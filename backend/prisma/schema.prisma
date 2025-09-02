@@ -1,0 +1,114 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and authorization
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(RESEARCHER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  surveys   Survey[]
+  responses Response[]
+  sessions  Session[]
+}
+
+// Session model for JWT refresh tokens
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+// Survey model for Q-methodology studies
+model Survey {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  status      SurveyStatus @default(DRAFT)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  statements  Statement[]
+  responses   Response[]
+  creator     User @relation(fields: [createdBy], references: [id])
+  
+  @@index([createdBy])
+}
+
+// Statement model for Q-sort items
+model Statement {
+  id       String @id @default(cuid())
+  surveyId String
+  text     String
+  order    Int
+  
+  survey   Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  sorts    QSort[]
+  
+  @@index([surveyId])
+}
+
+// Response model for participant submissions
+model Response {
+  id           String   @id @default(cuid())
+  surveyId     String
+  participantId String?
+  sessionCode  String   @unique
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  
+  survey       Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  participant  User? @relation(fields: [participantId], references: [id])
+  demographics Json?
+  qSorts       QSort[]
+  
+  @@index([surveyId])
+  @@index([participantId])
+}
+
+// QSort model for statement rankings
+model QSort {
+  id          String @id @default(cuid())
+  responseId  String
+  statementId String
+  position    Int
+  
+  response    Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  statement   Statement @relation(fields: [statementId], references: [id])
+  
+  @@unique([responseId, statementId])
+  @@index([responseId])
+}
+
+enum Role {
+  ADMIN
+  RESEARCHER
+  PARTICIPANT
+}
+
+enum SurveyStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
