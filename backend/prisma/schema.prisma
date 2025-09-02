@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 // User model for authentication and authorization
@@ -17,12 +17,48 @@ model User {
   password  String
   name      String?
   role      Role     @default(RESEARCHER)
+  isActive  Boolean  @default(true)
+  emailVerified Boolean @default(false)
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret String?
+  lastLoginAt DateTime?
+  passwordChangedAt DateTime @default(now())
+  failedLoginAttempts Int @default(0)
+  lockedUntil DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  // Multi-tenant isolation
+  tenantId  String?  @default("default")
   
   surveys   Survey[]
   responses Response[]
   sessions  Session[]
+  auditLogs AuditLog[]
+  supportTickets SupportTicket[]
+  collaborations Collaboration[]
+  sentInvitations CollaborationInvitation[] @relation("InvitationSender")
+  invitedCollaborations Collaboration[] @relation("CollaborationInviter")
+  twoFactorBackups TwoFactorBackup[]
+  mediaFiles MediaFile[]
+  
+  @@index([email])
+  @@index([tenantId])
+  @@index([isActive])
+}
+
+// Two-factor authentication backup codes
+model TwoFactorBackup {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String   // Hashed backup code
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([used])
 }
 
 // Session model for JWT refresh tokens
@@ -45,14 +81,38 @@ model Survey {
   description String?
   status      SurveyStatus @default(DRAFT)
   createdBy   String
+  tenantId    String?  @default("default")
+  scheduledStart DateTime?
+  scheduledEnd DateTime?
+  maxResponses Int?
+  currentResponses Int @default(0)
+  
+  // Q-Sort Configuration
+  gridColumns Int @default(9) // Number of columns in Q-sort grid
+  gridShape   String @default("quasi-normal") // forced, free, quasi-normal
+  gridConfig  Json? // Detailed grid configuration with max items per column
+  
+  // Study Flow Configuration
+  welcomeMessage String?
+  consentText String?
+  enablePreScreening Boolean @default(false)
+  enablePostSurvey Boolean @default(true)
+  enableVideoConferencing Boolean @default(false)
+  
+  settings   Json? // Additional survey configuration
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
   statements  Statement[]
   responses   Response[]
+  questions   Question[]
+  mediaFiles  MediaFile[]
+  collaborations Collaboration[]
   creator     User @relation(fields: [createdBy], references: [id])
   
   @@index([createdBy])
+  @@index([tenantId])
+  @@index([status])
 }
 
 // Statement model for Q-sort items
@@ -75,15 +135,23 @@ model Response {
   participantId String?
   sessionCode  String   @unique
   completedAt  DateTime?
+  timeSpent    Int? // Total time in seconds
+  ipAddress    String?
+  userAgent    String?
   createdAt    DateTime @default(now())
   
   survey       Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   participant  User? @relation(fields: [participantId], references: [id])
   demographics Json?
   qSorts       QSort[]
+  answers      Answer[]
+  progress     ParticipantProgress?
+  preSort      PreSort?
+  commentaries Commentary[]
   
   @@index([surveyId])
   @@index([participantId])
+  @@index([sessionCode])
 }
 
 // QSort model for statement rankings
@@ -100,6 +168,227 @@ model QSort {
   @@index([responseId])
 }
 
+// Advanced Questionnaire Engine Models
+model Question {
+  id          String @id @default(cuid())
+  surveyId    String
+  type        QuestionType
+  text        String
+  description String?
+  required    Boolean @default(true)
+  order       Int
+  validation  Json? // Validation rules
+  options     Json? // Answer options for multiple choice, etc.
+  logic       Json? // Skip logic and branching
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  survey      Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  answers     Answer[]
+  
+  @@index([surveyId])
+  @@index([type])
+}
+
+model Answer {
+  id         String @id @default(cuid())
+  questionId String
+  responseId String
+  value      Json   // Flexible answer storage
+  createdAt  DateTime @default(now())
+  
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  
+  @@unique([questionId, responseId])
+  @@index([responseId])
+}
+
+// Media and File Management
+model MediaFile {
+  id          String @id @default(cuid())
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int
+  path        String
+  url         String
+  uploadedBy  String
+  surveyId    String?
+  isPublic    Boolean @default(false)
+  virusScanStatus String @default("pending") // pending, clean, infected
+  createdAt   DateTime @default(now())
+  
+  uploader    User @relation(fields: [uploadedBy], references: [id])
+  survey      Survey? @relation(fields: [surveyId], references: [id])
+  
+  @@index([uploadedBy])
+  @@index([surveyId])
+  @@index([virusScanStatus])
+}
+
+// Audit Logging for Security
+model AuditLog {
+  id        String @id @default(cuid())
+  userId    String?
+  action    String
+  resource  String?
+  resourceId String?
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  timestamp DateTime @default(now())
+  
+  user      User? @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([action])
+  @@index([timestamp])
+}
+
+// Support System
+model SupportTicket {
+  id          String @id @default(cuid())
+  userId      String
+  category    String
+  priority    String @default("medium")
+  subject     String
+  description String
+  status      String @default("open")
+  assignedTo  String?
+  context     Json? // Browser info, error logs, etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User @relation(fields: [userId], references: [id])
+  messages    SupportMessage[]
+  
+  @@index([userId])
+  @@index([status])
+  @@index([priority])
+}
+
+model SupportMessage {
+  id        String @id @default(cuid())
+  ticketId  String
+  senderId  String?
+  message   String
+  isInternal Boolean @default(false)
+  createdAt DateTime @default(now())
+  
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  @@index([ticketId])
+}
+
+// Collaboration System
+model Collaboration {
+  id        String @id @default(cuid())
+  studyId   String
+  userId    String
+  role      CollaborationRole
+  permissions Json // Granular permissions
+  invitedBy String
+  acceptedAt DateTime?
+  createdAt DateTime @default(now())
+  
+  study     Survey @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id])
+  inviter   User @relation("CollaborationInviter", fields: [invitedBy], references: [id])
+  
+  @@unique([studyId, userId])
+  @@index([studyId])
+  @@index([userId])
+}
+
+model CollaborationInvitation {
+  id        String @id @default(cuid())
+  studyId   String
+  email     String
+  role      CollaborationRole
+  token     String @unique
+  expiresAt DateTime
+  acceptedAt DateTime?
+  invitedBy String
+  createdAt DateTime @default(now())
+  
+  inviter   User @relation("InvitationSender", fields: [invitedBy], references: [id])
+  
+  @@index([studyId])
+  @@index([email])
+  @@index([token])
+}
+
+// Rate Limiting and Security
+model RateLimit {
+  id        String @id @default(cuid())
+  identifier String // IP address or user ID
+  endpoint   String
+  count     Int
+  windowStart DateTime
+  createdAt DateTime @default(now())
+  
+  @@unique([identifier, endpoint, windowStart])
+  @@index([identifier])
+  @@index([endpoint])
+}
+
+// System Health Monitoring
+model SystemHealth {
+  id        String @id @default(cuid())
+  service   String
+  status    String // healthy, warning, critical
+  metrics   Json
+  timestamp DateTime @default(now())
+  
+  @@index([service])
+  @@index([timestamp])
+}
+
+// Participant Journey Progress
+model ParticipantProgress {
+  id           String   @id @default(cuid())
+  responseId   String   @unique
+  currentStep  String   @default("welcome")
+  completedSteps Json   @default("[]")
+  stepData     Json?    // Data collected at each step
+  lastActiveAt DateTime @default(now())
+  
+  response     Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  
+  @@index([responseId])
+}
+
+// Pre-Sort Data (Three-box categorization)
+model PreSort {
+  id          String @id @default(cuid())
+  responseId  String @unique
+  disagree    Json   // Array of statement IDs
+  neutral     Json   // Array of statement IDs
+  agree       Json   // Array of statement IDs
+  completedAt DateTime @default(now())
+  
+  response    Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  
+  @@index([responseId])
+}
+
+// Commentary on extreme positions
+model Commentary {
+  id          String @id @default(cuid())
+  responseId  String
+  statementId String
+  position    Int
+  comment     String
+  wordCount   Int
+  createdAt   DateTime @default(now())
+  
+  response    Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  
+  @@index([responseId])
+  @@index([statementId])
+}
+
 enum Role {
   ADMIN
   RESEARCHER
@@ -108,7 +397,35 @@ enum Role {
 
 enum SurveyStatus {
   DRAFT
+  SCHEDULED
   ACTIVE
-  CLOSED
+  PAUSED
+  ENDED
   ARCHIVED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE_SINGLE
+  MULTIPLE_CHOICE_MULTI
+  DROPDOWN
+  RATING_SCALE
+  LIKERT_SCALE
+  SEMANTIC_DIFFERENTIAL
+  TEXT_ENTRY
+  NUMERIC_ENTRY
+  DATE_TIME
+  SLIDER
+  RANK_ORDER
+  MATRIX_GRID
+  FILE_UPLOAD
+  CONSTANT_SUM
+  NET_PROMOTER_SCORE
+  IMAGE_CHOICE
+  VIDEO_RESPONSE
+}
+
+enum CollaborationRole {
+  OWNER
+  COLLABORATOR
+  VIEWER
 }

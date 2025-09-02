@@ -1,0 +1,583 @@
+{
+  "info": {
+    "name": "VQMethod API Tests",
+    "description": "Comprehensive API test collection for VQMethod platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set base URL",
+          "pm.environment.set('base_url', pm.environment.get('base_url') || 'http://localhost:3001/api');"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test for response time",
+          "pm.test('Response time is less than 2000ms', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has user data', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('user');",
+                  "    pm.expect(response.user).to.have.property('id');",
+                  "    pm.expect(response.user).to.have.property('email');",
+                  "});",
+                  "",
+                  "pm.test('Response has tokens', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('accessToken');",
+                  "    pm.expect(response).to.have.property('refreshToken');",
+                  "    ",
+                  "    // Store tokens for later use",
+                  "    pm.environment.set('access_token', response.accessToken);",
+                  "    pm.environment.set('refresh_token', response.refreshToken);",
+                  "    pm.environment.set('user_id', response.user.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test{{$timestamp}}@example.com\",\n    \"password\": \"SecurePassword123!\",\n    \"name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Store test credentials",
+                  "pm.environment.set('test_email', 'test@example.com');",
+                  "pm.environment.set('test_password', 'SecurePassword123!');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has valid structure', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('user');",
+                  "    pm.expect(response).to.have.property('accessToken');",
+                  "    pm.expect(response).to.have.property('refreshToken');",
+                  "});",
+                  "",
+                  "pm.test('User data is correct', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.user.email).to.equal(pm.environment.get('test_email'));",
+                  "});",
+                  "",
+                  "// Store tokens",
+                  "const response = pm.response.json();",
+                  "pm.environment.set('access_token', response.accessToken);",
+                  "pm.environment.set('refresh_token', response.refreshToken);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{test_email}}\",\n    \"password\": \"{{test_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('New tokens are provided', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('accessToken');",
+                  "    pm.expect(response).to.have.property('refreshToken');",
+                  "    ",
+                  "    // Update stored tokens",
+                  "    pm.environment.set('access_token', response.accessToken);",
+                  "    pm.environment.set('refresh_token', response.refreshToken);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Two-Factor Authentication",
+      "item": [
+        {
+          "name": "Generate 2FA Secret",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has 2FA data', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('secret');",
+                  "    pm.expect(response).to.have.property('qrCode');",
+                  "    pm.expect(response).to.have.property('manualSetupKey');",
+                  "    ",
+                  "    // Store secret for testing",
+                  "    pm.environment.set('2fa_secret', response.secret);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/2fa/generate",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "2fa", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Enable 2FA",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 or 401', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('2FA enabled successfully', function () {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response.success).to.be.true;",
+                  "        pm.expect(response).to.have.property('backupCodes');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"token\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/2fa/enable",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "2fa", "enable"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rate Limiting Tests",
+      "item": [
+        {
+          "name": "Test Auth Rate Limit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// This test should be run multiple times to trigger rate limiting",
+                  "pm.test('Rate limiting works', function () {",
+                  "    const iteration = pm.info.iteration;",
+                  "    ",
+                  "    if (iteration < 5) {",
+                  "        // First 5 requests should succeed",
+                  "        pm.expect(pm.response.code).to.not.equal(429);",
+                  "    } else {",
+                  "        // After 5 requests, should be rate limited",
+                  "        pm.expect(pm.response.code).to.equal(429);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"invalid@example.com\",\n    \"password\": \"wrongpassword\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "File Upload",
+      "item": [
+        {
+          "name": "Upload Single File",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 or 400', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 400]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    pm.test('File uploaded successfully', function () {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response).to.have.property('id');",
+                  "        pm.expect(response).to.have.property('filename');",
+                  "        pm.expect(response).to.have.property('size');",
+                  "        pm.expect(response).to.have.property('mimeType');",
+                  "        ",
+                  "        // Store file ID for later tests",
+                  "        pm.environment.set('uploaded_file_id', response.id);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test-file.txt"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/files/upload",
+              "host": ["{{base_url}}"],
+              "path": ["files", "upload"]
+            }
+          }
+        },
+        {
+          "name": "Test EICAR Virus Detection",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('EICAR test file is detected', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.message).to.include('detected');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/files/test/eicar",
+              "host": ["{{base_url}}"],
+              "path": ["files", "test", "eicar"]
+            }
+          }
+        },
+        {
+          "name": "Get File Metadata",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('File metadata is returned', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('id');",
+                  "    pm.expect(response).to.have.property('filename');",
+                  "    pm.expect(response).to.have.property('storagePath');",
+                  "    pm.expect(response).to.have.property('hash');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/files/{{uploaded_file_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["files", "{{uploaded_file_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete File",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('File deleted successfully', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.message).to.include('deleted');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/files/{{uploaded_file_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["files", "{{uploaded_file_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Security Tests",
+      "item": [
+        {
+          "name": "SQL Injection Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('SQL injection is prevented', function () {",
+                  "    // Should return 400 or 401, not 500",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+                  "    pm.expect(pm.response.code).to.not.equal(500);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin' OR '1'='1\",\n    \"password\": \"' OR '1'='1\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "XSS Prevention Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('XSS is prevented', function () {",
+                  "    const response = pm.response.json();",
+                  "    // Check that script tags are not executed",
+                  "    pm.expect(JSON.stringify(response)).to.not.include('<script>');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password\",\n    \"name\": \"<script>alert('XSS')</script>\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Check Security Headers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Security headers are present', function () {",
+                  "    pm.response.to.have.header('X-Content-Type-Options');",
+                  "    pm.response.to.have.header('X-Frame-Options');",
+                  "    pm.response.to.have.header('Content-Security-Policy');",
+                  "    pm.response.to.have.header('Strict-Transport-Security');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

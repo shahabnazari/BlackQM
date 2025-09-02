@@ -1,0 +1,25 @@
+{
+  "projectName": "VQMethod",
+  "services": {
+    "frontend": {
+      "defaultPort": 3000,
+      "fallbackPorts": [3001, 3002, 3003, 3004, 3005],
+      "description": "Next.js Frontend"
+    },
+    "backend": {
+      "defaultPort": 4000,
+      "fallbackPorts": [4001, 4002, 4003, 4004, 4005],
+      "description": "NestJS Backend API"
+    },
+    "database": {
+      "defaultPort": 5432,
+      "fallbackPorts": [5433, 5434, 5435],
+      "description": "PostgreSQL Database"
+    }
+  },
+  "portRanges": {
+    "development": [3000, 5999],
+    "testing": [6000, 6999],
+    "services": [7000, 7999]
+  }
+}
