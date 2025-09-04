@@ -47,15 +47,16 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-label mb-2">
-              Age Range *
+            <label htmlFor="age-select" className="block text-sm font-medium text-label mb-2">
+              Age
             </label>
             <select
+              id="age-select"
               className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               value={formData.age}
               onChange={(e) => handleChange('age', e.target.value)}
             >
-              <option value="">Select age range</option>
+              <option value="">Please select</option>
               <option value="18-24">18-24</option>
               <option value="25-34">25-34</option>
               <option value="35-44">35-44</option>
@@ -67,10 +68,11 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-label mb-2">
-              Gender *
+            <label htmlFor="gender-select" className="block text-sm font-medium text-label mb-2">
+              Gender
             </label>
             <select
+              id="gender-select"
               className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               value={formData.gender}
               onChange={(e) => handleChange('gender', e.target.value)}
@@ -85,10 +87,11 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-label mb-2">
-              Highest Education Level *
+            <label htmlFor="education-select" className="block text-sm font-medium text-label mb-2">
+              Education
             </label>
             <select
+              id="education-select"
               className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               value={formData.education}
               onChange={(e) => handleChange('education', e.target.value)}
@@ -112,10 +115,11 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
           />
 
           <div>
-            <label className="block text-sm font-medium text-label mb-2">
-              Country *
+            <label htmlFor="country-select" className="block text-sm font-medium text-label mb-2">
+              Country
             </label>
             <select
+              id="country-select"
               className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               value={formData.country}
               onChange={(e) => handleChange('country', e.target.value)}
@@ -187,7 +191,7 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
             onClick={() => onComplete(formData)}
             disabled={!isComplete}
           >
-            Submit Survey
+            Complete Study
           </Button>
         </div>
       </div>

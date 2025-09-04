@@ -21,7 +21,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { FileUploadService } from '../services/file-upload.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-// import { RateLimitGuard } from '../../rate-limiting/guards/rate-limit.guard';
+import { RateLimitGuard } from '../../rate-limiting/guards/rate-limit.guard';
+import { FileUploadRateLimit } from '../../rate-limiting/decorators/rate-limit.decorator';
 
 @ApiTags('File Upload')
 @Controller('files')
@@ -31,7 +32,8 @@ export class FileUploadController {
   constructor(private readonly fileUploadService: FileUploadService) {}
 
   @Post('upload')
-  // @UseGuards(RateLimitGuard)
+  @UseGuards(RateLimitGuard)
+  @FileUploadRateLimit()
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -80,7 +82,8 @@ export class FileUploadController {
   }
 
   @Post('upload-multiple')
-  // @UseGuards(RateLimitGuard)
+  @UseGuards(RateLimitGuard)
+  @FileUploadRateLimit()
   @UseInterceptors(
     FilesInterceptor('files', 5, {
       storage: diskStorage({
@@ -170,14 +173,7 @@ export class FileUploadController {
     res.download(file.storagePath, file.filename);
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete a file' })
-  @ApiResponse({ status: 200, description: 'File deleted successfully' })
-  @ApiResponse({ status: 404, description: 'File not found' })
-  async deleteFile(@Param('id') id: string, @Req() req: any) {
-    await this.fileUploadService.deleteFile(id, req.user.id);
-    return { message: 'File deleted successfully' };
-  }
+
 
   @Post('test/eicar')
   @ApiOperation({ summary: 'Upload EICAR test file for virus scanning validation' })
@@ -217,5 +213,17 @@ export class FileUploadController {
         error: error instanceof Error ? error.message : String(error),
       };
     }
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a file' })
+  @ApiResponse({ status: 200, description: 'File deleted successfully' })
+  @ApiResponse({ status: 404, description: 'File not found' })
+  async deleteFile(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Ip() ipAddress: string,
+  ) {
+    return this.fileUploadService.deleteFile(id, req.user.id, ipAddress);
   }
 }

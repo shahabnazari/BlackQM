@@ -34,10 +34,25 @@ const mockStatements: Statement[] = [
 
 export default function Familiarization({ onComplete, onBack }: FamiliarizationProps) {
   const [viewedStatements, setViewedStatements] = useState<Set<string>>(new Set());
-  const [currentView, setCurrentView] = useState<'grid' | 'list'>('grid');
+  const [currentView, setCurrentView] = useState<'grid' | 'list' | 'single'>('single');
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const handleStatementView = (id: string) => {
     setViewedStatements((prev) => new Set(prev).add(id));
+  };
+
+  const handleNext = () => {
+    if (currentIndex < mockStatements.length - 1) {
+      const currentStatement = mockStatements[currentIndex];
+      handleStatementView(currentStatement.id);
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
   };
 
   const allViewed = viewedStatements.size === mockStatements.length;
@@ -71,6 +86,13 @@ export default function Familiarization({ onComplete, onBack }: FamiliarizationP
 
           <div className="flex space-x-2">
             <Button
+              variant={currentView === 'single' ? 'primary' : 'secondary'}
+              size="small"
+              onClick={() => setCurrentView('single')}
+            >
+              Single
+            </Button>
+            <Button
               variant={currentView === 'grid' ? 'primary' : 'secondary'}
               size="small"
               onClick={() => setCurrentView('grid')}
@@ -87,7 +109,42 @@ export default function Familiarization({ onComplete, onBack }: FamiliarizationP
           </div>
         </div>
 
-        {currentView === 'grid' ? (
+        {currentView === 'single' ? (
+          <div className="space-y-6">
+            <Card className="p-6">
+              <div className="flex items-start justify-between mb-4">
+                <span className="text-xs font-medium text-tertiary-label">
+                  #{mockStatements[currentIndex].id}
+                </span>
+                {mockStatements[currentIndex].category && (
+                  <Badge variant="secondary" size="sm">
+                    {mockStatements[currentIndex].category}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-lg text-label">{mockStatements[currentIndex].text}</p>
+            </Card>
+            <div className="flex justify-between">
+              <Button
+                variant="secondary"
+                onClick={handlePrevious}
+                disabled={currentIndex === 0}
+              >
+                Previous
+              </Button>
+              {currentIndex < mockStatements.length - 1 ? (
+                <Button
+                  variant="primary"
+                  onClick={handleNext}
+                >
+                  Next
+                </Button>
+              ) : (
+                <span className="text-sm text-system-green">All statements viewed</span>
+              )}
+            </div>
+          </div>
+        ) : currentView === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {mockStatements.map((statement) => {
               const isViewed = viewedStatements.has(statement.id);

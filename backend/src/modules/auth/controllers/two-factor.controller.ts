@@ -38,7 +38,7 @@ export class TwoFactorController {
   @ApiOperation({ summary: 'Generate 2FA secret and QR code' })
   @ApiResponse({ status: 200, description: '2FA secret generated successfully' })
   async generateSecret(@Req() req: any) {
-    return this.twoFactorService.generateSecret(req.user.id);
+    return this.twoFactorService.generateSecret(req.user.userId || req.user.id);
   }
 
   @Post('enable')
@@ -52,7 +52,7 @@ export class TwoFactorController {
     @Req() req: any,
     @Ip() ipAddress: string,
   ) {
-    return this.twoFactorService.enable2FA(req.user.id, dto.token, ipAddress);
+    return this.twoFactorService.enable2FA(req.user.userId || req.user.id, dto.token, ipAddress);
   }
 
   @Delete('disable')
@@ -65,7 +65,7 @@ export class TwoFactorController {
     @Req() req: any,
     @Ip() ipAddress: string,
   ) {
-    return this.twoFactorService.disable2FA(req.user.id, dto.password, ipAddress);
+    return this.twoFactorService.disable2FA(req.user.userId || req.user.id, dto.password, ipAddress);
   }
 
   @Post('verify')
@@ -80,7 +80,7 @@ export class TwoFactorController {
     @Ip() ipAddress: string,
   ) {
     const isValid = await this.twoFactorService.verify2FAToken(
-      req.user.id,
+      req.user.userId || req.user.id,
       dto.token,
       ipAddress,
     );

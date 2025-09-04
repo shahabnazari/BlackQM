@@ -5,6 +5,21 @@
 @import '../styles/tokens.css';
 @import '../styles/apple-design.css';
 
+/* Animation for striped progress bars */
+@keyframes stripes {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 40px 0;
+  }
+}
+
+.animate-stripes {
+  animation: stripes 1s linear infinite;
+  background-size: 40px 40px;
+}
+
 /* Base styles using Apple design tokens */
 @layer base {
   * {

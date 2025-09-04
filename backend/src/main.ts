@@ -4,8 +4,17 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import * as Sentry from '@sentry/node';
+import { SentryConfig } from './config/sentry.config';
 
 async function bootstrap() {
+  // Initialize Sentry before creating the app
+  const sentryConfig = new SentryConfig({
+    get: (key: string, defaultValue?: any) => process.env[key] || defaultValue,
+  } as any);
+  sentryConfig.init();
+  
   const app = await NestFactory.create(AppModule);
   
   // Security middleware
@@ -24,12 +33,16 @@ async function bootstrap() {
   // Compression middleware
   app.use(compression());
   
+  // Cookie parser middleware (required for CSRF)
+  app.use(cookieParser());
+  
   // Enable CORS
   app.enableCors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
+    exposedHeaders: ['X-CSRF-Token'],
   });
   
   // Global validation pipe
@@ -59,5 +72,11 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`🚀 Backend server running on: http://localhost:${port}/api`);
   console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
+  console.log(`📊 Performance Monitoring: ${process.env.SENTRY_DSN ? 'Enabled' : 'Disabled (Set SENTRY_DSN)'}`);
 }
-bootstrap();
+
+bootstrap().catch((error) => {
+  console.error('Failed to start application:', error);
+  Sentry.captureException(error);
+  process.exit(1);
+});

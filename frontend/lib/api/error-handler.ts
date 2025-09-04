@@ -27,10 +27,13 @@ export function handleApiError(error: any): ApiError {
 }
 
 export function isNetworkError(error: any): boolean {
-  return error.code === 'ECONNREFUSED' || 
+  if (!error) return false;
+  
+  return !!(error.code === 'ECONNREFUSED' || 
          error.code === 'ENOTFOUND' ||
          error.code === 'ETIMEDOUT' ||
          error.code === 'ECONNRESET' ||
          error.message?.includes('Network') ||
-         (error.isAxiosError && !error.response);
+         (error.isAxiosError && !error.response) ||
+         (error.request && !error.response));
 }

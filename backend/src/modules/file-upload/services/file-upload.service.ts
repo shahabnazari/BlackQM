@@ -319,7 +319,7 @@ export class FileUploadService {
   /**
    * Delete file
    */
-  async deleteFile(fileId: string, userId: string): Promise<void> {
+  async deleteFile(fileId: string, userId: string, ipAddress?: string): Promise<{ message: string }> {
     const file = await this.getFile(fileId, userId);
 
     // Delete physical file
@@ -337,6 +337,9 @@ export class FileUploadService {
       action: 'FILE_DELETED',
       resource: 'MediaFile',
       resourceId: fileId,
+      ipAddress,
     });
+
+    return { message: 'File deleted successfully' };
   }
 }

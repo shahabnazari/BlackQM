@@ -9,6 +9,7 @@ import {
   HttpStatus,
   Ip,
   Headers,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from '../services/auth.service';
@@ -111,17 +112,34 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request password reset' })
   @ApiResponse({ status: 200, description: 'Password reset email sent' })
-  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
-    // TODO: Implement password reset functionality
-    return { message: 'Password reset email sent (not implemented yet)' };
+  async forgotPassword(
+    @Body() forgotPasswordDto: ForgotPasswordDto,
+    @Ip() ipAddress: string,
+  ) {
+    return this.authService.forgotPassword(forgotPasswordDto, ipAddress);
   }
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password with token' })
   @ApiResponse({ status: 200, description: 'Password reset successfully' })
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    // TODO: Implement password reset functionality
-    return { message: 'Password reset (not implemented yet)' };
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  async resetPassword(
+    @Body() resetPasswordDto: ResetPasswordDto,
+    @Ip() ipAddress: string,
+  ) {
+    return this.authService.resetPassword(resetPasswordDto, ipAddress);
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify email address' })
+  @ApiResponse({ status: 200, description: 'Email verified successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  async verifyEmail(
+    @Query('token') token: string,
+    @Ip() ipAddress: string,
+  ) {
+    return this.authService.verifyEmail(token, ipAddress);
   }
 }

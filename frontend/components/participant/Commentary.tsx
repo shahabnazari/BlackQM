@@ -139,6 +139,9 @@ export default function Commentary({ onComplete, onBack }: CommentaryProps) {
           <label className="block text-sm font-medium text-label mb-2">
             Why did you place this statement at this position?
           </label>
+          <p className="text-sm text-secondary-label mb-2">
+            Please provide brief comments about your placement decision.
+          </p>
           <textarea
             className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label placeholder:text-tertiary-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             rows={6}
@@ -152,7 +155,7 @@ export default function Commentary({ onComplete, onBack }: CommentaryProps) {
                 wordCount >= 50 ? 'text-system-green' : 'text-secondary-label'
               }`}
             >
-              {wordCount} words {wordCount < 50 && `(minimum 50)`}
+              {wordCount < 50 ? `${(50 - wordCount) * 5} characters remaining` : `${wordCount} words`}
             </span>
             {wordCount >= 50 && (
               <span className="text-sm text-system-green">✓ Requirement met</span>
@@ -161,18 +164,8 @@ export default function Commentary({ onComplete, onBack }: CommentaryProps) {
         </div>
 
         <div className="flex justify-between">
-          <div className="flex space-x-2">
-            <Button variant="secondary" onClick={onBack} disabled={currentIndex === 0}>
-              Back to Q-Sort
-            </Button>
-            {currentIndex > 0 && (
-              <Button variant="secondary" onClick={handlePrevious}>
-                Previous
-              </Button>
-            )}
-          </div>
-          <div className="flex space-x-2">
-            {!isLastStatement && (
+          {!isLastStatement ? (
+            <>
               <Button
                 variant="primary"
                 onClick={handleNext}
@@ -180,8 +173,27 @@ export default function Commentary({ onComplete, onBack }: CommentaryProps) {
               >
                 Next Statement
               </Button>
-            )}
-            {isLastStatement && (
+              <div className="flex space-x-2">
+                {currentIndex > 0 && (
+                  <Button variant="secondary" onClick={handlePrevious}>
+                    Previous
+                  </Button>
+                )}
+                <Button variant="secondary" onClick={onBack} disabled={currentIndex === 0}>
+                  Back to Q-Sort
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex space-x-2">
+                <Button variant="secondary" onClick={handlePrevious}>
+                  Previous
+                </Button>
+                <Button variant="secondary" onClick={onBack}>
+                  Back to Q-Sort
+                </Button>
+              </div>
               <Button
                 variant="primary"
                 size="large"
@@ -190,8 +202,8 @@ export default function Commentary({ onComplete, onBack }: CommentaryProps) {
               >
                 Continue to Survey
               </Button>
-            )}
-          </div>
+            </>
+          )}
         </div>
       </div>
     </Card>

@@ -5,8 +5,18 @@ import path from 'path';
 export default defineConfig({
   test: {
     environment: 'jsdom',
-    setupFiles: ['./frontend/test/setup.ts'],
+    setupFiles: ['./test/setup.ts'],
     globals: true,
+    testTimeout: 10000,  // Reduced from 30000 to fail faster
+    hookTimeout: 10000,  // Reduced from 30000 to fail faster
+    isolate: true,
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      }
+    },
+    maxConcurrency: 1,
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
@@ -21,7 +31,10 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       all: true,
-      include: ['frontend/components/apple-ui/**/*.{ts,tsx}'],
+      include: [
+        'components/apple-ui/**/*.{ts,tsx}',
+        'lib/**/*.{ts,tsx}'
+      ],
       exclude: [
         'node_modules/',
         '**/*.d.ts',
@@ -31,6 +44,8 @@ export default defineConfig({
         '**/.next/**',
         '**/test/**',
         '**/__tests__/**',
+        '**/*.test.{ts,tsx}',
+        '**/*.spec.{ts,tsx}'
       ],
       thresholds: {
         global: {

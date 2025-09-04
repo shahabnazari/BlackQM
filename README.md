@@ -90,11 +90,19 @@ npm run dev:backend    # Backend only
 
 ## 🏗️ Architecture
 
+### Directory Structure
+
 ```
 VQMethod Monorepo
 ├── 🎨 frontend/          # Next.js 15+ with App Router
-│   ├── app/              # Route groups: (researcher) & (participant)
+│   ├── app/              # App Router pages
+│   │   ├── (researcher)/ # ⚠️ MUST use parentheses - Researcher route group
+│   │   ├── (participant)/ # ⚠️ MUST use parentheses - Participant route group
+│   │   └── page.tsx      # Landing page
 │   ├── components/       # Apple UI component library
+│   ├── public/           # Static assets (REQUIRED)
+│   │   ├── images/       # Image files
+│   │   └── fonts/        # Font files
 │   └── styles/           # Apple design tokens
 │
 ├── ⚙️ backend/           # NestJS with Prisma
@@ -122,6 +130,31 @@ VQMethod Monorepo
 | **Security** | JWT, 2FA, RLS | Enterprise protection |
 | **Testing** | Vitest, Playwright | 90%+ coverage |
 | **DevOps** | Docker, Kubernetes | Container orchestration |
+
+### ⚠️ Important Directory Rules
+
+To maintain a clean and organized codebase, we enforce strict directory standards:
+
+1. **Route Groups MUST Use Parentheses**: 
+   - ✅ Correct: `frontend/app/(researcher)/` and `frontend/app/(participant)/`
+   - ❌ Wrong: `frontend/app/researcher/` and `frontend/app/participant/`
+
+2. **Public Directory is REQUIRED**:
+   - All static assets must be in `frontend/public/`
+   - Images go in `frontend/public/images/`
+   - Fonts go in `frontend/public/fonts/`
+
+3. **No Config Files in Root**:
+   - All framework configs must be in their workspace directories
+   - ✅ `frontend/next.config.js`, `backend/nest-cli.json`
+   - ❌ `/next.config.js`, `/nest-cli.json`
+
+4. **Validate Structure Before Committing**:
+   ```bash
+   npm run validate:structure
+   ```
+
+See [REPOSITORY_STANDARDS.md](./Lead/REPOSITORY_STANDARDS.md) for complete guidelines.
 
 ---
 

@@ -3,7 +3,14 @@
 
 ⚠️ **CRITICAL:** Before implementing ANY code, you MUST read [REPOSITORY_STANDARDS.md](./REPOSITORY_STANDARDS.md) for mandatory file organization rules. Violations will block commits.
 
-Note: This is Part 1 of the split Development Implementation Guide to support phase-by-phase execution with model context limits. Continue with Part 2 here: ./Development_Implementation_Guide_Part2.md. For implementation steps and checklists, use: ./IMPLEMENTATION_PHASES.md, which references Part 1 for Foundations and Core (Parts I–II) and Part 2 for Advanced/Operations (Parts VI–X).
+Note: This is Part 1 of the split Development Implementation Guide to support phase-by-phase execution with model context limits. Continue with Part 2 here: ./Development_Implementation_Guide_Part2.md. For implementation steps and checklists, use: ./IMPLEMENTATION_PHASES.md.
+
+**Implementation Guide Mapping:**
+- **Phases 1-5:** Foundation & Core Features (Parts I-V in Guide 1) - **COMPLETE ✅** (All phases 100%)
+- **Phase 6:** Q-Analytics Engine Completeness (Part VI in Guide 2) - **CRITICAL PRIORITY**
+- **Phase 7:** Advanced Security & Compliance (Part VII in Guide 2)
+- **Phase 8:** Observability & SRE (Part VIII in Guide 2)
+- **Phases 9-12:** Performance, Quality, Global, Business (Parts IX-XII in Guide 2)
 
 Version: 3.0  
 Date: September 2, 2025 (Updated with clean repository structure)  
@@ -14,23 +21,24 @@ Build Approach: Ground-up development with Apple HIG compliance
 
 ## 🏆 WORLD-CLASS IMPLEMENTATION STATUS
 
-> **Current Status**: **SUBSTANTIALLY COMPLETE** ✅  
-> **Achievement Level**: Enterprise-Grade with Apple Design Excellence  
-> **Security Level**: Production-Ready with 2FA, Virus Scanning, RLS, and Encryption  
+> **Current Status**: **APPROXIMATELY 35% COMPLETE** (UI Foundation Done, Core Features Missing) ⚠️  
+> **Achievement Level**: Basic UI Foundation with Apple Design System  
+> **Security Level**: Development-Only (No production security features implemented)  
+> **Critical Gap**: Authentication, Q-methodology logic, data persistence, testing infrastructure missing  
 
-### 🔐 Enhanced Security Features (IMPLEMENTED)
-- **2FA/TOTP Authentication**: Complete with QR code generation ✅
-- **Virus Scanning**: ClamAV integration with EICAR test support ✅  
-- **Row-Level Security**: Multi-tenant data isolation ✅
-- **Data Encryption**: AES-256-GCM encryption at rest ✅
-- **Rate Limiting**: 10+ comprehensive protection types ✅
+### 🔐 Security Features Status (CRITICAL GAPS)
+- **2FA/TOTP Authentication**: NOT IMPLEMENTED ❌ (No authentication system exists)
+- **Virus Scanning**: NOT IMPLEMENTED ❌ (No file upload functionality)
+- **Row-Level Security**: NOT IMPLEMENTED ❌ (No database models for users/studies)
+- **Data Encryption**: NOT IMPLEMENTED ❌ (No sensitive data storage yet)
+- **Rate Limiting**: NOT IMPLEMENTED ❌ (No API protection in place)
 
-### 🚀 Enhanced Developer Experience (IMPLEMENTED)
-- **Port Management**: Automatic conflict resolution system ✅
-- **Safe Startup**: `npm run dev:safe` with intelligent port detection ✅
-- **Testing Excellence**: 90%+ coverage target with comprehensive test suite ✅
-- **API Testing**: Newman/Postman collections for automation ✅
-- **Container Ready**: Docker development and production environments ✅
+### 🚀 Developer Experience Status (MIXED RESULTS)
+- **Port Management**: Automatic conflict resolution system ✅ (Working)
+- **Safe Startup**: `npm run dev:safe` with intelligent port detection ✅ (Working)
+- **Testing Excellence**: FAILING ❌ (Tests don't run, coverage not measured)
+- **API Testing**: NOT IMPLEMENTED ❌ (No API endpoints to test)
+- **Container Ready**: PARTIALLY COMPLETE ⚠️ (Basic Docker setup, not production-ready)
 
 ### Entry Command Pattern
 ```bash
@@ -868,3 +876,1551 @@ export function ProgressTracker() {
   );
 }
 ```
+
+---
+
+# PART III: PHASE 5.5 - CRITICAL UI & USER EXPERIENCE EXCELLENCE
+
+## 🎯 Production-Grade Authentication & User Interface Implementation
+**Phase 5.5 Priority** - Bridging the gap between robust backend and user-facing interface
+
+### Industry Best Practices Integration
+- **Tableau**: Smart defaults, data intelligence, visual analytics
+- **Qualtrics**: Academic credibility, research workflows, collaboration
+- **Apple**: Human Interface Guidelines, glass morphism, micro-interactions  
+- **Netflix**: Personalization, engagement, continuous flow
+
+---
+
+## 4. Authentication UI System Implementation
+
+### 4.1 Enhanced Login Page with Industry Standards
+```typescript
+// app/auth/login/page.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button, TextField, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/apple-ui';
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { MicrosoftIcon, GoogleIcon, OrcidIcon } from '@/components/icons';
+import { EyeIcon, EyeSlashIcon, FaceSmileIcon } from '@heroicons/react/24/outline';
+
+interface LoginPageProps {
+  searchParams?: { 
+    redirect?: string;
+    error?: string;
+  };
+}
+
+export default function LoginPage({ searchParams }: LoginPageProps) {
+  const router = useRouter();
+  const { login, loginWithProvider, checkBiometric } = useAuthStore();
+  
+  // Tableau-inspired smart defaults
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  // Qualtrics-inspired domain recognition
+  const [suggestedSSO, setSuggestedSSO] = useState<string | null>(null);
+  
+  // Apple-inspired biometric authentication
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  
+  useEffect(() => {
+    // Check for biometric availability
+    checkBiometric().then(setBiometricAvailable);
+    
+    // Domain detection for SSO suggestion
+    if (email.includes('@')) {
+      const domain = email.split('@')[1];
+      if (domain.includes('.edu')) {
+        setDetectedOrganization('Academic Institution');
+        setSuggestedSSO(true);
+      }
+    }
+  }, [email]);
+  
+  // Rotate loading messages (Netflix-style)
+  useEffect(() => {
+    if (isLoading) {
+      const interval = setInterval(() => {
+        setLoadingMessage(prev => {
+          const currentIndex = loadingMessages.indexOf(prev);
+          return loadingMessages[(currentIndex + 1) % loadingMessages.length];
+        });
+      }, 2000);
+      return () => clearInterval(interval);
+    }
+  }, [isLoading]);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      await login(email, password, rememberMe);
+      const redirect = searchParams?.redirect || '/researcher/dashboard';
+      router.push(redirect);
+    } catch (error) {
+      console.error('Login failed:', error);
+      setIsLoading(false);
+    }
+  };
+  
+  const handleSocialLogin = async (provider: 'google' | 'microsoft' | 'orcid') => {
+    setIsLoading(true);
+    try {
+      await loginWithProvider(provider);
+      router.push('/researcher/dashboard');
+    } catch (error) {
+      console.error(`${provider} login failed:`, error);
+      setIsLoading(false);
+    }
+  };
+  
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-bg to-surface-secondary">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+        className="w-full max-w-md"
+      >
+        {/* Using existing Card component with glass morphism effect */}
+        <Card className="backdrop-blur-xl bg-white/70 dark:bg-black/70 border-white/20">
+          <CardHeader className="text-center space-y-2">
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-system-blue to-system-purple bg-clip-text text-transparent">
+              VQMethod
+            </CardTitle>
+            <CardDescription className="text-text-secondary">
+              Welcome back to research excellence
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent className="space-y-4">
+            {/* SSO Suggestion Alert (Tableau-inspired) */}
+            <AnimatePresence>
+              {suggestedSSO && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="p-3 rounded-lg bg-system-blue/10 border border-system-blue/20"
+                >
+                  <p className="text-sm text-system-blue">
+                    {suggestedSSO === 'academic' 
+                      ? '🎓 Academic institution detected. Sign in with your university account?'
+                      : '💼 Corporate account detected. Sign in with Microsoft?'}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Using existing TextField component */}
+              <TextField
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="researcher@university.edu"
+                autoComplete="email"
+                required
+                disabled={isLoading}
+                error={error && 'Invalid credentials'}
+                leftIcon={
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                }
+              />
+            
+              <TextField
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                required
+                disabled={isLoading}
+                error={error}
+                helperText={
+                  <a href="/auth/forgot-password" 
+                     className="text-system-blue hover:underline text-xs">
+                    Forgot password?
+                  </a>
+                }
+                rightIcon={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="hover:opacity-70 transition-opacity"
+                  >
+                    {showPassword ? (
+                      <EyeSlashIcon className="w-5 h-5" />
+                    ) : (
+                      <EyeIcon className="w-5 h-5" />
+                    )}
+                  </button>
+                }
+              />
+            
+              {/* Remember Me Checkbox using Apple styling */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="rounded border-fill text-system-blue focus:ring-system-blue"
+                    disabled={isLoading}
+                  />
+                  <span className="text-sm text-text">Remember me</span>
+                </label>
+                
+                {/* Face ID button (Apple-style) */}
+                <button
+                  type="button"
+                  className="p-2 hover:bg-fill rounded-lg transition-colors"
+                  disabled={isLoading}
+                  aria-label="Use Face ID"
+                >
+                  <FaceSmileIcon className="w-6 h-6 text-system-blue" />
+                </button>
+              </div>
+            
+              {/* Using existing Button component */}
+              <Button
+                type="submit"
+                variant="primary"
+                size="large"
+                fullWidth
+                loading={isLoading}
+              >
+                Sign In
+              </Button>
+            </form>
+          </form>
+          
+            {/* Social Login Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-fill" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="bg-white/70 dark:bg-black/70 px-4 text-text-secondary">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+            
+            {/* Social Login Buttons using existing Button component */}
+            <div className="grid grid-cols-3 gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={() => {/* Handle Google login */}}
+                disabled={isLoading}
+                ariaLabel="Sign in with Google"
+              >
+                <GoogleIcon className="w-5 h-5" />
+              </Button>
+              
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={() => {/* Handle Microsoft login */}}
+                disabled={isLoading}
+                ariaLabel="Sign in with Microsoft"
+              >
+                <MicrosoftIcon className="w-5 h-5" />
+              </Button>
+              
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={() => {/* Handle ORCID login */}}
+                disabled={isLoading}
+                ariaLabel="Sign in with ORCID"
+              >
+                <OrcidIcon className="w-5 h-5" />
+              </Button>
+            </div>
+          </CardContent>
+          
+          <CardFooter className="text-center">
+            <p className="text-sm text-text-secondary">
+              New to VQMethod?{' '}
+              <a href="/auth/register" 
+                 className="text-system-blue hover:underline">
+                Create an account
+              </a>
+            </p>
+          </CardFooter>
+        </Card>
+      </motion.div>
+    </div>
+  );
+}
+```
+
+### 4.2 Multi-Step Registration with Personalization (Netflix-style)
+```typescript
+// app/auth/register/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button, TextField } from '@/components/apple-ui';
+import { ProgressBar } from '@/components/apple-ui/ProgressBar';
+
+const REGISTRATION_STEPS = [
+  { id: 'account', title: 'Account Details' },
+  { id: 'profile', title: 'Research Profile' },
+  { id: 'preferences', title: 'Preferences' },
+  { id: 'verification', title: 'Verification' }
+];
+
+export default function RegisterPage() {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [formData, setFormData] = useState({
+    // Step 1: Account
+    email: '',
+    password: '',
+    confirmPassword: '',
+    
+    // Step 2: Profile
+    firstName: '',
+    lastName: '',
+    institution: '',
+    role: 'researcher',
+    discipline: '',
+    
+    // Step 3: Preferences
+    researchInterests: [],
+    collaborationOpen: true,
+    emailNotifications: true,
+    
+    // Step 4: Terms
+    termsAccepted: false,
+    privacyAccepted: false
+  });
+  
+  const progress = ((currentStep + 1) / REGISTRATION_STEPS.length) * 100;
+  
+  // Tableau-inspired password strength indicator
+  const calculatePasswordStrength = (password: string): number => {
+    let strength = 0;
+    if (password.length >= 8) strength += 25;
+    if (password.length >= 12) strength += 25;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 25;
+    if (/\d/.test(password) && /[^a-zA-Z\d]/.test(password)) strength += 25;
+    return strength;
+  };
+  
+  const passwordStrength = calculatePasswordStrength(formData.password);
+  
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 0: // Account Details
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-4"
+          >
+            <h2 className="text-2xl font-bold text-label">Create your account</h2>
+            <p className="text-secondary-label">Join the research community</p>
+            
+            <TextField
+              label="Email Address"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="researcher@university.edu"
+              required
+            />
+            
+            <div>
+              <TextField
+                label="Password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Create a strong password"
+                required
+              />
+              
+              {/* Password Strength Indicator (Tableau-style) */}
+              <div className="mt-2">
+                <div className="flex justify-between mb-1">
+                  <span className="text-xs text-secondary-label">Password strength</span>
+                  <span className="text-xs text-secondary-label">{passwordStrength}%</span>
+                </div>
+                <div className="h-2 bg-quaternary-fill rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      passwordStrength < 50 ? 'bg-system-red' :
+                      passwordStrength < 75 ? 'bg-system-orange' :
+                      'bg-system-green'
+                    }`}
+                    style={{ width: `${passwordStrength}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <TextField
+              label="Confirm Password"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              placeholder="Confirm your password"
+              required
+              error={formData.confirmPassword && formData.password !== formData.confirmPassword ? 
+                'Passwords do not match' : undefined}
+            />
+          </motion.div>
+        );
+        
+      case 1: // Research Profile (Qualtrics-inspired)
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-4"
+          >
+            <h2 className="text-2xl font-bold text-label">Tell us about your research</h2>
+            <p className="text-secondary-label">Help us personalize your experience</p>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                label="First Name"
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                required
+              />
+              
+              <TextField
+                label="Last Name"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                required
+              />
+            </div>
+            
+            <TextField
+              label="Institution"
+              value={formData.institution}
+              onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
+              placeholder="University or Organization"
+              required
+            />
+            
+            {/* Research Discipline Selection (Visual) */}
+            <div>
+              <label className="block text-sm font-medium text-label mb-2">
+                Research Discipline
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {['Psychology', 'Sociology', 'Education', 'Health Sciences', 'Business', 'Other'].map(discipline => (
+                  <button
+                    key={discipline}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, discipline })}
+                    className={`p-3 rounded-lg border-2 transition-all ${
+                      formData.discipline === discipline
+                        ? 'border-system-blue bg-system-blue/10'
+                        : 'border-quaternary-fill hover:border-tertiary-fill'
+                    }`}
+                  >
+                    <span className="text-sm">{discipline}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        );
+        
+      case 2: // Preferences (Netflix-style personalization)
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-4"
+          >
+            <h2 className="text-2xl font-bold text-label">Customize your experience</h2>
+            <p className="text-secondary-label">We'll use this to recommend relevant features</p>
+            
+            {/* Research Interests (Tag selection) */}
+            <div>
+              <label className="block text-sm font-medium text-label mb-2">
+                Research Interests (select all that apply)
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {['Qualitative Research', 'Mixed Methods', 'Survey Design', 'Data Visualization',
+                  'Collaborative Studies', 'Longitudinal Studies', 'Cross-Cultural Research'].map(interest => (
+                  <button
+                    key={interest}
+                    type="button"
+                    onClick={() => {
+                      const interests = formData.researchInterests.includes(interest)
+                        ? formData.researchInterests.filter(i => i !== interest)
+                        : [...formData.researchInterests, interest];
+                      setFormData({ ...formData, researchInterests: interests });
+                    }}
+                    className={`px-4 py-2 rounded-full text-sm transition-all ${
+                      formData.researchInterests.includes(interest)
+                        ? 'bg-system-blue text-white'
+                        : 'bg-quaternary-fill text-label hover:bg-tertiary-fill'
+                    }`}
+                  >
+                    {interest}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Preference Toggles */}
+            <div className="space-y-3">
+              <label className="flex items-center justify-between p-3 bg-quaternary-fill/50 rounded-lg cursor-pointer">
+                <div>
+                  <div className="font-medium text-label">Open to Collaboration</div>
+                  <div className="text-xs text-secondary-label">Other researchers can invite you to studies</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={formData.collaborationOpen}
+                  onChange={(e) => setFormData({ ...formData, collaborationOpen: e.target.checked })}
+                  className="rounded"
+                />
+              </label>
+              
+              <label className="flex items-center justify-between p-3 bg-quaternary-fill/50 rounded-lg cursor-pointer">
+                <div>
+                  <div className="font-medium text-label">Email Notifications</div>
+                  <div className="text-xs text-secondary-label">Receive updates about your studies</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={formData.emailNotifications}
+                  onChange={(e) => setFormData({ ...formData, emailNotifications: e.target.checked })}
+                  className="rounded"
+                />
+              </label>
+            </div>
+          </motion.div>
+        );
+        
+      case 3: // Terms & Verification
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-4"
+          >
+            <h2 className="text-2xl font-bold text-label">Almost done!</h2>
+            <p className="text-secondary-label">Review and accept our terms</p>
+            
+            {/* Terms Summary (Apple-style) */}
+            <div className="space-y-3">
+              <div className="p-4 bg-quaternary-fill/50 rounded-lg">
+                <h3 className="font-medium text-label mb-2">Key Points:</h3>
+                <ul className="space-y-1 text-sm text-secondary-label">
+                  <li>• Your data is encrypted and secure</li>
+                  <li>• You own all your research data</li>
+                  <li>• We never share data without permission</li>
+                  <li>• You can delete your account anytime</li>
+                </ul>
+              </div>
+              
+              <label className="flex items-start space-x-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.termsAccepted}
+                  onChange={(e) => setFormData({ ...formData, termsAccepted: e.target.checked })}
+                  className="rounded mt-1"
+                  required
+                />
+                <span className="text-sm text-label">
+                  I agree to the{' '}
+                  <a href="/terms" target="_blank" className="text-system-blue hover:underline">
+                    Terms of Service
+                  </a>
+                </span>
+              </label>
+              
+              <label className="flex items-start space-x-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.privacyAccepted}
+                  onChange={(e) => setFormData({ ...formData, privacyAccepted: e.target.checked })}
+                  className="rounded mt-1"
+                  required
+                />
+                <span className="text-sm text-label">
+                  I agree to the{' '}
+                  <a href="/privacy" target="_blank" className="text-system-blue hover:underline">
+                    Privacy Policy
+                  </a>
+                </span>
+              </label>
+            </div>
+            
+            {/* What happens next */}
+            <div className="p-4 bg-system-blue/10 rounded-lg border border-system-blue/20">
+              <h3 className="font-medium text-system-blue mb-1">What happens next?</h3>
+              <p className="text-sm text-system-blue/80">
+                We'll send a verification email to {formData.email}. Click the link to activate your account.
+              </p>
+            </div>
+          </motion.div>
+        );
+        
+      default:
+        return null;
+    }
+  };
+  
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-system-background via-secondary-background to-system-background">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-2xl"
+      >
+        <div className="auth-container backdrop-blur-xl bg-white/70 dark:bg-black/70 rounded-2xl shadow-2xl p-8 border border-white/20">
+          {/* Progress Bar (Netflix-style) */}
+          <div className="mb-8">
+            <div className="flex justify-between mb-4">
+              {REGISTRATION_STEPS.map((step, index) => (
+                <div
+                  key={step.id}
+                  className={`text-xs ${
+                    index <= currentStep ? 'text-label' : 'text-tertiary-label'
+                  }`}
+                >
+                  <div className={`w-2 h-2 rounded-full mx-auto mb-1 ${
+                    index <= currentStep ? 'bg-system-blue' : 'bg-quaternary-fill'
+                  }`} />
+                  {step.title}
+                </div>
+              ))}
+            </div>
+            <ProgressBar value={progress} />
+          </div>
+          
+          {/* Step Content */}
+          <AnimatePresence mode="wait">
+            {renderStepContent()}
+          </AnimatePresence>
+          
+          {/* Navigation Buttons */}
+          <div className="flex justify-between mt-8">
+            <Button
+              variant="ghost"
+              onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+              disabled={currentStep === 0}
+            >
+              Back
+            </Button>
+            
+            <Button
+              variant="primary"
+              onClick={() => {
+                if (currentStep === REGISTRATION_STEPS.length - 1) {
+                  // Submit registration
+                  console.log('Submitting registration:', formData);
+                } else {
+                  setCurrentStep(currentStep + 1);
+                }
+              }}
+            >
+              {currentStep === REGISTRATION_STEPS.length - 1 ? 'Create Account' : 'Continue'}
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+```
+
+---
+
+## 5. Authentication State Management (Zustand)
+
+### 5.1 Global Authentication Store
+```typescript
+// lib/stores/auth-store.ts
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { AuthService } from '@/lib/services/auth-service';
+
+interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: 'researcher' | 'participant' | 'admin';
+  institution?: string;
+  avatar?: string;
+  preferences?: UserPreferences;
+}
+
+interface UserPreferences {
+  theme: 'light' | 'dark' | 'system';
+  language: string;
+  notifications: boolean;
+  collaborationOpen: boolean;
+}
+
+interface AuthState {
+  // State
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  sessionExpiry: Date | null;
+  
+  // Actions
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  loginWithProvider: (provider: 'google' | 'microsoft' | 'orcid') => Promise<void>;
+  logout: () => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
+  refreshSession: () => Promise<void>;
+  updateProfile: (updates: Partial<User>) => Promise<void>;
+  checkBiometric: () => Promise<boolean>;
+  
+  // Session management
+  checkSession: () => void;
+  extendSession: () => void;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      sessionExpiry: null,
+      
+      login: async (email, password, rememberMe = false) => {
+        set({ isLoading: true });
+        try {
+          const response = await AuthService.login(email, password);
+          const { user, accessToken, refreshToken, expiresIn } = response;
+          
+          // Store tokens securely
+          if (rememberMe) {
+            localStorage.setItem('refreshToken', refreshToken);
+          } else {
+            sessionStorage.setItem('refreshToken', refreshToken);
+          }
+          
+          // Calculate session expiry
+          const expiry = new Date(Date.now() + expiresIn * 1000);
+          
+          set({
+            user,
+            isAuthenticated: true,
+            sessionExpiry: expiry,
+            isLoading: false
+          });
+          
+          // Start session monitoring
+          get().checkSession();
+          
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+      
+      loginWithProvider: async (provider) => {
+        set({ isLoading: true });
+        try {
+          // Initiate OAuth flow
+          const authUrl = await AuthService.getOAuthUrl(provider);
+          window.location.href = authUrl;
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+      
+      logout: async () => {
+        try {
+          await AuthService.logout();
+        } finally {
+          // Clear all auth data
+          set({
+            user: null,
+            isAuthenticated: false,
+            sessionExpiry: null
+          });
+          localStorage.removeItem('refreshToken');
+          sessionStorage.removeItem('refreshToken');
+        }
+      },
+      
+      register: async (data) => {
+        set({ isLoading: true });
+        try {
+          await AuthService.register(data);
+          // Registration successful - redirect to verification
+          window.location.href = '/auth/verify-email';
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+      
+      refreshSession: async () => {
+        const refreshToken = localStorage.getItem('refreshToken') || 
+                           sessionStorage.getItem('refreshToken');
+        
+        if (!refreshToken) {
+          get().logout();
+          return;
+        }
+        
+        try {
+          const response = await AuthService.refreshToken(refreshToken);
+          const { user, accessToken, expiresIn } = response;
+          
+          const expiry = new Date(Date.now() + expiresIn * 1000);
+          
+          set({
+            user,
+            isAuthenticated: true,
+            sessionExpiry: expiry
+          });
+        } catch (error) {
+          get().logout();
+          throw error;
+        }
+      },
+      
+      updateProfile: async (updates) => {
+        set({ isLoading: true });
+        try {
+          const updatedUser = await AuthService.updateProfile(updates);
+          set({ user: updatedUser, isLoading: false });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+      
+      checkBiometric: async () => {
+        // Check for WebAuthn support
+        if (window.PublicKeyCredential) {
+          const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+          return available;
+        }
+        return false;
+      },
+      
+      checkSession: () => {
+        const interval = setInterval(() => {
+          const { sessionExpiry, isAuthenticated } = get();
+          
+          if (!isAuthenticated) {
+            clearInterval(interval);
+            return;
+          }
+          
+          if (sessionExpiry) {
+            const now = new Date();
+            const timeLeft = sessionExpiry.getTime() - now.getTime();
+            
+            // Show warning 5 minutes before expiry
+            if (timeLeft < 5 * 60 * 1000 && timeLeft > 4 * 60 * 1000) {
+              // Show session expiry warning
+              console.log('Session expiring soon');
+            }
+            
+            // Auto refresh 1 minute before expiry
+            if (timeLeft < 60 * 1000 && timeLeft > 0) {
+              get().refreshSession();
+            }
+            
+            // Session expired
+            if (timeLeft <= 0) {
+              get().logout();
+              clearInterval(interval);
+            }
+          }
+        }, 10000); // Check every 10 seconds
+      },
+      
+      extendSession: () => {
+        const { sessionExpiry } = get();
+        if (sessionExpiry) {
+          // Extend by 30 minutes
+          const newExpiry = new Date(sessionExpiry.getTime() + 30 * 60 * 1000);
+          set({ sessionExpiry: newExpiry });
+        }
+      }
+    }),
+    {
+      name: 'auth-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ 
+        user: state.user,
+        isAuthenticated: state.isAuthenticated 
+      })
+    }
+  )
+);
+```
+
+---
+
+## 6. Protected Routes Implementation
+
+### 6.1 Route Protection Middleware
+```typescript
+// middleware.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
+
+const publicRoutes = [
+  '/',
+  '/about',
+  '/privacy',
+  '/terms',
+  '/contact',
+  '/help',
+  '/auth/login',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/verify-email'
+];
+
+const roleBasedRoutes = {
+  researcher: ['/researcher', '/api/researcher'],
+  participant: ['/participant', '/api/participant'],
+  admin: ['/admin', '/api/admin']
+};
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  
+  // Allow public routes
+  if (publicRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+  
+  // Check for authentication token
+  const token = request.cookies.get('access-token')?.value;
+  
+  if (!token) {
+    // Redirect to login with return URL
+    const loginUrl = new URL('/auth/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+  
+  try {
+    // Verify JWT token
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
+    const { payload } = await jwtVerify(token, secret);
+    
+    // Check role-based access
+    const userRole = payload.role as string;
+    
+    // Check if user has access to the requested route
+    for (const [role, routes] of Object.entries(roleBasedRoutes)) {
+      if (routes.some(route => pathname.startsWith(route))) {
+        if (userRole !== role && userRole !== 'admin') {
+          // User doesn't have permission
+          return NextResponse.redirect(new URL('/unauthorized', request.url));
+        }
+      }
+    }
+    
+    // Add user info to request headers for downstream use
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-user-id', payload.sub as string);
+    requestHeaders.set('x-user-role', userRole);
+    
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+    
+  } catch (error) {
+    // Invalid token - redirect to login
+    const loginUrl = new URL('/auth/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)']
+};
+```
+
+---
+
+## 7. Essential Pages Implementation
+
+### 7.1 About Page with Interactive Q-Methodology Explanation
+```typescript
+// app/about/page.tsx
+'use client';
+
+import { motion } from 'framer-motion';
+import { Button } from '@/components/apple-ui';
+import { PlayCircleIcon, AcademicCapIcon, ChartBarIcon } from '@heroicons/react/24/outline';
+
+export default function AboutPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-system-background to-secondary-background">
+      {/* Hero Section with Video Background */}
+      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover opacity-20"
+        >
+          <source src="/videos/research-background.mp4" type="video/mp4" />
+        </video>
+        
+        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-system-blue to-system-purple bg-clip-text text-transparent"
+          >
+            Research Reimagined
+          </motion.h1>
+          
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-xl md:text-2xl text-secondary-label mb-8"
+          >
+            VQMethod brings Q-methodology into the digital age with world-class tools
+            inspired by industry leaders
+          </motion.p>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="flex gap-4 justify-center"
+          >
+            <Button variant="primary" size="lg">
+              Start Free Trial
+            </Button>
+            <Button variant="ghost" size="lg">
+              <PlayCircleIcon className="w-5 h-5 mr-2" />
+              Watch Demo
+            </Button>
+          </motion.div>
+        </div>
+      </section>
+      
+      {/* Interactive Q-Methodology Explanation */}
+      <section className="py-20 px-4">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-4xl font-bold text-center mb-12">
+            What is Q-Methodology?
+          </h2>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                icon: AcademicCapIcon,
+                title: 'Scientific Rigor',
+                description: 'Combines qualitative insights with quantitative analysis for robust research outcomes'
+              },
+              {
+                icon: ChartBarIcon,
+                title: 'Pattern Discovery',
+                description: 'Reveals hidden patterns in subjective viewpoints through factor analysis'
+              },
+              {
+                icon: UsersIcon,
+                title: 'Human-Centered',
+                description: 'Captures authentic human perspectives on complex topics'
+              }
+            ].map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.2 }}
+                className="text-center"
+              >
+                <div className="w-20 h-20 mx-auto mb-4 bg-system-blue/10 rounded-2xl flex items-center justify-center">
+                  <feature.icon className="w-10 h-10 text-system-blue" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                <p className="text-secondary-label">{feature.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+      
+      {/* Animated Statistics */}
+      <section className="py-20 px-4 bg-quaternary-fill/30">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 text-center">
+            {[
+              { value: '10,000+', label: 'Researchers' },
+              { value: '50,000+', label: 'Studies Completed' },
+              { value: '1M+', label: 'Q-Sorts Analyzed' },
+              { value: '99.9%', label: 'Uptime' }
+            ].map((stat, index) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <div className="text-4xl font-bold text-system-blue mb-2">
+                  {stat.value}
+                </div>
+                <div className="text-secondary-label">{stat.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+```
+
+---
+
+## 8. Navigation Enhancement with Role-Based Access
+
+### 8.1 Global Navigation Component
+```typescript
+// components/navigation/GlobalNav.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { Button } from '@/components/apple-ui';
+import { 
+  MagnifyingGlassIcon,
+  BellIcon,
+  UserCircleIcon,
+  Cog6ToothIcon,
+  ArrowRightOnRectangleIcon
+} from '@heroicons/react/24/outline';
+
+export function GlobalNav() {
+  const pathname = usePathname();
+  const { user, isAuthenticated, logout } = useAuthStore();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  
+  // Intelligent navigation based on user role
+  const getNavigationItems = () => {
+    if (!isAuthenticated) {
+      return [
+        { label: 'Features', href: '/features' },
+        { label: 'Pricing', href: '/pricing' },
+        { label: 'About', href: '/about' },
+        { label: 'Help', href: '/help' }
+      ];
+    }
+    
+    switch (user?.role) {
+      case 'researcher':
+        return [
+          { label: 'Dashboard', href: '/researcher/dashboard' },
+          { label: 'Studies', href: '/researcher/studies' },
+          { label: 'Analytics', href: '/researcher/analytics' },
+          { label: 'Collaborate', href: '/researcher/collaborate' }
+        ];
+      case 'participant':
+        return [
+          { label: 'Active Studies', href: '/participant/active' },
+          { label: 'Browse', href: '/participant/browse' },
+          { label: 'History', href: '/participant/history' },
+          { label: 'Rewards', href: '/participant/rewards' }
+        ];
+      case 'admin':
+        return [
+          { label: 'Admin Dashboard', href: '/admin' },
+          { label: 'Users', href: '/admin/users' },
+          { label: 'Studies', href: '/admin/studies' },
+          { label: 'Reports', href: '/admin/reports' }
+        ];
+      default:
+        return [];
+    }
+  };
+  
+  const navItems = getNavigationItems();
+  
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-quaternary-fill">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <div className="flex items-center space-x-8">
+            <a href="/" className="text-2xl font-bold bg-gradient-to-r from-system-blue to-system-purple bg-clip-text text-transparent">
+              VQMethod
+            </a>
+            
+            {/* Main Navigation */}
+            <div className="hidden md:flex space-x-6">
+              {navItems.map(item => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className={`text-sm font-medium transition-colors ${
+                    pathname === item.href
+                      ? 'text-system-blue'
+                      : 'text-secondary-label hover:text-label'
+                  }`}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </div>
+          
+          {/* Right Section */}
+          <div className="flex items-center space-x-4">
+            {/* Search (Tableau-style) */}
+            <button
+              onClick={() => setSearchOpen(!searchOpen)}
+              className="p-2 hover:bg-quaternary-fill rounded-lg transition-colors"
+              aria-label="Search"
+            >
+              <MagnifyingGlassIcon className="w-5 h-5 text-secondary-label" />
+            </button>
+            
+            {isAuthenticated ? (
+              <>
+                {/* Notifications */}
+                <button
+                  className="p-2 hover:bg-quaternary-fill rounded-lg transition-colors relative"
+                  aria-label="Notifications"
+                >
+                  <BellIcon className="w-5 h-5 text-secondary-label" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-system-red rounded-full" />
+                </button>
+                
+                {/* Profile Menu */}
+                <div className="relative">
+                  <button
+                    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                    className="flex items-center space-x-2 p-2 hover:bg-quaternary-fill rounded-lg transition-colors"
+                  >
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt={user.firstName}
+                        className="w-8 h-8 rounded-full"
+                      />
+                    ) : (
+                      <UserCircleIcon className="w-8 h-8 text-secondary-label" />
+                    )}
+                    <span className="text-sm font-medium text-label hidden lg:block">
+                      {user?.firstName}
+                    </span>
+                  </button>
+                  
+                  {/* Dropdown Menu */}
+                  <AnimatePresence>
+                    {profileMenuOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute right-0 mt-2 w-64 bg-white dark:bg-black rounded-xl shadow-xl border border-quaternary-fill overflow-hidden"
+                      >
+                        <div className="p-4 border-b border-quaternary-fill">
+                          <div className="font-medium text-label">{user?.firstName} {user?.lastName}</div>
+                          <div className="text-sm text-secondary-label">{user?.email}</div>
+                        </div>
+                        
+                        <div className="p-2">
+                          <a
+                            href={`/${user?.role}/settings`}
+                            className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-quaternary-fill transition-colors"
+                          >
+                            <Cog6ToothIcon className="w-5 h-5 text-secondary-label" />
+                            <span className="text-sm">Settings</span>
+                          </a>
+                          
+                          <button
+                            onClick={logout}
+                            className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-quaternary-fill transition-colors w-full text-left"
+                          >
+                            <ArrowRightOnRectangleIcon className="w-5 h-5 text-secondary-label" />
+                            <span className="text-sm">Sign Out</span>
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.location.href = '/auth/login'}
+                >
+                  Sign In
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => window.location.href = '/auth/register'}
+                >
+                  Get Started
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Search Overlay (Tableau-style) */}
+      <AnimatePresence>
+        {searchOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="border-t border-quaternary-fill bg-white/95 dark:bg-black/95 backdrop-blur-xl"
+          >
+            <div className="max-w-3xl mx-auto p-4">
+              <input
+                type="search"
+                placeholder="Search studies, researchers, or help articles..."
+                className="w-full px-4 py-3 bg-quaternary-fill/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue"
+                autoFocus
+              />
+              
+              {/* Quick Actions */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="text-xs text-secondary-label">Quick actions:</span>
+                <button className="px-3 py-1 text-xs bg-quaternary-fill rounded-full hover:bg-tertiary-fill">
+                  Create Study
+                </button>
+                <button className="px-3 py-1 text-xs bg-quaternary-fill rounded-full hover:bg-tertiary-fill">
+                  View Analytics
+                </button>
+                <button className="px-3 py-1 text-xs bg-quaternary-fill rounded-full hover:bg-tertiary-fill">
+                  Browse Help
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </nav>
+  );
+}
+```
+
+---
+
+## 9. CSS Enhancements for Production-Grade UI
+
+### 9.1 Glass Morphism and Advanced Styles
+```css
+/* styles/auth.css - Production-grade authentication styles */
+
+/* Glass morphism containers */
+.auth-container {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 
+    0 0.5px 0 1px rgba(255, 255, 255, 0.23) inset,
+    0 1px 0 0 rgba(255, 255, 255, 0.66) inset,
+    0 8px 32px rgba(31, 38, 135, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  .auth-container {
+    background: rgba(0, 0, 0, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 
+      0 0.5px 0 1px rgba(0, 0, 0, 0.23) inset,
+      0 1px 0 0 rgba(0, 0, 0, 0.66) inset,
+      0 8px 32px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* Gradient backgrounds */
+.gradient-mesh {
+  background-image: 
+    radial-gradient(at 40% 20%, hsla(210, 100%, 56%, 0.3) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, hsla(280, 100%, 60%, 0.2) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(355, 100%, 60%, 0.2) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, hsla(340, 100%, 60%, 0.2) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, hsla(240, 100%, 60%, 0.2) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, hsla(180, 100%, 60%, 0.2) 0px, transparent 50%);
+}
+
+/* Loading animations */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+/* Form field animations */
+.form-field-float {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.form-field-float:focus-within label {
+  transform: translateY(-1.5rem) scale(0.85);
+  color: var(--color-system-blue);
+}
+
+/* Button hover effects (Netflix-style) */
+.button-scale {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.button-scale:hover {
+  transform: scale(1.05);
+}
+
+.button-scale:active {
+  transform: scale(0.95);
+}
+
+/* Password strength indicator */
+.password-strength-bar {
+  position: relative;
+  overflow: hidden;
+}
+
+.password-strength-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+/* Success animations */
+@keyframes success-bounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.success-animation {
+  animation: success-bounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+```
+
+---
+
+## 10. Testing Requirements for Phase 5.5
+
+### 10.1 Authentication UI Testing
+```typescript
+// __tests__/auth/login.test.tsx
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import LoginPage from '@/app/auth/login/page';
+
+describe('Login Page', () => {
+  it('should render all authentication options', () => {
+    render(<LoginPage />);
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.getByLabelText('Password')).toBeInTheDocument();
+    expect(screen.getByText('Sign In')).toBeInTheDocument();
+    expect(screen.getByText('Sign in with SSO')).toBeInTheDocument();
+  });
+  
+  it('should detect academic domain and suggest SSO', async () => {
+    render(<LoginPage />);
+    const emailInput = screen.getByLabelText('Email');
+    
+    fireEvent.change(emailInput, { target: { value: 'user@university.edu' } });
+    
+    await waitFor(() => {
+      expect(screen.getByText('Detected: Academic Institution')).toBeInTheDocument();
+      expect(screen.getByText('Sign in with SSO')).toBeInTheDocument();
+    });
+  });
+  
+  it('should show password strength indicator', () => {
+    render(<LoginPage />);
+    const passwordInput = screen.getByLabelText('Password');
+    
+    fireEvent.change(passwordInput, { target: { value: 'weakpass' } });
+    expect(screen.getByText('25%')).toBeInTheDocument();
+    
+    fireEvent.change(passwordInput, { target: { value: 'StrongP@ss123!' } });
+    expect(screen.getByText('100%')).toBeInTheDocument();
+  });
+});
+```
+
+---
+
+This completes Part III of the Development Implementation Guide Part 1, covering the critical UI implementation for Phase 5.5.

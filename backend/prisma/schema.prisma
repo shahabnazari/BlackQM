@@ -41,6 +41,8 @@ model User {
   invitedCollaborations Collaboration[] @relation("CollaborationInviter")
   twoFactorBackups TwoFactorBackup[]
   mediaFiles MediaFile[]
+  passwordResets PasswordReset[]
+  emailVerifications EmailVerification[]
   
   @@index([email])
   @@index([tenantId])
@@ -72,6 +74,34 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@index([userId])
+}
+
+// Password reset tokens
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([token])
+}
+
+// Email verification tokens
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([token])
 }
 
 // Survey model for Q-methodology studies
@@ -388,6 +418,8 @@ model Commentary {
   @@index([responseId])
   @@index([statementId])
 }
+
+
 
 enum Role {
   ADMIN

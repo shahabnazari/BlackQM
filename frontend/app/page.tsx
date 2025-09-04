@@ -285,6 +285,187 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* All Available Pages - Testing Section */}
+      <section className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <Badge variant="warning" className="mb-4">Testing & Development</Badge>
+            <h2 className="text-3xl font-bold mb-4">All Available Pages</h2>
+            <p className="text-text-secondary">Quick access to all implemented pages for testing</p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Researcher Pages */}
+            <Card className="p-6">
+              <h3 className="text-xl font-semibold mb-6 text-system-blue">
+                🔬 Researcher Interface
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2">Dashboard & Studies</h4>
+                  <div className="space-y-2">
+                    <Link href="/dashboard" className="block">
+                      <div className="p-3 bg-surface-secondary rounded-lg hover:bg-surface-tertiary transition-colors">
+                        <span className="text-sm font-medium">Dashboard</span>
+                        <span className="text-xs text-text-secondary block mt-1">/dashboard</span>
+                      </div>
+                    </Link>
+                    <Link href="/studies" className="block">
+                      <div className="p-3 bg-surface-secondary rounded-lg hover:bg-surface-tertiary transition-colors">
+                        <span className="text-sm font-medium">Studies List</span>
+                        <span className="text-xs text-text-secondary block mt-1">/studies</span>
+                      </div>
+                    </Link>
+                    <Link href="/studies/create" className="block">
+                      <div className="p-3 bg-surface-secondary rounded-lg hover:bg-surface-tertiary transition-colors">
+                        <span className="text-sm font-medium">Create Study</span>
+                        <span className="text-xs text-text-secondary block mt-1">/studies/create</span>
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Visualizations</h4>
+                  <div className="space-y-2">
+                    <Link href="/visualization-demo" className="block">
+                      <div className="p-3 bg-surface-secondary rounded-lg hover:bg-surface-tertiary transition-colors">
+                        <span className="text-sm font-medium">Visualization Demo</span>
+                        <span className="text-xs text-text-secondary block mt-1">/visualization-demo</span>
+                      </div>
+                    </Link>
+                    <Link href="/visualization-demo/q-methodology" className="block">
+                      <div className="p-3 bg-surface-secondary rounded-lg hover:bg-surface-tertiary transition-colors">
+                        <span className="text-sm font-medium">Q-Methodology Visualizations</span>
+                        <span className="text-xs text-text-secondary block mt-1">/visualization-demo/q-methodology</span>
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Not Yet Implemented</h4>
+                  <div className="space-y-2 opacity-50">
+                    <div className="p-3 bg-surface-secondary rounded-lg">
+                      <span className="text-sm font-medium line-through">Settings</span>
+                      <span className="text-xs text-text-secondary block mt-1">/settings (empty)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Participant Pages */}
+            <Card className="p-6">
+              <h3 className="text-xl font-semibold mb-6 text-system-green">
+                👥 Participant Interface
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2">Active Pages</h4>
+                  <div className="space-y-2">
+                    <Link href="/study/test-token" className="block">
+                      <div className="p-3 bg-surface-secondary rounded-lg hover:bg-surface-tertiary transition-colors">
+                        <span className="text-sm font-medium">Study Journey (Test Token)</span>
+                        <span className="text-xs text-text-secondary block mt-1">/study/[token] - Dynamic route</span>
+                        <Badge variant="info" className="mt-2 text-xs">8-Step Journey</Badge>
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Not Yet Implemented</h4>
+                  <div className="space-y-2 opacity-50">
+                    <div className="p-3 bg-surface-secondary rounded-lg">
+                      <span className="text-sm font-medium line-through">Join Study</span>
+                      <span className="text-xs text-text-secondary block mt-1">/join (empty)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* API & Backend */}
+            <Card className="p-6">
+              <h3 className="text-xl font-semibold mb-6 text-system-orange">
+                🔧 Backend & API
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2">API Endpoints</h4>
+                  <div className="space-y-2">
+                    <a href="http://localhost:3001/api/docs" target="_blank" rel="noopener noreferrer" className="block">
+                      <div className="p-3 bg-surface-secondary rounded-lg hover:bg-surface-tertiary transition-colors">
+                        <span className="text-sm font-medium">Swagger API Documentation</span>
+                        <span className="text-xs text-text-secondary block mt-1">http://localhost:3001/api/docs</span>
+                        <Badge variant="success" className="mt-2 text-xs">Interactive</Badge>
+                      </div>
+                    </a>
+                    <a href="http://localhost:5555" target="_blank" rel="noopener noreferrer" className="block">
+                      <div className="p-3 bg-surface-secondary rounded-lg hover:bg-surface-tertiary transition-colors">
+                        <span className="text-sm font-medium">Prisma Studio</span>
+                        <span className="text-xs text-text-secondary block mt-1">http://localhost:5555</span>
+                        <Badge variant="success" className="mt-2 text-xs">Database Browser</Badge>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Health Checks</h4>
+                  <div className="space-y-2">
+                    <a href="http://localhost:3001/api" target="_blank" rel="noopener noreferrer" className="block">
+                      <div className="p-3 bg-surface-secondary rounded-lg hover:bg-surface-tertiary transition-colors">
+                        <span className="text-sm font-medium">API Health</span>
+                        <span className="text-xs text-text-secondary block mt-1">http://localhost:3001/api</span>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Development Tools */}
+            <Card className="p-6">
+              <h3 className="text-xl font-semibold mb-6 text-system-purple">
+                🛠️ Development Tools
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2">Useful Commands</h4>
+                  <div className="space-y-2">
+                    <div className="p-3 bg-surface-secondary rounded-lg font-mono text-xs">
+                      <p className="text-text-secondary mb-1"># Validate directory structure</p>
+                      <p>npm run validate:structure</p>
+                    </div>
+                    <div className="p-3 bg-surface-secondary rounded-lg font-mono text-xs">
+                      <p className="text-text-secondary mb-1"># Start development servers</p>
+                      <p>npm run dev:safe</p>
+                    </div>
+                    <div className="p-3 bg-surface-secondary rounded-lg font-mono text-xs">
+                      <p className="text-text-secondary mb-1"># Run tests</p>
+                      <p>npm test</p>
+                    </div>
+                    <div className="p-3 bg-surface-secondary rounded-lg font-mono text-xs">
+                      <p className="text-text-secondary mb-1"># Check TypeScript</p>
+                      <p>npm run typecheck</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          <div className="mt-8 p-4 bg-surface-secondary rounded-lg">
+            <p className="text-sm text-text-secondary text-center">
+              <strong>Note:</strong> Routes now use parentheses for groups: <code className="font-mono">(researcher)</code> and <code className="font-mono">(participant)</code>.
+              These don't affect the URL structure.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="py-12 px-6 border-t border-border">
         <div className="max-w-7xl mx-auto text-center">

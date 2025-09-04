@@ -7,6 +7,34 @@
 
 ---
 
+## ⚠️ COMMON MISTAKES TO AVOID
+
+### 1. Route Groups MUST Use Parentheses
+```
+❌ WRONG:
+/frontend/app/researcher/     # Missing parentheses
+/frontend/app/participant/    # Missing parentheses
+
+✅ CORRECT:
+/frontend/app/(researcher)/   # Parentheses required for route groups
+/frontend/app/(participant)/  # Parentheses required for route groups
+```
+**Why:** Next.js App Router requires parentheses for route groups that don't affect the URL structure.
+
+### 2. Public Directory is REQUIRED
+```
+❌ WRONG:
+/frontend/images/logo.png     # Images in wrong location
+/frontend/fonts/custom.woff   # Fonts in wrong location
+
+✅ CORRECT:
+/frontend/public/images/logo.png    # Static assets in public
+/frontend/public/fonts/custom.woff  # Fonts in public
+```
+**Why:** Next.js serves static assets from the public directory.
+
+---
+
 ## 🚨 CRITICAL RULES - VIOLATIONS WILL BLOCK COMMITS
 
 ### Rule #1: NO Frontend Files in Root Directory
@@ -88,8 +116,8 @@ frontend/
 ├── coverage/             // Test coverage (git-ignored)
 │
 ├── app/                  // Next.js App Router ONLY
-│   ├── (researcher)/     // Researcher routes ONLY
-│   ├── (participant)/    // Participant routes ONLY
+│   ├── (researcher)/     // ⚠️ MUST USE PARENTHESES - Route group for researcher pages
+│   ├── (participant)/    // ⚠️ MUST USE PARENTHESES - Route group for participant pages
 │   ├── globals.css       // Global styles
 │   ├── layout.tsx        // Root layout
 │   └── page.tsx          // Landing page

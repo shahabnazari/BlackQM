@@ -201,6 +201,46 @@ class RepositoryValidator {
         this.log('Frontend package.json should have name: @vqmethod/frontend', 'warning');
       }
     }
+    
+    // Check for route groups with parentheses
+    const appPath = path.join(this.rootPath, 'frontend', 'app');
+    if (fs.existsSync(appPath)) {
+      // Check for incorrect route group naming
+      if (this.checkDirExists('frontend/app/researcher')) {
+        this.violations.push('Route group "researcher" MUST be named "(researcher)" with parentheses');
+        this.log('Route group "researcher" missing parentheses - should be "(researcher)"', 'error');
+      }
+      if (this.checkDirExists('frontend/app/participant')) {
+        this.violations.push('Route group "participant" MUST be named "(participant)" with parentheses');
+        this.log('Route group "participant" missing parentheses - should be "(participant)"', 'error');
+      }
+      
+      // Check that correct route groups exist
+      if (!this.checkDirExists('frontend/app/(researcher)')) {
+        this.violations.push('Required route group "(researcher)" is missing in frontend/app/');
+        this.log('Required route group "(researcher)" not found', 'error');
+      }
+      if (!this.checkDirExists('frontend/app/(participant)')) {
+        this.violations.push('Required route group "(participant)" is missing in frontend/app/');
+        this.log('Required route group "(participant)" not found', 'error');
+      }
+    }
+    
+    // Check for public directory
+    if (!this.checkDirExists('frontend/public')) {
+      this.violations.push('Required directory "frontend/public" is missing');
+      this.log('Public directory missing - required for static assets', 'error');
+    } else {
+      // Check for subdirectories
+      if (!this.checkDirExists('frontend/public/images')) {
+        this.warnings.push('Recommended directory "frontend/public/images" is missing');
+        this.log('Public images directory missing', 'warning');
+      }
+      if (!this.checkDirExists('frontend/public/fonts')) {
+        this.warnings.push('Recommended directory "frontend/public/fonts" is missing');
+        this.log('Public fonts directory missing', 'warning');
+      }
+    }
   }
 
   validateBackendStructure() {

@@ -85,7 +85,7 @@ export default function Welcome({ onComplete, onBack }: WelcomeProps) {
             Back
           </Button>
           <Button variant="primary" size="large" onClick={() => onComplete()}>
-            Continue to Consent
+            I Consent
           </Button>
         </div>
       </div>

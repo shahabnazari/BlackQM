@@ -1,10 +1,20 @@
 import { Module } from '@nestjs/common';
-import { RateLimitingService } from './services/rate-limiting.service';
-import { RateLimitingGuard } from './guards/rate-limiting.guard';
-import { PrismaService } from '../../common/prisma.service';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
-  providers: [RateLimitingService, RateLimitingGuard, PrismaService],
-  exports: [RateLimitingService, RateLimitingGuard],
+  imports: [
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          ttl: config.get('THROTTLE_TTL', 60000), // 60 seconds
+          limit: config.get('THROTTLE_LIMIT', 10), // 10 requests per TTL
+        },
+      ],
+    }),
+  ],
+  exports: [ThrottlerModule],
 })
 export class RateLimitingModule {}

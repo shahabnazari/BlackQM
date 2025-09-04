@@ -127,7 +127,7 @@ function validateFile(filePath) {
 }
 
 function validateComponents() {
-  const componentsDir = path.join(__dirname, '..', 'components', 'apple-ui');
+  const componentsDir = path.join(__dirname, '..', 'frontend', 'components', 'apple-ui');
   const components = [];
   
   // Find all component files

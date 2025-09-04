@@ -46,6 +46,16 @@ export default function ThankYou() {
           </p>
         </div>
 
+        <div className="bg-system-green/10 border border-system-green/20 p-4 rounded-lg mb-4">
+          <h2 className="font-semibold text-label mb-2">Completion Code</h2>
+          <p className="font-mono text-xl text-system-green">
+            STUDY-{Math.random().toString(36).substring(2, 11).toUpperCase()}
+          </p>
+          <p className="text-sm text-secondary-label mt-2">
+            Please save this code for your records
+          </p>
+        </div>
+
         <div className="bg-quaternary-fill/30 p-4 rounded-lg">
           <h2 className="font-semibold text-label mb-2">What happens next?</h2>
           <ul className="text-sm text-secondary-label space-y-1 text-left">

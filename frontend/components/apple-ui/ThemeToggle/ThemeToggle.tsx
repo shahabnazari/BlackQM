@@ -13,17 +13,19 @@ export function ThemeToggle({ className = '', size = 'md' }: ThemeToggleProps) {
 
   useEffect(() => {
     setMounted(true);
-    try {
-      const savedTheme = localStorage.getItem('theme');
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      
-      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-        setIsDark(true);
-        document.documentElement.classList.add('dark');
-      }
-    } catch (error) {
-      // Handle localStorage not available (e.g., in tests)
-      console.warn('localStorage not available:', error);
+    
+    // Check for saved theme preference or default to light
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    const shouldBeDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    setIsDark(shouldBeDark);
+    
+    // Apply the theme class to the document
+    if (shouldBeDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
   }, []);
 
@@ -33,31 +35,12 @@ export function ThemeToggle({ className = '', size = 'md' }: ThemeToggleProps) {
     
     if (newTheme) {
       document.documentElement.classList.add('dark');
-      try {
-        localStorage.setItem('theme', 'dark');
-      } catch (error) {
-        console.warn('localStorage not available:', error);
-      }
+      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      try {
-        localStorage.setItem('theme', 'light');
-      } catch (error) {
-        console.warn('localStorage not available:', error);
-      }
+      localStorage.setItem('theme', 'light');
     }
   };
-
-  if (!mounted) {
-    return (
-      <button 
-        className={`rounded-lg bg-surface-secondary p-2 ${className}`}
-        aria-label="Loading theme toggle"
-      >
-        <div className="h-4 w-4 animate-pulse bg-fill rounded" />
-      </button>
-    );
-  }
 
   const sizeClasses = {
     sm: 'h-8 w-8 p-1.5',
@@ -65,17 +48,24 @@ export function ThemeToggle({ className = '', size = 'md' }: ThemeToggleProps) {
     lg: 'h-12 w-12 p-3'
   };
 
+  // Always render the same structure to avoid hydration errors
+  const buttonClass = `rounded-lg bg-surface-secondary hover:bg-fill dark:bg-surface dark:hover:bg-surface-secondary transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${sizeClasses[size]} ${className}`;
+  
   return (
     <button
-      onClick={toggleTheme}
-      className={`rounded-lg bg-surface-secondary hover:bg-fill dark:bg-surface dark:hover:bg-surface-secondary transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${sizeClasses[size]} ${className}`}
-      aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+      onClick={mounted ? toggleTheme : undefined}
+      className={buttonClass}
+      aria-label={mounted ? `Switch to ${isDark ? 'light' : 'dark'} mode` : 'Theme toggle'}
+      disabled={!mounted}
+      suppressHydrationWarning
     >
-      {isDark ? (
-        <SunIcon className="h-full w-full text-yellow-500" />
-      ) : (
-        <MoonIcon className="h-full w-full text-text-secondary" />
-      )}
+      <div className="h-full w-full" suppressHydrationWarning>
+        {mounted && isDark ? (
+          <SunIcon className="h-full w-full text-yellow-500" />
+        ) : (
+          <MoonIcon className="h-full w-full text-text-secondary" />
+        )}
+      </div>
     </button>
   );
 }

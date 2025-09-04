@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { studyApi } from '@/lib/api/study';
+import { formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/apple-ui/Button';
 import { Card } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/apple-ui/Badge';
@@ -149,7 +150,7 @@ export default function StudiesPage() {
                 <div className="flex justify-between">
                   <span className="text-tertiary-label">Updated:</span>
                   <span className="font-medium text-label">
-                    {new Date(study.updatedAt).toLocaleDateString()}
+                    {formatDate(study.updatedAt, { format: 'medium' })}
                   </span>
                 </div>
               </div>

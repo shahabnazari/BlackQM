@@ -22,9 +22,9 @@ export default function ResearcherLayout({
             <h1 className="text-xl font-semibold text-label">VQMethod Researcher</h1>
           </div>
           <div className="flex items-center gap-4">
-            <a href="/dashboard" className="text-secondary-label hover:text-label">Dashboard</a>
-            <a href="/studies" className="text-secondary-label hover:text-label">Studies</a>
-            <a href="/analytics" className="text-secondary-label hover:text-label">Analytics</a>
+            <a href="/researcher/dashboard" className="text-secondary-label hover:text-label">Dashboard</a>
+            <a href="/researcher/studies" className="text-secondary-label hover:text-label">Studies</a>
+            <a href="/researcher/analytics" className="text-secondary-label hover:text-label">Analytics</a>
           </div>
         </nav>
       </header>

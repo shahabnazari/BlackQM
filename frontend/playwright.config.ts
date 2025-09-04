@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 const E2E_PORT = process.env.E2E_PORT || '3333';
 
 export default defineConfig({
-  testDir: './frontend/e2e',
+  testDir: './e2e',
   testMatch: '**/*.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -30,7 +30,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run dev -- -p ${E2E_PORT}`,
+    command: `next dev -p ${E2E_PORT}`,
     url: `http://localhost:${E2E_PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
