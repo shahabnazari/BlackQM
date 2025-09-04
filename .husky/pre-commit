@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 echo "🔍 Running VQMethod Repository Standards Check..."
 
 # Check for forbidden files in root directory

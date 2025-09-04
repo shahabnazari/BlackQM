@@ -92,3 +92,7 @@ pnpm-lock.yaml
 # Misc
 .vercel
 .turbo
+# Log files
+*.log
+logs/
+
