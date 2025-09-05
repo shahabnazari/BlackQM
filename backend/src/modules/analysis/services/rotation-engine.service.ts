@@ -1,5 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import * as math from 'mathjs';
+import {
+  RotationMethod,
+  RotationOptions,
+  RotationResult,
+} from '../types/rotation.types';
+import { StatisticsService } from './statistics.service';
+import { AnalysisLoggerService } from './analysis-logger.service';
 
 /**
  * Rotation Engine Service
@@ -8,6 +15,176 @@ import * as math from 'mathjs';
  */
 @Injectable()
 export class RotationEngineService {
+  constructor(
+    private readonly statisticsService: StatisticsService,
+    private readonly logger: AnalysisLoggerService,
+  ) {}
+
+  /**
+   * Main rotation method that delegates to specific rotation methods
+   */
+  async rotate(options: RotationOptions): Promise<RotationResult> {
+    // Validate input
+    if (!options.loadingMatrix || options.loadingMatrix.length === 0) {
+      throw new Error('Loading matrix cannot be empty');
+    }
+
+    const numVariables = options.loadingMatrix.length;
+    const numFactors = options.loadingMatrix[0]?.length || 0;
+
+    if (numFactors === 0) {
+      throw new Error('Loading matrix has no factors');
+    }
+
+    if (numFactors === 1) {
+      throw new Error('Cannot rotate single factor');
+    }
+
+    // Validate rotation angles for manual rotation
+    if (options.method === RotationMethod.MANUAL && !options.rotationAngles) {
+      throw new Error('Rotation angles required for manual rotation');
+    }
+
+    // Validate kappa for Promax
+    if (options.method === RotationMethod.PROMAX) {
+      if (options.kappa !== undefined && options.kappa <= 1) {
+        throw new Error('Kappa must be greater than 1');
+      }
+    }
+
+    // Validate gamma for Oblimin
+    if (options.method === RotationMethod.OBLIMIN) {
+      if (
+        options.gamma !== undefined &&
+        (options.gamma < -1 || options.gamma > 1)
+      ) {
+        throw new Error('Gamma must be between -1 and 1');
+      }
+    }
+
+    // Delegate to appropriate method
+    let result: any;
+    switch (options.method) {
+      case RotationMethod.VARIMAX:
+        result = await this.rotateVarimax(
+          options.loadingMatrix,
+          options.normalize ?? true,
+          options.maxIterations,
+          options.convergenceCriterion,
+        );
+        break;
+      case RotationMethod.QUARTIMAX:
+        result = await this.rotateQuartimax(
+          options.loadingMatrix,
+          options.maxIterations,
+          options.convergenceCriterion,
+        );
+        break;
+      case RotationMethod.PROMAX:
+        result = await this.rotatePromax(
+          options.loadingMatrix,
+          options.kappa ?? 4,
+        );
+        break;
+      case RotationMethod.OBLIMIN:
+        result = await this.rotateOblimin(
+          options.loadingMatrix,
+          options.gamma ?? 0,
+          options.maxIterations,
+          options.convergenceCriterion,
+        );
+        break;
+      case RotationMethod.MANUAL:
+        result = await this.rotateManual(
+          options.loadingMatrix,
+          options.rotationAngles!.theta ?? 0,
+          options.rotationAngles!.phi ?? 0,
+          options.rotationAngles!.psi ?? 0,
+        );
+        break;
+      case RotationMethod.NONE:
+        result = {
+          rotatedLoadings: options.loadingMatrix,
+          rotationMatrix: this.createIdentityMatrix(numFactors),
+          iterations: 0,
+          converged: true,
+        };
+        break;
+      default:
+        throw new Error(`Unsupported rotation method: ${options.method}`);
+    }
+
+    // Format result to match RotationResult interface
+    const rotationResult: RotationResult = {
+      method: options.method,
+      rotatedLoadings:
+        result.rotatedLoadings || result.loadings || options.loadingMatrix,
+      rotationMatrix:
+        result.rotationMatrix || this.createIdentityMatrix(numFactors),
+      iterations: result.iterations || 0,
+      converged: result.converged !== undefined ? result.converged : true,
+      oblique: [RotationMethod.PROMAX, RotationMethod.OBLIMIN].includes(
+        options.method,
+      ),
+      normalized: options.normalize,
+      patternMatrix: result.patternMatrix,
+      structureMatrix: result.structureMatrix,
+      factorCorrelations: result.factorCorrelations,
+      quality: this.calculateRotationQuality(
+        result.rotatedLoadings || options.loadingMatrix,
+      ),
+      warnings: result.warnings || [],
+    };
+
+    // Add warnings for non-convergence
+    if (!rotationResult.converged) {
+      rotationResult.warnings?.push('Rotation did not converge');
+    }
+
+    return rotationResult;
+  }
+
+  private createIdentityMatrix(size: number): number[][] {
+    const matrix: number[][] = [];
+    for (let i = 0; i < size; i++) {
+      matrix[i] = [];
+      for (let j = 0; j < size; j++) {
+        matrix[i][j] = i === j ? 1 : 0;
+      }
+    }
+    return matrix;
+  }
+
+  private calculateRotationQuality(loadings: number[][]): any {
+    const threshold = 0.1;
+    let hyperplaneCount = 0;
+    let crossLoadings = 0;
+    const complexities: number[] = [];
+
+    for (const row of loadings) {
+      const significantLoadings = row.filter((l) => Math.abs(l) > 0.4).length;
+      complexities.push(significantLoadings);
+
+      if (row.every((l) => Math.abs(l) < threshold)) {
+        hyperplaneCount++;
+      }
+
+      if (significantLoadings > 1) {
+        crossLoadings++;
+      }
+    }
+
+    const simplicityIndex = 1 - crossLoadings / loadings.length;
+    const complexityIndex =
+      complexities.reduce((a, b) => a + b, 0) / complexities.length;
+
+    return {
+      simplicityIndex,
+      hyperplaneCount,
+      complexityIndex,
+      crossLoadings,
+    };
+  }
   /**
    * Varimax Rotation (Orthogonal)
    * Most common rotation method in Q-methodology

@@ -8,7 +8,9 @@ import { StatisticalOutputService } from './services/statistical-output.service'
 import { PQMethodCompatibilityService } from './services/pqmethod-compatibility.service';
 import { CacheService } from './services/cache.service';
 import { AnalysisLoggerService } from './services/analysis-logger.service';
+import { StatisticsService } from './services/statistics.service';
 import { AnalysisController } from './controllers/analysis.controller';
+import { AnalysisGateway } from './gateways/analysis.gateway';
 import { PrismaService } from '../../common/prisma.service';
 
 /**
@@ -37,7 +39,11 @@ import { PrismaService } from '../../common/prisma.service';
     FactorExtractionService,
     RotationEngineService,
     StatisticalOutputService,
+    StatisticsService,
     PQMethodCompatibilityService,
+
+    // Real-time WebSocket Gateway
+    AnalysisGateway,
 
     // Enterprise Features
     CacheService,
@@ -52,6 +58,7 @@ import { PrismaService } from '../../common/prisma.service';
     FactorExtractionService,
     RotationEngineService,
     StatisticalOutputService,
+    StatisticsService,
     PQMethodCompatibilityService,
     CacheService,
     AnalysisLoggerService,

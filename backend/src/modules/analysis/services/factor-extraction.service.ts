@@ -1,5 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import * as math from 'mathjs';
+import {
+  ExtractionMethod,
+  ExtractionOptions,
+  ExtractionResult,
+} from '../types/extraction.types';
+import { StatisticsService } from './statistics.service';
+import { AnalysisLoggerService } from './analysis-logger.service';
 
 /**
  * Factor Extraction Service
@@ -8,6 +15,157 @@ import * as math from 'mathjs';
  */
 @Injectable()
 export class FactorExtractionService {
+  constructor(
+    private readonly statisticsService: StatisticsService,
+    private readonly logger: AnalysisLoggerService,
+  ) {}
+
+  /**
+   * Main extraction method that delegates to specific extraction methods
+   */
+  async extractFactors(options: ExtractionOptions): Promise<ExtractionResult> {
+    // Validate input
+    if (!options.correlationMatrix || options.correlationMatrix.length === 0) {
+      throw new Error('Correlation matrix cannot be empty');
+    }
+
+    const n = options.correlationMatrix.length;
+
+    // Check if matrix is square
+    if (options.correlationMatrix.some((row) => row.length !== n)) {
+      throw new Error('Correlation matrix must be square');
+    }
+
+    // Check for invalid correlations
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        const val = options.correlationMatrix[i][j];
+        if (i === j && Math.abs(val - 1) > 0.01) {
+          throw new Error(
+            'Invalid correlation matrix: diagonal elements must be 1',
+          );
+        }
+        if (Math.abs(val) > 1.01) {
+          throw new Error(
+            'Invalid correlation matrix: correlations must be between -1 and 1',
+          );
+        }
+      }
+    }
+
+    // Validate number of factors
+    const numberOfFactors =
+      options.numberOfFactors || this.determineNumberOfFactors(options);
+    if (numberOfFactors > n) {
+      throw new Error('Number of factors cannot exceed number of variables');
+    }
+    if (numberOfFactors < 1) {
+      throw new Error('Number of factors must be positive');
+    }
+
+    // Delegate to appropriate method
+    let result: any;
+    switch (options.method) {
+      case ExtractionMethod.CENTROID:
+        result = await this.extractFactorsCentroid(
+          options.correlationMatrix,
+          numberOfFactors,
+        );
+        break;
+      case ExtractionMethod.PCA:
+        result = await this.extractFactorsPCA(
+          options.correlationMatrix,
+          numberOfFactors,
+        );
+        break;
+      case ExtractionMethod.ML:
+        result = await this.extractFactorsML(
+          options.correlationMatrix,
+          numberOfFactors,
+          options.maxIterations,
+          options.convergenceCriterion,
+        );
+        break;
+      default:
+        throw new Error(`Unsupported extraction method: ${options.method}`);
+    }
+
+    // Format result to match ExtractionResult interface
+    const eigenvalues = result.eigenvalues || [];
+    const variance = eigenvalues.map(
+      (ev: number) =>
+        (ev / eigenvalues.reduce((a: number, b: number) => a + b, 0)) * 100,
+    );
+    const cumulativeVariance = variance.reduce(
+      (acc: number[], v: number, i: number) => {
+        if (i === 0) return [v];
+        return [...acc, acc[i - 1] + v];
+      },
+      [] as number[],
+    );
+
+    const extractionResult: ExtractionResult = {
+      method: options.method,
+      eigenvalues: eigenvalues,
+      factorLoadings: result.factors || result.loadings || [],
+      communalities: result.communalities || [],
+      variance: variance,
+      cumulativeVariance: cumulativeVariance,
+      numberOfFactors: numberOfFactors,
+      iterations: result.iterations,
+      converged: result.converged !== undefined ? result.converged : true,
+      heywoodCase:
+        result.heywoodCase || this.detectHeywoodCase(result.communalities),
+      warnings: result.warnings || [],
+      screeData: eigenvalues.map((ev: number, i: number) => ({
+        factor: i + 1,
+        eigenvalue: ev,
+        variance: variance[i],
+        cumulativeVariance: cumulativeVariance[i],
+      })),
+      chiSquare: result.chiSquare,
+      degreesOfFreedom: result.degreesOfFreedom,
+    };
+
+    // Add warnings for potential issues
+    if (extractionResult.heywoodCase) {
+      extractionResult.warnings?.push('Heywood case detected');
+    }
+
+    return extractionResult;
+  }
+
+  private determineNumberOfFactors(options: ExtractionOptions): number {
+    // Use Kaiser criterion (eigenvalues > 1) if minEigenvalue is specified
+    if (options.minEigenvalue !== undefined) {
+      const eigenvalues = this.statisticsService.calculateEigenvalues(
+        options.correlationMatrix,
+      );
+      return eigenvalues.filter(
+        (ev: number) => ev > (options.minEigenvalue || 1),
+      ).length;
+    }
+
+    // Default to extracting factors that explain 70% of variance
+    const eigenvalues = this.statisticsService.calculateEigenvalues(
+      options.correlationMatrix,
+    );
+    const totalVariance = eigenvalues.reduce((a, b) => a + b, 0);
+    let cumulativeVariance = 0;
+    let numFactors = 0;
+
+    for (const ev of eigenvalues) {
+      cumulativeVariance += ev;
+      numFactors++;
+      if (cumulativeVariance / totalVariance > 0.7) break;
+    }
+
+    return numFactors;
+  }
+
+  private detectHeywoodCase(communalities: number[]): boolean {
+    return communalities.some((c) => c > 1.0);
+  }
   /**
    * Perform Centroid Factor Extraction (Brown's Method)
    * Industry standard for Q-methodology

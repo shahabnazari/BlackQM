@@ -92,15 +92,29 @@ if [ -f "./scripts/validate-structure.js" ]; then
   fi
 fi
 
+# Run file placement validation
+if [ -f "./scripts/validate-file-placement.js" ]; then
+  echo "🔍 Running Next.js file placement validation..."
+  node ./scripts/validate-file-placement.js
+  if [ $? -ne 0 ]; then
+    echo "❌ File placement validation failed!"
+    echo "📚 See FILE_PLACEMENT_RULES.md for help"
+    exit 1
+  fi
+fi
+
 # Check for violations
 if [ $VIOLATIONS -gt 0 ]; then
   echo ""
   echo "❌ COMMIT BLOCKED: $VIOLATIONS repository standard violations found!"
   echo ""
-  echo "📚 Please read: Lead/REPOSITORY_STANDARDS.md"
-  echo "   for complete guidelines on file organization."
+  echo "📚 See FILE_PLACEMENT_RULES.md for complete guidelines"
   echo ""
-  echo "🔧 Quick fix:"
+  echo "🔧 Quick fixes available:"
+  echo "   • Run 'npm run organize' to automatically fix file placement"
+  echo "   • Run 'npm run organize:check' to see what would be moved"
+  echo ""
+  echo "📁 Manual fix:"
   echo "   1. Move all frontend configs to frontend/ directory"
   echo "   2. Move all backend configs to backend/ directory"
   echo "   3. Keep root directory clean (only workspace files)"

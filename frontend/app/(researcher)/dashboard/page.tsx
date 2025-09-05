@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import {
   Button,
   Card,
@@ -270,6 +271,12 @@ export default function ResearcherDashboard() {
                   <span className="mr-2">👥</span>
                   Invite Participants
                 </Button>
+                <Link href="/analysis/q-methodology" className="w-full">
+                  <Button fullWidth variant="secondary">
+                    <span className="mr-2">🧪</span>
+                    Q-Analysis Engine
+                  </Button>
+                </Link>
                 <Button fullWidth variant="secondary">
                   <span className="mr-2">📊</span>
                   Export Analytics

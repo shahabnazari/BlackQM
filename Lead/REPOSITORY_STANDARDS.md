@@ -1,4 +1,5 @@
 # 📐 VQMethod Repository Standards & Guidelines
+
 ## Mandatory Rules for World-Class Code Organization
 
 **Version:** 1.0  
@@ -10,6 +11,7 @@
 ## ⚠️ COMMON MISTAKES TO AVOID
 
 ### 1. Route Groups MUST Use Parentheses
+
 ```
 ❌ WRONG:
 /frontend/app/researcher/     # Missing parentheses
@@ -19,9 +21,11 @@
 /frontend/app/(researcher)/   # Parentheses required for route groups
 /frontend/app/(participant)/  # Parentheses required for route groups
 ```
+
 **Why:** Next.js App Router requires parentheses for route groups that don't affect the URL structure.
 
 ### 2. Public Directory is REQUIRED
+
 ```
 ❌ WRONG:
 /frontend/images/logo.png     # Images in wrong location
@@ -31,6 +35,7 @@
 /frontend/public/images/logo.png    # Static assets in public
 /frontend/public/fonts/custom.woff  # Fonts in public
 ```
+
 **Why:** Next.js serves static assets from the public directory.
 
 ---
@@ -38,6 +43,7 @@
 ## 🚨 CRITICAL RULES - VIOLATIONS WILL BLOCK COMMITS
 
 ### Rule #1: NO Frontend Files in Root Directory
+
 ```
 ❌ FORBIDDEN:
 /tsconfig.json         # Frontend TypeScript config
@@ -55,6 +61,7 @@
 ```
 
 ### Rule #2: NO Backend Files in Root Directory
+
 ```
 ❌ FORBIDDEN:
 /nest-cli.json        # Backend NestJS config
@@ -68,6 +75,7 @@
 ```
 
 ### Rule #3: Root Directory ONLY Contains
+
 ```
 ✅ ALLOWED IN ROOT:
 /frontend/            # Frontend workspace
@@ -75,8 +83,10 @@
 /scripts/             # Shared automation scripts
 /infrastructure/      # Docker, K8s configs
 /Lead/               # Documentation
+/logs/               # PM2 logs directory
 /.github/            # GitHub workflows
 /.husky/             # Git hooks
+/.vscode/            # VS Code workspace settings
 /package.json        # Workspace configuration ONLY
 /package-lock.json   # Lock file
 /.gitignore          # Git ignore rules
@@ -86,14 +96,23 @@
 /README.md           # Project readme
 /LICENSE             # License file
 /CONTRIBUTING.md     # Contribution guide
-/*.md                # Root-level documentation ONLY
+/SECURITY.md         # Security policy
+/FILE_PLACEMENT_RULES.md  # File organization guide
+/CLAUDE.md           # Claude AI context file
+/ecosystem.config.js # PM2 configuration
+/docker-compose.yml  # Docker configuration
+/docker-compose.*.yml # Environment-specific Docker configs
+/port-config.json    # Port configuration
+/.env.ports          # Port environment variables
+/.env.example        # Environment variable template
 
 ❌ FORBIDDEN IN ROOT:
-- Any application source code
-- Any framework-specific configs
-- Any build outputs
-- Any test files
+- Any application source code (*.ts, *.tsx, *.js, *.jsx)
+- Any framework-specific configs (next.config.js, nest-cli.json)
+- Any build outputs (.next/, dist/)
+- Any test files (*.test.ts, *.spec.ts)
 - Any component files
+- Shell scripts (*.sh) - must be in scripts/
 ```
 
 ---
@@ -101,6 +120,7 @@
 ## 📁 Strict Directory Structure Rules
 
 ### Frontend Structure
+
 ```typescript
 frontend/
 ├── package.json           // MUST have name: "@vqmethod/frontend"
@@ -150,6 +170,7 @@ frontend/
 ```
 
 ### Backend Structure
+
 ```typescript
 backend/
 ├── package.json          // MUST have name: "@vqmethod/backend"
@@ -196,6 +217,7 @@ backend/
 ## 🛡️ Enforcement Mechanisms
 
 ### 1. Pre-Commit Hook (Automatic)
+
 ```bash
 #!/bin/bash
 # .husky/pre-commit
@@ -215,6 +237,7 @@ npm run validate:structure
 ```
 
 ### 2. Structure Validation Script
+
 ```javascript
 // scripts/validate-structure.js
 const RULES = {
@@ -224,24 +247,25 @@ const RULES = {
     'next.config.js',
     'vitest.config.ts',
     'nest-cli.json',
-    '.next/'
+    '.next/',
   ],
   frontendRequired: [
     'frontend/package.json',
     'frontend/next.config.js',
-    'frontend/tsconfig.json'
+    'frontend/tsconfig.json',
   ],
   backendRequired: [
     'backend/package.json',
     'backend/nest-cli.json',
-    'backend/tsconfig.json'
-  ]
+    'backend/tsconfig.json',
+  ],
 };
 
 // Validation logic here...
 ```
 
 ### 3. CI/CD Pipeline Check
+
 ```yaml
 # .github/workflows/structure-check.yml
 name: Repository Structure Validation
@@ -262,6 +286,7 @@ jobs:
 ## 📝 Naming Conventions
 
 ### Files
+
 ```
 ✅ CORRECT:
 - Components: PascalCase.tsx (Button.tsx, QSortGrid.tsx)
@@ -277,6 +302,7 @@ jobs:
 ```
 
 ### Directories
+
 ```
 ✅ CORRECT:
 - Feature modules: kebab-case (auth/, file-upload/, rate-limiting/)
@@ -294,6 +320,7 @@ jobs:
 ## 🚀 Import Rules
 
 ### Path Aliases
+
 ```typescript
 // tsconfig.json paths configuration
 {
@@ -315,6 +342,7 @@ import { Button } from 'components/apple-ui/Button';
 ```
 
 ### Import Order
+
 ```typescript
 // 1. Node modules
 import React from 'react';
@@ -340,6 +368,7 @@ import styles from './Component.module.css';
 ## 🔒 Security Rules
 
 ### Environment Variables
+
 ```bash
 # NEVER commit these files:
 .env              # Local environment variables
@@ -352,6 +381,7 @@ import styles from './Component.module.css';
 ```
 
 ### Sensitive Data
+
 ```typescript
 ❌ FORBIDDEN:
 - API keys in code
@@ -370,6 +400,7 @@ import styles from './Component.module.css';
 ## 📊 Quality Standards
 
 ### Code Coverage
+
 ```
 Minimum Requirements:
 - Frontend: 90% line coverage
@@ -378,6 +409,7 @@ Minimum Requirements:
 ```
 
 ### Bundle Size
+
 ```
 Maximum Limits:
 - Initial JS: < 200KB
@@ -386,6 +418,7 @@ Maximum Limits:
 ```
 
 ### Performance
+
 ```
 Requirements:
 - Lighthouse Score: > 90
@@ -418,7 +451,7 @@ Requirements:
 - [ ] No frontend configs in root directory
 - [ ] No backend configs in root directory
 - [ ] All files in correct workspace directories
-- [ ] Package.json files have correct namespace (@vqmethod/*)
+- [ ] Package.json files have correct namespace (@vqmethod/\*)
 - [ ] No duplicate configuration files
 - [ ] Import statements use path aliases
 - [ ] No sensitive data in code
