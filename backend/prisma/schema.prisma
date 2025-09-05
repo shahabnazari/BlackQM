@@ -138,6 +138,7 @@ model Survey {
   questions   Question[]
   mediaFiles  MediaFile[]
   collaborations Collaboration[]
+  analyses    Analysis[]
   creator     User @relation(fields: [createdBy], references: [id])
   
   @@index([createdBy])
@@ -419,7 +420,34 @@ model Commentary {
   @@index([statementId])
 }
 
+// Q-Analysis results model
+model Analysis {
+  id          String   @id @default(cuid())
+  surveyId    String
+  userId      String?
+  config      Json     // Analysis configuration (extraction method, rotation, etc.)
+  results     Json     // Complete analysis results (factors, loadings, etc.)
+  status      AnalysisStatus @default(PENDING)
+  startedAt   DateTime?
+  completedAt DateTime?
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  
+  @@index([surveyId])
+  @@index([userId])
+  @@index([status])
+}
 
+enum AnalysisStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
 
 enum Role {
   ADMIN

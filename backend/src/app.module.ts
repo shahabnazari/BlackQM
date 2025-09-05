@@ -12,6 +12,7 @@ import { FileUploadModule } from './modules/file-upload/file-upload.module';
 import { StudyModule } from './modules/study/study.module';
 import { ParticipantModule } from './modules/participant/participant.module';
 import { HealthModule } from './modules/health/health.module';
+import { AnalysisModule } from './modules/analysis/analysis.module';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 
@@ -44,6 +45,7 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
     FileUploadModule,
     StudyModule,
     ParticipantModule,
+    AnalysisModule,
     HealthModule,
   ],
   controllers: [AppController],
@@ -59,8 +61,6 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(SecurityMiddleware, CsrfMiddleware)
-      .forRoutes('*');
+    consumer.apply(SecurityMiddleware, CsrfMiddleware).forRoutes('*');
   }
 }
