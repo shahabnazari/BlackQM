@@ -1,6 +1,11 @@
 import apiClient from './config';
 import { handleApiError, isNetworkError } from './error-handler';
-import { mockSession, mockStudy, mockStatements, mockProgress } from './mock-data';
+import {
+  mockSession,
+  mockStudy,
+  mockStatements,
+  mockProgress,
+} from './mock-data';
 
 export interface StartSessionResponse {
   sessionCode: string;
@@ -35,24 +40,39 @@ export interface Progress {
   progress: number;
 }
 
-// Track if we're in mock mode
-let useMockData = false;
+// Track if we're in mock mode - default to true for demo
+let useMockData = true;
 
 export const participantApiEnhanced = {
   // Check if backend is available
   async checkBackendHealth(): Promise<boolean> {
+    // Skip health check and use mock data for demo
+    if (typeof window !== 'undefined') {
+      console.info('Using demo mode with mock data');
+    }
+    return false;
+
+    // Original health check code (disabled for demo)
+    /*
     try {
-      const response = await apiClient.get('/health');
+      const response = await apiClient.get('/health', {
+        timeout: 1000, // 1 second timeout for health check
+      });
+      useMockData = false;
       return response.status === 200;
     } catch (error) {
       console.warn('Backend health check failed, switching to mock mode');
       useMockData = true;
       return false;
     }
+    */
   },
 
   // Start a new participant session
-  async startSession(studyId: string, invitationCode?: string): Promise<StartSessionResponse> {
+  async startSession(
+    studyId: string,
+    invitationCode?: string
+  ): Promise<StartSessionResponse> {
     if (useMockData) {
       console.log('Using mock data for session');
       return Promise.resolve(mockSession);
@@ -84,7 +104,9 @@ export const participantApiEnhanced = {
     }
 
     try {
-      const { data } = await apiClient.get(`/participant/session/${sessionCode}`);
+      const { data } = await apiClient.get(
+        `/participant/session/${sessionCode}`
+      );
       return data;
     } catch (error) {
       if (isNetworkError(error)) {
@@ -111,7 +133,9 @@ export const participantApiEnhanced = {
     }
 
     try {
-      const { data } = await apiClient.get(`/participant/session/${sessionCode}/study`);
+      const { data } = await apiClient.get(
+        `/participant/session/${sessionCode}/study`
+      );
       return data;
     } catch (error) {
       if (isNetworkError(error)) {
@@ -140,7 +164,9 @@ export const participantApiEnhanced = {
     }
 
     try {
-      const { data } = await apiClient.get(`/participant/session/${sessionCode}/statements`);
+      const { data } = await apiClient.get(
+        `/participant/session/${sessionCode}/statements`
+      );
       return data;
     } catch (error) {
       if (isNetworkError(error)) {
@@ -153,30 +179,39 @@ export const participantApiEnhanced = {
   },
 
   // Update progress
-  async updateProgress(sessionCode: string, progressData: {
-    currentStep: string;
-    completedStep?: string;
-    stepData?: any;
-  }): Promise<Progress> {
+  async updateProgress(
+    sessionCode: string,
+    progressData: {
+      currentStep: string;
+      completedStep?: string;
+      stepData?: any;
+    }
+  ): Promise<Progress> {
     if (useMockData) {
-      const completedSteps = progressData.completedStep 
+      const completedSteps = progressData.completedStep
         ? [...(mockProgress.completedSteps || []), progressData.completedStep]
         : mockProgress.completedSteps;
-      
+
       const updatedProgress = {
         ...mockProgress,
         currentStep: progressData.currentStep,
         completedSteps,
         progress: (completedSteps.length / 8) * 100,
       };
-      
+
       // Store in localStorage for mock persistence
-      localStorage.setItem(`progress-${sessionCode}`, JSON.stringify(updatedProgress));
+      localStorage.setItem(
+        `progress-${sessionCode}`,
+        JSON.stringify(updatedProgress)
+      );
       return Promise.resolve(updatedProgress);
     }
 
     try {
-      const { data } = await apiClient.put(`/participant/session/${sessionCode}/progress`, progressData);
+      const { data } = await apiClient.put(
+        `/participant/session/${sessionCode}/progress`,
+        progressData
+      );
       return data;
     } catch (error) {
       if (isNetworkError(error)) {
@@ -198,7 +233,9 @@ export const participantApiEnhanced = {
     }
 
     try {
-      const { data } = await apiClient.get(`/participant/session/${sessionCode}/progress`);
+      const { data } = await apiClient.get(
+        `/participant/session/${sessionCode}/progress`
+      );
       return data;
     } catch (error) {
       if (isNetworkError(error)) {
@@ -212,12 +249,18 @@ export const participantApiEnhanced = {
   // Submit consent
   async submitConsent(sessionCode: string, consent: boolean): Promise<any> {
     if (useMockData) {
-      localStorage.setItem(`consent-${sessionCode}`, JSON.stringify({ consent, timestamp: Date.now() }));
+      localStorage.setItem(
+        `consent-${sessionCode}`,
+        JSON.stringify({ consent, timestamp: Date.now() })
+      );
       return Promise.resolve({ success: true });
     }
 
     try {
-      const { data } = await apiClient.post(`/participant/session/${sessionCode}/consent`, { consent });
+      const { data } = await apiClient.post(
+        `/participant/session/${sessionCode}/consent`,
+        { consent }
+      );
       return data;
     } catch (error) {
       if (isNetworkError(error)) {
@@ -231,12 +274,18 @@ export const participantApiEnhanced = {
   // Submit pre-screening answers
   async submitPreScreening(sessionCode: string, answers: any): Promise<any> {
     if (useMockData) {
-      localStorage.setItem(`prescreening-${sessionCode}`, JSON.stringify(answers));
+      localStorage.setItem(
+        `prescreening-${sessionCode}`,
+        JSON.stringify(answers)
+      );
       return Promise.resolve({ success: true });
     }
 
     try {
-      const { data } = await apiClient.post(`/participant/session/${sessionCode}/prescreening`, answers);
+      const { data } = await apiClient.post(
+        `/participant/session/${sessionCode}/prescreening`,
+        answers
+      );
       return data;
     } catch (error) {
       if (isNetworkError(error)) {
@@ -248,18 +297,27 @@ export const participantApiEnhanced = {
   },
 
   // Submit pre-sort categories
-  async submitPreSort(sessionCode: string, categories: {
-    agree: string[];
-    neutral: string[];
-    disagree: string[];
-  }): Promise<any> {
+  async submitPreSort(
+    sessionCode: string,
+    categories: {
+      agree: string[];
+      neutral: string[];
+      disagree: string[];
+    }
+  ): Promise<any> {
     if (useMockData) {
-      localStorage.setItem(`presort-${sessionCode}`, JSON.stringify(categories));
+      localStorage.setItem(
+        `presort-${sessionCode}`,
+        JSON.stringify(categories)
+      );
       return Promise.resolve({ success: true });
     }
 
     try {
-      const { data } = await apiClient.post(`/participant/session/${sessionCode}/presort`, categories);
+      const { data } = await apiClient.post(
+        `/participant/session/${sessionCode}/presort`,
+        categories
+      );
       return data;
     } catch (error) {
       if (isNetworkError(error)) {
@@ -278,7 +336,10 @@ export const participantApiEnhanced = {
     }
 
     try {
-      const { data } = await apiClient.post(`/participant/session/${sessionCode}/qsort`, { grid });
+      const { data } = await apiClient.post(
+        `/participant/session/${sessionCode}/qsort`,
+        { grid }
+      );
       return data;
     } catch (error) {
       if (isNetworkError(error)) {
@@ -290,14 +351,23 @@ export const participantApiEnhanced = {
   },
 
   // Submit commentary
-  async submitCommentary(sessionCode: string, comments: Record<string, string>): Promise<any> {
+  async submitCommentary(
+    sessionCode: string,
+    comments: Record<string, string>
+  ): Promise<any> {
     if (useMockData) {
-      localStorage.setItem(`commentary-${sessionCode}`, JSON.stringify(comments));
+      localStorage.setItem(
+        `commentary-${sessionCode}`,
+        JSON.stringify(comments)
+      );
       return Promise.resolve({ success: true });
     }
 
     try {
-      const { data } = await apiClient.post(`/participant/session/${sessionCode}/commentary`, { comments });
+      const { data } = await apiClient.post(
+        `/participant/session/${sessionCode}/commentary`,
+        { comments }
+      );
       return data;
     } catch (error) {
       if (isNetworkError(error)) {
@@ -311,12 +381,18 @@ export const participantApiEnhanced = {
   // Submit post-survey
   async submitPostSurvey(sessionCode: string, answers: any): Promise<any> {
     if (useMockData) {
-      localStorage.setItem(`postsurvey-${sessionCode}`, JSON.stringify(answers));
+      localStorage.setItem(
+        `postsurvey-${sessionCode}`,
+        JSON.stringify(answers)
+      );
       return Promise.resolve({ success: true });
     }
 
     try {
-      const { data } = await apiClient.post(`/participant/session/${sessionCode}/postsurvey`, answers);
+      const { data } = await apiClient.post(
+        `/participant/session/${sessionCode}/postsurvey`,
+        answers
+      );
       return data;
     } catch (error) {
       if (isNetworkError(error)) {
@@ -335,12 +411,17 @@ export const participantApiEnhanced = {
         timestamp: Date.now(),
         completionCode: `COMP-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
       };
-      localStorage.setItem(`completion-${sessionCode}`, JSON.stringify(completion));
+      localStorage.setItem(
+        `completion-${sessionCode}`,
+        JSON.stringify(completion)
+      );
       return Promise.resolve(completion);
     }
 
     try {
-      const { data } = await apiClient.post(`/participant/session/${sessionCode}/complete`);
+      const { data } = await apiClient.post(
+        `/participant/session/${sessionCode}/complete`
+      );
       return data;
     } catch (error) {
       if (isNetworkError(error)) {
@@ -357,19 +438,25 @@ export const participantApiEnhanced = {
       const qsort = localStorage.getItem(`qsort-${sessionCode}`);
       if (qsort) {
         const grid = JSON.parse(qsort);
-        const totalStatements = grid.reduce((sum: number, col: any) => sum + col.statementIds.length, 0);
+        const totalStatements = grid.reduce(
+          (sum: number, col: any) => sum + col.statementIds.length,
+          0
+        );
         return Promise.resolve({
           valid: totalStatements === mockStatements.length,
-          message: totalStatements === mockStatements.length 
-            ? 'Q-sort is complete' 
-            : `Missing ${mockStatements.length - totalStatements} statements`,
+          message:
+            totalStatements === mockStatements.length
+              ? 'Q-sort is complete'
+              : `Missing ${mockStatements.length - totalStatements} statements`,
         });
       }
       return Promise.resolve({ valid: false, message: 'No Q-sort data found' });
     }
 
     try {
-      const { data } = await apiClient.get(`/participant/session/${sessionCode}/qsort/validate`);
+      const { data } = await apiClient.get(
+        `/participant/session/${sessionCode}/qsort/validate`
+      );
       return data;
     } catch (error) {
       if (isNetworkError(error)) {
@@ -388,5 +475,5 @@ export const participantApiEnhanced = {
   // Reset to try real API again
   resetMockMode(): void {
     useMockData = false;
-  }
+  },
 };

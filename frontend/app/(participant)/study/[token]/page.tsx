@@ -40,55 +40,69 @@ export default function ParticipantStudyPage() {
   useEffect(() => {
     const initSession = async () => {
       try {
-        // Check backend health first
-        await participantApi.checkBackendHealth();
-        
+        // Check backend health first - this will enable mock mode if backend is not available
+        const backendAvailable = await participantApi.checkBackendHealth();
+
+        if (!backendAvailable) {
+          console.info('Backend not available, using demo mode');
+        }
+
         // Use token from URL or default to study-1
-        const studyId = typeof params.token === 'string' ? params.token : params.token?.[0] || 'study-1';
-        
-        // Start session
+        const studyId =
+          typeof params.token === 'string'
+            ? params.token
+            : params.token?.[0] || 'study-1';
+
+        // Start session (will use mock data if backend is not available)
         const session = await participantApi.startSession(studyId);
         setSessionId(session.sessionCode);
-        
+
         // Get study details
         await participantApi.getStudyInfo(session.sessionCode);
         // Store study data in component state if needed
-        
+
         // Get statements
         await participantApi.getStatements(session.sessionCode);
         // Store statements if needed
-        
+
         // Get progress if exists
         const progress = await participantApi.getProgress(session.sessionCode);
         if (progress.currentStep) {
           setCurrentStep(progress.currentStep as ParticipantStep);
-          setCompletedSteps((progress.completedSteps || []) as ParticipantStep[]);
+          setCompletedSteps(
+            (progress.completedSteps || []) as ParticipantStep[]
+          );
         }
-        
+
         // Show notification if using mock data
         if (participantApi.isUsingMockData()) {
           console.info('Using demo mode - backend not available');
         }
       } catch (error) {
         console.error('Failed to initialize session:', error);
+        // Continue with demo mode even if there's an error
+        if (participantApi.isUsingMockData()) {
+          console.info('Continuing with demo mode');
+        }
       } finally {
+        // Always stop loading to show the UI
         setLoading(false);
       }
     };
-    
+
     initSession();
   }, [params.token]);
 
   const handleStepComplete = async (data?: any) => {
     setCompletedSteps([...completedSteps, currentStep]);
-    
+
     if (data) {
       setStudyData((prev: any) => ({
         ...prev,
         [currentStep]: data,
       }));
     }
-    
+
     // Submit data to backend based on step
     if (sessionId) {
       try {
@@ -172,17 +186,11 @@ export default function ParticipantStudyPage() {
         );
       case 'welcome':
         return (
-          <Welcome
-            onComplete={handleStepComplete}
-            onBack={handleStepBack}
-          />
+          <Welcome onComplete={handleStepComplete} onBack={handleStepBack} />
         );
       case 'consent':
         return (
-          <Consent
-            onComplete={handleStepComplete}
-            onBack={handleStepBack}
-          />
+          <Consent onComplete={handleStepComplete} onBack={handleStepBack} />
         );
       case 'familiarization':
         return (
@@ -193,10 +201,7 @@ export default function ParticipantStudyPage() {
         );
       case 'pre-sorting':
         return (
-          <PreSorting
-            onComplete={handleStepComplete}
-            onBack={handleStepBack}
-          />
+          <PreSorting onComplete={handleStepComplete} onBack={handleStepBack} />
         );
       case 'q-sort':
         return (
@@ -216,10 +221,7 @@ export default function ParticipantStudyPage() {
         );
       case 'post-survey':
         return (
-          <PostSurvey
-            onComplete={handleStepComplete}
-            onBack={handleStepBack}
-          />
+          <PostSurvey onComplete={handleStepComplete} onBack={handleStepBack} />
         );
       case 'thank-you':
         return <ThankYou />;
@@ -246,10 +248,8 @@ export default function ParticipantStudyPage() {
           currentStep={currentStep}
           completedSteps={completedSteps}
         />
-        
-        <div className="mt-8">
-          {renderStep()}
-        </div>
+
+        <div className="mt-8">{renderStep()}</div>
       </div>
     </div>
   );

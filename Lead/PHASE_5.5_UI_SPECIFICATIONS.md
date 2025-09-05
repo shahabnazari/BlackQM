@@ -1,4 +1,5 @@
 # Phase 5.5 UI Specifications
+
 ## Using the Existing Apple Design System
 
 **IMPORTANT:** VQMethod already has a comprehensive Apple Design System implemented. This document specifies how to properly use the existing components for Phase 5.5 implementation.
@@ -8,7 +9,9 @@
 ## 🎨 Existing Apple Design System Overview
 
 ### Available Components
+
 Located in `frontend/components/apple-ui/`:
+
 - **Button** - Multiple variants (primary, secondary, tertiary, destructive)
 - **TextField** - iOS-style text inputs with floating labels
 - **Card** - Apple-style cards with header, content, footer
@@ -17,34 +20,45 @@ Located in `frontend/components/apple-ui/`:
 - **ThemeToggle** - Light/dark mode toggle
 
 ### Design Tokens (CSS Variables)
+
 Located in `frontend/styles/apple-design.css`:
 
 #### Typography
+
 The project uses the system font stack defined in Tailwind config:
+
 - Font family: `-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif`
 - Mono font: `'SF Mono', Monaco, 'Cascadia Code', monospace`
 
 #### System Colors
+
 All colors are mapped through Tailwind's semantic tokens:
+
 - System colors: `text-system-blue`, `bg-system-green`, `border-system-red`
 - Text colors: `text-primary`, `text-secondary`, `text-tertiary`
 - Background colors: `bg-primary`, `bg-surface`, `bg-surface-secondary`
 
 #### Text Colors
+
 Using Tailwind's semantic text classes:
+
 - Primary text: `text-text`
 - Secondary text: `text-text-secondary`
 - Tertiary text: `text-text-tertiary`
 - Quaternary text: `text-text-quaternary`
 
 #### Background & Fill Colors
+
 Using Tailwind's semantic background classes:
+
 - Primary background: `bg-background`
 - Secondary background: `bg-surface-secondary`
 - Fill colors: `bg-fill`, `bg-fill-secondary`, `bg-fill-tertiary`, `bg-fill-quaternary`
 
 #### Spacing (8pt Grid)
+
 Using Tailwind's spacing scale:
+
 - xs: `space-y-1` (4px)
 - sm: `space-y-2` (8px)
 - md: `space-y-4` (16px)
@@ -52,7 +66,9 @@ Using Tailwind's spacing scale:
 - xl: `space-y-8` (32px)
 
 #### Animation
+
 Using Tailwind's transition utilities:
+
 - Easing: `ease-in-out`
 - Duration: `duration-150`, `duration-300`
 - Transitions: `transition-all`, `transition-colors`, `transition-opacity`
@@ -81,10 +97,10 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
-  
+
   // Domain detection for SSO suggestion (Qualtrics-inspired)
   const [suggestedSSO, setSuggestedSSO] = useState<string | null>(null);
-  
+
   useEffect(() => {
     if (email.includes('@')) {
       const domain = email.split('@')[1];
@@ -97,12 +113,12 @@ export default function LoginPage() {
       }
     }
   }, [email]);
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -110,9 +126,9 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password, rememberMe }),
         credentials: 'include'
       });
-      
+
       if (response.ok) {
-        router.push('/researcher/dashboard');
+        router.push('/dashboard');  // Note: Route groups (researcher) don't appear in URLs
       } else {
         const data = await response.json();
         setError(data.message || 'Login failed');
@@ -123,7 +139,7 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
-  
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-background to-surface-secondary">
       <motion.div
@@ -142,7 +158,7 @@ export default function LoginPage() {
               Welcome back to research excellence
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="space-y-4">
             {/* SSO Suggestion Alert (Tableau-inspired) */}
             <AnimatePresence>
@@ -154,14 +170,14 @@ export default function LoginPage() {
                   className="p-3 rounded-lg bg-system-blue/10 border border-system-blue/20"
                 >
                   <p className="text-sm text-system-blue">
-                    {suggestedSSO === 'academic' 
+                    {suggestedSSO === 'academic'
                       ? '🎓 Academic institution detected. Sign in with your university account?'
                       : '💼 Corporate account detected. Sign in with Microsoft?'}
                   </p>
                 </motion.div>
               )}
             </AnimatePresence>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Using existing TextField component */}
               <TextField
@@ -180,7 +196,7 @@ export default function LoginPage() {
                   </svg>
                 }
               />
-              
+
               <TextField
                 label="Password"
                 type={showPassword ? 'text' : 'password'}
@@ -210,7 +226,7 @@ export default function LoginPage() {
                   </button>
                 }
               />
-              
+
               {/* Remember Me Checkbox using Apple styling */}
               <div className="flex items-center justify-between">
                 <label className="flex items-center space-x-2 cursor-pointer">
@@ -223,7 +239,7 @@ export default function LoginPage() {
                   />
                   <span className="text-sm text-text">Remember me</span>
                 </label>
-                
+
                 {/* Face ID button (Apple-style) */}
                 <button
                   type="button"
@@ -234,7 +250,7 @@ export default function LoginPage() {
                   <FaceSmileIcon className="w-6 h-6 text-system-blue" />
                 </button>
               </div>
-              
+
               {/* Using existing Button component */}
               <Button
                 type="submit"
@@ -246,7 +262,7 @@ export default function LoginPage() {
                 Sign In
               </Button>
             </form>
-            
+
             {/* Social Login Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -258,7 +274,7 @@ export default function LoginPage() {
                 </span>
               </div>
             </div>
-            
+
             {/* Social Login Buttons using existing Button component */}
             <div className="grid grid-cols-3 gap-3">
               <Button
@@ -271,7 +287,7 @@ export default function LoginPage() {
               >
                 <GoogleIcon className="w-5 h-5" />
               </Button>
-              
+
               <Button
                 type="button"
                 variant="secondary"
@@ -282,7 +298,7 @@ export default function LoginPage() {
               >
                 <MicrosoftIcon className="w-5 h-5" />
               </Button>
-              
+
               <Button
                 type="button"
                 variant="secondary"
@@ -295,7 +311,7 @@ export default function LoginPage() {
               </Button>
             </div>
           </CardContent>
-          
+
           <CardFooter className="text-center">
             <p className="text-sm text-text-secondary">
               New to VQMethod?{' '}
@@ -344,7 +360,7 @@ export default function RegisterPage() {
     termsAccepted: false,
     privacyAccepted: false
   });
-  
+
   // Password strength calculation (Tableau-inspired)
   const calculatePasswordStrength = (password: string): {
     score: number;
@@ -356,16 +372,16 @@ export default function RegisterPage() {
     if (password.length >= 12) score += 25;
     if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 25;
     if (/\d/.test(password) && /[^a-zA-Z\d]/.test(password)) score += 25;
-    
+
     if (score <= 25) return { score, label: 'Weak', color: 'rgb(255, 59, 48)' };
     if (score <= 50) return { score, label: 'Fair', color: 'rgb(255, 149, 0)' };
     if (score <= 75) return { score, label: 'Good', color: 'rgb(255, 204, 0)' };
     return { score, label: 'Strong', color: 'rgb(52, 199, 89)' };
   };
-  
+
   const passwordStrength = calculatePasswordStrength(formData.password);
   const progress = ((currentStep + 1) / REGISTRATION_STEPS.length) * 100;
-  
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 0: // Account Details
@@ -378,7 +394,7 @@ export default function RegisterPage() {
           >
             <h2 className="text-2xl font-bold text-text">Create your account</h2>
             <p className="text-text-secondary">Let's start with the basics</p>
-            
+
             <TextField
               label="Email Address"
               type="email"
@@ -388,7 +404,7 @@ export default function RegisterPage() {
               required
               description="Use your institutional email for verification benefits"
             />
-            
+
             <div>
               <TextField
                 label="Password"
@@ -398,7 +414,7 @@ export default function RegisterPage() {
                 placeholder="Create a strong password"
                 required
               />
-              
+
               {/* Password Strength Meter using existing ProgressBar */}
               {formData.password && (
                 <div className="mt-2 space-y-1">
@@ -406,14 +422,14 @@ export default function RegisterPage() {
                     <span className="text-[var(--color-secondary-label)]">Password strength</span>
                     <span style={{ color: passwordStrength.color }}>{passwordStrength.label}</span>
                   </div>
-                  <ProgressBar 
-                    value={passwordStrength.score} 
+                  <ProgressBar
+                    value={passwordStrength.score}
                     className="h-1"
-                    style={{ 
-                      '--progress-color': passwordStrength.color 
+                    style={{
+                      '--progress-color': passwordStrength.color
                     } as React.CSSProperties}
                   />
-                  
+
                   {/* Password requirements checklist */}
                   <div className="mt-2 space-y-1">
                     {[
@@ -438,7 +454,7 @@ export default function RegisterPage() {
                 </div>
               )}
             </div>
-            
+
             <TextField
               label="Confirm Password"
               type="password"
@@ -450,7 +466,7 @@ export default function RegisterPage() {
             />
           </motion.div>
         );
-        
+
       case 1: // Profile Information
         return (
           <motion.div
@@ -461,7 +477,7 @@ export default function RegisterPage() {
           >
             <h2 className="text-2xl font-bold text-text">Your research profile</h2>
             <p className="text-text-secondary">Help us personalize your experience</p>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <TextField
                 label="First Name"
@@ -470,7 +486,7 @@ export default function RegisterPage() {
                 placeholder="Jane"
                 required
               />
-              
+
               <TextField
                 label="Last Name"
                 value={formData.lastName}
@@ -479,7 +495,7 @@ export default function RegisterPage() {
                 required
               />
             </div>
-            
+
             <TextField
               label="Institution"
               value={formData.institution}
@@ -488,7 +504,7 @@ export default function RegisterPage() {
               description="This helps us connect you with relevant researchers"
               required
             />
-            
+
             {/* Discipline Selection using Cards */}
             <div>
               <label className="block text-sm font-medium text-text mb-2">
@@ -499,8 +515,8 @@ export default function RegisterPage() {
                   <Card
                     key={discipline}
                     className={`cursor-pointer transition-all hover:scale-[1.02] ${
-                      formData.discipline === discipline 
-                        ? 'border-system-blue bg-system-blue/10' 
+                      formData.discipline === discipline
+                        ? 'border-system-blue bg-system-blue/10'
                         : 'border-fill-quaternary'
                     }`}
                     onClick={() => setFormData({ ...formData, discipline })}
@@ -514,7 +530,7 @@ export default function RegisterPage() {
             </div>
           </motion.div>
         );
-        
+
       case 2: // Preferences (Netflix-style personalization)
         return (
           <motion.div
@@ -525,7 +541,7 @@ export default function RegisterPage() {
           >
             <h2 className="text-2xl font-bold text-text">Customize your experience</h2>
             <p className="text-text-secondary">Select your research interests</p>
-            
+
             {/* Interest Tags using Badge component */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-text">
@@ -533,7 +549,7 @@ export default function RegisterPage() {
               </label>
               <div className="flex flex-wrap gap-2">
                 {[
-                  'Qualitative Research', 'Mixed Methods', 'Survey Design', 
+                  'Qualitative Research', 'Mixed Methods', 'Survey Design',
                   'Data Visualization', 'Collaborative Studies', 'Longitudinal Studies',
                   'Cross-Cultural Research', 'Experimental Design'
                 ].map(interest => {
@@ -562,13 +578,13 @@ export default function RegisterPage() {
                 })}
               </div>
             </div>
-            
+
             {/* Notification Preferences using existing Card component */}
             <div className="space-y-3">
               <label className="block text-sm font-medium text-text">
                 Communication Preferences
               </label>
-              
+
               {[
                 { id: 'collaboration', label: 'Open to Collaboration', desc: 'Other researchers can invite you to studies' },
                 { id: 'updates', label: 'Product Updates', desc: 'New features and improvements' },
@@ -589,7 +605,7 @@ export default function RegisterPage() {
             </div>
           </motion.div>
         );
-        
+
       case 3: // Terms & Verification
         return (
           <motion.div
@@ -600,7 +616,7 @@ export default function RegisterPage() {
           >
             <h2 className="text-2xl font-bold text-text">Almost done!</h2>
             <p className="text-text-secondary">Review and accept our terms</p>
-            
+
             {/* Summary Card */}
             <Card className="bg-system-blue/5 border-system-blue/20">
               <CardContent className="p-4">
@@ -621,7 +637,7 @@ export default function RegisterPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             {/* Terms Checkboxes */}
             <div className="space-y-3">
               <label className="flex items-start space-x-3 cursor-pointer">
@@ -639,7 +655,7 @@ export default function RegisterPage() {
                   and understand how VQMethod handles my data
                 </span>
               </label>
-              
+
               <label className="flex items-start space-x-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -655,7 +671,7 @@ export default function RegisterPage() {
                 </span>
               </label>
             </div>
-            
+
             {/* What happens next */}
             <Card className="bg-[var(--color-system-green)]/5 border-[var(--color-system-green)]/20">
               <CardContent className="p-4">
@@ -671,12 +687,12 @@ export default function RegisterPage() {
             </Card>
           </motion.div>
         );
-        
+
       default:
         return null;
     }
   };
-  
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-b from-[var(--color-system-background)] to-[var(--color-secondary-background)]">
       <motion.div
@@ -710,13 +726,13 @@ export default function RegisterPage() {
               <ProgressBar value={progress} />
             </div>
           </CardHeader>
-          
+
           <CardContent>
             <AnimatePresence mode="wait">
               {renderStepContent()}
             </AnimatePresence>
           </CardContent>
-          
+
           <CardFooter>
             <div className="flex justify-between w-full">
               <Button
@@ -726,7 +742,7 @@ export default function RegisterPage() {
               >
                 Back
               </Button>
-              
+
               <Button
                 variant="primary"
                 onClick={() => {
@@ -738,7 +754,7 @@ export default function RegisterPage() {
                   }
                 }}
                 disabled={
-                  currentStep === REGISTRATION_STEPS.length - 1 && 
+                  currentStep === REGISTRATION_STEPS.length - 1 &&
                   (!formData.termsAccepted || !formData.privacyAccepted)
                 }
               >
@@ -784,14 +800,14 @@ export default function AboutPage() {
       description: 'Captures authentic perspectives on complex topics'
     }
   ];
-  
+
   const stats = [
     { value: '10,000+', label: 'Researchers' },
     { value: '50,000+', label: 'Studies' },
     { value: '1M+', label: 'Q-Sorts' },
     { value: '99.9%', label: 'Uptime' }
   ];
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[var(--color-system-background)] to-[var(--color-secondary-background)]">
       {/* Hero Section */}
@@ -804,7 +820,7 @@ export default function AboutPage() {
           >
             Research Reimagined
           </motion.h1>
-          
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -813,7 +829,7 @@ export default function AboutPage() {
           >
             VQMethod brings Q-methodology into the digital age
           </motion.p>
-          
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -830,14 +846,14 @@ export default function AboutPage() {
           </motion.div>
         </div>
       </section>
-      
+
       {/* Features Section using existing Cards */}
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12 text-[var(--color-label)]">
             What is Q-Methodology?
           </h2>
-          
+
           <div className="grid md:grid-cols-3 gap-6">
             {features.map((feature, index) => (
               <motion.div
@@ -865,7 +881,7 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
-      
+
       {/* Stats Section */}
       <section className="py-16 px-4 bg-[var(--color-quaternary-fill)]/30">
         <div className="max-w-6xl mx-auto">
@@ -901,14 +917,18 @@ export default function AboutPage() {
 Use these Tailwind classes for glass morphism and other effects:
 
 ### Glass Morphism
+
 ```html
 <!-- Glass card effect -->
-<div className="backdrop-blur-xl bg-white/70 dark:bg-black/70 border border-white/20">
+<div
+  className="backdrop-blur-xl bg-white/70 dark:bg-black/70 border border-white/20"
+>
   <!-- Content -->
 </div>
 ```
 
 ### Gradient Backgrounds
+
 ```html
 <!-- System gradient -->
 <div className="bg-gradient-to-b from-background to-surface-secondary">
@@ -922,6 +942,7 @@ Use these Tailwind classes for glass morphism and other effects:
 ```
 
 ### Hover Effects
+
 ```html
 <!-- Lift on hover -->
 <div className="hover:-translate-y-0.5 transition-transform duration-300">
@@ -935,6 +956,7 @@ Use these Tailwind classes for glass morphism and other effects:
 ```
 
 ### Focus Effects
+
 ```html
 <!-- Focus ring -->
 <input className="focus:ring-2 focus:ring-primary focus:ring-offset-2" />
@@ -950,6 +972,7 @@ Use these Tailwind classes for glass morphism and other effects:
 ## 5. Implementation Guidelines
 
 ### Do's ✅
+
 1. **Always use existing Apple UI components** from `@/components/apple-ui`
 2. **Use Tailwind classes** for all colors (e.g., `text-system-blue`, `bg-primary`)
 3. **Follow 8pt grid** spacing using Tailwind spacing utilities
@@ -960,6 +983,7 @@ Use these Tailwind classes for glass morphism and other effects:
 8. **Use ProgressBar component** for all progress indicators
 
 ### Don'ts ❌
+
 1. **Don't create new color values** - use existing system colors
 2. **Don't hardcode spacing** - use spacing variables
 3. **Don't create new button styles** - use Button component variants
@@ -969,6 +993,7 @@ Use these Tailwind classes for glass morphism and other effects:
 ### Component Usage Examples
 
 #### Button Variants
+
 ```typescript
 <Button variant="primary" size="large" fullWidth loading={isLoading}>
   Primary Action
@@ -988,6 +1013,7 @@ Use these Tailwind classes for glass morphism and other effects:
 ```
 
 #### TextField Variations
+
 ```typescript
 <TextField
   label="Email"
@@ -1003,6 +1029,7 @@ Use these Tailwind classes for glass morphism and other effects:
 ```
 
 #### Card Compositions
+
 ```typescript
 <Card className="hover:shadow-lg transition-shadow">
   <CardHeader>
@@ -1023,18 +1050,21 @@ Use these Tailwind classes for glass morphism and other effects:
 ## 6. Testing Considerations
 
 ### Accessibility
+
 - All components have proper ARIA labels
 - Focus states are visible and follow Apple HIG
 - Keyboard navigation works throughout
 - Screen reader compatibility is maintained
 
 ### Performance
+
 - Use existing optimized components
 - Leverage CSS variables for theming (no runtime calculations)
 - Components are already memoized where needed
 - Animations use GPU-accelerated properties
 
 ### Cross-browser Compatibility
+
 - CSS variables have fallbacks
 - Backdrop-filter has webkit prefix
 - System font stack works across platforms

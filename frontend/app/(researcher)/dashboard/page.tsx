@@ -1,405 +1,329 @@
 'use client';
 
-import { 
-  Button, 
-  TextField, 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
-  CardContent, 
-  CardFooter,
+import React from 'react';
+import {
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
   Badge,
-  ProgressBar
+  ProgressBar,
 } from '@/components/apple-ui';
-import { ThemeToggle } from '@/components/apple-ui/ThemeToggle/ThemeToggle';
 
-export default function AppleDesignSystemDemo() {
+export default function ResearcherDashboard() {
+  // Mock data for dashboard
+  const stats = {
+    activeStudies: 3,
+    totalParticipants: 127,
+    completionRate: 78,
+    pendingAnalysis: 2,
+  };
+
+  const recentStudies = [
+    {
+      id: 1,
+      title: 'Climate Change Perceptions',
+      participants: 45,
+      completion: 85,
+      status: 'active',
+    },
+    {
+      id: 2,
+      title: 'Healthcare Policy Q-Sort',
+      participants: 32,
+      completion: 60,
+      status: 'active',
+    },
+    {
+      id: 3,
+      title: 'Education Reform Views',
+      participants: 28,
+      completion: 100,
+      status: 'completed',
+    },
+  ];
+
+  const recentActivity = [
+    {
+      id: 1,
+      action: 'New participant joined',
+      study: 'Climate Change Perceptions',
+      time: '2 hours ago',
+    },
+    {
+      id: 2,
+      action: 'Study completed',
+      study: 'Education Reform Views',
+      time: '5 hours ago',
+    },
+    {
+      id: 3,
+      action: 'Analysis exported',
+      study: 'Healthcare Policy Q-Sort',
+      time: '1 day ago',
+    },
+    {
+      id: 4,
+      action: 'New study created',
+      study: 'Urban Planning Priorities',
+      time: '2 days ago',
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-bg text-text transition-colors duration-normal">
-      {/* Header with Theme Toggle */}
-      <header className="sticky top-0 z-50 border-b border-border bg-surface/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center space-x-3">
-            <div className="h-8 w-8 rounded-lg bg-primary"></div>
-            <h1 className="text-xl font-semibold">VQMethod</h1>
-          </div>
-          <ThemeToggle size="sm" />
+    <div className="space-y-8">
+      {/* Welcome Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-label mb-2">
+          Welcome back, Researcher
+        </h1>
+        <p className="text-secondary-label">
+          Here's an overview of your Q-methodology research
+        </p>
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-12 w-12 rounded-lg bg-system-blue/10 flex items-center justify-center">
+                <span className="text-2xl">📊</span>
+              </div>
+              <Badge variant="info" size="sm">
+                Active
+              </Badge>
+            </div>
+            <h3 className="text-2xl font-bold mb-1">{stats.activeStudies}</h3>
+            <p className="text-sm text-secondary-label">Active Studies</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-12 w-12 rounded-lg bg-system-green/10 flex items-center justify-center">
+                <span className="text-2xl">👥</span>
+              </div>
+              <Badge variant="success" size="sm">
+                +12%
+              </Badge>
+            </div>
+            <h3 className="text-2xl font-bold mb-1">
+              {stats.totalParticipants}
+            </h3>
+            <p className="text-sm text-secondary-label">Total Participants</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-12 w-12 rounded-lg bg-system-purple/10 flex items-center justify-center">
+                <span className="text-2xl">✅</span>
+              </div>
+              <Badge variant="default" size="sm">
+                {stats.completionRate}%
+              </Badge>
+            </div>
+            <h3 className="text-2xl font-bold mb-1">{stats.completionRate}%</h3>
+            <p className="text-sm text-secondary-label">Completion Rate</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-12 w-12 rounded-lg bg-system-orange/10 flex items-center justify-center">
+                <span className="text-2xl">📈</span>
+              </div>
+              <Badge variant="warning" size="sm">
+                Pending
+              </Badge>
+            </div>
+            <h3 className="text-2xl font-bold mb-1">{stats.pendingAnalysis}</h3>
+            <p className="text-sm text-secondary-label">Pending Analysis</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent Studies - Takes 2 columns */}
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Studies</CardTitle>
+              <CardDescription>
+                Your active and recent Q-methodology studies
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentStudies.map(study => (
+                  <div
+                    key={study.id}
+                    className="border rounded-lg p-4 hover:bg-surface-secondary transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h4 className="font-semibold text-label">
+                          {study.title}
+                        </h4>
+                        <p className="text-sm text-secondary-label mt-1">
+                          {study.participants} participants
+                        </p>
+                      </div>
+                      <Badge
+                        variant={
+                          study.status === 'active' ? 'success' : 'secondary'
+                        }
+                        size="sm"
+                      >
+                        {study.status}
+                      </Badge>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-secondary-label">Completion</span>
+                        <span className="font-medium">{study.completion}%</span>
+                      </div>
+                      <ProgressBar
+                        value={study.completion}
+                        variant={
+                          study.completion === 100 ? 'success' : 'default'
+                        }
+                        size="sm"
+                      />
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <Button size="small" variant="secondary">
+                        View Details
+                      </Button>
+                      <Button size="small" variant="secondary">
+                        Analytics
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4">
+                <Button fullWidth>View All Studies</Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Hero Section */}
-        <section className="mb-16 text-center">
-          <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            Apple Design System
-          </h1>
-          <p className="mx-auto max-w-3xl text-lg text-text-secondary sm:text-xl">
-            A comprehensive implementation of Apple Human Interface Guidelines for Q methodology research software. 
-            This design system ensures consistency, accessibility, and excellence across all interfaces.
-          </p>
-          <div className="mt-8 flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-            <Button size="large" className="w-full sm:w-auto">
-              Get Started
-            </Button>
-            <Button variant="secondary" size="large" className="w-full sm:w-auto">
-              View Documentation
-            </Button>
-          </div>
-        </section>
-
-        {/* Typography Section */}
-        <section className="mb-16">
-          <h2 className="mb-8 text-3xl font-bold">Typography System</h2>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-4">
-              <div className="text-5xl font-bold">Large Title (34px)</div>
-              <div className="text-4xl font-bold">Title 1 (28px)</div>
-              <div className="text-3xl font-semibold">Title 2 (22px)</div>
-              <div className="text-2xl font-semibold">Title 3 (20px)</div>
-              <div className="text-xl font-semibold">Headline (17px)</div>
-            </div>
-            <div className="space-y-4">
-              <div className="text-lg">Body (17px)</div>
-              <div className="text-base">Callout (16px)</div>
-              <div className="text-sm">Subhead (15px)</div>
-              <div className="text-xs">Footnote (13px)</div>
-              <div className="text-xs">Caption 1 (12px)</div>
-            </div>
-          </div>
-        </section>
-
-        {/* Color System Section */}
-        <section className="mb-16">
-          <h2 className="mb-8 text-3xl font-bold">Color System</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
-            <div className="space-y-2">
-              <div className="h-16 rounded-lg bg-primary"></div>
-              <p className="text-sm font-medium">Primary</p>
-              <p className="text-xs text-text-secondary">#007aff</p>
-            </div>
-            <div className="space-y-2">
-              <div className="h-16 rounded-lg bg-success"></div>
-              <p className="text-sm font-medium">Success</p>
-              <p className="text-xs text-text-secondary">#34c759</p>
-            </div>
-            <div className="space-y-2">
-              <div className="h-16 rounded-lg bg-warning"></div>
-              <p className="text-sm font-medium">Warning</p>
-              <p className="text-xs text-text-secondary">#ff9500</p>
-            </div>
-            <div className="space-y-2">
-              <div className="h-16 rounded-lg bg-danger"></div>
-              <p className="text-sm font-medium">Danger</p>
-              <p className="text-xs text-text-secondary">#ff3b30</p>
-            </div>
-            <div className="space-y-2">
-              <div className="h-16 rounded-lg bg-info"></div>
-              <p className="text-sm font-medium">Info</p>
-              <p className="text-xs text-text-secondary">#5ac8fa</p>
-            </div>
-            <div className="space-y-2">
-              <div className="h-16 rounded-lg bg-fill"></div>
-              <p className="text-sm font-medium">Fill</p>
-              <p className="text-xs text-text-secondary">rgba(120, 120, 128, 0.2)</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Button Components Section */}
-        <section className="mb-16">
-          <h2 className="mb-8 text-3xl font-bold">Button Components</h2>
-          <div className="space-y-8">
-            <div>
-              <h3 className="mb-4 text-xl font-semibold">Button Variants</h3>
-              <div className="flex flex-wrap gap-4">
-                <Button variant="primary">Primary Button</Button>
-                <Button variant="secondary">Secondary Button</Button>
-                <Button variant="destructive">Destructive Button</Button>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="mb-4 text-xl font-semibold">Button Sizes</h3>
-              <div className="flex flex-wrap items-center gap-4">
-                <Button size="small">Small</Button>
-                <Button size="md">Medium</Button>
-                <Button size="large">Large</Button>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="mb-4 text-xl font-semibold">Button States</h3>
-              <div className="flex flex-wrap gap-4">
-                <Button loading>Loading</Button>
-                <Button disabled>Disabled</Button>
-                <Button fullWidth className="max-w-xs">Full Width</Button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Form Components Section */}
-        <section className="mb-16">
-          <h2 className="mb-8 text-3xl font-bold">Form Components</h2>
-          <div className="grid gap-8 md:grid-cols-2">
-            <div className="space-y-4">
-              <TextField 
-                label="Standard Input" 
-                placeholder="Enter your text here"
-                helperText="This is helper text below the input"
-              />
-              <TextField 
-                label="Input with Error" 
-                placeholder="This input has an error"
-                error="This field is required"
-              />
-              <TextField 
-                label="Input with Success" 
-                placeholder="This input is valid"
-                variant="success"
-                helperText="Great! This input is valid"
-              />
-            </div>
-            
-            <div className="space-y-4">
-              <TextField 
-                label="Small Input" 
-                size="sm"
-                placeholder="Small size input"
-              />
-              <TextField 
-                label="Large Input" 
-                size="lg"
-                placeholder="Large size input"
-              />
-              <TextField 
-                label="Input with Icons" 
-                placeholder="Input with left and right icons"
-                leftIcon={<span>🔍</span>}
-                rightIcon={<span>✓</span>}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Card Components Section */}
-        <section className="mb-16">
-          <h2 className="mb-8 text-3xl font-bold">Card Components</h2>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Default Card</CardTitle>
-                <CardDescription>This is a default card with standard styling</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Card content goes here with proper spacing and typography.</p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Elevated Card</CardTitle>
-                <CardDescription>This card has elevated styling with shadows</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Elevated cards provide more visual hierarchy.</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-border">
-              <CardHeader>
-                <CardTitle>Outlined Card</CardTitle>
-                <CardDescription>This card uses border styling</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Outlined cards are great for subtle emphasis.</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-fill">
-              <CardHeader>
-                <CardTitle>Flat Card</CardTitle>
-                <CardDescription>This card has no shadows or borders</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Flat cards blend seamlessly with the background.</p>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer">
-              <CardHeader>
-                <CardTitle>Interactive Card</CardTitle>
-                <CardDescription>This card is clickable</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Interactive cards respond to user interaction.</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Card with Footer</CardTitle>
-                <CardDescription>This card includes a footer section</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Footer sections are great for actions or metadata.</p>
-              </CardContent>
-              <CardFooter>
-                <Button size="small">Action</Button>
-              </CardFooter>
-            </Card>
-          </div>
-        </section>
-
-        {/* Badge Components Section */}
-        <section className="mb-16">
-          <h2 className="mb-8 text-3xl font-bold">Badge Components</h2>
-          <div className="space-y-6">
-            <div>
-              <h3 className="mb-4 text-xl font-semibold">Badge Variants</h3>
-              <div className="flex flex-wrap gap-4">
-                <Badge variant="default">Default</Badge>
-                <Badge variant="secondary">Secondary</Badge>
-                <Badge variant="destructive">Destructive</Badge>
-                <Badge variant="outline">Outline</Badge>
-                <Badge variant="success">Success</Badge>
-                <Badge variant="warning">Warning</Badge>
-                <Badge variant="info">Info</Badge>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="mb-4 text-xl font-semibold">Badge Sizes</h3>
-              <div className="flex flex-wrap items-center gap-4">
-                <Badge size="sm">Small</Badge>
-                <Badge size="md">Medium</Badge>
-                <Badge size="lg">Large</Badge>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Progress Components Section */}
-        <section className="mb-16">
-          <h2 className="mb-8 text-3xl font-bold">Progress Components</h2>
-          <div className="space-y-6">
-            <div>
-              <h3 className="mb-4 text-xl font-semibold">Progress Bar Variants</h3>
+        {/* Recent Activity - Takes 1 column */}
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>
+                Latest updates from your studies
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-4">
-                <ProgressBar value={75} label="Progress 75%" />
-                <ProgressBar value={50} variant="success" label="Success 50%" />
-                <ProgressBar value={25} variant="warning" label="Warning 25%" />
-                <ProgressBar value={90} variant="danger" label="Danger 90%" />
+                {recentActivity.map(activity => (
+                  <div
+                    key={activity.id}
+                    className="flex items-start gap-3 pb-3 border-b last:border-0"
+                  >
+                    <div className="h-2 w-2 rounded-full bg-primary mt-2"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-label">
+                        {activity.action}
+                      </p>
+                      <p className="text-xs text-secondary-label mt-1">
+                        {activity.study}
+                      </p>
+                      <p className="text-xs text-tertiary-label mt-1">
+                        {activity.time}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-            
-            <div>
-              <h3 className="mb-4 text-xl font-semibold">Progress Bar Sizes</h3>
-              <div className="space-y-4">
-                <ProgressBar value={60} size="sm" label="Small 60%" />
-                <ProgressBar value={60} size="md" label="Medium 60%" />
-                <ProgressBar value={60} size="lg" label="Large 60%" />
+              <div className="mt-4">
+                <Button size="small" fullWidth variant="secondary">
+                  View All Activity
+                </Button>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div>
-              <h3 className="mb-4 text-xl font-semibold">Progress Bar Label Positions</h3>
-              <div className="space-y-4">
-                <ProgressBar value={45} label="Left Label" />
-                <ProgressBar value={65} label="Right Label" />
-                <ProgressBar value={85} label="Bottom Label" />
+          {/* Quick Actions */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Button fullWidth variant="primary">
+                  <span className="mr-2">➕</span>
+                  Create New Study
+                </Button>
+                <Button fullWidth variant="secondary">
+                  <span className="mr-2">👥</span>
+                  Invite Participants
+                </Button>
+                <Button fullWidth variant="secondary">
+                  <span className="mr-2">📊</span>
+                  Export Analytics
+                </Button>
+                <Button fullWidth variant="secondary">
+                  <span className="mr-2">📚</span>
+                  View Documentation
+                </Button>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Spacing System Section */}
-        <section className="mb-16">
-          <h2 className="mb-8 text-3xl font-bold">Spacing System (8pt Grid)</h2>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="h-1 w-1 rounded bg-primary"></div>
-              <span className="text-sm">4px (space-1)</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="h-2 w-2 rounded bg-primary"></div>
-              <span className="text-sm">8px (space-2)</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="h-4 w-4 rounded bg-primary"></div>
-              <span className="text-sm">16px (space-4)</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="h-6 w-6 rounded bg-primary"></div>
-              <span className="text-sm">24px (space-6)</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="h-8 w-8 rounded bg-primary"></div>
-              <span className="text-sm">32px (space-8)</span>
-            </div>
-          </div>
-        </section>
-
-        {/* Accessibility Section */}
-        <section className="mb-16">
-          <h2 className="mb-8 text-3xl font-bold">Accessibility Features</h2>
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Keyboard Navigation</CardTitle>
-                <CardDescription>All interactive elements support keyboard navigation</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="list-inside list-disc space-y-2">
-                  <li>Tab navigation between elements</li>
-                  <li>Enter/Space activation for buttons</li>
-                  <li>Arrow key navigation for selectable items</li>
-                  <li>Escape key to close modals</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Screen Reader Support</CardTitle>
-                <CardDescription>Proper ARIA labels and semantic HTML</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="list-inside list-disc space-y-2">
-                  <li>Semantic HTML structure</li>
-                  <li>ARIA labels and descriptions</li>
-                  <li>Proper heading hierarchy</li>
-                  <li>Alt text for images</li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border bg-surface-secondary">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h3 className="mb-4 text-lg font-semibold">VQMethod Apple Design System</h3>
-            <p className="mb-6 text-text-secondary">
-              Built with Apple Human Interface Guidelines
-            </p>
-            <div className="flex justify-center space-x-6">
-              <a href="#" className="text-text-secondary hover:text-text transition-colors">
-                Documentation
-              </a>
-              <a href="#" className="text-text-secondary hover:text-text transition-colors">
-                Components
-              </a>
-              <a href="#" className="text-text-secondary hover:text-text transition-colors">
-                GitHub
-              </a>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
-      </footer>
+      </div>
+
+      {/* Getting Started Tips */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Getting Started Tips</CardTitle>
+          <CardDescription>
+            New to VQMethod? Here are some helpful resources
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-surface-secondary rounded-lg">
+              <h4 className="font-semibold mb-2">📖 Q-Methodology Guide</h4>
+              <p className="text-sm text-secondary-label mb-3">
+                Learn the basics of Q-methodology research and best practices.
+              </p>
+              <Button size="small" variant="secondary">
+                Learn More
+              </Button>
+            </div>
+            <div className="p-4 bg-surface-secondary rounded-lg">
+              <h4 className="font-semibold mb-2">🎥 Video Tutorials</h4>
+              <p className="text-sm text-secondary-label mb-3">
+                Watch step-by-step tutorials on creating and managing studies.
+              </p>
+              <Button size="small" variant="secondary">
+                Watch Now
+              </Button>
+            </div>
+            <div className="p-4 bg-surface-secondary rounded-lg">
+              <h4 className="font-semibold mb-2">💬 Community Forum</h4>
+              <p className="text-sm text-secondary-label mb-3">
+                Connect with other researchers and share experiences.
+              </p>
+              <Button size="small" variant="secondary">
+                Join Forum
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

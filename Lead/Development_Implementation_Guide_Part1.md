@@ -1,4 +1,5 @@
 # VQMethod - Development Implementation Guide (Part 1 of 2)
+
 ## Apple Design System Integration with Q Methodology Excellence
 
 ⚠️ **CRITICAL:** Before implementing ANY code, you MUST read [REPOSITORY_STANDARDS.md](./REPOSITORY_STANDARDS.md) for mandatory file organization rules. Violations will block commits.
@@ -6,6 +7,7 @@
 Note: This is Part 1 of the split Development Implementation Guide to support phase-by-phase execution with model context limits. Continue with Part 2 here: ./Development_Implementation_Guide_Part2.md. For implementation steps and checklists, use: ./IMPLEMENTATION_PHASES.md.
 
 **Implementation Guide Mapping:**
+
 - **Phases 1-5:** Foundation & Core Features (Parts I-V in Guide 1) - **COMPLETE ✅** (All phases 100%)
 - **Phase 6:** Q-Analytics Engine Completeness (Part VI in Guide 2) - **CRITICAL PRIORITY**
 - **Phase 7:** Advanced Security & Compliance (Part VII in Guide 2)
@@ -19,21 +21,28 @@ Build Approach: Ground-up development with Apple HIG compliance
 
 ---
 
-## 🏆 WORLD-CLASS IMPLEMENTATION STATUS
+## 🏆 WORLD-CLASS IMPLEMENTATION STATUS - REVISED ASSESSMENT
 
-> **Current Status**: **APPROXIMATELY 35% COMPLETE** (UI Foundation Done, Core Features Missing) ⚠️  
-> **Achievement Level**: Basic UI Foundation with Apple Design System  
-> **Security Level**: Development-Only (No production security features implemented)  
-> **Critical Gap**: Authentication, Q-methodology logic, data persistence, testing infrastructure missing  
+> **Current Status**: **60-65% COMPLETE** (Backend Excellent, Frontend Critical Gaps) ⚠️  
+> **Achievement Level**: Strong Backend Infrastructure, Missing Frontend Authentication  
+> **Security Level**: Backend Production-Ready, Frontend Missing Auth Integration  
+> **Critical Gap**: Frontend authentication UI, session management, protected routes missing
 
-### 🔐 Security Features Status (CRITICAL GAPS)
-- **2FA/TOTP Authentication**: NOT IMPLEMENTED ❌ (No authentication system exists)
-- **Virus Scanning**: NOT IMPLEMENTED ❌ (No file upload functionality)
-- **Row-Level Security**: NOT IMPLEMENTED ❌ (No database models for users/studies)
-- **Data Encryption**: NOT IMPLEMENTED ❌ (No sensitive data storage yet)
-- **Rate Limiting**: NOT IMPLEMENTED ❌ (No API protection in place)
+### 🔐 Security Features Status (BACKEND COMPLETE, FRONTEND GAPS)
+
+- **Backend Authentication**: ✅ COMPLETE (JWT, refresh tokens, all endpoints working)
+- **2FA/TOTP**: ✅ Backend ready, ❌ Frontend UI missing
+- **Virus Scanning**: ✅ COMPLETE (ClamAV integrated, working)
+- **Row-Level Security**: ✅ Database RLS policies implemented
+- **Data Encryption**: ✅ At rest and in transit implemented
+- **Rate Limiting**: ✅ COMPLETE (10 types, all working)
+- **CSRF Protection**: ✅ Middleware implemented
+- **Frontend Auth UI**: ❌ NOT IMPLEMENTED (No login/register pages)
+- **Session Management**: ❌ NOT IMPLEMENTED (No AuthContext/Provider)
+- **Protected Routes**: ❌ NOT IMPLEMENTED (All routes public)
 
 ### 🚀 Developer Experience Status (MIXED RESULTS)
+
 - **Port Management**: Automatic conflict resolution system ✅ (Working)
 - **Safe Startup**: `npm run dev:safe` with intelligent port detection ✅ (Working)
 - **Testing Excellence**: FAILING ❌ (Tests don't run, coverage not measured)
@@ -41,6 +50,7 @@ Build Approach: Ground-up development with Apple HIG compliance
 - **Container Ready**: PARTIALLY COMPLETE ⚠️ (Basic Docker setup, not production-ready)
 
 ### Entry Command Pattern
+
 ```bash
 # Use enhanced startup command for conflict-free development
 npm run dev:safe  # Automatically finds available ports
@@ -48,6 +58,7 @@ npm run dev:safe  # Automatically finds available ports
 # Traditional approach (may have port conflicts)
 # npm run dev
 ```
+
 All Apple design standards, Q methodology patterns, and security protocols are **implemented and operational**.
 
 ---
@@ -66,8 +77,6 @@ All Apple design standards, Q methodology patterns, and security protocols are *
 - **Git Hooks**: ✅ Pre-commit hooks for quality assurance
 - **Port Management**: 🆕 E2E tests use port 3333 to avoid conflicts with development server
 - **API Testing**: 🆕 Newman/Postman collections for comprehensive API validation
-
-
 
 #### Apple Design Tokens → Tailwind Mapping (✅ IMPLEMENTED)
 
@@ -88,9 +97,27 @@ module.exports = {
     extend: {
       // Apple system font stack
       fontFamily: {
-        'apple-system': ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        'display': ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        'text': ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        'apple-system': [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'sans-serif',
+        ],
+        display: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'sans-serif',
+        ],
+        text: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'sans-serif',
+        ],
       },
       // Apple semantic colors with CSS variables
       colors: {
@@ -100,15 +127,15 @@ module.exports = {
       },
       // Apple 8pt grid spacing system
       spacing: {
-        'xs': 'var(--spacing-xs)', // 4px
-        'sm': 'var(--spacing-sm)', // 8px  
-        'md': 'var(--spacing-md)', // 16px
-        'lg': 'var(--spacing-lg)', // 24px
-        'xl': 'var(--spacing-xl)', // 32px
+        xs: 'var(--spacing-xs)', // 4px
+        sm: 'var(--spacing-sm)', // 8px
+        md: 'var(--spacing-md)', // 16px
+        lg: 'var(--spacing-lg)', // 24px
+        xl: 'var(--spacing-xl)', // 32px
       },
       // Apple standard heights
       height: {
-        '13': '3.25rem', // 52px - Apple standard for large components
+        13: '3.25rem', // 52px - Apple standard for large components
       },
       // Apple-style animations
       animation: {
@@ -119,12 +146,12 @@ module.exports = {
           '0%': { transform: 'scale(1)' },
           '50%': { transform: 'scale(1.02)' },
           '100%': { transform: 'scale(1)' },
-        }
-      }
+        },
+      },
     },
   },
   plugins: [
-    require('@tailwindcss/forms'),      // Enhanced form styling
+    require('@tailwindcss/forms'), // Enhanced form styling
     require('@tailwindcss/typography'), // Rich text formatting
     require('@tailwindcss/aspect-ratio'), // Media aspect ratios
   ],
@@ -133,49 +160,51 @@ module.exports = {
 
 - ✅ Dark mode implemented via `dark` class on `<html>` with Apple-style `ThemeToggle` component that persists preferences in localStorage
 
-
-
 ## 1. Apple Human Interface Guidelines Integration
 
 ### 1.1 Core Design Principles (Mandatory)
+
 ```typescript
 // Apple Design System Configuration
 export const AppleDesignSystem = {
   principles: {
     clarity: 'Typography and visual hierarchy prioritize content readability',
-    deference: 'UI elements support content without competing for attention',  
+    deference: 'UI elements support content without competing for attention',
     depth: 'Layered interfaces create spatial relationships',
-    consistency: 'Predictable patterns across all interactions'
+    consistency: 'Predictable patterns across all interactions',
   },
-  implementation: 'Every component must follow Apple HIG 2024 standards'
+  implementation: 'Every component must follow Apple HIG 2024 standards',
 } as const;
 ```
 
 ### 1.2 Typography System (San Francisco Pro)
+
 ```css
 /* MANDATORY: Apple Typography System */
 :root {
   /* San Francisco Pro Font Stack */
-  --font-family-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-family-text: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family-display:
+    'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family-text:
+    'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-  
+
   /* Apple Typography Scale (Mandatory sizes) */
-  --text-large-title: 34px;    /* Hero sections, main titles */
-  --text-title-1: 28px;        /* Section headers */
-  --text-title-2: 22px;        /* Subsection headers */
-  --text-title-3: 20px;        /* Card titles */
-  --text-headline: 17px;       /* Prominent body text */
-  --text-body: 17px;           /* Standard body text */
-  --text-callout: 16px;        /* Secondary content */
-  --text-subhead: 15px;        /* Supporting text */
-  --text-footnote: 13px;       /* Metadata, captions */
-  --text-caption-1: 12px;      /* Small labels */
-  --text-caption-2: 11px;      /* Smallest text */
+  --text-large-title: 34px; /* Hero sections, main titles */
+  --text-title-1: 28px; /* Section headers */
+  --text-title-2: 22px; /* Subsection headers */
+  --text-title-3: 20px; /* Card titles */
+  --text-headline: 17px; /* Prominent body text */
+  --text-body: 17px; /* Standard body text */
+  --text-callout: 16px; /* Secondary content */
+  --text-subhead: 15px; /* Supporting text */
+  --text-footnote: 13px; /* Metadata, captions */
+  --text-caption-1: 12px; /* Small labels */
+  --text-caption-2: 11px; /* Smallest text */
 }
 
 /* Typography Implementation Classes */
-.apple-large-title { 
+.apple-large-title {
   font-family: var(--font-family-display);
   font-size: var(--text-large-title);
   font-weight: 700;
@@ -191,6 +220,7 @@ export const AppleDesignSystem = {
 ```
 
 🔍 **TEST AFTER TYPOGRAPHY SYSTEM IMPLEMENTATION:**
+
 - [ ] Verify system font stack renders correctly across Apple, Windows, and Linux
 - [ ] Test typography scales properly with browser zoom (100%-200%)
 - [ ] Validate line height calculations maintain readability
@@ -198,41 +228,85 @@ export const AppleDesignSystem = {
 - [ ] Verify font weights render consistently across browsers
 
 ### 1.3 Color System (Apple Semantic Colors)
+
 ```css
 /* MANDATORY: Apple Color System with Light/Dark Mode */
 :root {
   color-scheme: light dark;
-  
+
   /* Label Colors */
-  --color-label: light-dark(rgba(0,0,0,1), rgba(255,255,255,1));
-  --color-secondary-label: light-dark(rgba(60,60,67,0.6), rgba(235,235,245,0.6));
-  --color-tertiary-label: light-dark(rgba(60,60,67,0.3), rgba(235,235,245,0.3));
-  --color-quaternary-label: light-dark(rgba(60,60,67,0.18), rgba(235,235,245,0.16));
-  
+  --color-label: light-dark(rgba(0, 0, 0, 1), rgba(255, 255, 255, 1));
+  --color-secondary-label: light-dark(
+    rgba(60, 60, 67, 0.6),
+    rgba(235, 235, 245, 0.6)
+  );
+  --color-tertiary-label: light-dark(
+    rgba(60, 60, 67, 0.3),
+    rgba(235, 235, 245, 0.3)
+  );
+  --color-quaternary-label: light-dark(
+    rgba(60, 60, 67, 0.18),
+    rgba(235, 235, 245, 0.16)
+  );
+
   /* Background Colors */
-  --color-system-background: light-dark(rgba(255,255,255,1), rgba(0,0,0,1));
-  --color-secondary-background: light-dark(rgba(242,242,247,1), rgba(28,28,30,1));
-  --color-tertiary-background: light-dark(rgba(255,255,255,1), rgba(44,44,46,1));
-  
+  --color-system-background: light-dark(
+    rgba(255, 255, 255, 1),
+    rgba(0, 0, 0, 1)
+  );
+  --color-secondary-background: light-dark(
+    rgba(242, 242, 247, 1),
+    rgba(28, 28, 30, 1)
+  );
+  --color-tertiary-background: light-dark(
+    rgba(255, 255, 255, 1),
+    rgba(44, 44, 46, 1)
+  );
+
   /* System Colors */
-  --color-system-blue: light-dark(rgba(0,122,255,1), rgba(10,132,255,1));
-  --color-system-green: light-dark(rgba(52,199,89,1), rgba(48,209,88,1));
-  --color-system-red: light-dark(rgba(255,59,48,1), rgba(255,69,58,1));
-  --color-system-orange: light-dark(rgba(255,149,0,1), rgba(255,159,10,1));
-  --color-system-yellow: light-dark(rgba(255,204,0,1), rgba(255,214,10,1));
-  --color-system-purple: light-dark(rgba(175,82,222,1), rgba(191,90,242,1));
-  --color-system-pink: light-dark(rgba(255,45,85,1), rgba(255,55,95,1));
-  --color-system-teal: light-dark(rgba(89,173,196,1), rgba(102,187,106,1));
-  
+  --color-system-blue: light-dark(rgba(0, 122, 255, 1), rgba(10, 132, 255, 1));
+  --color-system-green: light-dark(rgba(52, 199, 89, 1), rgba(48, 209, 88, 1));
+  --color-system-red: light-dark(rgba(255, 59, 48, 1), rgba(255, 69, 58, 1));
+  --color-system-orange: light-dark(
+    rgba(255, 149, 0, 1),
+    rgba(255, 159, 10, 1)
+  );
+  --color-system-yellow: light-dark(
+    rgba(255, 204, 0, 1),
+    rgba(255, 214, 10, 1)
+  );
+  --color-system-purple: light-dark(
+    rgba(175, 82, 222, 1),
+    rgba(191, 90, 242, 1)
+  );
+  --color-system-pink: light-dark(rgba(255, 45, 85, 1), rgba(255, 55, 95, 1));
+  --color-system-teal: light-dark(
+    rgba(89, 173, 196, 1),
+    rgba(102, 187, 106, 1)
+  );
+
   /* Fill Colors for Interactive Elements */
-  --color-system-fill: light-dark(rgba(120,120,128,0.2), rgba(120,120,128,0.36));
-  --color-secondary-fill: light-dark(rgba(120,120,128,0.16), rgba(120,120,128,0.32));
-  --color-tertiary-fill: light-dark(rgba(118,118,128,0.12), rgba(118,118,128,0.24));
-  --color-quaternary-fill: light-dark(rgba(116,116,128,0.08), rgba(118,118,128,0.18));
+  --color-system-fill: light-dark(
+    rgba(120, 120, 128, 0.2),
+    rgba(120, 120, 128, 0.36)
+  );
+  --color-secondary-fill: light-dark(
+    rgba(120, 120, 128, 0.16),
+    rgba(120, 120, 128, 0.32)
+  );
+  --color-tertiary-fill: light-dark(
+    rgba(118, 118, 128, 0.12),
+    rgba(118, 118, 128, 0.24)
+  );
+  --color-quaternary-fill: light-dark(
+    rgba(116, 116, 128, 0.08),
+    rgba(118, 118, 128, 0.18)
+  );
 }
 ```
 
 🔍 **TEST AFTER COLOR SYSTEM IMPLEMENTATION:**
+
 - [ ] Test light/dark mode switching preserves color semantics
 - [ ] Verify color contrast ratios meet WCAG AA standards (≥4.5:1)
 - [ ] Test system colors adapt properly in forced dark mode
@@ -240,21 +314,22 @@ export const AppleDesignSystem = {
 - [ ] Test color accessibility with screen readers and high contrast mode
 
 ### 1.4 Spacing System (8pt Grid)
+
 ```css
 /* MANDATORY: Apple 8pt Grid System */
 :root {
   /* Base spacing unit: 8px */
   --spacing-base: 8px;
-  
+
   /* Apple Spacing Scale */
-  --spacing-xs: 4px;     /* 0.5 × base */
-  --spacing-sm: 8px;     /* 1 × base */
-  --spacing-md: 16px;    /* 2 × base */
-  --spacing-lg: 24px;    /* 3 × base */
-  --spacing-xl: 32px;    /* 4 × base */
-  --spacing-xxl: 48px;   /* 6 × base */
-  --spacing-xxxl: 64px;  /* 8 × base */
-  
+  --spacing-xs: 4px; /* 0.5 × base */
+  --spacing-sm: 8px; /* 1 × base */
+  --spacing-md: 16px; /* 2 × base */
+  --spacing-lg: 24px; /* 3 × base */
+  --spacing-xl: 32px; /* 4 × base */
+  --spacing-xxl: 48px; /* 6 × base */
+  --spacing-xxxl: 64px; /* 8 × base */
+
   /* Component-specific spacing */
   --spacing-button-padding: 12px 16px;
   --spacing-card-padding: 16px;
@@ -264,12 +339,14 @@ export const AppleDesignSystem = {
 ```
 
 🔍 **TEST AFTER SPACING SYSTEM IMPLEMENTATION:**
+
 - [ ] Verify 8pt grid alignment across all components
 - [ ] Test spacing consistency at different screen sizes
 - [ ] Validate responsive spacing calculations
 - [ ] Test component spacing doesn't break with long content
 - [ ] Verify grid system works with CSS Grid and Flexbox
-```
+
+````
 
 ### 1.5 Animation System (Apple Motion)
 ```css
@@ -281,7 +358,7 @@ export const AppleDesignSystem = {
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
-  
+
   /* Apple Standard Durations */
   --duration-instant: 0ms;
   --duration-fast: 150ms;
@@ -299,14 +376,16 @@ export const AppleDesignSystem = {
   transform: scale(1.02);
   transition: transform var(--duration-fast) var(--ease-out);
 }
-```
+````
 
 🔍 **TEST AFTER ANIMATION SYSTEM IMPLEMENTATION:**
+
 - [ ] Test animations run at 60fps on various devices
 - [ ] Verify animations respect prefers-reduced-motion
 - [ ] Test easing curves match Apple's motion standards
 - [ ] Validate animation performance doesn't block UI
 - [ ] Test animations work consistently across browsers
+
 ```
 
 ---
@@ -317,149 +396,151 @@ export const AppleDesignSystem = {
 
 ### 2.1 Enhanced Repository Structure (World-Class Implementation) ✅
 ```
-vqmethod/                      # Root monorepo directory (CLEAN - workspace configs only)
-├── .nvmrc                     # Node version (20+)
-├── package.json               # Workspace configuration ONLY (no app dependencies)
-├── package-lock.json          # Dependency lock file
-├── port-config.json           # 🆕 Port management configuration
-├── .gitignore                 # Git ignore rules
-├── .prettierrc                # Shared code formatting
-├── .eslintrc.json            # Shared linting rules
-├── README.md                  # Project documentation
+
+vqmethod/ # Root monorepo directory (CLEAN - workspace configs only)
+├── .nvmrc # Node version (20+)
+├── package.json # Workspace configuration ONLY (no app dependencies)
+├── package-lock.json # Dependency lock file
+├── port-config.json # 🆕 Port management configuration
+├── .gitignore # Git ignore rules
+├── .prettierrc # Shared code formatting
+├── .eslintrc.json # Shared linting rules
+├── README.md # Project documentation
 │
-├── frontend/                  # 🆕 Next.js 15+ application (ALL frontend files here)
-│   ├── package.json           # Frontend dependencies (@vqmethod/frontend)
-│   ├── next.config.js         # Next.js configuration (ONLY in frontend/)
-│   ├── tailwind.config.js     # Tailwind CSS config (ONLY in frontend/)
-│   ├── postcss.config.js      # PostCSS config (ONLY in frontend/)
-│   ├── tsconfig.json          # TypeScript config (ONLY in frontend/)
-│   ├── vitest.config.ts       # Testing config (ONLY in frontend/)
-│   ├── playwright.config.ts   # E2E testing (ONLY in frontend/)
-│   ├── app/                   # Next.js App Router
-│   │   ├── (researcher)/      # 🆕 Researcher route group
-│   │   │   ├── dashboard/     # Research dashboard
-│   │   │   ├── studies/       # Study management
-│   │   │   │   ├── create/    # Study creation wizard
-│   │   │   │   └── [id]/      # Individual study pages
-│   │   │   │       ├── design/    # Study design interface
-│   │   │   │       ├── participants/ # Participant management
-│   │   │   │       ├── analysis/  # Q methodology analysis
-│   │   │   │       └── export/    # Data export tools
-│   │   │   ├── analytics/     # Research analytics
-│   │   │   └── settings/      # Account settings
-│   │   ├── (participant)/     # 🆕 Participant route group
-│   │   │   ├── join/          # SECURITY: Invitation redemption
-│   │   │   └── study/         # 8-step participant journey
-│   │   │       ├── welcome/       # Step 2: Welcome page
-│   │   │       ├── consent/       # Step 3: Informed consent
-│   │   │       ├── familiarization/ # Step 4: Stimulus review
-│   │   │       ├── pre-sort/      # Step 5: Three-box sorting
-│   │   │       ├── q-sort/        # Step 6: Q-sort grid
-│   │   │       ├── commentary/    # Step 7: Edge commentary
-│   │   │       ├── post-survey/   # Step 8a: Post-survey
-│   │   │       └── thank-you/     # Step 8b: Completion
-│   │   ├── globals.css        # Global styles with Apple design
-│   │   └── layout.tsx         # Root layout component
-│   ├── components/            # 🆕 Enhanced component library
-│   │   ├── apple-ui/          # ✅ Apple HIG component library
-│   │   │   ├── Button/        # ✅ iOS-style buttons (multiple variants)
-│   │   │   ├── TextField/     # ✅ iOS text inputs with floating labels
-│   │   │   ├── Card/          # ✅ Apple-style cards
-│   │   │   ├── Badge/         # ✅ Status badges
-│   │   │   ├── ProgressBar/   # ✅ Progress indicators
-│   │   │   ├── ThemeToggle/   # ✅ Light/dark mode toggle
-│   │   │   └── index.ts       # Component exports
-│   │   ├── researcher/        # Researcher interface components
-│   │   │   ├── Dashboard/
-│   │   │   ├── StudyBuilder/
-│   │   │   │   ├── QuestionBuilder/ # Advanced questionnaire builder
-│   │   │   │   ├── GridDesigner/    # Q-sort grid designer
-│   │   │   │   ├── StimuliManager/  # Media stimulus manager
-│   │   │   │   └── FlowDesigner/    # Participant flow designer
-│   │   │   ├── Analytics/     # Research analytics dashboard
-│   │   │   └── DataExport/    # Export functionality
-│   │   ├── participant/       # Participant interface components
-│   │   │   ├── StepFlow/      # 8-step flow controller
-│   │   │   ├── QSortGrid/     # Main Q-sort interface
-│   │   │   ├── PreSorting/    # Three-box sorting
-│   │   │   ├── StimuliGallery/ # Media stimulus gallery
-│   │   │   ├── Commentary/    # Post-sort commentary
-│   │   │   └── ProgressTracker/ # Apple-style progress
-│   │   └── shared/            # Shared components
-│   │       ├── VideoConferencing/ # Google Meet/Zoom integration
-│   │       ├── RichTextEditor/    # Advanced text editing
-│   │       ├── MediaPlayer/       # Media playback
-│   │       └── FormBuilder/       # Dynamic form generation
-│   ├── lib/                   # Utility libraries
-│   │   ├── apple-design/      # Apple design system utilities
-│   │   ├── api/              # API client layer
-│   │   ├── hooks/            # Custom React hooks
-│   │   ├── stores/           # Zustand state management
-│   │   └── utils/            # Utility functions
-│   └── styles/               # ✅ Apple Design System
-│       ├── tokens.css        # ✅ Design tokens (CSS variables)
-│       ├── apple-design.css  # ✅ Apple HIG base styles
-│       └── globals.css       # ✅ Global application styles
-├── backend/                  # 🆕 Enhanced NestJS application (ALL backend files here)
-│   ├── package.json          # Backend dependencies (@vqmethod/backend)
-│   ├── nest-cli.json         # NestJS CLI config (ONLY in backend/)
-│   ├── tsconfig.json         # TypeScript config (ONLY in backend/)
-│   ├── tsconfig.build.json   # Build config (ONLY in backend/)
-│   ├── .env                  # Environment variables (NEVER commit)
-│   ├── src/
-│   │   ├── modules/          # Feature modules
-│   │   │   ├── auth/         # 🔐 Enhanced authentication
-│   │   │   │   ├── controllers/
-│   │   │   │   │   ├── auth.controller.ts
-│   │   │   │   │   └── two-factor.controller.ts # ✅ 2FA/TOTP
-│   │   │   │   ├── services/
-│   │   │   │   │   ├── auth.service.ts
-│   │   │   │   │   ├── audit.service.ts     # ✅ Audit logging
-│   │   │   │   │   └── two-factor.service.ts # ✅ TOTP with QR codes
-│   │   │   │   └── strategies/
-│   │   │   │       └── jwt.strategy.ts
-│   │   │   ├── file-upload/  # 🔐 Enterprise file security
-│   │   │   │   ├── controllers/
-│   │   │   │   │   └── file-upload.controller.ts
-│   │   │   │   └── services/
-│   │   │   │       ├── file-upload.service.ts
-│   │   │   │       └── virus-scan.service.ts # ✅ ClamAV integration
-│   │   │   ├── rate-limiting/ # 🔐 Comprehensive rate limiting
-│   │   │   │   ├── rate-limiting.module.ts
-│   │   │   │   └── guards/    # ✅ 10+ rate limiting types
-│   │   │   ├── studies/      # Study management
-│   │   │   ├── questionnaires/ # Advanced questionnaire engine
-│   │   │   ├── qsort/        # Q-sort specific logic
-│   │   │   ├── participants/ # Participant management
-│   │   │   ├── analysis/     # Q methodology analysis
-│   │   │   └── video-conferencing/ # Meet/Zoom integration
-│   │   ├── common/           # 🆕 Shared infrastructure
-│   │   │   ├── prisma.service.ts        # Database service
-│   │   │   ├── prisma-rls.service.ts    # ✅ Row-Level Security
-│   │   │   └── encryption.service.ts    # ✅ AES-256-GCM encryption
-│   │   └── types/            # 🆕 TypeScript definitions
-│   │       ├── auth.types.ts
-│   │       ├── upload.types.ts
-│   │       └── study.types.ts
-│   ├── prisma/              # Database schema & migrations
-│   │   ├── schema.prisma     # ✅ Enhanced schema with MediaFile
-│   │   ├── migrations/       # ✅ Database migrations
-│   │   └── dev.db           # SQLite development database
-│   └── postman/             # ✅ API testing collections
-│       └── VQMethod.postman_collection.json
-├── infrastructure/          # 🆕 DevOps & deployment
-│   ├── docker-compose.yml   # Production containers
-│   ├── docker-compose.dev.yml # ✅ Development environment
-│   └── kubernetes/          # K8s deployment configs
-├── scripts/                 # 🆕 Automation scripts
-│   ├── port-manager.js      # ✅ Port conflict resolution
-│   └── start-safe.js        # ✅ Safe startup with port detection
-└── Lead/                    # 🆕 Enhanced documentation
-    ├── Complete_Product_Specification.md     # ✅ Updated specs
-    ├── Development_Implementation_Guide_Part1.md # This file
-    ├── Development_Implementation_Guide_Part2.md
-    └── IMPLEMENTATION_PHASES.md              # ✅ Updated phases
-```
+├── frontend/ # 🆕 Next.js 15+ application (ALL frontend files here)
+│ ├── package.json # Frontend dependencies (@vqmethod/frontend)
+│ ├── next.config.js # Next.js configuration (ONLY in frontend/)
+│ ├── tailwind.config.js # Tailwind CSS config (ONLY in frontend/)
+│ ├── postcss.config.js # PostCSS config (ONLY in frontend/)
+│ ├── tsconfig.json # TypeScript config (ONLY in frontend/)
+│ ├── vitest.config.ts # Testing config (ONLY in frontend/)
+│ ├── playwright.config.ts # E2E testing (ONLY in frontend/)
+│ ├── app/ # Next.js App Router
+│ │ ├── (researcher)/ # 🆕 Researcher route group
+│ │ │ ├── dashboard/ # Research dashboard
+│ │ │ ├── studies/ # Study management
+│ │ │ │ ├── create/ # Study creation wizard
+│ │ │ │ └── [id]/ # Individual study pages
+│ │ │ │ ├── design/ # Study design interface
+│ │ │ │ ├── participants/ # Participant management
+│ │ │ │ ├── analysis/ # Q methodology analysis
+│ │ │ │ └── export/ # Data export tools
+│ │ │ ├── analytics/ # Research analytics
+│ │ │ └── settings/ # Account settings
+│ │ ├── (participant)/ # 🆕 Participant route group
+│ │ │ ├── join/ # SECURITY: Invitation redemption
+│ │ │ └── study/ # 8-step participant journey
+│ │ │ ├── welcome/ # Step 2: Welcome page
+│ │ │ ├── consent/ # Step 3: Informed consent
+│ │ │ ├── familiarization/ # Step 4: Stimulus review
+│ │ │ ├── pre-sort/ # Step 5: Three-box sorting
+│ │ │ ├── q-sort/ # Step 6: Q-sort grid
+│ │ │ ├── commentary/ # Step 7: Edge commentary
+│ │ │ ├── post-survey/ # Step 8a: Post-survey
+│ │ │ └── thank-you/ # Step 8b: Completion
+│ │ ├── globals.css # Global styles with Apple design
+│ │ └── layout.tsx # Root layout component
+│ ├── components/ # 🆕 Enhanced component library
+│ │ ├── apple-ui/ # ✅ Apple HIG component library
+│ │ │ ├── Button/ # ✅ iOS-style buttons (multiple variants)
+│ │ │ ├── TextField/ # ✅ iOS text inputs with floating labels
+│ │ │ ├── Card/ # ✅ Apple-style cards
+│ │ │ ├── Badge/ # ✅ Status badges
+│ │ │ ├── ProgressBar/ # ✅ Progress indicators
+│ │ │ ├── ThemeToggle/ # ✅ Light/dark mode toggle
+│ │ │ └── index.ts # Component exports
+│ │ ├── researcher/ # Researcher interface components
+│ │ │ ├── Dashboard/
+│ │ │ ├── StudyBuilder/
+│ │ │ │ ├── QuestionBuilder/ # Advanced questionnaire builder
+│ │ │ │ ├── GridDesigner/ # Q-sort grid designer
+│ │ │ │ ├── StimuliManager/ # Media stimulus manager
+│ │ │ │ └── FlowDesigner/ # Participant flow designer
+│ │ │ ├── Analytics/ # Research analytics dashboard
+│ │ │ └── DataExport/ # Export functionality
+│ │ ├── participant/ # Participant interface components
+│ │ │ ├── StepFlow/ # 8-step flow controller
+│ │ │ ├── QSortGrid/ # Main Q-sort interface
+│ │ │ ├── PreSorting/ # Three-box sorting
+│ │ │ ├── StimuliGallery/ # Media stimulus gallery
+│ │ │ ├── Commentary/ # Post-sort commentary
+│ │ │ └── ProgressTracker/ # Apple-style progress
+│ │ └── shared/ # Shared components
+│ │ ├── VideoConferencing/ # Google Meet/Zoom integration
+│ │ ├── RichTextEditor/ # Advanced text editing
+│ │ ├── MediaPlayer/ # Media playback
+│ │ └── FormBuilder/ # Dynamic form generation
+│ ├── lib/ # Utility libraries
+│ │ ├── apple-design/ # Apple design system utilities
+│ │ ├── api/ # API client layer
+│ │ ├── hooks/ # Custom React hooks
+│ │ ├── stores/ # Zustand state management
+│ │ └── utils/ # Utility functions
+│ └── styles/ # ✅ Apple Design System
+│ ├── tokens.css # ✅ Design tokens (CSS variables)
+│ ├── apple-design.css # ✅ Apple HIG base styles
+│ └── globals.css # ✅ Global application styles
+├── backend/ # 🆕 Enhanced NestJS application (ALL backend files here)
+│ ├── package.json # Backend dependencies (@vqmethod/backend)
+│ ├── nest-cli.json # NestJS CLI config (ONLY in backend/)
+│ ├── tsconfig.json # TypeScript config (ONLY in backend/)
+│ ├── tsconfig.build.json # Build config (ONLY in backend/)
+│ ├── .env # Environment variables (NEVER commit)
+│ ├── src/
+│ │ ├── modules/ # Feature modules
+│ │ │ ├── auth/ # 🔐 Enhanced authentication
+│ │ │ │ ├── controllers/
+│ │ │ │ │ ├── auth.controller.ts
+│ │ │ │ │ └── two-factor.controller.ts # ✅ 2FA/TOTP
+│ │ │ │ ├── services/
+│ │ │ │ │ ├── auth.service.ts
+│ │ │ │ │ ├── audit.service.ts # ✅ Audit logging
+│ │ │ │ │ └── two-factor.service.ts # ✅ TOTP with QR codes
+│ │ │ │ └── strategies/
+│ │ │ │ └── jwt.strategy.ts
+│ │ │ ├── file-upload/ # 🔐 Enterprise file security
+│ │ │ │ ├── controllers/
+│ │ │ │ │ └── file-upload.controller.ts
+│ │ │ │ └── services/
+│ │ │ │ ├── file-upload.service.ts
+│ │ │ │ └── virus-scan.service.ts # ✅ ClamAV integration
+│ │ │ ├── rate-limiting/ # 🔐 Comprehensive rate limiting
+│ │ │ │ ├── rate-limiting.module.ts
+│ │ │ │ └── guards/ # ✅ 10+ rate limiting types
+│ │ │ ├── studies/ # Study management
+│ │ │ ├── questionnaires/ # Advanced questionnaire engine
+│ │ │ ├── qsort/ # Q-sort specific logic
+│ │ │ ├── participants/ # Participant management
+│ │ │ ├── analysis/ # Q methodology analysis
+│ │ │ └── video-conferencing/ # Meet/Zoom integration
+│ │ ├── common/ # 🆕 Shared infrastructure
+│ │ │ ├── prisma.service.ts # Database service
+│ │ │ ├── prisma-rls.service.ts # ✅ Row-Level Security
+│ │ │ └── encryption.service.ts # ✅ AES-256-GCM encryption
+│ │ └── types/ # 🆕 TypeScript definitions
+│ │ ├── auth.types.ts
+│ │ ├── upload.types.ts
+│ │ └── study.types.ts
+│ ├── prisma/ # Database schema & migrations
+│ │ ├── schema.prisma # ✅ Enhanced schema with MediaFile
+│ │ ├── migrations/ # ✅ Database migrations
+│ │ └── dev.db # SQLite development database
+│ └── postman/ # ✅ API testing collections
+│ └── VQMethod.postman_collection.json
+├── infrastructure/ # 🆕 DevOps & deployment
+│ ├── docker-compose.yml # Production containers
+│ ├── docker-compose.dev.yml # ✅ Development environment
+│ └── kubernetes/ # K8s deployment configs
+├── scripts/ # 🆕 Automation scripts
+│ ├── port-manager.js # ✅ Port conflict resolution
+│ └── start-safe.js # ✅ Safe startup with port detection
+└── Lead/ # 🆕 Enhanced documentation
+├── Complete_Product_Specification.md # ✅ Updated specs
+├── Development_Implementation_Guide_Part1.md # This file
+├── Development_Implementation_Guide_Part2.md
+└── IMPLEMENTATION_PHASES.md # ✅ Updated phases
+
+````
 
 ### 2.2 Apple UI Component Library (Mandatory Implementation)
 
@@ -502,7 +583,7 @@ const buttonVariants = cva(
   }
 );
 
-interface ButtonProps 
+interface ButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   loading?: boolean;
@@ -529,16 +610,18 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button";
 
 export { Button, buttonVariants };
-```
+````
 
 🔍 **TEST AFTER BUTTON COMPONENT IMPLEMENTATION:**
+
 - [ ] Test all button variants render correctly
 - [ ] Verify button states (hover, focus, active, disabled)
 - [ ] Test loading state animation and accessibility
 - [ ] Validate keyboard navigation and focus indicators
 - [ ] Test button accessibility with screen readers
 - [ ] Verify button works in all supported browsers
-```
+
+````
 
 #### Apple TextField Component
 ```typescript
@@ -584,7 +667,7 @@ const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
   ({ className, label, helperText, error, variant, size, ...props }, ref) => {
     const [isFocused, setIsFocused] = useState(false);
     const hasValue = Boolean(props.value || props.defaultValue);
-    
+
     const currentVariant = error ? 'error' : variant || 'default';
 
     return (
@@ -631,11 +714,12 @@ const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
 TextField.displayName = "TextField";
 
 export { TextField };
-```
+````
 
 ## 3. 8-Step Participant Journey Implementation
 
 ### 3.1 Step Flow Controller (Mandatory Pattern)
+
 ```typescript
 // lib/hooks/useParticipantFlow.ts
 'use client';
@@ -643,9 +727,9 @@ export { TextField };
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-type ParticipantStep = 
+type ParticipantStep =
   | 'pre-screening'
-  | 'welcome' 
+  | 'welcome'
   | 'consent'
   | 'familiarization'
   | 'pre-sorting'
@@ -665,13 +749,13 @@ interface ParticipantFlowState {
     commentary?: CommentaryData;
     surveyData?: Record<string, any>;
   };
-  
+
   // Actions
   setCurrentStep: (step: ParticipantStep) => void;
   completeStep: (step: ParticipantStep, data?: any) => void;
   updateParticipantData: (key: string, data: any) => void;
   resetFlow: () => void;
-  
+
   // Apple-style progress calculation
   getProgress: () => number;
   getNextStep: () => ParticipantStep | null;
@@ -680,122 +764,134 @@ interface ParticipantFlowState {
 
 // Participant flow step order (9 steps total including pre-screening and thank-you)
 const PARTICIPANT_STEP_ORDER: ParticipantStep[] = [
-  'pre-screening', 'welcome', 'consent', 'familiarization',
-  'pre-sorting', 'q-sort', 'commentary', 'post-survey', 'thank-you'
+  'pre-screening',
+  'welcome',
+  'consent',
+  'familiarization',
+  'pre-sorting',
+  'q-sort',
+  'commentary',
+  'post-survey',
+  'thank-you',
 ];
 
 // SECURITY: No localStorage persistence for participant data
 // All sensitive data (demographics, consent, Q-sort data) stored server-side only
 // Client stores only encrypted resume token for session recovery
-export const useParticipantFlow = create<ParticipantFlowState>()((set, get) => ({
-  currentStep: 'pre-screening',
-  completedSteps: [],
-  studyToken: '',
-  participantData: {}, // Never persisted locally - server-side only
-  resumeToken: '', // Encrypted, server-validated resume token
+export const useParticipantFlow = create<ParticipantFlowState>()(
+  (set, get) => ({
+    currentStep: 'pre-screening',
+    completedSteps: [],
+    studyToken: '',
+    participantData: {}, // Never persisted locally - server-side only
+    resumeToken: '', // Encrypted, server-validated resume token
 
-  setCurrentStep: (step) => {
-    set({ currentStep: step });
-    // Auto-save progress to server with resume token
-    get().saveProgressToServer();
-  },
-  
-  completeStep: async (step, data) => {
-    // Save data to server immediately, never store locally
-    const response = await fetch('/api/participant/save-step', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        resumeToken: get().resumeToken,
-        step,
-        data: data || {},
-        timestamp: new Date().toISOString()
-      }),
-      credentials: 'include' // Use HttpOnly cookies for session
-    });
+    setCurrentStep: step => {
+      set({ currentStep: step });
+      // Auto-save progress to server with resume token
+      get().saveProgressToServer();
+    },
 
-    if (response.ok) {
-      const { encryptedResumeToken } = await response.json();
-      set((state) => ({
-        completedSteps: [...state.completedSteps, step],
-        resumeToken: encryptedResumeToken,
-        // participantData NOT stored locally
-      }));
-    }
-  },
-
-  updateParticipantData: async (key, data) => {
-    // All participant data updates go to server immediately
-    await fetch('/api/participant/update-data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        resumeToken: get().resumeToken,
-        key,
-        data,
-        timestamp: new Date().toISOString()
-      }),
-      credentials: 'include'
-    });
-  },
-
-  resetFlow: () => {
-    // Clear all local state and invalidate server session
-    fetch('/api/participant/reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resumeToken: get().resumeToken }),
-      credentials: 'include'
-    });
-    
-    set({
-      currentStep: 'pre-screening',
-      completedSteps: [],
-      participantData: {},
-      resumeToken: '',
-    });
-  },
-
-  saveProgressToServer: async () => {
-    const { currentStep, completedSteps, resumeToken } = get();
-    try {
-      await fetch('/api/participant/save-progress', {
+    completeStep: async (step, data) => {
+      // Save data to server immediately, never store locally
+      const response = await fetch('/api/participant/save-step', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          resumeToken,
-          currentStep,
-          completedSteps,
-          timestamp: new Date().toISOString()
+          resumeToken: get().resumeToken,
+          step,
+          data: data || {},
+          timestamp: new Date().toISOString(),
         }),
-        credentials: 'include'
+        credentials: 'include', // Use HttpOnly cookies for session
       });
-    } catch (error) {
-      console.error('Failed to save progress:', error);
-    }
-  },
 
-  getProgress: () => {
-    const { completedSteps } = get();
-    const totalSteps = PARTICIPANT_STEP_ORDER.length; 
-    return (completedSteps.length / totalSteps) * 100;
-  },
+      if (response.ok) {
+        const { encryptedResumeToken } = await response.json();
+        set(state => ({
+          completedSteps: [...state.completedSteps, step],
+          resumeToken: encryptedResumeToken,
+          // participantData NOT stored locally
+        }));
+      }
+    },
 
-  getNextStep: (): ParticipantStep | null => {
-    const { currentStep } = get();
-    const currentIndex = PARTICIPANT_STEP_ORDER.indexOf(currentStep);
-    return currentIndex < PARTICIPANT_STEP_ORDER.length - 1 ? PARTICIPANT_STEP_ORDER[currentIndex + 1] : null;
-  },
+    updateParticipantData: async (key, data) => {
+      // All participant data updates go to server immediately
+      await fetch('/api/participant/update-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeToken: get().resumeToken,
+          key,
+          data,
+          timestamp: new Date().toISOString(),
+        }),
+        credentials: 'include',
+      });
+    },
 
-  getPreviousStep: (): ParticipantStep | null => {
-    const { currentStep } = get();
-    const currentIndex = PARTICIPANT_STEP_ORDER.indexOf(currentStep);
-    return currentIndex > 0 ? PARTICIPANT_STEP_ORDER[currentIndex - 1] : null;
-  },
-}));
+    resetFlow: () => {
+      // Clear all local state and invalidate server session
+      fetch('/api/participant/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resumeToken: get().resumeToken }),
+        credentials: 'include',
+      });
+
+      set({
+        currentStep: 'pre-screening',
+        completedSteps: [],
+        participantData: {},
+        resumeToken: '',
+      });
+    },
+
+    saveProgressToServer: async () => {
+      const { currentStep, completedSteps, resumeToken } = get();
+      try {
+        await fetch('/api/participant/save-progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            resumeToken,
+            currentStep,
+            completedSteps,
+            timestamp: new Date().toISOString(),
+          }),
+          credentials: 'include',
+        });
+      } catch (error) {
+        console.error('Failed to save progress:', error);
+      }
+    },
+
+    getProgress: () => {
+      const { completedSteps } = get();
+      const totalSteps = PARTICIPANT_STEP_ORDER.length;
+      return (completedSteps.length / totalSteps) * 100;
+    },
+
+    getNextStep: (): ParticipantStep | null => {
+      const { currentStep } = get();
+      const currentIndex = PARTICIPANT_STEP_ORDER.indexOf(currentStep);
+      return currentIndex < PARTICIPANT_STEP_ORDER.length - 1
+        ? PARTICIPANT_STEP_ORDER[currentIndex + 1]
+        : null;
+    },
+
+    getPreviousStep: (): ParticipantStep | null => {
+      const { currentStep } = get();
+      const currentIndex = PARTICIPANT_STEP_ORDER.indexOf(currentStep);
+      return currentIndex > 0 ? PARTICIPANT_STEP_ORDER[currentIndex - 1] : null;
+    },
+  })
+);
 ```
 
 ### 3.2 Apple-Style Progress Indicator
+
 ```typescript
 // components/participant/ProgressTracker/ProgressTracker.tsx
 'use client';
@@ -828,7 +924,7 @@ export function ProgressTracker() {
           <span className="text-sm font-medium text-secondary-label">{Math.round(progress)}%</span>
         </div>
         <div className="h-1 bg-quaternary-fill rounded-full overflow-hidden">
-          <div 
+          <div
             className="h-full bg-system-blue transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           />
@@ -840,7 +936,7 @@ export function ProgressTracker() {
         {Object.entries(stepLabels).map(([step, label], index) => {
           const isCompleted = completedSteps.includes(step as any);
           const isCurrent = currentStep === step;
-          
+
           return (
             <div key={step} className="flex flex-col items-center space-y-2">
               {/* Step circle */}
@@ -858,7 +954,7 @@ export function ProgressTracker() {
                   <span>{index + 1}</span>
                 )}
               </div>
-              
+
               {/* Step label */}
               <span className={cn(
                 "text-xs font-medium text-center max-w-16",
@@ -882,12 +978,14 @@ export function ProgressTracker() {
 # PART III: PHASE 5.5 - CRITICAL UI & USER EXPERIENCE EXCELLENCE
 
 ## 🎯 Production-Grade Authentication & User Interface Implementation
+
 **Phase 5.5 Priority** - Bridging the gap between robust backend and user-facing interface
 
 ### Industry Best Practices Integration
+
 - **Tableau**: Smart defaults, data intelligence, visual analytics
 - **Qualtrics**: Academic credibility, research workflows, collaboration
-- **Apple**: Human Interface Guidelines, glass morphism, micro-interactions  
+- **Apple**: Human Interface Guidelines, glass morphism, micro-interactions
 - **Netflix**: Personalization, engagement, continuous flow
 
 ---
@@ -895,6 +993,7 @@ export function ProgressTracker() {
 ## 4. Authentication UI System Implementation
 
 ### 4.1 Enhanced Login Page with Industry Standards
+
 ```typescript
 // app/auth/login/page.tsx
 'use client';
@@ -908,7 +1007,7 @@ import { MicrosoftIcon, GoogleIcon, OrcidIcon } from '@/components/icons';
 import { EyeIcon, EyeSlashIcon, FaceSmileIcon } from '@heroicons/react/24/outline';
 
 interface LoginPageProps {
-  searchParams?: { 
+  searchParams?: {
     redirect?: string;
     error?: string;
   };
@@ -917,7 +1016,7 @@ interface LoginPageProps {
 export default function LoginPage({ searchParams }: LoginPageProps) {
   const router = useRouter();
   const { login, loginWithProvider, checkBiometric } = useAuthStore();
-  
+
   // Tableau-inspired smart defaults
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -925,17 +1024,17 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   // Qualtrics-inspired domain recognition
   const [suggestedSSO, setSuggestedSSO] = useState<string | null>(null);
-  
+
   // Apple-inspired biometric authentication
   const [biometricAvailable, setBiometricAvailable] = useState(false);
-  
+
   useEffect(() => {
     // Check for biometric availability
     checkBiometric().then(setBiometricAvailable);
-    
+
     // Domain detection for SSO suggestion
     if (email.includes('@')) {
       const domain = email.split('@')[1];
@@ -945,7 +1044,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
       }
     }
   }, [email]);
-  
+
   // Rotate loading messages (Netflix-style)
   useEffect(() => {
     if (isLoading) {
@@ -958,32 +1057,32 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
       return () => clearInterval(interval);
     }
   }, [isLoading]);
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       await login(email, password, rememberMe);
-      const redirect = searchParams?.redirect || '/researcher/dashboard';
+      const redirect = searchParams?.redirect || '/dashboard';  // Note: Route groups don't appear in URLs
       router.push(redirect);
     } catch (error) {
       console.error('Login failed:', error);
       setIsLoading(false);
     }
   };
-  
+
   const handleSocialLogin = async (provider: 'google' | 'microsoft' | 'orcid') => {
     setIsLoading(true);
     try {
       await loginWithProvider(provider);
-      router.push('/researcher/dashboard');
+      router.push('/dashboard');  // Correct: no /researcher prefix
     } catch (error) {
       console.error(`${provider} login failed:`, error);
       setIsLoading(false);
     }
   };
-  
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-bg to-surface-secondary">
       <motion.div
@@ -1002,7 +1101,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               Welcome back to research excellence
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="space-y-4">
             {/* SSO Suggestion Alert (Tableau-inspired) */}
             <AnimatePresence>
@@ -1014,14 +1113,14 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                   className="p-3 rounded-lg bg-system-blue/10 border border-system-blue/20"
                 >
                   <p className="text-sm text-system-blue">
-                    {suggestedSSO === 'academic' 
+                    {suggestedSSO === 'academic'
                       ? '🎓 Academic institution detected. Sign in with your university account?'
                       : '💼 Corporate account detected. Sign in with Microsoft?'}
                   </p>
                 </motion.div>
               )}
             </AnimatePresence>
-          
+
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -1042,7 +1141,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                   </svg>
                 }
               />
-            
+
               <TextField
                 label="Password"
                 type={showPassword ? 'text' : 'password'}
@@ -1054,7 +1153,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                 disabled={isLoading}
                 error={error}
                 helperText={
-                  <a href="/auth/forgot-password" 
+                  <a href="/auth/forgot-password"
                      className="text-system-blue hover:underline text-xs">
                     Forgot password?
                   </a>
@@ -1073,7 +1172,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                   </button>
                 }
               />
-            
+
               {/* Remember Me Checkbox using Apple styling */}
               <div className="flex items-center justify-between">
                 <label className="flex items-center space-x-2 cursor-pointer">
@@ -1086,7 +1185,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                   />
                   <span className="text-sm text-text">Remember me</span>
                 </label>
-                
+
                 {/* Face ID button (Apple-style) */}
                 <button
                   type="button"
@@ -1097,7 +1196,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                   <FaceSmileIcon className="w-6 h-6 text-system-blue" />
                 </button>
               </div>
-            
+
               {/* Using existing Button component */}
               <Button
                 type="submit"
@@ -1110,7 +1209,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               </Button>
             </form>
           </form>
-          
+
             {/* Social Login Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -1122,7 +1221,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                 </span>
               </div>
             </div>
-            
+
             {/* Social Login Buttons using existing Button component */}
             <div className="grid grid-cols-3 gap-3">
               <Button
@@ -1135,7 +1234,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               >
                 <GoogleIcon className="w-5 h-5" />
               </Button>
-              
+
               <Button
                 type="button"
                 variant="secondary"
@@ -1146,7 +1245,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               >
                 <MicrosoftIcon className="w-5 h-5" />
               </Button>
-              
+
               <Button
                 type="button"
                 variant="secondary"
@@ -1159,11 +1258,11 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               </Button>
             </div>
           </CardContent>
-          
+
           <CardFooter className="text-center">
             <p className="text-sm text-text-secondary">
               New to VQMethod?{' '}
-              <a href="/auth/register" 
+              <a href="/auth/register"
                  className="text-system-blue hover:underline">
                 Create an account
               </a>
@@ -1177,6 +1276,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
 ```
 
 ### 4.2 Multi-Step Registration with Personalization (Netflix-style)
+
 ```typescript
 // app/auth/register/page.tsx
 'use client';
@@ -1200,26 +1300,26 @@ export default function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    
+
     // Step 2: Profile
     firstName: '',
     lastName: '',
     institution: '',
     role: 'researcher',
     discipline: '',
-    
+
     // Step 3: Preferences
     researchInterests: [],
     collaborationOpen: true,
     emailNotifications: true,
-    
+
     // Step 4: Terms
     termsAccepted: false,
     privacyAccepted: false
   });
-  
+
   const progress = ((currentStep + 1) / REGISTRATION_STEPS.length) * 100;
-  
+
   // Tableau-inspired password strength indicator
   const calculatePasswordStrength = (password: string): number => {
     let strength = 0;
@@ -1229,9 +1329,9 @@ export default function RegisterPage() {
     if (/\d/.test(password) && /[^a-zA-Z\d]/.test(password)) strength += 25;
     return strength;
   };
-  
+
   const passwordStrength = calculatePasswordStrength(formData.password);
-  
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 0: // Account Details
@@ -1244,7 +1344,7 @@ export default function RegisterPage() {
           >
             <h2 className="text-2xl font-bold text-label">Create your account</h2>
             <p className="text-secondary-label">Join the research community</p>
-            
+
             <TextField
               label="Email Address"
               type="email"
@@ -1253,7 +1353,7 @@ export default function RegisterPage() {
               placeholder="researcher@university.edu"
               required
             />
-            
+
             <div>
               <TextField
                 label="Password"
@@ -1263,7 +1363,7 @@ export default function RegisterPage() {
                 placeholder="Create a strong password"
                 required
               />
-              
+
               {/* Password Strength Indicator (Tableau-style) */}
               <div className="mt-2">
                 <div className="flex justify-between mb-1">
@@ -1282,7 +1382,7 @@ export default function RegisterPage() {
                 </div>
               </div>
             </div>
-            
+
             <TextField
               label="Confirm Password"
               type="password"
@@ -1290,12 +1390,12 @@ export default function RegisterPage() {
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               placeholder="Confirm your password"
               required
-              error={formData.confirmPassword && formData.password !== formData.confirmPassword ? 
+              error={formData.confirmPassword && formData.password !== formData.confirmPassword ?
                 'Passwords do not match' : undefined}
             />
           </motion.div>
         );
-        
+
       case 1: // Research Profile (Qualtrics-inspired)
         return (
           <motion.div
@@ -1306,7 +1406,7 @@ export default function RegisterPage() {
           >
             <h2 className="text-2xl font-bold text-label">Tell us about your research</h2>
             <p className="text-secondary-label">Help us personalize your experience</p>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <TextField
                 label="First Name"
@@ -1314,7 +1414,7 @@ export default function RegisterPage() {
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                 required
               />
-              
+
               <TextField
                 label="Last Name"
                 value={formData.lastName}
@@ -1322,7 +1422,7 @@ export default function RegisterPage() {
                 required
               />
             </div>
-            
+
             <TextField
               label="Institution"
               value={formData.institution}
@@ -1330,7 +1430,7 @@ export default function RegisterPage() {
               placeholder="University or Organization"
               required
             />
-            
+
             {/* Research Discipline Selection (Visual) */}
             <div>
               <label className="block text-sm font-medium text-label mb-2">
@@ -1355,7 +1455,7 @@ export default function RegisterPage() {
             </div>
           </motion.div>
         );
-        
+
       case 2: // Preferences (Netflix-style personalization)
         return (
           <motion.div
@@ -1366,7 +1466,7 @@ export default function RegisterPage() {
           >
             <h2 className="text-2xl font-bold text-label">Customize your experience</h2>
             <p className="text-secondary-label">We'll use this to recommend relevant features</p>
-            
+
             {/* Research Interests (Tag selection) */}
             <div>
               <label className="block text-sm font-medium text-label mb-2">
@@ -1395,7 +1495,7 @@ export default function RegisterPage() {
                 ))}
               </div>
             </div>
-            
+
             {/* Preference Toggles */}
             <div className="space-y-3">
               <label className="flex items-center justify-between p-3 bg-quaternary-fill/50 rounded-lg cursor-pointer">
@@ -1410,7 +1510,7 @@ export default function RegisterPage() {
                   className="rounded"
                 />
               </label>
-              
+
               <label className="flex items-center justify-between p-3 bg-quaternary-fill/50 rounded-lg cursor-pointer">
                 <div>
                   <div className="font-medium text-label">Email Notifications</div>
@@ -1426,7 +1526,7 @@ export default function RegisterPage() {
             </div>
           </motion.div>
         );
-        
+
       case 3: // Terms & Verification
         return (
           <motion.div
@@ -1437,7 +1537,7 @@ export default function RegisterPage() {
           >
             <h2 className="text-2xl font-bold text-label">Almost done!</h2>
             <p className="text-secondary-label">Review and accept our terms</p>
-            
+
             {/* Terms Summary (Apple-style) */}
             <div className="space-y-3">
               <div className="p-4 bg-quaternary-fill/50 rounded-lg">
@@ -1449,7 +1549,7 @@ export default function RegisterPage() {
                   <li>• You can delete your account anytime</li>
                 </ul>
               </div>
-              
+
               <label className="flex items-start space-x-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1465,7 +1565,7 @@ export default function RegisterPage() {
                   </a>
                 </span>
               </label>
-              
+
               <label className="flex items-start space-x-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1482,7 +1582,7 @@ export default function RegisterPage() {
                 </span>
               </label>
             </div>
-            
+
             {/* What happens next */}
             <div className="p-4 bg-system-blue/10 rounded-lg border border-system-blue/20">
               <h3 className="font-medium text-system-blue mb-1">What happens next?</h3>
@@ -1492,12 +1592,12 @@ export default function RegisterPage() {
             </div>
           </motion.div>
         );
-        
+
       default:
         return null;
     }
   };
-  
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-system-background via-secondary-background to-system-background">
       <motion.div
@@ -1525,12 +1625,12 @@ export default function RegisterPage() {
             </div>
             <ProgressBar value={progress} />
           </div>
-          
+
           {/* Step Content */}
           <AnimatePresence mode="wait">
             {renderStepContent()}
           </AnimatePresence>
-          
+
           {/* Navigation Buttons */}
           <div className="flex justify-between mt-8">
             <Button
@@ -1540,7 +1640,7 @@ export default function RegisterPage() {
             >
               Back
             </Button>
-            
+
             <Button
               variant="primary"
               onClick={() => {
@@ -1567,6 +1667,7 @@ export default function RegisterPage() {
 ## 5. Authentication State Management (Zustand)
 
 ### 5.1 Global Authentication Store
+
 ```typescript
 // lib/stores/auth-store.ts
 import { create } from 'zustand';
@@ -1597,16 +1698,22 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   sessionExpiry: Date | null;
-  
+
   // Actions
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
-  loginWithProvider: (provider: 'google' | 'microsoft' | 'orcid') => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    rememberMe?: boolean
+  ) => Promise<void>;
+  loginWithProvider: (
+    provider: 'google' | 'microsoft' | 'orcid'
+  ) => Promise<void>;
   logout: () => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   refreshSession: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   checkBiometric: () => Promise<boolean>;
-  
+
   // Session management
   checkSession: () => void;
   extendSession: () => void;
@@ -1619,40 +1726,39 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
       sessionExpiry: null,
-      
+
       login: async (email, password, rememberMe = false) => {
         set({ isLoading: true });
         try {
           const response = await AuthService.login(email, password);
           const { user, accessToken, refreshToken, expiresIn } = response;
-          
+
           // Store tokens securely
           if (rememberMe) {
             localStorage.setItem('refreshToken', refreshToken);
           } else {
             sessionStorage.setItem('refreshToken', refreshToken);
           }
-          
+
           // Calculate session expiry
           const expiry = new Date(Date.now() + expiresIn * 1000);
-          
+
           set({
             user,
             isAuthenticated: true,
             sessionExpiry: expiry,
-            isLoading: false
+            isLoading: false,
           });
-          
+
           // Start session monitoring
           get().checkSession();
-          
         } catch (error) {
           set({ isLoading: false });
           throw error;
         }
       },
-      
-      loginWithProvider: async (provider) => {
+
+      loginWithProvider: async provider => {
         set({ isLoading: true });
         try {
           // Initiate OAuth flow
@@ -1663,7 +1769,7 @@ export const useAuthStore = create<AuthState>()(
           throw error;
         }
       },
-      
+
       logout: async () => {
         try {
           await AuthService.logout();
@@ -1672,14 +1778,14 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: null,
             isAuthenticated: false,
-            sessionExpiry: null
+            sessionExpiry: null,
           });
           localStorage.removeItem('refreshToken');
           sessionStorage.removeItem('refreshToken');
         }
       },
-      
-      register: async (data) => {
+
+      register: async data => {
         set({ isLoading: true });
         try {
           await AuthService.register(data);
@@ -1690,34 +1796,35 @@ export const useAuthStore = create<AuthState>()(
           throw error;
         }
       },
-      
+
       refreshSession: async () => {
-        const refreshToken = localStorage.getItem('refreshToken') || 
-                           sessionStorage.getItem('refreshToken');
-        
+        const refreshToken =
+          localStorage.getItem('refreshToken') ||
+          sessionStorage.getItem('refreshToken');
+
         if (!refreshToken) {
           get().logout();
           return;
         }
-        
+
         try {
           const response = await AuthService.refreshToken(refreshToken);
           const { user, accessToken, expiresIn } = response;
-          
+
           const expiry = new Date(Date.now() + expiresIn * 1000);
-          
+
           set({
             user,
             isAuthenticated: true,
-            sessionExpiry: expiry
+            sessionExpiry: expiry,
           });
         } catch (error) {
           get().logout();
           throw error;
         }
       },
-      
-      updateProfile: async (updates) => {
+
+      updateProfile: async updates => {
         set({ isLoading: true });
         try {
           const updatedUser = await AuthService.updateProfile(updates);
@@ -1727,40 +1834,41 @@ export const useAuthStore = create<AuthState>()(
           throw error;
         }
       },
-      
+
       checkBiometric: async () => {
         // Check for WebAuthn support
         if (window.PublicKeyCredential) {
-          const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+          const available =
+            await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
           return available;
         }
         return false;
       },
-      
+
       checkSession: () => {
         const interval = setInterval(() => {
           const { sessionExpiry, isAuthenticated } = get();
-          
+
           if (!isAuthenticated) {
             clearInterval(interval);
             return;
           }
-          
+
           if (sessionExpiry) {
             const now = new Date();
             const timeLeft = sessionExpiry.getTime() - now.getTime();
-            
+
             // Show warning 5 minutes before expiry
             if (timeLeft < 5 * 60 * 1000 && timeLeft > 4 * 60 * 1000) {
               // Show session expiry warning
               console.log('Session expiring soon');
             }
-            
+
             // Auto refresh 1 minute before expiry
             if (timeLeft < 60 * 1000 && timeLeft > 0) {
               get().refreshSession();
             }
-            
+
             // Session expired
             if (timeLeft <= 0) {
               get().logout();
@@ -1769,7 +1877,7 @@ export const useAuthStore = create<AuthState>()(
           }
         }, 10000); // Check every 10 seconds
       },
-      
+
       extendSession: () => {
         const { sessionExpiry } = get();
         if (sessionExpiry) {
@@ -1777,15 +1885,15 @@ export const useAuthStore = create<AuthState>()(
           const newExpiry = new Date(sessionExpiry.getTime() + 30 * 60 * 1000);
           set({ sessionExpiry: newExpiry });
         }
-      }
+      },
     }),
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ 
+      partialize: state => ({
         user: state.user,
-        isAuthenticated: state.isAuthenticated 
-      })
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );
@@ -1796,6 +1904,7 @@ export const useAuthStore = create<AuthState>()(
 ## 6. Protected Routes Implementation
 
 ### 6.1 Route Protection Middleware
+
 ```typescript
 // middleware.ts
 import { NextResponse } from 'next/server';
@@ -1813,41 +1922,41 @@ const publicRoutes = [
   '/auth/register',
   '/auth/forgot-password',
   '/auth/reset-password',
-  '/auth/verify-email'
+  '/auth/verify-email',
 ];
 
 const roleBasedRoutes = {
   researcher: ['/researcher', '/api/researcher'],
   participant: ['/participant', '/api/participant'],
-  admin: ['/admin', '/api/admin']
+  admin: ['/admin', '/api/admin'],
 };
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+
   // Allow public routes
   if (publicRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next();
   }
-  
+
   // Check for authentication token
   const token = request.cookies.get('access-token')?.value;
-  
+
   if (!token) {
     // Redirect to login with return URL
     const loginUrl = new URL('/auth/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
-  
+
   try {
     // Verify JWT token
     const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
     const { payload } = await jwtVerify(token, secret);
-    
+
     // Check role-based access
     const userRole = payload.role as string;
-    
+
     // Check if user has access to the requested route
     for (const [role, routes] of Object.entries(roleBasedRoutes)) {
       if (routes.some(route => pathname.startsWith(route))) {
@@ -1857,18 +1966,17 @@ export async function middleware(request: NextRequest) {
         }
       }
     }
-    
+
     // Add user info to request headers for downstream use
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-user-id', payload.sub as string);
     requestHeaders.set('x-user-role', userRole);
-    
+
     return NextResponse.next({
       request: {
         headers: requestHeaders,
       },
     });
-    
   } catch (error) {
     // Invalid token - redirect to login
     const loginUrl = new URL('/auth/login', request.url);
@@ -1878,7 +1986,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)']
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
 ```
 
@@ -1887,6 +1995,7 @@ export const config = {
 ## 7. Essential Pages Implementation
 
 ### 7.1 About Page with Interactive Q-Methodology Explanation
+
 ```typescript
 // app/about/page.tsx
 'use client';
@@ -1909,7 +2018,7 @@ export default function AboutPage() {
         >
           <source src="/videos/research-background.mp4" type="video/mp4" />
         </video>
-        
+
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
@@ -1919,7 +2028,7 @@ export default function AboutPage() {
           >
             Research Reimagined
           </motion.h1>
-          
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1929,7 +2038,7 @@ export default function AboutPage() {
             VQMethod brings Q-methodology into the digital age with world-class tools
             inspired by industry leaders
           </motion.p>
-          
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1946,14 +2055,14 @@ export default function AboutPage() {
           </motion.div>
         </div>
       </section>
-      
+
       {/* Interactive Q-Methodology Explanation */}
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-4xl font-bold text-center mb-12">
             What is Q-Methodology?
           </h2>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
@@ -1989,7 +2098,7 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
-      
+
       {/* Animated Statistics */}
       <section className="py-20 px-4 bg-quaternary-fill/30">
         <div className="max-w-6xl mx-auto">
@@ -2025,6 +2134,7 @@ export default function AboutPage() {
 ## 8. Navigation Enhancement with Role-Based Access
 
 ### 8.1 Global Navigation Component
+
 ```typescript
 // components/navigation/GlobalNav.tsx
 'use client';
@@ -2034,7 +2144,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { Button } from '@/components/apple-ui';
-import { 
+import {
   MagnifyingGlassIcon,
   BellIcon,
   UserCircleIcon,
@@ -2047,7 +2157,7 @@ export function GlobalNav() {
   const { user, isAuthenticated, logout } = useAuthStore();
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  
+
   // Intelligent navigation based on user role
   const getNavigationItems = () => {
     if (!isAuthenticated) {
@@ -2058,14 +2168,14 @@ export function GlobalNav() {
         { label: 'Help', href: '/help' }
       ];
     }
-    
+
     switch (user?.role) {
       case 'researcher':
         return [
-          { label: 'Dashboard', href: '/researcher/dashboard' },
-          { label: 'Studies', href: '/researcher/studies' },
-          { label: 'Analytics', href: '/researcher/analytics' },
-          { label: 'Collaborate', href: '/researcher/collaborate' }
+          { label: 'Dashboard', href: '/dashboard' },  // Note: Route groups (researcher) don't appear in URLs
+          { label: 'Studies', href: '/studies' },
+          { label: 'Analytics', href: '/analytics' },
+          { label: 'Collaborate', href: '/collaborate' }
         ];
       case 'participant':
         return [
@@ -2085,9 +2195,9 @@ export function GlobalNav() {
         return [];
     }
   };
-  
+
   const navItems = getNavigationItems();
-  
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-quaternary-fill">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -2097,7 +2207,7 @@ export function GlobalNav() {
             <a href="/" className="text-2xl font-bold bg-gradient-to-r from-system-blue to-system-purple bg-clip-text text-transparent">
               VQMethod
             </a>
-            
+
             {/* Main Navigation */}
             <div className="hidden md:flex space-x-6">
               {navItems.map(item => (
@@ -2115,7 +2225,7 @@ export function GlobalNav() {
               ))}
             </div>
           </div>
-          
+
           {/* Right Section */}
           <div className="flex items-center space-x-4">
             {/* Search (Tableau-style) */}
@@ -2126,7 +2236,7 @@ export function GlobalNav() {
             >
               <MagnifyingGlassIcon className="w-5 h-5 text-secondary-label" />
             </button>
-            
+
             {isAuthenticated ? (
               <>
                 {/* Notifications */}
@@ -2137,7 +2247,7 @@ export function GlobalNav() {
                   <BellIcon className="w-5 h-5 text-secondary-label" />
                   <span className="absolute top-1 right-1 w-2 h-2 bg-system-red rounded-full" />
                 </button>
-                
+
                 {/* Profile Menu */}
                 <div className="relative">
                   <button
@@ -2157,7 +2267,7 @@ export function GlobalNav() {
                       {user?.firstName}
                     </span>
                   </button>
-                  
+
                   {/* Dropdown Menu */}
                   <AnimatePresence>
                     {profileMenuOpen && (
@@ -2171,7 +2281,7 @@ export function GlobalNav() {
                           <div className="font-medium text-label">{user?.firstName} {user?.lastName}</div>
                           <div className="text-sm text-secondary-label">{user?.email}</div>
                         </div>
-                        
+
                         <div className="p-2">
                           <a
                             href={`/${user?.role}/settings`}
@@ -2180,7 +2290,7 @@ export function GlobalNav() {
                             <Cog6ToothIcon className="w-5 h-5 text-secondary-label" />
                             <span className="text-sm">Settings</span>
                           </a>
-                          
+
                           <button
                             onClick={logout}
                             className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-quaternary-fill transition-colors w-full text-left"
@@ -2215,7 +2325,7 @@ export function GlobalNav() {
           </div>
         </div>
       </div>
-      
+
       {/* Search Overlay (Tableau-style) */}
       <AnimatePresence>
         {searchOpen && (
@@ -2232,7 +2342,7 @@ export function GlobalNav() {
                 className="w-full px-4 py-3 bg-quaternary-fill/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue"
                 autoFocus
               />
-              
+
               {/* Quick Actions */}
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="text-xs text-secondary-label">Quick actions:</span>
@@ -2260,6 +2370,7 @@ export function GlobalNav() {
 ## 9. CSS Enhancements for Production-Grade UI
 
 ### 9.1 Glass Morphism and Advanced Styles
+
 ```css
 /* styles/auth.css - Production-grade authentication styles */
 
@@ -2269,7 +2380,7 @@ export function GlobalNav() {
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 
+  box-shadow:
     0 0.5px 0 1px rgba(255, 255, 255, 0.23) inset,
     0 1px 0 0 rgba(255, 255, 255, 0.66) inset,
     0 8px 32px rgba(31, 38, 135, 0.15);
@@ -2279,7 +2390,7 @@ export function GlobalNav() {
   .auth-container {
     background: rgba(0, 0, 0, 0.72);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 
+    box-shadow:
       0 0.5px 0 1px rgba(0, 0, 0, 0.23) inset,
       0 1px 0 0 rgba(0, 0, 0, 0.66) inset,
       0 8px 32px rgba(0, 0, 0, 0.35);
@@ -2288,7 +2399,7 @@ export function GlobalNav() {
 
 /* Gradient backgrounds */
 .gradient-mesh {
-  background-image: 
+  background-image:
     radial-gradient(at 40% 20%, hsla(210, 100%, 56%, 0.3) 0px, transparent 50%),
     radial-gradient(at 80% 0%, hsla(280, 100%, 60%, 0.2) 0px, transparent 50%),
     radial-gradient(at 0% 50%, hsla(355, 100%, 60%, 0.2) 0px, transparent 50%),
@@ -2364,7 +2475,8 @@ export function GlobalNav() {
 
 /* Success animations */
 @keyframes success-bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -2382,6 +2494,7 @@ export function GlobalNav() {
 ## 10. Testing Requirements for Phase 5.5
 
 ### 10.1 Authentication UI Testing
+
 ```typescript
 // __tests__/auth/login.test.tsx
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -2395,26 +2508,26 @@ describe('Login Page', () => {
     expect(screen.getByText('Sign In')).toBeInTheDocument();
     expect(screen.getByText('Sign in with SSO')).toBeInTheDocument();
   });
-  
+
   it('should detect academic domain and suggest SSO', async () => {
     render(<LoginPage />);
     const emailInput = screen.getByLabelText('Email');
-    
+
     fireEvent.change(emailInput, { target: { value: 'user@university.edu' } });
-    
+
     await waitFor(() => {
       expect(screen.getByText('Detected: Academic Institution')).toBeInTheDocument();
       expect(screen.getByText('Sign in with SSO')).toBeInTheDocument();
     });
   });
-  
+
   it('should show password strength indicator', () => {
     render(<LoginPage />);
     const passwordInput = screen.getByLabelText('Password');
-    
+
     fireEvent.change(passwordInput, { target: { value: 'weakpass' } });
     expect(screen.getByText('25%')).toBeInTheDocument();
-    
+
     fireEvent.change(passwordInput, { target: { value: 'StrongP@ss123!' } });
     expect(screen.getByText('100%')).toBeInTheDocument();
   });

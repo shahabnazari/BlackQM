@@ -54,7 +54,7 @@ export class EmailService {
     try {
       const info = await this.transporter.sendMail(mailOptions);
       console.log('Email sent:', info.messageId);
-      
+
       // In development, log the preview URL
       if (this.configService.get('NODE_ENV') === 'development') {
         console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
@@ -65,9 +65,12 @@ export class EmailService {
     }
   }
 
-  async sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
+  async sendPasswordResetEmail(
+    email: string,
+    resetToken: string,
+  ): Promise<void> {
     const resetUrl = `${this.configService.get('FRONTEND_URL', 'http://localhost:3000')}/auth/reset-password?token=${resetToken}`;
-    
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -111,9 +114,12 @@ export class EmailService {
     });
   }
 
-  async sendEmailVerificationEmail(email: string, verificationToken: string): Promise<void> {
+  async sendEmailVerificationEmail(
+    email: string,
+    verificationToken: string,
+  ): Promise<void> {
     const verifyUrl = `${this.configService.get('FRONTEND_URL', 'http://localhost:3000')}/auth/verify-email?token=${verificationToken}`;
-    
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -192,7 +198,7 @@ export class EmailService {
               </div>
 
               <p>Ready to create your first study?</p>
-              <a href="${this.configService.get('FRONTEND_URL', 'http://localhost:3000')}/researcher/dashboard" class="button">Go to Dashboard</a>
+              <a href="${this.configService.get('FRONTEND_URL', 'http://localhost:3000')}/dashboard" class="button">Go to Dashboard</a>
               
               <p>Need help getting started? Check out our documentation or contact support.</p>
               

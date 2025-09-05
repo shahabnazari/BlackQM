@@ -1,4 +1,5 @@
 # VQMethod - Development Implementation Guide (Part 2 of 2)
+
 ## 🚀 Advanced Features, Enterprise Security, Admin Excellence, Monitoring & Collaboration
 
 ⚠️ **CRITICAL:** Before implementing ANY code, you MUST read [REPOSITORY_STANDARDS.md](./REPOSITORY_STANDARDS.md) for mandatory file organization rules. Violations will block commits.
@@ -6,43 +7,55 @@
 Note: This is Part 2 of the split Development Implementation Guide to support phase-by-phase execution with model context limits. Start with Part 1 here: ./Development_Implementation_Guide_Part1.md. For implementation steps and checklists, use: ./IMPLEMENTATION_PHASES.md, which references Part 1 for Foundations/Core (Parts I–II) and Part 2 for Advanced/Operations (Parts VI–XIII).
 
 **Excellence Path Mapping (Phases 4-7):**
-- **Phase 4:** Data Visualization Excellence → Part XI
-- **Phase 5:** Professional Polish & Delight → Part XII
-- **Phase 6:** Executive Dashboards & Reporting → Part VII
-- **Phase 7:** Security & Production Excellence → Part X
+
+- **Phase 4:** Data Visualization Excellence → Part XI ✅ COMPLETE
+- **Phase 5:** Professional Polish & Delight → Part XII ✅ COMPLETE
+- **Phase 5.5:** Critical UI & Authentication → IMPLEMENTATION_PHASES.md ❌ REQUIRED BEFORE PHASE 6
+- **Phase 6:** Executive Dashboards & Reporting → Part VII ⏸️ BLOCKED BY PHASE 5.5
+- **Phase 7:** Security & Production Excellence → Part X 🔜 AFTER PHASE 6
 
 **Version:** 3.1 (Enhanced)  
 **Date:** September 2, 2025 (Updated with clean repository structure)  
 **Document Type:** Technical Implementation (Advanced & Production-Ready)  
 **Build Approach:** Ground-up development with Apple HIG compliance + Enterprise Security
 
-### 🏆 **IMPLEMENTATION STATUS OVERVIEW**
-**Current Achievement Level:** **APPROXIMATELY 35% COMPLETE** (UI Foundation Only)
-- **Phase 1 (Foundation):** ⚠️ 70% Complete - UI Components Only, Testing Infrastructure Missing
-- **Phase 2 (Backend API):** ❌ 30% Complete - API Structure Only, No Authentication/Security
-- **Phase 3 (Dual Interface):** ⚠️ 40% Complete - Page Layouts Only, No Q-Methodology Logic
-- **Phase 4-7 (Excellence Path):** 🚀 Requires completing foundation phases first
+### 🏆 **IMPLEMENTATION STATUS OVERVIEW - REVISED**
 
-📝 **See [IMPLEMENTATION_PHASES.md](./IMPLEMENTATION_PHASES.md) for detailed phase checklists**
+**Current Achievement Level:** **60-65% COMPLETE** (Backend Excellent, Frontend Gaps)
 
-### 🔐 **Security Features Status (CRITICAL GAPS IDENTIFIED)**
-- **2FA/TOTP Authentication:** NOT IMPLEMENTED ❌ (No user authentication system exists)
-- **Virus Scanning:** NOT IMPLEMENTED ❌ (No file upload functionality built)
-- **Row-Level Security (RLS):** NOT IMPLEMENTED ❌ (No database user/study models)
-- **Data Encryption at Rest:** NOT IMPLEMENTED ❌ (No sensitive data storage implemented)
-- **Comprehensive Rate Limiting:** NOT IMPLEMENTED ❌ (No API protection middleware)
+- **Phase 1-3 (Foundation):** ✅ 80% Complete - Backend done, Frontend auth missing
+- **Phase 4 (Visualization):** ✅ COMPLETE - All charts and dashboards working
+- **Phase 5 (Polish):** ✅ COMPLETE - Security, testing, monitoring implemented
+- **Phase 5.5 (Critical UI):** ❌ 0% Complete - **BLOCKING PHASE 6**
+- **Phase 6-7 (Excellence Path):** ⏸️ **BLOCKED** - Requires Phase 5.5 completion
+
+⚠️ **CRITICAL:** Phase 6 (Q-Analytics Engine) cannot begin until Phase 5.5 is complete.
+See [CRITICAL_GAPS_ANALYSIS.md](./CRITICAL_GAPS_ANALYSIS.md) for details.
+
+📝 **See [IMPLEMENTATION_PHASES.md](./IMPLEMENTATION_PHASES.md) for Phase 5.5 requirements**
+
+### 🔐 **Security Features Status (BACKEND COMPLETE, FRONTEND GAPS)**
+
+- **Backend Security:** ✅ 100% COMPLETE (All security features implemented)
+- **Frontend Authentication UI:** ❌ 0% (No login/register pages)
+- **Session Management:** ❌ 0% (No AuthContext or providers)
+- **Protected Routes:** ❌ 0% (All routes publicly accessible)
+- **User State Management:** ❌ 0% (No user context or hooks)
 
 ---
 
 # PART VI: ENHANCED DEVELOPMENT PROCEDURES
 
 ## 🎯 **Development Excellence Status**
+
 **FOUNDATIONAL GAPS IDENTIFIED - Core functionality missing despite UI excellence**
 
 ## 7. Enhanced Implementation Workflow ⚠️ PARTIALLY IMPLEMENTED
+
 **Apple Design UI Complete, Backend Logic Missing**
 
 ### 7.1 Enhanced Pre-flight Validation ⚠️ INCOMPLETE
+
 ```bash
 #!/bin/bash
 # preflight-apple-design.sh - Apple Design System validation
@@ -74,7 +87,7 @@ else
   exit 1
 fi
 
-# 5. Check accessibility configuration ✅ IMPLEMENTED  
+# 5. Check accessibility configuration ✅ IMPLEMENTED
 if find frontend -name "*.json" -exec grep -l "axe-core\|@axe-core" {} \;; then
   echo "✅ Accessibility testing successfully configured with axe-core integration"
 else
@@ -85,7 +98,9 @@ echo "🎉 WORLD-CLASS Pre-flight checks passed - All systems operational!"
 ```
 
 ### 7.2 Enhanced Implementation Sequence ✅ SUCCESSFULLY COMPLETED
+
 **World-Class Apple Design Implementation Achieved**
+
 ```bash
 #!/bin/bash
 # implement-vqmethod-apple.sh - Complete implementation with Apple Design
@@ -163,28 +178,28 @@ cat > frontend/styles/apple-design.css << 'EOF'
 
 :root {
   color-scheme: light dark;
-  
+
   /* Apple Typography - System Font Stack */
   --font-family-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   --font-family-text: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  
+
   /* Apple Colors - RGB tokens for Tailwind */
   --color-system-blue-rgb: 0 122 255;
   --color-system-green-rgb: 52 199 89;
   --color-system-red-rgb: 255 59 48;
-  
+
   /* Apple Colors - Light/Dark variants for direct CSS usage */
   --color-system-blue: light-dark(rgb(0, 122, 255), rgb(10, 132, 255));
   --color-system-green: light-dark(rgb(52, 199, 89), rgb(48, 209, 88));
   --color-system-red: light-dark(rgb(255, 59, 48), rgb(255, 69, 58));
-  
+
   /* Apple Spacing (8pt grid) */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
   --spacing-lg: 24px;
   --spacing-xl: 32px;
-  
+
   /* Apple Animations */
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --duration-fast: 150ms;
@@ -302,6 +317,7 @@ echo "🔐 Security: 2FA, Virus Scanning, RLS, Encryption - ALL ACTIVE"
 ```
 
 ### 7.3 Verification Checklist (Apple Design Compliance)
+
 ```bash
 #!/bin/bash
 # verify-apple-compliance.sh - Comprehensive Apple design verification
@@ -429,6 +445,7 @@ fi
 ## CONCLUSION: AUTONOMOUS APPLE DESIGN EXCELLENCE
 
 This execution framework ensures:
+
 - Deterministic, automated setup and verification
 - Enforced Apple HIG standards across typography, color, spacing, animation
 - Accessibility and performance baselines validated in CI
@@ -442,6 +459,7 @@ This execution framework ensures:
 Before implementing advanced admin features, our world-class security foundation provides:
 
 ### 7.A Enhanced Authentication System ✅ IMPLEMENTED
+
 ```typescript
 // backend/src/modules/auth/services/two-factor.service.ts
 @Injectable()
@@ -460,6 +478,7 @@ export class TwoFactorService {
 ```
 
 🔍 **TEST AFTER 2FA IMPLEMENTATION:**
+
 - [ ] Test TOTP secret generation and QR code display
 - [ ] Verify 2FA authentication with various TOTP apps
 - [ ] Test backup code generation and redemption
@@ -467,7 +486,8 @@ export class TwoFactorService {
 - [ ] Test 2FA recovery scenarios (lost device)
 - [ ] Verify 2FA audit logging and security events
 
-### 7.B Enterprise File Security ✅ IMPLEMENTED  
+### 7.B Enterprise File Security ✅ IMPLEMENTED
+
 ```typescript
 // backend/src/modules/file-upload/services/virus-scan.service.ts
 @Injectable()
@@ -485,6 +505,7 @@ export class VirusScanService {
 ```
 
 🔍 **TEST AFTER FILE SECURITY IMPLEMENTATION:**
+
 - [ ] Test virus scanning blocks EICAR test file
 - [ ] Verify MIME type validation rejects disguised executables
 - [ ] Test metadata stripping removes sensitive information
@@ -493,6 +514,7 @@ export class VirusScanService {
 - [ ] Verify secure file storage and access
 
 ### 7.C Multi-Tenant Security ✅ IMPLEMENTED
+
 ```typescript
 // backend/src/common/prisma-rls.service.ts
 @Injectable()
@@ -507,8 +529,9 @@ export class PrismaRLSService {
 ```
 
 ### 7.D Data Encryption at Rest ✅ IMPLEMENTED
+
 ```typescript
-// backend/src/common/encryption.service.ts  
+// backend/src/common/encryption.service.ts
 @Injectable()
 export class EncryptionService {
   encrypt(data: string): string {
@@ -520,8 +543,9 @@ export class EncryptionService {
 ```
 
 ### 7.E Comprehensive Rate Limiting ✅ IMPLEMENTED
+
 - **Authentication Protection**: 5 attempts/15min per IP ✅
-- **API Endpoint Protection**: 100 requests/minute per IP ✅  
+- **API Endpoint Protection**: 100 requests/minute per IP ✅
 - **File Upload Protection**: 10 uploads/hour per user ✅
 - **Export Protection**: 20 exports/hour per user ✅
 - **Plus 6 additional rate limiting types** ✅
@@ -529,13 +553,16 @@ export class EncryptionService {
 ---
 
 # PART VII: EXECUTIVE DASHBOARDS & REPORTING EXCELLENCE
+
 **Implements Phase 6: Executive Dashboards & Reporting**
 
 ## 🎨 KEY DASHBOARD FEATURES TO IMPLEMENT (Phase 6)
 
 ### Qualtrics Survey Builder (75% → 100% Target):
+
 **Current Achievement:** Q-methodology system and lifecycle management  
 **Implementation Required:**
+
 - 💎 **Visual survey builder** - Drag-drop with real-time preview
 - 🎯 **Advanced question types** - 15+ types including matrix and heat maps
 - 🌊 **Conditional logic UI** - Visual flow builder with branching
@@ -543,8 +570,10 @@ export class EncryptionService {
 - 📤 **Template library** - 50+ industry-standard survey templates
 
 ### Executive Dashboard (70% → 100% Target):
+
 **Current Achievement:** Basic dashboard with demo content  
 **Implementation Required:**
+
 - 📊 **Widget library** - 20+ pre-built executive components
 - 🔄 **Real-time streaming** - WebSocket with <100ms latency
 - 🔍 **Advanced filters** - Multi-dimensional with visual builder
@@ -552,15 +581,18 @@ export class EncryptionService {
 - 🏢 **White-label system** - Domain mapping + email templates
 
 ### Apple Card-Based Layout Implementation
+
 ```css
 /* Apple's signature card design for dashboards */
 .executive-dashboard-card {
-  background: linear-gradient(135deg, 
+  background: linear-gradient(
+    135deg,
     rgba(255, 255, 255, 0.9) 0%,
-    rgba(255, 255, 255, 0.7) 100%);
+    rgba(255, 255, 255, 0.7) 100%
+  );
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  box-shadow: 
+  box-shadow:
     0 0.5px 0 1px rgba(255, 255, 255, 0.23) inset,
     0 1px 0 0 rgba(255, 255, 255, 0.66) inset,
     0 4px 16px rgba(0, 0, 0, 0.12);
@@ -570,7 +602,7 @@ export class EncryptionService {
 
 .executive-dashboard-card:hover {
   transform: translateY(-2px) scale(1.01);
-  box-shadow: 
+  box-shadow:
     0 0.5px 0 1px rgba(255, 255, 255, 0.23) inset,
     0 1px 0 0 rgba(255, 255, 255, 0.66) inset,
     0 8px 32px rgba(0, 0, 0, 0.16);
@@ -578,6 +610,7 @@ export class EncryptionService {
 ```
 
 ## 7. Executive Dashboard Architecture
+
 ```typescript
 // Executive Dashboard Architecture (Phase 6 - Executive Excellence)
 src/modules/admin/
@@ -622,13 +655,14 @@ src/modules/admin/
 ```
 
 ### 7.2 Admin Analytics Service Implementation
+
 ```typescript
 // backend/src/modules/admin/dashboard/services/admin-analytics.service.ts
 @Injectable()
 export class AdminAnalyticsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly cacheService: CacheService,
+    private readonly cacheService: CacheService
   ) {}
 
   async getDashboardMetrics(
@@ -638,19 +672,20 @@ export class AdminAnalyticsService {
     const cached = await this.cacheService.get(cacheKey);
     if (cached) return cached;
 
-    const [userMetrics, studyMetrics, participantMetrics, systemHealth] = await Promise.all([
-      this.getUserMetrics(timeRange),
-      this.getStudyMetrics(timeRange),
-      this.getParticipantMetrics(timeRange),
-      this.getSystemHealth()
-    ]);
+    const [userMetrics, studyMetrics, participantMetrics, systemHealth] =
+      await Promise.all([
+        this.getUserMetrics(timeRange),
+        this.getStudyMetrics(timeRange),
+        this.getParticipantMetrics(timeRange),
+        this.getSystemHealth(),
+      ]);
 
     const metrics = {
       userMetrics,
       studyMetrics,
       participantMetrics,
       systemHealth,
-      generatedAt: new Date()
+      generatedAt: new Date(),
     };
 
     await this.cacheService.set(cacheKey, metrics, 300);
@@ -666,6 +701,7 @@ export class AdminAnalyticsService {
 # PART VIII: CUSTOMER SUPPORT SYSTEM IMPLEMENTATION
 
 ## 8. Customer Support Architecture
+
 ```typescript
 // backend/src/modules/admin/support/services/support-ticket.service.ts
 @Injectable()
@@ -674,7 +710,7 @@ export class SupportTicketService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly emailService: EmailService,
-    private readonly aiAssistant: AiAssistantService,
+    private readonly aiAssistant: AiAssistantService
   ) {}
 
   async createTicket(
@@ -718,6 +754,7 @@ export class SupportTicketService {
 ## 9. Comprehensive System Monitoring
 
 ### 9.1 Health Check & Monitoring Service
+
 ```typescript
 // backend/src/modules/admin/monitoring/services/health-check.service.ts
 @Injectable()
@@ -727,7 +764,7 @@ export class HealthCheckService {
     private readonly prisma: PrismaService,
     private readonly redis: Redis,
     private readonly storageService: StorageService,
-    private readonly alerting: AlertingService,
+    private readonly alerting: AlertingService
   ) {
     this.initializeHealthChecks();
     this.startHealthCheckLoop();
@@ -745,6 +782,7 @@ export class HealthCheckService {
 ```
 
 ### 9.2 Advanced Alerting System
+
 ```typescript
 // backend/src/modules/admin/monitoring/services/alerting.service.ts
 @Injectable()
@@ -753,7 +791,7 @@ export class AlertingService {
     private readonly emailService: EmailService,
     private readonly slackService: SlackService,
     private readonly smsService: SmsService,
-    private readonly incidentService: IncidentManagementService,
+    private readonly incidentService: IncidentManagementService
   ) {}
 
   async triggerAlert(alert: AlertConfig): Promise<void> {
@@ -766,11 +804,13 @@ export class AlertingService {
 ---
 
 # PART X: SECURITY & PRODUCTION EXCELLENCE
+
 **Implements Phase 7: Security & Production Excellence**
 
 ## 🎨 KEY EXCELLENCE FEATURES TO IMPLEMENT (Phase 7)
 
 ### Apple Performance Standards:
+
 - ⚡ **60fps animations** using Apple's Core Animation techniques
 - 🚀 **Apple-style loading optimizations** with progressive enhancement
 - ♿ **Apple's accessibility-first approach** targeting WCAG AAA
@@ -778,6 +818,7 @@ export class AlertingService {
 - 🔒 **Apple's security best practices** for enterprise deployment
 
 ### Design Quality Gates to Achieve:
+
 - 📏 **Apple HIG compliance scoring** (≥95% target)
 - 🎬 **Micro-interaction smoothness testing** (60fps requirement)
 - 📈 **Data visualization clarity validation** against industry standards
@@ -785,6 +826,7 @@ export class AlertingService {
 - 💯 **Lighthouse perfect scores** (100/100 all categories)
 
 ### Performance Optimization Code
+
 ```typescript
 // Apple-style 60fps animation optimization
 const animationConfig = {
@@ -796,10 +838,10 @@ const animationConfig = {
 
 // React performance optimization
 const OptimizedComponent = React.memo(({ data }) => {
-  const processedData = useMemo(() => 
+  const processedData = useMemo(() =>
     expensiveDataProcessing(data), [data]
   );
-  
+
   return (
     <motion.div
       style={animationConfig}
@@ -816,6 +858,7 @@ const OptimizedComponent = React.memo(({ data }) => {
 ```
 
 ## 10. Enterprise Security & Collaboration Architecture
+
 ```typescript
 // Security & Collaboration Architecture (Phase 7 - Production Excellence)
 src/modules/collaboration/
@@ -825,6 +868,7 @@ src/modules/collaboration/
 ```
 
 ### 10.2 Secure Invitation System Implementation
+
 ```typescript
 // backend/src/modules/collaboration/invitation/services/invitation.service.ts
 @Injectable()
@@ -835,6 +879,7 @@ export class CollaborationInvitationService {
 ```
 
 ### 10.3 Real-time Chat Implementation
+
 ```typescript
 // backend/src/modules/collaboration/chat/gateways/chat-socket.gateway.ts
 @WebSocketGateway({
@@ -847,6 +892,7 @@ export class CollaborationChatGateway {
 ```
 
 ### 10.4 Survey Lifecycle Management Implementation
+
 ```typescript
 // backend/src/modules/collaboration/lifecycle/services/survey-lifecycle.service.ts
 @Injectable()
@@ -879,6 +925,7 @@ export class SurveyLifecycleService {
 ## EXECUTION NOTE
 
 When following ./IMPLEMENTATION_PHASES.md:
+
 - Phases 1–3 map primarily to Part 1 (Foundations and Core Dual Interface/Q-Method)
 - Phases 4–7 map primarily to Part 2 (Media, Collaboration, Admin, Monitoring, Security/Production)
 
@@ -887,14 +934,18 @@ Always enforce Apple HIG, accessibility, and security baselines throughout each 
 ---
 
 # PART XI: DATA VISUALIZATION EXCELLENCE 📊
+
 ## Tableau-Quality Analytics Implementation
+
 **Implements Phase 4: Data Visualization & Analytics Excellence**
 
 ## 🎨 KEY DESIGN FEATURES TO IMPLEMENT (Phase 4)
 
 ### Apple Liquid Glass Design (85% → 100% Target):
+
 **Current Achievement:** Basic Apple design system with typography and colors  
 **Implementation Required:**
+
 - ✨ **Glass morphism effects** - `backdrop-filter: blur(20px)` with 70% opacity
 - 🎯 **Dynamic materials** - Context-aware translucency and depth
 - 🌊 **Liquid animations** - Spring physics (tension: 170, friction: 26)
@@ -902,8 +953,10 @@ Always enforce Apple HIG, accessibility, and security baselines throughout each 
 - 🧲 **Magnetic interactions** - 30px attraction radius with easing
 
 ### Tableau-Level Visualization (70% → 100% Target):
+
 **Current Achievement:** Interactive tooltips and export functionality defined  
 **Implementation Required:**
+
 - 📊 **Drag-drop dashboard builder** - React DnD with Apple physics engine
 - 💡 **"Show Me" AI recommendations** - TensorFlow.js pattern recognition
 - 🔍 **"Ask Data" NLP queries** - Web Speech API + natural language processing
@@ -911,6 +964,7 @@ Always enforce Apple HIG, accessibility, and security baselines throughout each 
 - 💬 **Smart tooltips** - Context-aware content with Apple HIG styling
 
 ### Installation & Setup
+
 ```bash
 # Install visualization libraries
 cd frontend
@@ -936,6 +990,7 @@ mkdir -p hooks/useVisualization
 ### Core Chart Components
 
 #### 1. Base Chart Architecture with Apple Design
+
 ```tsx
 // components/visualizations/charts/BaseChart.tsx
 import { useRef, useEffect } from 'react';
@@ -949,7 +1004,7 @@ const glassStyle = {
   WebkitBackdropFilter: 'blur(20px)',
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
   border: '1px solid rgba(255, 255, 255, 0.18)',
-  borderRadius: '20px'
+  borderRadius: '20px',
 };
 
 interface BaseChartProps {
@@ -967,7 +1022,7 @@ export const BaseChart: React.FC<BaseChartProps> = ({
   margin = { top: 20, right: 20, bottom: 20, left: 20 },
   children,
   className,
-  animate = true
+  animate = true,
 }) => {
   const { theme } = useTheme();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -976,9 +1031,9 @@ export const BaseChart: React.FC<BaseChartProps> = ({
     <motion.div
       initial={animate ? { opacity: 0, scale: 0.95 } : false}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ 
-        duration: 0.5, 
-        ease: [0.4, 0, 0.2, 1] // Apple's signature easing
+      transition={{
+        duration: 0.5,
+        ease: [0.4, 0, 0.2, 1], // Apple's signature easing
       }}
       whileHover={{ scale: 1.02 }} // Apple-style hover effect
       style={glassStyle}
@@ -990,9 +1045,7 @@ export const BaseChart: React.FC<BaseChartProps> = ({
         height={height}
         className="overflow-visible"
       >
-        <g transform={`translate(${margin.left},${margin.top})`}>
-          {children}
-        </g>
+        <g transform={`translate(${margin.left},${margin.top})`}>{children}</g>
       </svg>
     </motion.div>
   );
@@ -1000,16 +1053,21 @@ export const BaseChart: React.FC<BaseChartProps> = ({
 ```
 
 #### 2. Q-Methodology Specific Visualizations
+
 ```tsx
 // components/visualizations/charts/EigenvalueScreePlot.tsx
 import { scaleLinear, scaleBand } from '@visx/scale';
 import { Line } from '@visx/shape';
 import { BaseChart } from './BaseChart';
 
-export const EigenvalueScreePlot = ({ eigenvalues, width = 600, height = 400 }) => {
+export const EigenvalueScreePlot = ({
+  eigenvalues,
+  width = 600,
+  height = 400,
+}) => {
   // Kaiser criterion line at eigenvalue = 1
   const kaiserLine = 1.0;
-  
+
   return (
     <BaseChart width={width} height={height}>
       {/* Scree plot with Kaiser criterion line */}
@@ -1025,7 +1083,7 @@ export const FactorArrayVisualization = ({ factorArrays, statements }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {factorArrays.map((array, factorIndex) => (
-        <QSortGrid 
+        <QSortGrid
           key={factorIndex}
           statements={statements}
           placement={array}
@@ -1038,11 +1096,15 @@ export const FactorArrayVisualization = ({ factorArrays, statements }) => {
 };
 
 // components/visualizations/charts/DistinguishingStatements.tsx
-export const DistinguishingStatementsChart = ({ statements, factors, pValues }) => {
+export const DistinguishingStatementsChart = ({
+  statements,
+  factors,
+  pValues,
+}) => {
   // Highlights statements that distinguish between factors
   // Critical for factor interpretation
   const distinguishing = statements.filter(s => pValues[s.id] < 0.01);
-  
+
   return (
     <BaseChart width={800} height={600}>
       {/* Bar chart showing z-scores across factors for distinguishing statements */}
@@ -1052,6 +1114,7 @@ export const DistinguishingStatementsChart = ({ statements, factors, pValues }) 
 ```
 
 #### 3. Real-time Data Integration
+
 ```tsx
 // hooks/useVisualization/useRealtimeData.ts
 import { useEffect, useState } from 'react';
@@ -1070,12 +1133,12 @@ export function useRealtimeData<T>(endpoint: string, options = {}) {
       const response = await fetch(`/api/${endpoint}`);
       return response.json();
     },
-    refetchInterval: 5000
+    refetchInterval: 5000,
   });
 
   // WebSocket subscription
   useEffect(() => {
-    const unsubscribe = subscribe(`data:${endpoint}`, (update) => {
+    const unsubscribe = subscribe(`data:${endpoint}`, update => {
       setData(update);
       queryClient.setQueryData([endpoint], update);
     });
@@ -1087,6 +1150,7 @@ export function useRealtimeData<T>(endpoint: string, options = {}) {
 ```
 
 ### Export Functionality
+
 ```typescript
 // lib/visualization/export.ts
 import html2canvas from 'html2canvas';
@@ -1097,9 +1161,9 @@ export class ChartExporter {
   static async exportToPNG(element: HTMLElement, filename: string) {
     const canvas = await html2canvas(element, {
       backgroundColor: 'white',
-      scale: 2
+      scale: 2,
     });
-    
+
     const link = document.createElement('a');
     link.download = `${filename}.png`;
     link.href = canvas.toDataURL();
@@ -1124,14 +1188,18 @@ export class ChartExporter {
 ---
 
 # PART XII: PROFESSIONAL POLISH & DELIGHT 💎
+
 ## SurveyMonkey-Level UX Excellence
+
 **Implements Phase 5: Professional Polish & Delight**
 
 ## 🎨 KEY POLISH FEATURES TO IMPLEMENT (Phase 5)
 
 ### Apple Micro-Interactions (60% → 100% Target):
+
 **Current Achievement:** Basic hover states and transitions  
 **Implementation Required:**
+
 - ✨ **Scale animations** - Precise 1.0 → 0.95 → 1.0 with 150ms duration
 - 🧲 **Magnetic hover** - 30px attraction radius with quadratic easing
 - 🎯 **Physics drag-drop** - Momentum (damping: 0.7, stiffness: 300)
@@ -1139,8 +1207,10 @@ export class ChartExporter {
 - 💀 **Shimmer skeleton** - 2s wave interval with gradient animation
 
 ### SurveyMonkey Polish (60% → 100% Target):
+
 **Current Achievement:** Basic skeleton screens and empty states defined  
 **Implementation Required:**
+
 - 📊 **Progress visualization** - Multi-step with milestone celebrations
 - ❓ **Contextual help** - Smart tooltips with 500ms delay
 - 🎊 **Achievement system** - Gamification with progress tracking
@@ -1148,6 +1218,7 @@ export class ChartExporter {
 - ⏳ **Loading personality** - 20+ unique loading messages with rotation
 
 ### Skeleton Screen System
+
 ```tsx
 // components/ui/SkeletonScreen/SkeletonScreen.tsx
 import { motion } from 'framer-motion';
@@ -1166,13 +1237,13 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   variant = 'rect',
   width,
   height,
-  animate = true
+  animate = true,
 }) => {
   const baseClasses = 'bg-fill overflow-hidden';
   const variantClasses = {
     text: 'rounded h-4',
     rect: 'rounded-lg',
-    circle: 'rounded-full'
+    circle: 'rounded-full',
   };
 
   return (
@@ -1187,7 +1258,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
           transition={{
             duration: 1.5,
             repeat: Infinity,
-            ease: 'linear'
+            ease: 'linear',
           }}
         />
       )}
@@ -1209,6 +1280,7 @@ export const SkeletonCard = () => (
 ```
 
 ### Empty State System
+
 ```tsx
 // components/ui/EmptyStates/EmptyState.tsx
 import { motion } from 'framer-motion';
@@ -1228,7 +1300,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   type,
   title,
   description,
-  action
+  action,
 }) => {
   return (
     <motion.div
@@ -1244,15 +1316,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       >
         {/* SVG illustrations based on type */}
       </motion.div>
-      
+
       <h3 className="mt-6 text-xl font-semibold text-text">{title}</h3>
-      
+
       {description && (
         <p className="mt-2 text-text-secondary text-center max-w-md">
           {description}
         </p>
       )}
-      
+
       {action && (
         <Button onClick={action.onClick} className="mt-6">
           {action.label}
@@ -1264,6 +1336,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 ```
 
 ### Micro-Animations & Celebrations
+
 ```tsx
 // components/animations/SuccessCelebration.tsx
 import { useEffect } from 'react';
@@ -1277,11 +1350,11 @@ export const SuccessCelebration = ({ type = 'confetti' }) => {
         particleCount: 100,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#5856D6']
+        colors: ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#5856D6'],
       });
     }
   }, [type]);
-  
+
   return (
     <motion.div
       initial={{ scale: 0, rotate: -180 }}
@@ -1296,6 +1369,7 @@ export const SuccessCelebration = ({ type = 'confetti' }) => {
 ```
 
 ### Enhanced Drag-Drop with Physics
+
 ```tsx
 // components/interactions/EnhancedDragDrop.tsx
 import { motion, useMotionValue, useTransform } from 'framer-motion';
@@ -1305,7 +1379,7 @@ export const EnhancedDragDrop = ({ children, onDrop }) => {
   const y = useMotionValue(0);
   const rotateX = useTransform(y, [-100, 100], [30, -30]);
   const rotateY = useTransform(x, [-100, 100], [-30, 30]);
-  
+
   return (
     <motion.div
       drag
@@ -1328,20 +1402,23 @@ export const EnhancedDragDrop = ({ children, onDrop }) => {
 ---
 
 # PART XIII: PERFORMANCE OPTIMIZATION
+
 ## Achieving 100/100 Lighthouse Scores
+
 **Supporting All Excellence Phases (4-7)**
 
 ### Bundle Optimization
+
 ```typescript
 // next.config.js
 module.exports = {
   experimental: {
     optimizeCss: true,
-    optimizePackageImports: ['@visx/visx', 'framer-motion', 'recharts']
+    optimizePackageImports: ['@visx/visx', 'framer-motion', 'recharts'],
   },
   images: {
     formats: ['image/avif', 'image/webp'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840]
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
   },
   webpack: (config, { dev, isServer }) => {
     // Tree shaking
@@ -1350,36 +1427,34 @@ module.exports = {
       config.optimization.sideEffects = false;
     }
     return config;
-  }
+  },
 };
 ```
 
 ### Service Worker for Offline Support
+
 ```javascript
 // public/sw.js
 const CACHE_NAME = 'vqmethod-v1';
-const urlsToCache = [
-  '/',
-  '/styles/globals.css',
-  '/styles/tokens.css'
-];
+const urlsToCache = ['/', '/styles/globals.css', '/styles/tokens.css'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
 });
 
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
+    caches
+      .match(event.request)
       .then(response => response || fetch(event.request))
   );
 });
 ```
 
 ### Performance Monitoring
+
 ```typescript
 // lib/performance.ts
 export class PerformanceMonitor {
@@ -1399,16 +1474,18 @@ export class PerformanceMonitor {
     }
     return () => {};
   }
-  
+
   static reportWebVitals() {
     if (typeof window !== 'undefined' && 'web-vital' in window) {
-      import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-        getCLS(console.log);
-        getFID(console.log);
-        getFCP(console.log);
-        getLCP(console.log);
-        getTTFB(console.log);
-      });
+      import('web-vitals').then(
+        ({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
+          getCLS(console.log);
+          getFID(console.log);
+          getFCP(console.log);
+          getLCP(console.log);
+          getTTFB(console.log);
+        }
+      );
     }
   }
 }
@@ -1419,6 +1496,7 @@ export class PerformanceMonitor {
 # PART XIV: PHASE 5.5 - ADVANCED UI/UX EXCELLENCE
 
 ## 🎯 Production-Grade User Experience Implementation
+
 **Industry Best Practices from Tableau, Qualtrics, Apple, and Netflix**
 
 ---
@@ -1426,6 +1504,7 @@ export class PerformanceMonitor {
 ## 11. Intelligent Onboarding System (Netflix-Inspired)
 
 ### 11.1 Personalized Researcher Onboarding
+
 ```typescript
 // components/onboarding/ResearcherOnboarding.tsx
 'use client';
@@ -1498,15 +1577,15 @@ export function ResearcherOnboarding() {
   const { currentStep, progress, completeStep, skipStep } = useOnboardingStore();
   const [stepIndex, setStepIndex] = useState(0);
   const [achievements, setAchievements] = useState<string[]>([]);
-  
+
   const currentStepData = ONBOARDING_STEPS[stepIndex];
   const StepComponent = currentStepData.component;
-  
+
   const handleStepComplete = async () => {
     // Award achievement
     if (currentStepData.reward) {
       setAchievements([...achievements, currentStepData.reward]);
-      
+
       // Celebration animation
       confetti({
         particleCount: 100,
@@ -1515,21 +1594,21 @@ export function ResearcherOnboarding() {
         colors: ['#007AFF', '#34C759', '#FF9500']
       });
     }
-    
+
     await completeStep(currentStepData.id);
-    
+
     if (stepIndex < ONBOARDING_STEPS.length - 1) {
       setStepIndex(stepIndex + 1);
     }
   };
-  
+
   const handleSkip = async () => {
     if (currentStepData.skippable) {
       await skipStep(currentStepData.id);
       setStepIndex(stepIndex + 1);
     }
   };
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-system-background via-secondary-background to-system-background">
       {/* Progress Bar (Netflix-style) */}
@@ -1541,12 +1620,12 @@ export function ResearcherOnboarding() {
           transition={{ duration: 0.5, ease: 'easeOut' }}
         />
       </div>
-      
+
       {/* Step Counter */}
       <div className="fixed top-4 right-4 z-40 text-sm text-secondary-label">
         Step {stepIndex + 1} of {ONBOARDING_STEPS.length}
       </div>
-      
+
       {/* Achievement Notifications */}
       <AnimatePresence>
         {achievements.length > 0 && (
@@ -1571,7 +1650,7 @@ export function ResearcherOnboarding() {
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       {/* Main Content */}
       <div className="container mx-auto px-4 py-16">
         <AnimatePresence mode="wait">
@@ -1598,7 +1677,7 @@ export function ResearcherOnboarding() {
 // Individual Step Components
 function WelcomeStep({ onComplete }: { onComplete: () => void }) {
   const [videoWatched, setVideoWatched] = useState(false);
-  
+
   return (
     <div className="text-center space-y-8">
       <motion.div
@@ -1613,7 +1692,7 @@ function WelcomeStep({ onComplete }: { onComplete: () => void }) {
           The world's most advanced Q-methodology platform
         </p>
       </motion.div>
-      
+
       {/* Welcome Video (Optional) */}
       <div className="relative rounded-2xl overflow-hidden bg-black aspect-video">
         <video
@@ -1624,7 +1703,7 @@ function WelcomeStep({ onComplete }: { onComplete: () => void }) {
         >
           <source src="/videos/welcome.mp4" type="video/mp4" />
         </video>
-        
+
         {!videoWatched && (
           <button
             onClick={() => setVideoWatched(true)}
@@ -1634,7 +1713,7 @@ function WelcomeStep({ onComplete }: { onComplete: () => void }) {
           </button>
         )}
       </div>
-      
+
       <div className="space-y-4">
         <Button
           variant="primary"
@@ -1645,7 +1724,7 @@ function WelcomeStep({ onComplete }: { onComplete: () => void }) {
         >
           Let's Get Started
         </Button>
-        
+
         {!videoWatched && (
           <p className="text-sm text-secondary-label">
             Watch the video to continue or{' '}
@@ -1664,7 +1743,7 @@ function WelcomeStep({ onComplete }: { onComplete: () => void }) {
 
 function ResearchInterestsStep({ onComplete, onSkip, canSkip }: any) {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  
+
   const interests = [
     { id: 'psychology', label: 'Psychology', icon: '🧠' },
     { id: 'education', label: 'Education', icon: '📚' },
@@ -1675,7 +1754,7 @@ function ResearchInterestsStep({ onComplete, onSkip, canSkip }: any) {
     { id: 'politics', label: 'Political Science', icon: '🏛️' },
     { id: 'technology', label: 'Technology', icon: '💻' }
   ];
-  
+
   const toggleInterest = (id: string) => {
     setSelectedInterests(prev =>
       prev.includes(id)
@@ -1683,7 +1762,7 @@ function ResearchInterestsStep({ onComplete, onSkip, canSkip }: any) {
         : [...prev, id]
     );
   };
-  
+
   return (
     <div className="space-y-8">
       <div className="text-center">
@@ -1694,7 +1773,7 @@ function ResearchInterestsStep({ onComplete, onSkip, canSkip }: any) {
           Select your areas of interest (you can change these later)
         </p>
       </div>
-      
+
       {/* Interest Grid (Tableau-style visual selection) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {interests.map((interest) => (
@@ -1714,7 +1793,7 @@ function ResearchInterestsStep({ onComplete, onSkip, canSkip }: any) {
           </motion.button>
         ))}
       </div>
-      
+
       {/* Recommendations based on selection */}
       {selectedInterests.length > 0 && (
         <motion.div
@@ -1728,7 +1807,7 @@ function ResearchInterestsStep({ onComplete, onSkip, canSkip }: any) {
           </p>
         </motion.div>
       )}
-      
+
       <div className="flex justify-between">
         {canSkip && (
           <Button variant="ghost" onClick={onSkip}>
@@ -1754,6 +1833,7 @@ function ResearchInterestsStep({ onComplete, onSkip, canSkip }: any) {
 ## 12. Advanced Help Center (Qualtrics-Inspired)
 
 ### 12.1 Interactive Help Center with AI Search
+
 ```typescript
 // app/help/page.tsx
 'use client';
@@ -1790,10 +1870,10 @@ export default function HelpCenterPage() {
   const [selectedArticle, setSelectedArticle] = useState<HelpArticle | null>(null);
   const [searchResults, setSearchResults] = useState<HelpArticle[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  
+
   // AI-powered search suggestions (Tableau-style)
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  
+
   const categories: HelpCategory[] = [
     {
       id: 'getting-started',
@@ -1844,12 +1924,12 @@ export default function HelpCenterPage() {
       popularArticles: ['common-errors', 'browser-issues', 'data-recovery']
     }
   ];
-  
+
   // Simulate AI-powered search
   useEffect(() => {
     if (searchQuery.length > 2) {
       setIsSearching(true);
-      
+
       // Simulate API call
       const timer = setTimeout(() => {
         // Generate smart suggestions
@@ -1859,7 +1939,7 @@ export default function HelpCenterPage() {
           `Troubleshooting ${searchQuery}`,
           `${searchQuery} tutorial`
         ]);
-        
+
         // Mock search results
         setSearchResults([
           {
@@ -1872,17 +1952,17 @@ export default function HelpCenterPage() {
             content: 'Lorem ipsum...'
           }
         ]);
-        
+
         setIsSearching(false);
       }, 500);
-      
+
       return () => clearTimeout(timer);
     } else {
       setSuggestions([]);
       setSearchResults([]);
     }
   }, [searchQuery]);
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-system-background to-secondary-background">
       {/* Hero Section with Search */}
@@ -1892,7 +1972,7 @@ export default function HelpCenterPage() {
           <div className="absolute top-20 left-10 w-72 h-72 bg-system-blue rounded-full filter blur-3xl animate-pulse" />
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-system-purple rounded-full filter blur-3xl animate-pulse delay-1000" />
         </div>
-        
+
         <div className="relative max-w-4xl mx-auto text-center">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
@@ -1901,7 +1981,7 @@ export default function HelpCenterPage() {
           >
             How can we help you?
           </motion.h1>
-          
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1910,7 +1990,7 @@ export default function HelpCenterPage() {
           >
             Search our knowledge base or browse by category
           </motion.p>
-          
+
           {/* AI-Powered Search Bar */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1933,7 +2013,7 @@ export default function HelpCenterPage() {
                 </div>
               )}
             </div>
-            
+
             {/* Search Suggestions (Tableau-style) */}
             <AnimatePresence>
               {suggestions.length > 0 && (
@@ -1960,7 +2040,7 @@ export default function HelpCenterPage() {
               )}
             </AnimatePresence>
           </motion.div>
-          
+
           {/* Quick Links */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -1981,12 +2061,12 @@ export default function HelpCenterPage() {
           </motion.div>
         </div>
       </section>
-      
+
       {/* Category Grid */}
       <section className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl font-bold text-label mb-8">Browse by Category</h2>
-          
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {categories.map((category, index) => (
               <motion.div
@@ -2009,12 +2089,12 @@ export default function HelpCenterPage() {
           </div>
         </div>
       </section>
-      
+
       {/* Interactive Tutorials Section */}
       <section className="py-12 px-4 bg-quaternary-fill/30">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl font-bold text-label mb-8">Video Tutorials</h2>
-          
+
           <div className="grid md:grid-cols-3 gap-6">
             {[
               { title: 'Getting Started', duration: '3:45', thumbnail: '/tutorials/getting-started.jpg' },
@@ -2050,7 +2130,7 @@ export default function HelpCenterPage() {
           </div>
         </div>
       </section>
-      
+
       {/* Contact Support Section */}
       <section className="py-12 px-4">
         <div className="max-w-4xl mx-auto text-center">
@@ -2058,7 +2138,7 @@ export default function HelpCenterPage() {
           <p className="text-secondary-label mb-8">
             Our support team is here to assist you
           </p>
-          
+
           <div className="grid md:grid-cols-3 gap-6">
             <motion.div
               whileHover={{ scale: 1.05 }}
@@ -2069,7 +2149,7 @@ export default function HelpCenterPage() {
               <p className="text-sm text-secondary-label mb-4">Get instant help from our team</p>
               <Button variant="primary" size="sm">Start Chat</Button>
             </motion.div>
-            
+
             <motion.div
               whileHover={{ scale: 1.05 }}
               className="p-6 bg-white dark:bg-black rounded-xl border border-quaternary-fill"
@@ -2079,7 +2159,7 @@ export default function HelpCenterPage() {
               <p className="text-sm text-secondary-label mb-4">We'll respond within 24 hours</p>
               <Button variant="primary" size="sm">Send Email</Button>
             </motion.div>
-            
+
             <motion.div
               whileHover={{ scale: 1.05 }}
               className="p-6 bg-white dark:bg-black rounded-xl border border-quaternary-fill"
@@ -2102,6 +2182,7 @@ export default function HelpCenterPage() {
 ## 13. Performance Monitoring & Analytics
 
 ### 13.1 Web Vitals Tracking
+
 ```typescript
 // lib/analytics/performance.ts
 import { getCLS, getFID, getFCP, getLCP, getTTFB } from 'web-vitals';
@@ -2116,11 +2197,11 @@ interface PerformanceMetric {
 class PerformanceMonitor {
   private metrics: Map<string, PerformanceMetric> = new Map();
   private analyticsEndpoint = '/api/analytics/performance';
-  
+
   constructor() {
     this.initializeMonitoring();
   }
-  
+
   private initializeMonitoring() {
     // Core Web Vitals
     getCLS(this.handleMetric.bind(this));
@@ -2128,74 +2209,88 @@ class PerformanceMonitor {
     getFCP(this.handleMetric.bind(this));
     getLCP(this.handleMetric.bind(this));
     getTTFB(this.handleMetric.bind(this));
-    
+
     // Custom metrics
     this.measureCustomMetrics();
-    
+
     // Send metrics on page unload
     window.addEventListener('beforeunload', () => {
       this.sendMetrics();
     });
   }
-  
+
   private handleMetric(metric: any) {
     const { name, value, rating } = metric;
-    
+
     this.metrics.set(name, {
       name,
       value: Math.round(value),
       rating,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
-    
+
     // Log to console in development
     if (process.env.NODE_ENV === 'development') {
       console.log(`[Performance] ${name}:`, value, rating);
     }
   }
-  
+
   private measureCustomMetrics() {
     // Time to Interactive
     if (typeof window !== 'undefined' && window.performance) {
-      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-      
+      const navigation = performance.getEntriesByType(
+        'navigation'
+      )[0] as PerformanceNavigationTiming;
+
       if (navigation) {
         const tti = navigation.loadEventEnd - navigation.fetchStart;
         this.handleMetric({
           name: 'TTI',
           value: tti,
-          rating: tti < 3800 ? 'good' : tti < 7300 ? 'needs-improvement' : 'poor'
+          rating:
+            tti < 3800 ? 'good' : tti < 7300 ? 'needs-improvement' : 'poor',
         });
       }
     }
-    
+
     // First Input Delay polyfill for unsupported browsers
     if (!('PerformanceEventTiming' in window)) {
       let firstInputDelay = 0;
       let firstInputTimeStamp = 0;
-      
-      ['click', 'keydown', 'mousedown', 'pointerdown', 'touchstart'].forEach(type => {
-        addEventListener(type, (event) => {
-          if (!firstInputTimeStamp) {
-            firstInputTimeStamp = event.timeStamp;
-            firstInputDelay = performance.now() - firstInputTimeStamp;
-            
-            this.handleMetric({
-              name: 'FID-Polyfill',
-              value: firstInputDelay,
-              rating: firstInputDelay < 100 ? 'good' : firstInputDelay < 300 ? 'needs-improvement' : 'poor'
-            });
-          }
-        }, { once: true, passive: true });
-      });
+
+      ['click', 'keydown', 'mousedown', 'pointerdown', 'touchstart'].forEach(
+        type => {
+          addEventListener(
+            type,
+            event => {
+              if (!firstInputTimeStamp) {
+                firstInputTimeStamp = event.timeStamp;
+                firstInputDelay = performance.now() - firstInputTimeStamp;
+
+                this.handleMetric({
+                  name: 'FID-Polyfill',
+                  value: firstInputDelay,
+                  rating:
+                    firstInputDelay < 100
+                      ? 'good'
+                      : firstInputDelay < 300
+                        ? 'needs-improvement'
+                        : 'poor',
+                });
+              }
+            },
+            { once: true, passive: true }
+          );
+        }
+      );
     }
   }
-  
+
   private async sendMetrics() {
     const metricsArray = Array.from(this.metrics.values());
-    
+
     if (metricsArray.length === 0) return;
-    
+
     try {
       // Use sendBeacon for reliable delivery
       if ('sendBeacon' in navigator) {
@@ -2205,7 +2300,7 @@ class PerformanceMonitor {
             metrics: metricsArray,
             url: window.location.href,
             userAgent: navigator.userAgent,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           })
         );
       } else {
@@ -2217,43 +2312,48 @@ class PerformanceMonitor {
             metrics: metricsArray,
             url: window.location.href,
             userAgent: navigator.userAgent,
-            timestamp: Date.now()
-          })
+            timestamp: Date.now(),
+          }),
         });
       }
     } catch (error) {
       console.error('Failed to send performance metrics:', error);
     }
   }
-  
+
   // Public API
   public measureComponentRender(componentName: string): () => void {
     const startMark = `${componentName}-start`;
     performance.mark(startMark);
-    
+
     return () => {
       const endMark = `${componentName}-end`;
       const measureName = `${componentName}-render`;
-      
+
       performance.mark(endMark);
       performance.measure(measureName, startMark, endMark);
-      
+
       const measure = performance.getEntriesByName(measureName)[0];
       if (measure) {
         this.handleMetric({
           name: measureName,
           value: measure.duration,
-          rating: measure.duration < 16 ? 'good' : measure.duration < 50 ? 'needs-improvement' : 'poor'
+          rating:
+            measure.duration < 16
+              ? 'good'
+              : measure.duration < 50
+                ? 'needs-improvement'
+                : 'poor',
         });
       }
-      
+
       // Clean up marks and measures
       performance.clearMarks(startMark);
       performance.clearMarks(endMark);
       performance.clearMeasures(measureName);
     };
   }
-  
+
   public reportError(error: Error, context?: any) {
     // Send error to monitoring service
     fetch('/api/analytics/errors', {
@@ -2264,8 +2364,8 @@ class PerformanceMonitor {
         stack: error.stack,
         context,
         url: window.location.href,
-        timestamp: Date.now()
-      })
+        timestamp: Date.now(),
+      }),
     });
   }
 }
@@ -2279,6 +2379,7 @@ export const performanceMonitor = new PerformanceMonitor();
 ## 14. Production Deployment Configuration
 
 ### 14.1 Docker Configuration for Phase 5.5
+
 ```dockerfile
 # Dockerfile.frontend
 FROM node:20-alpine AS deps
@@ -2314,12 +2415,13 @@ CMD ["node", "server.js"]
 ```
 
 ### 14.2 Nginx Configuration
+
 ```nginx
 # nginx.conf - Production configuration
 server {
     listen 80;
     server_name vqmethod.com www.vqmethod.com;
-    
+
     # Redirect to HTTPS
     return 301 https://$server_name$request_uri;
 }
@@ -2327,36 +2429,36 @@ server {
 server {
     listen 443 ssl http2;
     server_name vqmethod.com www.vqmethod.com;
-    
+
     # SSL Configuration
     ssl_certificate /etc/ssl/certs/vqmethod.crt;
     ssl_certificate_key /etc/ssl/private/vqmethod.key;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
-    
+
     # Security Headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';" always;
-    
+
     # HSTS
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
-    
+
     # Compression
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
     gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-    
+
     # Cache static assets
     location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
-    
+
     # Next.js app
     location / {
         proxy_pass http://frontend:3000;
@@ -2369,7 +2471,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-    
+
     # API backend
     location /api {
         proxy_pass http://backend:3001;
@@ -2378,11 +2480,11 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # Rate limiting
         limit_req zone=api burst=10 nodelay;
     }
-    
+
     # WebSocket support
     location /ws {
         proxy_pass http://backend:3001;
@@ -2405,6 +2507,7 @@ limit_req_zone $binary_remote_addr zone=auth:10m rate=5r/m;
 ## 15. Testing Strategy for Phase 5.5
 
 ### 15.1 E2E Testing for Critical User Flows
+
 ```typescript
 // e2e/critical-flows.spec.ts
 import { test, expect } from '@playwright/test';
@@ -2413,71 +2516,79 @@ test.describe('Critical User Flows', () => {
   test('Complete registration and onboarding flow', async ({ page }) => {
     // Navigate to registration
     await page.goto('/auth/register');
-    
+
     // Step 1: Account details
     await page.fill('[name="email"]', 'researcher@university.edu');
     await page.fill('[name="password"]', 'SecurePassword123!');
     await page.fill('[name="confirmPassword"]', 'SecurePassword123!');
-    
+
     // Verify password strength indicator
-    await expect(page.locator('[data-testid="password-strength"]')).toHaveText('100%');
-    
+    await expect(page.locator('[data-testid="password-strength"]')).toHaveText(
+      '100%'
+    );
+
     await page.click('[data-testid="continue-button"]');
-    
+
     // Step 2: Profile setup
     await page.fill('[name="firstName"]', 'Jane');
     await page.fill('[name="lastName"]', 'Researcher');
     await page.fill('[name="institution"]', 'Test University');
     await page.click('[data-testid="discipline-psychology"]');
-    
+
     await page.click('[data-testid="continue-button"]');
-    
+
     // Step 3: Preferences
     await page.click('[data-testid="interest-qualitative"]');
     await page.click('[data-testid="interest-mixed-methods"]');
-    
+
     await page.click('[data-testid="continue-button"]');
-    
+
     // Step 4: Terms
     await page.check('[name="termsAccepted"]');
     await page.check('[name="privacyAccepted"]');
-    
+
     await page.click('[data-testid="create-account-button"]');
-    
+
     // Verify email verification page
     await expect(page).toHaveURL('/auth/verify-email');
     await expect(page.locator('h1')).toContainText('Verify your email');
   });
-  
+
   test('Login with SSO detection', async ({ page }) => {
     await page.goto('/auth/login');
-    
+
     // Type academic email
     await page.fill('[name="email"]', 'user@harvard.edu');
-    
+
     // Verify SSO suggestion appears
     await expect(page.locator('[data-testid="sso-suggestion"]')).toBeVisible();
-    await expect(page.locator('[data-testid="sso-suggestion"]')).toContainText('Academic Institution');
-    
+    await expect(page.locator('[data-testid="sso-suggestion"]')).toContainText(
+      'Academic Institution'
+    );
+
     // Click SSO login
     await page.click('[data-testid="sso-microsoft"]');
-    
+
     // Would redirect to Microsoft login in production
   });
-  
+
   test('Navigate help center and search', async ({ page }) => {
     await page.goto('/help');
-    
+
     // Search functionality
     await page.fill('[data-testid="help-search"]', 'create study');
-    
+
     // Verify suggestions appear
-    await expect(page.locator('[data-testid="search-suggestions"]')).toBeVisible();
-    await expect(page.locator('[data-testid="suggestion-0"]')).toContainText('How to create study');
-    
+    await expect(
+      page.locator('[data-testid="search-suggestions"]')
+    ).toBeVisible();
+    await expect(page.locator('[data-testid="suggestion-0"]')).toContainText(
+      'How to create study'
+    );
+
     // Click on a category
     await page.click('[data-testid="category-q-methodology"]');
-    
+
     // Verify category page loads
     await expect(page.locator('h2')).toContainText('Q-Methodology Guide');
   });
@@ -2485,6 +2596,7 @@ test.describe('Critical User Flows', () => {
 ```
 
 ### 15.2 Performance Testing
+
 ```typescript
 // tests/performance.spec.ts
 import { test, expect } from '@playwright/test';
@@ -2495,21 +2607,21 @@ test.describe('Performance Metrics', () => {
     await page.goto('/auth/login');
     await page.waitForLoadState('networkidle');
     const loadTime = Date.now() - startTime;
-    
+
     expect(loadTime).toBeLessThan(2000);
   });
-  
+
   test('Core Web Vitals meet targets', async ({ page }) => {
     await page.goto('/');
-    
+
     // Measure Web Vitals
     const metrics = await page.evaluate(() => {
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         let cls = 0;
         let lcp = 0;
         let fid = 0;
-        
-        new PerformanceObserver((list) => {
+
+        new PerformanceObserver(list => {
           for (const entry of list.getEntries()) {
             if (entry.entryType === 'layout-shift') {
               cls += entry.value;
@@ -2521,18 +2633,24 @@ test.describe('Performance Metrics', () => {
               fid = entry.processingStart - entry.startTime;
             }
           }
-        }).observe({ entryTypes: ['layout-shift', 'largest-contentful-paint', 'first-input'] });
-        
+        }).observe({
+          entryTypes: [
+            'layout-shift',
+            'largest-contentful-paint',
+            'first-input',
+          ],
+        });
+
         setTimeout(() => {
           resolve({ cls, lcp, fid });
         }, 5000);
       });
     });
-    
+
     // Verify metrics meet targets
-    expect(metrics.cls).toBeLessThan(0.1);  // CLS < 0.1 (good)
+    expect(metrics.cls).toBeLessThan(0.1); // CLS < 0.1 (good)
     expect(metrics.lcp).toBeLessThan(2500); // LCP < 2.5s (good)
-    expect(metrics.fid).toBeLessThan(100);  // FID < 100ms (good)
+    expect(metrics.fid).toBeLessThan(100); // FID < 100ms (good)
   });
 });
 ```
