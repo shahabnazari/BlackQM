@@ -1,15 +1,27 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '@/lib/auth/types';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
+import { authService, User, RegisterData } from '@/lib/api/services';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  register: (userData: any) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    rememberMe?: boolean
+  ) => Promise<void>;
+  logout: () => Promise<void>;
+  register: (userData: RegisterData) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,27 +30,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Check for existing session on mount
   useEffect(() => {
-    // Check for existing session on mount
     const checkSession = async () => {
       try {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-          // TODO: Validate token with backend
-          // For now, just set a mock user
-          setUser({
-            id: '1',
-            email: 'demo@vqmethod.com',
-            name: 'Demo User',
-            role: 'researcher',
-            emailVerified: true,
-            twoFactorEnabled: false,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
+        // Check if we have a token
+        if (authService.isAuthenticated()) {
+          // Get current user from backend
+          const currentUser = await authService.getCurrentUser();
+          setUser(currentUser);
         }
       } catch (error) {
         console.error('Session check failed:', error);
+        // Clear invalid token
+        authService.clearAuthData();
       } finally {
         setIsLoading(false);
       }
@@ -47,47 +52,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkSession();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(
+    async (email: string, password: string, rememberMe: boolean = true) => {
+      setIsLoading(true);
+      try {
+        const response = await authService.login({
+          email,
+          password,
+          rememberMe,
+        });
+
+        setUser(response.user);
+        toast.success('Welcome back!');
+      } catch (error: any) {
+        console.error('Login failed:', error);
+        throw new Error(
+          error.response?.data?.message || 'Invalid email or password'
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  const logout = useCallback(async () => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual login API call
-      // For now, just set a mock user
-      setUser({
-        id: '1',
-        email,
-        name: 'Demo User',
-        role: 'researcher',
-        emailVerified: true,
-        twoFactorEnabled: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      localStorage.setItem('authToken', 'mock-token');
+      await authService.logout();
+      setUser(null);
+      toast.success('Logged out successfully');
     } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
+      console.error('Logout failed:', error);
+      // Still clear local data even if API call fails
+      authService.clearAuthData();
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('authToken');
-  };
-
-  const register = async (userData: any) => {
+  const register = useCallback(async (userData: RegisterData) => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual registration API call
-      console.log('Registration data:', userData);
-    } catch (error) {
+      const response = await authService.register(userData);
+      setUser(response.user);
+      toast.success('Account created successfully!');
+    } catch (error: any) {
       console.error('Registration failed:', error);
-      throw error;
+      throw new Error(
+        error.response?.data?.message ||
+          'Registration failed. Please try again.'
+      );
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    if (!authService.isAuthenticated()) return;
+
+    try {
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  }, []);
 
   const value = {
     user,
@@ -96,6 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     logout,
     register,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

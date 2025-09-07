@@ -12,6 +12,15 @@ import {
   LoadingState,
 } from '../EmptyState';
 
+// Mock Button component
+vi.mock('@/components/apple-ui/Button/Button', () => ({
+  Button: ({ children, onClick, ...props }: any) => (
+    <button onClick={onClick} {...props}>
+      {children}
+    </button>
+  ),
+}));
+
 // Mock framer-motion
 vi.mock('framer-motion', () => ({
   motion: {
@@ -44,23 +53,6 @@ vi.mock('../Illustrations', () => ({
   ),
   NotFoundIllustration: () => <div data-testid="not-found-illustration" />,
   ErrorIllustration: () => <div data-testid="error-illustration" />,
-}));
-
-// Mock framer-motion
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    g: ({ children, ...props }: any) => <g {...props}>{children}</g>,
-    rect: ({ children, ...props }: any) => <rect {...props}>{children}</rect>,
-    circle: ({ children, ...props }: any) => (
-      <circle {...props}>{children}</circle>
-    ),
-    path: ({ children, ...props }: any) => <path {...props}>{children}</path>,
-    line: ({ children, ...props }: any) => <line {...props}>{children}</line>,
-    polygon: ({ children, ...props }: any) => (
-      <polygon {...props}>{children}</polygon>
-    ),
-  },
 }));
 
 describe('EmptyState Components', () => {

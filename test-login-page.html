@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Login Page</h1>
+    
+    <div class="form-group">
+        <label for="email">Email:</label>
+        <input type="email" id="email" value="admin@test.com">
+    </div>
+    
+    <div class="form-group">
+        <label for="password">Password:</label>
+        <input type="password" id="password" value="Password123!">
+    </div>
+    
+    <button onclick="testLogin()">Test Login</button>
+    <button onclick="testFromFrontend()">Test From Frontend URL</button>
+    
+    <div id="message"></div>
+    
+    <script>
+        async function testLogin() {
+            const messageDiv = document.getElementById('message');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            messageDiv.innerHTML = '<div class="message info">Testing login...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:4000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = `
+                        <div class="message success">
+                            <h3>✅ Login Successful!</h3>
+                            <p><strong>User:</strong> ${data.user.email}</p>
+                            <p><strong>Role:</strong> ${data.user.role}</p>
+                            <p><strong>Access Token:</strong> ${data.accessToken ? '✓ Received' : '✗ Missing'}</p>
+                            <p><strong>Refresh Token:</strong> ${data.refreshToken ? '✓ Received' : '✗ Missing'}</p>
+                            <details>
+                                <summary>Full Response</summary>
+                                <pre>${JSON.stringify(data, null, 2)}</pre>
+                            </details>
+                        </div>
+                    `;
+                    
+                    // Store tokens like the frontend would
+                    if (data.accessToken) {
+                        localStorage.setItem('access_token', data.accessToken);
+                        localStorage.setItem('refresh_token', data.refreshToken);
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        console.log('Tokens stored in localStorage');
+                    }
+                } else {
+                    messageDiv.innerHTML = `
+                        <div class="message error">
+                            <h3>❌ Login Failed</h3>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Message:</strong> ${data.message || 'Unknown error'}</p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = `
+                    <div class="message error">
+                        <h3>❌ Request Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p>Check the browser console for more details.</p>
+                    </div>
+                `;
+                console.error('Login error:', error);
+            }
+        }
+        
+        async function testFromFrontend() {
+            // This simulates what the frontend would do
+            window.location.href = 'http://localhost:3001/auth/login';
+        }
+    </script>
+</body>
+</html>

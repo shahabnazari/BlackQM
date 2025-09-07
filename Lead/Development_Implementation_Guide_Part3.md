@@ -4,11 +4,301 @@
 
 This is Part 3 of the Development Implementation Guide, focusing on authentication UI, state management, and production-grade interface implementation.
 
+**⚠️ CRITICAL UPDATE - Phase 6.7 Required:**
+The authentication UI and state management code in this guide is **NOT CONNECTED** to the backend. While the UI is complete and the backend endpoints exist, they are not integrated. See [PHASE_6.7_BACKEND_INTEGRATION.md](../PHASE_6.7_BACKEND_INTEGRATION.md) for the urgent integration plan.
+
 **Previous Parts:**
 
-- Part 1: Foundation & Apple Design System (Lines 1-1666)
-- Part 2: Backend Implementation & Q-Analytics (In separate file)
-- Part 3: Authentication UI & User Experience (This file)
+- Part 1: Foundation & Apple Design System (Updated with Phase 6.7)
+- Part 2: Backend Implementation & Q-Analytics (Updated with Phase 6.7)
+- Part 3: Authentication UI & User Experience (This file - awaiting Phase 6.7 integration)
+
+---
+
+## 4. Enterprise SSO Implementation (Phase 7 Enhanced)
+
+### 4.1 SAML SSO Frontend Integration
+
+```typescript
+// lib/services/sso-service.ts
+import { ApiClient } from './api-client'; // ⚠️ NOTE: ApiClient not implemented - Phase 6.7 required
+
+// PHASE 6.7 TODO: Create ApiClient with axios:
+// - Base URL configuration (http://localhost:3001/api)
+// - Auth token interceptors
+// - Error handling
+// - Request/response logging
+// See PHASE_6.7_BACKEND_INTEGRATION.md for implementation
+
+export class SSOService {
+  // Detect academic institution from email domain
+  static async detectInstitution(email: string): Promise<{
+    isAcademic: boolean;
+    institution?: string;
+    ssoProvider?: string;
+  }> {
+    const domain = email.split('@')[1];
+
+    // Check known academic domains
+    const academicDomains = [
+      { domain: '.edu', provider: 'shibboleth' },
+      { domain: '.ac.uk', provider: 'shibboleth' },
+      { domain: '.edu.au', provider: 'shibboleth' },
+      { domain: '.ac.jp', provider: 'shibboleth' },
+    ];
+
+    const isAcademic = academicDomains.some(ad => domain.endsWith(ad.domain));
+
+    if (isAcademic) {
+      // Check if institution has SSO configured
+      const response = await ApiClient.get(`/auth/sso/check-domain/${domain}`);
+      return response.data;
+    }
+
+    return { isAcademic: false };
+  }
+
+  // Initiate SAML SSO flow
+  static async initiateSAMLLogin(
+    provider: string,
+    email?: string
+  ): Promise<void> {
+    const response = await ApiClient.post('/auth/saml/initiate', {
+      provider,
+      email,
+      returnUrl: window.location.origin + '/auth/callback',
+    });
+
+    // Redirect to IdP login page
+    window.location.href = response.data.redirectUrl;
+  }
+
+  // Handle SAML callback
+  static async handleSAMLCallback(samlResponse: string): Promise<{
+    user: any;
+    accessToken: string;
+    refreshToken: string;
+  }> {
+    const response = await ApiClient.post('/auth/saml/callback', {
+      SAMLResponse: samlResponse,
+    });
+
+    return response.data;
+  }
+}
+```
+
+### 4.2 Enterprise Login Component with SSO
+
+```tsx
+// components/auth/enterprise-login.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button, TextField } from '@/components/apple-ui';
+import { SSOService } from '@/lib/services/sso-service';
+import {
+  AcademicCapIcon,
+  BuildingOfficeIcon,
+  ShieldCheckIcon,
+  KeyIcon,
+} from '@heroicons/react/24/outline';
+
+export function EnterpriseLogin() {
+  const [email, setEmail] = useState('');
+  const [institutionDetected, setInstitutionDetected] = useState(false);
+  const [ssoProvider, setSsoProvider] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Auto-detect institution from email
+  useEffect(() => {
+    const detectSSO = async () => {
+      if (email.includes('@')) {
+        const result = await SSOService.detectInstitution(email);
+        setInstitutionDetected(result.isAcademic);
+        setSsoProvider(result.ssoProvider || null);
+      }
+    };
+
+    const timer = setTimeout(detectSSO, 500);
+    return () => clearTimeout(timer);
+  }, [email]);
+
+  const handleSSOLogin = async (provider: string) => {
+    setLoading(true);
+    try {
+      await SSOService.initiateSAMLLogin(provider, email);
+    } catch (error) {
+      console.error('SSO login failed:', error);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto p-6">
+      <div className="text-center mb-8">
+        <ShieldCheckIcon className="w-16 h-16 mx-auto mb-4 text-system-blue" />
+        <h1 className="text-3xl font-bold mb-2">Enterprise Sign In</h1>
+        <p className="text-secondary-label">
+          Access with your institutional credentials
+        </p>
+      </div>
+
+      {/* Email Detection */}
+      <TextField
+        label="Work or School Email"
+        type="email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        placeholder="you@university.edu"
+        className="mb-4"
+      />
+
+      {/* Institution Detection Alert */}
+      <AnimatePresence>
+        {institutionDetected && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-4 p-3 bg-system-blue/10 rounded-lg border border-system-blue/20"
+          >
+            <div className="flex items-center gap-2">
+              <AcademicCapIcon className="w-5 h-5 text-system-blue" />
+              <span className="text-sm font-medium">
+                Academic institution detected
+              </span>
+            </div>
+            <p className="text-xs text-secondary-label mt-1">
+              Sign in with your university credentials
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* SSO Options */}
+      <div className="space-y-3 mb-6">
+        {/* University SSO (Shibboleth) */}
+        {institutionDetected && (
+          <Button
+            variant="primary"
+            size="lg"
+            className="w-full"
+            onClick={() => handleSSOLogin('shibboleth')}
+            disabled={loading}
+          >
+            <AcademicCapIcon className="w-5 h-5 mr-2" />
+            Sign in with University SSO
+          </Button>
+        )}
+
+        {/* Microsoft Azure AD */}
+        <Button
+          variant="ghost"
+          size="lg"
+          className="w-full"
+          onClick={() => handleSSOLogin('azure')}
+          disabled={loading}
+        >
+          <BuildingOfficeIcon className="w-5 h-5 mr-2" />
+          Sign in with Microsoft (Azure AD)
+        </Button>
+
+        {/* Okta */}
+        <Button
+          variant="ghost"
+          size="lg"
+          className="w-full"
+          onClick={() => handleSSOLogin('okta')}
+          disabled={loading}
+        >
+          <KeyIcon className="w-5 h-5 mr-2" />
+          Sign in with Okta
+        </Button>
+      </div>
+
+      {/* Compliance Badges */}
+      <div className="border-t pt-4">
+        <div className="flex justify-center gap-4 text-xs text-tertiary-label">
+          <span className="flex items-center gap-1">
+            <ShieldCheckIcon className="w-4 h-4" />
+            GDPR
+          </span>
+          <span className="flex items-center gap-1">
+            <ShieldCheckIcon className="w-4 h-4" />
+            HIPAA
+          </span>
+          <span className="flex items-center gap-1">
+            <ShieldCheckIcon className="w-4 h-4" />
+            FERPA
+          </span>
+          <span className="flex items-center gap-1">
+            <ShieldCheckIcon className="w-4 h-4" />
+            SOC2
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### 4.3 SAML Callback Handler
+
+```tsx
+// app/auth/callback/page.tsx
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { SSOService } from '@/lib/services/sso-service';
+import { LoadingSpinner } from '@/components/apple-ui';
+
+export default function AuthCallbackPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const setUser = useAuthStore(state => state.setUser);
+
+  useEffect(() => {
+    const handleCallback = async () => {
+      const samlResponse = searchParams.get('SAMLResponse');
+
+      if (samlResponse) {
+        try {
+          const { user, accessToken, refreshToken } =
+            await SSOService.handleSAMLCallback(samlResponse);
+
+          // Store tokens
+          localStorage.setItem('accessToken', accessToken);
+          localStorage.setItem('refreshToken', refreshToken);
+
+          // Update auth store
+          setUser(user);
+
+          // Redirect to dashboard
+          router.push('/dashboard');
+        } catch (error) {
+          console.error('SSO callback failed:', error);
+          router.push('/auth/login?error=sso_failed');
+        }
+      }
+    };
+
+    handleCallback();
+  }, [searchParams, router, setUser]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <LoadingSpinner size="lg" />
+        <p className="mt-4 text-secondary-label">Completing sign in...</p>
+      </div>
+    </div>
+  );
+}
+```
 
 ---
 
@@ -109,7 +399,7 @@ export const useAuthStore = create<AuthState>()(
       loginWithProvider: async provider => {
         set({ isLoading: true });
         try {
-          // Initiate OAuth flow
+          // Initiate OAuth flow (including SAML SSO)
           const authUrl = await AuthService.getOAuthUrl(provider);
           window.location.href = authUrl;
         } catch (error) {

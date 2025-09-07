@@ -11,7 +11,12 @@ import {
   Headers,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from '../services/auth.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import {
@@ -76,11 +81,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Logout user' })
   @ApiResponse({ status: 200, description: 'Logged out successfully' })
-  async logout(
-    @Request() req: any,
-    @Body() refreshTokenDto: RefreshTokenDto,
-  ) {
-    return this.authService.logout(refreshTokenDto.refreshToken, req.user.userId);
+  async logout(@Request() req: any, @Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.logout(
+      refreshTokenDto.refreshToken,
+      req.user.userId,
+    );
   }
 
   @Post('change-password')
@@ -101,7 +106,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user profile' })
-  @ApiResponse({ status: 200, description: 'User profile retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile retrieved successfully',
+  })
   async getProfile(@Request() req: any) {
     return {
       user: req.user,
@@ -136,10 +144,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Verify email address' })
   @ApiResponse({ status: 200, description: 'Email verified successfully' })
   @ApiResponse({ status: 400, description: 'Invalid or expired token' })
-  async verifyEmail(
-    @Query('token') token: string,
-    @Ip() ipAddress: string,
-  ) {
+  async verifyEmail(@Query('token') token: string, @Ip() ipAddress: string) {
     return this.authService.verifyEmail(token, ipAddress);
   }
 }

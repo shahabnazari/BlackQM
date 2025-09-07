@@ -1,4 +1,10 @@
-import { PrismaClient, Role, SurveyStatus, QuestionType, ResponseStatus } from '@prisma/client';
+import {
+  PrismaClient,
+  Role,
+  SurveyStatus,
+  QuestionType,
+  ResponseStatus,
+} from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -18,7 +24,7 @@ async function main() {
 
   const adminUser = await prisma.user.create({
     data: {
-      email: 'admin@vqmethod.test',
+      email: 'admin@test.com',
       password: hashedPassword,
       name: 'Admin User',
       role: Role.ADMIN,
@@ -29,7 +35,7 @@ async function main() {
 
   const researcherUser = await prisma.user.create({
     data: {
-      email: 'researcher@vqmethod.test',
+      email: 'researcher@test.com',
       password: hashedPassword,
       name: 'Researcher User',
       role: Role.RESEARCHER,
@@ -40,7 +46,7 @@ async function main() {
 
   const participantUser = await prisma.user.create({
     data: {
-      email: 'participant@vqmethod.test',
+      email: 'participant@test.com',
       password: hashedPassword,
       name: 'Participant User',
       role: Role.PARTICIPANT,
@@ -55,7 +61,8 @@ async function main() {
   const survey = await prisma.survey.create({
     data: {
       title: 'Climate Change Perspectives Study',
-      description: 'A Q-methodology study exploring different perspectives on climate change and environmental policies.',
+      description:
+        'A Q-methodology study exploring different perspectives on climate change and environmental policies.',
       userId: researcherUser.id,
       status: SurveyStatus.ACTIVE,
       settings: {
@@ -73,7 +80,11 @@ async function main() {
         },
         demographics: {
           age: { required: true, type: 'range', min: 18, max: 100 },
-          gender: { required: true, type: 'select', options: ['Male', 'Female', 'Other', 'Prefer not to say'] },
+          gender: {
+            required: true,
+            type: 'select',
+            options: ['Male', 'Female', 'Other', 'Prefer not to say'],
+          },
           education: { required: false, type: 'select' },
         },
       },
@@ -156,14 +167,26 @@ async function main() {
             text: 'How confident are you in your sorting decisions?',
             order: 11,
             required: true,
-            options: ['Very unconfident', 'Unconfident', 'Neutral', 'Confident', 'Very confident'],
+            options: [
+              'Very unconfident',
+              'Unconfident',
+              'Neutral',
+              'Confident',
+              'Very confident',
+            ],
           },
           {
             type: QuestionType.MULTIPLE_CHOICE,
             text: 'What is your primary source of information about climate change?',
             order: 12,
             required: true,
-            options: ['Scientific journals', 'News media', 'Social media', 'Educational institutions', 'Government sources'],
+            options: [
+              'Scientific journals',
+              'News media',
+              'Social media',
+              'Educational institutions',
+              'Government sources',
+            ],
           },
         ],
       },
@@ -182,14 +205,14 @@ async function main() {
       data: {
         qSort: {
           placements: {
-            '1': 2,  // Statement 1 placed at position 2
+            '1': 2, // Statement 1 placed at position 2
             '2': -3, // Statement 2 placed at position -3
-            '3': 0,  // Statement 3 placed at position 0
-            '4': 4,  // Statement 4 placed at position 4
-            '5': 1,  // Statement 5 placed at position 1
+            '3': 0, // Statement 3 placed at position 0
+            '4': 4, // Statement 4 placed at position 4
+            '5': 1, // Statement 5 placed at position 1
             '6': -4, // Statement 6 placed at position -4
             '7': -1, // Statement 7 placed at position -1
-            '8': 3,  // Statement 8 placed at position 3
+            '8': 3, // Statement 8 placed at position 3
             '9': -2, // Statement 9 placed at position -2
           },
           timeSpent: 450, // seconds
@@ -209,7 +232,8 @@ async function main() {
   const benchmarkSurvey = await prisma.survey.create({
     data: {
       title: 'PQMethod Benchmark Study',
-      description: 'Reference dataset for validating statistical calculations against PQMethod.',
+      description:
+        'Reference dataset for validating statistical calculations against PQMethod.',
       userId: researcherUser.id,
       status: SurveyStatus.COMPLETED,
       settings: {

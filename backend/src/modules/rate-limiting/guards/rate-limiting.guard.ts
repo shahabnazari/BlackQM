@@ -6,7 +6,10 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { RateLimitingService, RateLimitConfig } from '../services/rate-limiting.service';
+import {
+  RateLimitingService,
+  RateLimitConfig,
+} from '../services/rate-limiting.service';
 
 export const RATE_LIMIT_KEY = 'rateLimit';
 
@@ -61,7 +64,7 @@ export class RateLimitingGuard implements CanActivate {
     if (request.user?.userId) {
       return `user:${request.user.userId}`;
     }
-    
+
     // Get IP address from various sources
     return (
       request.ip ||
@@ -78,7 +81,7 @@ export class RateLimitingGuard implements CanActivate {
 
   private addRateLimitHeaders(response: any, config: RateLimitConfig) {
     const windowSeconds = Math.ceil(config.windowMs / 1000);
-    
+
     response.setHeader('X-RateLimit-Limit', config.maxRequests);
     response.setHeader('X-RateLimit-Window', windowSeconds);
     response.setHeader('X-RateLimit-Remaining', config.maxRequests - 1); // Approximate

@@ -5,6 +5,8 @@ import { Request, Response, NextFunction } from 'express';
 import { performance } from 'perf_hooks';
 import { JwtService } from '@nestjs/jwt';
 import { RotationEngineService } from '../../services/rotation-engine.service';
+import { StatisticsService } from '../../services/statistics.service';
+import { AnalysisLoggerService } from '../../services/analysis-logger.service';
 import io from 'socket.io-client';
 import type { Socket as ClientSocket } from 'socket.io-client';
 
@@ -30,7 +32,26 @@ describe('Response Time Performance Tests', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      providers: [RotationEngineService, JwtService],
+      providers: [
+        RotationEngineService,
+        JwtService,
+        {
+          provide: StatisticsService,
+          useValue: {
+            mean: jest.fn(),
+            standardDeviation: jest.fn(),
+            correlationMatrix: jest.fn(),
+          },
+        },
+        {
+          provide: AnalysisLoggerService,
+          useValue: {
+            log: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     app = moduleFixture.createNestApplication();

@@ -12,7 +12,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { QAnalysisService } from '../services/q-analysis.service';
 
-@WebSocketGateway(3001, {
+@WebSocketGateway({
   cors: {
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,

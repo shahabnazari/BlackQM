@@ -66,6 +66,7 @@ npm run dev:backend    # Backend only
 ## 🎯 Key Features
 
 ### For Researchers
+
 - 📊 **Advanced Study Builder**: 15+ question types with Qualtrics-level capabilities
 - 🎨 **Q-Sort Grid Designer**: Customizable grid layouts with forced/free distribution
 - 📈 **Real-time Analytics**: Live participant tracking and data visualization
@@ -73,6 +74,7 @@ npm run dev:backend    # Backend only
 - 📱 **Video Integration**: Google Meet/Zoom support throughout the journey
 
 ### For Participants
+
 - 🎯 **8-Step Journey**: Complete Q-methodology flow from screening to completion
 - 🖱️ **Intuitive Q-Sort**: Drag-and-drop interface with Apple-style interactions
 - 📱 **Mobile Optimized**: Responsive design for all devices
@@ -80,6 +82,7 @@ npm run dev:backend    # Backend only
 - ♿ **Accessible**: WCAG 2.1 AA compliance with VoiceOver support
 
 ### Security & Infrastructure
+
 - 🔐 **Enterprise Security**: 2FA/TOTP, virus scanning, encryption at rest
 - 🛡️ **Rate Limiting**: 10+ protection types against DDoS attacks
 - 🏢 **Multi-tenant**: Row-Level Security with complete data isolation
@@ -121,21 +124,21 @@ VQMethod Monorepo
 
 ### Technology Stack
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **Frontend** | Next.js 15, React 19 | Modern web application |
-| **Styling** | Tailwind CSS, Apple Design System | Consistent UI/UX |
-| **Backend** | NestJS, Prisma | Scalable API server |
-| **Database** | PostgreSQL/SQLite | Data persistence |
-| **Security** | JWT, 2FA, RLS | Enterprise protection |
-| **Testing** | Vitest, Playwright | 90%+ coverage |
-| **DevOps** | Docker, Kubernetes | Container orchestration |
+| Layer        | Technology                        | Purpose                 |
+| ------------ | --------------------------------- | ----------------------- |
+| **Frontend** | Next.js 15, React 19              | Modern web application  |
+| **Styling**  | Tailwind CSS, Apple Design System | Consistent UI/UX        |
+| **Backend**  | NestJS, Prisma                    | Scalable API server     |
+| **Database** | PostgreSQL/SQLite                 | Data persistence        |
+| **Security** | JWT, 2FA, RLS                     | Enterprise protection   |
+| **Testing**  | Vitest, Playwright                | 90%+ coverage           |
+| **DevOps**   | Docker, Kubernetes                | Container orchestration |
 
 ### ⚠️ Important Directory Rules
 
 To maintain a clean and organized codebase, we enforce strict directory standards:
 
-1. **Route Groups MUST Use Parentheses**: 
+1. **Route Groups MUST Use Parentheses**:
    - ✅ Correct: `frontend/app/(researcher)/` and `frontend/app/(participant)/`
    - ❌ Wrong: `frontend/app/researcher/` and `frontend/app/participant/`
 
@@ -193,6 +196,7 @@ npm run typecheck
 ## 🚢 Deployment
 
 ### Development
+
 ```bash
 # Using Docker Compose
 docker-compose -f docker-compose.dev.yml up
@@ -202,6 +206,7 @@ pm2 start ecosystem.config.js
 ```
 
 ### Production
+
 ```bash
 # Build for production
 npm run build

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/apple-ui/Button/Button';
 import {
   Card,
@@ -11,6 +12,7 @@ import {
 } from '@/components/apple-ui/Card/Card';
 
 export default function HomePage() {
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-bg text-text transition-colors duration-normal">
       {/* Header */}
@@ -21,12 +23,15 @@ export default function HomePage() {
             <h1 className="text-xl font-semibold">VQMethod</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <Link href="/auth/login">
-              <Button variant="secondary">Sign In</Button>
-            </Link>
-            <Link href="/auth/register">
-              <Button>Get Started</Button>
-            </Link>
+            <Button
+              variant="secondary"
+              onClick={() => router.push('/auth/login')}
+            >
+              Sign In
+            </Button>
+            <Button onClick={() => router.push('/auth/register')}>
+              Get Started
+            </Button>
           </div>
         </div>
       </header>
@@ -43,20 +48,21 @@ export default function HomePage() {
             cutting-edge visualization tools.
           </p>
           <div className="flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-            <Link href="/auth/register">
-              <Button size="large" className="w-full sm:w-auto">
-                Start Your Research
-              </Button>
-            </Link>
-            <Link href="/auth/login">
-              <Button
-                variant="secondary"
-                size="large"
-                className="w-full sm:w-auto"
-              >
-                Sign In
-              </Button>
-            </Link>
+            <Button
+              size="large"
+              className="w-full sm:w-auto"
+              onClick={() => router.push('/auth/register')}
+            >
+              Start Your Research
+            </Button>
+            <Button
+              variant="secondary"
+              size="large"
+              className="w-full sm:w-auto"
+              onClick={() => router.push('/auth/login')}
+            >
+              Sign In
+            </Button>
           </div>
         </section>
 
@@ -71,11 +77,13 @@ export default function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/join">
-                <Button variant="secondary" className="w-full">
-                  Join a Study
-                </Button>
-              </Link>
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => router.push('/join')}
+              >
+                Join a Study
+              </Button>
             </CardContent>
           </Card>
 
@@ -88,11 +96,13 @@ export default function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/visualization-demo">
-                <Button variant="secondary" className="w-full">
-                  View Demos
-                </Button>
-              </Link>
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => router.push('/visualization-demo')}
+              >
+                View Demos
+              </Button>
             </CardContent>
           </Card>
 
@@ -105,11 +115,13 @@ export default function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/auth/login">
-                <Button variant="secondary" className="w-full">
-                  Access Dashboard
-                </Button>
-              </Link>
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => router.push('/auth/login')}
+              >
+                Access Dashboard
+              </Button>
             </CardContent>
           </Card>
         </section>

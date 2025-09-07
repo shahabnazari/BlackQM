@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Button Clicks</title>
+</head>
+<body>
+    <h1>Testing Button Navigation</h1>
+    
+    <button onclick="testNavigation('/auth/login')">Test Login Navigation</button>
+    <button onclick="testNavigation('/auth/register')">Test Register Navigation</button>
+    <button onclick="testAPI()">Test API Connection</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        function testNavigation(path) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<p>Testing navigation to: ${path}</p>`;
+            
+            // Test if the route exists
+            fetch(`http://localhost:3000${path}`)
+                .then(response => {
+                    resultDiv.innerHTML += `<p>Response status: ${response.status}</p>`;
+                    if (response.ok) {
+                        resultDiv.innerHTML += `<p style="color: green;">✓ Route exists and is accessible</p>`;
+                    } else {
+                        resultDiv.innerHTML += `<p style="color: red;">✗ Route returned error: ${response.status}</p>`;
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML += `<p style="color: red;">✗ Error accessing route: ${error.message}</p>`;
+                });
+        }
+        
+        function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<p>Testing API connection...</p>`;
+            
+            fetch('http://localhost:4000/api')
+                .then(response => response.text())
+                .then(data => {
+                    resultDiv.innerHTML += `<p style="color: green;">✓ API Response: ${data}</p>`;
+                })
+                .catch(error => {
+                    resultDiv.innerHTML += `<p style="color: red;">✗ API Error: ${error.message}</p>`;
+                });
+        }
+    </script>
+</body>
+</html>

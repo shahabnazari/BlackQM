@@ -13,7 +13,11 @@ export function useLogin() {
       setLoginError(null);
 
       try {
-        await login(credentials.email, credentials.password);
+        await login(
+          credentials.email,
+          credentials.password,
+          credentials.rememberMe
+        );
         return { success: true };
       } catch (err: any) {
         const message = err.message || 'Login failed. Please try again.';

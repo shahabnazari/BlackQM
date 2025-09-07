@@ -5,11 +5,14 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
   private readonly logger = new Logger(PrismaService.name);
-  
+
   constructor(private configService: ConfigService) {
-    const databaseUrl = configService.get<string>('DATABASE_URL', 'file:./dev.db');
+    const databaseUrl = configService.get<string>(
+      'DATABASE_URL',
+      'file:./dev.db',
+    );
     const isProduction = configService.get<string>('NODE_ENV') === 'production';
-    
+
     // Configure connection pooling and optimization
     super({
       datasources: {
@@ -17,33 +20,39 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
           url: databaseUrl,
         },
       },
-      log: isProduction 
-        ? ['error', 'warn'] 
-        : ['query', 'error', 'warn'],
+      log: isProduction ? ['error', 'warn'] : ['query', 'error', 'warn'],
       errorFormat: isProduction ? 'minimal' : 'pretty',
     });
 
     // Connection pool configuration for PostgreSQL
-    if (databaseUrl.includes('postgresql://') || databaseUrl.includes('postgres://')) {
+    if (
+      databaseUrl.includes('postgresql://') ||
+      databaseUrl.includes('postgres://')
+    ) {
       // PostgreSQL connection pooling via connection string parameters
       // Example: postgresql://user:pass@host:5432/db?connection_limit=10&pool_timeout=30
       this.logger.log('Using PostgreSQL with connection pooling');
     } else if (databaseUrl.includes('file:')) {
       // SQLite doesn't support connection pooling
       this.logger.warn('Using SQLite - connection pooling not available');
-      this.logger.warn('For production, please use PostgreSQL with connection pooling');
+      this.logger.warn(
+        'For production, please use PostgreSQL with connection pooling',
+      );
     }
   }
 
   async onModuleInit() {
     // Configure connection pool settings
     await this.$connect();
-    
+
     // Log connection details
-    const dbUrl = this.configService.get<string>('DATABASE_URL', 'file:./dev.db');
+    const dbUrl = this.configService.get<string>(
+      'DATABASE_URL',
+      'file:./dev.db',
+    );
     if (dbUrl.includes('postgresql://') || dbUrl.includes('postgres://')) {
       this.logger.log('Database connected with connection pooling enabled');
-      
+
       // Set pool configuration via raw query for PostgreSQL
       try {
         // These would be set in the connection string, but we can verify them
@@ -51,7 +60,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
           current_setting('max_connections') as max_conn,
           count(*) as active_conn 
           FROM pg_stat_activity`;
-        this.logger.log(`Connection pool status: ${JSON.stringify(poolStatus)}`);
+        this.logger.log(
+          `Connection pool status: ${JSON.stringify(poolStatus)}`,
+        );
       } catch (error) {
         // SQLite will throw here, which is expected
         if (!dbUrl.includes('file:')) {
@@ -65,7 +76,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     await this.$disconnect();
     this.logger.log('Database connection pool closed');
   }
-  
+
   // Helper method for health checks
   async isHealthy(): Promise<boolean> {
     try {
@@ -76,14 +87,17 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       return false;
     }
   }
-  
+
   // Helper method to get pool statistics (PostgreSQL only)
   async getPoolStats(): Promise<any> {
-    const dbUrl = this.configService.get<string>('DATABASE_URL', 'file:./dev.db');
-    
+    const dbUrl = this.configService.get<string>(
+      'DATABASE_URL',
+      'file:./dev.db',
+    );
+
     if (dbUrl.includes('postgresql://') || dbUrl.includes('postgres://')) {
       try {
-        const stats = await this.$queryRaw`
+        const stats = (await this.$queryRaw`
           SELECT 
             count(*) as total_connections,
             count(*) FILTER (WHERE state = 'active') as active_connections,
@@ -92,14 +106,14 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
             max(EXTRACT(EPOCH FROM (now() - query_start))) as longest_query_seconds
           FROM pg_stat_activity
           WHERE datname = current_database()
-        ` as any[];
+        `) as any[];
         return stats[0];
       } catch (error) {
         this.logger.error('Failed to get pool stats:', error);
         return null;
       }
     }
-    
+
     return {
       message: 'Connection pooling statistics not available for SQLite',
       database_type: 'SQLite',

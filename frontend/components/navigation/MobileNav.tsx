@@ -92,7 +92,18 @@ export function MobileNav({ className = '' }: MobileNavProps) {
       return [
         { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
         { label: 'Studies', path: '/studies', icon: <StudiesIcon /> },
-        { label: 'Analytics', path: '/analytics', icon: <AnalyticsIcon /> },
+        {
+          label: 'Analytics',
+          path: '/analytics',
+          icon: <AnalyticsIcon />,
+          description: 'Platform metrics',
+        },
+        {
+          label: 'Analysis',
+          path: '/analysis',
+          icon: <AnalyticsIcon />,
+          description: 'Research tools',
+        },
         {
           label: 'Participants',
           path: '/participants',

@@ -2,50 +2,80 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { studyApi } from '@/lib/api/study';
+import { studyApi, Study } from '@/lib/api/study';
 import { formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/apple-ui/Button';
 import { Card } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/apple-ui/Badge';
 
-interface Study {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'ENDED' | 'ARCHIVED';
-  _count?: {
-    responses: number;
-    statements: number;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
+// Use Study type from API service
+// The Study interface is imported from '@/lib/api/study'
 
 // Mock studies for when API is not available
 const mockStudies: Study[] = [
   {
     id: '1',
-    title: 'Climate Change Perspectives Study',
-    description: 'Understanding public views on climate change policies',
-    status: 'ACTIVE',
-    _count: {
-      responses: 45,
-      statements: 32,
+    title: 'Public Perception of Air Pollution Solutions',
+    description:
+      'Understanding public attitudes toward various air pollution mitigation strategies and policies.',
+    status: 'active',
+    createdBy: 'user1',
+    settings: {
+      requireAuth: false,
+      allowAnonymous: true,
+      sortingMethod: 'grid',
+      statements: [],
     },
-    createdAt: '2024-01-15',
-    updatedAt: '2024-01-20',
+    statistics: {
+      totalParticipants: 30,
+      completedSorts: 25,
+      averageCompletionTime: 900,
+      responseRate: 83.3,
+    },
+    createdAt: '2024-01-15T00:00:00Z',
+    updatedAt: '2024-01-20T00:00:00Z',
   },
   {
     id: '2',
+    title: 'Climate Change Perspectives Study',
+    description: 'Understanding public views on climate change policies',
+    status: 'active',
+    createdBy: 'user1',
+    settings: {
+      requireAuth: false,
+      allowAnonymous: true,
+      sortingMethod: 'grid',
+      statements: [],
+    },
+    statistics: {
+      totalParticipants: 45,
+      completedSorts: 32,
+      averageCompletionTime: 1200,
+      responseRate: 71.1,
+    },
+    createdAt: '2024-01-18T00:00:00Z',
+    updatedAt: '2024-01-19T00:00:00Z',
+  },
+  {
+    id: '3',
     title: 'Healthcare System Evaluation',
     description: 'Q-methodology study on healthcare system improvements',
-    status: 'DRAFT',
-    _count: {
-      responses: 0,
-      statements: 0,
+    status: 'draft',
+    createdBy: 'user1',
+    settings: {
+      requireAuth: true,
+      allowAnonymous: false,
+      sortingMethod: 'grid',
+      statements: [],
     },
-    createdAt: '2024-01-18',
-    updatedAt: '2024-01-19',
+    statistics: {
+      totalParticipants: 0,
+      completedSorts: 0,
+      averageCompletionTime: 0,
+      responseRate: 0,
+    },
+    createdAt: '2024-01-20T00:00:00Z',
+    updatedAt: '2024-01-21T00:00:00Z',
   },
 ];
 
@@ -74,16 +104,15 @@ export default function StudiesPage() {
 
   const getStatusBadgeVariant = (status: Study['status']) => {
     switch (status) {
-      case 'ACTIVE':
+      case 'active':
         return 'success';
-      case 'DRAFT':
+      case 'draft':
         return 'secondary';
-      case 'PAUSED':
+      case 'paused':
         return 'warning';
-      case 'SCHEDULED':
+      case 'completed':
         return 'info';
-      case 'ENDED':
-      case 'ARCHIVED':
+      case 'archived':
         return 'default';
       default:
         return 'default';
@@ -118,7 +147,7 @@ export default function StudiesPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {studies.map((study) => (
+        {studies.map(study => (
           <Link key={study.id} href={`/studies/${study.id}`}>
             <Card className="h-full transition-transform hover:scale-[1.02] cursor-pointer">
               <div className="flex items-start justify-between mb-4">
@@ -126,7 +155,7 @@ export default function StudiesPage() {
                   {study.title}
                 </h3>
                 <Badge variant={getStatusBadgeVariant(study.status)}>
-                  {study.status}
+                  {study.status.toUpperCase()}
                 </Badge>
               </div>
 
@@ -136,15 +165,15 @@ export default function StudiesPage() {
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-tertiary-label">Responses:</span>
+                  <span className="text-tertiary-label">Participants:</span>
                   <span className="font-medium text-label">
-                    {study._count?.responses || 0}
+                    {study.statistics?.totalParticipants || 0}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-tertiary-label">Statements:</span>
+                  <span className="text-tertiary-label">Completed:</span>
                   <span className="font-medium text-label">
-                    {study._count?.statements || 0}
+                    {study.statistics?.completedSorts || 0}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -155,16 +184,23 @@ export default function StudiesPage() {
                 </div>
               </div>
 
-              {study.status === 'ACTIVE' && study._count?.responses && study._count.responses > 0 && (
-                <div className="mt-4 pt-4 border-t border-quaternary-fill">
-                  <div className="h-2 bg-quaternary-fill rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-system-green transition-all duration-500"
-                      style={{ width: `${Math.min(100, (study._count?.responses || 0) * 10)}%` }}
-                    />
+              {study.status === 'active' &&
+                study.statistics?.totalParticipants > 0 && (
+                  <div className="mt-4 pt-4 border-t border-quaternary-fill">
+                    <div className="h-2 bg-quaternary-fill rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-system-green transition-all duration-500"
+                        style={{
+                          width: `${Math.min(100, study.statistics?.responseRate || 0)}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-tertiary-label mt-2">
+                      {study.statistics?.responseRate?.toFixed(1)}% completion
+                      rate
+                    </p>
                   </div>
-                </div>
-              )}
+                )}
             </Card>
           </Link>
         ))}

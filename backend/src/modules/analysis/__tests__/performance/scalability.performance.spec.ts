@@ -7,6 +7,14 @@ import * as os from 'os';
 import * as cluster from 'cluster';
 import { JwtService } from '@nestjs/jwt';
 import { QAnalysisService } from '../../services/q-analysis.service';
+import { FactorExtractionService } from '../../services/factor-extraction.service';
+import { RotationEngineService } from '../../services/rotation-engine.service';
+import { StatisticalOutputService } from '../../services/statistical-output.service';
+import { PQMethodCompatibilityService } from '../../services/pqmethod-compatibility.service';
+import { QMethodValidatorService } from '../../qmethod-validator.service';
+import { PrismaService } from '../../../../common/prisma.service';
+import { StatisticsService } from '../../services/statistics.service';
+import { AnalysisLoggerService } from '../../services/analysis-logger.service';
 
 describe('Scalability Tests - Multiple Simultaneous Analyses', () => {
   let app: INestApplication;
@@ -26,7 +34,74 @@ describe('Scalability Tests - Multiple Simultaneous Analyses', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      providers: [QAnalysisService, JwtService],
+      providers: [
+        QAnalysisService,
+        JwtService,
+        {
+          provide: FactorExtractionService,
+          useValue: {
+            extractFactors: jest.fn(),
+            calculateEigenvalues: jest.fn(),
+          },
+        },
+        {
+          provide: RotationEngineService,
+          useValue: {
+            rotate: jest.fn(),
+            manualRotate: jest.fn(),
+          },
+        },
+        {
+          provide: StatisticalOutputService,
+          useValue: {
+            generateOutputs: jest.fn(),
+            calculateStatistics: jest.fn(),
+          },
+        },
+        {
+          provide: PQMethodCompatibilityService,
+          useValue: {
+            validate: jest.fn(),
+            export: jest.fn(),
+          },
+        },
+        {
+          provide: QMethodValidatorService,
+          useValue: {
+            validate: jest.fn(),
+            checkData: jest.fn(),
+          },
+        },
+        {
+          provide: PrismaService,
+          useValue: {
+            study: {
+              findUnique: jest.fn(),
+              update: jest.fn(),
+            },
+            analysisSession: {
+              create: jest.fn(),
+              update: jest.fn(),
+            },
+          },
+        },
+        {
+          provide: StatisticsService,
+          useValue: {
+            mean: jest.fn(),
+            standardDeviation: jest.fn(),
+            correlationMatrix: jest.fn(),
+          },
+        },
+        {
+          provide: AnalysisLoggerService,
+          useValue: {
+            log: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     app = moduleFixture.createNestApplication();

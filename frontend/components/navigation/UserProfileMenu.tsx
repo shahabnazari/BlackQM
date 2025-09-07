@@ -45,8 +45,14 @@ export function UserProfileMenu({ className = '' }: UserProfileMenuProps) {
     return undefined;
   }, [isOpen]);
 
+  // Always render a placeholder to prevent layout shift
   if (!isAuthenticated || !user) {
-    return null;
+    return (
+      <div className={`relative ${className}`}>
+        {/* Placeholder avatar with same dimensions to prevent layout shift */}
+        <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+      </div>
+    );
   }
 
   const handleLogout = () => {
