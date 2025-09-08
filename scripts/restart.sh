@@ -1,9 +1,20 @@
 #!/bin/bash
 
-# VQMethod PM2 Restart Script
-# Gracefully restarts both frontend and backend servers
+# DEPRECATED: PM2 restart script - conflicts with unified dev manager
+# For development, use: npm run restart
+# This script is for PM2 production deployments only
 
-echo "🔄 Restarting VQMethod servers..."
+echo "⚠️  WARNING: This PM2 script conflicts with the dev manager"
+echo "   For development restart, use: npm run restart"
+echo ""
+read -p "Continue with PM2 restart? (y/n): " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Use 'npm run restart' for development"
+    exit 0
+fi
+
+echo "🔄 Restarting VQMethod servers with PM2..."
 
 # Check if PM2 is installed
 if ! command -v pm2 &> /dev/null; then
@@ -11,9 +22,16 @@ if ! command -v pm2 &> /dev/null; then
     exit 1
 fi
 
+# Check if ecosystem file exists
+if [ ! -f "ecosystem.production.js" ]; then
+    echo "❌ ecosystem.production.js not found"
+    echo "   For development, use: npm run restart"
+    exit 1
+fi
+
 # Restart the applications with zero-downtime reload
 echo "📦 Performing zero-downtime restart..."
-pm2 reload ecosystem.config.js
+pm2 reload ecosystem.production.js
 
 # Show status
 echo ""

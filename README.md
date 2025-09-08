@@ -47,12 +47,13 @@ cd vqmethod
 # Install dependencies for monorepo
 npm install
 
-# Start development with automatic port management
-npm run dev:safe
+# Start development servers (automatic port management)
+npm run dev
 
-# Or start specific services
-npm run dev:frontend   # Frontend only
-npm run dev:backend    # Backend only
+# Or use different modes
+npm run dev:simple     # Minimal mode for debugging
+npm run dev:enterprise # Full monitoring and logging
+npm run dev:debug      # Verbose output for troubleshooting
 ```
 
 ### Access Points
@@ -270,3 +271,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [Website](https://vqmethod.com) • [Documentation](./Lead) • [API Docs](http://localhost:4000/api/docs)
 
 </div>
+
+

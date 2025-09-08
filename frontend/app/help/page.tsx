@@ -259,6 +259,10 @@ export default function HelpPage() {
                       variant="secondary"
                       size="small"
                       className="w-full"
+                      onClick={() => {
+                        // Navigate to tutorial page or open video
+                        window.open(`/tutorials/${tutorial.id}`, '_blank');
+                      }}
                     >
                       {tutorial.video ? 'Watch Tutorial' : 'Read Article'}
                     </AppleButton>
@@ -311,7 +315,13 @@ export default function HelpPage() {
                     </div>
                   </Link>
                 </div>
-                <AppleButton variant="primary" className="w-full">
+                <AppleButton 
+                  variant="primary" 
+                  className="w-full"
+                  onClick={() => {
+                    window.location.href = '/documentation';
+                  }}
+                >
                   View Full Documentation
                 </AppleButton>
               </AppleCard>
@@ -375,7 +385,14 @@ export default function HelpPage() {
                         </p>
                       </div>
                     </div>
-                    <button className="text-system-blue hover:text-blue-700">
+                    <button 
+                      className="text-system-blue hover:text-blue-700"
+                      onClick={() => {
+                        // Trigger download for the resource
+                        const filename = resource.title.toLowerCase().replace(/\s+/g, '-') + '.' + resource.type.toLowerCase();
+                        window.open(`/resources/download/${filename}`, '_blank');
+                      }}
+                    >
                       <svg
                         className="w-5 h-5"
                         fill="none"

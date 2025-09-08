@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Execution Test</title>
+</head>
+<body>
+    <h1>JavaScript Execution Test</h1>
+    <div id="status">Loading...</div>
+    <button id="testBtn">Test Button (Count: 0)</button>
+    <div id="errors" style="color: red; margin-top: 20px;"></div>
+    
+    <iframe id="testFrame" src="http://localhost:3000/js-test" width="100%" height="600" style="margin-top: 20px; border: 2px solid #333;"></iframe>
+    
+    <script>
+        let count = 0;
+        const statusEl = document.getElementById('status');
+        const btnEl = document.getElementById('testBtn');
+        const errorsEl = document.getElementById('errors');
+        
+        // Test basic JavaScript
+        statusEl.textContent = '✅ JavaScript is working in this test page';
+        
+        // Test button click
+        btnEl.addEventListener('click', () => {
+            count++;
+            btnEl.textContent = `Test Button (Count: ${count})`;
+        });
+        
+        // Monitor iframe for errors
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'error') {
+                errorsEl.innerHTML += `<div>Error from iframe: ${e.data.message}</div>`;
+            }
+        });
+        
+        // Try to access iframe content after load
+        document.getElementById('testFrame').onload = function() {
+            try {
+                const iframeDoc = this.contentDocument || this.contentWindow.document;
+                const iframeScripts = iframeDoc.querySelectorAll('script');
+                errorsEl.innerHTML += `<div>Found ${iframeScripts.length} script tags in iframe</div>`;
+                
+                // Check if React is loaded in iframe
+                if (this.contentWindow.React) {
+                    errorsEl.innerHTML += '<div style="color: green;">✅ React loaded in iframe</div>';
+                } else {
+                    errorsEl.innerHTML += '<div>❌ React NOT loaded in iframe</div>';
+                }
+            } catch (e) {
+                errorsEl.innerHTML += `<div>Cannot access iframe content: ${e.message}</div>`;
+            }
+        };
+    </script>
+</body>
+</html>

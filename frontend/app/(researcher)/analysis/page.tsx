@@ -186,6 +186,7 @@ export default function AnalysisHubPage() {
                       size="small"
                       className="w-full"
                       disabled={isDisabled}
+                      onClick={() => !isDisabled && handleToolClick(tool)}
                     >
                       {isDisabled ? 'Coming Soon' : 'Open Tool'}
                     </Button>

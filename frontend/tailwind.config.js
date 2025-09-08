@@ -13,7 +13,7 @@ module.exports = {
         'mono': ['var(--font-mono)'],
       },
       colors: {
-        // Apple Semantic Colors
+        // Apple Semantic Colors (both with and without 'color-' prefix for compatibility)
         'bg': 'var(--color-bg)',
         'surface': 'var(--color-surface)',
         'surface-secondary': 'var(--color-surface-secondary)',
@@ -35,6 +35,24 @@ module.exports = {
         
         'fill': 'var(--color-fill)',
         'fill-secondary': 'var(--color-fill-secondary)',
+        
+        // Additional mappings with 'color-' prefix for new components
+        'color-bg': 'var(--color-bg)',
+        'color-surface': 'var(--color-surface)',
+        'color-surface-secondary': 'var(--color-surface-secondary)',
+        'color-text': 'var(--color-text)',
+        'color-text-secondary': 'var(--color-text-secondary)',
+        'color-text-tertiary': 'var(--color-text-tertiary)',
+        'color-primary': 'var(--color-primary)',
+        'color-primary-dark': 'var(--color-primary-dark)',
+        'color-success': 'var(--color-success)',
+        'color-warning': 'var(--color-warning)',
+        'color-danger': 'var(--color-danger)',
+        'color-info': 'var(--color-info)',
+        'color-border': 'var(--color-border)',
+        'color-border-secondary': 'var(--color-border-secondary)',
+        'color-fill': 'var(--color-fill)',
+        'color-fill-secondary': 'var(--color-fill-secondary)',
         
         // System colors with RGB values for opacity support
         'system-blue': 'rgb(0 122 255 / <alpha-value>)',

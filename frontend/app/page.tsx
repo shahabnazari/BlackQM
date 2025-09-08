@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/apple-ui/Button/Button';
@@ -13,6 +14,16 @@ import {
 
 export default function HomePage() {
   const router = useRouter();
+  
+  // Prefetch critical routes on mount for instant navigation
+  useEffect(() => {
+    // Prefetch auth pages for instant navigation
+    router.prefetch('/auth/login');
+    router.prefetch('/auth/register');
+    router.prefetch('/dashboard');
+    router.prefetch('/join');
+  }, [router]);
+
   return (
     <div className="min-h-screen bg-bg text-text transition-colors duration-normal">
       {/* Header */}
@@ -23,15 +34,17 @@ export default function HomePage() {
             <h1 className="text-xl font-semibold">VQMethod</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <Button
-              variant="secondary"
-              onClick={() => router.push('/auth/login')}
-            >
-              Sign In
-            </Button>
-            <Button onClick={() => router.push('/auth/register')}>
-              Get Started
-            </Button>
+            {/* Use Link for instant navigation with prefetch */}
+            <Link href="/auth/login" prefetch={true}>
+              <Button variant="secondary">
+                Sign In
+              </Button>
+            </Link>
+            <Link href="/auth/register" prefetch={true}>
+              <Button>
+                Get Started
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
@@ -48,25 +61,27 @@ export default function HomePage() {
             cutting-edge visualization tools.
           </p>
           <div className="flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-            <Button
-              size="large"
-              className="w-full sm:w-auto"
-              onClick={() => router.push('/auth/register')}
-            >
-              Start Your Research
-            </Button>
-            <Button
-              variant="secondary"
-              size="large"
-              className="w-full sm:w-auto"
-              onClick={() => router.push('/auth/login')}
-            >
-              Sign In
-            </Button>
+            <Link href="/auth/register" prefetch={true}>
+              <Button
+                size="large"
+                className="w-full sm:w-auto"
+              >
+                Start Your Research
+              </Button>
+            </Link>
+            <Link href="/auth/login" prefetch={true}>
+              <Button
+                variant="secondary"
+                size="large"
+                className="w-full sm:w-auto"
+              >
+                Sign In
+              </Button>
+            </Link>
           </div>
         </section>
 
-        {/* Features Grid */}
+        {/* Features Grid - Use Link for navigation */}
         <section className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 mb-16">
           <Card>
             <CardHeader>
@@ -77,13 +92,14 @@ export default function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button
-                variant="secondary"
-                className="w-full"
-                onClick={() => router.push('/join')}
-              >
-                Join a Study
-              </Button>
+              <Link href="/join" prefetch={true}>
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                >
+                  Join a Study
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 
@@ -96,13 +112,14 @@ export default function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button
-                variant="secondary"
-                className="w-full"
-                onClick={() => router.push('/visualization-demo')}
-              >
-                View Demos
-              </Button>
+              <Link href="/visualization-demo" prefetch={true}>
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                >
+                  View Demos
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 
@@ -115,13 +132,14 @@ export default function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button
-                variant="secondary"
-                className="w-full"
-                onClick={() => router.push('/auth/login')}
-              >
-                Access Dashboard
-              </Button>
+              <Link href="/auth/login" prefetch={true}>
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                >
+                  Access Dashboard
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </section>

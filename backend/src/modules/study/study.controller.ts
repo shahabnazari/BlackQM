@@ -144,4 +144,19 @@ export class StudyController {
   async getStatistics(@Param('id') id: string, @Request() req: any) {
     return this.studyService.getStatistics(id, req.user.userId);
   }
+
+  @Post('preview')
+  @ApiOperation({ summary: 'Preview study as participant would see it' })
+  @ApiResponse({ status: 200, description: 'Returns preview data' })
+  async previewStudy(@Body() studyData: CreateStudyDto, @Request() req: any) {
+    // Generate a preview of how the study will appear to participants
+    return this.studyService.generatePreview(studyData, req.user.userId);
+  }
+
+  @Get(':id/preview')
+  @ApiOperation({ summary: 'Get preview of existing study' })
+  @ApiResponse({ status: 200, description: 'Returns preview data for existing study' })
+  async getStudyPreview(@Param('id') id: string, @Request() req: any) {
+    return this.studyService.getPreview(id, req.user.userId);
+  }
 }

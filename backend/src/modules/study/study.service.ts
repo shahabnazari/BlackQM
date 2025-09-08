@@ -13,12 +13,34 @@ export class StudyService {
     const gridConfig = this.generateGridConfig(data.gridColumns || 9, data.gridShape || 'quasi-normal');
 
     // Extract DTO fields and properly set creator
-    const { createdBy, ...studyData } = data;
+    const { 
+      createdBy, 
+      consentForm,
+      includeWelcomeVideo,
+      welcomeVideoUrl,
+      requireSignature,
+      signatureType,
+      organizationName,
+      organizationLogoUrl,
+      ...studyData 
+    } = data;
+
+    // Build settings object for additional fields
+    const settings = {
+      includeWelcomeVideo,
+      welcomeVideoUrl,
+      requireSignature,
+      signatureType,
+      organizationName,
+      organizationLogoUrl,
+    };
 
     return this.prisma.survey.create({
       data: {
         ...studyData,
+        consentText: consentForm || data.consentText,
         gridConfig,
+        settings,
         status: SurveyStatus.DRAFT,
         creator: {
           connect: { id: createdBy }
@@ -279,5 +301,153 @@ export class StudyService {
       '4': 'Strongly Agree',
     };
     return (labels as any)[position.toString()] || `Position ${position}`;
+  }
+
+  async generatePreview(studyData: CreateStudyDto, userId: string) {
+    // Generate grid configuration for preview
+    const gridConfig = this.generateGridConfig(
+      studyData.gridColumns || 9,
+      studyData.gridShape || 'quasi-normal'
+    );
+
+    // Create preview object that shows how the study will appear to participants
+    const preview = {
+      participantView: {
+        welcome: {
+          title: studyData.title,
+          message: studyData.welcomeMessage || studyData.consentText || '',
+          videoUrl: studyData.welcomeVideoUrl || '',
+          includeVideo: studyData.includeWelcomeVideo || false,
+        },
+        consent: {
+          form: studyData.consentForm || studyData.consentText || '',
+          requireSignature: studyData.requireSignature || false,
+          signatureType: studyData.signatureType || 'typed',
+          organizationName: studyData.organizationName || '',
+          organizationLogoUrl: studyData.organizationLogoUrl || '',
+        },
+        preScreening: {
+          enabled: studyData.enablePreScreening || false,
+          questions: [], // Will be populated when pre-screening questions are added
+        },
+        qSort: {
+          gridConfig,
+          gridColumns: studyData.gridColumns || 9,
+          gridShape: studyData.gridShape || 'quasi-normal',
+          statements: [], // Will be populated with actual statements
+        },
+        postSurvey: {
+          enabled: studyData.enablePostSurvey !== false,
+          questions: [], // Will be populated when post-survey questions are added
+        },
+      },
+      metadata: {
+        totalSteps: this.calculateTotalSteps(studyData),
+        estimatedTime: this.estimateCompletionTime(studyData),
+        features: {
+          videoConferencing: studyData.enableVideoConferencing || false,
+          preScreening: studyData.enablePreScreening || false,
+          postSurvey: studyData.enablePostSurvey !== false,
+          digitalSignature: studyData.requireSignature || false,
+        },
+      },
+    };
+
+    return preview;
+  }
+
+  async getPreview(id: string, userId: string) {
+    // Get the study with all related data
+    const study = await this.prisma.survey.findUnique({
+      where: { id },
+      include: {
+        statements: {
+          orderBy: { order: 'asc' },
+        },
+        questions: {
+          orderBy: { order: 'asc' },
+        },
+      },
+    });
+
+    if (!study) {
+      throw new NotFoundException(`Study with ID ${id} not found`);
+    }
+
+    if (study.createdBy !== userId) {
+      throw new ForbiddenException('You do not have permission to preview this study');
+    }
+
+    // Parse settings for additional configuration
+    const settings = (study.settings as any) || {};
+    const preScreeningQuestions = study.questions.filter((q: any) => q.type === 'PRE_SCREENING');
+    const postSurveyQuestions = study.questions.filter((q: any) => q.type === 'POST_SURVEY');
+
+    // Generate preview with actual data
+    const preview = {
+      participantView: {
+        welcome: {
+          title: study.title,
+          message: study.welcomeMessage || '',
+          videoUrl: settings.welcomeVideoUrl || '',
+          includeVideo: settings.includeWelcomeVideo || false,
+        },
+        consent: {
+          form: study.consentText || '',
+          requireSignature: settings.requireSignature || false,
+          signatureType: settings.signatureType || 'typed',
+          organizationName: settings.organizationName || '',
+          organizationLogoUrl: settings.organizationLogoUrl || '',
+        },
+        preScreening: {
+          enabled: study.enablePreScreening,
+          questions: preScreeningQuestions,
+        },
+        qSort: {
+          gridConfig: study.gridConfig,
+          gridColumns: study.gridColumns,
+          gridShape: study.gridShape,
+          statements: study.statements.map((s: any) => ({
+            id: s.id,
+            text: s.text,
+            order: s.order,
+          })),
+        },
+        postSurvey: {
+          enabled: study.enablePostSurvey,
+          questions: postSurveyQuestions,
+        },
+      },
+      metadata: {
+        studyId: study.id,
+        status: study.status,
+        totalSteps: this.calculateTotalSteps(study),
+        estimatedTime: this.estimateCompletionTime(study),
+        features: {
+          videoConferencing: study.enableVideoConferencing,
+          preScreening: study.enablePreScreening,
+          postSurvey: study.enablePostSurvey,
+          digitalSignature: settings.requireSignature || false,
+        },
+      },
+    };
+
+    return preview;
+  }
+
+  private calculateTotalSteps(studyData: any): number {
+    let steps = 3; // Welcome, Consent, Q-Sort (minimum)
+    if (studyData.enablePreScreening) steps++;
+    if (studyData.enablePostSurvey) steps++;
+    if (studyData.requireSignature) steps++;
+    return steps;
+  }
+
+  private estimateCompletionTime(studyData: any): number {
+    let minutes = 15; // Base time for Q-Sort
+    if (studyData.enablePreScreening) minutes += 5;
+    if (studyData.enablePostSurvey) minutes += 10;
+    if (studyData.includeWelcomeVideo) minutes += 5;
+    return minutes;
   }
 }

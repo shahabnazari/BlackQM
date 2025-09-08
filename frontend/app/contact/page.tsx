@@ -332,7 +332,14 @@ export default function ContactPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Get instant help from our support team
               </p>
-              <AppleButton variant="primary" className="w-full">
+              <AppleButton 
+                variant="primary" 
+                className="w-full"
+                onClick={() => {
+                  // Open chat support (could open a modal, redirect to chat page, or open external chat)
+                  window.open('/support/chat', '_blank');
+                }}
+              >
                 Start Chat
               </AppleButton>
             </AppleCard>

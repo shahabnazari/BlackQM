@@ -13,6 +13,7 @@ const buttonVariants = cva(
         destructive: "bg-danger text-white hover:bg-danger/90 active:opacity-90"
       },
       size: {
+        sm: "h-8 px-3 text-sm",
         small: "h-8 px-3 text-sm",
         md: "h-10 px-4 text-base",
         large: "h-12 px-6 text-lg"

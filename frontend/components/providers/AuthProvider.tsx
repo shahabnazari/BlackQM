@@ -28,7 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Changed to false to not block initial render
 
   // Check for existing session on mount
   useEffect(() => {
@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         // Check if we have a token
         if (authService.isAuthenticated()) {
+          setIsLoading(true);
           // Get current user from backend
           const currentUser = await authService.getCurrentUser();
           setUser(currentUser);

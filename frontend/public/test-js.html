@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Direct JS Test</title>
+</head>
+<body>
+    <h1>Direct JavaScript Test</h1>
+    <div id="status">JavaScript Not Working</div>
+    <button id="btn" onclick="handleClick()">Click Count: 0</button>
+    
+    <script>
+        // Immediately execute
+        document.getElementById('status').innerHTML = '✅ JavaScript is Working!';
+        
+        let count = 0;
+        function handleClick() {
+            count++;
+            document.getElementById('btn').innerHTML = 'Click Count: ' + count;
+        }
+        
+        console.log('Static HTML JavaScript executed!');
+    </script>
+</body>
+</html>

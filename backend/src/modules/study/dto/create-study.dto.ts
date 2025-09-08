@@ -21,6 +21,44 @@ export class CreateStudyDto {
   @IsString()
   consentText?: string;
 
+  @ApiPropertyOptional({ description: 'Consent form content' })
+  @IsOptional()
+  @IsString()
+  consentForm?: string;
+
+  @ApiPropertyOptional({ description: 'Include welcome video' })
+  @IsOptional()
+  @IsBoolean()
+  includeWelcomeVideo?: boolean;
+
+  @ApiPropertyOptional({ description: 'Welcome video URL' })
+  @IsOptional()
+  @IsString()
+  welcomeVideoUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Require digital signature' })
+  @IsOptional()
+  @IsBoolean()
+  requireSignature?: boolean;
+
+  @ApiPropertyOptional({ 
+    description: 'Signature type',
+    enum: ['typed', 'drawn', 'upload']
+  })
+  @IsOptional()
+  @IsIn(['typed', 'drawn', 'upload'])
+  signatureType?: string;
+
+  @ApiPropertyOptional({ description: 'Organization name' })
+  @IsOptional()
+  @IsString()
+  organizationName?: string;
+
+  @ApiPropertyOptional({ description: 'Organization logo URL' })
+  @IsOptional()
+  @IsString()
+  organizationLogoUrl?: string;
+
   @ApiPropertyOptional({ 
     description: 'Number of columns in Q-sort grid',
     minimum: 5,

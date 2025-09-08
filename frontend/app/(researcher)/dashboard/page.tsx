@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Button,
   Card,
@@ -14,6 +15,7 @@ import {
 } from '@/components/apple-ui';
 
 export default function ResearcherDashboard() {
+  const router = useRouter();
   // Mock data for dashboard
   const stats = {
     activeStudies: 3,
@@ -200,10 +202,18 @@ export default function ResearcherDashboard() {
                       />
                     </div>
                     <div className="mt-3 flex gap-2">
-                      <Button size="small" variant="secondary">
+                      <Button 
+                        size="small" 
+                        variant="secondary"
+                        onClick={() => router.push(`/studies/${study.id}`)}
+                      >
                         View Details
                       </Button>
-                      <Button size="small" variant="secondary">
+                      <Button 
+                        size="small" 
+                        variant="secondary"
+                        onClick={() => router.push(`/studies/${study.id}/analytics`)}
+                      >
                         Analytics
                       </Button>
                     </div>
@@ -211,7 +221,12 @@ export default function ResearcherDashboard() {
                 ))}
               </div>
               <div className="mt-4">
-                <Button fullWidth>View All Studies</Button>
+                <Button 
+                  fullWidth
+                  onClick={() => router.push('/studies')}
+                >
+                  View All Studies
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -249,7 +264,12 @@ export default function ResearcherDashboard() {
                 ))}
               </div>
               <div className="mt-4">
-                <Button size="small" fullWidth variant="secondary">
+                <Button 
+                  size="small" 
+                  fullWidth 
+                  variant="secondary"
+                  onClick={() => router.push('/activity')}
+                >
                   View All Activity
                 </Button>
               </div>
@@ -263,11 +283,19 @@ export default function ResearcherDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <Button fullWidth variant="primary">
+                <Button 
+                  fullWidth 
+                  variant="primary"
+                  onClick={() => router.push('/studies/create')}
+                >
                   <span className="mr-2">➕</span>
                   Create New Study
                 </Button>
-                <Button fullWidth variant="secondary">
+                <Button 
+                  fullWidth 
+                  variant="secondary"
+                  onClick={() => router.push('/participants/invite')}
+                >
                   <span className="mr-2">👥</span>
                   Invite Participants
                 </Button>
@@ -277,11 +305,19 @@ export default function ResearcherDashboard() {
                     Q-Analysis Engine
                   </Button>
                 </Link>
-                <Button fullWidth variant="secondary">
+                <Button 
+                  fullWidth 
+                  variant="secondary"
+                  onClick={() => router.push('/analytics/export')}
+                >
                   <span className="mr-2">📊</span>
                   Export Analytics
                 </Button>
-                <Button fullWidth variant="secondary">
+                <Button 
+                  fullWidth 
+                  variant="secondary"
+                  onClick={() => router.push('/docs')}
+                >
                   <span className="mr-2">📚</span>
                   View Documentation
                 </Button>
@@ -306,7 +342,11 @@ export default function ResearcherDashboard() {
               <p className="text-sm text-secondary-label mb-3">
                 Learn the basics of Q-methodology research and best practices.
               </p>
-              <Button size="small" variant="secondary">
+              <Button 
+                size="small" 
+                variant="secondary"
+                onClick={() => router.push('/guide')}
+              >
                 Learn More
               </Button>
             </div>
@@ -315,7 +355,11 @@ export default function ResearcherDashboard() {
               <p className="text-sm text-secondary-label mb-3">
                 Watch step-by-step tutorials on creating and managing studies.
               </p>
-              <Button size="small" variant="secondary">
+              <Button 
+                size="small" 
+                variant="secondary"
+                onClick={() => router.push('/tutorials')}
+              >
                 Watch Now
               </Button>
             </div>
@@ -324,7 +368,11 @@ export default function ResearcherDashboard() {
               <p className="text-sm text-secondary-label mb-3">
                 Connect with other researchers and share experiences.
               </p>
-              <Button size="small" variant="secondary">
+              <Button 
+                size="small" 
+                variant="secondary"
+                onClick={() => router.push('/forum')}
+              >
                 Join Forum
               </Button>
             </div>
