@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ResearcherNavigation } from '@/components/navigation/ResearcherNavigation';
+import KeyboardShortcutsHelp from '@/components/navigation/KeyboardShortcutsHelp';
 import '../globals.css';
 
 export const metadata: Metadata = {
@@ -15,6 +16,7 @@ export default function ResearcherLayout({
   return (
     <div className="min-h-screen bg-system-background">
       <ResearcherNavigation />
+      <KeyboardShortcutsHelp />
 
       <main className="max-w-7xl mx-auto px-6 py-8">{children}</main>
     </div>

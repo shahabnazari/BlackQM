@@ -47,13 +47,17 @@ cd vqmethod
 # Install dependencies for monorepo
 npm install
 
-# Start development servers (automatic port management)
+# Start development servers (with V3 enhanced monitoring)
 npm run dev
 
-# Or use different modes
-npm run dev:simple     # Minimal mode for debugging
-npm run dev:enterprise # Full monitoring and logging
-npm run dev:debug      # Verbose output for troubleshooting
+# Or use legacy versions (not recommended)
+npm run dev:v2         # Previous version with basic monitoring
+npm run dev:ultimate   # Original ultimate manager
+
+# Other commands
+npm run stop           # Stop all servers
+npm run restart        # Stop and restart with V3
+npm run dev:clean      # Clean build and restart
 ```
 
 ### Access Points

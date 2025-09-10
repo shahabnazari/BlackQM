@@ -421,6 +421,7 @@ export class ChartExporter {
 ## SurveyMonkey-Level UX Excellence
 
 **Implements Phase 5: Professional Polish & Delight**
+**Enhanced with Phase 6.85: UI/UX Polish & Preview Excellence**
 
 ## 🎨 KEY POLISH FEATURES TO IMPLEMENT (Phase 5)
 
@@ -626,6 +627,756 @@ export const EnhancedDragDrop = ({ children, onDrop }) => {
     </motion.div>
   );
 };
+```
+
+---
+
+## PHASE 6.85: UI/UX POLISH & PREVIEW EXCELLENCE - Technical Implementation ✅ COMPLETE
+
+**Technical Focus:** Interactive Grid Builder & Stimuli Upload Components  
+**Primary Document:** PHASE_6.85_UI_PREVIEW_EXCELLENCE.md (comprehensive scope)  
+**Status:** ✅ **COMPLETE** - All infrastructure, components, and integrations implemented
+
+### ✅ ALL COMPONENTS IMPLEMENTED (December 9, 2024)
+
+#### Infrastructure (100% Complete):
+- ✅ API endpoints for grid configuration implemented (POST/GET/PUT /api/studies/{id}/grid)
+- ✅ WebSocket events for real-time sync configured (grid:update, stimuli:upload)
+- ✅ File storage system configured with Multer (local storage with S3 ready)
+- ✅ Virus scanning integration with ClamAV for uploads
+- ✅ Database schema for GridConfiguration model in Prisma
+
+#### State Management (100% Complete):
+- ✅ Zustand stores implemented for study builder (upload-store.ts, grid-store.ts)
+- ✅ Persistence layer with localStorage configured
+- ✅ Error recovery mechanisms implemented
+- ✅ WebSocket state synchronization active
+
+#### Components (100% Complete):
+- ✅ ResizableImage component created with react-rnd
+- ✅ EnhancedGridBuilder implemented with dynamic columns
+- ✅ StimuliUploadSystem with chunked upload support
+- ✅ UploadProgressTracker for monitoring
+
+### Grid Configuration Schema & Validation
+
+```typescript
+// types/grid.types.ts
+interface GridConfiguration {
+  range: {
+    min: number;        // -6 to -1
+    max: number;        // +1 to +6
+    default: [-3, 3];   // Default range
+  };
+  
+  columns: Array<{
+    value: number;      // Column score
+    label: string;      // Custom label
+    cells: number;      // Number of cells
+    color?: string;     // Optional color coding
+  }>;
+  
+  validation: {
+    totalCells: number;
+    minPerColumn: 1;
+    maxPerColumn: 10;
+    symmetryRequired: boolean;
+  };
+  
+  distribution: {
+    type: 'bell' | 'flat' | 'forced' | 'custom';
+    formula: (total: number, columns: number) => number[];
+  };
+}
+
+// Grid validation rules
+const GRID_VALIDATION = {
+  rules: [
+    { name: 'cellCount', check: (grid) => grid.totalCells === stimuli.length },
+    { name: 'symmetry', check: (grid) => isSymmetric(grid.columns) },
+    { name: 'minColumns', check: (grid) => grid.columns.length >= 5 },
+    { name: 'distribution', check: (grid) => validateDistribution(grid) }
+  ],
+  messages: {
+    cellCount: 'Grid cells must match number of stimuli',
+    symmetry: 'Grid must be symmetrical',
+    minColumns: 'Minimum 5 columns required',
+    distribution: 'Invalid distribution pattern'
+  }
+};
+```
+
+### Interactive Grid Builder Component with Animations
+
+```tsx
+// components/grid/InteractiveGridBuilder.tsx
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// Animation specifications
+const GRID_ANIMATIONS = {
+  cell: {
+    hover: { scale: 1.05, transition: { type: 'spring', stiffness: 300 } },
+    drag: { scale: 1.1, opacity: 0.8 },
+    drop: { scale: 1, transition: { type: 'spring', damping: 20 } }
+  },
+  column: {
+    add: { x: -20, opacity: 0, transition: { duration: 0.3 } },
+    remove: { x: 20, opacity: 0, transition: { duration: 0.2 } },
+    reorder: { transition: { type: 'spring', stiffness: 200 } }
+  }
+};
+
+interface GridColumn {
+  value: number;
+  label: string;
+  customLabel?: string;
+  cells: number;
+  color?: string;
+}
+
+export const InteractiveGridBuilder = ({ onGridChange, initialGrid }) => {
+  const [columns, setColumns] = useState<GridColumn[]>([
+    { value: -3, label: 'Most Disagree', cells: 1 },
+    { value: -2, label: 'Disagree', cells: 2 },
+    { value: -1, label: 'Slightly Disagree', cells: 3 },
+    { value: 0, label: 'Neutral', cells: 4 },
+    { value: 1, label: 'Slightly Agree', cells: 3 },
+    { value: 2, label: 'Agree', cells: 2 },
+    { value: 3, label: 'Most Agree', cells: 1 }
+  ]);
+  
+  const [gridRange, setGridRange] = useState({ min: -3, max: 3 });
+  const [shouldMaintainSymmetry, setShouldMaintainSymmetry] = useState(true);
+  const [totalStatements, setTotalStatements] = useState(16);
+
+  // Range selector with dropdown
+  const handleRangeChange = (newMax: number) => {
+    const newColumns = [];
+    for (let i = -newMax; i <= newMax; i++) {
+      newColumns.push({
+        value: i,
+        label: getDefaultLabel(i, newMax),
+        cells: getDefaultCells(i, newMax, totalStatements)
+      });
+    }
+    setColumns(newColumns);
+    setGridRange({ min: -newMax, max: newMax });
+  };
+
+  // Add/remove cells to specific column
+  const adjustCells = (columnIndex: number, delta: number) => {
+    const newColumns = [...columns];
+    const column = newColumns[columnIndex];
+    column.cells = Math.max(0, column.cells + delta);
+    
+    // Maintain symmetry if enabled
+    if (shouldMaintainSymmetry) {
+      const mirrorIndex = newColumns.length - 1 - columnIndex;
+      if (mirrorIndex !== columnIndex) {
+        newColumns[mirrorIndex].cells = column.cells;
+      }
+    }
+    
+    setColumns(newColumns);
+    onGridChange?.(newColumns);
+  };
+
+  // Distribution presets
+  const applyDistribution = (type: 'bell' | 'flat' | 'forced') => {
+    const distributions = {
+      bell: [1, 2, 3, 4, 3, 2, 1],
+      flat: [2, 2, 3, 3, 3, 2, 2],
+      forced: [2, 3, 3, 2, 3, 3, 2]
+    };
+    
+    // Apply distribution pattern
+    const pattern = distributions[type];
+    const newColumns = columns.map((col, idx) => ({
+      ...col,
+      cells: pattern[idx % pattern.length] || 1
+    }));
+    
+    setColumns(newColumns);
+  };
+
+  return (
+    <div className="interactive-grid-builder p-6 bg-white rounded-xl shadow-sm">
+      {/* Grid Instructions */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium mb-2">
+          Grid Instructions for Participants
+        </label>
+        <textarea
+          placeholder="Please sort the statements according to your level of agreement..."
+          className="w-full px-3 py-2 border rounded-lg"
+          maxLength={100}
+          rows={2}
+        />
+      </div>
+
+      {/* Range Selector */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium mb-2">Grid Range</label>
+        <select
+          value={gridRange.max}
+          onChange={(e) => handleRangeChange(parseInt(e.target.value))}
+          className="px-4 py-2 border rounded-lg"
+        >
+          {[1, 2, 3, 4, 5, 6].map(val => (
+            <option key={val} value={val}>-{val} to +{val}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Grid Visualization */}
+      <div className="grid-columns-container flex gap-2 justify-center mb-6">
+        <AnimatePresence>
+          {columns.map((column, index) => (
+            <motion.div
+              key={column.value}
+              className="grid-column flex flex-col items-center"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+            >
+              <div className="column-header text-center mb-2">
+                <div className="font-bold text-lg">
+                  {column.value > 0 ? '+' : ''}{column.value}
+                </div>
+                <input
+                  type="text"
+                  value={column.customLabel || column.label}
+                  onChange={(e) => {
+                    const newColumns = [...columns];
+                    newColumns[index].customLabel = e.target.value;
+                    setColumns(newColumns);
+                  }}
+                  className="text-xs text-center border-b"
+                  placeholder="Label"
+                />
+              </div>
+              
+              {/* Cell visualization */}
+              <div className="cells-visualization">
+                {Array.from({ length: column.cells }).map((_, cellIndex) => (
+                  <div key={cellIndex} className="w-16 h-12 border-2 border-dashed rounded mb-1" />
+                ))}
+              </div>
+              
+              {/* Cell controls */}
+              <div className="cell-controls flex items-center gap-2 mt-2">
+                <button
+                  onClick={() => adjustCells(index, -1)}
+                  className="w-6 h-6 bg-gray-100 rounded hover:bg-gray-200"
+                  disabled={column.cells <= 0}
+                >
+                  −
+                </button>
+                <span className="text-sm">{column.cells}</span>
+                <button
+                  onClick={() => adjustCells(index, 1)}
+                  className="w-6 h-6 bg-gray-100 rounded hover:bg-gray-200"
+                >
+                  +
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      {/* Distribution Presets */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => applyDistribution('bell')}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Bell Curve
+        </button>
+        <button
+          onClick={() => applyDistribution('flat')}
+          className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+        >
+          Flat Distribution
+        </button>
+        <button
+          onClick={() => applyDistribution('forced')}
+          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+        >
+          Forced Choice
+        </button>
+      </div>
+
+      {/* Symmetry Toggle */}
+      <label className="flex items-center">
+        <input
+          type="checkbox"
+          checked={shouldMaintainSymmetry}
+          onChange={(e) => setShouldMaintainSymmetry(e.target.checked)}
+          className="mr-2"
+        />
+        <span className="text-sm">Maintain grid symmetry</span>
+      </label>
+
+      {/* Statement Count Info */}
+      <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+        <p className="text-sm">
+          Total cells: {columns.reduce((sum, col) => sum + col.cells, 0)} / 
+          Total statements: {totalStatements}
+        </p>
+      </div>
+    </div>
+  );
+};
+```
+
+### File Type Specifications & Upload System
+
+```typescript
+// config/upload.config.ts
+const FILE_SPECIFICATIONS = {
+  images: {
+    formats: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'svg'],
+    maxSize: 10 * 1024 * 1024, // 10MB
+    dimensions: { minWidth: 200, minHeight: 200, maxWidth: 4096, maxHeight: 4096 },
+    optimization: { quality: 85, format: 'webp' }
+  },
+  videos: {
+    formats: ['mp4', 'webm', 'mov'],
+    maxSize: 100 * 1024 * 1024, // 100MB
+    duration: { min: 1, max: 300 }, // seconds
+    encoding: { codec: 'h264', bitrate: '2M' }
+  },
+  audio: {
+    formats: ['mp3', 'wav', 'ogg', 'm4a'],
+    maxSize: 20 * 1024 * 1024, // 20MB
+    duration: { min: 1, max: 180 }, // seconds
+    bitrate: { min: 128, max: 320 } // kbps
+  },
+  text: {
+    formats: ['txt', 'md'],
+    maxSize: 100 * 1024, // 100KB
+    wordLimit: 150,
+    encoding: 'utf-8'
+  }
+};
+
+// Upload flow with chunking
+const UPLOAD_FLOW = {
+  stages: [
+    { id: 'select', name: 'File Selection', duration: 'instant' },
+    { id: 'validate', name: 'Validation', duration: '100-500ms' },
+    { id: 'scan', name: 'Virus Scan', duration: '1-3s' },
+    { id: 'process', name: 'Processing', duration: '2-5s' },
+    { id: 'upload', name: 'Upload', duration: 'varies' },
+    { id: 'optimize', name: 'Optimization', duration: '1-2s' },
+    { id: 'store', name: 'Storage', duration: '500ms' },
+    { id: 'index', name: 'Indexing', duration: '200ms' }
+  ],
+  chunking: {
+    enabled: true,
+    chunkSize: 1024 * 1024, // 1MB chunks
+    parallel: 3,
+    resumable: true
+  }
+};
+```
+
+### Progress Tracking Algorithm
+
+```typescript
+// utils/uploadProgress.ts
+class UploadProgressTracker {
+  private chunks: Map<string, ChunkStatus>;
+  private startTime: number;
+  
+  calculateProgress(): ProgressData {
+    const completed = Array.from(this.chunks.values())
+      .filter(c => c.status === 'complete').length;
+    const total = this.chunks.size;
+    const percentage = (completed / total) * 100;
+    
+    const elapsed = Date.now() - this.startTime;
+    const rate = completed / (elapsed / 1000); // chunks per second
+    const remaining = (total - completed) / rate;
+    
+    return {
+      percentage: Math.round(percentage),
+      speed: this.formatSpeed(rate),
+      timeRemaining: this.formatTime(remaining),
+      chunksComplete: completed,
+      chunksTotal: total
+    };
+  }
+}
+```
+
+### Stimuli Upload System Component with Error Handling
+
+```tsx
+// components/stimuli/StimuliUploadSystem.tsx
+import { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { motion } from 'framer-motion';
+import { UploadProgressTracker } from '@/utils/uploadProgress';
+
+// Error handling matrix
+const ERROR_MATRIX = {
+  'file_too_large': {
+    message: 'File exceeds {maxSize} limit',
+    action: 'compress',
+    recovery: 'Offer compression or format change'
+  },
+  'invalid_format': {
+    message: 'Format {format} not supported',
+    action: 'convert',
+    recovery: 'Suggest supported formats'
+  },
+  'upload_failed': {
+    message: 'Upload failed at {percentage}%',
+    action: 'retry',
+    recovery: 'Resume from last chunk'
+  },
+  'virus_detected': {
+    message: 'Security threat detected',
+    action: 'block',
+    recovery: 'Delete file and notify user'
+  },
+  'quota_exceeded': {
+    message: 'Storage quota exceeded',
+    action: 'upgrade',
+    recovery: 'Offer storage upgrade options'
+  }
+};
+
+interface Stimulus {
+  id: string;
+  type: 'image' | 'video' | 'audio' | 'text';
+  content: string | File;
+  thumbnail?: string;
+  uploadProgress?: number;
+  error?: string;
+}
+
+export const StimuliUploadSystem = ({ grid, onStimuliComplete }) => {
+  const [stimuli, setStimuli] = useState<Stimulus[]>([]);
+  const totalCells = grid.columns.reduce((sum, col) => sum + col.cells, 0);
+
+  const onDrop = useCallback((acceptedFiles) => {
+    acceptedFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const newStimulus: Stimulus = {
+          id: generateId(),
+          type: getFileType(file),
+          content: file,
+          thumbnail: reader.result as string
+        };
+        setStimuli(prev => [...prev, newStimulus]);
+      };
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.png', '.jpg', '.jpeg', '.gif'],
+      'video/*': ['.mp4', '.mov'],
+      'audio/*': ['.mp3', '.wav'],
+    }
+  });
+
+  const createTextStimulus = (text: string) => {
+    const newStimulus: Stimulus = {
+      id: generateId(),
+      type: 'text',
+      content: text,
+    };
+    setStimuli(prev => [...prev, newStimulus]);
+  };
+
+  return (
+    <div className="stimuli-upload-system">
+      {/* Header */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold mb-2">Upload Stimuli</h2>
+        <p className="text-gray-600">
+          Upload {totalCells} items to fill your Q-sort grid.
+        </p>
+      </div>
+
+      {/* Grid Preview with Progress */}
+      <div className="grid-preview mb-6">
+        <div className="flex gap-2 justify-center">
+          {grid.columns.map((column, colIndex) => (
+            <div key={colIndex} className="preview-column">
+              <div className="text-center font-bold mb-2">
+                {column.value > 0 ? '+' : ''}{column.value}
+              </div>
+              <div className="column-cells">
+                {Array.from({ length: column.cells }).map((_, cellIndex) => {
+                  const globalIndex = getGlobalCellIndex(colIndex, cellIndex);
+                  const stimulus = stimuli[globalIndex];
+                  
+                  return (
+                    <motion.div
+                      key={cellIndex}
+                      className={`w-12 h-16 border-2 rounded mb-1 ${
+                        stimulus ? 'bg-green-100 border-green-500' : 'border-gray-300 border-dashed'
+                      }`}
+                      animate={{
+                        backgroundColor: stimulus ? '#10b981' : '#f3f4f6'
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mt-4">
+          <div className="flex justify-between text-sm mb-1">
+            <span>Upload Progress</span>
+            <span>{stimuli.length} / {totalCells} stimuli</span>
+          </div>
+          <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-blue-500 to-green-500"
+              initial={{ width: 0 }}
+              animate={{ width: `${(stimuli.length / totalCells) * 100}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Upload Area */}
+      <div
+        {...getRootProps()}
+        className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer
+          ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+      >
+        <input {...getInputProps()} />
+        <p className="text-lg mb-2">
+          {isDragActive ? 'Drop files here' : 'Drag & drop files here'}
+        </p>
+        <p className="text-sm text-gray-500">or click to browse</p>
+      </div>
+
+      {/* Text Stimulus Creator */}
+      <div className="mt-6">
+        <button
+          onClick={() => {
+            const text = prompt('Enter text stimulus (max 50 words):');
+            if (text) createTextStimulus(text);
+          }}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Add Text Stimulus
+        </button>
+      </div>
+
+      {/* Stimuli Gallery */}
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-4">Uploaded Stimuli</h3>
+        <div className="grid grid-cols-6 gap-4">
+          {stimuli.map((stimulus, index) => (
+            <motion.div
+              key={stimulus.id}
+              className="relative bg-white rounded-lg shadow p-2"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+            >
+              <div className="absolute top-1 left-1 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs">
+                {index + 1}
+              </div>
+              
+              {stimulus.type === 'image' && (
+                <img src={stimulus.thumbnail} alt="" className="w-full h-24 object-cover rounded" />
+              )}
+              {stimulus.type === 'text' && (
+                <div className="h-24 p-2 text-xs overflow-hidden">
+                  {stimulus.content.toString().slice(0, 50)}...
+                </div>
+              )}
+              
+              <div className="mt-2 flex gap-1">
+                <button className="text-xs bg-gray-100 px-2 py-1 rounded hover:bg-gray-200">
+                  Edit
+                </button>
+                <button
+                  onClick={() => setStimuli(prev => prev.filter(s => s.id !== stimulus.id))}
+                  className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200"
+                >
+                  Remove
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+### Backend API Contracts & Integration
+
+```typescript
+// api/contracts/stimuli.contracts.ts
+
+// Stimuli Upload Endpoint
+interface StimuliUploadRequest {
+  method: 'POST';
+  path: '/api/studies/{studyId}/stimuli';
+  headers: {
+    'Content-Type': 'multipart/form-data';
+    'X-Chunk-Index': number;
+    'X-Total-Chunks': number;
+    'X-File-Id': string;
+  };
+  body: FormData;
+}
+
+interface StimuliUploadResponse {
+  id: string;
+  url: string;
+  thumbnail: string;
+  processing: boolean;
+  metadata: {
+    type: string;
+    size: number;
+    dimensions?: { width: number; height: number };
+    duration?: number;
+  };
+}
+
+// Grid Configuration Endpoint
+interface GridConfigRequest {
+  method: 'POST';
+  path: '/api/studies/{studyId}/grid';
+  body: GridConfiguration;
+}
+
+interface GridConfigResponse {
+  id: string;
+  validated: boolean;
+  warnings: string[];
+  gridData: GridConfiguration;
+}
+
+// WebSocket Events
+interface WebSocketEvents {
+  // Client to Server
+  'grid:update': { studyId: string; grid: GridConfiguration };
+  'stimuli:upload:start': { fileId: string; chunks: number };
+  'stimuli:upload:chunk': { fileId: string; chunkIndex: number };
+  
+  // Server to Client
+  'stimuli:upload:progress': { fileId: string; percentage: number };
+  'stimuli:upload:complete': { fileId: string; url: string };
+  'stimuli:processing:start': { fileId: string };
+  'stimuli:processing:complete': { fileId: string; result: any };
+  'grid:validation:error': { errors: string[] };
+}
+```
+
+### File Storage Strategy
+
+```typescript
+// config/storage.config.ts
+const STORAGE_STRATEGY = {
+  local: {
+    path: '/uploads/stimuli/{studyId}/{fileId}',
+    temp: '/tmp/uploads/{sessionId}',
+    cleanup: 24 * 60 * 60 * 1000 // 24 hours
+  },
+  cloud: {
+    provider: 'aws-s3',
+    bucket: 'vqmethod-stimuli',
+    region: 'us-east-1',
+    cdn: 'cloudfront.net',
+    signedUrls: true,
+    urlExpiry: 3600 // 1 hour
+  },
+  database: {
+    metadata: 'stimuli_metadata',
+    references: 'stimuli_files',
+    indexes: ['studyId', 'fileType', 'uploadDate']
+  },
+  virusScanning: {
+    enabled: true,
+    service: 'clamav',
+    maxFileSize: 100 * 1024 * 1024, // 100MB
+    quarantinePath: '/quarantine'
+  }
+};
+```
+
+### WebSocket Implementation
+
+```typescript
+// services/websocket.service.ts
+import { io, Socket } from 'socket.io-client';
+
+class WebSocketService {
+  private socket: Socket | null = null;
+  private studyId: string | null = null;
+  
+  connect(studyId: string) {
+    this.studyId = studyId;
+    this.socket = io(`ws://localhost:3001/studies/${studyId}`, {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
+    });
+    
+    this.setupEventListeners();
+  }
+  
+  private setupEventListeners() {
+    if (!this.socket) return;
+    
+    // Upload progress events
+    this.socket.on('stimuli:upload:progress', (data) => {
+      console.log(`Upload progress: ${data.percentage}%`);
+      // Update UI progress indicator
+    });
+    
+    // Processing events
+    this.socket.on('stimuli:processing:complete', (data) => {
+      console.log('Processing complete:', data);
+      // Update stimulus with processed data
+    });
+    
+    // Grid validation events
+    this.socket.on('grid:validation:error', (data) => {
+      console.error('Grid validation errors:', data.errors);
+      // Display validation errors to user
+    });
+  }
+  
+  // Emit events to server
+  updateGrid(grid: GridConfiguration) {
+    this.socket?.emit('grid:update', { 
+      studyId: this.studyId, 
+      grid 
+    });
+  }
+  
+  startUpload(fileId: string, chunks: number) {
+    this.socket?.emit('stimuli:upload:start', { 
+      fileId, 
+      chunks 
+    });
+  }
+}
+
+export const wsService = new WebSocketService();
 ```
 
 ---

@@ -3,6 +3,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { 
+  formatShortcut, 
+  matchesShortcut,
+  getAriaKeyShortcuts
+} from '@/lib/utils/keyboard';
 
 interface SearchResult {
   id: string;
@@ -30,18 +35,21 @@ export function GlobalSearch({
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [shortcutKey, setShortcutKey] = useState<string>('Ctrl+K'); // Default for SSR
 
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const { user } = useAuth();
 
-  // Load recent searches from localStorage
+  // Load recent searches from localStorage and set platform-specific shortcut
   useEffect(() => {
     const saved = localStorage.getItem('recentSearches');
     if (saved) {
       setRecentSearches(JSON.parse(saved));
     }
+    // Set platform-specific shortcut after mount to avoid hydration mismatch
+    setShortcutKey(formatShortcut({ meta: true, ctrl: true, key: 'k' }));
   }, []);
 
   // Save recent searches to localStorage
@@ -168,7 +176,7 @@ export function GlobalSearch({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Cmd/Ctrl + K to open search
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if (matchesShortcut(e, { meta: true, ctrl: true, key: 'k' })) {
         e.preventDefault();
         setIsOpen(true);
         setTimeout(() => inputRef.current?.focus(), 100);
@@ -271,7 +279,7 @@ export function GlobalSearch({
         {showShortcut && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
             <kbd className="hidden sm:inline-flex items-center px-2 py-1 text-xs font-semibold text-gray-500 bg-gray-200 dark:bg-gray-700 dark:text-gray-400 rounded">
-              ⌘K
+              {shortcutKey}
             </kbd>
           </div>
         )}

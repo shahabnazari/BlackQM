@@ -19,15 +19,17 @@ class UltimateStopManager {
       '.dev-manager.lock',
       '.dev-simple.lock',
       '.dev-ultimate.lock',
-      '.dev-ultimate.pid'
+      '.dev-ultimate.pid',
+      '.dev-processes.json'
     ];
+    this.processListFile = path.join(__dirname, '..', '.dev-processes.json');
   }
 
   async stop() {
     console.log('🛑 ULTIMATE STOP - Killing ALL processes...\n');
 
-    // Remove all lock files
-    this.removeAllLockFiles();
+    // Kill tracked processes first
+    await this.killTrackedProcesses();
 
     // Kill all Node.js processes
     await this.killAllNodeProcesses();
@@ -38,7 +40,32 @@ class UltimateStopManager {
     // Kill any remaining processes
     await this.killRemainingProcesses();
 
+    // Remove all lock files (do this last)
+    this.removeAllLockFiles();
+
     console.log('✅ ULTIMATE STOP Complete - All processes killed');
+  }
+
+  async killTrackedProcesses() {
+    if (fs.existsSync(this.processListFile)) {
+      try {
+        const processList = JSON.parse(fs.readFileSync(this.processListFile, 'utf8'));
+        console.log('📋 Killing tracked processes...');
+        
+        for (const [service, pid] of Object.entries(processList)) {
+          if (pid && service !== 'started') {
+            try {
+              process.kill(parseInt(pid), 'SIGKILL');
+              console.log(`   ✅ Killed ${service} (PID: ${pid})`);
+            } catch (e) {
+              // Process might already be dead
+            }
+          }
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
   }
 
   removeAllLockFiles() {

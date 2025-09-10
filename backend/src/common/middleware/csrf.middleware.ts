@@ -26,7 +26,10 @@ export class CsrfMiddleware implements NestMiddleware {
     }
 
     // Skip CSRF for health check endpoints
-    if (req.path === '/health' || req.path === '/') {
+    if (req.path === '/health' || 
+        req.path === '/' || 
+        req.path.startsWith('/api/health') ||
+        req.path === '/api') {
       return next();
     }
 

@@ -4,7 +4,6 @@
   "private": true,
   "description": "VQMethod - Advanced Q Methodology Research Platform with Apple Design Excellence",
   "_comment": "⚠️ IMPORTANT: This is the workspace root. DO NOT add app code here! All Next.js code goes in /frontend/, all NestJS code goes in /backend/",
- 
   "workspaces": [
     "frontend",
     "backend"
@@ -15,7 +14,11 @@
     "CRITICAL": "NEVER create /app, /components, or /pages in root - they go in /frontend/!"
   },
   "scripts": {
-    "dev": "node scripts/dev-ultimate.js",
+    "dev": "node scripts/dev-ultimate-v5.js",
+    "dev:v5": "node scripts/dev-ultimate-v5.js",
+    "dev:v4": "node scripts/dev-ultimate-v4.js",
+    "dev:v3": "node scripts/dev-ultimate-v3.js",
+    "dev:v2": "node scripts/dev-ultimate-v2.js",
     "dev:ultimate": "node scripts/dev-ultimate.js",
     "stop": "node scripts/stop-ultimate.js",
     "restart": "npm run stop && sleep 2 && npm run dev",
@@ -72,9 +75,14 @@
   "dependencies": {
     "@react-three/drei": "^9.88.17",
     "@react-three/fiber": "^8.15.12",
+    "@types/react-rnd": "^7.4.4",
     "chart.js": "^4.5.0",
+    "framer-motion": "^12.23.12",
+    "lucide-react": "^0.542.0",
     "react-chartjs-2": "^5.3.0",
     "react-dropzone": "^14.3.8",
-    "three": "^0.180.0"
+    "react-rnd": "^10.5.2",
+    "three": "^0.180.0",
+    "zustand": "^5.0.8"
   }
 }

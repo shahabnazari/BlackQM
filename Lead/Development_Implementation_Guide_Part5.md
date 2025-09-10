@@ -544,6 +544,532 @@ export const useAuthStore = create<AuthState>()(
 
 ---
 
+## 5.5 Study Builder State Management (Phase 6.85)
+
+### ⚠️ CRITICAL GAPS IDENTIFIED (December 2024)
+
+**Status:** Backend infrastructure and integration required before implementation
+
+**Missing Infrastructure:**
+- ❌ No backend API endpoints for grid/stimuli operations
+- ❌ No WebSocket server implementation for real-time sync
+- ❌ No file storage configuration (S3/local)
+- ❌ No database models for GridConfiguration/Stimulus
+
+**Missing Implementation:**
+- ❌ Zustand stores defined but not implemented
+- ❌ No persistence layer actually configured
+- ❌ No error recovery mechanisms in place
+- ❌ WebSocket sync not connected to backend
+
+### Enhanced State Management Architecture
+
+```typescript
+// types/store.types.ts
+interface StudyBuilderStore {
+  // Grid Configuration
+  grid: {
+    range: { min: number; max: number };
+    columns: GridColumn[];
+    symmetry: boolean;
+    distribution: 'bell' | 'flat' | 'forced' | 'custom';
+    instructions: string;
+    validation: {
+      totalCells: number;
+      minPerColumn: number;
+      maxPerColumn: number;
+      symmetryRequired: boolean;
+    };
+  };
+  
+  // Stimuli Management
+  stimuli: {
+    items: Stimulus[];
+    uploadProgress: number;
+    uploadErrors: UploadError[];
+    validationState: ValidationState;
+    chunkedUploads: Map<string, ChunkProgress>;
+  };
+  
+  // Preview State
+  preview: {
+    device: 'mobile' | 'tablet' | 'desktop' | 'wide';
+    zoom: number;
+    isFullscreen: boolean;
+    syncScroll: boolean;
+    breakpoint: DeviceBreakpoint;
+  };
+  
+  // Persistence
+  draft: {
+    lastSaved: Date;
+    autoSaveEnabled: boolean;
+    recoveryData: RecoveryData;
+    version: string;
+  };
+}
+
+// Persistence Strategy Configuration
+const PERSISTENCE_CONFIG = {
+  localStorage: ['grid', 'stimuli'],      // Persistent across sessions
+  sessionStorage: ['preview', 'draft'],   // Current session only
+  indexedDB: ['uploadedFiles'],          // Large binary data
+  autoSaveInterval: 30000,               // 30 seconds
+  maxRecoveryAge: 86400000,              // 24 hours
+  conflictResolution: 'last-write-wins'
+};
+```
+
+### Study Builder Store with Advanced Features
+
+```typescript
+// lib/stores/study-builder-store.ts
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+
+interface GridColumn {
+  value: number;
+  label: string;
+  customLabel?: string;
+  cells: number;
+  color?: string;
+}
+
+interface Stimulus {
+  id: string;
+  type: 'image' | 'video' | 'audio' | 'text';
+  content: string | File;
+  thumbnail?: string;
+  position?: number;
+  uploadProgress?: number;
+  error?: string;
+}
+
+interface PreviewSettings {
+  device: 'desktop' | 'tablet' | 'mobile' | 'wide';
+  zoom: number;
+  showGrid: boolean;
+  breakpoint: { width: number; height: number; scale: number };
+}
+
+type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+interface StudyBuilderState {
+  // Study Configuration
+  studyId: string | null;
+  studyTitle: string;
+  studyDescription: string;
+  
+  // Grid Configuration
+  gridConfiguration: GridConfig;
+  
+  // Stimuli Management
+  stimuli: Stimulus[];
+  uploadProgress: number;
+  
+  // Preview Settings
+  previewSettings: PreviewSettings;
+  
+  // UI State
+  autoSaveStatus: AutoSaveStatus;
+  lastSaved: Date | null;
+  hasUnsavedChanges: boolean;
+  errors: string[];
+  
+  // Actions
+  setStudyId: (id: string) => void;
+  updateStudyDetails: (title: string, description: string) => void;
+  updateGrid: (config: GridConfig) => void;
+  addStimulus: (stimulus: Stimulus) => void;
+  removeStimulus: (id: string) => void;
+  reorderStimuli: (fromIndex: number, toIndex: number) => void;
+  updatePreviewSettings: (settings: Partial<PreviewSettings>) => void;
+  setAutoSaveStatus: (status: AutoSaveStatus) => void;
+  addError: (error: string) => void;
+  clearErrors: () => void;
+  saveStudy: () => Promise<void>;
+  loadStudy: (id: string) => Promise<void>;
+  resetBuilder: () => void;
+}
+
+const defaultGridConfig: GridConfig = {
+  columns: [
+    { value: -3, label: 'Most Disagree', cells: 1 },
+    { value: -2, label: 'Disagree', cells: 2 },
+    { value: -1, label: 'Slightly Disagree', cells: 3 },
+    { value: 0, label: 'Neutral', cells: 4 },
+    { value: 1, label: 'Slightly Agree', cells: 3 },
+    { value: 2, label: 'Agree', cells: 2 },
+    { value: 3, label: 'Most Agree', cells: 1 }
+  ],
+  range: { min: -3, max: 3 },
+  symmetry: true,
+  totalCells: 16,
+  instructions: 'Please sort the statements according to your level of agreement.'
+};
+
+export const useStudyBuilderStore = create<StudyBuilderState>()(
+  persist(
+    (set, get) => ({
+      // Initial state
+      studyId: null,
+      studyTitle: '',
+      studyDescription: '',
+      gridConfiguration: defaultGridConfig,
+      stimuli: [],
+      uploadProgress: 0,
+      previewSettings: {
+        device: 'desktop',
+        zoom: 1,
+        showGrid: true
+      },
+      autoSaveStatus: 'idle',
+      lastSaved: null,
+      hasUnsavedChanges: false,
+      errors: [],
+      
+      // Actions
+      setStudyId: (id) => set({ studyId: id }),
+      
+      updateStudyDetails: (title, description) => set({
+        studyTitle: title,
+        studyDescription: description,
+        hasUnsavedChanges: true
+      }),
+      
+      updateGrid: (config) => set({
+        gridConfiguration: config,
+        hasUnsavedChanges: true
+      }),
+      
+      addStimulus: (stimulus) => set((state) => ({
+        stimuli: [...state.stimuli, stimulus],
+        uploadProgress: ((state.stimuli.length + 1) / state.gridConfiguration.totalCells) * 100,
+        hasUnsavedChanges: true
+      })),
+      
+      removeStimulus: (id) => set((state) => ({
+        stimuli: state.stimuli.filter(s => s.id !== id),
+        uploadProgress: ((state.stimuli.length - 1) / state.gridConfiguration.totalCells) * 100,
+        hasUnsavedChanges: true
+      })),
+      
+      reorderStimuli: (fromIndex, toIndex) => set((state) => {
+        const newStimuli = [...state.stimuli];
+        const [removed] = newStimuli.splice(fromIndex, 1);
+        newStimuli.splice(toIndex, 0, removed);
+        return {
+          stimuli: newStimuli,
+          hasUnsavedChanges: true
+        };
+      }),
+      
+      updatePreviewSettings: (settings) => set((state) => ({
+        previewSettings: { ...state.previewSettings, ...settings }
+      })),
+      
+      setAutoSaveStatus: (status) => set({ autoSaveStatus: status }),
+      
+      addError: (error) => set((state) => ({
+        errors: [...state.errors, error]
+      })),
+      
+      clearErrors: () => set({ errors: [] }),
+      
+      saveStudy: async () => {
+        const state = get();
+        set({ autoSaveStatus: 'saving' });
+        
+        try {
+          // API call to save study
+          const response = await fetch(`/api/studies/${state.studyId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: state.studyTitle,
+              description: state.studyDescription,
+              gridConfiguration: state.gridConfiguration,
+              stimuli: state.stimuli
+            })
+          });
+          
+          if (!response.ok) throw new Error('Failed to save study');
+          
+          set({
+            autoSaveStatus: 'saved',
+            lastSaved: new Date(),
+            hasUnsavedChanges: false
+          });
+          
+          // Reset status after 3 seconds
+          setTimeout(() => {
+            if (get().autoSaveStatus === 'saved') {
+              set({ autoSaveStatus: 'idle' });
+            }
+          }, 3000);
+        } catch (error) {
+          set({
+            autoSaveStatus: 'error',
+            errors: [`Save failed: ${error.message}`]
+          });
+        }
+      },
+      
+      loadStudy: async (id) => {
+        try {
+          const response = await fetch(`/api/studies/${id}`);
+          if (!response.ok) throw new Error('Failed to load study');
+          
+          const study = await response.json();
+          set({
+            studyId: study.id,
+            studyTitle: study.title,
+            studyDescription: study.description,
+            gridConfiguration: study.gridConfiguration || defaultGridConfig,
+            stimuli: study.stimuli || [],
+            hasUnsavedChanges: false,
+            lastSaved: study.updatedAt ? new Date(study.updatedAt) : null
+          });
+        } catch (error) {
+          set({
+            errors: [`Failed to load study: ${error.message}`]
+          });
+        }
+      },
+      
+      resetBuilder: () => set({
+        studyId: null,
+        studyTitle: '',
+        studyDescription: '',
+        gridConfiguration: defaultGridConfig,
+        stimuli: [],
+        uploadProgress: 0,
+        previewSettings: {
+          device: 'desktop',
+          zoom: 1,
+          showGrid: true
+        },
+        autoSaveStatus: 'idle',
+        lastSaved: null,
+        hasUnsavedChanges: false,
+        errors: []
+      })
+    }),
+    {
+      name: 'study-builder-storage',
+      partialize: (state) => ({
+        studyId: state.studyId,
+        studyTitle: state.studyTitle,
+        studyDescription: state.studyDescription,
+        gridConfiguration: state.gridConfiguration,
+        stimuli: state.stimuli,
+        previewSettings: state.previewSettings
+      })
+    }
+  )
+);
+
+// Auto-save hook with conflict resolution
+export const useAutoSave = () => {
+  const { hasUnsavedChanges, saveStudy, studyId } = useStudyBuilderStore();
+  const [conflictDetected, setConflictDetected] = useState(false);
+  
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    
+    const timer = setTimeout(async () => {
+      try {
+        // Check for conflicts before saving
+        const serverVersion = await checkServerVersion(studyId);
+        const localVersion = localStorage.getItem(`study-version-${studyId}`);
+        
+        if (serverVersion !== localVersion) {
+          setConflictDetected(true);
+          // Handle conflict based on strategy
+          if (PERSISTENCE_CONFIG.conflictResolution === 'last-write-wins') {
+            await saveStudy();
+          } else {
+            // Show conflict resolution UI
+            showConflictDialog();
+          }
+        } else {
+          await saveStudy();
+        }
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+    }, PERSISTENCE_CONFIG.autoSaveInterval);
+    
+    return () => clearTimeout(timer);
+  }, [hasUnsavedChanges, saveStudy, studyId]);
+  
+  return { conflictDetected };
+};
+```
+
+### State Synchronization Service
+
+```typescript
+// services/state-sync.service.ts
+import { wsService } from './websocket.service';
+
+const SYNC_CONFIG = {
+  events: [
+    'grid:update',
+    'stimuli:add',
+    'stimuli:remove',
+    'preview:change'
+  ],
+  debounceMs: 500,
+  retryAttempts: 3,
+  conflictResolution: 'last-write-wins'
+};
+
+class StateSyncService {
+  private syncQueue: Map<string, any> = new Map();
+  private retryCount: Map<string, number> = new Map();
+  
+  async syncState(event: string, data: any) {
+    // Debounce similar events
+    if (this.syncQueue.has(event)) {
+      clearTimeout(this.syncQueue.get(event).timer);
+    }
+    
+    const timer = setTimeout(() => {
+      this.performSync(event, data);
+    }, SYNC_CONFIG.debounceMs);
+    
+    this.syncQueue.set(event, { data, timer });
+  }
+  
+  private async performSync(event: string, data: any) {
+    try {
+      await wsService.emit(event, data);
+      this.retryCount.delete(event);
+    } catch (error) {
+      const retries = this.retryCount.get(event) || 0;
+      
+      if (retries < SYNC_CONFIG.retryAttempts) {
+        this.retryCount.set(event, retries + 1);
+        // Exponential backoff
+        setTimeout(() => {
+          this.performSync(event, data);
+        }, Math.pow(2, retries) * 1000);
+      } else {
+        // Store for offline sync
+        this.storeOfflineSync(event, data);
+      }
+    }
+  }
+  
+  private storeOfflineSync(event: string, data: any) {
+    const offlineQueue = JSON.parse(
+      localStorage.getItem('offline-sync-queue') || '[]'
+    );
+    offlineQueue.push({ event, data, timestamp: Date.now() });
+    localStorage.setItem('offline-sync-queue', JSON.stringify(offlineQueue));
+  }
+}
+
+export const stateSyncService = new StateSyncService();
+```
+
+### Enhanced Error Recovery System
+
+```typescript
+// lib/stores/error-recovery-store.ts
+import { create } from 'zustand';
+
+interface ErrorRecovery {
+  strategies: {
+    network: 'retry' | 'queue' | 'offline-mode';
+    validation: 'highlight' | 'block' | 'auto-correct';
+    upload: 'resume' | 'restart' | 'skip';
+  };
+  maxRetries: 3;
+  backoffMs: [1000, 2000, 4000];
+  fallbackUI: boolean;
+}
+
+interface ErrorRecoveryState {
+  failedUploads: Map<string, { file: File; attempts: number; lastError: string }>;
+  networkErrors: Array<{ error: string; timestamp: Date; resolved: boolean }>;
+  validationErrors: Map<string, { error: string; severity: 'error' | 'warning' }>;
+  recoveryStrategies: ErrorRecovery;
+  
+  addFailedUpload: (id: string, file: File, error: string) => void;
+  retryUpload: (id: string) => Promise<void>;
+  addNetworkError: (error: string) => void;
+  addValidationError: (field: string, error: string, severity?: 'error' | 'warning') => void;
+  clearValidationError: (field: string) => void;
+  clearAllErrors: () => void;
+  setRecoveryStrategy: (type: keyof ErrorRecovery['strategies'], strategy: string) => void;
+}
+
+export const useErrorRecoveryStore = create<ErrorRecoveryState>((set, get) => ({
+  failedUploads: new Map(),
+  networkErrors: [],
+  validationErrors: new Map(),
+  
+  addFailedUpload: (id, file) => set((state) => {
+    const newMap = new Map(state.failedUploads);
+    newMap.set(id, file);
+    return { failedUploads: newMap };
+  }),
+  
+  retryUpload: async (id) => {
+    const file = get().failedUploads.get(id);
+    if (!file) return;
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/upload/stimulus', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) throw new Error('Upload failed');
+      
+      // Remove from failed uploads on success
+      set((state) => {
+        const newMap = new Map(state.failedUploads);
+        newMap.delete(id);
+        return { failedUploads: newMap };
+      });
+    } catch (error) {
+      console.error('Retry failed:', error);
+    }
+  },
+  
+  addNetworkError: (error) => set((state) => ({
+    networkErrors: [...state.networkErrors, error]
+  })),
+  
+  addValidationError: (field, error) => set((state) => {
+    const newMap = new Map(state.validationErrors);
+    newMap.set(field, error);
+    return { validationErrors: newMap };
+  }),
+  
+  clearValidationError: (field) => set((state) => {
+    const newMap = new Map(state.validationErrors);
+    newMap.delete(field);
+    return { validationErrors: newMap };
+  }),
+  
+  clearAllErrors: () => set({
+    failedUploads: new Map(),
+    networkErrors: [],
+    validationErrors: new Map()
+  })
+}));
+```
+
+---
+
 ## 6. Protected Routes Implementation
 
 ### 6.1 Route Protection Middleware

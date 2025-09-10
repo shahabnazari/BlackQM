@@ -3,6 +3,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { 
+  formatShortcut, 
+  matchesShortcut, 
+  getAriaKeyShortcuts,
+  getShortcutDisplay,
+  isMac
+} from '@/lib/utils/keyboard';
 
 interface Command {
   id: string;
@@ -24,16 +31,33 @@ export function CommandPalette({ className = '' }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [recentCommands, setRecentCommands] = useState<string[]>([]);
+  const [shortcuts, setShortcuts] = useState({
+    home: 'Ctrl+H',
+    new: 'Ctrl+N',
+    export: 'Ctrl+E',
+    search: 'Ctrl+K',
+    theme: 'Ctrl+T',
+    palette: 'Ctrl+Shift+P',
+  });
 
   const router = useRouter();
   const { user, logout } = useAuth();
 
-  // Load recent commands
+  // Load recent commands and set platform-specific shortcuts
   useEffect(() => {
     const saved = localStorage.getItem('recentCommands');
     if (saved) {
       setRecentCommands(JSON.parse(saved));
     }
+    // Set platform-specific shortcuts after mount
+    setShortcuts({
+      home: formatShortcut({ meta: true, ctrl: true, key: 'h' }),
+      new: formatShortcut({ meta: true, ctrl: true, key: 'n' }),
+      export: formatShortcut({ meta: true, ctrl: true, key: 'e' }),
+      search: formatShortcut({ meta: true, ctrl: true, key: 'k' }),
+      theme: formatShortcut({ meta: true, ctrl: true, key: 't' }),
+      palette: formatShortcut({ meta: true, ctrl: true, shift: true, key: 'p' }),
+    });
   }, []);
 
   // Define available commands
@@ -46,7 +70,7 @@ export function CommandPalette({ className = '' }: CommandPaletteProps) {
       action: () => router.push('/'),
       icon: <HomeIcon />,
       keywords: ['dashboard', 'main'],
-      shortcut: '⌘H',
+      shortcut: shortcuts.home,
     },
     {
       id: 'nav-studies',
@@ -82,7 +106,7 @@ export function CommandPalette({ className = '' }: CommandPaletteProps) {
       action: () => router.push('/studies/create'),
       icon: <PlusIcon />,
       keywords: ['new', 'add', 'start'],
-      shortcut: '⌘N',
+      shortcut: shortcuts.new,
     },
     {
       id: 'action-export',
@@ -92,7 +116,7 @@ export function CommandPalette({ className = '' }: CommandPaletteProps) {
       action: () => console.log('Export triggered'),
       icon: <ExportIcon />,
       keywords: ['download', 'save'],
-      shortcut: '⌘E',
+      shortcut: shortcuts.export,
     },
     {
       id: 'action-search',
@@ -105,7 +129,7 @@ export function CommandPalette({ className = '' }: CommandPaletteProps) {
         ),
       icon: <SearchIcon />,
       keywords: ['find', 'look'],
-      shortcut: '⌘K',
+      shortcut: shortcuts.search,
     },
 
     // Settings commands
@@ -129,7 +153,7 @@ export function CommandPalette({ className = '' }: CommandPaletteProps) {
       },
       icon: <ThemeIcon />,
       keywords: ['dark', 'light', 'mode'],
-      shortcut: '⌘T',
+      shortcut: shortcuts.theme,
     },
     {
       id: 'settings-logout',
@@ -187,8 +211,8 @@ export function CommandPalette({ className = '' }: CommandPaletteProps) {
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Open command palette
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'p') {
+      // Open command palette (Cmd+Shift+P on Mac, Ctrl+Shift+P on Windows)
+      if (matchesShortcut(e, { meta: true, ctrl: true, shift: true, key: 'p' })) {
         e.preventDefault();
         setIsOpen(true);
         setQuery('');
@@ -337,10 +361,10 @@ export function CommandPalette({ className = '' }: CommandPaletteProps) {
             <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <div className="flex items-center space-x-4">
                 <span>↑↓ Navigate</span>
-                <span>↵ Select</span>
-                <span>esc Close</span>
+                <span>{isMac() ? '↵' : 'Enter'} Select</span>
+                <span>Esc Close</span>
               </div>
-              <span>⌘⇧P to open</span>
+              <span>{shortcuts.palette} to open</span>
             </div>
           </div>
         </div>

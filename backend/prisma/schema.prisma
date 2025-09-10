@@ -140,6 +140,8 @@ model Survey {
   collaborations Collaboration[]
   analyses    Analysis[]
   creator     User @relation(fields: [createdBy], references: [id])
+  gridConfiguration GridConfiguration?
+  stimuli     Stimulus[]
   
   @@index([createdBy])
   @@index([tenantId])
@@ -441,6 +443,74 @@ model Analysis {
   @@index([status])
 }
 
+// Grid Configuration for Phase 6.85
+model GridConfiguration {
+  id         String   @id @default(cuid())
+  surveyId   String   @unique
+  survey     Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  
+  // Grid dimensions
+  rangeMin   Int      @default(-3)
+  rangeMax   Int      @default(3)
+  columns    Json     // Array of column configurations
+  
+  // Grid properties
+  symmetry   Boolean  @default(true)
+  totalCells Int
+  distribution String @default("bell") // bell, flat, forced
+  instructions String?
+  
+  // Metadata
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@index([surveyId])
+}
+
+// Stimulus model for Phase 6.85
+model Stimulus {
+  id           String   @id @default(cuid())
+  surveyId     String
+  survey       Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  
+  // Stimulus properties
+  type         StimulusType
+  content      String   // URL for media files, text for text stimuli
+  thumbnail    String?  // Thumbnail URL for media
+  metadata     Json?    // Additional metadata (dimensions, duration, etc.)
+  
+  // Organization
+  position     Int?     // Position in grid
+  category     String?  // Optional categorization
+  tags         Json?    // Array of tags
+  
+  // Upload tracking
+  uploadStatus String   @default("pending") // pending, processing, complete, failed
+  uploadedBy   String?
+  fileSize     Int?
+  mimeType     String?
+  
+  // Virus scanning
+  virusScanStatus String @default("pending") // pending, clean, infected
+  virusScanDate   DateTime?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([surveyId])
+  @@index([type])
+  @@index([uploadStatus])
+  @@index([virusScanStatus])
+}
+
+enum StimulusType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+}
+
 enum AnalysisStatus {
   PENDING
   PROCESSING
@@ -489,3 +559,4 @@ enum CollaborationRole {
   COLLABORATOR
   VIEWER
 }
+

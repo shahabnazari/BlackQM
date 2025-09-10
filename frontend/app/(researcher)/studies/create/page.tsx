@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/apple-ui/Button';
 import { Card } from '@/components/apple-ui/Card';
@@ -8,6 +8,9 @@ import { TextField } from '@/components/apple-ui/TextField';
 import RichTextEditor from '@/components/editors/RichTextEditorV2';
 import DigitalSignature from '@/components/signature/DigitalSignature';
 import InfoTooltip from '@/components/tooltips/InfoTooltipV2';
+import PopupModal, { usePopup } from '@/components/ui/PopupModal';
+import { uploadLogo, uploadSignature } from '@/lib/services/upload.service';
+import { DraftService } from '@/lib/services/draft.service';
 import { 
   welcomeTemplates, 
   getTemplateById, 
@@ -24,7 +27,20 @@ import {
 } from '@/lib/tooltips/study-creation-tooltips';
 import ParticipantPreview from '@/components/study-creation/ParticipantPreview';
 import ResearcherSignature from '@/components/study-creation/ResearcherSignature';
-import { ChevronLeft, ChevronRight, Save, Eye, Upload, Pen, Type, Check, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Save, Eye, Upload, Pen, Type, Check, X, Monitor, Tablet, Smartphone, ZoomIn, ZoomOut, Sparkles } from 'lucide-react';
+import { 
+  matchesPlatformShortcut,
+  getAriaKeyShortcuts,
+  getPlatformShortcut,
+  matchesShortcut
+} from '@/lib/utils/keyboard';
+import { useShortcuts } from '@/lib/hooks/useShortcut';
+import { AppleUIGridBuilderV5 as AppleUIGridBuilder } from '@/components/grid/AppleUIGridBuilderV5';
+import { UploadProgressTracker } from '@/components/stimuli/UploadProgressTracker';
+import { StimuliUploadSystem } from '@/components/stimuli/StimuliUploadSystem';
+import { ResizableImage } from '@/components/editors/ResizableImage';
+import { useStudyBuilderStore } from '@/lib/stores/study-builder-store';
+import { StudyCreationErrorBoundary } from '@/components/errors/ErrorBoundary';
 
 interface EnhancedStudyConfig {
   // Basic Information
@@ -63,10 +79,19 @@ interface EnhancedStudyConfig {
 export default function EnhancedCreateStudyPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const shortcuts = useShortcuts();
+  const [gridConfig, setGridConfig] = useState<any>(null);
+  const [stimuli, setStimuli] = useState<any[]>([]);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [previewZoom, setPreviewZoom] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [isLoadingAPI, setIsLoadingAPI] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [previewData, setPreviewData] = useState<any>(null);
+  const { popupState, closePopup, showConfirm, showError, showSuccess, showInfo } = usePopup();
+  const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const [studyConfig, setStudyConfig] = useState<EnhancedStudyConfig>({
     title: '',
@@ -91,26 +116,63 @@ export default function EnhancedCreateStudyPage() {
     enableVideoConferencing: false,
   });
 
-  // Auto-save to localStorage
-  useEffect(() => {
-    const autoSave = setTimeout(() => {
-      localStorage.setItem('study_draft', JSON.stringify(studyConfig));
-    }, 1000);
-    
-    return () => clearTimeout(autoSave);
-  }, [studyConfig]);
+  // Draft management
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [isDraft, setIsDraft] = useState(false);
 
-  // Load draft on mount
+  // Initialize new study (clear any old drafts)
   useEffect(() => {
-    const draft = localStorage.getItem('study_draft');
-    if (draft) {
-      try {
-        setStudyConfig(JSON.parse(draft));
-      } catch (e) {
-        console.error('Failed to load draft', e);
+    // Check if we're loading a specific draft from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const loadDraftId = urlParams.get('draft');
+    
+    if (loadDraftId) {
+      // Load specific draft
+      const draft = DraftService.getDraft(loadDraftId);
+      if (draft) {
+        setStudyConfig(draft.config);
+        setDraftId(loadDraftId);
+        setIsDraft(true);
+        showInfo(`Draft "${draft.title}" loaded`);
+      } else {
+        showError('Draft not found');
+        router.push('/researcher/studies/create');
+      }
+    } else {
+      // Starting a new study - clear old localStorage
+      localStorage.removeItem('study_draft');
+      // Migrate any old draft to new system
+      const migratedId = DraftService.migrateOldDraft();
+      if (migratedId) {
+        showInfo('Old draft migrated. You can find it in your studies list.');
       }
     }
   }, []);
+
+  // Manual save as draft
+  const saveAsDraft = useCallback(() => {
+    setIsAutoSaving(true);
+    
+    const currentDraftId = draftId || DraftService.generateDraftId();
+    DraftService.saveDraft(currentDraftId, studyConfig);
+    
+    if (!draftId) {
+      setDraftId(currentDraftId);
+      setIsDraft(true);
+    }
+    
+    setLastSaveTime(new Date());
+    setTimeout(() => setIsAutoSaving(false), 500);
+    showSuccess('Draft saved successfully');
+  }, [studyConfig, draftId]);
+
+
+  // Helper function to get text content from HTML
+  const getTextFromHTML = (html: string): string => {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    return temp.textContent || temp.innerText || '';
+  };
 
   const validateStep = (stepNumber: number): boolean => {
     const errors: Record<string, string> = {};
@@ -129,22 +191,81 @@ export default function EnhancedCreateStudyPage() {
         break;
         
       case 2:
-        if (!studyConfig.welcomeMessage || studyConfig.welcomeMessage.length < 100) {
-          errors.welcomeMessage = 'Welcome message must be at least 100 characters';
+        // For welcome message - count actual text content, not HTML
+        const welcomeText = getTextFromHTML(studyConfig.welcomeMessage || '');
+        if (!welcomeText || welcomeText.length < 100) {
+          errors.welcomeMessage = `Welcome message must be at least 100 characters (currently ${welcomeText.length})`;
         }
-        if (studyConfig.welcomeMessage.length > 1000) {
-          errors.welcomeMessage = 'Welcome message must be less than 1000 characters';
+        if (welcomeText.length > 5000) {
+          errors.welcomeMessage = `Welcome message must be less than 5000 characters (currently ${welcomeText.length})`;
         }
-        if (!studyConfig.consentForm || studyConfig.consentForm.length < 500) {
-          errors.consentForm = 'Consent form must be at least 500 characters';
+        
+        // For consent form - count actual text content, not HTML
+        const consentText = getTextFromHTML(studyConfig.consentForm || '');
+        if (!consentText || consentText.length < 500) {
+          errors.consentForm = `Consent form must be at least 500 characters (currently ${consentText.length})`;
         }
-        if (studyConfig.consentForm.length > 5000) {
-          errors.consentForm = 'Consent form must be less than 5000 characters';
+        if (consentText.length > 10000) {
+          errors.consentForm = `Consent form must be less than 10000 characters (currently ${consentText.length})`;
+        }
+        break;
+        
+      case 3:
+        if (!gridConfig) {
+          errors.grid = 'Please configure the Q-sort grid';
+        } else if (gridConfig.totalCells === 0) {
+          errors.grid = 'Grid must have at least one cell configured';
+        }
+        break;
+        
+      case 4:
+        if (!stimuli || stimuli.length === 0) {
+          errors.stimuli = 'Please upload study stimuli';
+        } else if (gridConfig && stimuli.length !== gridConfig.totalCells) {
+          errors.stimuli = `Please upload exactly ${gridConfig.totalCells} stimuli (currently ${stimuli.length})`;
         }
         break;
     }
     
     setValidationErrors(errors);
+    
+    // If there are errors, scroll to the first error field
+    if (Object.keys(errors).length > 0) {
+      const firstErrorField = Object.keys(errors)[0];
+      
+      // Scroll to the error field
+      setTimeout(() => {
+        // Find the element with the error
+        let element: HTMLElement | null = null;
+        
+        if (firstErrorField === 'title' || firstErrorField === 'description') {
+          element = document.querySelector(`[name="${firstErrorField}"]`);
+        } else if (firstErrorField === 'welcomeMessage') {
+          element = document.querySelector('.welcome-message-section');
+        } else if (firstErrorField === 'consentForm') {
+          element = document.querySelector('.consent-form-section');
+        } else if (firstErrorField === 'grid') {
+          element = document.querySelector('.interactive-grid-builder');
+        } else if (firstErrorField === 'stimuli') {
+          element = document.querySelector('.stimuli-upload-system');
+        }
+        
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Add a highlight effect
+          element.classList.add('error-highlight');
+          setTimeout(() => {
+            element?.classList.remove('error-highlight');
+          }, 3000);
+        }
+      }, 100);
+      
+      // Show error message
+      if (stepNumber > 2) {
+        showError(Object.values(errors)[0]);
+      }
+    }
+    
     return Object.keys(errors).length === 0;
   };
 
@@ -162,6 +283,16 @@ export default function EnhancedCreateStudyPage() {
     } else {
       handleSubmit();
     }
+  };
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    }
+  };
+
+  const handleSaveDraft = () => {
+    saveAsDraft();
   };
 
   const generatePreview = async () => {
@@ -228,16 +359,14 @@ export default function EnhancedCreateStudyPage() {
       let maxItems = 1;
       
       if (shape === 'quasi-normal') {
-        // Bell curve distribution
+        // Improved bell curve distribution
         const distance = Math.abs(position);
-        maxItems = Math.max(1, 5 - distance);
-      } else if (shape === 'forced') {
-        // Inverted bell curve
-        const distance = Math.abs(position);
-        maxItems = Math.min(5, 1 + distance);
+        const maxCells = Math.ceil(columns * 0.8);
+        const bellFactor = Math.exp(-(distance * distance) / (columns / 3));
+        maxItems = Math.max(1, Math.round(maxCells * bellFactor));
       } else {
-        // Free distribution - equal across all columns
-        maxItems = 3;
+        // Flat distribution - equal across all columns
+        maxItems = Math.max(1, Math.floor(columns * 0.6));
       }
       
       config.push({ position, maxItems });
@@ -246,14 +375,9 @@ export default function EnhancedCreateStudyPage() {
     return config;
   };
 
-  const handleBack = () => {
-    if (step > 1) {
-      setStep(step - 1);
-    }
-  };
-
   const handleSubmit = async () => {
     setIsSaving(true);
+    setIsLoadingAPI(true);
     
     try {
       const response = await fetch('/api/studies', {
@@ -267,80 +391,113 @@ export default function EnhancedCreateStudyPage() {
       
       if (response.ok) {
         const study = await response.json();
+        
+        // Clear draft if we were editing one
+        if (draftId) {
+          DraftService.deleteDraft(draftId);
+        }
+        
+        // Clear any old draft format
         localStorage.removeItem('study_draft');
-        router.push(`/studies/${study.id}`);
+        
+        showSuccess('Study created successfully! Redirecting...');
+        setTimeout(() => {
+          router.push(`/studies/${study.id}`);
+        }, 1000);
       } else {
         throw new Error('Failed to create study');
       }
     } catch (error) {
       console.error('Error creating study:', error);
-      alert('Failed to create study. Please try again.');
+      showError('Failed to create study. Please try again.');
     } finally {
       setIsSaving(false);
+      setIsLoadingAPI(false);
     }
   };
 
-  const updateConfig = (field: keyof EnhancedStudyConfig, value: any) => {
+  const updateConfig = useCallback((field: keyof EnhancedStudyConfig, value: any) => {
     setStudyConfig((prev) => ({
       ...prev,
       [field]: value,
     }));
-  };
+  }, []);
+
+  // Memoized grid change handler to prevent infinite loops
+  const handleGridChange = useCallback((grid: any) => {
+    setGridConfig(grid);
+    updateConfig('gridColumns', grid.columns?.length || 0);
+    updateConfig('gridShape', 
+      grid.distribution === 'bell' ? 'quasi-normal' : 'free'
+    );
+  }, [updateConfig]);
 
   const handleTemplateSelect = (type: 'welcome' | 'consent', templateId: string) => {
-    // Don't do anything if selecting the empty option
-    if (!templateId) return;
+    const field = type === 'welcome' ? 'welcomeMessage' : 'consentForm';
+    const templateField = type === 'welcome' ? 'welcomeTemplateId' : 'consentTemplateId';
+    
+    // If selecting the empty option, clear the content
+    if (!templateId) {
+      updateConfig(field, '');
+      updateConfig(templateField, undefined);
+      return;
+    }
     
     const template = type === 'welcome' 
       ? getTemplateById(templateId)
       : getConsentTemplateById(templateId);
       
     if (template) {
-      const field = type === 'welcome' ? 'welcomeMessage' : 'consentForm';
-      const templateField = type === 'welcome' ? 'welcomeTemplateId' : 'consentTemplateId';
       const currentContent = type === 'welcome' ? studyConfig.welcomeMessage : studyConfig.consentForm;
       
       // Check if there's existing content that would be overwritten
       if (currentContent && currentContent.length > 50) {
         const confirmMessage = `You have existing ${type === 'welcome' ? 'welcome message' : 'consent form'} content that will be replaced by the template. Do you want to continue?`;
         
-        if (!window.confirm(confirmMessage)) {
-          // Reset the select to previous value or empty
-          const selectElement = document.querySelector(
-            `select[value="${studyConfig[templateField] || ''}"]`
-          ) as HTMLSelectElement;
-          if (selectElement) {
-            selectElement.value = studyConfig[templateField] || '';
+        showConfirm(
+          confirmMessage,
+          () => {
+            updateConfig(field, template.content);
+            updateConfig(templateField, templateId);
+          },
+          {
+            title: 'Replace Content?',
+            onCancel: () => {
+              // Reset the select to previous value
+              const selectElement = document.querySelector(
+                `select[data-type="${type}"]`
+              ) as HTMLSelectElement;
+              if (selectElement) {
+                selectElement.value = studyConfig[templateField] || '';
+              }
+            }
           }
-          return;
-        }
+        );
+      } else {
+        updateConfig(field, template.content);
+        updateConfig(templateField, templateId);
       }
-      
-      updateConfig(field, template.content);
-      updateConfig(templateField, templateId);
     }
   };
 
   const handleLogoUpload = async (file: File) => {
-    const formData = new FormData();
-    formData.append('logo', file);
-    
     try {
-      const response = await fetch('/api/upload/logo', {
-        method: 'POST',
-        body: formData,
-      });
+      showInfo('Uploading logo...');
+      const result = await uploadLogo(file);
+      console.log('Logo upload result:', result);
       
-      if (response.ok) {
-        const { url } = await response.json();
-        updateConfig('organizationLogoUrl', url);
+      // Update the state with the returned URL
+      if (result && result.url) {
+        updateConfig('organizationLogoUrl', result.url);
+        console.log('Updated organizationLogoUrl to:', result.url);
+        console.log('Current studyConfig:', studyConfig);
+        showSuccess('Logo uploaded successfully!');
       } else {
-        const error = await response.json();
-        alert(`Failed to upload logo: ${error.error}`);
+        throw new Error('No URL returned from upload');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Logo upload failed:', error);
-      alert('Failed to upload logo. Please try again.');
+      showError(error.message || 'Failed to upload logo. Please try again.');
     }
   };
   
@@ -356,8 +513,40 @@ export default function EnhancedCreateStudyPage() {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
   };
 
+  // Keyboard shortcuts - must be after function declarations
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Platform-specific Next shortcut (Cmd+Right on Mac, Alt+N on Windows)
+      if (matchesPlatformShortcut(e, 'next')) {
+        e.preventDefault();
+        handleNext();
+      }
+      // Platform-specific Back shortcut (Cmd+Left on Mac, Alt+B on Windows)
+      if (matchesPlatformShortcut(e, 'back')) {
+        e.preventDefault();
+        handleBack();
+      }
+      // Platform-specific Save Draft shortcut (Cmd+Shift+S on Mac, Ctrl+Shift+S on Windows)
+      if (matchesPlatformShortcut(e, 'saveDraft')) {
+        e.preventDefault();
+        saveAsDraft();
+      }
+      // Ctrl+Enter or Cmd+Enter for Submit (on last step)
+      if (matchesShortcut(e, { meta: true, ctrl: true, key: 'Enter' }) && step === 5) {
+        e.preventDefault();
+        handleSubmit();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [step]); // Minimal dependencies to avoid circular refs
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 px-4">
+      {/* Upload Progress Tracker */}
+      <UploadProgressTracker compact={false} showDetails={true} />
+      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-label">Create New Study</h1>
@@ -366,14 +555,32 @@ export default function EnhancedCreateStudyPage() {
           </p>
         </div>
         
-        <Button
-          variant="secondary"
-          size="small"
-          onClick={() => setIsPreviewMode(!isPreviewMode)}
-        >
-          <Eye className="w-4 h-4 mr-2" />
-          {isPreviewMode ? 'Edit Mode' : 'Preview'}
-        </Button>
+        <div className="flex flex-col items-end gap-2">
+          {/* Auto-save Status */}
+          {isAutoSaving && (
+            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400" role="status" aria-live="polite">
+              <div className="w-3 h-3 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+              <span>Auto-saving...</span>
+            </div>
+          )}
+          
+          {lastSaveTime && !isAutoSaving && (
+            <div className="text-sm text-secondary-label" role="status" aria-live="polite">
+              <span className="flex items-center gap-1">
+                <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
+                Auto-saved {lastSaveTime.toLocaleTimeString()}
+              </span>
+            </div>
+          )}
+          
+          {/* Loading Indicator for API calls */}
+          {isLoadingAPI && (
+            <div className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400" role="status" aria-live="polite">
+              <div className="w-3 h-3 animate-spin rounded-full border-2 border-orange-600 border-t-transparent" />
+              <span>Processing request...</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Progress Steps */}
@@ -381,9 +588,9 @@ export default function EnhancedCreateStudyPage() {
           {[
             { num: 1, label: 'Basic Info' },
             { num: 2, label: 'Welcome & Consent' },
-            { num: 3, label: 'Q-Sort Setup' },
-            { num: 4, label: 'Review' },
-            { num: 5, label: 'Preview' },
+            { num: 3, label: 'Grid Configuration' },
+            { num: 4, label: 'Upload Stimuli' },
+            { num: 5, label: 'Preview & Create' },
           ].map((s) => (
             <div key={s.num} className="flex items-center flex-1">
               <div
@@ -399,7 +606,7 @@ export default function EnhancedCreateStudyPage() {
               </div>
               <div className="flex-1 flex flex-col ml-2">
                 <span className="text-xs text-secondary-label">{s.label}</span>
-                {s.num < 5 && (
+                {s.num < 4 && (
                   <div
                     className={`
                       h-1 mt-1 mr-2
@@ -416,47 +623,90 @@ export default function EnhancedCreateStudyPage() {
           {/* Step 1: Basic Information */}
           {step === 1 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-label">
-                Basic Information
-              </h2>
+              <div>
+                <h2 className="text-xl font-semibold text-label">
+                  Basic Information
+                </h2>
+                <p className="text-xs text-secondary-label mt-1">
+                  <span className="text-red-500">*</span> indicates required fields
+                </p>
+              </div>
               
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium text-label">
-                    Study Title
+                  <label htmlFor="study-title" className="text-sm font-medium text-label">
+                    Study Title <span className="text-red-500">*</span>
                   </label>
                   <InfoTooltip {...getTooltip('studyTitle')!} />
                 </div>
                 <TextField
+                  id="study-title"
+                  name="title"
                   placeholder="Enter your study title (10-100 characters)"
                   value={studyConfig.title}
-                  onChange={(e) => updateConfig('title', e.target.value)}
+                  onChange={(e) => {
+                    updateConfig('title', e.target.value);
+                    // Clear error when requirement is met
+                    if (e.target.value.length >= 10 && e.target.value.length <= 100) {
+                      setValidationErrors(prev => {
+                        const { title, ...rest } = prev;
+                        return rest;
+                      });
+                    }
+                  }}
                   error={validationErrors.title}
+                  aria-label="Study title"
+                  aria-required="true"
+                  aria-invalid={!!validationErrors.title}
+                  aria-describedby={validationErrors.title ? "title-error" : "title-hint"}
                 />
-                <div className="text-xs text-tertiary-label mt-1">
-                  {studyConfig.title.length}/100 characters
+                <div id="title-hint" className="text-xs text-tertiary-label mt-1 flex justify-between">
+                  <span className={studyConfig.title.length < 10 || studyConfig.title.length > 100 ? "text-system-red" : ""}>
+                    {studyConfig.title.length}/100 characters
+                    {studyConfig.title.length < 10 && " (min: 10)"}
+                  </span>
+                  <span className="text-red-500">Required field</span>
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium text-label">
-                    Study Description (Optional)
+                  <label htmlFor="study-description" className="text-sm font-medium text-label">
+                    Study Description <span className="text-secondary-label text-xs font-normal">(Optional)</span>
                   </label>
                   <InfoTooltip {...getTooltip('studyDescription')!} />
                 </div>
                 <textarea
-                  className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label placeholder:text-tertiary-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  id="study-description"
+                  name="description"
+                  className={`w-full px-4 py-3 rounded-lg border ${validationErrors.description ? 'border-system-red' : 'border-quaternary-fill'} bg-tertiary-background text-label placeholder:text-tertiary-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
                   rows={4}
-                  placeholder="Describe your study's purpose and goals (50-500 characters)"
+                  placeholder="Describe your study's purpose and goals (50-500 characters if provided)"
                   value={studyConfig.description}
-                  onChange={(e) => updateConfig('description', e.target.value)}
+                  onChange={(e) => {
+                    updateConfig('description', e.target.value);
+                    // Clear error when requirement is met or field is empty
+                    if (!e.target.value || e.target.value.length >= 50) {
+                      setValidationErrors(prev => {
+                        const { description, ...rest } = prev;
+                        return rest;
+                      });
+                    }
+                  }}
+                  aria-label="Study description"
+                  aria-required="false"
+                  aria-invalid={!!validationErrors.description}
+                  aria-describedby={validationErrors.description ? "description-error" : "description-hint"}
                 />
-                <div className="text-xs text-tertiary-label mt-1">
-                  {studyConfig.description.length}/500 characters
+                <div className="text-xs text-tertiary-label mt-1 flex justify-between">
+                  <span className={studyConfig.description && studyConfig.description.length > 0 && studyConfig.description.length < 50 ? "text-system-red" : ""}>
+                    {studyConfig.description.length}/500 characters
+                    {studyConfig.description && studyConfig.description.length > 0 && studyConfig.description.length < 50 && " (min: 50 if provided)"}
+                  </span>
+                  <span>Optional field</span>
                 </div>
                 {validationErrors.description && (
-                  <p className="text-xs text-system-red mt-1">
+                  <p className="text-xs text-system-red mt-1" role="alert">
                     {validationErrors.description}
                   </p>
                 )}
@@ -476,13 +726,14 @@ export default function EnhancedCreateStudyPage() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <label className="text-sm font-medium text-label">
-                      Welcome Message
+                      Welcome Message <span className="text-red-500">*</span>
                     </label>
                     <InfoTooltip {...getTooltip('welcomeMessage')!} />
                   </div>
                   
                   <select
                     className="text-sm px-3 py-1 rounded border border-quaternary-fill"
+                    data-type="welcome"
                     onChange={(e) => handleTemplateSelect('welcome', e.target.value)}
                     value={studyConfig.welcomeTemplateId || ''}
                   >
@@ -495,29 +746,43 @@ export default function EnhancedCreateStudyPage() {
                   </select>
                 </div>
                 
-                {/* Template Disclaimer */}
-                <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
-                  <p className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
-                    <span className="text-amber-600 dark:text-amber-400">⚠️</span>
-                    <span>
-                      <strong>Important:</strong> These templates are suggestions only. You must ensure compliance with your institution's IRB, local laws, and regulations (GDPR, HIPAA, etc.). Always consult your legal/ethics team before use.
-                    </span>
-                  </p>
+                {/* Template Disclaimer - Only show when a template is selected */}
+                {studyConfig.welcomeTemplateId && (
+                  <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+                    <p className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                      <span className="text-amber-600 dark:text-amber-400">⚠️</span>
+                      <span>
+                        <strong>Important:</strong> These templates are suggestions only. You must ensure compliance with your institution's IRB, local laws, and regulations (GDPR, HIPAA, etc.). Always consult your legal/ethics team before use.
+                      </span>
+                    </p>
+                  </div>
+                )}
+                
+                <div className="welcome-message-section">
+                  <RichTextEditor
+                    content={studyConfig.welcomeMessage}
+                    onChange={(content) => {
+                      updateConfig('welcomeMessage', content);
+                      // Clear error when requirement is met
+                      const textLength = content.replace(/<[^>]*>/g, '').trim().length;
+                      if (textLength >= 100) {
+                        setValidationErrors(prev => {
+                          const { welcomeMessage, ...rest } = prev;
+                          return rest;
+                        });
+                      }
+                    }}
+                    placeholder="Welcome your participants..."
+                    minLength={100}
+                    maxLength={5000}
+                  />
+                  {validationErrors.welcomeMessage && (
+                    <p className="text-xs text-system-red mt-1" role="alert">
+                      {validationErrors.welcomeMessage}
+                    </p>
+                  )}
                 </div>
                 
-                <RichTextEditor
-                  content={studyConfig.welcomeMessage}
-                  onChange={(content) => updateConfig('welcomeMessage', content)}
-                  placeholder="Welcome your participants..."
-                  minLength={100}
-                  maxLength={1000}
-                />
-                
-                {validationErrors.welcomeMessage && (
-                  <p className="text-xs text-system-red mt-1">
-                    {validationErrors.welcomeMessage}
-                  </p>
-                )}
 
                 <label className="flex items-center gap-2 mt-3">
                   <input
@@ -543,13 +808,14 @@ export default function EnhancedCreateStudyPage() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <label className="text-sm font-medium text-label">
-                      Consent Form
+                      Consent Form <span className="text-red-500">*</span>
                     </label>
                     <InfoTooltip {...getTooltip('consentForm')!} />
                   </div>
                   
                   <select
                     className="text-sm px-3 py-1 rounded border border-quaternary-fill"
+                    data-type="consent"
                     onChange={(e) => handleTemplateSelect('consent', e.target.value)}
                     value={studyConfig.consentTemplateId || ''}
                   >
@@ -562,29 +828,43 @@ export default function EnhancedCreateStudyPage() {
                   </select>
                 </div>
                 
-                {/* Legal Compliance Disclaimer */}
-                <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
-                  <p className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
-                    <span className="text-amber-600 dark:text-amber-400">⚠️</span>
-                    <span>
-                      <strong>Legal Notice:</strong> Consent form templates are provided as examples only. You are responsible for ensuring your consent form meets all applicable ethical, legal, and regulatory requirements including IRB approval, GDPR, HIPAA, and local laws. Consult your institution's legal and ethics departments.
-                    </span>
-                  </p>
+                {/* Legal Compliance Disclaimer - Only show when a template is selected */}
+                {studyConfig.consentTemplateId && (
+                  <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+                    <p className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                      <span className="text-amber-600 dark:text-amber-400">⚠️</span>
+                      <span>
+                        <strong>Legal Notice:</strong> Consent form templates are provided as examples only. You are responsible for ensuring your consent form meets all applicable ethical, legal, and regulatory requirements including IRB approval, GDPR, HIPAA, and local laws. Consult your institution's legal and ethics departments.
+                      </span>
+                    </p>
+                  </div>
+                )}
+                
+                <div className="consent-form-section">
+                  <RichTextEditor
+                    content={studyConfig.consentForm}
+                    onChange={(content) => {
+                      updateConfig('consentForm', content);
+                      // Clear error when requirement is met
+                      const textLength = content.replace(/<[^>]*>/g, '').trim().length;
+                      if (textLength >= 500) {
+                        setValidationErrors(prev => {
+                          const { consentForm, ...rest } = prev;
+                          return rest;
+                        });
+                      }
+                    }}
+                    placeholder="Enter consent form text..."
+                    minLength={500}
+                    maxLength={10000}
+                  />
+                  {validationErrors.consentForm && (
+                    <p className="text-xs text-system-red mt-1" role="alert">
+                      {validationErrors.consentForm}
+                    </p>
+                  )}
                 </div>
                 
-                <RichTextEditor
-                  content={studyConfig.consentForm}
-                  onChange={(content) => updateConfig('consentForm', content)}
-                  placeholder="Enter consent form text..."
-                  minLength={500}
-                  maxLength={5000}
-                />
-                
-                {validationErrors.consentForm && (
-                  <p className="text-xs text-system-red mt-1">
-                    {validationErrors.consentForm}
-                  </p>
-                )}
 
                 {/* Professional Signature Section */}
                 <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -650,7 +930,7 @@ export default function EnhancedCreateStudyPage() {
                             Organization Logo
                           </label>
                           
-                          {!studyConfig.organizationLogoUrl ? (
+                          {!studyConfig.organizationLogoUrl || studyConfig.organizationLogoUrl === '' ? (
                             <label className="block">
                               <input
                                 type="file"
@@ -683,9 +963,17 @@ export default function EnhancedCreateStudyPage() {
                               <div className="flex items-center gap-4 p-4">
                                 <div className="flex-shrink-0 bg-white p-3 rounded-lg border border-color-border shadow-sm">
                                   <img 
+                                    key={studyConfig.organizationLogoUrl}
                                     src={studyConfig.organizationLogoUrl} 
                                     alt="Organization logo" 
                                     className="h-14 w-auto object-contain"
+                                    onError={(e) => {
+                                      console.error('Failed to load logo image:', studyConfig.organizationLogoUrl);
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                    onLoad={() => {
+                                      console.log('Logo image loaded successfully:', studyConfig.organizationLogoUrl);
+                                    }}
                                   />
                                 </div>
                                 <div className="flex-1">
@@ -835,152 +1123,63 @@ export default function EnhancedCreateStudyPage() {
             </div>
           )}
 
-          {/* Step 3: Q-Sort Configuration */}
+          {/* Step 3: Interactive Grid Configuration */}
           {step === 3 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-label">
-                Q-Sort Configuration
+                Interactive Grid Configuration
               </h2>
-
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium text-label">
-                    Grid Columns
-                  </label>
-                  <InfoTooltip {...getTooltip('gridColumns')!} />
+              
+              {/* AI Assistant Info Banner */}
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl flex items-start gap-3 border border-blue-200/50">
+                <Sparkles className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0 animate-pulse" />
+                <div className="flex-1">
+                  <p className="text-sm text-purple-900 font-medium">
+                    AI-Powered Grid Design Assistant Available
+                  </p>
+                  <p className="text-xs text-purple-700 mt-1">
+                    Click the gradient AI Assistant button below to get scientifically-backed grid configurations tailored to your study requirements.
+                  </p>
                 </div>
-                <select
-                  className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  value={studyConfig.gridColumns}
-                  onChange={(e) => updateConfig('gridColumns', parseInt(e.target.value))}
-                >
-                  {[5, 7, 9, 11, 13].map((cols) => (
-                    <option key={cols} value={cols}>
-                      {cols} columns (from -{Math.floor(cols / 2)} to +{Math.floor(cols / 2)})
-                    </option>
-                  ))}
-                </select>
               </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium text-label">
-                    Distribution Shape
-                  </label>
-                  <InfoTooltip {...getTooltip('distributionShape')!} />
-                </div>
-                <select
-                  className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  value={studyConfig.gridShape}
-                  onChange={(e) => updateConfig('gridShape', e.target.value as any)}
-                >
-                  <option value="forced">Forced Distribution</option>
-                  <option value="quasi-normal">Quasi-Normal Distribution</option>
-                  <option value="free">Free Distribution</option>
-                </select>
-              </div>
-
-              <div className="p-4 bg-quaternary-fill/30 rounded-lg">
-                <p className="text-sm text-secondary-label">
-                  <strong>Grid Preview:</strong> Your Q-sort grid will have{' '}
-                  {studyConfig.gridColumns} columns ranging from -
-                  {Math.floor(studyConfig.gridColumns / 2)} to +
-                  {Math.floor(studyConfig.gridColumns / 2)} with a{' '}
-                  {studyConfig.gridShape} distribution pattern.
-                </p>
-              </div>
+              
+              <AppleUIGridBuilder
+                studyId={studyConfig.title ? 
+                  studyConfig.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase().substring(0, 50) : 
+                  `study-${Date.now()}`}
+                onGridChange={handleGridChange}
+                initialCells={30}
+              />
             </div>
           )}
 
-          {/* Step 4: Review & Create */}
+          {/* Step 4: Upload Stimuli */}
           {step === 4 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-label">
-                Review & Create
+                Upload Study Stimuli
               </h2>
-
-              <div className="space-y-4">
-                <div className="p-4 bg-quaternary-fill/30 rounded-lg">
-                  <h3 className="font-medium text-label mb-2">Study Details</h3>
-                  <dl className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <dt className="text-secondary-label">Title:</dt>
-                      <dd className="font-medium text-label">
-                        {studyConfig.title || 'Not set'}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-secondary-label">Grid Columns:</dt>
-                      <dd className="font-medium text-label">
-                        {studyConfig.gridColumns}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-secondary-label">Distribution:</dt>
-                      <dd className="font-medium text-label">
-                        {studyConfig.gridShape}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-secondary-label">Principal Investigator:</dt>
-                      <dd className="font-medium text-label">
-                        {studyConfig.researcherName || 'Not set'}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-secondary-label">Organization:</dt>
-                      <dd className="font-medium text-label">
-                        {studyConfig.organizationName || 'Not set'}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-secondary-label">Researcher Branding:</dt>
-                      <dd className="font-medium text-label">
-                        {studyConfig.includeResearcherSignature ? 'Enabled' : 'Disabled'}
-                      </dd>
-                    </div>
-                  </dl>
+              {gridConfig ? (
+                <StimuliUploadSystem
+                  studyId={studyConfig.title ? 
+                    studyConfig.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase().substring(0, 50) : 
+                    `study-${Date.now()}`}
+                  grid={gridConfig}
+                  onStimuliComplete={(completedStimuli) => {
+                    setStimuli(completedStimuli);
+                    // Success message is now handled inside StimuliUploadSystem
+                  }}
+                  initialStimuli={stimuli}
+                />
+              ) : (
+                <div className="p-4 bg-yellow-50 rounded-lg">
+                  <p className="text-yellow-800">Please complete grid configuration first.</p>
                 </div>
-
-                <div className="p-4 bg-quaternary-fill/30 rounded-lg">
-                  <h3 className="font-medium text-label mb-2">
-                    Enabled Features
-                  </h3>
-                  <ul className="space-y-1 text-sm text-label">
-                    {studyConfig.enablePreScreening && (
-                      <li>✓ Pre-screening questions</li>
-                    )}
-                    {studyConfig.enablePostSurvey && <li>✓ Post-sort survey</li>}
-                    {studyConfig.enableVideoConferencing && (
-                      <li>✓ Video conferencing</li>
-                    )}
-                    {studyConfig.includeWelcomeVideo && (
-                      <li>✓ Welcome video</li>
-                    )}
-                    {studyConfig.includeResearcherSignature && (
-                      <li>✓ Researcher signature & branding at {studyConfig.brandingPosition}</li>
-                    )}
-                  </ul>
-                </div>
-
-                {studyConfig.organizationLogoUrl && (
-                  <div className="p-4 bg-quaternary-fill/30 rounded-lg">
-                    <h3 className="font-medium text-label mb-2">Organization</h3>
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={studyConfig.organizationLogoUrl}
-                        alt={studyConfig.organizationName}
-                        className="h-12 object-contain"
-                      />
-                      <span className="text-label">{studyConfig.organizationName}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           )}
 
-          {/* Step 5: Preview */}
+          {/* Step 5: Preview & Create */}
           {step === 5 && previewData && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -997,10 +1196,78 @@ export default function EnhancedCreateStudyPage() {
                 </div>
               </div>
 
-              <ParticipantPreview 
-                previewData={previewData} 
-                studyTitle={studyConfig.title}
-              />
+              {/* Device Preview Controls */}
+              <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-700">Device:</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setPreviewDevice('desktop')}
+                      className={`p-2 rounded-lg transition-colors ${
+                        previewDevice === 'desktop' 
+                          ? 'bg-blue-500 text-white' 
+                          : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Monitor className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setPreviewDevice('tablet')}
+                      className={`p-2 rounded-lg transition-colors ${
+                        previewDevice === 'tablet' 
+                          ? 'bg-blue-500 text-white' 
+                          : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Tablet className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setPreviewDevice('mobile')}
+                      className={`p-2 rounded-lg transition-colors ${
+                        previewDevice === 'mobile' 
+                          ? 'bg-blue-500 text-white' 
+                          : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Smartphone className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-700">Zoom:</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPreviewZoom(Math.max(0.5, previewZoom - 0.25))}
+                      className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      <ZoomOut className="w-4 h-4" />
+                    </button>
+                    <span className="text-sm font-medium w-12 text-center">
+                      {Math.round(previewZoom * 100)}%
+                    </span>
+                    <button
+                      onClick={() => setPreviewZoom(Math.min(2, previewZoom + 0.25))}
+                      className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      <ZoomIn className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div 
+                className="overflow-auto"
+                style={{
+                  transform: `scale(${previewZoom})`,
+                  transformOrigin: 'top center'
+                }}
+              >
+                <ParticipantPreview 
+                  previewData={previewData} 
+                  studyTitle={studyConfig.title}
+                />
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 bg-blue-50 rounded-lg">
@@ -1039,11 +1306,15 @@ export default function EnhancedCreateStudyPage() {
             </div>
           )}
 
+          {/* Navigation Buttons with Keyboard Shortcuts */}
           <div className="flex justify-between mt-8">
             <Button
               variant="secondary"
               onClick={handleBack}
               disabled={step === 1}
+              aria-label="Go to previous step"
+              aria-keyshortcuts={getAriaKeyShortcuts([getPlatformShortcut('back')])}
+              title={`Back (${shortcuts.back})`}
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
               Back
@@ -1052,24 +1323,51 @@ export default function EnhancedCreateStudyPage() {
             <div className="flex gap-2">
               <Button
                 variant="secondary"
-                onClick={() => {
-                  localStorage.setItem('study_draft', JSON.stringify(studyConfig));
-                  alert('Draft saved!');
-                }}
+                onClick={handleSaveDraft}
+                disabled={isSaving || isAutoSaving}
+                aria-label="Save current progress as draft"
+                aria-keyshortcuts={getAriaKeyShortcuts([getPlatformShortcut('saveDraft')])}
+                title={`Save Draft (${shortcuts.saveDraft})`}
               >
-                <Save className="w-4 h-4 mr-1" />
-                Save Draft
+                {isAutoSaving ? (
+                  <>
+                    <div className="w-4 h-4 mr-1 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                    Auto-saving...
+                  </>
+                ) : isSaving ? (
+                  <>
+                    <div className="w-4 h-4 mr-1 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-1" />
+                    Save Draft
+                  </>
+                )}
               </Button>
               
               <Button 
                 variant="primary" 
                 onClick={handleNext}
-                disabled={isSaving}
+                disabled={isSaving || isLoadingAPI}
+                aria-label={step === 5 ? "Submit and create study" : "Go to next step"}
+                aria-keyshortcuts={getAriaKeyShortcuts([
+                  step === 5 
+                    ? { meta: true, ctrl: true, key: 'Enter' }
+                    : getPlatformShortcut('next')
+                ])}
+                title={step === 5 
+                  ? `Submit (${shortcuts.submit})` 
+                  : `Next (${shortcuts.next})`}
               >
-                {step === 5 ? (
+                {isLoadingAPI ? (
+                  <>
+                    <div className="w-4 h-4 mr-1 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Processing...
+                  </>
+                ) : step === 5 ? (
                   isSaving ? 'Creating...' : 'Create Study'
-                ) : step === 4 ? (
-                  'Preview Study'
                 ) : (
                   <>
                     Next
@@ -1079,7 +1377,28 @@ export default function EnhancedCreateStudyPage() {
               </Button>
             </div>
           </div>
+
+          {/* Keyboard Shortcuts Help */}
+          <div className="mt-4 text-xs text-tertiary-label text-center">
+            <span className="inline-flex items-center gap-4">
+              <span>{shortcuts.back}: Back</span>
+              <span>{shortcuts.next}: Next</span>
+              <span>{shortcuts.saveDraft}: Save</span>
+              {step === 5 && <span>{shortcuts.submit}: Submit</span>}
+            </span>
+          </div>
       </Card>
+      
+      {/* Popup Modal */}
+      <PopupModal
+        isOpen={popupState.isOpen}
+        onClose={closePopup}
+        type={popupState.type}
+        title={popupState.title}
+        message={popupState.message}
+        onConfirm={popupState.onConfirm}
+        onCancel={popupState.onCancel}
+      />
     </div>
   );
 }

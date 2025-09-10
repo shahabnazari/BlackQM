@@ -2,11 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { studyApi, Study } from '@/lib/api/study';
 import { formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/apple-ui/Button';
 import { Card } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/apple-ui/Badge';
+import { DraftService, StudyDraft } from '@/lib/services/draft.service';
+import { Trash2, Edit3, FileText } from 'lucide-react';
+import { usePopup } from '@/components/ui/PopupModal';
 
 // Use Study type from API service
 // The Study interface is imported from '@/lib/api/study'
@@ -81,14 +85,25 @@ const mockStudies: Study[] = [
 
 export default function StudiesPage() {
   const [studies, setStudies] = useState<Study[]>([]);
+  const [drafts, setDrafts] = useState<StudyDraft[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const { showSuccess, showError, showConfirm } = usePopup();
   // const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchStudies = async () => {
       try {
+        // Fetch published studies
         const data = await studyApi.getStudies();
         setStudies(data);
+        
+        // Fetch local drafts
+        const localDrafts = DraftService.getAllDrafts();
+        setDrafts(localDrafts);
+        
+        // Clean up old drafts (older than 7 days)
+        DraftService.cleanupOldDrafts(7);
       } catch (err) {
         console.error('Failed to fetch studies:', err);
         // setError('Failed to load studies');
@@ -101,6 +116,22 @@ export default function StudiesPage() {
 
     fetchStudies();
   }, []);
+
+  const handleDeleteDraft = (draftId: string) => {
+    showConfirm(
+      'Are you sure you want to delete this draft? This action cannot be undone.',
+      () => {
+        DraftService.deleteDraft(draftId);
+        setDrafts(drafts.filter(d => d.id !== draftId));
+        showSuccess('Draft deleted successfully');
+      },
+      { title: 'Delete Draft' }
+    );
+  };
+
+  const handleContinueDraft = (draftId: string) => {
+    router.push(`/studies/create?draft=${draftId}`);
+  };
 
   const getStatusBadgeVariant = (status: Study['status']) => {
     switch (status) {
@@ -146,7 +177,63 @@ export default function StudiesPage() {
         </Link>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* Drafts Section */}
+      {drafts.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-label mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Unsaved Drafts
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {drafts.map(draft => (
+              <Card key={draft.id} className="relative">
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <button
+                    onClick={() => handleContinueDraft(draft.id)}
+                    className="p-2 rounded-lg bg-system-blue/10 hover:bg-system-blue/20 transition-colors"
+                    aria-label="Continue editing draft"
+                  >
+                    <Edit3 className="w-4 h-4 text-system-blue" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteDraft(draft.id)}
+                    className="p-2 rounded-lg bg-system-red/10 hover:bg-system-red/20 transition-colors"
+                    aria-label="Delete draft"
+                  >
+                    <Trash2 className="w-4 h-4 text-system-red" />
+                  </button>
+                </div>
+                
+                <Badge variant="secondary" className="mb-3">
+                  DRAFT
+                </Badge>
+                
+                <h3 className="text-lg font-semibold text-label line-clamp-2 pr-20">
+                  {draft.title || 'Untitled Study'}
+                </h3>
+                
+                <p className="text-sm text-secondary-label mt-2">
+                  {draft.config.description || 'No description'}
+                </p>
+                
+                <div className="mt-4 pt-4 border-t border-quaternary-fill">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-tertiary-label">Last saved:</span>
+                    <span className="font-medium text-label">
+                      {formatDate(draft.updatedAt, { format: 'medium' })}
+                    </span>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Published Studies Section */}
+      <div>
+        <h2 className="text-xl font-semibold text-label mb-4">Published Studies</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {studies.map(study => (
           <Link key={study.id} href={`/studies/${study.id}`}>
             <Card className="h-full transition-transform hover:scale-[1.02] cursor-pointer">
@@ -204,9 +291,10 @@ export default function StudiesPage() {
             </Card>
           </Link>
         ))}
+        </div>
       </div>
 
-      {studies.length === 0 && (
+      {studies.length === 0 && drafts.length === 0 && (
         <div className="text-center py-12">
           <p className="text-secondary-label mb-4">
             You haven't created any studies yet

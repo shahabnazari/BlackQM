@@ -1,0 +1,328 @@
+/* Floating Image Styles for Advanced Text Wrapping */
+
+/* Base floating image wrapper */
+.floating-image-wrapper {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  transition: all 0.2s ease;
+}
+
+/* Text wrapping modes */
+.floating-image-wrapper[data-wrap-mode="inline"] {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.floating-image-wrapper[data-wrap-mode="left"] {
+  float: left;
+  clear: left;
+  margin-right: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.floating-image-wrapper[data-wrap-mode="right"] {
+  float: right;
+  clear: right;
+  margin-left: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.floating-image-wrapper[data-wrap-mode="center"] {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  clear: both;
+  text-align: center;
+}
+
+.floating-image-wrapper[data-wrap-mode="break-text"] {
+  shape-outside: margin-box;
+  -webkit-shape-outside: margin-box;
+  shape-margin: 1rem;
+  -webkit-shape-margin: 1rem;
+}
+
+/* Image within wrapper */
+.floating-image-wrapper img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Hover and selection states */
+.floating-image-wrapper:hover img,
+.floating-image-wrapper.is-selected img {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.floating-image-wrapper.is-selected {
+  outline: 2px solid var(--color-primary, #007AFF);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Resize handles */
+.floating-image-wrapper .resize-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--color-primary, #007AFF);
+  border: 2px solid white;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+.floating-image-wrapper:hover .resize-handle,
+.floating-image-wrapper.is-selected .resize-handle {
+  opacity: 1;
+}
+
+.floating-image-wrapper .resize-handle.nw {
+  top: -6px;
+  left: -6px;
+  cursor: nw-resize;
+}
+
+.floating-image-wrapper .resize-handle.ne {
+  top: -6px;
+  right: -6px;
+  cursor: ne-resize;
+}
+
+.floating-image-wrapper .resize-handle.sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: sw-resize;
+}
+
+.floating-image-wrapper .resize-handle.se {
+  bottom: -6px;
+  right: -6px;
+  cursor: se-resize;
+}
+
+/* Control overlay */
+.floating-image-controls {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.floating-image-wrapper:hover .floating-image-controls,
+.floating-image-wrapper.is-selected .floating-image-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.floating-image-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #333;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.floating-image-controls button:hover {
+  background: #f0f0f0;
+}
+
+.floating-image-controls button.active {
+  background: var(--color-primary, #007AFF);
+  color: white;
+}
+
+/* Settings panel */
+.floating-image-settings {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  min-width: 240px;
+  z-index: 30;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .floating-image-wrapper img {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  .floating-image-wrapper:hover img,
+  .floating-image-wrapper.is-selected img {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+  
+  .floating-image-controls {
+    background: #2a2a2a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  .floating-image-controls button {
+    color: #e0e0e0;
+  }
+  
+  .floating-image-controls button:hover {
+    background: #3a3a3a;
+  }
+  
+  .floating-image-settings {
+    background: #2a2a2a;
+    color: #e0e0e0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Text reflow around images */
+.ProseMirror p + .floating-image-wrapper[data-wrap-mode="left"],
+.ProseMirror p + .floating-image-wrapper[data-wrap-mode="right"] {
+  margin-top: 0.5rem;
+}
+
+.floating-image-wrapper[data-wrap-mode="left"] + p,
+.floating-image-wrapper[data-wrap-mode="right"] + p {
+  display: inline;
+}
+
+/* Clearfix for floating images */
+.ProseMirror::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .floating-image-wrapper[data-wrap-mode="left"],
+  .floating-image-wrapper[data-wrap-mode="right"] {
+    float: none;
+    display: block;
+    margin: 1rem auto;
+  }
+  
+  .floating-image-wrapper img {
+    max-width: 100%;
+  }
+}
+
+/* Animation for resize */
+.floating-image-wrapper.is-resizing {
+  transition: none;
+}
+
+.floating-image-wrapper.is-resizing img {
+  opacity: 0.8;
+}
+
+/* Drag and drop styles */
+.floating-image-wrapper {
+  cursor: move;
+}
+
+.floating-image-wrapper:active {
+  cursor: grabbing;
+}
+
+.floating-image-wrapper.is-dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.floating-image-wrapper.ProseMirror-selectednode {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Drag handle visual indicator */
+.floating-image-wrapper[draggable="true"]:hover {
+  cursor: grab;
+}
+
+.floating-image-wrapper[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* Drop zone indicator */
+.ProseMirror.dragging .floating-image-wrapper {
+  transition: transform 0.2s ease;
+}
+
+.ProseMirror.dragging .floating-image-wrapper:hover {
+  transform: scale(1.02);
+}
+
+/* Visual feedback during drag */
+.ProseMirror .ProseMirror-gapcursor {
+  display: block;
+  position: absolute;
+  width: 2px;
+  background-color: #3b82f6;
+  animation: ProseMirror-cursor-blink 1.1s steps(2, start) infinite;
+}
+
+@keyframes ProseMirror-cursor-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Inline image upload modal styles */
+.image-upload-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.image-upload-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 900px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Checkered background for transparent images */
+.bg-checkered {
+  background-image: 
+    linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+    linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+    linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}

@@ -1,0 +1,322 @@
+/* Apple UI Compatible Image Extension Styles */
+.advanced-image-wrapper,
+.simple-image-wrapper {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  margin: var(--spacing-sm);
+  line-height: 0;
+  /* Use Apple UI design tokens */
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.advanced-image,
+.simple-image {
+  position: relative;
+  display: inline-block;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all var(--duration-fast) var(--ease-out);
+  box-shadow: var(--shadow-sm);
+  /* Use Apple UI colors */
+  background-color: var(--color-tertiary-background);
+}
+
+.advanced-image:hover,
+.simple-image:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.advanced-image.ring-2,
+.simple-image.ring-2 {
+  box-shadow: 0 0 0 2px var(--color-system-blue);
+}
+
+.advanced-image.ring-blue-400,
+.simple-image.ring-blue-400 {
+  box-shadow: 0 0 0 2px var(--color-system-blue);
+}
+
+.advanced-image.ring-green-400,
+.simple-image.ring-green-400 {
+  box-shadow: 0 0 0 2px var(--color-system-green);
+}
+
+/* Apple UI Compatible Drag Handle */
+.drag-handle {
+  transition: all var(--duration-fast) var(--ease-out);
+  /* Use Apple UI button styling */
+  background-color: var(--color-quaternary-fill);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs);
+  cursor: move;
+  /* Apple UI focus styles */
+  outline: none;
+}
+
+.drag-handle:hover {
+  background-color: var(--color-tertiary-fill);
+  transform: scale(1.05);
+}
+
+.drag-handle:focus-visible {
+  box-shadow: 0 0 0 3px rgba(var(--color-system-blue-rgb), 0.3);
+}
+
+/* Apple UI Compatible Resize Handles */
+.react-resizable-handle {
+  background: var(--color-system-blue);
+  border-radius: var(--radius-sm);
+  opacity: 0.7;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.react-resizable-handle:hover {
+  opacity: 1;
+  background: var(--color-system-blue);
+  transform: scale(1.1);
+}
+
+/* Apple UI Compatible Control Buttons */
+.advanced-image-wrapper button,
+.simple-image-wrapper button {
+  /* Use Apple UI button base styles */
+  font-family: var(--font-family-text);
+  font-size: var(--text-caption-1);
+  font-weight: 500;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  min-height: 32px;
+  /* Apple UI button styling */
+  background-color: var(--color-quaternary-fill);
+  color: var(--color-label);
+  transition: all var(--duration-fast) var(--ease-out);
+  backdrop-filter: blur(8px);
+}
+
+.advanced-image-wrapper button:hover,
+.simple-image-wrapper button:hover {
+  background-color: var(--color-tertiary-fill);
+  transform: scale(1.05);
+  backdrop-filter: blur(12px);
+}
+
+.advanced-image-wrapper button:focus-visible,
+.simple-image-wrapper button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--color-system-blue-rgb), 0.3);
+}
+
+/* Apple UI Compatible Size Info */
+.advanced-image-wrapper .size-info,
+.simple-image-wrapper .size-info {
+  font-family: var(--font-family-mono);
+  font-size: var(--text-caption-2);
+  letter-spacing: 0.5px;
+  /* Use Apple UI colors */
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+}
+
+/* Apple UI Compatible Fullscreen Mode */
+.advanced-image-wrapper.fullscreen,
+.simple-image-wrapper.fullscreen {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  max-width: 90vw;
+  max-height: 90vh;
+  /* Use Apple UI backdrop */
+  backdrop-filter: blur(20px);
+  background-color: rgba(var(--color-system-background), 0.8);
+}
+
+/* Apple UI Compatible Text Flow Integration */
+.ProseMirror .advanced-image-wrapper,
+.ProseMirror .simple-image-wrapper {
+  margin: var(--spacing-sm);
+  vertical-align: middle;
+  line-height: 1.2;
+  /* Better text flow */
+  display: inline-block;
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+.ProseMirror .advanced-image-wrapper img,
+.ProseMirror .simple-image-wrapper img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  /* Maintain aspect ratio */
+  object-fit: contain;
+}
+
+/* Better text wrapping around images */
+.ProseMirror .advanced-image-wrapper,
+.ProseMirror .simple-image-wrapper {
+  /* Allow text to flow around the image */
+  float: none;
+  clear: none;
+  /* Ensure proper spacing */
+  margin: var(--spacing-sm) var(--spacing-xs);
+}
+
+/* Apple UI Compatible Responsive Design */
+@media (max-width: 768px) {
+  .advanced-image-wrapper,
+  .simple-image-wrapper {
+    margin: var(--spacing-xs);
+  }
+  
+  .advanced-image-wrapper button,
+  .simple-image-wrapper button {
+    padding: var(--spacing-xs);
+    min-height: 28px;
+  }
+  
+  .advanced-image-wrapper .size-info,
+  .simple-image-wrapper .size-info {
+    font-size: var(--text-caption-2);
+  }
+}
+
+/* Apple UI Compatible Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .advanced-image,
+  .simple-image {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .advanced-image:hover,
+  .simple-image:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  .advanced-image-wrapper button,
+  .simple-image-wrapper button {
+    background-color: var(--color-quaternary-fill);
+    color: var(--color-label);
+  }
+
+  .advanced-image-wrapper button:hover,
+  .simple-image-wrapper button:hover {
+    background-color: var(--color-tertiary-fill);
+  }
+}
+
+/* Apple UI Compatible Animations */
+@keyframes imageResize {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.02);
+  }
+}
+
+.advanced-image.resizing,
+.simple-image.resizing {
+  animation: imageResize 0.1s var(--ease-out);
+}
+
+/* Apple UI Compatible Focus Styles */
+.advanced-image-wrapper:focus-within,
+.simple-image-wrapper:focus-within {
+  outline: 2px solid var(--color-system-blue);
+  outline-offset: 2px;
+}
+
+/* Apple UI Compatible Loading State */
+.advanced-image-wrapper.loading,
+.simple-image-wrapper.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.advanced-image-wrapper.loading::after,
+.simple-image-wrapper.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--color-system-blue);
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Apple UI Compatible React-RND Components */
+.react-rnd {
+  position: relative;
+  display: inline-block;
+  z-index: 10;
+}
+
+.simple-image-wrapper .react-rnd,
+.advanced-image-wrapper .react-rnd {
+  position: relative;
+  display: inline-block;
+  z-index: 10;
+}
+
+/* Apple UI Compatible Resize Handles */
+.simple-image-wrapper .react-rnd .react-resizable-handle,
+.advanced-image-wrapper .react-rnd .react-resizable-handle {
+  position: absolute;
+  z-index: 20;
+}
+
+/* Apple UI Compatible Drag Handles */
+.simple-image-wrapper .drag-handle,
+.advanced-image-wrapper .drag-handle {
+  position: absolute;
+  z-index: 30;
+  cursor: move;
+}
+
+/* Apple UI Compatible Image Containers */
+.simple-image-wrapper,
+.advanced-image-wrapper {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  margin: var(--spacing-sm);
+  line-height: 1.2;
+  float: none;
+  clear: none;
+  /* Better text flow integration */
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+/* Apple UI Compatible Image Sizing */
+.simple-image-wrapper img,
+.advanced-image-wrapper img {
+  max-width: none;
+  max-height: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}

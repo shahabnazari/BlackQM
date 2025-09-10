@@ -68,18 +68,20 @@ class UltimateDevManager {
     
     // Kill all Node.js processes related to our project
     const killCommands = [
-      'pkill -f "next dev" || true',
-      'pkill -f "nest start" || true', 
-      'pkill -f "npm run dev" || true',
-      'pkill -f "npm run start:dev" || true',
-      'pkill -f "dev-manager" || true',
-      'pkill -f "dev-simple" || true',
-      'pkill -f "dev-ultimate" || true'
+      'pkill -9 -f "next dev" || true',
+      'pkill -9 -f "nest start" || true', 
+      'pkill -9 -f "npm run dev" || true',
+      'pkill -9 -f "npm run start:dev" || true',
+      'pkill -9 -f "dev-manager" || true',
+      'pkill -9 -f "dev-simple" || true',
+      'pkill -9 -f "dev-ultimate" || true',
+      'pkill -9 -f "stop-ultimate" || true'
     ];
     
     for (const cmd of killCommands) {
       try {
         await execAsync(cmd);
+        console.log(`   ✅ Executed: ${cmd}`);
       } catch (error) {
         // Continue if no processes found
       }
@@ -116,6 +118,14 @@ class UltimateDevManager {
       } catch (error) {
         // Port is free
       }
+    }
+    
+    // Additional cleanup - kill any remaining Node.js processes
+    try {
+      await execAsync('pkill -9 -f "node.*blackQmethhod" || true');
+      console.log('   ✅ Killed remaining Node.js processes');
+    } catch (error) {
+      // No processes found
     }
   }
 

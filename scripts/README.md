@@ -3,112 +3,137 @@
 ## Active Scripts (USE THESE)
 
 ### Primary Server Management
-- **`dev-manager-unified.js`** - Main development server manager
-  - Usage: `npm run dev` (standard mode)
-  - Modes: simple, standard, enterprise
+- **`dev-ultimate-v3.js`** - Latest development server manager with enhanced monitoring
+  - Usage: `npm run dev` (default - uses V3)
+  - Features:
+    - Active HTTP health checks every 5 seconds
+    - Automatic stall detection (30-second timeout)
+    - Self-healing recovery mechanism
+    - Detailed logging to `logs/dev-manager.log`
+    - Force cleanup of orphaned processes
   - Manages both frontend (port 3000) and backend (port 4000)
-  - Handles health checks, auto-restart, and port cleanup
-  - **IMPROVED**: Atomic lock file prevents duplicates
-  - **IMPROVED**: Blocks Next.js port fallback (3001-3003)
-  - **IMPROVED**: Cleans orphaned processes
+  - **BEST FOR**: Production-like stability with automatic recovery
+
+- **`dev-ultimate-v2.js`** - Previous version with basic monitoring
+  - Usage: `npm run dev:v2`
+  - Basic process monitoring
+  - Legacy version (use V3 instead)
+
+- **`dev-ultimate.js`** - Original ultimate manager
+  - Usage: `npm run dev:ultimate`
+  - Basic functionality
+  - Legacy version (use V3 instead)
 
 ### Utility Scripts
-- **`stop-all.js`** - Stops all running servers
+- **`stop-ultimate.js`** - Stops all running servers
   - Usage: `npm run stop`
-  - Kills processes on ports 3000, 4000, 5000
-  - Used by the unified dev manager
-
-- **`restart.sh`** - Restarts all servers
-  - Usage: `npm run restart`
-  - Runs stop, waits 2 seconds, then starts dev
-
-- **`check-duplicates.js`** - Diagnose duplicate process issues
-  - Usage: `npm run check:duplicates`
-  - Detects multiple Next.js instances
-  - Identifies "spinning website" cause
-  - Auto-fix: `npm run fix:duplicates`
-
-### Testing & Monitoring
-- **`test-cors-ports.js`** - Tests CORS and port configuration
-- **`monitor.js`** - Monitors server health (if exists)
-- **`test-duplicate-prevention.js`** - Validates duplicate prevention
+  - Kills all Node.js processes
+  - Cleans ports 3000-3005, 4000-4005, 5000-5001
+  - Removes all lock files
 
 ## NPM Scripts (package.json)
 
 ```bash
 # Start development servers (RECOMMENDED)
-npm run dev              # Standard mode with health checks
-npm run dev:simple       # Simple mode, minimal overhead  
-npm run dev:enterprise   # Enterprise mode with full monitoring
-npm run dev:debug        # Simple mode with verbose output
+npm run dev              # Uses V3 with enhanced monitoring (DEFAULT)
+npm run dev:v3           # Explicitly use V3
+npm run dev:v2           # Use legacy V2
+npm run dev:ultimate     # Use original ultimate manager
 
 # Stop all servers
 npm run stop
 
 # Restart servers
-npm run restart
+npm run restart          # Stop and start with V3
 
 # Clean restart (removes build artifacts)
-npm run dev:clean
-
-# Check for duplicate processes
-npm run check:duplicates
-
-# Auto-fix duplicate issues
-npm run fix:duplicates
+npm run dev:clean        # Clean build with V3
 
 # Individual servers (for debugging only)
-npm run dev:frontend-only
-npm run dev:backend-only
+npm run dev:frontend-only   # Frontend only (if configured)
+npm run dev:backend-only    # Backend only (if configured)
 ```
 
-## Archived Scripts
+## V3 Features (Current Default)
 
-Old/redundant scripts have been moved to `scripts/archive-legacy/`:
-- dev-manager.js (replaced by unified)
-- enterprise-dev-manager.js (replaced by unified)
-- port-manager.js (functionality in unified)
-- port-manager-enhanced.js (functionality in unified)
-- start-safe.js (replaced by unified)
-- start-safe-enhanced.js (replaced by unified)
-- start.sh (replaced by npm scripts)
-- stop.sh (replaced by stop-all.js)
+### Enhanced Health Monitoring
+- HTTP health checks every 5 seconds
+- Verifies servers are actually responding
+- Not just checking if process exists
+
+### Automatic Recovery
+- Detects stalled servers within 30 seconds
+- Automatic restart on failure
+- 3-failure threshold before forced restart
+
+### Detailed Logging
+- All events logged to `logs/dev-manager.log`
+- Timestamped entries
+- Console output with clear status indicators
+
+### Better Process Management
+- SIGKILL for guaranteed cleanup
+- Port-specific process termination
+- Extended wait times for port release
 
 ## Important Notes
 
-1. **ALWAYS use `npm run dev`** for starting servers
+1. **ALWAYS use `npm run dev`** for starting servers (uses V3 by default)
 2. **ALWAYS use `npm run stop`** before manually starting servers
-3. The unified dev manager prevents duplicate processes
+3. V3 prevents zombie processes and stalling
 4. Default ports: Frontend=3000, Backend=4000
-5. Health checks run every 30 seconds in standard/enterprise modes
+5. Health checks are active, not passive
 
 ## Troubleshooting
 
-### Website "Spinning" or Slow
-This is usually caused by multiple Next.js instances on different ports.
+### Website Stalling or Not Responding
+V3 automatically detects and recovers from stalls. If issues persist:
 
-**Quick Fix:**
 ```bash
-npm run fix:duplicates
-npm run dev
+npm run stop          # Stop all servers
+npm run dev:clean     # Clean restart with V3
 ```
 
-**Manual Diagnosis:**
+### Check Server Status
+Look for health check messages in console:
+- ✅ Successful health checks (silent)
+- ⚠️ Failed health checks (warnings shown)
+- 🔄 Automatic restarts (logged)
+
+### View Detailed Logs
 ```bash
-npm run check:duplicates
-# Review the output
-# If duplicates found, run fix:duplicates
+tail -f logs/dev-manager.log   # Watch real-time logs
 ```
 
 ### Port Already in Use
 ```bash
 npm run stop          # Stop all servers
-npm run fix:duplicates # Clean all ports
-npm run dev           # Start fresh
+lsof -i :3000,4000   # Check what's using ports
+npm run dev           # Start fresh with V3
 ```
 
-### Lock File Issues
-If you see "Another instance is already running":
-1. Check if servers are actually running: `npm run check:duplicates`
-2. If no servers running, the lock file is stale
-3. Run: `npm run fix:duplicates` to clean it up
+### Manual Recovery
+If automatic recovery fails:
+```bash
+npm run stop          # Force stop everything
+ps aux | grep node    # Check for zombies
+npm run dev:clean     # Clean restart
+```
+
+## Migration from Old Managers
+
+If you were using:
+- `dev-manager-unified.js` → Now use `dev-ultimate-v3.js`
+- `dev-manager.js` → Now use `dev-ultimate-v3.js`
+- `enterprise-dev-manager.js` → Now use `dev-ultimate-v3.js`
+- `dev-simple.js` → Now use `dev-ultimate-v3.js`
+
+All functionality has been consolidated and improved in V3.
+
+## Why V3?
+
+1. **Reliability**: Active health monitoring prevents zombie processes
+2. **Recovery**: Automatic detection and recovery from stalls
+3. **Visibility**: Detailed logging for debugging
+4. **Simplicity**: One manager handles all scenarios
+5. **Performance**: Optimized health checks with minimal overhead

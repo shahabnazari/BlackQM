@@ -1,6 +1,6 @@
 'use client';
 
-import React, { forwardRef, InputHTMLAttributes, useState } from 'react';
+import React, { forwardRef, InputHTMLAttributes, useState, useId } from 'react';
 import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
@@ -44,7 +44,8 @@ const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
     const hasValue = Boolean(props.value || props.defaultValue);
     
     const currentVariant = error ? 'error' : variant || 'default';
-    const inputId = id || `text-field-${Math.random().toString(36).substr(2, 9)}`;
+    const generatedId = useId();
+    const inputId = id || `text-field-${generatedId}`;
     const helperId = `${inputId}-helper`;
     const errorId = `${inputId}-error`;
 

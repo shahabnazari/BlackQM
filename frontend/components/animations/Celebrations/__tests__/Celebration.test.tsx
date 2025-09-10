@@ -13,8 +13,7 @@ import {
 
 // Mock react-confetti
 vi.mock('react-confetti', () => ({
-  default: ({ active, config }: any) => 
-    active ? <div data-testid="confetti" {...config} /> : null,
+  default: (props: any) => <div data-testid="confetti" {...props} />,
 }));
 
 // Mock lottie-react
@@ -30,24 +29,33 @@ vi.mock('lottie-react', () => ({
 }));
 
 // Mock framer-motion
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, initial, animate, exit, transition, variants, ...props }: any) => (
-      <div data-animate={JSON.stringify(animate)} {...props}>
-        {children}
-      </div>
-    ),
-    svg: ({ children, ...props }: any) => <svg {...props}>{children}</svg>,
-    path: ({ ...props }: any) => <path {...props} />,
-    circle: ({ ...props }: any) => <circle {...props} />,
-    text: ({ children, ...props }: any) => <text {...props}>{children}</text>,
-  },
-  AnimatePresence: ({ children }: any) => children,
-  useAnimation: () => ({
-    start: vi.fn(),
-    stop: vi.fn(),
-  }),
-}));
+vi.mock('framer-motion', () => {
+  const React = require('react');
+  return {
+    motion: {
+      div: React.forwardRef(({ children, initial, animate, exit, transition, variants, ...props }: any, ref: any) => 
+        React.createElement('div', { 'data-animate': JSON.stringify(animate), ref, ...props }, children)
+      ),
+      svg: React.forwardRef(({ children, ...props }: any, ref: any) => 
+        React.createElement('svg', { ref, ...props }, children)
+      ),
+      path: React.forwardRef((props: any, ref: any) => 
+        React.createElement('path', { ref, ...props })
+      ),
+      circle: React.forwardRef((props: any, ref: any) => 
+        React.createElement('circle', { ref, ...props })
+      ),
+      text: React.forwardRef(({ children, ...props }: any, ref: any) => 
+        React.createElement('text', { ref, ...props }, children)
+      ),
+    },
+    AnimatePresence: ({ children }: any) => React.createElement(React.Fragment, null, children),
+    useAnimation: () => ({
+      start: vi.fn(),
+      stop: vi.fn(),
+    }),
+  };
+});
 
 // Mock window dimensions for confetti
 beforeEach(() => {

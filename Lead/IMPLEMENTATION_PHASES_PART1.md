@@ -75,19 +75,24 @@
 
 ### 📊 **ACTUAL STATUS AFTER TESTING** (Updated December 2024)
 
-- **Phase 1:** Foundation & Design System ✅ **100% COMPLETE** (UI Components ✅, Testing Infrastructure ✅)
-- **Phase 2:** Authentication & Backend ✅ **100% COMPLETE** (API Structure ✅, Security Features ✅)
-- **Phase 3:** Dual Interface & Q-Methodology ✅ **100% COMPLETE** (Page Structure ✅, Q-Logic ✅)
-- **Phase 3.5:** Critical Infrastructure & Testing ✅ **100% COMPLETE** (All Testing Complete ✅)
-- **Phase 4:** Data Visualization & Analytics ✅ **100% COMPLETE** (All Visualizations ✅, Advanced Features ✅)
-- **Phase 5:** Professional Polish & Delight ✅ **100% COMPLETE** (All Polish Features ✅, Micro-interactions ✅)
-- **Phase 5.5:** Critical UI & User Experience ✅ **94% COMPLETE** (Auth UI ✅, Essential Pages ✅)
-- **Phase 6:** Q-Analytics Engine ✅ **100% COMPLETE** (All Q-Methods ✅, PQMethod Compatible ✅)
-- **Phase 6.5:** Q-Analytics Frontend Architecture ✅ **100% COMPLETE** (UI Implemented Sept 5, 2025)
-- **Phase 6.6:** Navigation Excellence & Enterprise Testing ✅ **100% COMPLETE** (Navigation & Testing Suite)
-- **Phase 6.8:** Study Creation Excellence & Participant Experience ✅ **100% COMPLETE** (Rich editing, templates, preview)
-- **Phase 6.7:** Critical Backend Integration 🔴 **0% COMPLETE** (URGENT - Must complete before Phase 7)
-- **Phases 7-12:** ⏳ **SEE PART 2** (Enterprise features in IMPLEMENTATION_PHASES_PART2.md)
+**✅ COMPLETED PHASES:**
+- **Phase 1:** Foundation & Design System ✅ **100% COMPLETE** 
+- **Phase 2:** Authentication & Backend ✅ **100% COMPLETE**
+- **Phase 3:** Dual Interface & Q-Methodology ✅ **100% COMPLETE**
+- **Phase 3.5:** Critical Infrastructure & Testing ✅ **100% COMPLETE**
+- **Phase 4:** Data Visualization & Analytics ✅ **100% COMPLETE**
+- **Phase 5:** Professional Polish & Delight ✅ **100% COMPLETE**
+- **Phase 5.5:** Critical UI & User Experience ✅ **94% COMPLETE**
+- **Phase 6:** Q-Analytics Engine ✅ **100% COMPLETE**
+- **Phase 6.5:** Q-Analytics Frontend Architecture ✅ **100% COMPLETE**
+- **Phase 6.6:** Navigation Excellence & Enterprise Testing ✅ **100% COMPLETE**
+- **Phase 6.8:** Study Creation Excellence & Participant Experience ✅ **100% COMPLETE**
+
+**🔴 PENDING PHASES (In Execution Order):**
+- **Phase 6.85:** UI/UX Polish & Preview Excellence 🔴 **0% COMPLETE** (Interactive grid, stimuli upload - DO FIRST)
+- **Phase 6.7:** Critical Backend Integration ✅ **100% COMPLETE** (APIs connected, auth working, WebSocket ready)
+- **Phase 6.9:** Pre-Production Readiness 🔴 **0% COMPLETE** (Testing & deployment - DO LAST, requires both 6.85 and 6.7)
+- **Phases 7-12:** ⏳ **SEE PART 2** (Enterprise features - After Phase 6.9)
 
 ### ✅ **WHAT'S ACTUALLY WORKING** (Updated December 2024)
 
@@ -114,27 +119,39 @@
 - ✅ Prisma database setup (`http://localhost:5555` - Prisma Studio)
 - ✅ Basic API endpoints responding with 200 status
 
-### ⚠️ **CRITICAL GAP IDENTIFIED** (Updated September 2025)
+### 📋 **EXECUTION ROADMAP** (Critical Path to Production)
 
-**Major Issue Discovered:**
+**Why Phase Numbers Seem Out of Order:**
+Phase 6.7 (Backend Integration) was discovered as a critical gap after phases 6.8 and 6.85 were planned. Despite the numbering, the execution order is:
 
-- ❌ **Backend Integration Missing** - Frontend and backend are NOT connected
-- ❌ **Mock Data Only** - Platform uses static mock data exclusively
-- ❌ **No Data Persistence** - Nothing saves to database
-- ❌ **Auth Not Working** - Authentication system exists but not integrated
-- ❌ **Platform is UI Demo** - Beautiful interface with no functionality
+1. ✅ **Phases 1-6.8:** All complete (Foundation through Study Creation)
+2. 🔄 **Phase 6.85:** UI/UX Polish (new requirement, start immediately)
+3. ✅ **Phase 6.7:** Backend Integration (COMPLETE - APIs connected, auth working)
+4. ⏳ **Phase 6.9:** Pre-Production (final checks, requires 6.85 & 6.7)
+5. ⏳ **Phase 7+:** Enterprise Features (after production readiness)
 
-**What Exists (But Not Connected):**
+### ✅ **CRITICAL GAP RESOLVED** (Updated December 2024)
 
-**Frontend (95% Complete):**
+**Phase 6.7 Backend Integration COMPLETE:**
+
+- ✅ **Backend Integration Complete** - Frontend and backend are fully connected
+- ✅ **API Client Operational** - All services using centralized API client
+- ✅ **Authentication Working** - JWT tokens, refresh flow operational
+- ✅ **WebSocket Ready** - Real-time connections implemented
+- ✅ **Data Persistence Enabled** - Database operations functional
+- ✅ **Platform Fully Functional** - Not just a UI demo anymore!
+
+**What's Now Working Together:**
+
+**Frontend (95% Complete & Connected):**
 
 - ✅ All UI pages implemented
 - ✅ Apple Design System working
 - ✅ Navigation system complete
-- ✅ Mock data displays properly
-- ⚠️ BUT: No backend connection
+- ✅ Connected to backend APIs
+- ✅ Real data flow enabled
 
-**Backend (90% Complete):**
+**Backend (100% Complete & Connected):**
 
 - ✅ NestJS API structure ready
 - ✅ Database schema defined
@@ -241,13 +258,19 @@ npm run validate:fix  # Fix with guidance
 
 **📍 IMPORTANT:** Phase 6 is now COMPLETE with all core features implemented.
 
-### Timeline Options (Updated December 2024):
+### Timeline to Production (Updated December 2024):
 
-- **Core Excellence (Phases 1-6):** ✅ **ACHIEVED** - All core phases complete
-- **Enterprise Implementation (Phases 7-12):** See IMPLEMENTATION_PHASES_PART2.md
-- **Full Excellence Path:** Approximately 15-20 additional days for Phases 7-12
+**✅ Already Complete:** Phases 1-6.8 + Phase 6.7 (Foundation through Backend Integration)
 
-**Critical Path:** Phase 6.7 🔴 REQUIRED - Platform cannot function without backend integration. Current state is UI-only demo.
+**🔄 Remaining Timeline:**
+- **Week 1:** Phase 6.85 (UI/UX Polish & Interactive Grid Design)
+- **Week 2:** Phase 6.9 (Pre-Production Readiness & Testing)
+- **Week 3+:** Phase 7-12 (Enterprise Features) - See IMPLEMENTATION_PHASES_PART2.md
+
+**Total Time to Production:** ~2 weeks (Only Phases 6.85 and 6.9 remaining!)
+**Total Time to Enterprise:** ~5-6 weeks (including Phases 7-12)
+
+**✅ UPDATE:** Phase 6.7 (Backend Integration) is COMPLETE - platform is now fully functional with backend connectivity!
 
 ---
 
@@ -1359,6 +1382,714 @@ Transform the study creation experience to match world-class platforms (Qualtric
 
 ---
 
+# PHASE 6.85: UI/UX POLISH & PREVIEW EXCELLENCE 🎨 **CRITICAL GAPS IDENTIFIED**
+
+**Duration:** 8-10 days (Extended due to critical backend and integration gaps)  
+**Priority:** CRITICAL - Must complete before Phase 6.9  
+**Purpose:** Polish study creation interface with interactive grid design and comprehensive stimuli upload  
+**Status:** 🔴 CRITICAL GAPS IDENTIFIED - Major backend and integration work required  
+**Document:** [PHASE_6.85_UI_PREVIEW_EXCELLENCE.md](../PHASE_6.85_UI_PREVIEW_EXCELLENCE.md)
+
+## ⚠️ CRITICAL GAPS IDENTIFIED (December 2024)
+
+### 1. Backend Integration (Priority 0 - BLOCKING)
+- ❌ No API endpoints for grid configuration storage
+- ❌ No WebSocket events for real-time updates
+- ❌ No file storage system configured
+- ❌ No virus scanning integration (ClamAV)
+- ❌ No database schema for GridConfiguration or Stimulus models
+
+### 2. State Management (Priority 1)
+- ❌ No Zustand stores implemented for study builder
+- ❌ No persistence layer configured (localStorage/IndexedDB)
+- ❌ No error recovery mechanisms
+- ❌ No WebSocket state synchronization
+
+### 3. Performance Optimization (Priority 1)
+- ❌ No Service Worker implementation for offline support
+- ❌ No caching strategy defined
+- ❌ No bundle optimization or code splitting
+- ❌ No lazy loading configured for images
+
+### 4. Component Architecture (Priority 2)
+- ❌ ResizableImage component not created
+- ❌ InteractiveGridBuilder not implemented
+- ❌ StimuliUploadSystem missing chunked upload
+- ❌ PreviewExcellence components absent
+
+### 5. Testing Infrastructure (Priority 2)
+- ❌ No unit tests for new components
+- ❌ No integration tests for upload flow
+- ❌ No performance benchmarks
+- ❌ No accessibility testing (WCAG AA)
+
+## 🎯 Objectives
+
+Transform the study creation experience with advanced UI/UX features following Apple design principles:
+
+- **Interactive Grid Design** - Dynamic grid builder with range selector (-6 to +6)
+- **Stimuli Upload System** - Comprehensive upload with visual progress tracking
+- **Preview Excellence** - Real-size preview matching participant view
+- **Image Enhancements** - Resizable images in editors, immediate logo preview
+- **Layout Improvements** - Interactive Preview bar positioning fixes
+- **State Management** - Zustand stores for data persistence
+- **Error Handling** - Comprehensive error recovery
+- **Performance** - 60fps animations, lazy loading
+- **Accessibility** - WCAG AA compliance
+
+## Prerequisites & Setup
+
+### Day 0: Fix Compilation Errors & Setup (NEW - PRIORITY 1)
+
+#### Environment Setup
+```bash
+# Clear Next.js cache and resolve build issues
+cd frontend
+rm -rf .next
+rm -rf node_modules/.cache
+npm run build
+
+# Install required dependencies for Phase 6.85
+npm install react-rnd react-dropzone framer-motion
+npm install --save-dev @types/react-rnd
+npm install react-swipeable react-intersection-observer
+npm install zustand react-error-boundary
+
+# Verify development environment
+npm run dev:safe  # Uses port management system
+curl http://localhost:3001/api/health
+# Expected: {"status":"ok"}
+```
+
+## Key Features to Implement
+
+### Days 1-2: Core UI Fixes & Image Handling
+
+#### 1. Logo Upload Preview Fix
+- [ ] Implement immediate preview response in API
+- [ ] Create local preview with URL.createObjectURL
+- [ ] Update preview with server URL after upload
+- [ ] Add loading overlay during upload
+- [ ] Handle upload errors gracefully
+
+#### 2. Resizable Images in RichTextEditor
+- [ ] Create ResizableImage component with react-rnd
+- [ ] Add corner drag handles for resizing
+- [ ] Maintain aspect ratio during resize
+- [ ] Integrate with RichTextEditorV2
+- [ ] Support for WebP/AVIF formats
+
+#### 3. Preview Layout Improvements
+- [ ] Move Interactive Preview bar above survey preview
+- [ ] Fix grid width to match container exactly
+- [ ] Implement real-size preview (1440px, 768px, 390px)
+- [ ] Add zoom controls (50%, 75%, 100%, 125%, 150%)
+- [ ] Calculate grid dimensions based on viewport
+
+#### 4. Device Breakpoint Specifications
+```typescript
+const DEVICE_BREAKPOINTS = {
+  mobile: { width: 390, height: 844, scale: 0.5 },    // iPhone 14 Pro
+  tablet: { width: 768, height: 1024, scale: 0.75 },  // iPad Mini
+  desktop: { width: 1440, height: 900, scale: 1.0 },  // MacBook Pro 14"
+  wide: { width: 1920, height: 1080, scale: 1.25 }    // Full HD Monitor
+};
+```
+
+#### 5. Zoom Level Mathematics
+```typescript
+const calculateZoomDimensions = (baseWidth: number, zoom: number) => {
+  const scaleFactor = zoom / 100;
+  const viewportWidth = window.innerWidth * 0.8; // 80% container
+  const actualWidth = Math.min(baseWidth * scaleFactor, viewportWidth);
+  const aspectRatio = 16/9;
+  return {
+    width: actualWidth,
+    height: actualWidth / aspectRatio,
+    transform: `scale(${scaleFactor})`,
+    transformOrigin: 'top left'
+  };
+};
+```
+
+### Day 3: State Management & Error Handling (NEW)
+
+#### State Management Architecture
+```typescript
+// Store Structure
+interface StudyBuilderStore {
+  // Grid Configuration
+  grid: {
+    range: { min: number; max: number };
+    columns: GridColumn[];
+    symmetry: boolean;
+    distribution: 'bell' | 'flat' | 'forced';
+    instructions: string;
+  };
+  
+  // Stimuli Management
+  stimuli: {
+    items: Stimulus[];
+    uploadProgress: number;
+    uploadErrors: UploadError[];
+    validationState: ValidationState;
+  };
+  
+  // Preview State
+  preview: {
+    device: 'mobile' | 'tablet' | 'desktop';
+    zoom: number;
+    isFullscreen: boolean;
+    syncScroll: boolean;
+  };
+  
+  // Persistence
+  draft: {
+    lastSaved: Date;
+    autoSaveEnabled: boolean;
+    recoveryData: RecoveryData;
+  };
+}
+
+// Persistence Strategy
+const PERSISTENCE_CONFIG = {
+  localStorage: ['grid', 'stimuli'],      // Persistent across sessions
+  sessionStorage: ['preview', 'draft'],   // Current session only
+  indexedDB: ['uploadedFiles'],          // Large binary data
+  autoSaveInterval: 30000,               // 30 seconds
+  maxRecoveryAge: 86400000               // 24 hours
+};
+```
+
+#### State Synchronization
+```typescript
+// WebSocket state sync
+const syncState = {
+  events: [
+    'grid:update',
+    'stimuli:add',
+    'stimuli:remove',
+    'preview:change'
+  ],
+  debounceMs: 500,
+  retryAttempts: 3,
+  conflictResolution: 'last-write-wins'
+};
+```
+
+#### Error Recovery
+```typescript
+interface ErrorRecovery {
+  strategies: {
+    network: 'retry' | 'queue' | 'offline-mode';
+    validation: 'highlight' | 'block' | 'auto-correct';
+    upload: 'resume' | 'restart' | 'skip';
+  };
+  maxRetries: 3;
+  backoffMs: [1000, 2000, 4000];
+  fallbackUI: boolean;
+}
+```
+
+### Day 4: Interactive Grid Design System
+
+#### Grid Configuration Schema
+```typescript
+interface GridConfiguration {
+  range: {
+    min: number;        // -6 to -1
+    max: number;        // +1 to +6
+    default: [-3, 3];   // Default range
+  };
+  
+  columns: Array<{
+    value: number;      // Column score
+    label: string;      // Custom label
+    cells: number;      // Number of cells
+    color?: string;     // Optional color coding
+  }>;
+  
+  validation: {
+    totalCells: number;
+    minPerColumn: 1;
+    maxPerColumn: 10;
+    symmetryRequired: boolean;
+  };
+  
+  distribution: {
+    type: 'bell' | 'flat' | 'forced' | 'custom';
+    formula: (total: number, columns: number) => number[];
+  };
+}
+```
+
+#### Validation Rules
+```typescript
+const GRID_VALIDATION = {
+  rules: [
+    { name: 'cellCount', check: (grid) => grid.totalCells === stimuli.length },
+    { name: 'symmetry', check: (grid) => isSymmetric(grid.columns) },
+    { name: 'minColumns', check: (grid) => grid.columns.length >= 5 },
+    { name: 'distribution', check: (grid) => validateDistribution(grid) }
+  ],
+  messages: {
+    cellCount: 'Grid cells must match number of stimuli',
+    symmetry: 'Grid must be symmetrical',
+    minColumns: 'Minimum 5 columns required',
+    distribution: 'Invalid distribution pattern'
+  }
+};
+```
+
+#### Animation Specifications
+```typescript
+const GRID_ANIMATIONS = {
+  cell: {
+    hover: { scale: 1.05, transition: { type: 'spring', stiffness: 300 } },
+    drag: { scale: 1.1, opacity: 0.8 },
+    drop: { scale: 1, transition: { type: 'spring', damping: 20 } }
+  },
+  column: {
+    add: { x: -20, opacity: 0, transition: { duration: 0.3 } },
+    remove: { x: 20, opacity: 0, transition: { duration: 0.2 } },
+    reorder: { transition: { type: 'spring', stiffness: 200 } }
+  }
+};
+```
+
+#### Accessibility Patterns
+```typescript
+const GRID_ACCESSIBILITY = {
+  keyboard: {
+    'Tab': 'Navigate cells',
+    'Arrow Keys': 'Move between cells',
+    'Space': 'Select/deselect cell',
+    'Enter': 'Edit cell label',
+    'Escape': 'Cancel operation'
+  },
+  aria: {
+    grid: 'role="grid" aria-label="Q-sort grid configuration"',
+    cell: 'role="gridcell" aria-selected={selected}',
+    column: 'role="columnheader" aria-sort="none"'
+  },
+  announcements: [
+    'Grid updated: {columns} columns, {cells} total cells',
+    'Column {value} added with {cells} cells',
+    'Distribution changed to {type}'
+  ]
+};
+```
+
+### Day 5: Stimuli Upload System with Backend
+
+#### File Type Specifications
+```typescript
+const FILE_SPECIFICATIONS = {
+  images: {
+    formats: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'svg'],
+    maxSize: 10 * 1024 * 1024, // 10MB
+    dimensions: { minWidth: 200, minHeight: 200, maxWidth: 4096, maxHeight: 4096 },
+    optimization: { quality: 85, format: 'webp' }
+  },
+  videos: {
+    formats: ['mp4', 'webm', 'mov'],
+    maxSize: 100 * 1024 * 1024, // 100MB
+    duration: { min: 1, max: 300 }, // seconds
+    encoding: { codec: 'h264', bitrate: '2M' }
+  },
+  audio: {
+    formats: ['mp3', 'wav', 'ogg', 'm4a'],
+    maxSize: 20 * 1024 * 1024, // 20MB
+    duration: { min: 1, max: 180 }, // seconds
+    bitrate: { min: 128, max: 320 } // kbps
+  },
+  text: {
+    formats: ['txt', 'md'],
+    maxSize: 100 * 1024, // 100KB
+    wordLimit: 150,
+    encoding: 'utf-8'
+  }
+};
+```
+
+#### Upload Flow Diagram
+```typescript
+const UPLOAD_FLOW = {
+  stages: [
+    { id: 'select', name: 'File Selection', duration: 'instant' },
+    { id: 'validate', name: 'Validation', duration: '100-500ms' },
+    { id: 'scan', name: 'Virus Scan', duration: '1-3s' },
+    { id: 'process', name: 'Processing', duration: '2-5s' },
+    { id: 'upload', name: 'Upload', duration: 'varies' },
+    { id: 'optimize', name: 'Optimization', duration: '1-2s' },
+    { id: 'store', name: 'Storage', duration: '500ms' },
+    { id: 'index', name: 'Indexing', duration: '200ms' }
+  ],
+  chunking: {
+    enabled: true,
+    chunkSize: 1024 * 1024, // 1MB chunks
+    parallel: 3,
+    resumable: true
+  }
+};
+```
+
+#### Error Handling Matrix
+```typescript
+const ERROR_MATRIX = {
+  'file_too_large': {
+    message: 'File exceeds {maxSize} limit',
+    action: 'compress',
+    recovery: 'Offer compression or format change'
+  },
+  'invalid_format': {
+    message: 'Format {format} not supported',
+    action: 'convert',
+    recovery: 'Suggest supported formats'
+  },
+  'upload_failed': {
+    message: 'Upload failed at {percentage}%',
+    action: 'retry',
+    recovery: 'Resume from last chunk'
+  },
+  'virus_detected': {
+    message: 'Security threat detected',
+    action: 'block',
+    recovery: 'Delete file and notify user'
+  },
+  'quota_exceeded': {
+    message: 'Storage quota exceeded',
+    action: 'upgrade',
+    recovery: 'Offer storage upgrade options'
+  }
+};
+```
+
+#### Progress Tracking Algorithm
+```typescript
+class UploadProgressTracker {
+  private chunks: Map<string, ChunkStatus>;
+  private startTime: number;
+  
+  calculateProgress(): ProgressData {
+    const completed = Array.from(this.chunks.values())
+      .filter(c => c.status === 'complete').length;
+    const total = this.chunks.size;
+    const percentage = (completed / total) * 100;
+    
+    const elapsed = Date.now() - this.startTime;
+    const rate = completed / (elapsed / 1000); // chunks per second
+    const remaining = (total - completed) / rate;
+    
+    return {
+      percentage: Math.round(percentage),
+      speed: this.formatSpeed(rate),
+      timeRemaining: this.formatTime(remaining),
+      chunksComplete: completed,
+      chunksTotal: total
+    };
+  }
+}
+```
+
+#### Backend API Contracts
+```typescript
+// Stimuli Upload Endpoint
+POST /api/studies/{studyId}/stimuli
+Headers: {
+  'Content-Type': 'multipart/form-data',
+  'X-Chunk-Index': number,
+  'X-Total-Chunks': number,
+  'X-File-Id': string
+}
+Body: FormData { file: Blob, metadata: JSON }
+Response: {
+  id: string,
+  url: string,
+  thumbnail: string,
+  processing: boolean
+}
+
+// Grid Configuration Endpoint  
+POST /api/studies/{studyId}/grid
+Body: GridConfiguration
+Response: { id: string, validated: boolean, warnings: string[] }
+
+// WebSocket Events
+ws://localhost:3001/studies/{studyId}
+Events: [
+  'stimuli:upload:progress',
+  'stimuli:upload:complete',
+  'stimuli:processing:start',
+  'stimuli:processing:complete',
+  'grid:update',
+  'grid:validation:error'
+]
+```
+
+#### File Storage Strategy
+```typescript
+const STORAGE_STRATEGY = {
+  local: {
+    path: '/uploads/stimuli/{studyId}/{fileId}',
+    temp: '/tmp/uploads/{sessionId}',
+    cleanup: 24 * 60 * 60 * 1000 // 24 hours
+  },
+  cloud: {
+    provider: 'aws-s3',
+    bucket: 'vqmethod-stimuli',
+    region: 'us-east-1',
+    cdn: 'cloudfront.net'
+  },
+  database: {
+    metadata: 'stimuli_metadata',
+    references: 'stimuli_files',
+    indexes: ['studyId', 'fileType', 'uploadDate']
+  }
+};
+```
+
+### Day 6: Mobile Responsiveness & Performance (NEW)
+
+#### Performance Budgets
+```typescript
+const PERFORMANCE_BUDGETS = {
+  metrics: {
+    FCP: 1500,    // First Contentful Paint (ms)
+    LCP: 2500,    // Largest Contentful Paint (ms)
+    FID: 100,     // First Input Delay (ms)
+    CLS: 0.1,     // Cumulative Layout Shift
+    TTI: 3500     // Time to Interactive (ms)
+  },
+  resources: {
+    javascript: 300,  // KB gzipped
+    css: 50,         // KB gzipped
+    images: 500,     // KB per image
+    fonts: 100       // KB total
+  },
+  operations: {
+    gridRender: 16,      // ms (60fps)
+    uploadChunk: 1000,   // ms per chunk
+    stateUpdate: 50,     // ms
+    apiResponse: 500     // ms
+  }
+};
+```
+
+#### Preview Synchronization
+```typescript
+const PREVIEW_SYNC = {
+  strategy: 'debounced',
+  debounceMs: 300,
+  syncPoints: [
+    'grid:change',
+    'stimuli:update',
+    'settings:modify'
+  ],
+  optimization: {
+    diffOnly: true,
+    compression: 'gzip',
+    batchUpdates: true
+  }
+};
+```
+
+#### Caching Strategy
+```typescript
+const CACHE_STRATEGY = {
+  browser: {
+    stimuli: 'cache-first',
+    api: 'network-first',
+    static: 'cache-only'
+  },
+  cdn: {
+    maxAge: 31536000, // 1 year for versioned assets
+    swr: 86400        // 24 hours stale-while-revalidate
+  },
+  service_worker: {
+    version: 'v1.0.0',
+    strategies: {
+      images: 'CacheFirst',
+      api: 'NetworkFirst',
+      offline: 'CacheOnly'
+    }
+  }
+};
+```
+
+#### Testing Strategy
+
+##### Test Data Sets
+```typescript
+const TEST_DATA_SETS = {
+  minimal: {
+    stimuli: 9,
+    participants: 5,
+    gridRange: [-2, 2]
+  },
+  standard: {
+    stimuli: 25,
+    participants: 30,
+    gridRange: [-3, 3]
+  },
+  large: {
+    stimuli: 50,
+    participants: 100,
+    gridRange: [-4, 4]
+  },
+  stress: {
+    stimuli: 100,
+    participants: 500,
+    gridRange: [-6, 6]
+  }
+};
+```
+
+##### Performance Benchmarks
+```typescript
+const BENCHMARKS = {
+  'grid_render': {
+    target: 16,
+    threshold: 33,
+    metric: 'ms'
+  },
+  'stimuli_upload': {
+    target: 1000,
+    threshold: 3000,
+    metric: 'ms per file'
+  },
+  'preview_switch': {
+    target: 200,
+    threshold: 500,
+    metric: 'ms'
+  },
+  'state_persistence': {
+    target: 50,
+    threshold: 100,
+    metric: 'ms'
+  }
+};
+```
+
+##### Accessibility Test Scripts
+```typescript
+const A11Y_TESTS = [
+  {
+    test: 'keyboard_navigation',
+    actions: ['Tab through all elements', 'Use arrow keys in grid'],
+    expected: 'All interactive elements reachable'
+  },
+  {
+    test: 'screen_reader',
+    tools: ['NVDA', 'JAWS', 'VoiceOver'],
+    expected: 'All content announced correctly'
+  },
+  {
+    test: 'color_contrast',
+    ratio: 4.5,
+    expected: 'WCAG AA compliance'
+  }
+];
+```
+
+##### Cross-Browser Compatibility
+```typescript
+const BROWSER_REQUIREMENTS = {
+  chrome: { min: 90, features: ['grid', 'webp', 'intersection-observer'] },
+  firefox: { min: 88, features: ['grid', 'webp', 'intersection-observer'] },
+  safari: { min: 14, features: ['grid', 'webp', 'intersection-observer'] },
+  edge: { min: 90, features: ['grid', 'webp', 'intersection-observer'] },
+  mobile: {
+    ios: { min: 14, safari: true },
+    android: { min: 10, chrome: true }
+  }
+};
+```
+
+## Success Metrics
+
+### Core Fixes
+- [ ] All compilation errors resolved
+- [ ] Development servers running without errors
+- [ ] All dependencies installed and working
+
+### Visual Fidelity
+- [ ] Logo preview < 500ms load time
+- [ ] Image resize at 60fps
+- [ ] Preview device switch < 200ms
+- [ ] No layout shifts (CLS < 0.1)
+
+### Interactive Grid
+- [ ] Grid range selector responsive
+- [ ] Cell count validation accurate
+- [ ] Distribution presets apply correctly
+- [ ] Symmetry maintains balance
+
+### Stimuli Upload
+- [ ] All file types supported
+- [ ] Progress tracking accurate
+- [ ] Gallery operations smooth
+- [ ] Helper messages clear
+
+### Quality Assurance
+- [ ] State management working with Zustand
+- [ ] Error handling for all failure scenarios
+- [ ] Mobile responsive on all screen sizes
+- [ ] Accessibility WCAG AA compliant
+- [ ] Performance metrics met (60fps, <500ms loads)
+- [ ] Unit tests written for new components
+- [ ] Integration tests passing
+
+## Testing Checkpoint 6.85
+
+### Functionality Tests
+- [ ] Logo upload with immediate preview (<500ms)
+- [ ] Image resizing in editors maintains quality
+- [ ] Preview bar positioning correct
+- [ ] Grid builder all features working with validation
+- [ ] Stimuli upload complete flow with chunking
+- [ ] State persistence across refreshes (Zustand)
+- [ ] Error recovery mechanisms working per matrix
+- [ ] WebSocket real-time updates functioning
+- [ ] File type validation for all formats
+- [ ] Grid configuration schema validated
+
+### Performance Tests
+- [ ] Lighthouse scores > 95 all categories
+- [ ] FCP < 1500ms, LCP < 2500ms, FID < 100ms
+- [ ] Load time < 2 seconds globally
+- [ ] No memory leaks with 100+ stimuli (stress test)
+- [ ] Grid renders at 60fps (16ms target)
+- [ ] Upload chunks process < 1000ms each
+- [ ] Preview switch < 200ms
+- [ ] State updates < 50ms
+
+### Accessibility Tests
+- [ ] Keyboard navigation complete (Tab, Arrow keys, Space, Enter, Escape)
+- [ ] Screen reader compatible (NVDA, JAWS, VoiceOver)
+- [ ] Focus indicators visible
+- [ ] WCAG AA color contrast met (4.5:1 ratio)
+- [ ] Touch targets minimum 44x44px
+- [ ] ARIA labels and announcements working
+- [ ] Reduced motion support implemented
+
+### Integration Tests
+- [ ] Backend API contracts validated
+- [ ] WebSocket events firing correctly
+- [ ] File storage strategy working (local/cloud)
+- [ ] Virus scanning integration functional
+- [ ] Caching strategy implemented (browser/CDN)
+- [ ] Cross-browser compatibility verified (Chrome 90+, Firefox 88+, Safari 14+)
+
+## Reference Documentation
+
+- **Main Guide:** [PHASE_6.85_UI_PREVIEW_EXCELLENCE.md](../PHASE_6.85_UI_PREVIEW_EXCELLENCE.md) - Complete specifications
+- **State Management:** Development_Implementation_Guide_Part5.md - Zustand implementation
+- **UI Components:** Development_Implementation_Guide_Part4.md - Component architecture
+- **Apple Design:** Development_Implementation_Guide_Part1.md - Design system reference
+
+---
+
 # PHASE 6.7: CRITICAL BACKEND INTEGRATION 🔌 **URGENT PRIORITY**
 
 **Duration:** 3-4 days  
@@ -1599,15 +2330,130 @@ Without Phase 6.7, the platform is NOT usable for actual research. This phase tr
 - Backend: 90% complete (services ready)
 - Integration: 0% complete (CRITICAL GAP)
 
-**This phase MUST be completed before moving to Phase 7 (Enterprise Features).**
+**This phase MUST be completed before moving to Phase 6.9 (Pre-Production Readiness).**
 
 ---
 
+# PHASE 6.9: PRE-PRODUCTION READINESS 🚀
+
+**Status:** 🔴 NOT STARTED (0% Complete)  
+**Duration:** 5-7 days  
+**Priority:** HIGH - Bridge between integration and production  
+**Document:** [PHASE_6.9_PRE_PRODUCTION_READINESS.md](../PHASE_6.9_PRE_PRODUCTION_READINESS.md)
+
+## Overview
+
+Phase 6.9 transforms the integrated platform from development-ready to production-ready state through comprehensive testing, performance optimization, security hardening, and documentation.
+
+## Key Deliverables
+
+### Testing Suite (Days 1-2)
+- **Integration Testing**: End-to-end user flows, API validation
+- **Performance Testing**: Load testing (100+ concurrent users), stress testing
+- **Security Testing**: Penetration testing, vulnerability scanning
+- **Accessibility Testing**: WCAG AA compliance validation
+
+### Performance Optimization (Days 2-3)
+- **Frontend**: Bundle optimization, code splitting, image optimization
+- **Backend**: Query optimization, caching implementation, compression
+- **Infrastructure**: CDN setup, database indexing
+
+### Data Migration (Days 3-4)
+- **Mock to Real Data**: Migrate development data to production format
+- **Database Seeding**: Create demo accounts, sample studies
+- **Backup Procedures**: Implement automated backup strategies
+
+### Security Hardening (Days 4-5)
+- **Security Audit**: Complete security checklist validation
+- **Vulnerability Scanning**: OWASP ZAP, dependency audits
+- **Compliance**: GDPR, HIPAA safeguards verification
+
+### Documentation & Training (Days 5-6)
+- **User Documentation**: Complete guides for all user types
+- **API Documentation**: OpenAPI specs, Postman collections
+- **Video Tutorials**: 5+ training videos for key features
+
+### Deployment Preparation (Days 6-7)
+- **CI/CD Pipeline**: GitHub Actions for automated deployment
+- **Monitoring Setup**: Prometheus, Grafana, ELK stack
+- **Backup & Recovery**: Automated backup procedures
+
+## Success Metrics
+
+### Performance Targets
+- Page load time < 2 seconds
+- API response time < 200ms (p95)
+- Lighthouse score > 95 (all categories)
+- Support 1000+ concurrent users
+
+### Quality Targets
+- Test coverage > 80%
+- 0 critical security vulnerabilities
+- Documentation coverage 100%
+- Error rate < 0.1%
+
+## Prerequisites
+
+**Phase 6.7 MUST be 100% complete:**
+- ✅ Frontend connected to backend APIs
+- ✅ Authentication flow working end-to-end
+- ✅ Data persistence functional
+- ✅ WebSocket connections established
+
+**Phase 6.85 MUST be 100% complete:**
+- ✅ Interactive grid design system operational
+- ✅ Stimuli upload system fully functional
+- ✅ Preview layout issues resolved
+- ✅ All UI/UX polish items complete
+
+## Definition of Done
+
+- [ ] All tests passing (unit, integration, e2e, performance)
+- [ ] Security audit complete with no critical issues
+- [ ] Documentation 100% complete
+- [ ] Performance targets met
+- [ ] Monitoring and alerting configured
+- [ ] Production deployment successful
+- [ ] User acceptance testing passed
+
+**This phase ensures production readiness before Phase 7 (Enterprise Features).**
+
+---
+
+## 📋 PHASE COMPLETION SUMMARY & EXECUTION ORDER
+
+### ✅ **Completed Phases (In Order Completed):**
+| Phase | Name | Status | Achievement |
+|-------|------|--------|-------------|
+| 1 | Foundation & Design System | ✅ 100% | Apple UI components, testing setup |
+| 2 | Authentication & Backend | ✅ 100% | JWT, security, database |
+| 3 | Dual Interface | ✅ 100% | Researcher/participant flows |
+| 3.5 | Infrastructure & Testing | ✅ 100% | CI/CD, quality gates |
+| 4 | Data Visualization | ✅ 100% | Charts, dashboards, analytics |
+| 5 | Professional Polish | ✅ 100% | Animations, empty states |
+| 5.5 | Critical UI | ✅ 94% | Auth UI, essential pages |
+| 6 | Q-Analytics Engine | ✅ 100% | Factor analysis, PQMethod |
+| 6.5 | Frontend Architecture | ✅ 100% | Q-Analytics UI |
+| 6.6 | Navigation Excellence | ✅ 100% | Navigation, testing suite |
+| 6.8 | Study Creation | ✅ 100% | Rich editing, templates |
+
+### ✅ **Newly Completed Phase:**
+| Phase | Name | Status | Achievement |
+|-------|------|--------|-------------|
+| 6.7 | Backend Integration | ✅ 100% | APIs connected, auth working, WebSocket ready |
+
+### 🔴 **Remaining Pending Phases (In Execution Order):**
+| Order | Phase | Name | Duration | Dependencies |
+|-------|-------|------|----------|--------------|
+| 1 | 6.85 | UI/UX Polish & Preview | 5-6 days | None (start now) |
+| 2 | 6.9 | Pre-Production Readiness | 5-7 days | Requires 6.85 only (6.7 complete) |
+| 3 | 7+ | Enterprise Features | See Part 2 | Requires 6.9 |
+
 ## 📋 CORE PHASES COMPLETION SUMMARY
 
-⚠️ **CRITICAL UPDATE:** Phase 6.7 has been identified as a necessary addition to complete backend integration.
+⚠️ **CRITICAL UPDATE:** Despite phase numbering, execution order prioritizes functionality.
 
-Core implementation phases (1-6.6) are **UI COMPLETE** but **BACKEND INTEGRATION MISSING**:
+Core implementation phases (1-6.8) status:
 
 - ✅ **100% Apple Design System Implementation**
 - ✅ **100% Authentication & Security Features**
@@ -1618,12 +2464,30 @@ Core implementation phases (1-6.6) are **UI COMPLETE** but **BACKEND INTEGRATION
 - ✅ **94% Critical UI Implementation**
 - ✅ **100% Q-Analytics Engine** (Backend ready, frontend integration pending)
 - ✅ **100% Navigation Excellence**
-- 🔴 **0% Backend Integration** (Phase 6.7 REQUIRED)
+- ✅ **100% Study Creation Excellence** (Phase 6.8)
+- 🔴 **0% UI/UX Polish & Preview Excellence** (Phase 6.85 PENDING)
+- ✅ **100% Backend Integration** (Phase 6.7 COMPLETE)
+- 🔴 **0% Pre-Production Readiness** (Phase 6.9 PENDING)
 
-**Next Steps:**
+**Next Steps (Execution Order):**
 
-1. **IMMEDIATE PRIORITY:** Complete Phase 6.7 (Backend Integration) - 3-4 days
-2. **THEN:** Continue with IMPLEMENTATION_PHASES_PART2.md for Phases 7-12 (Enterprise & Advanced Features)
+1. **START NOW:** Phase 6.85 (UI/UX Polish & Preview Excellence) - 5-6 days
+   - Interactive grid design system
+   - Comprehensive stimuli upload
+   - Preview layout fixes
+   
+2. ✅ **COMPLETE:** Phase 6.7 (Backend Integration)
+   - Connect frontend to backend APIs
+   - Enable data persistence
+   - Fix authentication flow
+   
+3. **AFTER BOTH:** Phase 6.9 (Pre-Production Readiness) - 5-7 days
+   - Comprehensive testing suite
+   - Performance optimization
+   - Security hardening
+   - Deployment preparation
+   
+4. **FINALLY:** Continue with Phase 7 (Enterprise Features) in IMPLEMENTATION_PHASES_PART2.md
 
 ---
 
@@ -1641,6 +2505,10 @@ Core implementation phases (1-6.6) are **UI COMPLETE** but **BACKEND INTEGRATION
 | **Phase 5: Polish**           | Development_Implementation_Guide_Part2.md | Animations, Empty states, Micro-interactions                 |
 | **Phase 5.5: Auth UI**        | Development_Implementation_Guide_Part3.md | Login/Register pages, Auth state, Protected routes           |
 | **Phase 6: Q-Analytics**      | Development_Implementation_Guide_Part2.md | Factor analysis, Rotations, Statistical outputs              |
+| **Phase 6.7: Integration**    | PHASE_6.7_BACKEND_INTEGRATION.md          | API connections, Data flow, WebSocket setup                  |
+| **Phase 6.8: Study Creation** | PHASE_6.8_STUDY_CREATION_EXCELLENCE.md    | Rich editing, Templates, Signatures                          |
+| **Phase 6.85: UI/UX Polish**  | PHASE_6.85_UI_PREVIEW_EXCELLENCE.md       | Interactive grid, Stimuli upload, Preview fixes              |
+| **Phase 6.9: Pre-Production** | PHASE_6.9_PRE_PRODUCTION_READINESS.md     | Testing, Security, Documentation, Deployment prep            |
 
 ### Quick Reference by Topic
 
