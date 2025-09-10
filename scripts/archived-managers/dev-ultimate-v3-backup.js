@@ -2,7 +2,7 @@
 
 /**
  * ULTIMATE Development Manager V3 - Enhanced Version
- * 
+ *
  * Improvements over V2:
  * - Active HTTP health checks instead of just process checks
  * - Automatic restart on stalling detection
@@ -26,28 +26,28 @@ class UltimateDevManagerV3 {
     this.lockFile = path.join(__dirname, '..', '.dev-ultimate.lock');
     this.pidFile = path.join(__dirname, '..', '.dev-ultimate.pid');
     this.logFile = path.join(__dirname, '..', 'logs', 'dev-manager.log');
-    
+
     this.isShuttingDown = false;
     this.frontendProcess = null;
     this.backendProcess = null;
     this.healthCheckInterval = null;
     this.stallCheckInterval = null;
-    
+
     // Track failures for automatic recovery
     this.frontendFailures = 0;
     this.backendFailures = 0;
     this.maxFailures = 3;
-    
+
     // Track last successful health checks
     this.lastFrontendCheck = Date.now();
     this.lastBackendCheck = Date.now();
     this.stallTimeout = 30000; // 30 seconds
-    
+
     // Setup signal handlers
     process.on('SIGINT', () => this.cleanup());
     process.on('SIGTERM', () => this.cleanup());
     process.on('exit', () => this.cleanup());
-    process.on('uncaughtException', (error) => {
+    process.on('uncaughtException', error => {
       this.log('❌ Uncaught Exception:', error.message);
       this.cleanup();
       process.exit(1);
@@ -58,7 +58,7 @@ class UltimateDevManagerV3 {
     const timestamp = new Date().toISOString();
     const logMessage = `[${timestamp}] ${message}`;
     console.log(logMessage, ...args);
-    
+
     // Also write to log file
     if (!fs.existsSync(path.dirname(this.logFile))) {
       fs.mkdirSync(path.dirname(this.logFile), { recursive: true });
@@ -68,35 +68,35 @@ class UltimateDevManagerV3 {
 
   async start() {
     this.log('🚀 ULTIMATE Development Manager V3 Starting...\n');
-    
+
     // Step 1: Kill ALL existing processes
     await this.killAllProcesses();
-    
+
     // Step 2: Wait for ports to be free
     await this.waitForPortsToBeFree();
-    
+
     // Step 3: Create lock files
     this.createLockFiles();
-    
+
     // Step 4: Start backend
     await this.startBackend();
-    
+
     // Step 5: Start frontend
     await this.startFrontend();
-    
+
     // Step 6: Start enhanced health monitoring
     this.startHealthMonitoring();
-    
+
     // Step 7: Start stall detection
     this.startStallDetection();
-    
+
     // Show success message
     this.showSuccessMessage();
   }
 
   async killAllProcesses() {
     this.log('🧹 KILLING ALL EXISTING PROCESSES...');
-    
+
     const killCommands = [
       'pkill -9 -f "next dev" || true',
       'pkill -9 -f "nest start" || true',
@@ -106,9 +106,9 @@ class UltimateDevManagerV3 {
       'pkill -9 -f "dev-simple" || true',
       'pkill -9 -f "dev-ultimate" || true',
       'pkill -9 -f "stop-ultimate" || true',
-      'pkill -9 -f "node.*blackQmethhod" || true'
+      'pkill -9 -f "node.*blackQmethhod" || true',
     ];
-    
+
     for (const cmd of killCommands) {
       try {
         await execAsync(cmd);
@@ -117,19 +117,19 @@ class UltimateDevManagerV3 {
         // Ignore errors - process might not exist
       }
     }
-    
+
     // Kill processes on specific ports
     await this.killPortProcesses();
-    
+
     // Remove old lock files
     this.removeOldLockFiles();
-    
+
     this.log('   ✅ All processes killed\n');
   }
 
   async killPortProcesses() {
     const ports = [3000, 3001, 3002, 4000, 4001, 4002, 5000, 5001];
-    
+
     for (const port of ports) {
       try {
         const { stdout } = await execAsync(`lsof -ti:${port}`);
@@ -154,14 +154,14 @@ class UltimateDevManagerV3 {
 
   async waitForPortsToBeFree() {
     this.log('⏳ Waiting for ports to be free...');
-    
+
     const ports = [3000, 4000];
     let attempts = 0;
     const maxAttempts = 20; // Increased attempts
-    
+
     while (attempts < maxAttempts) {
       let allPortsFree = true;
-      
+
       for (const port of ports) {
         if (await this.isPortInUse(port)) {
           allPortsFree = false;
@@ -174,22 +174,24 @@ class UltimateDevManagerV3 {
           break;
         }
       }
-      
+
       if (allPortsFree) {
         this.log('   ✅ All ports are free\n');
         return;
       }
-      
+
       attempts++;
-      this.log(`   ⏳ Attempt ${attempts}/${maxAttempts} - waiting for ports...`);
+      this.log(
+        `   ⏳ Attempt ${attempts}/${maxAttempts} - waiting for ports...`
+      );
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    
+
     this.log('   ⚠️  Some ports may still be in use, continuing...\n');
   }
 
   async isPortInUse(port) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const server = net.createServer();
       server.listen(port, () => {
         server.once('close', () => resolve(false));
@@ -202,11 +204,11 @@ class UltimateDevManagerV3 {
   removeOldLockFiles() {
     const lockFiles = [
       '.dev-manager.lock',
-      '.dev-simple.lock', 
+      '.dev-simple.lock',
       '.dev-ultimate.lock',
-      '.dev-ultimate.pid'
+      '.dev-ultimate.pid',
     ];
-    
+
     for (const file of lockFiles) {
       const filePath = path.join(__dirname, '..', file);
       if (fs.existsSync(filePath)) {
@@ -223,13 +225,13 @@ class UltimateDevManagerV3 {
 
   async startBackend() {
     this.log('🔧 Starting Backend (NestJS)...');
-    
-    return new Promise((resolve) => {
+
+    return new Promise(resolve => {
       this.backendProcess = spawn('npm', ['run', 'start:dev'], {
         cwd: path.join(__dirname, '..', 'backend'),
         stdio: 'pipe',
         shell: true,
-        env: { ...process.env, PORT: '4000', NODE_ENV: 'development' }
+        env: { ...process.env, PORT: '4000', NODE_ENV: 'development' },
       });
 
       let backendReady = false;
@@ -240,10 +242,13 @@ class UltimateDevManagerV3 {
         }
       }, 30000);
 
-      this.backendProcess.stdout.on('data', (data) => {
+      this.backendProcess.stdout.on('data', data => {
         const output = data.toString();
-        if ((output.includes('Nest application successfully started') || 
-             output.includes('started on port')) && !backendReady) {
+        if (
+          (output.includes('Nest application successfully started') ||
+            output.includes('started on port')) &&
+          !backendReady
+        ) {
           backendReady = true;
           clearTimeout(timeout);
           this.log('   ✅ Backend started successfully');
@@ -252,20 +257,20 @@ class UltimateDevManagerV3 {
         }
       });
 
-      this.backendProcess.stderr.on('data', (data) => {
+      this.backendProcess.stderr.on('data', data => {
         const output = data.toString();
         if (output.includes('ERROR') || output.includes('Error')) {
           this.log('   ⚠️  Backend warning:', output.trim().substring(0, 100));
         }
       });
 
-      this.backendProcess.on('error', (error) => {
+      this.backendProcess.on('error', error => {
         this.log('   ❌ Failed to start backend:', error.message);
         clearTimeout(timeout);
         resolve(); // Continue anyway
       });
 
-      this.backendProcess.on('exit', (code) => {
+      this.backendProcess.on('exit', code => {
         if (code !== 0 && !this.isShuttingDown) {
           this.log('   ❌ Backend exited with code:', code);
           this.backendFailures++;
@@ -276,13 +281,13 @@ class UltimateDevManagerV3 {
 
   async startFrontend() {
     this.log('🌐 Starting Frontend (Next.js)...');
-    
-    return new Promise((resolve) => {
+
+    return new Promise(resolve => {
       this.frontendProcess = spawn('npm', ['run', 'dev'], {
         cwd: path.join(__dirname, '..', 'frontend'),
         stdio: 'pipe',
         shell: true,
-        env: { ...process.env, PORT: '3000', NODE_ENV: 'development' }
+        env: { ...process.env, PORT: '3000', NODE_ENV: 'development' },
       });
 
       let frontendReady = false;
@@ -293,9 +298,12 @@ class UltimateDevManagerV3 {
         }
       }, 30000);
 
-      this.frontendProcess.stdout.on('data', (data) => {
+      this.frontendProcess.stdout.on('data', data => {
         const output = data.toString();
-        if ((output.includes('Ready') || output.includes('compiled')) && !frontendReady) {
+        if (
+          (output.includes('Ready') || output.includes('compiled')) &&
+          !frontendReady
+        ) {
           frontendReady = true;
           clearTimeout(timeout);
           this.log('   ✅ Frontend started successfully');
@@ -304,22 +312,24 @@ class UltimateDevManagerV3 {
         }
       });
 
-      this.frontendProcess.stderr.on('data', (data) => {
+      this.frontendProcess.stderr.on('data', data => {
         const output = data.toString();
         // Ignore npm workspace warnings
-        if (!output.includes('ENOWORKSPACES') && 
-            (output.includes('ERROR') || output.includes('Error'))) {
+        if (
+          !output.includes('ENOWORKSPACES') &&
+          (output.includes('ERROR') || output.includes('Error'))
+        ) {
           this.log('   ⚠️  Frontend warning:', output.trim().substring(0, 100));
         }
       });
 
-      this.frontendProcess.on('error', (error) => {
+      this.frontendProcess.on('error', error => {
         this.log('   ❌ Failed to start frontend:', error.message);
         clearTimeout(timeout);
         resolve(); // Continue anyway
       });
 
-      this.frontendProcess.on('exit', (code) => {
+      this.frontendProcess.on('exit', code => {
         if (code !== 0 && !this.isShuttingDown) {
           this.log('   ❌ Frontend exited with code:', code);
           this.frontendFailures++;
@@ -331,12 +341,15 @@ class UltimateDevManagerV3 {
   // Enhanced health monitoring with HTTP checks
   startHealthMonitoring() {
     this.log('💓 Starting enhanced health monitoring...\n');
-    
+
     this.healthCheckInterval = setInterval(async () => {
       if (this.isShuttingDown) return;
-      
+
       // Check backend health via HTTP
-      const backendHealthy = await this.checkHttpHealth('http://localhost:4000/api', 'Backend');
+      const backendHealthy = await this.checkHttpHealth(
+        'http://localhost:4000/api',
+        'Backend'
+      );
       if (!backendHealthy) {
         this.backendFailures++;
         if (this.backendFailures >= this.maxFailures) {
@@ -347,9 +360,12 @@ class UltimateDevManagerV3 {
         this.backendFailures = 0;
         this.lastBackendCheck = Date.now();
       }
-      
+
       // Check frontend health via HTTP
-      const frontendHealthy = await this.checkHttpHealth('http://localhost:3000', 'Frontend');
+      const frontendHealthy = await this.checkHttpHealth(
+        'http://localhost:3000',
+        'Frontend'
+      );
       if (!frontendHealthy) {
         this.frontendFailures++;
         if (this.frontendFailures >= this.maxFailures) {
@@ -366,18 +382,18 @@ class UltimateDevManagerV3 {
   // Detect stalling based on last successful health checks
   startStallDetection() {
     this.log('🔍 Starting stall detection...\n');
-    
+
     this.stallCheckInterval = setInterval(async () => {
       if (this.isShuttingDown) return;
-      
+
       const now = Date.now();
-      
+
       // Check if frontend is stalling
       if (now - this.lastFrontendCheck > this.stallTimeout) {
         this.log('⚠️  Frontend appears to be stalling, attempting recovery...');
         await this.restartFrontend();
       }
-      
+
       // Check if backend is stalling
       if (now - this.lastBackendCheck > this.stallTimeout) {
         this.log('⚠️  Backend appears to be stalling, attempting recovery...');
@@ -387,37 +403,39 @@ class UltimateDevManagerV3 {
   }
 
   async checkHttpHealth(url, name) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const timeout = setTimeout(() => {
         this.log(`   ⚠️  ${name} health check timeout`);
         resolve(false);
       }, 3000); // 3 second timeout
 
-      http.get(url, (res) => {
-        clearTimeout(timeout);
-        if (res.statusCode >= 200 && res.statusCode < 500) {
-          resolve(true);
-        } else {
-          this.log(`   ⚠️  ${name} returned status ${res.statusCode}`);
+      http
+        .get(url, res => {
+          clearTimeout(timeout);
+          if (res.statusCode >= 200 && res.statusCode < 500) {
+            resolve(true);
+          } else {
+            this.log(`   ⚠️  ${name} returned status ${res.statusCode}`);
+            resolve(false);
+          }
+        })
+        .on('error', err => {
+          clearTimeout(timeout);
+          this.log(`   ⚠️  ${name} health check failed:`, err.message);
           resolve(false);
-        }
-      }).on('error', (err) => {
-        clearTimeout(timeout);
-        this.log(`   ⚠️  ${name} health check failed:`, err.message);
-        resolve(false);
-      });
+        });
     });
   }
 
   async restartBackend() {
     this.log('🔄 Restarting backend...');
-    
+
     // Kill existing backend process
     if (this.backendProcess) {
       this.backendProcess.kill('SIGKILL');
       this.backendProcess = null;
     }
-    
+
     // Kill any orphaned backend processes
     try {
       await execAsync('pkill -9 -f "nest start" || true');
@@ -425,10 +443,10 @@ class UltimateDevManagerV3 {
     } catch (e) {
       // Ignore
     }
-    
+
     // Wait a moment
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     // Restart
     await this.startBackend();
     this.backendFailures = 0;
@@ -437,13 +455,13 @@ class UltimateDevManagerV3 {
 
   async restartFrontend() {
     this.log('🔄 Restarting frontend...');
-    
+
     // Kill existing frontend process
     if (this.frontendProcess) {
       this.frontendProcess.kill('SIGKILL');
       this.frontendProcess = null;
     }
-    
+
     // Kill any orphaned frontend processes
     try {
       await execAsync('pkill -9 -f "next dev" || true');
@@ -451,10 +469,10 @@ class UltimateDevManagerV3 {
     } catch (e) {
       // Ignore
     }
-    
+
     // Wait a moment
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     // Restart
     await this.startFrontend();
     this.frontendFailures = 0;
@@ -481,9 +499,9 @@ class UltimateDevManagerV3 {
   async cleanup() {
     if (this.isShuttingDown) return;
     this.isShuttingDown = true;
-    
+
     this.log('\n🛑 ULTIMATE V3 Cleanup Starting...');
-    
+
     // Clear intervals
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
@@ -491,24 +509,24 @@ class UltimateDevManagerV3 {
     if (this.stallCheckInterval) {
       clearInterval(this.stallCheckInterval);
     }
-    
+
     // Kill processes
     if (this.frontendProcess) {
       this.frontendProcess.kill('SIGTERM');
       this.log('   ✅ Frontend stopped');
     }
-    
+
     if (this.backendProcess) {
       this.backendProcess.kill('SIGTERM');
       this.log('   ✅ Backend stopped');
     }
-    
+
     // Kill all processes again
     await this.killAllProcesses();
-    
+
     // Remove lock files
     this.removeOldLockFiles();
-    
+
     this.log('✅ ULTIMATE V3 Cleanup Complete');
   }
 }

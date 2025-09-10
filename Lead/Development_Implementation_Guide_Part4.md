@@ -15,13 +15,14 @@
 **Excellence Path Mapping (Phases 7-12):**
 
 - **Phase 7:** Enterprise Production Excellence → Part X ✅ IN THIS DOCUMENT
-- **Phase 8:** Observability & SRE → Part VIII (Monitoring) ✅ IN THIS DOCUMENT  
+- **Phase 8:** Observability & SRE → Part VIII (Monitoring) ✅ IN THIS DOCUMENT
 - **Phase 9:** Performance & Scale → Part XIII ✅ IN THIS DOCUMENT
 - **Phase 10:** Quality Gates → Part XIV ✅ IN THIS DOCUMENT
 - **Phase 11:** Internationalization → Future Implementation
 - **Phase 12:** Growth & Monetization → Future Implementation
 
 **Phase 6.8 Integration:**
+
 - Rich Text Editing → Part XI (Visualization)
 - Templates & Signatures → Part XII (Polish)
 - Study Creation Excellence → See PHASE_6.8_STUDY_CREATION_EXCELLENCE.md
@@ -32,6 +33,7 @@
 **Build Approach:** Ground-up development with Apple HIG compliance + Enterprise Security
 
 ---
+
 # PART X: SECURITY & PRODUCTION EXCELLENCE
 
 **Implements Phase 7: Security & Production Excellence**
@@ -640,6 +642,7 @@ export const EnhancedDragDrop = ({ children, onDrop }) => {
 ### ✅ ALL COMPONENTS IMPLEMENTED (December 9, 2024)
 
 #### Infrastructure (100% Complete):
+
 - ✅ API endpoints for grid configuration implemented (POST/GET/PUT /api/studies/{id}/grid)
 - ✅ WebSocket events for real-time sync configured (grid:update, stimuli:upload)
 - ✅ File storage system configured with Multer (local storage with S3 ready)
@@ -647,12 +650,14 @@ export const EnhancedDragDrop = ({ children, onDrop }) => {
 - ✅ Database schema for GridConfiguration model in Prisma
 
 #### State Management (100% Complete):
+
 - ✅ Zustand stores implemented for study builder (upload-store.ts, grid-store.ts)
 - ✅ Persistence layer with localStorage configured
 - ✅ Error recovery mechanisms implemented
 - ✅ WebSocket state synchronization active
 
 #### Components (100% Complete):
+
 - ✅ ResizableImage component created with react-rnd
 - ✅ EnhancedGridBuilder implemented with dynamic columns
 - ✅ StimuliUploadSystem with chunked upload support
@@ -664,25 +669,25 @@ export const EnhancedDragDrop = ({ children, onDrop }) => {
 // types/grid.types.ts
 interface GridConfiguration {
   range: {
-    min: number;        // -6 to -1
-    max: number;        // +1 to +6
-    default: [-3, 3];   // Default range
+    min: number; // -6 to -1
+    max: number; // +1 to +6
+    default: [-3, 3]; // Default range
   };
-  
+
   columns: Array<{
-    value: number;      // Column score
-    label: string;      // Custom label
-    cells: number;      // Number of cells
-    color?: string;     // Optional color coding
+    value: number; // Column score
+    label: string; // Custom label
+    cells: number; // Number of cells
+    color?: string; // Optional color coding
   }>;
-  
+
   validation: {
     totalCells: number;
     minPerColumn: 1;
     maxPerColumn: 10;
     symmetryRequired: boolean;
   };
-  
+
   distribution: {
     type: 'bell' | 'flat' | 'forced' | 'custom';
     formula: (total: number, columns: number) => number[];
@@ -692,17 +697,17 @@ interface GridConfiguration {
 // Grid validation rules
 const GRID_VALIDATION = {
   rules: [
-    { name: 'cellCount', check: (grid) => grid.totalCells === stimuli.length },
-    { name: 'symmetry', check: (grid) => isSymmetric(grid.columns) },
-    { name: 'minColumns', check: (grid) => grid.columns.length >= 5 },
-    { name: 'distribution', check: (grid) => validateDistribution(grid) }
+    { name: 'cellCount', check: grid => grid.totalCells === stimuli.length },
+    { name: 'symmetry', check: grid => isSymmetric(grid.columns) },
+    { name: 'minColumns', check: grid => grid.columns.length >= 5 },
+    { name: 'distribution', check: grid => validateDistribution(grid) },
   ],
   messages: {
     cellCount: 'Grid cells must match number of stimuli',
     symmetry: 'Grid must be symmetrical',
     minColumns: 'Minimum 5 columns required',
-    distribution: 'Invalid distribution pattern'
-  }
+    distribution: 'Invalid distribution pattern',
+  },
 };
 ```
 
@@ -718,13 +723,13 @@ const GRID_ANIMATIONS = {
   cell: {
     hover: { scale: 1.05, transition: { type: 'spring', stiffness: 300 } },
     drag: { scale: 1.1, opacity: 0.8 },
-    drop: { scale: 1, transition: { type: 'spring', damping: 20 } }
+    drop: { scale: 1, transition: { type: 'spring', damping: 20 } },
   },
   column: {
     add: { x: -20, opacity: 0, transition: { duration: 0.3 } },
     remove: { x: 20, opacity: 0, transition: { duration: 0.2 } },
-    reorder: { transition: { type: 'spring', stiffness: 200 } }
-  }
+    reorder: { transition: { type: 'spring', stiffness: 200 } },
+  },
 };
 
 interface GridColumn {
@@ -743,9 +748,9 @@ export const InteractiveGridBuilder = ({ onGridChange, initialGrid }) => {
     { value: 0, label: 'Neutral', cells: 4 },
     { value: 1, label: 'Slightly Agree', cells: 3 },
     { value: 2, label: 'Agree', cells: 2 },
-    { value: 3, label: 'Most Agree', cells: 1 }
+    { value: 3, label: 'Most Agree', cells: 1 },
   ]);
-  
+
   const [gridRange, setGridRange] = useState({ min: -3, max: 3 });
   const [shouldMaintainSymmetry, setShouldMaintainSymmetry] = useState(true);
   const [totalStatements, setTotalStatements] = useState(16);
@@ -757,7 +762,7 @@ export const InteractiveGridBuilder = ({ onGridChange, initialGrid }) => {
       newColumns.push({
         value: i,
         label: getDefaultLabel(i, newMax),
-        cells: getDefaultCells(i, newMax, totalStatements)
+        cells: getDefaultCells(i, newMax, totalStatements),
       });
     }
     setColumns(newColumns);
@@ -769,7 +774,7 @@ export const InteractiveGridBuilder = ({ onGridChange, initialGrid }) => {
     const newColumns = [...columns];
     const column = newColumns[columnIndex];
     column.cells = Math.max(0, column.cells + delta);
-    
+
     // Maintain symmetry if enabled
     if (shouldMaintainSymmetry) {
       const mirrorIndex = newColumns.length - 1 - columnIndex;
@@ -777,7 +782,7 @@ export const InteractiveGridBuilder = ({ onGridChange, initialGrid }) => {
         newColumns[mirrorIndex].cells = column.cells;
       }
     }
-    
+
     setColumns(newColumns);
     onGridChange?.(newColumns);
   };
@@ -787,16 +792,16 @@ export const InteractiveGridBuilder = ({ onGridChange, initialGrid }) => {
     const distributions = {
       bell: [1, 2, 3, 4, 3, 2, 1],
       flat: [2, 2, 3, 3, 3, 2, 2],
-      forced: [2, 3, 3, 2, 3, 3, 2]
+      forced: [2, 3, 3, 2, 3, 3, 2],
     };
-    
+
     // Apply distribution pattern
     const pattern = distributions[type];
     const newColumns = columns.map((col, idx) => ({
       ...col,
-      cells: pattern[idx % pattern.length] || 1
+      cells: pattern[idx % pattern.length] || 1,
     }));
-    
+
     setColumns(newColumns);
   };
 
@@ -820,11 +825,13 @@ export const InteractiveGridBuilder = ({ onGridChange, initialGrid }) => {
         <label className="block text-sm font-medium mb-2">Grid Range</label>
         <select
           value={gridRange.max}
-          onChange={(e) => handleRangeChange(parseInt(e.target.value))}
+          onChange={e => handleRangeChange(parseInt(e.target.value))}
           className="px-4 py-2 border rounded-lg"
         >
           {[1, 2, 3, 4, 5, 6].map(val => (
-            <option key={val} value={val}>-{val} to +{val}</option>
+            <option key={val} value={val}>
+              -{val} to +{val}
+            </option>
           ))}
         </select>
       </div>
@@ -842,12 +849,13 @@ export const InteractiveGridBuilder = ({ onGridChange, initialGrid }) => {
             >
               <div className="column-header text-center mb-2">
                 <div className="font-bold text-lg">
-                  {column.value > 0 ? '+' : ''}{column.value}
+                  {column.value > 0 ? '+' : ''}
+                  {column.value}
                 </div>
                 <input
                   type="text"
                   value={column.customLabel || column.label}
-                  onChange={(e) => {
+                  onChange={e => {
                     const newColumns = [...columns];
                     newColumns[index].customLabel = e.target.value;
                     setColumns(newColumns);
@@ -856,14 +864,17 @@ export const InteractiveGridBuilder = ({ onGridChange, initialGrid }) => {
                   placeholder="Label"
                 />
               </div>
-              
+
               {/* Cell visualization */}
               <div className="cells-visualization">
                 {Array.from({ length: column.cells }).map((_, cellIndex) => (
-                  <div key={cellIndex} className="w-16 h-12 border-2 border-dashed rounded mb-1" />
+                  <div
+                    key={cellIndex}
+                    className="w-16 h-12 border-2 border-dashed rounded mb-1"
+                  />
                 ))}
               </div>
-              
+
               {/* Cell controls */}
               <div className="cell-controls flex items-center gap-2 mt-2">
                 <button
@@ -913,7 +924,7 @@ export const InteractiveGridBuilder = ({ onGridChange, initialGrid }) => {
         <input
           type="checkbox"
           checked={shouldMaintainSymmetry}
-          onChange={(e) => setShouldMaintainSymmetry(e.target.checked)}
+          onChange={e => setShouldMaintainSymmetry(e.target.checked)}
           className="mr-2"
         />
         <span className="text-sm">Maintain grid symmetry</span>
@@ -922,7 +933,7 @@ export const InteractiveGridBuilder = ({ onGridChange, initialGrid }) => {
       {/* Statement Count Info */}
       <div className="mt-6 p-4 bg-blue-50 rounded-lg">
         <p className="text-sm">
-          Total cells: {columns.reduce((sum, col) => sum + col.cells, 0)} / 
+          Total cells: {columns.reduce((sum, col) => sum + col.cells, 0)} /
           Total statements: {totalStatements}
         </p>
       </div>
@@ -939,27 +950,32 @@ const FILE_SPECIFICATIONS = {
   images: {
     formats: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'svg'],
     maxSize: 10 * 1024 * 1024, // 10MB
-    dimensions: { minWidth: 200, minHeight: 200, maxWidth: 4096, maxHeight: 4096 },
-    optimization: { quality: 85, format: 'webp' }
+    dimensions: {
+      minWidth: 200,
+      minHeight: 200,
+      maxWidth: 4096,
+      maxHeight: 4096,
+    },
+    optimization: { quality: 85, format: 'webp' },
   },
   videos: {
     formats: ['mp4', 'webm', 'mov'],
     maxSize: 100 * 1024 * 1024, // 100MB
     duration: { min: 1, max: 300 }, // seconds
-    encoding: { codec: 'h264', bitrate: '2M' }
+    encoding: { codec: 'h264', bitrate: '2M' },
   },
   audio: {
     formats: ['mp3', 'wav', 'ogg', 'm4a'],
     maxSize: 20 * 1024 * 1024, // 20MB
     duration: { min: 1, max: 180 }, // seconds
-    bitrate: { min: 128, max: 320 } // kbps
+    bitrate: { min: 128, max: 320 }, // kbps
   },
   text: {
     formats: ['txt', 'md'],
     maxSize: 100 * 1024, // 100KB
     wordLimit: 150,
-    encoding: 'utf-8'
-  }
+    encoding: 'utf-8',
+  },
 };
 
 // Upload flow with chunking
@@ -972,14 +988,14 @@ const UPLOAD_FLOW = {
     { id: 'upload', name: 'Upload', duration: 'varies' },
     { id: 'optimize', name: 'Optimization', duration: '1-2s' },
     { id: 'store', name: 'Storage', duration: '500ms' },
-    { id: 'index', name: 'Indexing', duration: '200ms' }
+    { id: 'index', name: 'Indexing', duration: '200ms' },
   ],
   chunking: {
     enabled: true,
     chunkSize: 1024 * 1024, // 1MB chunks
     parallel: 3,
-    resumable: true
-  }
+    resumable: true,
+  },
 };
 ```
 
@@ -990,23 +1006,24 @@ const UPLOAD_FLOW = {
 class UploadProgressTracker {
   private chunks: Map<string, ChunkStatus>;
   private startTime: number;
-  
+
   calculateProgress(): ProgressData {
-    const completed = Array.from(this.chunks.values())
-      .filter(c => c.status === 'complete').length;
+    const completed = Array.from(this.chunks.values()).filter(
+      c => c.status === 'complete'
+    ).length;
     const total = this.chunks.size;
     const percentage = (completed / total) * 100;
-    
+
     const elapsed = Date.now() - this.startTime;
     const rate = completed / (elapsed / 1000); // chunks per second
     const remaining = (total - completed) / rate;
-    
+
     return {
       percentage: Math.round(percentage),
       speed: this.formatSpeed(rate),
       timeRemaining: this.formatTime(remaining),
       chunksComplete: completed,
-      chunksTotal: total
+      chunksTotal: total,
     };
   }
 }
@@ -1023,31 +1040,31 @@ import { UploadProgressTracker } from '@/utils/uploadProgress';
 
 // Error handling matrix
 const ERROR_MATRIX = {
-  'file_too_large': {
+  file_too_large: {
     message: 'File exceeds {maxSize} limit',
     action: 'compress',
-    recovery: 'Offer compression or format change'
+    recovery: 'Offer compression or format change',
   },
-  'invalid_format': {
+  invalid_format: {
     message: 'Format {format} not supported',
     action: 'convert',
-    recovery: 'Suggest supported formats'
+    recovery: 'Suggest supported formats',
   },
-  'upload_failed': {
+  upload_failed: {
     message: 'Upload failed at {percentage}%',
     action: 'retry',
-    recovery: 'Resume from last chunk'
+    recovery: 'Resume from last chunk',
   },
-  'virus_detected': {
+  virus_detected: {
     message: 'Security threat detected',
     action: 'block',
-    recovery: 'Delete file and notify user'
+    recovery: 'Delete file and notify user',
   },
-  'quota_exceeded': {
+  quota_exceeded: {
     message: 'Storage quota exceeded',
     action: 'upgrade',
-    recovery: 'Offer storage upgrade options'
-  }
+    recovery: 'Offer storage upgrade options',
+  },
 };
 
 interface Stimulus {
@@ -1063,7 +1080,7 @@ export const StimuliUploadSystem = ({ grid, onStimuliComplete }) => {
   const [stimuli, setStimuli] = useState<Stimulus[]>([]);
   const totalCells = grid.columns.reduce((sum, col) => sum + col.cells, 0);
 
-  const onDrop = useCallback((acceptedFiles) => {
+  const onDrop = useCallback(acceptedFiles => {
     acceptedFiles.forEach(file => {
       const reader = new FileReader();
       reader.onload = () => {
@@ -1071,7 +1088,7 @@ export const StimuliUploadSystem = ({ grid, onStimuliComplete }) => {
           id: generateId(),
           type: getFileType(file),
           content: file,
-          thumbnail: reader.result as string
+          thumbnail: reader.result as string,
         };
         setStimuli(prev => [...prev, newStimulus]);
       };
@@ -1085,7 +1102,7 @@ export const StimuliUploadSystem = ({ grid, onStimuliComplete }) => {
       'image/*': ['.png', '.jpg', '.jpeg', '.gif'],
       'video/*': ['.mp4', '.mov'],
       'audio/*': ['.mp3', '.wav'],
-    }
+    },
   });
 
   const createTextStimulus = (text: string) => {
@@ -1113,21 +1130,24 @@ export const StimuliUploadSystem = ({ grid, onStimuliComplete }) => {
           {grid.columns.map((column, colIndex) => (
             <div key={colIndex} className="preview-column">
               <div className="text-center font-bold mb-2">
-                {column.value > 0 ? '+' : ''}{column.value}
+                {column.value > 0 ? '+' : ''}
+                {column.value}
               </div>
               <div className="column-cells">
                 {Array.from({ length: column.cells }).map((_, cellIndex) => {
                   const globalIndex = getGlobalCellIndex(colIndex, cellIndex);
                   const stimulus = stimuli[globalIndex];
-                  
+
                   return (
                     <motion.div
                       key={cellIndex}
                       className={`w-12 h-16 border-2 rounded mb-1 ${
-                        stimulus ? 'bg-green-100 border-green-500' : 'border-gray-300 border-dashed'
+                        stimulus
+                          ? 'bg-green-100 border-green-500'
+                          : 'border-gray-300 border-dashed'
                       }`}
                       animate={{
-                        backgroundColor: stimulus ? '#10b981' : '#f3f4f6'
+                        backgroundColor: stimulus ? '#10b981' : '#f3f4f6',
                       }}
                     />
                   );
@@ -1141,7 +1161,9 @@ export const StimuliUploadSystem = ({ grid, onStimuliComplete }) => {
         <div className="mt-4">
           <div className="flex justify-between text-sm mb-1">
             <span>Upload Progress</span>
-            <span>{stimuli.length} / {totalCells} stimuli</span>
+            <span>
+              {stimuli.length} / {totalCells} stimuli
+            </span>
           </div>
           <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
             <motion.div
@@ -1193,22 +1215,28 @@ export const StimuliUploadSystem = ({ grid, onStimuliComplete }) => {
               <div className="absolute top-1 left-1 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs">
                 {index + 1}
               </div>
-              
+
               {stimulus.type === 'image' && (
-                <img src={stimulus.thumbnail} alt="" className="w-full h-24 object-cover rounded" />
+                <img
+                  src={stimulus.thumbnail}
+                  alt=""
+                  className="w-full h-24 object-cover rounded"
+                />
               )}
               {stimulus.type === 'text' && (
                 <div className="h-24 p-2 text-xs overflow-hidden">
                   {stimulus.content.toString().slice(0, 50)}...
                 </div>
               )}
-              
+
               <div className="mt-2 flex gap-1">
                 <button className="text-xs bg-gray-100 px-2 py-1 rounded hover:bg-gray-200">
                   Edit
                 </button>
                 <button
-                  onClick={() => setStimuli(prev => prev.filter(s => s.id !== stimulus.id))}
+                  onClick={() =>
+                    setStimuli(prev => prev.filter(s => s.id !== stimulus.id))
+                  }
                   className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200"
                 >
                   Remove
@@ -1274,7 +1302,7 @@ interface WebSocketEvents {
   'grid:update': { studyId: string; grid: GridConfiguration };
   'stimuli:upload:start': { fileId: string; chunks: number };
   'stimuli:upload:chunk': { fileId: string; chunkIndex: number };
-  
+
   // Server to Client
   'stimuli:upload:progress': { fileId: string; percentage: number };
   'stimuli:upload:complete': { fileId: string; url: string };
@@ -1292,7 +1320,7 @@ const STORAGE_STRATEGY = {
   local: {
     path: '/uploads/stimuli/{studyId}/{fileId}',
     temp: '/tmp/uploads/{sessionId}',
-    cleanup: 24 * 60 * 60 * 1000 // 24 hours
+    cleanup: 24 * 60 * 60 * 1000, // 24 hours
   },
   cloud: {
     provider: 'aws-s3',
@@ -1300,19 +1328,19 @@ const STORAGE_STRATEGY = {
     region: 'us-east-1',
     cdn: 'cloudfront.net',
     signedUrls: true,
-    urlExpiry: 3600 // 1 hour
+    urlExpiry: 3600, // 1 hour
   },
   database: {
     metadata: 'stimuli_metadata',
     references: 'stimuli_files',
-    indexes: ['studyId', 'fileType', 'uploadDate']
+    indexes: ['studyId', 'fileType', 'uploadDate'],
   },
   virusScanning: {
     enabled: true,
     service: 'clamav',
     maxFileSize: 100 * 1024 * 1024, // 100MB
-    quarantinePath: '/quarantine'
-  }
+    quarantinePath: '/quarantine',
+  },
 };
 ```
 
@@ -1325,58 +1353,996 @@ import { io, Socket } from 'socket.io-client';
 class WebSocketService {
   private socket: Socket | null = null;
   private studyId: string | null = null;
-  
+
   connect(studyId: string) {
     this.studyId = studyId;
     this.socket = io(`ws://localhost:3001/studies/${studyId}`, {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
     });
-    
+
     this.setupEventListeners();
   }
-  
+
   private setupEventListeners() {
     if (!this.socket) return;
-    
+
     // Upload progress events
-    this.socket.on('stimuli:upload:progress', (data) => {
+    this.socket.on('stimuli:upload:progress', data => {
       console.log(`Upload progress: ${data.percentage}%`);
       // Update UI progress indicator
     });
-    
+
     // Processing events
-    this.socket.on('stimuli:processing:complete', (data) => {
+    this.socket.on('stimuli:processing:complete', data => {
       console.log('Processing complete:', data);
       // Update stimulus with processed data
     });
-    
+
     // Grid validation events
-    this.socket.on('grid:validation:error', (data) => {
+    this.socket.on('grid:validation:error', data => {
       console.error('Grid validation errors:', data.errors);
       // Display validation errors to user
     });
   }
-  
+
   // Emit events to server
   updateGrid(grid: GridConfiguration) {
-    this.socket?.emit('grid:update', { 
-      studyId: this.studyId, 
-      grid 
+    this.socket?.emit('grid:update', {
+      studyId: this.studyId,
+      grid,
     });
   }
-  
+
   startUpload(fileId: string, chunks: number) {
-    this.socket?.emit('stimuli:upload:start', { 
-      fileId, 
-      chunks 
+    this.socket?.emit('stimuli:upload:start', {
+      fileId,
+      chunks,
     });
   }
 }
 
 export const wsService = new WebSocketService();
+```
+
+---
+
+# PHASE 6.86: CORE AI ENGINE INFRASTRUCTURE
+
+## Enterprise AI Platform Architecture
+
+### Centralized OpenAI Engine Service
+
+```typescript
+// lib/services/ai/core/openai-engine.service.ts
+import OpenAI from 'openai';
+import { Redis } from 'ioredis';
+import { encoding_for_model } from 'tiktoken';
+import pRetry from 'p-retry';
+
+export interface AIRequest {
+  operation: 'completion' | 'embedding' | 'image' | 'transcription';
+  model?: string;
+  prompt?: string;
+  context?: Record<string, any>;
+  userId: string;
+  feature: string;
+  priority: 'low' | 'medium' | 'high';
+}
+
+export interface AIResponse<T = any> {
+  data: T;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    estimatedCost: number;
+  };
+  cached: boolean;
+  latency: number;
+}
+
+export class OpenAIEngineService {
+  private static instance: OpenAIEngineService;
+  private openai: OpenAI;
+  private cache: Redis;
+  private tokenEncoder: any;
+  private requestQueue: Map<string, AIRequest[]> = new Map();
+
+  private readonly modelConfig = {
+    'gpt-4-turbo-preview': {
+      inputCost: 0.01,
+      outputCost: 0.03,
+      maxTokens: 128000,
+      rateLimit: 500, // requests per minute
+    },
+    'gpt-3.5-turbo': {
+      inputCost: 0.0005,
+      outputCost: 0.0015,
+      maxTokens: 16385,
+      rateLimit: 3500,
+    },
+    'text-embedding-3-small': {
+      inputCost: 0.00002,
+      outputCost: 0,
+      maxTokens: 8191,
+      rateLimit: 5000,
+    },
+  };
+
+  private constructor() {
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      organization: process.env.OPENAI_ORG_ID,
+    });
+
+    this.cache = new Redis({
+      host: process.env.REDIS_HOST,
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      password: process.env.REDIS_PASSWORD,
+      db: 1, // Dedicated DB for AI cache
+    });
+
+    this.tokenEncoder = encoding_for_model('gpt-4');
+    this.setupRateLimiting();
+  }
+
+  static getInstance(): OpenAIEngineService {
+    if (!OpenAIEngineService.instance) {
+      OpenAIEngineService.instance = new OpenAIEngineService();
+    }
+    return OpenAIEngineService.instance;
+  }
+
+  async executeRequest<T = any>(request: AIRequest): Promise<AIResponse<T>> {
+    const startTime = Date.now();
+
+    // Check cache first
+    const cacheKey = this.generateCacheKey(request);
+    const cached = await this.getFromCache<T>(cacheKey);
+    if (cached) {
+      return {
+        data: cached,
+        usage: {
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+          estimatedCost: 0,
+        },
+        cached: true,
+        latency: Date.now() - startTime,
+      };
+    }
+
+    // Select optimal model based on request
+    const model = request.model || this.selectOptimalModel(request);
+
+    // Count tokens and optimize if needed
+    const optimizedPrompt = await this.optimizePrompt(request.prompt, model);
+
+    // Execute with retry logic
+    const response = await pRetry(
+      async () => {
+        switch (request.operation) {
+          case 'completion':
+            return this.executeCompletion(
+              optimizedPrompt,
+              model,
+              request.context
+            );
+          case 'embedding':
+            return this.executeEmbedding(optimizedPrompt);
+          case 'image':
+            return this.executeImageGeneration(optimizedPrompt);
+          case 'transcription':
+            return this.executeTranscription(request.context?.audioFile);
+          default:
+            throw new Error(`Unknown operation: ${request.operation}`);
+        }
+      },
+      {
+        retries: 3,
+        onFailedAttempt: error => {
+          console.log(`Attempt ${error.attemptNumber} failed. Retrying...`);
+          // If GPT-4 fails, fallback to GPT-3.5
+          if (model === 'gpt-4-turbo-preview' && error.attemptNumber === 2) {
+            request.model = 'gpt-3.5-turbo';
+          }
+        },
+      }
+    );
+
+    // Calculate usage and cost
+    const usage = this.calculateUsage(optimizedPrompt, response, model);
+
+    // Cache the response
+    await this.cacheResponse(cacheKey, response.data, request.feature);
+
+    // Track usage for billing
+    await this.trackUsage(request.userId, request.feature, usage);
+
+    return {
+      data: response.data,
+      usage,
+      cached: false,
+      latency: Date.now() - startTime,
+    };
+  }
+
+  private async executeCompletion(
+    prompt: string,
+    model: string,
+    context?: any
+  ) {
+    const systemPrompt = this.getSystemPrompt(context?.feature);
+
+    const completion = await this.openai.chat.completions.create({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt },
+      ],
+      temperature: context?.temperature || 0.7,
+      max_tokens: context?.maxTokens || 2000,
+      response_format: context?.jsonMode ? { type: 'json_object' } : undefined,
+      stream: context?.stream || false,
+    });
+
+    return {
+      data: completion.choices[0].message.content,
+      raw: completion,
+    };
+  }
+
+  private selectOptimalModel(request: AIRequest): string {
+    // Use GPT-4 for complex research tasks
+    if (
+      ['analysis', 'interpretation', 'bias-detection'].includes(request.feature)
+    ) {
+      return 'gpt-4-turbo-preview';
+    }
+
+    // Use GPT-3.5 for simpler tasks
+    if (['enhancement', 'formatting', 'summary'].includes(request.feature)) {
+      return 'gpt-3.5-turbo';
+    }
+
+    // Default based on priority
+    return request.priority === 'high'
+      ? 'gpt-4-turbo-preview'
+      : 'gpt-3.5-turbo';
+  }
+}
+```
+
+### Step 3: AI-Powered Grid Design Assistant
+
+```typescript
+// components/grid/AIGridDesignWizard.tsx
+import { useState } from 'react';
+import { OpenAIEngineService } from '@/lib/services/ai/core/openai-engine.service';
+import { Brain, Sparkles, BarChart3 } from 'lucide-react';
+
+export const AIGridDesignWizard = ({ onGridSelected, studyContext }) => {
+  const [recommendation, setRecommendation] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const aiEngine = OpenAIEngineService.getInstance();
+
+  const getAIRecommendation = async () => {
+    setIsAnalyzing(true);
+
+    try {
+      const response = await aiEngine.executeRequest({
+        operation: 'completion',
+        feature: 'grid-design-assistant',
+        prompt: `As a Q-methodology expert, recommend the optimal grid distribution for:
+          Study Type: ${studyContext.studyType}
+          Participants: ${studyContext.participantCount}
+          Stimuli Count: ${studyContext.stimuliCount}
+          Complexity: ${studyContext.complexity}
+
+          Consider:
+          1. Statistical power requirements
+          2. Participant cognitive load
+          3. Distribution shape (normal vs. flat)
+          4. Best practices from literature
+
+          Provide:
+          - Recommended range (e.g., -4 to +4)
+          - Column distribution array
+          - Scientific rationale with citations
+          - 2-3 alternative options
+
+          Format as JSON.`,
+        context: {
+          feature: 'grid-design',
+          jsonMode: true,
+          temperature: 0.3 // Lower temperature for consistency
+        },
+        userId: currentUser.id,
+        priority: 'high'
+      });
+
+      const recommendation = JSON.parse(response.data);
+      setRecommendation(recommendation);
+
+    } catch (error) {
+      console.error('AI recommendation failed:', error);
+      // Fallback to rule-based recommendation
+      setRecommendation(getRuleBasedRecommendation(studyContext));
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  return (
+    <div className="ai-grid-wizard bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6">
+      <div className="ai-header flex items-center gap-3 mb-6">
+        <Brain className="w-8 h-8 text-blue-500" />
+        <div>
+          <h2 className="text-xl font-semibold">AI-Powered Grid Design Assistant</h2>
+          <p className="text-sm text-gray-600">Get scientifically-backed grid recommendations</p>
+        </div>
+      </div>
+
+      {!recommendation ? (
+        <button
+          onClick={getAIRecommendation}
+          disabled={isAnalyzing}
+          className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          {isAnalyzing ? (
+            <span className="flex items-center justify-center gap-2">
+              <Sparkles className="w-5 h-5 animate-spin" />
+              Analyzing your study requirements...
+            </span>
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              Get AI Recommendation
+            </span>
+          )}
+        </button>
+      ) : (
+        <div className="recommendation-display space-y-6">
+          <div className="primary-recommendation bg-white rounded-lg p-6 shadow-sm">
+            <h3 className="text-lg font-semibold mb-4">Recommended Grid Configuration</h3>
+            <GridPreview config={recommendation.primary} />
+
+            <div className="scientific-rationale mt-6">
+              <h4 className="font-medium mb-3">Scientific Rationale</h4>
+              {recommendation.rationale.map((point, i) => (
+                <div key={i} className="flex gap-2 mb-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                  <p className="text-sm">{point}</p>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => onGridSelected(recommendation.primary)}
+              className="mt-4 w-full py-2 bg-blue-500 text-white rounded-lg"
+            >
+              Use This Configuration
+            </button>
+          </div>
+
+          <div className="alternatives">
+            <h4 className="font-medium mb-3">Alternative Options</h4>
+            <div className="grid grid-cols-2 gap-4">
+              {recommendation.alternatives.map((alt, i) => (
+                <button
+                  key={i}
+                  onClick={() => onGridSelected(alt)}
+                  className="p-4 bg-white rounded-lg hover:shadow-md transition-shadow"
+                >
+                  <GridPreview config={alt} mini={true} />
+                  <p className="text-sm mt-2">{alt.label}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+---
+
+# PHASE 6.87: AI-POWERED STIMULI UPLOAD INTELLIGENCE
+
+## Stimuli Generation Using Core AI Engine
+
+### Updated Stimuli Service Using Central AI Engine
+
+```typescript
+// lib/services/ai/features/ai-stimuli.service.ts
+import OpenAI from 'openai';
+import { z } from 'zod';
+
+const StimulusSchema = z.object({
+  text: z.string(),
+  sentiment: z.enum(['positive', 'negative', 'neutral']),
+  perspective: z.string(),
+  readability: z.number(),
+  keywords: z.array(z.string()),
+});
+
+export class AIStimuliService {
+  private openai: OpenAI;
+  private cache: Map<string, any> = new Map();
+
+  constructor() {
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+
+  // Generate stimuli based on study context
+  async generateStimuli(config: {
+    topic: string;
+    count: number;
+    gridSize: number;
+    existingStimuli?: string[];
+    perspectives?: string[];
+    avoidBias?: string[];
+    readingLevel?: 'elementary' | 'high-school' | 'college' | 'professional';
+  }): Promise<GeneratedStimulus[]> {
+    const cacheKey = JSON.stringify(config);
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    const prompt = this.buildGenerationPrompt(config);
+
+    const completion = await this.openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are an expert Q-methodology researcher specializing in creating balanced, unbiased stimuli for research studies.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.8,
+      max_tokens: 2000,
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content);
+    const validated = z.array(StimulusSchema).parse(result.stimuli);
+
+    this.cache.set(cacheKey, validated);
+    return validated;
+  }
+
+  // Detect bias in stimuli set
+  async detectBias(stimuli: string[]): Promise<BiasReport> {
+    const embedding = await this.getEmbeddings(stimuli);
+    const clusters = this.performClustering(embedding);
+
+    const biasAnalysis = await this.openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Analyze these stimuli for various types of bias including political, cultural, demographic, and confirmation bias.',
+        },
+        {
+          role: 'user',
+          content: JSON.stringify({ stimuli, clusters }),
+        },
+      ],
+    });
+
+    return {
+      overallScore: this.calculateBiasScore(biasAnalysis),
+      categories: this.categorizeBias(biasAnalysis),
+      recommendations: this.generateBalanceRecommendations(biasAnalysis),
+      missingPerspectives: this.identifyGaps(clusters, stimuli),
+    };
+  }
+
+  // Auto-enhance text readability
+  async enhanceReadability(text: string, targetLevel: string): Promise<string> {
+    const currentScore = this.calculateReadability(text);
+
+    if (Math.abs(currentScore - this.getTargetScore(targetLevel)) < 2) {
+      return text; // Already at target level
+    }
+
+    const enhanced = await this.openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content: `Adjust this text to ${targetLevel} reading level while preserving meaning.`,
+        },
+        {
+          role: 'user',
+          content: text,
+        },
+      ],
+      temperature: 0.3,
+    });
+
+    return enhanced.choices[0].message.content;
+  }
+
+  // Smart organization and categorization
+  async organizeStimuli(stimuli: Stimulus[]): Promise<OrganizedStimuli> {
+    const embeddings = await this.getEmbeddings(stimuli.map(s => s.text));
+
+    // Perform clustering
+    const clusters = await this.performHierarchicalClustering(embeddings);
+
+    // Analyze sentiment
+    const sentiments = await this.analyzeSentiment(stimuli);
+
+    // Create optimal arrangement for grid
+    const arrangement = this.optimizeGridPlacement(
+      clusters,
+      sentiments,
+      stimuli.length
+    );
+
+    return {
+      categories: clusters.map(c => ({
+        name: c.label,
+        stimuli: c.items,
+        theme: c.dominantTheme,
+      })),
+      sentimentDistribution: sentiments,
+      recommendedOrder: arrangement,
+      balanceScore: this.calculateBalance(clusters, sentiments),
+    };
+  }
+
+  // Intelligent recommendations
+  async getRecommendations(context: StudyContext): Promise<Recommendation[]> {
+    const analysis = await this.analyzeStudyContext(context);
+
+    const recommendations = [];
+
+    // Check for missing perspectives
+    if (analysis.missingPerspectives.length > 0) {
+      recommendations.push({
+        type: 'missing_perspective',
+        priority: 'high',
+        message: `Consider adding perspectives from: ${analysis.missingPerspectives.join(', ')}`,
+        action: () => this.generatePerspectives(analysis.missingPerspectives),
+      });
+    }
+
+    // Check for bias
+    if (analysis.biasScore > 0.3) {
+      recommendations.push({
+        type: 'bias_detected',
+        priority: 'medium',
+        message: 'Potential bias detected in stimuli set',
+        action: () => this.suggestBalancingStimuli(analysis),
+      });
+    }
+
+    // Check for optimal count
+    const optimalCount = this.calculateOptimalStimuliCount(context.gridSize);
+    if (Math.abs(context.stimuliCount - optimalCount) > 2) {
+      recommendations.push({
+        type: 'count_optimization',
+        priority: 'low',
+        message: `Consider using ${optimalCount} stimuli for optimal distribution`,
+        action: () => this.adjustStimuliCount(context, optimalCount),
+      });
+    }
+
+    return recommendations;
+  }
+
+  private buildGenerationPrompt(config: any): string {
+    return `Generate ${config.count} stimuli for a Q-methodology study about "${config.topic}".
+    
+    Requirements:
+    - Grid size is ${config.gridSize} (plan for proper distribution)
+    - Balance positive, negative, and neutral perspectives equally
+    - Reading level: ${config.readingLevel || 'college'}
+    - Avoid bias toward: ${config.avoidBias?.join(', ') || 'none specified'}
+    - Include perspectives from: ${config.perspectives?.join(', ') || 'diverse backgrounds'}
+    ${config.existingStimuli ? `- Complement these existing stimuli: ${config.existingStimuli.slice(0, 3).join('; ')}...` : ''}
+    
+    Format: Return a JSON object with an array called "stimuli", where each item has:
+    - text: the stimulus text (50-150 characters)
+    - sentiment: positive, negative, or neutral
+    - perspective: whose viewpoint this represents
+    - readability: reading ease score (0-100)
+    - keywords: array of 3-5 key concepts`;
+  }
+}
+```
+
+### AI-Powered UI Components
+
+```tsx
+// components/stimuli/AIAssistantPanel.tsx
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, Brain, Shield, Zap } from 'lucide-react';
+
+export const AIAssistantPanel = ({
+  gridConfig,
+  existingStimuli,
+  onStimuliGenerated,
+}) => {
+  const [mode, setMode] = useState<
+    'generate' | 'validate' | 'enhance' | 'organize'
+  >('generate');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [aiResponse, setAiResponse] = useState('');
+
+  const handleGenerate = async () => {
+    setIsProcessing(true);
+
+    try {
+      const response = await fetch('/api/ai/generate-stimuli', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: studyTopic,
+          count: gridConfig.totalCells - existingStimuli.length,
+          gridSize: gridConfig.totalCells,
+          existingStimuli: existingStimuli.map(s => s.text),
+        }),
+      });
+
+      const { stimuli, explanation } = await response.json();
+
+      setAiResponse(explanation);
+      onStimuliGenerated(stimuli);
+
+      // Show success animation
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    } catch (error) {
+      console.error('Generation failed:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleValidate = async () => {
+    setIsProcessing(true);
+
+    const response = await fetch('/api/ai/validate-bias', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stimuli: existingStimuli }),
+    });
+
+    const biasReport = await response.json();
+
+    setSuggestions(biasReport.recommendations);
+    setIsProcessing(false);
+  };
+
+  return (
+    <motion.div
+      className="ai-assistant-panel"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+    >
+      {/* Mode Selector */}
+      <div className="flex gap-2 mb-6">
+        {[
+          { id: 'generate', icon: Sparkles, label: 'Generate' },
+          { id: 'validate', icon: Shield, label: 'Validate' },
+          { id: 'enhance', icon: Zap, label: 'Enhance' },
+          { id: 'organize', icon: Brain, label: 'Organize' },
+        ].map(({ id, icon: Icon, label }) => (
+          <button
+            key={id}
+            onClick={() => setMode(id as any)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+              mode === id
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 hover:bg-gray-200'
+            }`}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* AI Interface */}
+      <AnimatePresence mode="wait">
+        {mode === 'generate' && (
+          <motion.div
+            key="generate"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
+              <h3 className="text-lg font-semibold mb-4">
+                AI Stimulus Generator
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Study Topic
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2 border rounded-lg"
+                    placeholder="e.g., Climate change solutions"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Perspectives to Include
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      'Scientific',
+                      'Economic',
+                      'Social',
+                      'Political',
+                      'Environmental',
+                    ].map(p => (
+                      <label key={p} className="flex items-center gap-2">
+                        <input type="checkbox" />
+                        <span className="text-sm">{p}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Number to Generate
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <span className="text-2xl font-bold text-blue-600">
+                      {gridConfig.totalCells - existingStimuli.length}
+                    </span>
+                    <span className="text-sm text-gray-600">
+                      stimuli needed to complete your grid
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleGenerate}
+                  disabled={isProcessing}
+                  className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {isProcessing ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                      >
+                        <Sparkles className="w-5 h-5" />
+                      </motion.div>
+                      Generating...
+                    </span>
+                  ) : (
+                    'Generate Stimuli with AI'
+                  )}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {mode === 'validate' && (
+          <motion.div
+            key="validate"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <BiasValidator
+              stimuli={existingStimuli}
+              onValidate={handleValidate}
+              isProcessing={isProcessing}
+              suggestions={suggestions}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* AI Response Display */}
+      {aiResponse && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 p-4 bg-blue-50 rounded-lg"
+        >
+          <div className="flex items-start gap-3">
+            <Brain className="w-5 h-5 text-blue-500 mt-1" />
+            <div>
+              <p className="text-sm font-medium text-blue-900 mb-1">
+                AI Assistant
+              </p>
+              <p className="text-sm text-blue-700">{aiResponse}</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+};
+```
+
+### Backend AI Processing Pipeline
+
+```typescript
+// backend/services/ai-pipeline.service.ts
+import Bull from 'bull';
+import { AIStimuliService } from './ai-stimuli.service';
+
+export class AIPipelineService {
+  private queue: Bull.Queue;
+  private aiService: AIStimuliService;
+
+  constructor() {
+    this.queue = new Bull('ai-processing', {
+      redis: {
+        host: process.env.REDIS_HOST,
+        port: process.env.REDIS_PORT,
+      },
+    });
+
+    this.aiService = new AIStimuliService();
+    this.setupProcessors();
+  }
+
+  private setupProcessors() {
+    // Process generation requests
+    this.queue.process('generate', async job => {
+      const { config, userId } = job.data;
+
+      try {
+        const stimuli = await this.aiService.generateStimuli(config);
+
+        // Store in cache for quick retrieval
+        await this.cacheResult(userId, 'generation', stimuli);
+
+        // Emit WebSocket event
+        this.emitProgress(userId, 'generation_complete', stimuli);
+
+        return stimuli;
+      } catch (error) {
+        this.emitError(userId, 'generation_failed', error.message);
+        throw error;
+      }
+    });
+
+    // Process bias detection
+    this.queue.process('detect-bias', async job => {
+      const { stimuli, userId } = job.data;
+
+      const report = await this.aiService.detectBias(stimuli);
+
+      this.emitProgress(userId, 'bias_report_ready', report);
+
+      return report;
+    });
+
+    // Process enhancement requests
+    this.queue.process('enhance', async job => {
+      const { items, type, userId } = job.data;
+
+      const enhanced = await Promise.all(
+        items.map(item => this.enhanceItem(item, type))
+      );
+
+      this.emitProgress(userId, 'enhancement_complete', enhanced);
+
+      return enhanced;
+    });
+  }
+
+  async addToQueue(type: string, data: any) {
+    const job = await this.queue.add(type, data, {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 2000,
+      },
+    });
+
+    return job.id;
+  }
+}
+```
+
+### AI Credits & Usage Tracking
+
+```typescript
+// stores/ai-credits-store.ts
+import { create } from 'zustand';
+
+interface AICreditsStore {
+  credits: number;
+  usage: {
+    generation: number;
+    validation: number;
+    enhancement: number;
+  };
+  history: AIUsageRecord[];
+
+  consumeCredits: (amount: number, type: string) => boolean;
+  checkCredits: (amount: number) => boolean;
+  addCredits: (amount: number) => void;
+  getUsageStats: () => UsageStats;
+}
+
+export const useAICreditsStore = create<AICreditsStore>((set, get) => ({
+  credits: 100, // Free tier starts with 100 credits
+  usage: {
+    generation: 0,
+    validation: 0,
+    enhancement: 0,
+  },
+  history: [],
+
+  consumeCredits: (amount, type) => {
+    const state = get();
+    if (state.credits < amount) return false;
+
+    set(state => ({
+      credits: state.credits - amount,
+      usage: {
+        ...state.usage,
+        [type]: state.usage[type] + amount,
+      },
+      history: [
+        ...state.history,
+        {
+          timestamp: Date.now(),
+          type,
+          amount,
+          remaining: state.credits - amount,
+        },
+      ],
+    }));
+
+    return true;
+  },
+
+  checkCredits: amount => get().credits >= amount,
+
+  addCredits: amount =>
+    set(state => ({
+      credits: state.credits + amount,
+    })),
+
+  getUsageStats: () => {
+    const state = get();
+    return {
+      totalUsed: Object.values(state.usage).reduce((a, b) => a + b, 0),
+      remaining: state.credits,
+      breakdown: state.usage,
+    };
+  },
+}));
 ```
 
 ---

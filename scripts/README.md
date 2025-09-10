@@ -3,28 +3,22 @@
 ## Active Scripts (USE THESE)
 
 ### Primary Server Management
-- **`dev-ultimate-v3.js`** - Latest development server manager with enhanced monitoring
-  - Usage: `npm run dev` (default - uses V3)
+
+- **`dev-ultimate.js`** - Enhanced development server manager (V5)
+  - Usage: `npm run dev` (default)
   - Features:
-    - Active HTTP health checks every 5 seconds
-    - Automatic stall detection (30-second timeout)
-    - Self-healing recovery mechanism
-    - Detailed logging to `logs/dev-manager.log`
-    - Force cleanup of orphaned processes
+    - Process group management for reliable cleanup
+    - No shell spawning - direct process control
+    - Robust error handling and recovery
+    - Process tracking via .dev-processes.json
+    - Clean shutdown handling with proper signals
+    - Prevents orphaned processes
+    - Force cleanup of stale processes
   - Manages both frontend (port 3000) and backend (port 4000)
-  - **BEST FOR**: Production-like stability with automatic recovery
-
-- **`dev-ultimate-v2.js`** - Previous version with basic monitoring
-  - Usage: `npm run dev:v2`
-  - Basic process monitoring
-  - Legacy version (use V3 instead)
-
-- **`dev-ultimate.js`** - Original ultimate manager
-  - Usage: `npm run dev:ultimate`
-  - Basic functionality
-  - Legacy version (use V3 instead)
+  - **BEST FOR**: Reliable development with clean process management
 
 ### Utility Scripts
+
 - **`stop-ultimate.js`** - Stops all running servers
   - Usage: `npm run stop`
   - Kills all Node.js processes
@@ -35,77 +29,72 @@
 
 ```bash
 # Start development servers (RECOMMENDED)
-npm run dev              # Uses V3 with enhanced monitoring (DEFAULT)
-npm run dev:v3           # Explicitly use V3
-npm run dev:v2           # Use legacy V2
-npm run dev:ultimate     # Use original ultimate manager
+npm run dev              # Start development servers
 
 # Stop all servers
 npm run stop
 
 # Restart servers
-npm run restart          # Stop and start with V3
+npm run restart          # Stop and start servers
 
 # Clean restart (removes build artifacts)
-npm run dev:clean        # Clean build with V3
-
-# Individual servers (for debugging only)
-npm run dev:frontend-only   # Frontend only (if configured)
-npm run dev:backend-only    # Backend only (if configured)
+npm run dev:clean        # Clean build and restart
 ```
 
-## V3 Features (Current Default)
+## Features
 
-### Enhanced Health Monitoring
-- HTTP health checks every 5 seconds
-- Verifies servers are actually responding
-- Not just checking if process exists
+### Process Group Management
 
-### Automatic Recovery
-- Detects stalled servers within 30 seconds
-- Automatic restart on failure
-- 3-failure threshold before forced restart
+- Direct process control without shell spawning
+- Clean process tree management
+- No orphaned processes
 
-### Detailed Logging
-- All events logged to `logs/dev-manager.log`
-- Timestamped entries
-- Console output with clear status indicators
+### Reliable Cleanup
 
-### Better Process Management
-- SIGKILL for guaranteed cleanup
-- Port-specific process termination
-- Extended wait times for port release
+- Process tracking via .dev-processes.json
+- Guaranteed cleanup on exit
+- Proper signal handling (SIGTERM, SIGINT)
+
+### Error Recovery
+
+- Robust error handling
+- Clean port release
+- Extended wait times for resource cleanup
 
 ## Important Notes
 
-1. **ALWAYS use `npm run dev`** for starting servers (uses V3 by default)
+1. **ALWAYS use `npm run dev`** for starting servers
 2. **ALWAYS use `npm run stop`** before manually starting servers
-3. V3 prevents zombie processes and stalling
+3. Prevents zombie processes through process group management
 4. Default ports: Frontend=3000, Backend=4000
-5. Health checks are active, not passive
+5. Process tracking via .dev-processes.json file
 
 ## Troubleshooting
 
 ### Website Stalling or Not Responding
-V3 automatically detects and recovers from stalls. If issues persist:
+
+If servers are not responding:
 
 ```bash
 npm run stop          # Stop all servers
-npm run dev:clean     # Clean restart with V3
+npm run dev:clean     # Clean restart
 ```
 
 ### Check Server Status
-Look for health check messages in console:
-- ✅ Successful health checks (silent)
-- ⚠️ Failed health checks (warnings shown)
-- 🔄 Automatic restarts (logged)
+
+Process information is stored in .dev-processes.json:
+
+- Contains PIDs for manager, frontend, and backend
+- Automatically cleaned up on exit
 
 ### View Detailed Logs
+
 ```bash
 tail -f logs/dev-manager.log   # Watch real-time logs
 ```
 
 ### Port Already in Use
+
 ```bash
 npm run stop          # Stop all servers
 lsof -i :3000,4000   # Check what's using ports
@@ -113,7 +102,9 @@ npm run dev           # Start fresh with V3
 ```
 
 ### Manual Recovery
+
 If automatic recovery fails:
+
 ```bash
 npm run stop          # Force stop everything
 ps aux | grep node    # Check for zombies
@@ -122,18 +113,19 @@ npm run dev:clean     # Clean restart
 
 ## Migration from Old Managers
 
-If you were using:
-- `dev-manager-unified.js` → Now use `dev-ultimate-v3.js`
-- `dev-manager.js` → Now use `dev-ultimate-v3.js`
-- `enterprise-dev-manager.js` → Now use `dev-ultimate-v3.js`
-- `dev-simple.js` → Now use `dev-ultimate-v3.js`
+All previous manager versions have been archived. The current `dev-ultimate.js` (V5) is the only active manager.
 
-All functionality has been consolidated and improved in V3.
+Archived versions (in scripts/archived-managers/):
 
-## Why V3?
+- `dev-ultimate-v2.js` - Basic monitoring version
+- `dev-ultimate-v3.js` - HTTP health check version
+- `dev-ultimate-v4.js` - Intermediate version
+- Previous `dev-ultimate.js` - Original version
 
-1. **Reliability**: Active health monitoring prevents zombie processes
-2. **Recovery**: Automatic detection and recovery from stalls
-3. **Visibility**: Detailed logging for debugging
-4. **Simplicity**: One manager handles all scenarios
-5. **Performance**: Optimized health checks with minimal overhead
+## Why This Manager?
+
+1. **Reliability**: Process group management prevents zombie processes
+2. **Simplicity**: Direct process control without shell complications
+3. **Tracking**: Process IDs saved for reliable cleanup
+4. **Performance**: Minimal overhead with efficient process management
+5. **Stability**: Proven to handle long-running development sessions

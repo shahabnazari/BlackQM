@@ -14,12 +14,7 @@
     "CRITICAL": "NEVER create /app, /components, or /pages in root - they go in /frontend/!"
   },
   "scripts": {
-    "dev": "node scripts/dev-ultimate-v5.js",
-    "dev:v5": "node scripts/dev-ultimate-v5.js",
-    "dev:v4": "node scripts/dev-ultimate-v4.js",
-    "dev:v3": "node scripts/dev-ultimate-v3.js",
-    "dev:v2": "node scripts/dev-ultimate-v2.js",
-    "dev:ultimate": "node scripts/dev-ultimate.js",
+    "dev": "node scripts/dev-ultimate.js",
     "stop": "node scripts/stop-ultimate.js",
     "restart": "npm run stop && sleep 2 && npm run dev",
     "dev:clean": "npm run stop && rm -rf frontend/.next backend/dist logs/*.log && npm run dev",
