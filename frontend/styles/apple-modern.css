@@ -1,0 +1,254 @@
+/* Modern Apple Design System - Based on Latest HIG (2024) */
+/* Enhanced with iOS 17/macOS Sonoma Design Principles */
+
+:root {
+  /* ===== MODERN APPLE COLORS ===== */
+
+  /* Primary Background - Pure whites/blacks for main surfaces */
+  --apple-bg-primary: #ffffff;
+  --apple-bg-primary-dark: #000000;
+
+  /* Elevated Surfaces - Cards, modals, overlays */
+  --apple-bg-elevated: #ffffff;
+  --apple-bg-elevated-dark: #1c1c1e;
+
+  /* Secondary Surfaces - Sections, grouped content */
+  --apple-bg-secondary: #f2f2f7;
+  --apple-bg-secondary-dark: #1c1c1e;
+
+  /* Tertiary Surfaces - Nested content, wells */
+  --apple-bg-tertiary: #ffffff;
+  --apple-bg-tertiary-dark: #2c2c2e;
+
+  /* Grouped Backgrounds - Table/list backgrounds */
+  --apple-bg-grouped: #f2f2f7;
+  --apple-bg-grouped-dark: #000000;
+
+  /* ===== VIBRANCY & MATERIALS ===== */
+
+  /* Material Effects - Translucent overlays */
+  --apple-material-thin: rgba(255, 255, 255, 0.5);
+  --apple-material-regular: rgba(255, 255, 255, 0.8);
+  --apple-material-thick: rgba(255, 255, 255, 0.95);
+  --apple-material-chrome: rgba(255, 255, 255, 0.98);
+
+  --apple-material-thin-dark: rgba(30, 30, 30, 0.7);
+  --apple-material-regular-dark: rgba(30, 30, 30, 0.85);
+  --apple-material-thick-dark: rgba(30, 30, 30, 0.95);
+  --apple-material-chrome-dark: rgba(30, 30, 30, 0.98);
+
+  /* ===== SEPARATOR COLORS ===== */
+
+  --apple-separator: rgba(60, 60, 67, 0.12);
+  --apple-separator-opaque: #c6c6c8;
+  --apple-separator-dark: rgba(84, 84, 88, 0.65);
+  --apple-separator-opaque-dark: #38383a;
+
+  /* ===== TEXT COLORS ===== */
+
+  --apple-text-primary: #000000;
+  --apple-text-secondary: rgba(60, 60, 67, 0.6);
+  --apple-text-tertiary: rgba(60, 60, 67, 0.3);
+  --apple-text-quaternary: rgba(60, 60, 67, 0.18);
+
+  --apple-text-primary-dark: #ffffff;
+  --apple-text-secondary-dark: rgba(235, 235, 245, 0.6);
+  --apple-text-tertiary-dark: rgba(235, 235, 245, 0.3);
+  --apple-text-quaternary-dark: rgba(235, 235, 245, 0.18);
+
+  /* ===== FILL COLORS FOR UI ELEMENTS ===== */
+
+  --apple-fill-primary: rgba(120, 120, 128, 0.2);
+  --apple-fill-secondary: rgba(120, 120, 128, 0.16);
+  --apple-fill-tertiary: rgba(118, 118, 128, 0.12);
+  --apple-fill-quaternary: rgba(116, 116, 128, 0.08);
+
+  --apple-fill-primary-dark: rgba(120, 120, 128, 0.36);
+  --apple-fill-secondary-dark: rgba(120, 120, 128, 0.32);
+  --apple-fill-tertiary-dark: rgba(118, 118, 128, 0.24);
+  --apple-fill-quaternary-dark: rgba(118, 118, 128, 0.18);
+
+  /* ===== MODERN SHADOWS (Softer, more subtle) ===== */
+
+  --apple-shadow-xs:
+    0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.08);
+  --apple-shadow-sm:
+    0 2px 8px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.08);
+  --apple-shadow-md:
+    0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.08);
+  --apple-shadow-lg:
+    0 8px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.08);
+  --apple-shadow-xl:
+    0 12px 48px rgba(0, 0, 0, 0.12), 0 6px 12px rgba(0, 0, 0, 0.08);
+
+  /* Colored shadows for interactive elements */
+  --apple-shadow-blue: 0 4px 12px rgba(0, 122, 255, 0.15);
+  --apple-shadow-success: 0 4px 12px rgba(52, 199, 89, 0.15);
+
+  /* ===== BORDERS & RINGS ===== */
+
+  --apple-border-width: 0.5px;
+  --apple-border-width-thick: 1px;
+  --apple-focus-ring-width: 3px;
+  --apple-focus-ring-color: rgba(0, 122, 255, 0.25);
+
+  /* ===== MODERN BORDER RADIUS ===== */
+
+  --apple-radius-xs: 4px;
+  --apple-radius-sm: 6px;
+  --apple-radius-md: 10px;
+  --apple-radius-lg: 14px;
+  --apple-radius-xl: 20px;
+  --apple-radius-2xl: 28px;
+  --apple-radius-full: 9999px;
+
+  /* ===== BACKDROP FILTERS ===== */
+
+  --apple-blur-sm: blur(8px);
+  --apple-blur-md: blur(16px);
+  --apple-blur-lg: blur(24px);
+  --apple-blur-xl: blur(40px);
+}
+
+/* Dark mode overrides */
+.dark {
+  --apple-bg-primary: var(--apple-bg-primary-dark);
+  --apple-bg-elevated: var(--apple-bg-elevated-dark);
+  --apple-bg-secondary: var(--apple-bg-secondary-dark);
+  --apple-bg-tertiary: var(--apple-bg-tertiary-dark);
+  --apple-bg-grouped: var(--apple-bg-grouped-dark);
+
+  --apple-material-thin: var(--apple-material-thin-dark);
+  --apple-material-regular: var(--apple-material-regular-dark);
+  --apple-material-thick: var(--apple-material-thick-dark);
+  --apple-material-chrome: var(--apple-material-chrome-dark);
+
+  --apple-separator: var(--apple-separator-dark);
+  --apple-separator-opaque: var(--apple-separator-opaque-dark);
+
+  --apple-text-primary: var(--apple-text-primary-dark);
+  --apple-text-secondary: var(--apple-text-secondary-dark);
+  --apple-text-tertiary: var(--apple-text-tertiary-dark);
+  --apple-text-quaternary: var(--apple-text-quaternary-dark);
+
+  --apple-fill-primary: var(--apple-fill-primary-dark);
+  --apple-fill-secondary: var(--apple-fill-secondary-dark);
+  --apple-fill-tertiary: var(--apple-fill-tertiary-dark);
+  --apple-fill-quaternary: var(--apple-fill-quaternary-dark);
+
+  /* Adjust shadows for dark mode */
+  --apple-shadow-xs:
+    0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --apple-shadow-sm:
+    0 2px 8px rgba(0, 0, 0, 0.16), 0 2px 4px rgba(0, 0, 0, 0.24);
+  --apple-shadow-md:
+    0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.24);
+  --apple-shadow-lg:
+    0 8px 24px rgba(0, 0, 0, 0.24), 0 4px 8px rgba(0, 0, 0, 0.28);
+  --apple-shadow-xl:
+    0 12px 48px rgba(0, 0, 0, 0.32), 0 6px 12px rgba(0, 0, 0, 0.28);
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+/* Modern Card Styles */
+.apple-card {
+  background: var(--apple-bg-elevated);
+  border-radius: var(--apple-radius-lg);
+  border: var(--apple-border-width) solid var(--apple-separator);
+  box-shadow: var(--apple-shadow-sm);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.apple-card-hoverable:hover {
+  box-shadow: var(--apple-shadow-md);
+  transform: translateY(-1px);
+}
+
+/* Material/Glass Effects */
+.apple-material {
+  background: var(--apple-material-regular);
+  backdrop-filter: var(--apple-blur-md);
+  -webkit-backdrop-filter: var(--apple-blur-md);
+}
+
+.apple-material-thick {
+  background: var(--apple-material-thick);
+  backdrop-filter: var(--apple-blur-lg);
+  -webkit-backdrop-filter: var(--apple-blur-lg);
+}
+
+/* Modern Button Base */
+.apple-button {
+  background: var(--apple-fill-quaternary);
+  border: var(--apple-border-width) solid var(--apple-separator);
+  border-radius: var(--apple-radius-md);
+  padding: 8px 16px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.apple-button:hover {
+  background: var(--apple-fill-tertiary);
+}
+
+.apple-button:active {
+  transform: scale(0.98);
+}
+
+/* Separator Styles */
+.apple-separator-h {
+  height: var(--apple-border-width);
+  background: var(--apple-separator);
+  margin: 16px 0;
+}
+
+.apple-separator-v {
+  width: var(--apple-border-width);
+  background: var(--apple-separator);
+  margin: 0 16px;
+}
+
+/* Focus States */
+.apple-focus:focus {
+  outline: none;
+  box-shadow: 0 0 0 var(--apple-focus-ring-width) var(--apple-focus-ring-color);
+}
+
+/* Input Fields */
+.apple-input {
+  background: var(--apple-bg-primary);
+  border: var(--apple-border-width) solid var(--apple-separator);
+  border-radius: var(--apple-radius-md);
+  padding: 10px 12px;
+  transition: all 0.15s ease;
+}
+
+.apple-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 var(--apple-focus-ring-width) var(--apple-focus-ring-color);
+  outline: none;
+}
+
+/* Wells/Inset Areas */
+.apple-well {
+  background: var(--apple-bg-tertiary);
+  border-radius: var(--apple-radius-md);
+  padding: 12px;
+  border: var(--apple-border-width) solid var(--apple-separator);
+}
+
+/* Badge Styles */
+.apple-badge {
+  background: var(--apple-fill-secondary);
+  border-radius: var(--apple-radius-full);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

@@ -4,6 +4,8 @@
 
 @import '../styles/tokens.css';
 @import '../styles/apple-design.css';
+@import '../styles/apple-modern.css';
+@import '../styles/enhanced-design-system.css';
 @import '../styles/grid-responsive.css';
 @import '../styles/floating-image.css';
 

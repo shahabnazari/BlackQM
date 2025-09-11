@@ -1,0 +1,269 @@
+/* Enhanced Design System - Combining Best Practices from Industry Leaders */
+/* Based on: Apple HIG, Netflix UI, Qualtrics Design System, Material Design 3, IBM Carbon */
+
+:root {
+  /* ===== ENHANCED COLOR SYSTEM ===== */
+
+  /* Primary Backgrounds - Higher contrast approach */
+  --enhanced-bg-primary: #ffffff;
+  --enhanced-bg-primary-dark: #0a0a0a;
+
+  /* Elevated Surfaces - Better depth perception */
+  --enhanced-bg-elevated: #ffffff;
+  --enhanced-bg-elevated-dark: #141414; /* Netflix-inspired dark */
+
+  /* Secondary Surfaces - Subtle but visible */
+  --enhanced-bg-secondary: #f8f9fa;
+  --enhanced-bg-secondary-dark: #1a1a1a;
+
+  /* Interactive Surfaces - Clear affordance */
+  --enhanced-bg-interactive: #f5f7ff;
+  --enhanced-bg-interactive-dark: #1a1d2e;
+
+  /* ===== TEXT COLORS WITH WCAG AAA COMPLIANCE ===== */
+
+  /* Primary Text - Maximum contrast */
+  --enhanced-text-primary: #000000;
+  --enhanced-text-primary-dark: #ffffff;
+
+  /* Secondary Text - Still highly readable (WCAG AA) */
+  --enhanced-text-secondary: rgba(0, 0, 0, 0.75); /* 75% opacity */
+  --enhanced-text-secondary-dark: rgba(255, 255, 255, 0.85);
+
+  /* Tertiary Text - Minimum for body text (WCAG AA) */
+  --enhanced-text-tertiary: rgba(0, 0, 0, 0.6); /* 60% opacity */
+  --enhanced-text-tertiary-dark: rgba(255, 255, 255, 0.7);
+
+  /* Disabled/Placeholder - Still readable but clearly inactive */
+  --enhanced-text-disabled: rgba(
+    0,
+    0,
+    0,
+    0.45
+  ); /* 45% opacity - WCAG compliant */
+  --enhanced-text-disabled-dark: rgba(255, 255, 255, 0.5);
+
+  /* ===== INTERACTIVE ELEMENT COLORS (Netflix/Qualtrics inspired) ===== */
+
+  /* Action Colors - Clear and vibrant */
+  --enhanced-action-primary: #0066ff; /* Brighter than Apple's blue */
+  --enhanced-action-primary-hover: #0052cc;
+  --enhanced-action-primary-active: #003d99;
+
+  --enhanced-action-success: #00a854; /* More vibrant green */
+  --enhanced-action-danger: #e50914; /* Netflix red */
+  --enhanced-action-warning: #ff8c00; /* Deeper orange */
+
+  /* ===== BORDERS & SEPARATORS (More visible) ===== */
+
+  --enhanced-border-subtle: rgba(0, 0, 0, 0.08);
+  --enhanced-border-regular: rgba(0, 0, 0, 0.12);
+  --enhanced-border-strong: rgba(0, 0, 0, 0.2);
+
+  --enhanced-border-subtle-dark: rgba(255, 255, 255, 0.1);
+  --enhanced-border-regular-dark: rgba(255, 255, 255, 0.15);
+  --enhanced-border-strong-dark: rgba(255, 255, 255, 0.25);
+
+  /* ===== FILL COLORS FOR EMPTY STATES (More visible) ===== */
+
+  --enhanced-fill-empty: rgba(0, 0, 0, 0.04); /* Very light but visible */
+  --enhanced-fill-empty-hover: rgba(0, 0, 0, 0.08);
+  --enhanced-fill-empty-border: rgba(0, 0, 0, 0.15); /* Clearer border */
+
+  --enhanced-fill-empty-dark: rgba(255, 255, 255, 0.06);
+  --enhanced-fill-empty-hover-dark: rgba(255, 255, 255, 0.1);
+  --enhanced-fill-empty-border-dark: rgba(255, 255, 255, 0.2);
+
+  /* ===== ENHANCED SHADOWS (Material Design inspired) ===== */
+
+  --enhanced-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --enhanced-shadow-sm:
+    0 2px 4px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.08);
+  --enhanced-shadow-md:
+    0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --enhanced-shadow-lg:
+    0 10px 20px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.06);
+  --enhanced-shadow-xl:
+    0 20px 40px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.08);
+
+  /* Elevation shadows for dark mode */
+  --enhanced-shadow-sm-dark:
+    0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --enhanced-shadow-md-dark:
+    0 4px 8px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.4);
+  --enhanced-shadow-lg-dark:
+    0 10px 20px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.45);
+
+  /* ===== FOCUS INDICATORS (Accessibility first) ===== */
+
+  --enhanced-focus-ring-width: 2px;
+  --enhanced-focus-ring-color: #0066ff;
+  --enhanced-focus-ring-offset: 2px;
+
+  /* ===== BORDER RADIUS (Balanced approach) ===== */
+
+  --enhanced-radius-xs: 2px;
+  --enhanced-radius-sm: 4px;
+  --enhanced-radius-md: 8px;
+  --enhanced-radius-lg: 12px;
+  --enhanced-radius-xl: 16px;
+  --enhanced-radius-2xl: 24px;
+  --enhanced-radius-full: 9999px;
+
+  /* ===== SPACING (8pt grid maintained) ===== */
+
+  --enhanced-space-xs: 4px;
+  --enhanced-space-sm: 8px;
+  --enhanced-space-md: 16px;
+  --enhanced-space-lg: 24px;
+  --enhanced-space-xl: 32px;
+  --enhanced-space-2xl: 48px;
+  --enhanced-space-3xl: 64px;
+
+  /* ===== TRANSITIONS (Smooth but snappy) ===== */
+
+  --enhanced-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --enhanced-transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --enhanced-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ===== Z-INDEX SCALE ===== */
+
+  --enhanced-z-base: 1;
+  --enhanced-z-dropdown: 1000;
+  --enhanced-z-sticky: 1020;
+  --enhanced-z-fixed: 1030;
+  --enhanced-z-modal-backdrop: 1040;
+  --enhanced-z-modal: 1050;
+  --enhanced-z-popover: 1060;
+  --enhanced-z-tooltip: 1070;
+}
+
+/* Dark mode overrides */
+.dark {
+  --enhanced-bg-primary: var(--enhanced-bg-primary-dark);
+  --enhanced-bg-elevated: var(--enhanced-bg-elevated-dark);
+  --enhanced-bg-secondary: var(--enhanced-bg-secondary-dark);
+  --enhanced-bg-interactive: var(--enhanced-bg-interactive-dark);
+
+  --enhanced-text-primary: var(--enhanced-text-primary-dark);
+  --enhanced-text-secondary: var(--enhanced-text-secondary-dark);
+  --enhanced-text-tertiary: var(--enhanced-text-tertiary-dark);
+  --enhanced-text-disabled: var(--enhanced-text-disabled-dark);
+
+  --enhanced-border-subtle: var(--enhanced-border-subtle-dark);
+  --enhanced-border-regular: var(--enhanced-border-regular-dark);
+  --enhanced-border-strong: var(--enhanced-border-strong-dark);
+
+  --enhanced-fill-empty: var(--enhanced-fill-empty-dark);
+  --enhanced-fill-empty-hover: var(--enhanced-fill-empty-hover-dark);
+  --enhanced-fill-empty-border: var(--enhanced-fill-empty-border-dark);
+
+  --enhanced-shadow-sm: var(--enhanced-shadow-sm-dark);
+  --enhanced-shadow-md: var(--enhanced-shadow-md-dark);
+  --enhanced-shadow-lg: var(--enhanced-shadow-lg-dark);
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+/* High Contrast Empty Cell */
+.enhanced-empty-cell {
+  background: var(--enhanced-fill-empty);
+  border: 1px solid var(--enhanced-fill-empty-border);
+  color: var(--enhanced-text-tertiary);
+  transition: all var(--enhanced-transition-fast);
+}
+
+.enhanced-empty-cell:hover {
+  background: var(--enhanced-fill-empty-hover);
+  border-color: var(--enhanced-border-strong);
+}
+
+/* Interactive Card */
+.enhanced-card {
+  background: var(--enhanced-bg-elevated);
+  border: 1px solid var(--enhanced-border-regular);
+  border-radius: var(--enhanced-radius-lg);
+  box-shadow: var(--enhanced-shadow-sm);
+  transition: all var(--enhanced-transition-base);
+}
+
+.enhanced-card:hover {
+  box-shadow: var(--enhanced-shadow-md);
+  border-color: var(--enhanced-border-strong);
+}
+
+/* Clear Focus Indicator */
+.enhanced-focusable:focus {
+  outline: var(--enhanced-focus-ring-width) solid
+    var(--enhanced-focus-ring-color);
+  outline-offset: var(--enhanced-focus-ring-offset);
+}
+
+/* Accessible Button States */
+.enhanced-button {
+  background: var(--enhanced-bg-interactive);
+  border: 1px solid var(--enhanced-border-regular);
+  color: var(--enhanced-text-primary);
+  transition: all var(--enhanced-transition-fast);
+}
+
+.enhanced-button:hover {
+  background: var(--enhanced-action-primary);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: var(--enhanced-shadow-md);
+}
+
+.enhanced-button:active {
+  transform: translateY(0);
+  box-shadow: var(--enhanced-shadow-sm);
+}
+
+/* Netflix-style hover effects */
+.enhanced-hover-lift {
+  transition: transform var(--enhanced-transition-base);
+}
+
+.enhanced-hover-lift:hover {
+  transform: scale(1.05);
+  z-index: var(--enhanced-z-base);
+}
+
+/* Qualtrics-style data visualization */
+.enhanced-data-cell {
+  position: relative;
+  background: var(--enhanced-bg-elevated);
+  border: 1px solid var(--enhanced-border-regular);
+  overflow: hidden;
+}
+
+.enhanced-data-cell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    rgba(0, 102, 255, 0.05) 100%
+  );
+  opacity: 0;
+  transition: opacity var(--enhanced-transition-base);
+}
+
+.enhanced-data-cell:hover::before {
+  opacity: 1;
+}
+
+/* IBM Carbon-style feedback */
+.enhanced-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--enhanced-bg-secondary);
+  border-left: 3px solid var(--enhanced-action-primary);
+  border-radius: var(--enhanced-radius-sm);
+}

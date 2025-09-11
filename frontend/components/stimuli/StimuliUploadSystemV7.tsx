@@ -53,14 +53,15 @@ import {
 } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/apple-ui/Badge/Badge';
 import PopupModal, { usePopup } from '@/components/ui/PopupModal';
+import { useToast, ToastContainer } from '@/components/ui/ToastNotification';
 import { cn } from '@/lib/utils';
 
 // Q-Method text requirements
 const Q_METHOD_TEXT_LIMITS = {
-  minWords: 50,
-  maxWords: 150,
-  recommendedWords: 100,
-  maxCharacters: 750,
+  minWords: 10,
+  maxWords: 30,
+  recommendedWords: 20,
+  maxCharacters: 200,
 };
 
 // Stimuli requirements for Q-methodology
@@ -181,12 +182,13 @@ export function StimuliUploadSystemV7({
   const {
     popupState,
     closePopup,
-    showSuccess,
-    showError,
     showConfirm,
-    showWarning,
+    showWarning: showPopupWarning,
     showInfo,
   } = usePopup();
+
+  const { toasts, showSuccess, showError, showWarning, removeToast } =
+    useToast();
 
   // Initialize locked type if we have initial stimuli
   useEffect(() => {
@@ -225,6 +227,26 @@ export function StimuliUploadSystemV7({
       .filter(word => word.length > 0).length;
   const getCharCount = (text: string) => text.trim().length;
 
+  // LinkedIn-style hard limit - prevent typing beyond max words
+  const handleTextInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newText = e.target.value;
+    const currentWordCount = getWordCount(textInput);
+    const newWordCount = getWordCount(newText);
+
+    // If at max words and trying to add more (not deleting), block the input
+    if (newWordCount > Q_METHOD_TEXT_LIMITS.maxWords) {
+      // Only allow if user is deleting (new text is shorter)
+      if (newText.length < textInput.length) {
+        setTextInput(newText);
+      }
+      // Otherwise, don't update - effectively blocks typing
+      return;
+    }
+
+    // Normal update if within limits
+    setTextInput(newText);
+  };
+
   // Handle upload mode selection
   const handleModeSelect = (mode: UploadMode) => {
     if (readOnly) return;
@@ -243,9 +265,7 @@ export function StimuliUploadSystemV7({
           setLockedType(null);
           setUploadMode(mode);
           setSelectedStimuli(new Set());
-          showSuccess(
-            `Switched to ${mode} mode. Previous stimuli have been removed.`
-          );
+          showSuccess(`Switched to ${mode} mode`, 2000);
         },
         {
           title: 'Change Stimuli Type?',
@@ -315,7 +335,10 @@ export function StimuliUploadSystemV7({
     }
 
     setStimuli(prev => [...prev, ...newStimuli]);
-    showSuccess(`Successfully uploaded ${filesToUpload} ${uploadMode}(s)`);
+    showSuccess(
+      `${filesToUpload} ${uploadMode}${filesToUpload > 1 ? 's' : ''} added`,
+      2000
+    );
 
     // Lock type after first upload
     if (!lockedType && newStimuli.length > 0) {
@@ -326,7 +349,7 @@ export function StimuliUploadSystemV7({
 
     if (stimuli.length + filesToUpload >= totalCells) {
       setUploadMode(null);
-      showSuccess('Grid is now full! All stimuli slots have been filled.');
+      showSuccess('Grid complete!', 3000);
     }
   };
 
@@ -356,7 +379,7 @@ export function StimuliUploadSystemV7({
             : s
         )
       );
-      showSuccess('Text stimulus updated successfully');
+      showSuccess('Text updated', 2000);
     } else {
       if (stimuli.length >= totalCells) {
         showError(`Grid is full! Cannot add more stimuli.`);
@@ -376,7 +399,7 @@ export function StimuliUploadSystemV7({
           },
         },
       ]);
-      showSuccess('Text stimulus added successfully');
+      showSuccess(`Text ${stimuli.length + 1} added`, 2000);
 
       // Lock type after first text upload
       if (!lockedType) {
@@ -385,7 +408,7 @@ export function StimuliUploadSystemV7({
 
       if (stimuli.length + 1 >= totalCells) {
         setUploadMode(null);
-        showSuccess('Grid is now full! All stimuli slots have been filled.');
+        showSuccess('Grid complete!', 3000);
       }
     }
 
@@ -420,11 +443,9 @@ export function StimuliUploadSystemV7({
 
           if (newStimuli.length === 0) {
             setLockedType(null);
-            showSuccess(
-              'All stimuli removed. You can now choose any media type.'
-            );
+            showSuccess('All cleared', 2000);
           } else {
-            showSuccess(`Deleted ${ids.length} stimulus/stimuli`);
+            showSuccess(`${ids.length} deleted`, 2000);
           }
         }
       );
@@ -532,29 +553,19 @@ export function StimuliUploadSystemV7({
         onMouseLeave={() => setIsHovered(false)}
         disabled={readOnly}
         className={cn(
-          'relative group flex flex-col items-center justify-center p-6 rounded-2xl',
-          'transition-all duration-500 border-2',
-          isActive && !isFull && 'ring-2 ring-offset-2 shadow-2xl',
-          // Removed opacity reduction for full grid - buttons remain fully visible
-          !readOnly && 'hover:shadow-xl cursor-pointer',
+          'relative group flex flex-col items-center justify-center p-6 rounded-lg',
+          'transition-all duration-300 border-0.5 border-separator',
+          isActive &&
+            !isFull &&
+            'ring-2 ring-primary/25 ring-offset-2 shadow-md bg-gradient-to-br',
+          !isActive && 'bg-surface shadow-xs',
+          !readOnly && 'hover:shadow-sm cursor-pointer',
           readOnly && 'cursor-not-allowed opacity-60'
         )}
         style={{
-          borderColor: isActive
-            ? color.primary
-            : isHovered && !readOnly
-              ? color.primary
-              : 'rgba(0,0,0,0.1)',
           background: isActive
             ? `linear-gradient(135deg, ${color.primary} 0%, ${color.secondary} 100%)`
-            : isHovered && !readOnly
-              ? color.hover
-              : 'white',
-          boxShadow: isActive
-            ? `0 20px 40px -10px ${color.primary}66`
-            : isHovered && !readOnly
-              ? `0 10px 30px -5px ${color.primary}33`
-              : '0 2px 4px rgba(0,0,0,0.05)',
+            : undefined,
         }}
       >
         <motion.div
@@ -568,37 +579,26 @@ export function StimuliUploadSystemV7({
             className={cn(
               'mb-3 transition-all duration-300',
               isActive
-                ? 'w-12 h-12'
+                ? 'w-12 h-12 text-white'
                 : isHovered && !readOnly
-                  ? 'w-11 h-11'
-                  : 'w-10 h-10'
+                  ? 'w-11 h-11 text-primary'
+                  : 'w-10 h-10 text-text-secondary'
             )}
-            style={{
-              color: isActive
-                ? 'white'
-                : isHovered && !readOnly
-                  ? color.primary
-                  : '#6e6e73',
-            }}
           />
         </motion.div>
         <div
-          className="font-semibold text-lg mb-1 transition-all duration-300"
-          style={{
-            color: isActive
-              ? 'white'
-              : isHovered && !readOnly
-                ? color.primary
-                : '#1d1d1f',
-          }}
+          className={cn(
+            'font-semibold text-lg mb-1 transition-all duration-300',
+            isActive ? 'text-white' : 'text-text'
+          )}
         >
           {buttonLabel}
         </div>
         <div
-          className="text-xs transition-all duration-300"
-          style={{
-            color: isActive ? 'rgba(255,255,255,0.9)' : '#86868b',
-          }}
+          className={cn(
+            'text-xs transition-all duration-300',
+            isActive ? 'text-white/90' : 'text-text-tertiary'
+          )}
         >
           {isActive && !isFull ? 'Click to browse files' : description}
         </div>
@@ -618,86 +618,51 @@ export function StimuliUploadSystemV7({
 
   return (
     <div className="space-y-6">
-      {/* Progress Banner */}
-      <Card className="overflow-hidden bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30">
-        <div className="p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-white/50 dark:bg-black/30 backdrop-blur-xl rounded-xl">
-                  <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-label">
-                  Stimuli Collection Progress
-                </h3>
-              </div>
-
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-secondary-label">
-                    {stimuliCount} of {totalCells} required stimuli
-                  </span>
-                  <span className="text-sm font-medium text-label">
-                    {Math.round(progress)}%
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-white/50 dark:bg-black/30 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.5, ease: 'easeOut' }}
-                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 text-sm text-secondary-label">
-                {remainingStimuli > 0 ? (
-                  <>
-                    <Info className="w-4 h-4 text-blue-500" />
-                    <span>
-                      Add {remainingStimuli} more stimuli to fill all grid cells
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span className="text-green-600 dark:text-green-400 font-medium">
-                      All grid cells are filled! Your Q-sort is ready.
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {stimuliCount >= totalCells && (
-              <Badge variant="success" className="absolute top-6 right-6">
-                Grid Complete
-              </Badge>
+      {/* Compact Progress Bar */}
+      <div className="bg-surface rounded-lg p-3.5 shadow-sm border border-subtle">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-system-blue" />
+            <span className="text-sm font-medium text-text">
+              {stimuliCount}/{totalCells} stimuli
+            </span>
+            {remainingStimuli > 0 && (
+              <span className="text-xs text-text-secondary">
+                ({remainingStimuli} needed)
+              </span>
             )}
           </div>
+          <div className="flex items-center gap-3">
+            {stimuliCount >= totalCells && (
+              <Badge variant="success" className="text-xs">
+                Complete
+              </Badge>
+            )}
+            <span className="text-sm font-medium text-text">
+              {Math.round(progress)}%
+            </span>
+          </div>
         </div>
-      </Card>
+        <div className="w-full h-2 bg-fill-quaternary rounded-full overflow-hidden mt-2">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="h-full bg-gradient-to-r from-system-blue to-system-purple"
+          />
+        </div>
+      </div>
 
-      {/* Upload Mode Selection */}
+      {/* Upload Mode Selection - Compact */}
       {!readOnly && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h4 className="text-lg font-semibold text-label">
-                  Choose Upload Type
-                </h4>
-                <p className="text-sm text-secondary-label mt-1">
-                  {stimuli.length >= totalCells
-                    ? 'Grid is complete - all slots filled'
-                    : lockedType
-                      ? `Currently using ${lockedType} stimuli - switching types will clear all uploads`
-                      : 'Select media type to start uploading'}
-                </p>
-              </div>
+        <Card className="bg-surface shadow-sm border border-subtle">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-base font-semibold text-text">
+                Choose Upload Type
+              </h4>
               {lockedType && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="text-xs">
                   {lockedType.charAt(0).toUpperCase() + lockedType.slice(1)}{' '}
                   Only
                 </Badge>
@@ -747,14 +712,29 @@ export function StimuliUploadSystemV7({
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="text-input-section">
+            <Card className="text-input-section bg-surface shadow-sm border border-subtle">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-label">
-                    {isEditingText
-                      ? 'Edit Text Statement'
-                      : 'Add Text Statement'}
-                  </h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-lg font-semibold text-text">
+                      {isEditingText
+                        ? 'Edit Text Statement'
+                        : 'Add Text Statement'}
+                    </h4>
+                    {/* Tooltip */}
+                    <div className="group relative inline-flex items-center cursor-help">
+                      <Info className="w-4 h-4 text-system-blue" />
+                      <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute bottom-full left-0 mb-2 w-56 p-2.5 bg-surface text-text text-xs rounded-md shadow-md z-50 border-0.5 border-separator">
+                        <div className="relative">
+                          <p className="text-xs">
+                            Keep statements under 30 words. Use single, clear
+                            ideas. Each should represent a unique perspective.
+                          </p>
+                          <div className="absolute -bottom-1 left-2 w-2 h-2 bg-surface rotate-45 border-r-0.5 border-b-0.5 border-separator"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   <Button
                     variant="tertiary"
                     size="sm"
@@ -774,11 +754,11 @@ export function StimuliUploadSystemV7({
                   <div>
                     <textarea
                       value={textInput}
-                      onChange={e => setTextInput(e.target.value)}
-                      placeholder="Enter your text statement here (50-150 words). Each statement should represent a distinct viewpoint or opinion about the topic..."
-                      className="w-full h-40 p-4 rounded-xl border border-separator bg-white dark:bg-gray-800
-                               focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-                               resize-none text-label placeholder-tertiary-label"
+                      onChange={handleTextInputChange}
+                      placeholder="Enter a concise statement (10-30 words) representing a distinct viewpoint..."
+                      className="w-full h-40 p-4 rounded-md bg-surface-secondary border border-border-strong
+                               focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary
+                               resize-none text-text placeholder-text-disabled transition-all"
                     />
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-4 text-sm">
@@ -787,18 +767,17 @@ export function StimuliUploadSystemV7({
                             'font-medium',
                             getWordCount(textInput) <
                               Q_METHOD_TEXT_LIMITS.minWords
-                              ? 'text-red-500'
-                              : getWordCount(textInput) >
+                              ? 'text-danger'
+                              : getWordCount(textInput) ===
                                   Q_METHOD_TEXT_LIMITS.maxWords
-                                ? 'text-red-500'
-                                : 'text-green-500'
+                                ? 'text-warning'
+                                : 'text-success'
                           )}
                         >
                           {getWordCount(textInput)} words
                         </span>
-                        <span className="text-secondary-label">
-                          ({Q_METHOD_TEXT_LIMITS.minWords}-
-                          {Q_METHOD_TEXT_LIMITS.maxWords} required)
+                        <span className="text-text-secondary">
+                          (max {Q_METHOD_TEXT_LIMITS.maxWords} words)
                         </span>
                       </div>
 
@@ -830,30 +809,6 @@ export function StimuliUploadSystemV7({
                       </div>
                     </div>
                   </div>
-
-                  {/* Guidelines */}
-                  <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-xl">
-                    <div className="flex gap-2">
-                      <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-secondary-label space-y-1">
-                        <p className="font-medium text-label">
-                          Q-Method Text Guidelines:
-                        </p>
-                        <ul className="list-disc list-inside space-y-1">
-                          <li>
-                            Keep statements between 50-150 words for optimal
-                            sorting
-                          </li>
-                          <li>Use clear, single-idea statements</li>
-                          <li>Avoid complex or compound sentences</li>
-                          <li>
-                            Ensure each statement represents a unique
-                            perspective
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -862,14 +817,14 @@ export function StimuliUploadSystemV7({
       </AnimatePresence>
 
       {/* Grid Preview */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden bg-surface shadow-sm border border-subtle">
         <button
           onClick={() => setShowGridPreview(!showGridPreview)}
-          className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          className="w-full p-4 flex items-center justify-between hover:bg-fill-quaternary transition-colors"
         >
           <div className="flex items-center gap-3">
-            <Grid3x3 className="w-5 h-5 text-secondary-label" />
-            <span className="font-medium text-label">
+            <Grid3x3 className="w-5 h-5 text-text-secondary" />
+            <span className="font-medium text-text">
               Grid Preview - Fill Each Cell
             </span>
             <Badge
@@ -879,9 +834,9 @@ export function StimuliUploadSystemV7({
             </Badge>
           </div>
           {showGridPreview ? (
-            <ChevronUp className="w-5 h-5 text-secondary-label" />
+            <ChevronUp className="w-5 h-5 text-text-secondary" />
           ) : (
-            <ChevronDown className="w-5 h-5 text-secondary-label" />
+            <ChevronDown className="w-5 h-5 text-text-secondary" />
           )}
         </button>
 
@@ -891,17 +846,17 @@ export function StimuliUploadSystemV7({
               initial={{ height: 0 }}
               animate={{ height: 'auto' }}
               exit={{ height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="border-t border-separator"
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="border-t border-subtle"
             >
-              <div className="p-6">
-                <p className="text-sm text-secondary-label mb-4">
+              <div className="p-6 bg-bg">
+                <p className="text-sm text-text-secondary mb-4">
                   Your Q-sort grid configuration. Cells fill up as you upload
                   stimuli.
                 </p>
 
-                <div className="w-full overflow-x-auto">
-                  <div className="flex justify-center min-w-fit p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
+                <div className="w-full overflow-x-auto pb-2">
+                  <div className="flex justify-center min-w-fit p-5 bg-surface-interactive rounded-lg border border-subtle shadow-sm">
                     {grid && grid.columns ? (
                       grid.columns.map((column, colIndex) => {
                         // Calculate consistent column width based on total columns
@@ -924,7 +879,7 @@ export function StimuliUploadSystemV7({
                             {/* Column Value - Matching Step 3 format */}
                             <div className="text-center mb-2">
                               <div
-                                className={`font-bold ${grid.columns.length > 9 ? 'text-sm' : 'text-lg'} text-gray-900 dark:text-gray-100`}
+                                className={`font-bold ${grid.columns.length > 9 ? 'text-sm' : 'text-lg'} text-text`}
                               >
                                 {column.value > 0 ? '+' : ''}
                                 {column.value}
@@ -963,10 +918,10 @@ export function StimuliUploadSystemV7({
                                         grid.columns.length > 9
                                           ? 'w-12 h-14'
                                           : 'w-14 h-16',
-                                        'rounded-lg flex items-center justify-center text-xs font-medium border-2 transition-all',
+                                        'rounded-md flex items-center justify-center text-xs font-medium transition-all',
                                         stimulus
-                                          ? 'text-white shadow-md'
-                                          : 'bg-gray-100 dark:bg-gray-800 border-dashed border-gray-300 dark:border-gray-600 text-gray-500'
+                                          ? 'text-white shadow-sm border-0'
+                                          : 'bg-surface-secondary border-2 border-border-strong text-text-secondary font-semibold hover:bg-surface-interactive transition-all cursor-pointer'
                                       )}
                                       style={{
                                         backgroundColor: color?.primary,
@@ -975,13 +930,13 @@ export function StimuliUploadSystemV7({
                                           : undefined,
                                         boxShadow:
                                           stimulus && isRecentlyAdded
-                                            ? `0 10px 25px -5px ${color?.primary}66`
+                                            ? `0 8px 16px -4px ${color?.primary}40`
                                             : stimulus
-                                              ? `0 4px 6px -1px ${color?.primary}33`
+                                              ? `0 2px 4px -1px ${color?.primary}20`
                                               : 'none',
                                       }}
                                       whileHover={
-                                        stimulus ? { scale: 1.05 } : {}
+                                        stimulus ? { scale: 1.03 } : {}
                                       }
                                     >
                                       {stimulus ? (
@@ -996,23 +951,23 @@ export function StimuliUploadSystemV7({
                                           transition={{ duration: 0.5 }}
                                         >
                                           {stimulus.type === 'image' && (
-                                            <Image className="w-4 h-4 drop-shadow" />
+                                            <Image className="w-4 h-4" />
                                           )}
                                           {stimulus.type === 'video' && (
-                                            <Video className="w-4 h-4 drop-shadow" />
+                                            <Video className="w-4 h-4" />
                                           )}
                                           {stimulus.type === 'audio' && (
-                                            <Music className="w-4 h-4 drop-shadow" />
+                                            <Music className="w-4 h-4" />
                                           )}
                                           {stimulus.type === 'text' && (
-                                            <Type className="w-4 h-4 drop-shadow" />
+                                            <Type className="w-4 h-4" />
                                           )}
                                           <span className="text-[10px] font-semibold">
                                             {globalIndex + 1}
                                           </span>
                                         </motion.div>
                                       ) : (
-                                        <span className="text-[10px]">
+                                        <span className="text-xs font-bold text-text-secondary">
                                           {globalIndex + 1}
                                         </span>
                                       )}
@@ -1023,9 +978,9 @@ export function StimuliUploadSystemV7({
                             </div>
 
                             {/* Column Label - Matching Step 3 format with box */}
-                            <div className="px-1.5 py-1 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 w-full h-11 flex items-center justify-center mt-2">
+                            <div className="px-1.5 py-1 bg-surface-secondary rounded-md border border-subtle w-full h-11 flex items-center justify-center mt-2 shadow-sm">
                               <div
-                                className={`${grid.columns.length > 9 ? 'text-[10px]' : 'text-xs'} font-medium text-gray-600 dark:text-gray-400 text-center break-words line-clamp-2`}
+                                className={`${grid.columns.length > 9 ? 'text-[10px]' : 'text-xs'} font-medium text-text-secondary text-center break-words line-clamp-2`}
                               >
                                 {column.label || `Col ${column.value}`}
                               </div>
@@ -1034,7 +989,7 @@ export function StimuliUploadSystemV7({
                         );
                       })
                     ) : (
-                      <p className="text-tertiary-label">
+                      <p className="text-text-tertiary">
                         No grid configuration available
                       </p>
                     )}
@@ -1042,38 +997,45 @@ export function StimuliUploadSystemV7({
                 </div>
 
                 {/* Legend */}
-                <div className="mt-4 flex items-center gap-4 text-xs">
-                  <div className="flex items-center gap-1">
-                    <div
-                      className="w-3 h-3 rounded"
-                      style={{ backgroundColor: MEDIA_COLORS.image.primary }}
-                    ></div>
-                    <span className="text-secondary-label">Image</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div
-                      className="w-3 h-3 rounded"
-                      style={{ backgroundColor: MEDIA_COLORS.video.primary }}
-                    ></div>
-                    <span className="text-secondary-label">Video</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div
-                      className="w-3 h-3 rounded"
-                      style={{ backgroundColor: MEDIA_COLORS.audio.primary }}
-                    ></div>
-                    <span className="text-secondary-label">Audio</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div
-                      className="w-3 h-3 rounded"
-                      style={{ backgroundColor: MEDIA_COLORS.text.primary }}
-                    ></div>
-                    <span className="text-secondary-label">Text</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-gray-300 dark:bg-gray-600 rounded border-2 border-dashed border-gray-400"></div>
-                    <span className="text-secondary-label">Empty</span>
+                <div className="mt-6 p-4 bg-surface-secondary rounded-lg border border-subtle">
+                  <h4 className="text-xs font-semibold text-text mb-2 uppercase tracking-wide">
+                    Legend
+                  </h4>
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-1">
+                      <div
+                        className="w-3 h-3 rounded"
+                        style={{ backgroundColor: MEDIA_COLORS.image.primary }}
+                      ></div>
+                      <span className="text-text-secondary">Image</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div
+                        className="w-3 h-3 rounded"
+                        style={{ backgroundColor: MEDIA_COLORS.video.primary }}
+                      ></div>
+                      <span className="text-text-secondary">Video</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div
+                        className="w-3 h-3 rounded"
+                        style={{ backgroundColor: MEDIA_COLORS.audio.primary }}
+                      ></div>
+                      <span className="text-text-secondary">Audio</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div
+                        className="w-3 h-3 rounded"
+                        style={{ backgroundColor: MEDIA_COLORS.text.primary }}
+                      ></div>
+                      <span className="text-text-secondary">Text</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-surface-secondary rounded border-2 border-border-strong"></div>
+                      <span className="text-text-secondary font-medium">
+                        Empty
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1084,22 +1046,22 @@ export function StimuliUploadSystemV7({
 
       {/* Advanced Gallery */}
       {stimuli.length > 0 && (
-        <Card className="overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
-          <div className="relative overflow-hidden bg-white dark:bg-gray-900 border-b border-separator">
+        <Card className="overflow-hidden bg-surface shadow-sm border border-subtle">
+          <div className="relative overflow-hidden bg-surface border-b border-border">
             <div className="relative px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
+                  <div className="p-2 bg-gradient-to-br from-system-blue to-system-purple rounded-md">
                     <Grid3x3 className="w-5 h-5 text-white" />
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold text-label">
+                    <h3 className="text-lg font-semibold text-text">
                       Stimuli Gallery
                     </h3>
                     <div className="flex items-center gap-3 mt-0.5">
                       <div className="flex items-center gap-2">
-                        <div className="w-32 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div className="w-32 h-1.5 bg-fill-quaternary rounded-full overflow-hidden">
                           <div
                             className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
                             style={{
@@ -1107,7 +1069,7 @@ export function StimuliUploadSystemV7({
                             }}
                           />
                         </div>
-                        <span className="text-xs text-secondary-label font-medium">
+                        <span className="text-xs text-text-secondary font-medium">
                           {stimuli.length}/{totalCells}
                         </span>
                       </div>
@@ -1115,7 +1077,7 @@ export function StimuliUploadSystemV7({
                       {selectedStimuli.size > 0 && (
                         <>
                           <div className="w-px h-4 bg-separator" />
-                          <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                          <span className="text-xs text-system-blue font-medium">
                             {selectedStimuli.size} selected
                           </span>
                         </>
@@ -1136,14 +1098,14 @@ export function StimuliUploadSystemV7({
                     </Button>
                   )}
 
-                  <div className="inline-flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+                  <div className="inline-flex items-center bg-surface-secondary rounded-md p-0.5 border-0.5 border-separator">
                     <button
                       onClick={() => setGalleryView('grid')}
                       className={cn(
                         'px-3 py-1.5 rounded-md text-xs font-medium transition-all',
                         galleryView === 'grid'
-                          ? 'bg-white dark:bg-gray-700 shadow-sm text-label'
-                          : 'text-secondary-label hover:text-label'
+                          ? 'bg-surface shadow-sm text-text'
+                          : 'text-text-secondary hover:text-text'
                       )}
                       aria-label="Grid view"
                     >
@@ -1154,8 +1116,8 @@ export function StimuliUploadSystemV7({
                       className={cn(
                         'px-3 py-1.5 rounded-md text-xs font-medium transition-all',
                         galleryView === 'compact'
-                          ? 'bg-white dark:bg-gray-700 shadow-sm text-label'
-                          : 'text-secondary-label hover:text-label'
+                          ? 'bg-surface shadow-sm text-text'
+                          : 'text-text-secondary hover:text-text'
                       )}
                       aria-label="Compact view"
                     >
@@ -1166,8 +1128,8 @@ export function StimuliUploadSystemV7({
                       className={cn(
                         'px-3 py-1.5 rounded-md text-xs font-medium transition-all',
                         galleryView === 'list'
-                          ? 'bg-white dark:bg-gray-700 shadow-sm text-label'
-                          : 'text-secondary-label hover:text-label'
+                          ? 'bg-surface shadow-sm text-text'
+                          : 'text-text-secondary hover:text-text'
                       )}
                       aria-label="List view"
                     >
@@ -1179,8 +1141,8 @@ export function StimuliUploadSystemV7({
                     <select
                       value={galleryColumns}
                       onChange={e => setGalleryColumns(Number(e.target.value))}
-                      className="text-xs px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 border-0 
-                               text-label focus:ring-2 focus:ring-primary focus:outline-none"
+                      className="text-xs px-2 py-1.5 rounded-md bg-bg border-0.5 border-separator 
+                               text-text focus:ring-2 focus:ring-primary/25 focus:outline-none"
                     >
                       <option value={3}>3 cols</option>
                       <option value={4}>4 cols</option>
@@ -1198,7 +1160,7 @@ export function StimuliUploadSystemV7({
             <div
               ref={galleryRef}
               className={cn(
-                'relative rounded-xl',
+                'relative rounded-lg',
                 galleryView === 'grid' ? `grid gap-3` : '',
                 galleryView === 'compact'
                   ? 'grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2'
@@ -1231,9 +1193,9 @@ export function StimuliUploadSystemV7({
                       }}
                       className={cn(
                         'relative group overflow-hidden',
-                        'bg-white dark:bg-gray-800/80 backdrop-blur-sm',
-                        'border border-gray-200 dark:border-gray-700',
-                        'rounded-xl transition-all duration-200',
+                        'bg-surface backdrop-blur-sm shadow-xs',
+                        'border-0.5 border-separator',
+                        'rounded-md transition-all duration-200',
                         !readOnly &&
                           'hover:shadow-xl hover:scale-[1.03] hover:z-10',
                         !readOnly &&
@@ -1242,7 +1204,7 @@ export function StimuliUploadSystemV7({
                         galleryView === 'compact' ? 'aspect-[4/3]' : '',
                         galleryView === 'list' ? 'h-16 flex items-center' : '',
                         selectedStimuli.has(stimulus.id) &&
-                          'ring-2 ring-blue-500 ring-offset-2 bg-blue-50/50 dark:bg-blue-900/20',
+                          'ring-2 ring-primary ring-offset-2 bg-primary/10',
                         !readOnly && 'cursor-pointer'
                       )}
                       onClick={e => handleStimulusClick(stimulus, e)}
@@ -1291,8 +1253,8 @@ export function StimuliUploadSystemV7({
                               </div>
                             )}
                             {stimulus.type === 'text' && (
-                              <div className="w-full h-full bg-gray-50 dark:bg-gray-900 p-4 flex items-center justify-center">
-                                <p className="text-xs text-label line-clamp-4 text-center font-medium">
+                              <div className="w-full h-full bg-surface-secondary p-4 flex items-center justify-center">
+                                <p className="text-xs text-text line-clamp-4 text-center font-medium">
                                   {stimulus.editedText || stimulus.content}
                                 </p>
                               </div>
@@ -1333,11 +1295,11 @@ export function StimuliUploadSystemV7({
                               )}
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-medium text-label line-clamp-1">
+                              <p className="text-sm font-medium text-text line-clamp-1">
                                 {stimulus.title ||
                                   `${stimulus.type} ${index + 1}`}
                               </p>
-                              <p className="text-xs text-secondary-label">
+                              <p className="text-xs text-text-secondary">
                                 {stimulus.type.charAt(0).toUpperCase() +
                                   stimulus.type.slice(1)}
                               </p>
@@ -1357,11 +1319,11 @@ export function StimuliUploadSystemV7({
                                   e.stopPropagation();
                                   handleStimulusClick(stimulus, e);
                                 }}
-                                className="p-1.5 bg-white/90 backdrop-blur-sm rounded-lg 
-                                         hover:bg-white transition-colors shadow-sm"
+                                className="p-1.5 bg-surface/90 backdrop-blur-sm rounded-lg 
+                                         hover:bg-surface transition-colors shadow-sm"
                                 aria-label="Preview"
                               >
-                                <Eye className="w-3.5 h-3.5 text-gray-700" />
+                                <Eye className="w-3.5 h-3.5 text-text" />
                               </button>
                               <div className="flex gap-1">
                                 {stimulus.type === 'text' && (
@@ -1370,11 +1332,11 @@ export function StimuliUploadSystemV7({
                                       e.stopPropagation();
                                       handleEditText(stimulus);
                                     }}
-                                    className="p-1.5 bg-white/90 backdrop-blur-sm rounded-lg 
-                                             hover:bg-white transition-colors shadow-sm"
+                                    className="p-1.5 bg-surface/90 backdrop-blur-sm rounded-lg 
+                                             hover:bg-surface transition-colors shadow-sm"
                                     aria-label="Edit"
                                   >
-                                    <Edit2 className="w-3.5 h-3.5 text-gray-700" />
+                                    <Edit2 className="w-3.5 h-3.5 text-text" />
                                   </button>
                                 )}
                                 <button
@@ -1382,11 +1344,11 @@ export function StimuliUploadSystemV7({
                                     e.stopPropagation();
                                     handleDelete([stimulus.id]);
                                   }}
-                                  className="p-1.5 bg-white/90 backdrop-blur-sm rounded-lg 
-                                           hover:bg-red-50 transition-colors shadow-sm"
+                                  className="p-1.5 bg-surface/90 backdrop-blur-sm rounded-lg 
+                                           hover:bg-danger/10 transition-colors shadow-sm"
                                   aria-label="Delete"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                                  <Trash2 className="w-3.5 h-3.5 text-danger" />
                                 </button>
                               </div>
                             </div>
@@ -1396,7 +1358,7 @@ export function StimuliUploadSystemV7({
                         {/* Selection Indicator */}
                         {selectedStimuli.has(stimulus.id) && (
                           <div className="absolute top-2 right-2">
-                            <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center shadow-sm">
+                            <div className="w-6 h-6 bg-system-blue rounded-full flex items-center justify-center shadow-sm">
                               <CheckCircle className="w-4 h-4 text-white" />
                             </div>
                           </div>
@@ -1432,7 +1394,7 @@ export function StimuliUploadSystemV7({
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-w-4xl max-h-[90vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden"
+              className="relative max-w-4xl max-h-[90vh] bg-surface rounded-2xl shadow-2xl overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
               {/* Preview Header */}
@@ -1470,11 +1432,11 @@ export function StimuliUploadSystemV7({
                     )}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-label">
+                    <h3 className="font-semibold text-text">
                       {previewStimulus.title ||
                         `${previewStimulus.type.charAt(0).toUpperCase() + previewStimulus.type.slice(1)} Preview`}
                     </h3>
-                    <p className="text-xs text-secondary-label">
+                    <p className="text-xs text-text-secondary">
                       {previewStimulus.type.charAt(0).toUpperCase() +
                         previewStimulus.type.slice(1)}{' '}
                       stimulus
@@ -1483,9 +1445,9 @@ export function StimuliUploadSystemV7({
                 </div>
                 <button
                   onClick={() => setShowPreview(false)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  className="p-2 hover:bg-fill-quaternary rounded-lg transition-colors"
                 >
-                  <X className="w-5 h-5 text-secondary-label" />
+                  <X className="w-5 h-5 text-text-secondary" />
                 </button>
               </div>
 
@@ -1496,14 +1458,14 @@ export function StimuliUploadSystemV7({
                     <img
                       src={previewStimulus.preview}
                       alt={previewStimulus.title}
-                      className="w-full h-auto rounded-xl"
+                      className="w-full h-auto rounded-lg"
                     />
                   )}
                 {previewStimulus.type === 'video' && (
                   <video
                     src={previewStimulus.url || previewStimulus.content}
                     controls
-                    className="w-full rounded-xl"
+                    className="w-full rounded-lg"
                   />
                 )}
                 {previewStimulus.type === 'audio' && (
@@ -1524,8 +1486,8 @@ export function StimuliUploadSystemV7({
                   </div>
                 )}
                 {previewStimulus.type === 'text' && (
-                  <div className="p-8 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                    <p className="text-lg leading-relaxed text-label">
+                  <div className="p-8 bg-surface-secondary rounded-md border-0.5 border-separator">
+                    <p className="text-lg leading-relaxed text-text">
                       {previewStimulus.editedText || previewStimulus.content}
                     </p>
                   </div>
@@ -1605,6 +1567,13 @@ export function StimuliUploadSystemV7({
         message={popupState.message}
         onConfirm={popupState.onConfirm}
         onCancel={popupState.onCancel}
+      />
+
+      {/* Toast Container */}
+      <ToastContainer
+        toasts={toasts}
+        onDismiss={removeToast}
+        position="top-center"
       />
     </div>
   );
