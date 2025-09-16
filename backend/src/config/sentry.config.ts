@@ -31,7 +31,7 @@ export class SentryConfig {
       // Release tracking
       release: process.env.RELEASE_VERSION || '1.0.0',
       // Environment-specific settings
-      beforeSend(event, hint) {
+      beforeSend(event: any, hint: any) {
         // Filter out sensitive data
         if (event.request) {
           // Remove authentication headers
