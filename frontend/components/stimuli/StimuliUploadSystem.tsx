@@ -158,7 +158,7 @@ export const StimuliUploadSystem: React.FC<StimuliUploadSystemProps> = ({
       });
       
       return data.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
       
       // Update stimulus to failed state
@@ -195,7 +195,7 @@ export const StimuliUploadSystem: React.FC<StimuliUploadSystemProps> = ({
     for (const file of acceptedFiles) {
       try {
         await uploadFile(file);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to upload file:', file.name);
         showError(`Failed to upload ${file.name}. Please try again.`);
       }
@@ -267,7 +267,7 @@ export const StimuliUploadSystem: React.FC<StimuliUploadSystemProps> = ({
           const data = await response.json();
           newStimulus.id = data.data.id;
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to save text stimulus:', error);
       }
     }
@@ -283,7 +283,7 @@ export const StimuliUploadSystem: React.FC<StimuliUploadSystemProps> = ({
         await fetch(`/api/studies/${studyId}/stimuli?stimulusId=${id}`, {
           method: 'DELETE'
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to delete stimulus:', error);
       }
     }

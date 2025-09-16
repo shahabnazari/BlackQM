@@ -216,7 +216,7 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
       });
 
       return data.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
 
       setStimuli(prev =>
@@ -244,7 +244,7 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
       for (const file of acceptedFiles) {
         try {
           await uploadFile(file);
-        } catch (error) {
+        } catch (error: any) {
           showError(`Failed to upload ${file.name}`);
         }
       }

@@ -250,7 +250,7 @@ export const InteractiveGridBuilder: React.FC<InteractiveGridBuilderProps> = ({
       if (response.ok) {
         setIsDirty(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save grid:', error);
     }
   };

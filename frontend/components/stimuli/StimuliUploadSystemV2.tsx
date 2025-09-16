@@ -241,7 +241,7 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
           const data = await response.json();
           newStimulus.id = data.data.id;
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to save text stimulus:', error);
       }
     }
@@ -262,7 +262,7 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
         await fetch(`/api/studies/${studyId}/stimuli?stimulusId=${id}`, {
           method: 'DELETE'
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to delete stimulus:', error);
       }
     }

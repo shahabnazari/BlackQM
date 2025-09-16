@@ -136,7 +136,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
             break;
         }
         setShowExportMenu(false);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Export failed:', error);
       }
     }
