@@ -2,14 +2,14 @@
 // Phase 6.91: Complete Participant Management with Error Handling
 import { apiClient, ApiResponse } from '@/lib/api/client';
 import {
-  Participant,
-  ParticipantInvitation,
-  ParticipantFilter,
-  ParticipantMetrics,
-  BulkImportData,
-  ImportResult,
-  EmailCampaign,
-  EmailTemplate
+    BulkImportData,
+    EmailCampaign,
+    EmailTemplate,
+    ImportResult,
+    Participant,
+    ParticipantFilter,
+    ParticipantInvitation,
+    ParticipantMetrics
 } from '@/lib/types/participant.types';
 // Custom error class for participant operations
 export class ParticipantServiceError extends Error {
@@ -346,7 +346,7 @@ class ParticipantService {
       }
     });
     return {
-      valid: errors.length === 0,;
+      valid: errors.length === 0,
       errors
     }
   }
@@ -362,4 +362,4 @@ class ParticipantService {
 // Singleton instance
 export const participantService = new ParticipantService();
 // Export types for convenience
-export type { Participant, ParticipantInvitation, ParticipantFilter, ParticipantMetrics }
+export type { Participant, ParticipantFilter, ParticipantInvitation, ParticipantMetrics };

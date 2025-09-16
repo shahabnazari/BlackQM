@@ -341,7 +341,7 @@ class AIService {
   }
 
   async suggestNeutralAlternative(
-    text: string;
+    text: string,
   ): Promise<{ suggestion: string; explanation: string }> {
     try {
       const response = await apiClient.post<ApiResponse<{ suggestion: string; explanation: string }>>('/ai/suggest-neutral', { text });

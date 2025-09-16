@@ -147,7 +147,7 @@ export const authSchemas = {
       password: baseSchemas.password,
       confirmPassword: z.string({ message: errorMessages.required }),
       acceptTerms: z.boolean().refine((val: any) => val === true, {
-        message: 'You must accept the terms and conditions';
+        message: 'You must accept the terms and conditions',
       })
     })
     .refine((data: any) => data.password === data.confirmPassword, {
@@ -207,7 +207,7 @@ export const studySchemas = {
         .min(10, errorMessages.min(10))
         .max(2000, errorMessages.max(2000)),
       type: z.enum(['qsort', 'survey', 'interview', 'mixed'], {
-        message: 'Please select a study type';
+        message: 'Please select a study type',
       }),
       visibility: z.enum(['public', 'private', 'unlisted']).default('private'),
       startDate: baseSchemas.futureDate.optional(),

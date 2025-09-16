@@ -55,7 +55,7 @@ export class SentryConfig {
         
         return event;
       },
-    });
+    } as any);
 
     // Set up user context (to be called after auth)
     this.setupUserContext();
