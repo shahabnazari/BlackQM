@@ -162,7 +162,7 @@ class ParticipantService {
     for (let i = 0; i < participants.length; i += this.config.batchSize) {
       const batch = participants.slice(i, i + this.config.batchSize);
       const response = await this.withRetry(async () => {
-        const res = await apiClient.post<ApiResponse<Participant[]>>('/participants/bulk', {
+        const res = await apiClient.post<Participant[]>('/participants/bulk', {
           participants: batch
         });
         return res.data;
@@ -177,7 +177,7 @@ class ParticipantService {
     this.clearCache();
 
     return this.withRetry(async () => {
-      const response = await apiClient.patch<ApiResponse<Participant[]>>('/participants/bulk', { updates });
+      const response = await apiClient.patch<Participant[]>('/participants/bulk', { updates });
       return response.data;
     });
   }
@@ -234,7 +234,7 @@ class ParticipantService {
     this.clearCache();
 
     return this.withRetry(async () => {
-      const response = await apiClient.post<ApiResponse<ParticipantInvitation[]>>('/participants/invite', {
+      const response = await apiClient.post<ParticipantInvitation[]>('/participants/invite', {
         participantIds,
         templateId,
         customMessage
@@ -328,7 +328,7 @@ class ParticipantService {
     const cached = this.getFromCache<EmailTemplate[]>(cacheKey);
     if (cached) return cached;
     return this.withRetry(async () => {
-      const response = await apiClient.get<ApiResponse<EmailTemplate[]>>('/participants/templates');
+      const response = await apiClient.get<EmailTemplate[]>('/participants/templates');
       this.setCache(cacheKey, response.data);
       return response.data;
     });

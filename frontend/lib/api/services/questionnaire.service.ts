@@ -229,7 +229,7 @@ class QuestionnaireService {
           category: 'Usability',
           config: {
             min: 1,
-            max: 10,;
+            max: 10,
             step: 1,
             showLabels: true,
             labels: {
@@ -301,7 +301,7 @@ class QuestionnaireService {
             ]
           }
         }
-      )
+      );
     } else if (mode === 'targeted' && customPrompt) {
       // Generate targeted questions based on custom prompt
       questions.push({
@@ -359,7 +359,7 @@ class QuestionnaireService {
             maxLength: 200
           }
         }
-      )
+      );
     }
 
     return questions.slice(0, count);

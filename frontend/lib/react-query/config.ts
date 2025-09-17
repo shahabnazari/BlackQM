@@ -122,46 +122,46 @@ export const queryKeys = {
   studies: {
     all: () => ['studies'] as const,
     lists: () => [...queryKeys.studies.all(), 'list'] as const,
-    list: (filters: Record<string, any>) => [...queryKeys.studies.lists(), filters] as const,;
-    details: () => [...queryKeys.studies.all(), 'detail'] as const,;
-    detail: (id: string) => [...queryKeys.studies.details(), id] as const,;
-    participants: (studyId: string) =>;
+    list: (filters: Record<string, any>) => [...queryKeys.studies.lists(), filters] as const,
+    details: () => [...queryKeys.studies.all(), 'detail'] as const,
+    detail: (id: string) => [...queryKeys.studies.details(), id] as const,
+    participants: (studyId: string) =>
       [...queryKeys.studies.detail(studyId), 'participants'] as const,
-    results: (studyId: string) => [...queryKeys.studies.detail(studyId), 'results'] as const;
+    results: (studyId: string) => [...queryKeys.studies.detail(studyId), 'results'] as const
   },
 
   // Participant queries
   participants: {
-    all: () => ['participants'] as const,;
-    list: (studyId: string, filters?: Record<string, any>) =>;
+    all: () => ['participants'] as const,
+    list: (studyId: string, filters?: Record<string, any>) =>
       ['participants', studyId, filters] as const,
-    detail: (id: string) => ['participants', 'detail', id] as const,;
-    metrics: (studyId: string) => ['participants', 'metrics', studyId] as const;
+    detail: (id: string) => ['participants', 'detail', id] as const,
+    metrics: (studyId: string) => ['participants', 'metrics', studyId] as const
   },
 
   // Questionnaire queries
   questionnaires: {
-    all: () => ['questionnaires'] as const,;
-    templates: () => ['questionnaires', 'templates'] as const,;
-    detail: (id: string) => ['questionnaires', 'detail', id] as const,;
-    responses: (questionnaireId: string) =>;
+    all: () => ['questionnaires'] as const,
+    templates: () => ['questionnaires', 'templates'] as const,
+    detail: (id: string) => ['questionnaires', 'detail', id] as const,
+    responses: (questionnaireId: string) =>
       ['questionnaires', 'responses', questionnaireId] as const
   },
 
   // Analysis queries
   analysis: {
-    results: (studyId: string) => ['analysis', 'results', studyId] as const,;
-    insights: (studyId: string) => ['analysis', 'insights', studyId] as const,;
-    export: (studyId: string, format: string) => ['analysis', 'export', studyId, format] as const;
+    results: (studyId: string) => ['analysis', 'results', studyId] as const,
+    insights: (studyId: string) => ['analysis', 'insights', studyId] as const,
+    export: (studyId: string, format: string) => ['analysis', 'export', studyId, format] as const
   },
 
   // AI queries
   ai: {
-    suggestions: (context: string) => ['ai', 'suggestions'] as const,;
-    analysis: (data: any) => ['ai', 'analysis'] as const,;
-    generation: (prompt: string) => ['ai', 'generation', prompt] as const;
+    suggestions: (context: string) => ['ai', 'suggestions'] as const,
+    analysis: (data: any) => ['ai', 'analysis'] as const,
+    generation: (prompt: string) => ['ai', 'generation', prompt] as const
   }
-} as cons;t
+} as const;
 /**
  * Optimistic update helpers
  */
@@ -179,9 +179,9 @@ export const optimisticUpdates = {
    * Update item in list optimistically
    */
   updateInList: <T extends { id: string }>(
-    queryKey: readonly unknown[],;
-    id: string,;
-    updates: Partial<T>;
+    queryKey: readonly unknown[],
+    id: string,
+    updates: Partial<T>
   ) => {
     queryClient.setQueryData(queryKey, (old: T | undefined) => {
       return old?.map((item: any) => (item.id === id ? { ...(item as any), ...updates } : item));
@@ -217,12 +217,12 @@ export const cacheInvalidation = {
     const resourceKey = queryKeys[resource];
     if ('all' in resourceKey && typeof resourceKey.all === 'function') {
       queryClient.invalidateQueries({
-        queryKey: resourceKey.all();
+        queryKey: resourceKey.all()
       })
     } else {
       // For resources without 'all' method, invalidate the entire resource
       queryClient.invalidateQueries({
-        queryKey: [resource];
+        queryKey: [resource]
       })
     }
   },
@@ -244,10 +244,10 @@ export const cacheInvalidation = {
   /**
    * Prefetch query
    */
-  prefetch: async (;
-    queryKey: readonly unknown[],;
-    queryFn: () => Promise<any>,;
-    staleTime?: number;
+  prefetch: async (
+    queryKey: readonly unknown[],
+    queryFn: () => Promise<any>,
+    staleTime?: number
   ) => {
     await queryClient.prefetchQuery({
       queryKey,
@@ -306,8 +306,8 @@ export class QueryPerformanceMonitor {
     this.queryTimes.forEach((times: any, key: any) => {
       const sum = times.reduce((acc: any, time: any) => acc + time, 0);
       metrics[key] = {
-        average: sum / times.length,;
-        count: times.length;
+        average: sum / times.length,
+        count: times.length
       }
     })
 
@@ -328,7 +328,7 @@ export const offlineConfig = {
   /**
    * Queries that should work offline
    */
-  offlineQueries: [queryKeys.auth.user(), queryKeys.studies.lists()],;
+  offlineQueries: [queryKeys.auth.user(), queryKeys.studies.lists()],
 
   /**
    * Enable offline persistence

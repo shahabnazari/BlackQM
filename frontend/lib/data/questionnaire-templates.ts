@@ -132,22 +132,22 @@ export const questionnaireTemplates = {
       },
       {
         type: QuestionType.TEXT_LONG,
-        text: 'What changes would make you more likely to recommend our company as a great place to work?',;
+        text: 'What changes would make you more likely to recommend our company as a great place to work?',
         required: false,
         settings: {
-          placeholder: 'Share your thoughts...',;
+          placeholder: 'Share your thoughts...',
           maxLength: 500
         }
       }
     ]
   },
   'market-1': {
-    id: 'market-1',;
-    name: 'Market Research Survey',;
+    id: 'market-1',
+    name: 'Market Research Survey',
     questions: [
       {
-        type: QuestionType.DROPDOWN,;
-        text: 'What is your age group?',;
+        type: QuestionType.DROPDOWN,
+        text: 'What is your age group?',
         required: true,
         options: [
           { text: '18-24', value: '18-24' },
@@ -160,7 +160,7 @@ export const questionnaireTemplates = {
       },
       {
         type: QuestionType.MULTIPLE_CHOICE_SINGLE,
-        text: 'How often do you purchase products in our category?',;
+        text: 'How often do you purchase products in our category?',
         required: true,
         options: [
           { text: 'Daily', value: 'daily' },
@@ -172,8 +172,8 @@ export const questionnaireTemplates = {
         ]
       },
       {
-        type: QuestionType.RANKING,;
-        text: 'Please rank these factors by importance when making a purchase decision',;
+        type: QuestionType.RANKING,
+        text: 'Please rank these factors by importance when making a purchase decision',
         required: true,
         options: [
           { text: 'Price', value: 'price' },
@@ -206,12 +206,12 @@ export const questionnaireTemplates = {
     ]
   },
   'academic-1': {
-    id: 'academic-1',;
-    name: 'Course Evaluation Survey',;
+    id: 'academic-1',
+    name: 'Course Evaluation Survey',
     questions: [
       {
         type: QuestionType.LIKERT_SCALE,
-        text: 'The course objectives were clear and well-defined',;
+        text: 'The course objectives were clear and well-defined',
         required: true,
         settings: {
           scale: ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree']
@@ -219,7 +219,7 @@ export const questionnaireTemplates = {
       },
       {
         type: QuestionType.LIKERT_SCALE,
-        text: 'The instructor was knowledgeable about the subject matter',;
+        text: 'The instructor was knowledgeable about the subject matter',
         required: true,
         settings: {
           scale: ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree']
@@ -227,18 +227,18 @@ export const questionnaireTemplates = {
       },
       {
         type: QuestionType.RATING_SCALE,
-        text: 'How would you rate the overall quality of this course?',;
+        text: 'How would you rate the overall quality of this course?',
         required: true,
         settings: {
           min: 1,
-          max: 5,;
+          max: 5,
           minLabel: 'Poor',
           maxLabel: 'Excellent'
         }
       },
       {
         type: QuestionType.MULTIPLE_CHOICE_SINGLE,
-        text: 'Would you recommend this course to other students?',;
+        text: 'Would you recommend this course to other students?',
         required: true,
         options: [
           { text: 'Definitely yes', value: 'definitely_yes' },
@@ -250,33 +250,33 @@ export const questionnaireTemplates = {
       },
       {
         type: QuestionType.TEXT_LONG,
-        text: 'What suggestions do you have for improving this course?',;
+        text: 'What suggestions do you have for improving this course?',
         required: false,
         settings: {
-          placeholder: 'Your feedback is valuable...',;
+          placeholder: 'Your feedback is valuable...',
           maxLength: 500
         }
       }
     ]
   },
   'health-1': {
-    id: 'health-1',;
-    name: 'Patient Satisfaction Survey',;
+    id: 'health-1',
+    name: 'Patient Satisfaction Survey',
     questions: [
       {
         type: QuestionType.RATING_SCALE,
-        text: 'How would you rate your overall experience at our facility?',;
+        text: 'How would you rate your overall experience at our facility?',
         required: true,
         settings: {
           min: 1,
-          max: 5,;
-          minLabel: 'Very Poor',;
+          max: 5,
+          minLabel: 'Very Poor',
           maxLabel: 'Excellent'
         }
       },
       {
         type: QuestionType.LIKERT_SCALE,
-        text: 'The medical staff was professional and courteous',;
+        text: 'The medical staff was professional and courteous',
         required: true,
         settings: {
           scale: ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree']
@@ -284,7 +284,7 @@ export const questionnaireTemplates = {
       },
       {
         type: QuestionType.MULTIPLE_CHOICE_SINGLE,
-        text: 'How long did you wait to see the healthcare provider?',;
+        text: 'How long did you wait to see the healthcare provider?',
         required: true,
         options: [
           { text: 'Less than 15 minutes', value: '<15' },
@@ -295,16 +295,16 @@ export const questionnaireTemplates = {
       },
       {
         type: QuestionType.NET_PROMOTER_SCORE,
-        text: 'How likely are you to recommend our facility to friends and family?',;
+        text: 'How likely are you to recommend our facility to friends and family?',
         required: true
       },
       {
         type: QuestionType.TEXT_LONG,
-        text: 'Please share any additional comments about your visit',;
+        text: 'Please share any additional comments about your visit',
         required: false,
         settings: {
-          placeholder: 'Your feedback helps us improve...',;
-          maxLength: 300;
+          placeholder: 'Your feedback helps us improve...',
+          maxLength: 300
         }
       }
     ]
