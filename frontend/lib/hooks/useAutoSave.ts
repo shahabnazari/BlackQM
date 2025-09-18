@@ -26,7 +26,7 @@ export function useAutoSave<T extends Record<string, any>>(
     validateBeforeSave,
   } = options;
 
-  const { showAutoSave, showError } = useToast();
+  const { _showAutoSave, showError } = useToast();
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
   const [autoSaveError, setAutoSaveError] = useState<Error | null>(null);
@@ -61,7 +61,7 @@ export function useAutoSave<T extends Record<string, any>>(
 
         // Update previous data reference
         previousDataRef.current = dataToSave;
-      } catch (error) {
+      } catch (error: any) {
         const err = error as Error;
         setAutoSaveError(err);
 
@@ -115,7 +115,7 @@ export function useAutoSave<T extends Record<string, any>>(
 
       // Don't show notification here - let the parent component handle it
       // This prevents duplicate notifications
-    } catch (error) {
+    } catch (error: any) {
       const err = error as Error;
       setAutoSaveError(err);
 

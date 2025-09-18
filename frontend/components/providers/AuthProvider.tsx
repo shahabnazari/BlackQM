@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const currentUser = await authService.getCurrentUser();
           setUser(currentUser);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Session check failed:', error);
         // Clear invalid token
         authService.clearAuthData();
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await authService.logout();
       setUser(null);
       toast.success('Logged out successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Logout failed:', error);
       // Still clear local data even if API call fails
       authService.clearAuthData();
@@ -116,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const currentUser = await authService.getCurrentUser();
       setUser(currentUser);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to refresh user:', error);
     }
   }, []);

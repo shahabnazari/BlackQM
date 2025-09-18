@@ -127,7 +127,7 @@ class APIHealthService {
     this.healthCheckCallbacks.forEach(callback => {
       try {
         callback(result);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error in health check callback:', error);
       }
     });
@@ -163,7 +163,7 @@ class APIHealthService {
       } else if (status.responseTime > this.SLOW_THRESHOLD) {
         status.status = 'slow';
       }
-    } catch (error) {
+    } catch (error: any) {
       status.status = 'down';
       status.error = error instanceof Error ? error.message : 'Unknown error';
     }
@@ -215,7 +215,7 @@ class APIHealthService {
       } catch {
         // Response parsing failed, but endpoint responded
       }
-    } catch (error) {
+    } catch (error: any) {
       status.status = 'down';
       status.error =
         error instanceof Error ? error.message : 'Database check failed';
@@ -256,7 +256,7 @@ class APIHealthService {
       } else if (status.responseTime > this.SLOW_THRESHOLD) {
         status.status = 'slow';
       }
-    } catch (error) {
+    } catch (error: any) {
       status.status = 'down';
       status.error =
         error instanceof Error ? error.message : 'Auth check failed';

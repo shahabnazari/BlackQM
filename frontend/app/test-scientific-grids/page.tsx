@@ -10,7 +10,7 @@ export default function TestScientificGrids() {
   const [selectedConfig, setSelectedConfig] = useState<StandardGridConfig | null>(null);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
 
-  const configs = GridConfigurationService.STANDARD_CONFIGS.map(config => ({
+  const configs = GridConfigurationService.STANDARD_CONFIGS.map((config: any) => ({
     ...config,
     distribution: GridConfigurationService.getCorrectedDistribution(config)
   }));
@@ -54,7 +54,7 @@ export default function TestScientificGrids() {
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-xl font-semibold mb-4">Standard Configurations</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {configs.map(config => {
+            {configs.map((config: any) => {
               const validation = validateConfig(config);
               return (
                 <div
@@ -89,7 +89,7 @@ export default function TestScientificGrids() {
 
                   {/* Distribution Preview */}
                   <div className="mt-3 flex items-end gap-1 h-16">
-                    {config.distribution.map((height, idx) => (
+                    {config.distribution.map((height: any, idx: any) => (
                       <div
                         key={idx}
                         className="flex-1 bg-blue-400 rounded-t"
@@ -192,7 +192,7 @@ export default function TestScientificGrids() {
                 <h3 className="font-medium text-gray-700 mb-2">Grid Preview</h3>
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <div className="flex justify-center items-end gap-2">
-                    {selectedConfig.distribution.map((height, idx) => {
+                    {selectedConfig.distribution.map((height: any, idx: any) => {
                       const value = selectedConfig.range.min + idx;
                       return (
                         <div key={idx} className="flex flex-col items-center">

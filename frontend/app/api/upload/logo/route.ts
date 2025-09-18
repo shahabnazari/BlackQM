@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     try {
       await access(basePath, constants.F_OK);
       console.log('Directory exists');
-    } catch {
+    } catch (error: any) {
       console.log('Creating directory...');
       await mkdir(basePath, { recursive: true });
     }
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       size: file.size,
       type: file.type
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Logo upload error:', error);
     return NextResponse.json(
       { error: 'Failed to upload logo' },

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Info, AlertCircle, Plus, Minus, RotateCcw } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { AlertCircle, ChevronDown, Minus, Plus, RotateCcw } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface GridColumn {
   value: number;
@@ -31,7 +31,7 @@ interface AppleUIGridBuilderEnhancedProps {
 
 // Dynamic label generation based on scale range
 const generateDynamicLabels = (value: number, range: number): string => {
-  const absValue = Math.abs(value);
+  // const absValue = Math.abs(value);
   const maxRange = Math.abs(range);
   
   // For smaller ranges (-2 to +2 or -3 to +3)
@@ -86,11 +86,11 @@ const generateDynamicLabels = (value: number, range: number): string => {
 };
 
 export const AppleUIGridBuilderEnhanced: React.FC<AppleUIGridBuilderEnhancedProps> = ({
-  studyId,
+  studyId: _studyId,
   onGridChange,
   totalStatements = 30,
-  minStatements = 10,
-  maxStatements = 100
+  minStatements: _minStatements = 10,
+  maxStatements: _maxStatements = 100
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [gridRange, setGridRange] = useState({ min: -3, max: 3 });
@@ -292,7 +292,7 @@ export const AppleUIGridBuilderEnhanced: React.FC<AppleUIGridBuilderEnhancedProp
 
   // Calculate dynamic cell size
   const cellHeight = useMemo(() => {
-    const maxCells = Math.max(...columns.map(c => c.cells));
+    const maxCells = Math.max(...columns.map((c: any) => c.cells));
     if (maxCells > 8) return 28;
     if (maxCells > 6) return 36;
     return 44;
@@ -317,10 +317,10 @@ export const AppleUIGridBuilderEnhanced: React.FC<AppleUIGridBuilderEnhancedProp
             <div className="relative">
               <select
                 value={gridRange.max}
-                onChange={(e) => handleRangeChange(parseInt(e.target.value))}
+                onChange={(e: any) => handleRangeChange(parseInt(e.target.value))}
                 className="appearance-none w-full px-4 py-2.5 pr-10 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {[2, 3, 4, 5, 6].map(val => (
+                {[2, 3, 4, 5, 6].map((val: any) => (
                   <option key={val} value={val}>
                     −{val} to +{val} ({val * 2 + 1} columns)
                   </option>
@@ -338,7 +338,7 @@ export const AppleUIGridBuilderEnhanced: React.FC<AppleUIGridBuilderEnhancedProp
             <div className="relative">
               <select
                 value={distribution}
-                onChange={(e) => handleDistributionChange(e.target.value as 'bell' | 'flat')}
+                onChange={(e: any) => handleDistributionChange(e.target.value as 'bell' | 'flat')}
                 className="appearance-none w-full px-4 py-2.5 pr-10 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="bell">Bell Curve</option>
@@ -504,7 +504,7 @@ export const AppleUIGridBuilderEnhanced: React.FC<AppleUIGridBuilderEnhancedProp
         </label>
         <textarea
           value={instructions}
-          onChange={(e) => setInstructions(e.target.value)}
+          onChange={(e: any) => setInstructions(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           rows={2}
           maxLength={500}

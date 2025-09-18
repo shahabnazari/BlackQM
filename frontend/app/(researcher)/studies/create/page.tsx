@@ -1,74 +1,65 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/apple-ui/Button';
 import { Card } from '@/components/apple-ui/Card';
 import { TextField } from '@/components/apple-ui/TextField';
 import RichTextEditor from '@/components/editors/RichTextEditorV2';
-import DigitalSignature from '@/components/signature/DigitalSignature';
+import { AppleUIGridBuilderV5 as AppleUIGridBuilder } from '@/components/grid/AppleUIGridBuilderV5';
+import {
+    StimuliUploadSystemV7,
+    type Stimulus,
+} from '@/components/stimuli/StimuliUploadSystemV7';
+import { UploadProgressTracker } from '@/components/stimuli/UploadProgressTracker';
+import ParticipantPreview from '@/components/study-creation/ParticipantPreview';
+import ResearcherSignature from '@/components/study-creation/ResearcherSignature';
 import InfoTooltip from '@/components/tooltips/InfoTooltipV2';
 import PopupModal, { usePopup } from '@/components/ui/PopupModal';
 import { ToastContainer, useToast } from '@/components/ui/ToastNotification';
 import { useAutoSave } from '@/lib/hooks/useAutoSave';
+import { useShortcuts } from '@/lib/hooks/useShortcut';
 import { apiHealthService } from '@/lib/services/api-health.service';
-import debounce from 'lodash.debounce';
-import { uploadLogo, uploadSignature } from '@/lib/services/upload.service';
 import { DraftService } from '@/lib/services/draft.service';
+import { uploadLogo } from '@/lib/services/upload.service';
 import {
-  welcomeTemplates,
-  getTemplateById,
-  fillTemplate,
-} from '@/lib/templates/welcome-templates';
-import {
-  consentTemplates,
-  getConsentTemplateById,
-  fillConsentTemplate,
+    consentTemplates,
+    getConsentTemplateById,
 } from '@/lib/templates/consent-templates';
 import {
-  studyCreationTooltips,
-  getTooltip,
+    getTemplateById,
+    welcomeTemplates,
+} from '@/lib/templates/welcome-templates';
+import {
+    getTooltip,
 } from '@/lib/tooltips/study-creation-tooltips';
-import ParticipantPreview from '@/components/study-creation/ParticipantPreview';
-import ResearcherSignature from '@/components/study-creation/ResearcherSignature';
 import {
-  ChevronLeft,
-  ChevronRight,
-  Save,
-  Eye,
-  Upload,
-  Pen,
-  Type,
-  Check,
-  X,
-  Monitor,
-  Tablet,
-  Smartphone,
-  ZoomIn,
-  ZoomOut,
-  Sparkles,
-  AlertCircle,
-  Cloud,
-  CloudOff,
-  RefreshCw,
-  CheckCircle2,
-} from 'lucide-react';
-import {
-  matchesPlatformShortcut,
-  getAriaKeyShortcuts,
-  getPlatformShortcut,
-  matchesShortcut,
+    getAriaKeyShortcuts,
+    getPlatformShortcut,
+    matchesPlatformShortcut,
+    matchesShortcut,
 } from '@/lib/utils/keyboard';
-import { useShortcuts } from '@/lib/hooks/useShortcut';
-import { AppleUIGridBuilderV5 as AppleUIGridBuilder } from '@/components/grid/AppleUIGridBuilderV5';
-import { UploadProgressTracker } from '@/components/stimuli/UploadProgressTracker';
 import {
-  StimuliUploadSystemV7,
-  type Stimulus,
-} from '@/components/stimuli/StimuliUploadSystemV7';
-import { ResizableImage } from '@/components/editors/ResizableImage';
-import { useStudyBuilderStore } from '@/lib/stores/study-builder-store';
-import { StudyCreationErrorBoundary } from '@/components/errors/ErrorBoundary';
+    AlertCircle,
+    Check,
+    ChevronLeft,
+    ChevronRight,
+    Cloud,
+    Monitor,
+    RefreshCw,
+    Save,
+    Smartphone,
+    Sparkles,
+    Tablet,
+    Upload,
+    X,
+    ZoomIn,
+    ZoomOut,
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import React, { useCallback, useEffect, useState } from 'react';
+// Components reserved for future use
+// import { ResizableImage } from '@/components/editors/ResizableImage';
+// import { useStudyBuilderStore } from '@/lib/stores/study-builder-store';
+// import { StudyCreationErrorBoundary } from '@/components/errors/ErrorBoundary';
 
 interface EnhancedStudyConfig {
   // Basic Information
@@ -132,7 +123,7 @@ export default function EnhancedCreateStudyPage() {
     showError,
     showInfo,
     showWarning,
-    showAutoSave,
+    // showAutoSave, // Uncomment when auto-save notifications are needed
     toasts,
     removeToast,
   } = useToast();
@@ -141,11 +132,11 @@ export default function EnhancedCreateStudyPage() {
     title: '',
     description: '',
     welcomeMessage: '',
-    welcomeTemplateId: undefined,
+    welcomeTemplateId: '',
     includeWelcomeVideo: false,
     welcomeVideoUrl: '',
     consentForm: '',
-    consentTemplateId: undefined,
+    consentTemplateId: '',
     includeResearcherSignature: false,
     researcherName: '',
     researcherTitle: '',
@@ -165,7 +156,8 @@ export default function EnhancedCreateStudyPage() {
   const [draftId, setDraftId] = useState<string | null>(() =>
     DraftService.generateDraftId()
   );
-  const [isDraft, setIsDraft] = useState(true);
+  // Draft state will be used for save/publish logic
+  // const [isDraft, setIsDraft] = useState(true);
 
   // Auto-save configuration - memoized to prevent unnecessary re-renders
   const autoSaveConfig = React.useMemo(
@@ -217,7 +209,6 @@ export default function EnhancedCreateStudyPage() {
           setStimuli(draft.config.stimuli);
         }
         setDraftId(loadDraftId);
-        setIsDraft(true);
         showInfo(`Draft "${draft.title}" loaded`);
       } else {
         showError('Draft not found');
@@ -391,7 +382,7 @@ export default function EnhancedCreateStudyPage() {
 
       // Show error message
       if (stepNumber > 2) {
-        showError(Object.values(errors)[0]);
+        showError(Object.values(errors)[0] || 'Validation error');
       }
     }
 
@@ -492,7 +483,7 @@ export default function EnhancedCreateStudyPage() {
       };
 
       setPreviewData(previewData);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating preview:', error);
     }
   };
@@ -560,7 +551,7 @@ export default function EnhancedCreateStudyPage() {
       } else {
         throw new Error('Failed to create study');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating study:', error);
       showError('Failed to create study. Please try again.');
     } finally {
@@ -848,7 +839,7 @@ export default function EnhancedCreateStudyPage() {
           { num: 3, label: 'Grid Configuration' },
           { num: 4, label: 'Upload Stimuli' },
           { num: 5, label: 'Preview & Create' },
-        ].map(s => (
+        ].map((s: any) => (
           <div key={s.num} className="flex items-center flex-1">
             <div
               className={`
@@ -919,7 +910,7 @@ export default function EnhancedCreateStudyPage() {
                     });
                   }
                 }}
-                error={validationErrors.title}
+                {...(validationErrors.title && { error: validationErrors.title })}
                 aria-label="Study title"
                 aria-required="true"
                 aria-invalid={!!validationErrors.title}
@@ -1038,7 +1029,7 @@ export default function EnhancedCreateStudyPage() {
                   value={studyConfig.welcomeTemplateId || ''}
                 >
                   <option value="">Select Template</option>
-                  {welcomeTemplates.map(t => (
+                  {welcomeTemplates.map((t: any) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
                     </option>
@@ -1135,7 +1126,7 @@ export default function EnhancedCreateStudyPage() {
                   value={studyConfig.consentTemplateId || ''}
                 >
                   <option value="">Select Template</option>
-                  {consentTemplates.map(t => (
+                  {consentTemplates.map((t: any) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
                     </option>
@@ -1253,7 +1244,7 @@ export default function EnhancedCreateStudyPage() {
                     {/* Researcher Signature (Draw, Type, or Upload) */}
                     <ResearcherSignature
                       onSignatureComplete={handleSignatureComplete}
-                      currentSignatureUrl={studyConfig.researcherSignatureUrl}
+                      {...(studyConfig.researcherSignatureUrl && { currentSignatureUrl: studyConfig.researcherSignatureUrl })}
                       onRemove={handleSignatureRemove}
                     />
 
@@ -1808,10 +1799,10 @@ export default function EnhancedCreateStudyPage() {
         isOpen={popupState.isOpen}
         onClose={closePopup}
         type={popupState.type}
-        title={popupState.title}
+        {...(popupState.title && { title: popupState.title })}
         message={popupState.message}
-        onConfirm={popupState.onConfirm}
-        onCancel={popupState.onCancel}
+        {...(popupState.onConfirm && { onConfirm: popupState.onConfirm })}
+        {...(popupState.onCancel && { onCancel: popupState.onCancel })}
       />
 
       {/* Toast Notifications */}

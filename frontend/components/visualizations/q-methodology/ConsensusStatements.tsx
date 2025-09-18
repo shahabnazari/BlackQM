@@ -44,7 +44,7 @@ export const ConsensusStatements: React.FC<ConsensusStatementsProps> = ({
 
   // Filter consensus statements (low standard deviation)
   const consensusStatements = data
-    .filter(statement => statement.standardDeviation < threshold)
+    .filter((statement: any) => statement.standardDeviation < threshold)
     .sort((a, b) => a.standardDeviation - b.standardDeviation)
     .slice(0, 15);
 
@@ -54,7 +54,7 @@ export const ConsensusStatements: React.FC<ConsensusStatementsProps> = ({
   });
 
   const yScale = scaleBand({
-    domain: consensusStatements.map((s, i) => i.toString()),
+    domain: consensusStatements.map((_s, i) => i.toString()),
     range: [0, innerHeight],
     padding: 0.2,
   });

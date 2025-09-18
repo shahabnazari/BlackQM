@@ -49,7 +49,7 @@ export default function Commentary({ onComplete, onBack }: CommentaryProps) {
 
   const currentStatement = mockExtremeStatements[currentIndex];
   const isLastStatement = currentIndex === mockExtremeStatements.length - 1;
-  const allCommented = mockExtremeStatements.every((s) => comments[s.id]?.length >= 50);
+  const allCommented = mockExtremeStatements.every((s: any) => comments[s.id]?.length >= 50);
 
   const handleCommentChange = (value: string) => {
     setComments((prev) => ({
@@ -147,7 +147,7 @@ export default function Commentary({ onComplete, onBack }: CommentaryProps) {
             rows={6}
             placeholder="Please explain your reasoning (minimum 50 words)..."
             value={currentComment}
-            onChange={(e) => handleCommentChange(e.target.value)}
+            onChange={(e: any) => handleCommentChange(e.target.value)}
           />
           <div className="flex justify-between mt-2">
             <span

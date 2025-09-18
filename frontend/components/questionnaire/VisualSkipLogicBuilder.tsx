@@ -9,7 +9,6 @@ import ReactFlow, {
   Position,
   NodeProps,
   ReactFlowProvider,
-  useReactFlow,
   Background,
   Controls,
   MiniMap,
@@ -17,13 +16,11 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { 
-  GitBranch, 
   Filter, 
   Plus, 
   Trash2, 
   Save,
   AlertCircle,
-  ChevronRight,
   Layers
 } from 'lucide-react';
 import { QuestionType } from '@/lib/types/questionnaire';
@@ -266,7 +263,7 @@ export const VisualSkipLogicBuilder: React.FC<VisualSkipLogicBuilderProps> = ({
     return flowEdges;
   }, [questions]);
 
-  const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+  const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setSelectedNodeId(node.id);
     if (node.type === 'question') {
       setShowConditionPanel(true);
@@ -390,7 +387,7 @@ export const VisualSkipLogicBuilder: React.FC<VisualSkipLogicBuilderProps> = ({
                 <select 
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
                   value={currentCondition.operator}
-                  onChange={(e) => setCurrentCondition({
+                  onChange={(e: any) => setCurrentCondition({
                     ...currentCondition,
                     operator: e.target.value as any
                   })}
@@ -411,7 +408,7 @@ export const VisualSkipLogicBuilder: React.FC<VisualSkipLogicBuilderProps> = ({
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
                   value={currentCondition.value}
-                  onChange={(e) => setCurrentCondition({
+                  onChange={(e: any) => setCurrentCondition({
                     ...currentCondition,
                     value: e.target.value
                   })}
@@ -425,7 +422,7 @@ export const VisualSkipLogicBuilder: React.FC<VisualSkipLogicBuilderProps> = ({
                 <select 
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
                   value={currentCondition.action}
-                  onChange={(e) => setCurrentCondition({
+                  onChange={(e: any) => setCurrentCondition({
                     ...currentCondition,
                     action: e.target.value as any
                   })}
@@ -444,15 +441,15 @@ export const VisualSkipLogicBuilder: React.FC<VisualSkipLogicBuilderProps> = ({
                   <select 
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
                     value={currentCondition.targetQuestion || ''}
-                    onChange={(e) => setCurrentCondition({
+                    onChange={(e: any) => setCurrentCondition({
                       ...currentCondition,
                       targetQuestion: e.target.value
                     })}
                   >
                     <option value="">Select question...</option>
                     {questions
-                      .filter(q => q.id !== selectedNodeId)
-                      .map(q => (
+                      .filter((q: any) => q.id !== selectedNodeId)
+                      .map((q: any) => (
                         <option key={q.id} value={q.id}>
                           {q.text}
                         </option>

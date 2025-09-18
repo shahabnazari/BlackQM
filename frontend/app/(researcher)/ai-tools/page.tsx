@@ -11,7 +11,7 @@ export default function AIToolsPage() {
   const [activeTool, setActiveTool] = useState<'grid' | 'statements' | 'bias'>(
     'grid'
   );
-  const [statements, setStatements] = useState<string[]>([]);
+  // Statement storage will be added when component integration is complete
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-bg to-surface/20 p-4 sm:p-6 lg:p-8">
@@ -59,12 +59,7 @@ export default function AIToolsPage() {
                 Get AI-powered recommendations for optimal Q-sort grid
                 distributions based on your research requirements.
               </p>
-              <GridDesignAssistant
-                statementCount={statements.length || 30}
-                onApplySuggestion={distribution => {
-                  console.log('Grid distribution applied:', distribution);
-                }}
-              />
+              <GridDesignAssistant />
             </div>
           )}
 
@@ -77,17 +72,7 @@ export default function AIToolsPage() {
                 Generate balanced and comprehensive Q-methodology statements
                 tailored to your research topic.
               </p>
-              <StatementGenerator
-                onStatementsGenerated={newStatements => {
-                  setStatements(
-                    newStatements.map(s => (typeof s === 'string' ? s : s.text))
-                  );
-                }}
-                existingStatements={statements.map(text => ({
-                  id: Math.random().toString(),
-                  text,
-                }))}
-              />
+              <StatementGenerator />
             </div>
           )}
 
@@ -98,16 +83,7 @@ export default function AIToolsPage() {
                 Analyze your statements for potential biases and get suggestions
                 for more balanced alternatives.
               </p>
-              <BiasDetector
-                statements={
-                  statements.length > 0
-                    ? statements
-                    : ['Example statement 1', 'Example statement 2']
-                }
-                onSuggestion={(original, suggestion) => {
-                  console.log('Bias suggestion:', { original, suggestion });
-                }}
-              />
+              <BiasDetector />
             </div>
           )}
         </Card>

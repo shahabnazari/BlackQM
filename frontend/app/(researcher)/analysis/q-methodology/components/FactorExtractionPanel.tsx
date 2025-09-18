@@ -16,12 +16,9 @@ import {
 } from 'chart.js';
 import { Card } from '@/components/apple-ui/Card';
 import { Button } from '@/components/apple-ui/Button';
-import { Badge } from '@/components/apple-ui/Badge';
 import { motion } from 'framer-motion';
 import {
-  ChartBarIcon,
   CalculatorIcon,
-  AdjustmentsHorizontalIcon,
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 

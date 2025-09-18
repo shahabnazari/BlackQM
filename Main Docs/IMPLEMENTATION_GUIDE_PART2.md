@@ -1,10 +1,23 @@
 # VQMethod Implementation Guide - Part 2
 
-## Phases 4-6: Data Visualization through Q-Analytics Engine
+## Phases 4-5.5: UI Excellence & Data Visualization
 
-**Document Rule**: Maximum 20,000 tokens per document. Content continues in sequentially numbered parts.  
-**Previous Part**: [IMPLEMENTATION_GUIDE_PART1.md](./IMPLEMENTATION_GUIDE_PART1.md) - Phases 1-3  
-**Next Part**: [IMPLEMENTATION_GUIDE_PART3.md](./IMPLEMENTATION_GUIDE_PART3.md) - Phases 6.5-6.85
+**Updated:** September 2025 - World-Class Organization with Perfect Alignment  
+**Previous Part**: [IMPLEMENTATION_GUIDE_PART1.md](./IMPLEMENTATION_GUIDE_PART1.md) - Phases 1-3.5  
+**Next Part**: [IMPLEMENTATION_GUIDE_PART3.md](./IMPLEMENTATION_GUIDE_PART3.md) - Phases 6-6.85  
+**Document Rule**: Maximum 20,000 tokens per document. Content continues in sequentially numbered parts.
+
+### Phase Coverage
+- **Phase 4:** Data Visualization & Analytics Excellence
+- **Phase 5:** Professional Polish & Delight  
+- **Phase 5.5:** Critical UI & User Experience Excellence
+
+### ⚠️ Daily Error Management Protocol
+```bash
+# Run at 5 PM daily for each phase
+npm run typecheck | tee error-log-phase$(PHASE)-$(date +%Y%m%d).txt
+# No new errors allowed - fix immediately
+```
 
 ---
 
@@ -898,423 +911,227 @@ export function LoadingMessages() {
 
 ---
 
-# PHASE 6: Q-ANALYTICS ENGINE
+# PHASE 5.5: CRITICAL UI & USER EXPERIENCE EXCELLENCE
 
-**Duration:** 5-7 days  
+**Duration:** 3-4 days  
 **Status:** ✅ COMPLETE (100%)  
-**Target:** PQMethod-compatible analysis engine
+**Priority:** CRITICAL - User experience refinement
 
-## 6.1 Statistical Analysis Services
+## 5.5.1 Responsive Design System
 
-### Factor Extraction Service
+### Breakpoint Management
 
 ```typescript
-// backend/src/modules/analysis/services/factor-extraction.service.ts
-import { Injectable } from '@nestjs/common';
-import * as numeric from 'numeric';
+// lib/responsive.ts
+export const breakpoints = {
+  xs: 375,  // iPhone SE
+  sm: 640,  // Small tablet
+  md: 768,  // iPad
+  lg: 1024, // iPad Pro
+  xl: 1280, // Desktop
+  xxl: 1536 // Large desktop
+};
 
-@Injectable()
-export class FactorExtractionService {
-  extractFactors(
-    correlationMatrix: number[][],
-    method: 'pca' | 'centroid' = 'pca'
-  ) {
-    switch (method) {
-      case 'pca':
-        return this.principalComponentAnalysis(correlationMatrix);
-      case 'centroid':
-        return this.centroidMethod(correlationMatrix);
-      default:
-        throw new Error(`Unknown extraction method: ${method}`);
-    }
-  }
-
-  private principalComponentAnalysis(matrix: number[][]) {
-    // Calculate eigenvalues and eigenvectors
-    const eigen = numeric.eig(matrix);
-    const eigenvalues = eigen.lambda.x;
-    const eigenvectors = eigen.E.x;
-
-    // Sort by eigenvalue (descending)
-    const sorted = eigenvalues
-      .map((value, index) => ({ value, vector: eigenvectors[index] }))
-      .sort((a, b) => b.value - a.value);
-
-    // Apply Kaiser criterion (eigenvalue > 1)
-    const significantFactors = sorted.filter(f => f.value > 1);
-
-    return {
-      eigenvalues: sorted.map(f => f.value),
-      eigenvectors: sorted.map(f => f.vector),
-      numberOfFactors: significantFactors.length,
-      varianceExplained: this.calculateVarianceExplained(
-        sorted.map(f => f.value)
-      ),
+export const useBreakpoint = () => {
+  const [breakpoint, setBreakpoint] = useState('xl');
+  
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < breakpoints.sm) setBreakpoint('xs');
+      else if (width < breakpoints.md) setBreakpoint('sm');
+      else if (width < breakpoints.lg) setBreakpoint('md');
+      else if (width < breakpoints.xl) setBreakpoint('lg');
+      else if (width < breakpoints.xxl) setBreakpoint('xl');
+      else setBreakpoint('xxl');
     };
-  }
-
-  private centroidMethod(matrix: number[][]) {
-    const n = matrix.length;
-    let factors = [];
-    let residual = [...matrix.map(row => [...row])];
-
-    for (let f = 0; f < n; f++) {
-      // Calculate row sums
-      const rowSums = residual.map(row =>
-        row.reduce((sum, val) => sum + Math.abs(val), 0)
-      );
-
-      // Find maximum sum
-      const maxSum = Math.max(...rowSums);
-      if (maxSum < 0.01) break; // Stop when residual is negligible
-
-      // Extract factor
-      const factor = this.extractCentroidFactor(residual);
-      factors.push(factor);
-
-      // Update residual matrix
-      residual = this.updateResidual(residual, factor);
-    }
-
-    return {
-      factors,
-      eigenvalues: factors.map(f => f.eigenvalue),
-      numberOfFactors: factors.length,
-    };
-  }
-
-  private calculateVarianceExplained(eigenvalues: number[]) {
-    const total = eigenvalues.reduce((sum, val) => sum + val, 0);
-    return eigenvalues.map(val => (val / total) * 100);
-  }
-}
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  return breakpoint;
+};
 ```
 
-### Factor Rotation Service
+## 5.5.2 Accessibility Implementation
+
+### WCAG AA Compliance
 
 ```typescript
-// backend/src/modules/analysis/services/factor-rotation.service.ts
-import { Injectable } from '@nestjs/common';
-
-@Injectable()
-export class FactorRotationService {
-  rotateFactors(
-    loadings: number[][],
-    method: 'varimax' | 'quartimax' | 'manual'
-  ) {
-    switch (method) {
-      case 'varimax':
-        return this.varimax(loadings);
-      case 'quartimax':
-        return this.quartimax(loadings);
-      case 'manual':
-        return loadings; // Manual rotation handled client-side
-      default:
-        throw new Error(`Unknown rotation method: ${method}`);
-    }
-  }
-
-  private varimax(
-    loadings: number[][],
-    maxIterations = 100,
-    tolerance = 0.00001
-  ) {
-    const [n, m] = [loadings.length, loadings[0].length];
-    let rotated = [...loadings.map(row => [...row])];
-    let converged = false;
-    let iteration = 0;
-
-    while (!converged && iteration < maxIterations) {
-      let maxChange = 0;
-
-      for (let i = 0; i < m - 1; i++) {
-        for (let j = i + 1; j < m; j++) {
-          // Calculate rotation angle
-          const { angle, change } = this.calculateRotationAngle(rotated, i, j);
-          maxChange = Math.max(maxChange, Math.abs(change));
-
-          // Apply rotation
-          rotated = this.applyRotation(rotated, i, j, angle);
-        }
-      }
-
-      converged = maxChange < tolerance;
-      iteration++;
-    }
-
-    return {
-      rotatedLoadings: rotated,
-      iterations: iteration,
-      converged,
-    };
-  }
-
-  private calculateRotationAngle(loadings: number[][], i: number, j: number) {
-    const n = loadings.length;
-    let u = 0,
-      v = 0;
-
-    for (let k = 0; k < n; k++) {
-      const li = loadings[k][i];
-      const lj = loadings[k][j];
-      u += li * li - lj * lj;
-      v += 2 * li * lj;
-    }
-
-    const angle = Math.atan2(v, u) / 4;
-    return { angle, change: Math.abs(angle) };
-  }
-
-  private applyRotation(
-    loadings: number[][],
-    i: number,
-    j: number,
-    angle: number
-  ) {
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    const rotated = [...loadings.map(row => [...row])];
-
-    for (let k = 0; k < loadings.length; k++) {
-      const li = loadings[k][i];
-      const lj = loadings[k][j];
-      rotated[k][i] = cos * li + sin * lj;
-      rotated[k][j] = -sin * li + cos * lj;
-    }
-
-    return rotated;
-  }
-}
-```
-
-### Q-Analysis Controller
-
-```typescript
-// backend/src/modules/analysis/controllers/analysis.controller.ts
-import { Controller, Post, Body, Param, Get } from '@nestjs/common';
-import { AnalysisService } from '../services/analysis.service';
-
-@Controller('api/studies/:studyId/analysis')
-export class AnalysisController {
-  constructor(private analysisService: AnalysisService) {}
-
-  @Post('run')
-  async runAnalysis(
-    @Param('studyId') studyId: string,
-    @Body() options: AnalysisOptions
-  ) {
-    return this.analysisService.runFullAnalysis(studyId, options);
-  }
-
-  @Get('correlation')
-  async getCorrelationMatrix(@Param('studyId') studyId: string) {
-    return this.analysisService.calculateCorrelationMatrix(studyId);
-  }
-
-  @Post('factors/extract')
-  async extractFactors(
-    @Param('studyId') studyId: string,
-    @Body() options: { method: string; numberOfFactors?: number }
-  ) {
-    return this.analysisService.extractFactors(studyId, options);
-  }
-
-  @Post('factors/rotate')
-  async rotateFactors(
-    @Param('studyId') studyId: string,
-    @Body() options: { method: string; factorLoadings: number[][] }
-  ) {
-    return this.analysisService.rotateFactors(options);
-  }
-
-  @Get('export/:format')
-  async exportAnalysis(
-    @Param('studyId') studyId: string,
-    @Param('format') format: string
-  ) {
-    return this.analysisService.exportAnalysis(studyId, format);
-  }
-}
-```
-
-## 6.2 PQMethod Compatibility
-
-### PQMethod Import/Export Service
-
-```typescript
-// backend/src/modules/analysis/services/pqmethod.service.ts
-import { Injectable } from '@nestjs/common';
-import * as fs from 'fs/promises';
-
-@Injectable()
-export class PQMethodService {
-  async importPQMethodFile(filePath: string) {
-    const content = await fs.readFile(filePath, 'utf-8');
-    const lines = content.split('\n');
-
-    // Parse PQMethod DAT file format
-    const metadata = this.parseMetadata(lines);
-    const statements = this.parseStatements(lines, metadata);
-    const sorts = this.parseSorts(lines, metadata);
-
-    return {
-      metadata,
-      statements,
-      sorts,
-    };
-  }
-
-  async exportToPQMethod(study: Study, analysis: Analysis) {
-    const lines = [];
-
-    // Write header
-    lines.push(`${study.statements.length} ${study.participants.length}`);
-    lines.push(`${analysis.numberOfFactors}`);
-
-    // Write statements
-    study.statements.forEach((stmt, i) => {
-      lines.push(`${i + 1} ${stmt.text.substring(0, 60)}`);
-    });
-
-    // Write Q-sorts
-    study.participants.forEach(participant => {
-      const sort = participant.qSortData;
-      lines.push(sort.map(s => s.position).join(' '));
-    });
-
-    // Write factor loadings
-    analysis.factorLoadings.forEach(loading => {
-      lines.push(loading.values.map(v => v.toFixed(3)).join(' '));
-    });
-
-    return lines.join('\n');
-  }
-
-  validatePQMethodCompatibility(ourResults: any, pqmethodResults: any) {
-    const correlation = this.calculateCorrelation(
-      ourResults.factorLoadings,
-      pqmethodResults.factorLoadings
-    );
-
-    return {
-      isCompatible: correlation >= 0.99,
-      correlation,
-      differences: this.findDifferences(ourResults, pqmethodResults),
-    };
-  }
-}
-```
-
-## 6.3 Interactive Analysis Interface
-
-### Analysis Dashboard Component
-
-```typescript
-// frontend/app/(researcher)/analysis/q-methodology/page.tsx
-'use client';
-
-import { useState, useEffect } from 'react';
-import { Card } from '@/components/apple-ui/Card';
-import { Button } from '@/components/apple-ui/Button';
-import { FactorExtractionPanel } from '@/components/analysis/FactorExtractionPanel';
-import { FactorRotationPanel } from '@/components/analysis/FactorRotationPanel';
-import { FactorInterpretation } from '@/components/analysis/FactorInterpretation';
-import { StatisticalOutput } from '@/components/analysis/StatisticalOutput';
-
-export default function QAnalysisPage() {
-  const [step, setStep] = useState<'extraction' | 'rotation' | 'interpretation'>('extraction');
-  const [analysisState, setAnalysisState] = useState({
-    correlationMatrix: null,
-    extractedFactors: null,
-    rotatedFactors: null,
-    factorArrays: null,
-  });
-
-  const handleExtraction = async (options) => {
-    const response = await fetch(`/api/studies/${studyId}/analysis/factors/extract`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(options),
-    });
-
-    const factors = await response.json();
-    setAnalysisState(prev => ({ ...prev, extractedFactors: factors }));
-    setStep('rotation');
-  };
-
-  const handleRotation = async (options) => {
-    const response = await fetch(`/api/studies/${studyId}/analysis/factors/rotate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...options,
-        factorLoadings: analysisState.extractedFactors.loadings,
-      }),
-    });
-
-    const rotated = await response.json();
-    setAnalysisState(prev => ({ ...prev, rotatedFactors: rotated }));
-    setStep('interpretation');
-  };
-
+// components/accessibility/SkipLinks.tsx
+export function SkipLinks() {
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Q-Methodology Analysis</h1>
-        <div className="flex gap-2 mt-4">
-          {['extraction', 'rotation', 'interpretation'].map(s => (
-            <Button
-              key={s}
-              variant={step === s ? 'primary' : 'secondary'}
-              onClick={() => setStep(s as any)}
-              disabled={
-                (s === 'rotation' && !analysisState.extractedFactors) ||
-                (s === 'interpretation' && !analysisState.rotatedFactors)
-              }
-            >
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {step === 'extraction' && (
-        <FactorExtractionPanel
-          correlationMatrix={analysisState.correlationMatrix}
-          onExtract={handleExtraction}
-        />
-      )}
-
-      {step === 'rotation' && (
-        <FactorRotationPanel
-          factors={analysisState.extractedFactors}
-          onRotate={handleRotation}
-        />
-      )}
-
-      {step === 'interpretation' && (
-        <FactorInterpretation
-          factors={analysisState.rotatedFactors}
-          statements={statements}
-        />
-      )}
-
-      <div className="mt-8">
-        <StatisticalOutput analysis={analysisState} />
-      </div>
+    <div className="sr-only focus-within:not-sr-only">
+      <a href="#main" className="skip-link">
+        Skip to main content
+      </a>
+      <a href="#navigation" className="skip-link">
+        Skip to navigation
+      </a>
+      <a href="#footer" className="skip-link">
+        Skip to footer
+      </a>
     </div>
   );
 }
 ```
 
-## 🔍 Testing Checkpoint 6.1
+### Keyboard Navigation
 
-- [ ] Factor extraction produces valid eigenvalues
-- [ ] Varimax rotation converges properly
-- [ ] PQMethod correlation ≥0.99
-- [ ] Z-scores calculate correctly
-- [ ] Factor arrays match expected distribution
-- [ ] Export formats are valid
+```typescript
+// hooks/useKeyboardNavigation.ts
+export function useKeyboardNavigation() {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Tab trap for modals
+      if (e.key === 'Tab' && modalOpen) {
+        const focusableElements = modal.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+        
+        if (e.shiftKey && document.activeElement === firstElement) {
+          lastElement.focus();
+          e.preventDefault();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          firstElement.focus();
+          e.preventDefault();
+        }
+      }
+      
+      // Escape to close
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [modalOpen]);
+}
+```
+
+## 5.5.3 Performance Optimization
+
+### Image Optimization
+
+```typescript
+// components/optimized/OptimizedImage.tsx
+import Image from 'next/image';
+
+export function OptimizedImage({ src, alt, priority = false }) {
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      width={800}
+      height={600}
+      priority={priority}
+      placeholder="blur"
+      blurDataURL={generateBlurDataURL(src)}
+      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+    />
+  );
+}
+```
+
+### Code Splitting
+
+```typescript
+// Dynamic imports for heavy components
+const HeavyChart = dynamic(
+  () => import('@/components/charts/HeavyChart'),
+  { 
+    loading: () => <ChartSkeleton />,
+    ssr: false 
+  }
+);
+```
+
+## 5.5.4 Touch Interactions
+
+### Mobile Gestures
+
+```typescript
+// hooks/useSwipeGesture.ts
+export function useSwipeGesture(onSwipe: (direction: string) => void) {
+  const [touchStart, setTouchStart] = useState(null);
+  
+  const handleTouchStart = (e: TouchEvent) => {
+    setTouchStart({
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    });
+  };
+  
+  const handleTouchEnd = (e: TouchEvent) => {
+    if (!touchStart) return;
+    
+    const touchEnd = {
+      x: e.changedTouches[0].clientX,
+      y: e.changedTouches[0].clientY
+    };
+    
+    const dx = touchEnd.x - touchStart.x;
+    const dy = touchEnd.y - touchStart.y;
+    
+    if (Math.abs(dx) > Math.abs(dy)) {
+      onSwipe(dx > 0 ? 'right' : 'left');
+    } else {
+      onSwipe(dy > 0 ? 'down' : 'up');
+    }
+  };
+  
+  return { handleTouchStart, handleTouchEnd };
+}
+```
+
+## 5.5.5 Error Boundaries
+
+### Global Error Boundary
+
+```typescript
+// components/ErrorBoundary.tsx
+export class ErrorBoundary extends Component {
+  state = { hasError: false, error: null };
+  
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+    // Send to error tracking service
+    Sentry.captureException(error);
+  }
+  
+  render() {
+    if (this.state.hasError) {
+      return (
+        <ErrorFallback
+          error={this.state.error}
+          resetErrorBoundary={() => this.setState({ hasError: false })}
+        />
+      );
+    }
+    
+    return this.props.children;
+  }
+}
+```
+
+## Testing Checkpoint 5.5
+
+- [ ] All pages responsive down to 375px width
+- [ ] WCAG AA compliance verified
+- [ ] Keyboard navigation works throughout
+- [ ] Touch gestures functional on mobile
+- [ ] Images optimized with lazy loading
+- [ ] Error boundaries catch and report errors
+- [ ] Performance metrics meet targets (LCP < 2.5s)
 
 ---
 
@@ -1322,10 +1139,10 @@ export default function QAnalysisPage() {
 
 This Part 2 covers:
 
-- **Phase 4**: Data Visualization & Analytics with comprehensive charts
-- **Phase 5**: Professional Polish with animations and loading states
-- **Phase 6**: Q-Analytics Engine with PQMethod compatibility
+- **Phase 4**: Data Visualization & Analytics Excellence
+- **Phase 5**: Professional Polish & Delight
+- **Phase 5.5**: Critical UI & User Experience Excellence
 
-Continue to **IMPLEMENTATION_GUIDE_PART3.md** for Phases 6.5-6.85.
+Continue to **IMPLEMENTATION_GUIDE_PART3.md** for Phases 6-6.85.
 
-**Document Size**: ~19,800 tokens
+**Document Size**: ~18,000 tokens

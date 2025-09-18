@@ -3,9 +3,9 @@ import {
   LoginCredentials,
   RegisterData,
   AuthResponse,
-  PasswordResetRequest,
+  _PasswordResetRequest,
   PasswordReset,
-  EmailVerification,
+  _EmailVerification,
   User,
 } from './types';
 import { tokenStorage, getDeviceFingerprint } from './utils';
@@ -56,7 +56,7 @@ const createAuthClient = (): AxiosInstance => {
             originalRequest.headers.Authorization = `Bearer ${response.accessToken}`;
             return client(originalRequest);
           }
-        } catch (refreshError) {
+        } catch (refreshError: any) {
           // Refresh failed, redirect to login
           tokenStorage.clearTokens();
           if (typeof window !== 'undefined') {
@@ -105,7 +105,7 @@ export const authApi = {
   logout: async (): Promise<void> => {
     try {
       await authClient.post('/auth/logout');
-    } catch (error) {
+    } catch (error: any) {
       // Even if logout fails on server, clear local data
       console.error('Logout error:', error);
     } finally {

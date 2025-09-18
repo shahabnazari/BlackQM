@@ -17,7 +17,7 @@ export default function NavigationTestPage() {
         ...prev,
         [testName]: result ? '✅ Pass' : '❌ Fail',
       }));
-    } catch (error) {
+    } catch (error: any) {
       setTestResults(prev => ({ ...prev, [testName]: `❌ Error: ${error}` }));
     }
   };

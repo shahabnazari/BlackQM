@@ -38,7 +38,7 @@ export default function TestGridAlignment() {
             <input
               type="number"
               value={totalStatements}
-              onChange={(e) => setTotalStatements(parseInt(e.target.value) || 20)}
+              onChange={(e: any) => setTotalStatements(parseInt(e.target.value) || 20)}
               min={10}
               max={100}
               className="px-3 py-1 border rounded"

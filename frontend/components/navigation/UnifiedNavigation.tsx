@@ -1,22 +1,21 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { HamburgerMenu } from './HamburgerMenu';
-import { UserProfileMenu } from './UserProfileMenu';
-import { GlobalSearch } from './GlobalSearch';
+import {
+    BeakerIcon,
+    ChartBarIcon,
+    Cog6ToothIcon,
+    DocumentDuplicateIcon,
+    HomeIcon,
+    UsersIcon,
+} from '@heroicons/react/24/outline';
+import { usePathname, useRouter } from 'next/navigation';
+import React, { useMemo } from 'react';
 import { Breadcrumbs } from './Breadcrumbs';
 import { CommandPalette } from './CommandPalette';
-import {
-  HomeIcon,
-  ChartBarIcon,
-  BeakerIcon,
-  DocumentDuplicateIcon,
-  UsersIcon,
-  ChartPieIcon,
-  Cog6ToothIcon,
-} from '@heroicons/react/24/outline';
+import { GlobalSearch } from './GlobalSearch';
+import { HamburgerMenu } from './HamburgerMenu';
+import { UserProfileMenu } from './UserProfileMenu';
 
 interface NavigationItem {
   label: string;
@@ -46,7 +45,7 @@ export function UnifiedNavigation() {
 
   // Navigation configuration based on user role
   const navigationItems = useMemo<NavigationItem[]>(() => {
-    const items: NavigationItem[] = [];
+    const _items: NavigationItem[] = [];
 
     // Public items (always visible)
     const publicItems: NavigationItem[] = [
@@ -204,7 +203,7 @@ export function UnifiedNavigation() {
 
               {/* Desktop Navigation */}
               <div className="hidden lg:flex items-center gap-1 ml-8">
-                {navigationItems.map(item => {
+                {navigationItems.map((item: any) => {
                   const Icon = item.icon;
                   const active = isActive(item.path);
 
@@ -235,7 +234,7 @@ export function UnifiedNavigation() {
                       {/* Dropdown for children */}
                       {item.children && item.children.length > 0 && (
                         <div className="absolute top-full left-0 mt-1 w-48 py-2 bg-surface rounded-lg shadow-lg border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                          {item.children.map(child => (
+                          {item.children.map((child: any) => (
                             <button
                               key={child.path}
                               onClick={() => router.push(child.path)}

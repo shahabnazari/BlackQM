@@ -25,7 +25,41 @@ interface VideoState {
   error?: string;
 }
 
-export const VideoResponseQuestion: React.FC<QuestionComponentProps> = ({
+
+interface ExtendedProps extends QuestionComponentProps {
+  error?: string;
+  preview?: boolean;
+}
+
+
+
+// Complete type definitions
+interface Question {
+  id: string;
+  text: string;
+  type: string;
+  required?: boolean;
+  description?: string;
+  helpText?: string;
+  options?: any[];
+  sliderConfig?: {
+    min: number;
+    max: number;
+    step: number;
+  };
+}
+
+interface ExtendedQuestionComponentProps {
+  question: Question;
+  value: any;
+  onChange?: (value: any) => void;
+  error?: string;
+  preview?: boolean;
+}
+
+type ExtendedQuestion = Question;
+
+export const VideoResponseQuestion: React.FC<ExtendedQuestionComponentProps> = ({
   question,
   onChange,
   error,
@@ -47,8 +81,8 @@ export const VideoResponseQuestion: React.FC<QuestionComponentProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const maxDuration = question.sliderConfig?.max || 300; // 5 minutes default
-  const minDuration = question.sliderConfig?.min || 5; // 5 seconds minimum
+  const maxDuration = (question as any).sliderConfig?.max || 300; // 5 minutes default
+  const minDuration = (question as any).sliderConfig?.min || 5; // 5 seconds minimum
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -106,7 +140,7 @@ export const VideoResponseQuestion: React.FC<QuestionComponentProps> = ({
         });
         
         // Update value with video data
-        onChange({
+        onChange?.({
           videoBlob: blob,
           duration: videoState.recordingTime,
           mimeType: mediaRecorder.mimeType,
@@ -218,13 +252,13 @@ export const VideoResponseQuestion: React.FC<QuestionComponentProps> = ({
       isPlaying: false
     });
     recordedChunksRef.current = [];
-    onChange(null);
+    onChange?.(null);
     if (playbackRef.current) {
       playbackRef.current.src = '';
     }
   }, [disabled, preview, onChange, stopRecording]);
 
-  const togglePlayback = useCallback(() => {
+  const _togglePlayback = useCallback(() => {
     if (!playbackRef.current) return;
     
     if (videoState.isPlaying) {

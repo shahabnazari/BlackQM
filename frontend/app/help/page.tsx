@@ -127,7 +127,7 @@ export default function HelpPage() {
     },
   ];
 
-  const filteredTutorials = tutorials.filter(tutorial => {
+  const filteredTutorials = tutorials.filter((tutorial: any) => {
     const matchesCategory =
       selectedCategory === 'all' || tutorial.category === selectedCategory;
     const matchesSearch =
@@ -190,7 +190,7 @@ export default function HelpPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Category Filters */}
         <div className="flex flex-wrap gap-3 mb-8 justify-center">
-          {categories.map(category => (
+          {categories.map((category: any) => (
             <button
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
@@ -221,7 +221,7 @@ export default function HelpPage() {
               </AppleCard>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredTutorials.map(tutorial => (
+                {filteredTutorials.map((tutorial: any) => (
                   <AppleCard
                     key={tutorial.id}
                     className="p-6 hover:shadow-lg transition-shadow cursor-pointer"

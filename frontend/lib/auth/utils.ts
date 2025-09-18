@@ -52,7 +52,7 @@ export const userStorage = {
     if (!userStr) return null;
     try {
       return JSON.parse(userStr);
-    } catch {
+    } catch (error: any) {
       return null;
     }
   },
@@ -97,7 +97,7 @@ export const isTokenExpired = (token: string): boolean => {
     const payload = JSON.parse(atob(token.split('.')[1]));
     if (!payload.exp) return false;
     return Date.now() >= payload.exp * 1000;
-  } catch {
+  } catch (error: any) {
     return true;
   }
 };

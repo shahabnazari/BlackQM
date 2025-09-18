@@ -27,7 +27,7 @@ export default function TestPIOrganization() {
             <input
               type="text"
               value={data.researcherName}
-              onChange={(e) => setData({...data, researcherName: e.target.value})}
+              onChange={(e: any) => setData({...data, researcherName: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               placeholder="Dr. John Smith"
             />
@@ -40,7 +40,7 @@ export default function TestPIOrganization() {
             <input
               type="text"
               value={data.organizationName}
-              onChange={(e) => setData({...data, organizationName: e.target.value})}
+              onChange={(e: any) => setData({...data, organizationName: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               placeholder="Stanford University"
             />
@@ -53,7 +53,7 @@ export default function TestPIOrganization() {
             <input
               type="text"
               value={data.organizationLogoUrl}
-              onChange={(e) => setData({...data, organizationLogoUrl: e.target.value})}
+              onChange={(e: any) => setData({...data, organizationLogoUrl: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               placeholder="https://..."
             />
@@ -72,7 +72,7 @@ export default function TestPIOrganization() {
                     src={data.organizationLogoUrl} 
                     alt="Organization logo" 
                     className="h-14 w-auto object-contain"
-                    onError={(e) => {
+                    onError={(e: any) => {
                       e.currentTarget.style.display = 'none';
                     }}
                   />
@@ -112,7 +112,7 @@ export default function TestPIOrganization() {
                       src={data.organizationLogoUrl} 
                       alt="" 
                       className="h-10 w-auto object-contain"
-                      onError={(e) => {
+                      onError={(e: any) => {
                         e.currentTarget.style.display = 'none';
                       }}
                     />

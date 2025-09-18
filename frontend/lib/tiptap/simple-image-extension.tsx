@@ -1,14 +1,14 @@
 import { Node, mergeAttributes, NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react';
 import React, { useState, useRef, useEffect } from 'react';
 import { Rnd } from 'react-rnd';
-import { Maximize2, Minimize2, Move, X, RotateCw } from 'lucide-react';
+import { Move, X, RotateCw } from 'lucide-react';
 
 // Simple Image Component with resize functionality
 const SimpleImageComponent = ({ node, updateAttributes, deleteNode }: any) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [aspectRatio, setAspectRatio] = useState<number | null>(null);
+  // const [aspectRatio, setAspectRatio] = useState<number | null>(null); // For future aspect ratio locking
   const imageRef = useRef<HTMLImageElement>(null);
 
   const { src, alt, width, height, rotation = 0 } = node.attrs;
@@ -18,8 +18,8 @@ const SimpleImageComponent = ({ node, updateAttributes, deleteNode }: any) => {
     if (src) {
       const img = new Image();
       img.onload = () => {
-        const ratio = img.width / img.height;
-        setAspectRatio(ratio);
+        // const ratio = img.width / img.height;
+        // setAspectRatio(ratio);
       };
       img.src = src;
     }
@@ -29,7 +29,7 @@ const SimpleImageComponent = ({ node, updateAttributes, deleteNode }: any) => {
     setIsResizing(true);
   };
 
-  const handleResizeStop = (e: any, direction: any, ref: HTMLElement, delta: any, position: any) => {
+  const handleResizeStop = (_e: any, _direction: any, ref: HTMLElement, _delta: any, _position: any) => {
     const newWidth = ref.offsetWidth;
     const newHeight = ref.offsetHeight;
     
@@ -49,7 +49,7 @@ const SimpleImageComponent = ({ node, updateAttributes, deleteNode }: any) => {
     setIsDragging(true);
   };
 
-  const handleDragStop = (e: any, data: any) => {
+  const handleDragStop = (_e: any, _data: any) => {
     setIsDragging(false);
   };
 

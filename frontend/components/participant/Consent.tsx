@@ -115,7 +115,7 @@ export default function Consent({ onComplete, onBack }: ConsentProps) {
               type="checkbox"
               className="mt-1 w-5 h-5 rounded border-quaternary-fill text-system-blue focus:ring-2 focus:ring-blue-500/20"
               checked={hasConsented}
-              onChange={(e) => setHasConsented(e.target.checked)}
+              onChange={(e: any) => setHasConsented(e.target.checked)}
               disabled={!hasReadFully}
             />
             <span className="text-label">

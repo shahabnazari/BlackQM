@@ -88,7 +88,7 @@ export default function StudiesPage() {
   const [drafts, setDrafts] = useState<StudyDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { showSuccess, showError, showConfirm } = usePopup();
+  const { showSuccess, /* showError, */ showConfirm } = usePopup();
   // const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -104,7 +104,7 @@ export default function StudiesPage() {
         
         // Clean up old drafts (older than 7 days)
         DraftService.cleanupOldDrafts(7);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to fetch studies:', err);
         // setError('Failed to load studies');
         // Use mock data as fallback
@@ -122,7 +122,7 @@ export default function StudiesPage() {
       'Are you sure you want to delete this draft? This action cannot be undone.',
       () => {
         DraftService.deleteDraft(draftId);
-        setDrafts(drafts.filter(d => d.id !== draftId));
+        setDrafts(drafts.filter((d: any) => d.id !== draftId));
         showSuccess('Draft deleted successfully');
       },
       { title: 'Delete Draft' }
@@ -185,7 +185,7 @@ export default function StudiesPage() {
             Unsaved Drafts
           </h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {drafts.map(draft => (
+            {drafts.map((draft: any) => (
               <Card key={draft.id} className="relative">
                 <div className="absolute top-4 right-4 flex gap-2">
                   <button
@@ -234,7 +234,7 @@ export default function StudiesPage() {
       <div>
         <h2 className="text-xl font-semibold text-label mb-4">Published Studies</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {studies.map(study => (
+        {studies.map((study: any) => (
           <Link key={study.id} href={`/studies/${study.id}`}>
             <Card className="h-full transition-transform hover:scale-[1.02] cursor-pointer">
               <div className="flex items-start justify-between mb-4">

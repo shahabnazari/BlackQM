@@ -157,8 +157,8 @@ export const queryKeys = {
 
   // AI queries
   ai: {
-    suggestions: (context: string) => ['ai', 'suggestions'] as const,
-    analysis: (data: any) => ['ai', 'analysis'] as const,
+    suggestions: (_context: string) => ['ai', 'suggestions'] as const,
+    analysis: (_data: any) => ['ai', 'analysis'] as const,
     generation: (prompt: string) => ['ai', 'generation', prompt] as const
   }
 } as const;
@@ -267,12 +267,12 @@ export class QueryPerformanceMonitor {
    */
   static trackQueryTime(queryKey: readonly unknown[], time: number): void {
     const key = JSON.stringify(queryKey);
-    const times = this.queryTimes.get(key) || [];
-    times.push(time);
+    const times: number[] = this.queryTimes.get(key) || [];
+    (Array.isArray(times) ? times : []).push(time);
 
     // Keep only last 100 measurements
-    if (times.length > 100) {
-      times.shift()
+    if ((Array.isArray(times) ? times.length : 0) > 100) {
+      (times as number[]).shift()
     }
 
     this.queryTimes.set(key, times);
@@ -290,12 +290,12 @@ export class QueryPerformanceMonitor {
     const key = JSON.stringify(queryKey);
     const times = this.queryTimes.get(key);
 
-    if (!times || times.length === 0) {
+    if (!times || (Array.isArray(times) ? times.length : 0) === 0) {
       return null;
     }
 
-    const sum = times.reduce((acc: any, time: any) => acc + time, 0);
-    return sum / times.length;
+    const sum = (times as number[]).reduce((acc: any, time: any) => acc + time, 0);
+    return sum / (Array.isArray(times) ? times.length : 0);
   }
 
   /**
@@ -304,10 +304,10 @@ export class QueryPerformanceMonitor {
   static getMetrics(): Record<string, { average: number; count: number }> {
     const metrics: Record<string, { average: number; count: number }> = {}
     this.queryTimes.forEach((times: any, key: any) => {
-      const sum = times.reduce((acc: any, time: any) => acc + time, 0);
+      const sum = (times as number[]).reduce((acc: any, time: any) => acc + time, 0);
       metrics[key] = {
-        average: sum / times.length,
-        count: times.length
+        average: sum / (Array.isArray(times) ? times.length : 0),
+        count: (Array.isArray(times) ? times.length : 0)
       }
     })
 

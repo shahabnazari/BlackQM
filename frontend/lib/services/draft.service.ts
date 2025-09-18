@@ -45,7 +45,7 @@ export class DraftService {
     
     try {
       return JSON.parse(draftStr);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to parse draft:', e);
       return null;
     }
@@ -58,7 +58,7 @@ export class DraftService {
     
     try {
       return JSON.parse(draftsStr);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to parse drafts list:', e);
       return [];
     }
@@ -71,7 +71,7 @@ export class DraftService {
     
     // Update drafts list
     const drafts = this.getAllDrafts();
-    const filtered = drafts.filter(d => d.id !== draftId);
+    const filtered = drafts.filter((d: any) => d.id !== draftId);
     localStorage.setItem(this.DRAFTS_LIST_KEY, JSON.stringify(filtered));
   }
 
@@ -90,7 +90,7 @@ export class DraftService {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
     
-    const activeDrafts = drafts.filter(draft => {
+    const activeDrafts = drafts.filter((draft: any) => {
       const draftDate = new Date(draft.updatedAt);
       if (draftDate < cutoffDate) {
         localStorage.removeItem(`${this.DRAFT_KEY_PREFIX}${draft.id}`);
@@ -121,7 +121,7 @@ export class DraftService {
       localStorage.removeItem('study_draft');
       
       return newDraftId;
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to migrate old draft:', e);
       return null;
     }

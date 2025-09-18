@@ -102,7 +102,7 @@ export function generateSampleDistinguishingStatements(
   ];
 
   for (let i = 0; i < Math.min(statementCount, sampleTexts.length); i++) {
-    const scores: StatementScore[] = factors.map(factor => ({
+    const scores: StatementScore[] = factors.map((factor: any) => ({
       statementId: `S${(i + 1).toString().padStart(2, '0')}`,
       factor,
       qSortValue: Math.floor(Math.random() * 9) - 4, // -4 to +4
@@ -121,8 +121,8 @@ export function generateSampleDistinguishingStatements(
     
     statements.push({
       id: `S${(i + 1).toString().padStart(2, '0')}`,
-      statement: sampleTexts[i],
-      text: sampleTexts[i],
+      statement: sampleTexts[i] || '',
+      text: sampleTexts[i] || '',
       factors: factorScores,
       scores,
       significance: pValue,
@@ -162,7 +162,7 @@ export function generateSampleConsensusStatements(
   for (let i = 0; i < Math.min(statementCount, consensusTexts.length); i++) {
     // Generate factor scores with high agreement (low standard deviation)
     const baseScore = (Math.random() - 0.5) * 4; // Central tendency
-    const factorScores = factors.map(factor => ({
+    const factorScores = factors.map((factor: any) => ({
       factor,
       score: baseScore + (Math.random() - 0.5) * 0.8 // Small variation around base
     }));
@@ -174,8 +174,8 @@ export function generateSampleConsensusStatements(
 
     statements.push({
       id: `C${(i + 1).toString().padStart(2, '0')}`,
-      statement: consensusTexts[i],
-      text: consensusTexts[i],
+      statement: consensusTexts[i] || '',
+      text: consensusTexts[i] || '',
       consensusScore: 1 - standardDeviation, // Higher score for lower variance
       meanZScore,
       variance: standardDeviation * standardDeviation,

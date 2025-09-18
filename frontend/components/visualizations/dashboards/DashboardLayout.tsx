@@ -423,7 +423,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       min="5"
                       max="30"
                       value={gridSpacing}
-                      onChange={(e) => setGridSpacing(Number(e.target.value))}
+                      onChange={(e: any) => setGridSpacing(Number(e.target.value))}
                       className="w-full"
                     />
                   </div>
@@ -434,7 +434,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       type="checkbox"
                       id="autoResize"
                       checked={autoResize}
-                      onChange={(e) => setAutoResize(e.target.checked)}
+                      onChange={(e: any) => setAutoResize(e.target.checked)}
                       className="mr-2"
                     />
                     <label htmlFor="autoResize" className="text-xs font-medium text-gray-700">

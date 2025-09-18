@@ -163,7 +163,7 @@ describe('Authentication System', () => {
             email: 'test@example.com',
             password: 'wrong-password',
           });
-        } catch (error) {
+        } catch (error: any) {
           expect(error).toBeDefined();
         }
       });
@@ -300,7 +300,7 @@ describe('Authentication System', () => {
             email: 'test@example.com',
             password: 'wrong',
           });
-        } catch (error) {
+        } catch (error: any) {
           // Expected error
         }
       });

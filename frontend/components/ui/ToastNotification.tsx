@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, AlertCircle, Info, AlertTriangle, Save } from 'lucide-react';
+import { X, Check, _AlertCircle, Info, AlertTriangle, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info' | 'autosave';
@@ -122,7 +122,7 @@ export function ToastContainer({
     >
       <div className={cn('flex gap-2', stackDirection)}>
         <AnimatePresence mode="sync">
-          {toasts.map(toast => (
+          {toasts.map((toast: any) => (
             <div key={toast.id} className="pointer-events-auto">
               <ToastNotification toast={toast} onDismiss={onDismiss} />
             </div>
@@ -150,7 +150,7 @@ export function useToast() {
   };
 
   const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts(prev => prev.filter((t: any) => t.id !== id));
   };
 
   const showSuccess = (message: string, duration?: number) => {
@@ -171,7 +171,7 @@ export function useToast() {
 
   const showAutoSave = (message: string = 'Auto-saved') => {
     // Remove any existing autosave toasts
-    setToasts(prev => prev.filter(t => t.type !== 'autosave'));
+    setToasts(prev => prev.filter((t: any) => t.type !== 'autosave'));
     return addToast({ type: 'autosave', message, duration: 2000 });
   };
 

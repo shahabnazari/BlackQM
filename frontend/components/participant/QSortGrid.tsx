@@ -66,7 +66,7 @@ export default function QSortGrid({ onComplete, onBack, preSortData }: QSortGrid
     e.preventDefault();
     if (!draggedStatement || !draggedFrom) return;
 
-    const columnConfig = gridConfig.find((c) => c.column === column);
+    const columnConfig = gridConfig.find((c: any) => c.column === column);
     if (!columnConfig) return;
 
     // Check if column is full
@@ -80,14 +80,14 @@ export default function QSortGrid({ onComplete, onBack, preSortData }: QSortGrid
       setSourceBoxes((prev) => ({
         ...prev,
         [draggedFrom.location]: prev[draggedFrom.location as string].filter(
-          (s) => s.id !== draggedStatement.id
+          (s: any) => s.id !== draggedStatement.id
         ),
       }));
     } else {
       setGrid((prev) => ({
         ...prev,
         [draggedFrom.location]: prev[draggedFrom.location as number].filter(
-          (s) => s.id !== draggedStatement.id
+          (s: any) => s.id !== draggedStatement.id
         ),
       }));
     }
@@ -110,14 +110,14 @@ export default function QSortGrid({ onComplete, onBack, preSortData }: QSortGrid
       setSourceBoxes((prev) => ({
         ...prev,
         [draggedFrom.location]: prev[draggedFrom.location as string].filter(
-          (s) => s.id !== draggedStatement.id
+          (s: any) => s.id !== draggedStatement.id
         ),
       }));
     } else {
       setGrid((prev) => ({
         ...prev,
         [draggedFrom.location]: prev[draggedFrom.location as number].filter(
-          (s) => s.id !== draggedStatement.id
+          (s: any) => s.id !== draggedStatement.id
         ),
       }));
     }
@@ -168,7 +168,7 @@ export default function QSortGrid({ onComplete, onBack, preSortData }: QSortGrid
                   : 'border-system-green bg-green-500/5'
               }`}
               onDragOver={handleDragOver}
-              onDrop={(e) => handleDropOnBox(e, boxName)}
+              onDrop={(e: any) => handleDropOnBox(e, boxName)}
             >
               <h3 className="text-sm font-medium text-label mb-2 capitalize">{boxName}</h3>
               <div className="space-y-1">
@@ -205,7 +205,7 @@ export default function QSortGrid({ onComplete, onBack, preSortData }: QSortGrid
                       : 'border-system-green bg-green-500/5'
                   }`}
                   onDragOver={handleDragOver}
-                  onDrop={(e) => handleDropOnGrid(e, col.column)}
+                  onDrop={(e: any) => handleDropOnGrid(e, col.column)}
                 >
                   <div className="space-y-1">
                     {grid[col.column].map((statement) => (

@@ -3,9 +3,8 @@
  * Tests all validation scenarios for the study creation page
  */
 
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+// Test utilities imports removed as they're not yet used
+// Will be added back when actual tests are implemented
 import '@testing-library/jest-dom';
 
 // Mock Next.js router

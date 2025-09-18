@@ -70,7 +70,7 @@ describe('Animation Performance Tests', () => {
       expect(avgFrameTime).toBeLessThanOrEqual(targetFrameTime);
       
       // Check for frame drops (frames taking > 16.67ms)
-      const droppedFrames = frameTimes.filter(time => time > targetFrameTime);
+      const droppedFrames = frameTimes.filter((time: any) => time > targetFrameTime);
       expect(droppedFrames.length / frameCount).toBeLessThan(0.05); // Less than 5% frame drops
     });
 

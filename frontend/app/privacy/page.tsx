@@ -83,7 +83,7 @@ export default function PrivacyPage() {
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev =>
       prev.includes(sectionId)
-        ? prev.filter(id => id !== sectionId)
+        ? prev.filter((id: any) => id !== sectionId)
         : [...prev, sectionId]
     );
   };
@@ -142,7 +142,7 @@ export default function PrivacyPage() {
             </AppleCard>
 
             {/* Collapsible Sections */}
-            {filteredSections.map(section => (
+            {filteredSections.map((section: any) => (
               <AppleCard key={section.id} className="overflow-hidden">
                 <button
                   onClick={() => toggleSection(section.id)}
@@ -171,7 +171,7 @@ export default function PrivacyPage() {
                 {expandedSections.includes(section.id) && (
                   <div className="px-6 pb-4 border-t border-gray-200 dark:border-gray-700">
                     <ul className="mt-4 space-y-3">
-                      {section.content.map((item, index) => (
+                      {section.content.map((item: any, index: any) => (
                         <li key={index} className="flex items-start">
                           <svg
                             className="w-5 h-5 text-system-blue mt-0.5 mr-3 flex-shrink-0"

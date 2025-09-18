@@ -462,7 +462,7 @@ export function useParticipant(options: UseParticipantOptions = {}) {
 }
 
 // Hook for Q-sort grid management
-export function useQSortGrid(sessionId: string) {
+export function useQSortGrid(_sessionId: string) {
   const [grid, setGrid] = useState<GridPosition[]>([]);
   const [unsorted, setUnsorted] = useState<string[]>([]);
   const [canUndo, setCanUndo] = useState(false);
@@ -476,7 +476,7 @@ export function useQSortGrid(sessionId: string) {
       to: { column: number; row: number }
     ) => {
       setGrid(prev => {
-        const newGrid = prev.filter(p => p.statementId !== statementId);
+        const newGrid = prev.filter((p: any) => p.statementId !== statementId);
 
         // Add to new position
         newGrid.push({
@@ -491,7 +491,7 @@ export function useQSortGrid(sessionId: string) {
 
       // Update unsorted list
       if (!from) {
-        setUnsorted(prev => prev.filter(id => id !== statementId));
+        setUnsorted(prev => prev.filter((id: any) => id !== statementId));
       }
     },
     []
@@ -499,7 +499,7 @@ export function useQSortGrid(sessionId: string) {
 
   // Remove statement from grid
   const removeFromGrid = useCallback((statementId: string) => {
-    setGrid(prev => prev.filter(p => p.statementId !== statementId));
+    setGrid(prev => prev.filter((p: any) => p.statementId !== statementId));
     setUnsorted(prev => [...prev, statementId]);
   }, []);
 

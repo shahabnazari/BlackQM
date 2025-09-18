@@ -460,7 +460,7 @@ describe('Celebration Components', () => {
       });
       
       const hearts = container.querySelectorAll('[data-testid="heart"]');
-      const positions = Array.from(hearts).map(heart => 
+      const positions = Array.from(hearts).map((heart: any) => 
         heart.getAttribute('style')
       );
       

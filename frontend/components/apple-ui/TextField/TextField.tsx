@@ -85,11 +85,11 @@ const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
               ].filter(Boolean).join(' ') || undefined
             }
             aria-label={!label ? props.placeholder : undefined}
-            onFocus={(e) => {
+            onFocus={(e: any) => {
               setIsFocused(true);
               props.onFocus?.(e);
             }}
-            onBlur={(e) => {
+            onBlur={(e: any) => {
               setIsFocused(false);
               props.onBlur?.(e);
             }}

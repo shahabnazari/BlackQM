@@ -4,9 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { 
   formatShortcut, 
-  getKeyboardHelpText,
-  isMac,
-  matchesShortcut 
+  isMac
 } from '@/lib/utils/keyboard';
 
 interface ShortcutGroup {

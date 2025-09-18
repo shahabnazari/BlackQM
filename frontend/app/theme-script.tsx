@@ -8,7 +8,7 @@ export function ThemeScript() {
         if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
           document.documentElement.classList.add('dark');
         }
-      } catch (e) {}
+      } catch (e: any) {}
     })()
   `;
 

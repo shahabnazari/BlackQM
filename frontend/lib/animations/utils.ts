@@ -108,7 +108,7 @@ export const applyGpuAcceleration = (styles: React.CSSProperties): React.CSSProp
  * Calculate spring physics for drag animations
  */
 export const calculateSpringPhysics = (
-  velocity: number,
+  _velocity: number,
   stiffness: number = 300,
   damping: number = 30
 ): { duration: number; bounce: number } => {
@@ -165,7 +165,7 @@ export const calculateEasingPoints = (
   const match = easing.match(/cubic-bezier\(([\d.]+),\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)\)/);
   
   if (match) {
-    const [, x1, y1, x2, y2] = match.map(Number);
+    const [, _x1, y1, _x2, y2] = match.map(Number);
     
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
@@ -215,7 +215,7 @@ export const createTransition = (
   easing: string = 'ease'
 ): string => {
   return properties
-    .map(prop => `${prop} ${duration}ms ${easing}`)
+    .map((prop: any) => `${prop} ${duration}ms ${easing}`)
     .join(', ');
 };
 

@@ -1,33 +1,31 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Color from '@tiptap/extension-color';
-import { TextStyle } from '@tiptap/extension-text-style';
-import Link from '@tiptap/extension-link';
-import TextAlign from '@tiptap/extension-text-align';
-import { SimpleImageExtension } from '@/lib/tiptap/simple-image-extension';
+import PopupModal, { usePopup } from '@/components/ui/PopupModal';
 import { FloatingImageExtension } from '@/lib/tiptap/floating-image-extension';
-import Placeholder from '@tiptap/extension-placeholder';
+import { SimpleImageExtension } from '@/lib/tiptap/simple-image-extension';
+import '@/styles/advanced-image.css';
 import CharacterCount from '@tiptap/extension-character-count';
+import Color from '@tiptap/extension-color';
 import FontFamily from '@tiptap/extension-font-family';
 import FontSize from '@tiptap/extension-font-size';
-import PopupModal, { usePopup } from '@/components/ui/PopupModal';
-import '@/styles/advanced-image.css';
+import Link from '@tiptap/extension-link';
+import Placeholder from '@tiptap/extension-placeholder';
+import TextAlign from '@tiptap/extension-text-align';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
 import {
-  Bold,
-  Italic,
-  List,
-  ListOrdered,
-  Link as LinkIcon,
-  Image as ImageIcon,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Type,
-  Palette,
+    AlignCenter,
+    AlignLeft,
+    AlignRight,
+    Bold,
+    Image as ImageIcon,
+    Italic,
+    Link as LinkIcon,
+    List,
+    ListOrdered,
 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface RichTextEditorProps {
   content: string;
@@ -46,7 +44,7 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
   const listDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const { popupState, showPopup, closePopup, showError, showWarning } = usePopup();
+  const { popupState, closePopup, showError } = usePopup();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -96,7 +94,7 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
     try {
       // Read file as base64
       const reader = new FileReader();
-      reader.onload = async (e) => {
+      reader.onload = async (e: any) => {
         const base64 = e.target?.result as string;
         
         // Get image dimensions
@@ -138,7 +136,7 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
             }).run();
 
             // Image successfully inserted - no need for a popup notification
-          } catch (error) {
+          } catch (error: any) {
             showError('Upload Failed', 'Failed to upload image. Please try again.');
           } finally {
             setIsUploading(false);
@@ -147,7 +145,7 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
         img.src = base64;
       };
       reader.readAsDataURL(file);
-    } catch (error) {
+    } catch (error: any) {
       showError('Upload Failed', 'Failed to process image. Please try again.');
       setIsUploading(false);
     }
@@ -187,14 +185,14 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
       <div className="flex flex-wrap items-center gap-1 p-3 border-b border-color-border bg-color-surface rounded-t-lg">
       {/* Font Family Selector */}
       <select
-        onChange={(e) => {
+        onChange={(e: any) => {
           editor.chain().focus().setFontFamily(e.target.value).run();
         }}
         value={editor.getAttributes('textStyle').fontFamily || 'inherit'}
         className="px-3 py-1.5 text-sm rounded-md border border-color-border bg-color-bg text-color-text hover:bg-color-surface focus:outline-none focus:ring-2 focus:ring-color-primary/20"
         title="Font Family"
       >
-        {fontFamilies.map(font => (
+        {fontFamilies.map((font: any) => (
           <option key={font.value} value={font.value} style={{ fontFamily: font.value }}>
             {font.label}
           </option>
@@ -203,7 +201,7 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
 
       {/* Font Size Selector */}
       <select
-        onChange={(e) => {
+        onChange={(e: any) => {
           const size = e.target.value;
           editor.chain().focus().setFontSize(`${size}pt`).run();
         }}
@@ -211,7 +209,7 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
         className="px-3 py-1.5 text-sm rounded-md border border-color-border bg-color-bg text-color-text hover:bg-color-surface focus:outline-none focus:ring-2 focus:ring-color-primary/20"
         title="Font Size"
       >
-        {fontSizes.map(size => (
+        {fontSizes.map((size: any) => (
           <option key={size} value={size}>
             {size}pt
           </option>
@@ -391,7 +389,7 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
       <div className="relative">
         <input
           type="color"
-          onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+          onChange={(e: any) => editor.chain().focus().setColor(e.target.value).run()}
           className="w-8 h-8 rounded-md cursor-pointer border border-color-border"
           title="Text Color"
         />
@@ -432,7 +430,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   maxLength,
   minLength,
   showToolbar = true,
-  allowImages = true,
+  allowImages: _allowImages = true,
   allowLinks = true,
   className = '',
 }) => {
@@ -478,7 +476,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       attributes: {
         class: 'prose prose-sm max-w-none focus:outline-none text-color-text',
       },
-      handlePaste: (view, event) => {
+      handlePaste: (_view, _event) => {
         // Allow default paste behavior
         return false;
       },

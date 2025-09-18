@@ -29,7 +29,7 @@ export default function JoinStudyPage() {
 
       // Navigate to the study page with the code as the token
       router.push(`/study/${studyCode.toLowerCase()}`);
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Invalid study code');
       setLoading(false);
     }

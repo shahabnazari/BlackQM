@@ -45,13 +45,13 @@ export const EigenvalueScreePlot: React.FC<EigenvalueScreePlotProps> = ({
 
   // Scales
   const xScale = scaleBand({
-    domain: data.map(d => d.factor),
+    domain: data.map((d: any) => d.factor),
     range: [0, innerWidth],
     padding: 0.3,
   });
 
   const yScale = scaleLinear({
-    domain: [0, Math.max(...data.map(d => d.eigenvalue), 2)],
+    domain: [0, Math.max(...data.map((d: any) => d.eigenvalue), 2)],
     range: [innerHeight, 0],
   });
 
@@ -126,7 +126,7 @@ export const EigenvalueScreePlot: React.FC<EigenvalueScreePlotProps> = ({
         {/* Scree plot line */}
         <motion.path
           d={`M ${data
-            .map((d) => `${(xScale(d.factor) ?? 0) + xScale.bandwidth() / 2},${yScale(d.eigenvalue)}`)
+            .map((d: any) => `${(xScale(d.factor) ?? 0) + xScale.bandwidth() / 2},${yScale(d.eigenvalue)}`)
             .join(' L ')}`}
           fill="none"
           stroke="url(#appleBlue)"
@@ -152,7 +152,7 @@ export const EigenvalueScreePlot: React.FC<EigenvalueScreePlotProps> = ({
               stroke="url(#appleBlue)"
               strokeWidth={3}
               style={{ cursor: 'pointer' }}
-              onMouseEnter={(e) => {
+              onMouseEnter={(_e: any) => {
                 showTooltip({
                   tooltipData: d,
                   tooltipLeft: (xScale(d.factor) ?? 0) + xScale.bandwidth() / 2 + margin.left,
@@ -180,7 +180,7 @@ export const EigenvalueScreePlot: React.FC<EigenvalueScreePlotProps> = ({
         {/* Cumulative variance line (secondary) */}
         <motion.path
           d={`M ${data
-            .map((d) => `${(xScale(d.factor) ?? 0) + xScale.bandwidth() / 2},${percentScale(d.cumulativeVariance)}`)
+            .map((d: any) => `${(xScale(d.factor) ?? 0) + xScale.bandwidth() / 2},${percentScale(d.cumulativeVariance)}`)
             .join(' L ')}`}
           fill="none"
           stroke="url(#appleGreen)"

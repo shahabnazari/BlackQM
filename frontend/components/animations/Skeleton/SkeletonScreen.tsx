@@ -4,11 +4,11 @@
  * Phase 5 - Day 11 Implementation
  */
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { SKELETON_CONFIG, ANIMATION_TIMING } from '@/lib/animations/constants';
+import { SKELETON_CONFIG } from '@/lib/animations/constants';
 import { prefersReducedMotion } from '@/lib/animations/utils';
+import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
+import React from 'react';
 
 interface SkeletonProps {
   className?: string;

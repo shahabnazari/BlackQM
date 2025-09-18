@@ -31,20 +31,20 @@ export default function TestGridValidation() {
   const handleGridChange = (config: any) => {
     setGridConfig(config);
     const totalCells = config.columns?.reduce((sum: number, col: any) => sum + col.cells, 0) || 0;
-    const isWithinLimits = totalCells >= currentTest.min && totalCells <= currentTest.max;
+    const isWithinLimits = totalCells >= currentTest?.min && totalCells <= currentTest?.max;
     
     addLog(`Grid changed: ${totalCells} cells (${isWithinLimits ? '✅ Valid' : '⚠️ Out of range'})`);
     
     // Log details
-    if (totalCells < currentTest.min) {
-      addLog(`   → Need ${currentTest.min - totalCells} more cells`);
-    } else if (totalCells > currentTest.max) {
-      addLog(`   → Remove ${totalCells - currentTest.max} cells`);
+    if (totalCells < currentTest?.min) {
+      addLog(`   → Need ${currentTest?.min - totalCells} more cells`);
+    } else if (totalCells > currentTest?.max) {
+      addLog(`   → Remove ${totalCells - currentTest?.max} cells`);
     }
   };
 
   useEffect(() => {
-    addLog(`Test case changed: ${currentTest.name}`);
+    addLog(`Test case changed: ${currentTest?.name}`);
   }, [testCase]);
 
   return (
@@ -75,12 +75,12 @@ export default function TestGridValidation() {
         {/* Current Test Info */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
           <h3 className="text-lg font-semibold text-blue-900 mb-2">
-            Current Test: {currentTest.name}
+            Current Test: {currentTest?.name}
           </h3>
           <div className="space-y-2 text-blue-800">
-            <p>• Minimum cells required: <strong>{currentTest.min}</strong></p>
-            <p>• Maximum cells allowed: <strong>{currentTest.max}</strong></p>
-            <p>• Valid range: <strong>{currentTest.max - currentTest.min + 1} cells</strong></p>
+            <p>• Minimum cells required: <strong>{currentTest?.min}</strong></p>
+            <p>• Maximum cells allowed: <strong>{currentTest?.max}</strong></p>
+            <p>• Valid range: <strong>{currentTest?.max - currentTest?.min + 1} cells</strong></p>
           </div>
         </div>
 
@@ -91,8 +91,8 @@ export default function TestGridValidation() {
             key={testCase} // Force re-render on test case change
             studyId={`test-${testCase}`}
             onGridChange={handleGridChange}
-            minCells={currentTest.min}
-            maxCells={currentTest.max}
+            minCells={currentTest?.min}
+            maxCells={currentTest?.max}
             allowColumnManagement={true}
             showAdvancedOptions={true}
           />
@@ -132,15 +132,15 @@ export default function TestGridValidation() {
                     <span className={`font-medium ${
                       (() => {
                         const total = gridConfig.columns?.reduce((sum: number, col: any) => sum + col.cells, 0) || 0;
-                        return total >= currentTest.min && total <= currentTest.max
+                        return total >= currentTest?.min && total <= currentTest?.max
                           ? 'text-green-600'
                           : 'text-orange-600';
                       })()
                     }`}>
                       {(() => {
                         const total = gridConfig.columns?.reduce((sum: number, col: any) => sum + col.cells, 0) || 0;
-                        if (total < currentTest.min) return `Need ${currentTest.min - total} more`;
-                        if (total > currentTest.max) return `Remove ${total - currentTest.max}`;
+                        if (total < currentTest?.min) return `Need ${currentTest?.min - total} more`;
+                        if (total > currentTest?.max) return `Remove ${total - currentTest?.max}`;
                         return '✅ Valid';
                       })()}
                     </span>

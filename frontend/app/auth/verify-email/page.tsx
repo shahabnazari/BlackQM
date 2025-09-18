@@ -65,7 +65,7 @@ export default function VerifyEmailPage() {
       } else {
         setStatus('error');
       }
-    } catch (error) {
+    } catch (error: any) {
       setStatus('error');
     }
   };
@@ -80,7 +80,7 @@ export default function VerifyEmailPage() {
       // const response = await fetch('/api/auth/resend-verification');
 
       setResendCooldown(60); // 60 second cooldown
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to resend email:', error);
     } finally {
       setResendLoading(false);

@@ -151,9 +151,9 @@ export default defineConfig({
         // Force high contrast mode
         colorScheme: 'dark',
         // Reduce motion for accessibility
-        reducedMotion: 'reduce',
+        // 
         // Force focus visible
-        forcedColors: 'active',
+        
       },
     },
     

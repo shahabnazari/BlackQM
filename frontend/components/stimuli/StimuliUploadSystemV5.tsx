@@ -3,9 +3,9 @@
 import React, {
   useState,
   useRef,
-  useCallback,
-  useMemo,
-  useEffect,
+  _useCallback,
+  _useMemo,
+  _useEffect,
 } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -13,7 +13,7 @@ import {
   X,
   Edit2,
   Trash2,
-  Eye,
+  _Eye,
   Grid3x3,
   CheckCircle,
   Image,
@@ -22,12 +22,12 @@ import {
   Type,
   ChevronDown,
   ChevronUp,
-  AlertCircle,
+  _AlertCircle,
   Sparkles,
-  Zap,
+  _Zap,
   Info,
   FileText,
-  Plus,
+  _Plus,
   LayoutGrid,
   Square,
   Grid3X3Icon,
@@ -35,7 +35,7 @@ import {
 import { Button } from '@/components/apple-ui/Button';
 import { Card } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/apple-ui/Badge/Badge';
-import PopupModal, { usePopup } from '@/components/ui/PopupModal';
+import _PopupModal, { usePopup } from '@/components/ui/_PopupModal';
 
 interface PopupFunctions {
   showSuccess: (message: string) => void;
@@ -117,7 +117,7 @@ export function StimuliUploadSystemV5({ grid }: StimuliUploadSystemV5Props) {
   const [selectedStimuli, setSelectedStimuli] = useState<Set<string>>(
     new Set()
   );
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [_isSelectionMode, setIsSelectionMode] = useState(false);
   const [uploadMode, setUploadMode] = useState<UploadMode>(null);
   const [lockedType, setLockedType] = useState<UploadMode>(null); // Track the locked stimuli type
   const [showGridPreview, setShowGridPreview] = useState(true); // Show grid preview by default
@@ -157,8 +157,8 @@ export function StimuliUploadSystemV5({ grid }: StimuliUploadSystemV5Props) {
     text
       .trim()
       .split(/\s+/)
-      .filter(word => word.length > 0).length;
-  const getCharCount = (text: string) => text.trim().length;
+      .filter((word: any) => word.length > 0).length;
+  const _getCharCount = (text: string) => text.trim().length;
 
   // Handle upload mode selection
   const handleModeSelect = (mode: UploadMode) => {
@@ -279,7 +279,7 @@ export function StimuliUploadSystemV5({ grid }: StimuliUploadSystemV5Props) {
     if (isEditingText && editingTextId) {
       // Update existing text
       setStimuli(prev =>
-        prev.map(s =>
+        prev.map((s: any) =>
           s.id === editingTextId
             ? { ...s, editedText: textInput, content: textInput }
             : s
@@ -301,7 +301,7 @@ export function StimuliUploadSystemV5({ grid }: StimuliUploadSystemV5Props) {
           id,
           type: 'text',
           content: textInput,
-          title: `Text Statement ${stimuli.filter(s => s.type === 'text').length + 1}`,
+          title: `Text Statement ${stimuli.filter((s: any) => s.type === 'text').length + 1}`,
         },
       ]);
       showSuccess('Text stimulus added successfully');
@@ -341,7 +341,7 @@ export function StimuliUploadSystemV5({ grid }: StimuliUploadSystemV5Props) {
     showConfirm(
       `Are you sure you want to delete ${ids.length} stimulus/stimuli?`,
       () => {
-        const newStimuli = stimuli.filter(s => !ids.includes(s.id));
+        const newStimuli = stimuli.filter((s: any) => !ids.includes(s.id));
         setStimuli(newStimuli);
         setSelectedStimuli(new Set());
 
@@ -1270,7 +1270,7 @@ export function StimuliUploadSystemV5({ grid }: StimuliUploadSystemV5Props) {
                       </button>
                       <button
                         onClick={() => {
-                          const allIds = new Set(stimuli.map(s => s.id));
+                          const allIds = new Set(stimuli.map((s: any) => s.id));
                           setSelectedStimuli(allIds);
                         }}
                         className="text-xs px-2 py-1 text-blue-600 hover:text-blue-700 dark:text-blue-400"

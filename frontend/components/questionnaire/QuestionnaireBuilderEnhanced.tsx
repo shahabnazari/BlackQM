@@ -50,7 +50,7 @@ interface QuestionnaireBuilderEnhancedProps {
 }
 
 export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhancedProps> = ({
-  surveyId,
+  _surveyId,
   onSave,
   onPublish
 }) => {
@@ -332,7 +332,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                       >
                         All
                       </button>
-                      {Object.keys(questionTypesByCategory).map(category => (
+                      {Object.keys(questionTypesByCategory).map((category: any) => (
                         <button
                           key={category}
                           onClick={() => setSelectedCategory(category)}
@@ -357,7 +357,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                           {category}
                         </h3>
                         <div className="space-y-1">
-                          {items.map(item => (
+                          {items.map((item: any) => (
                             <button
                               key={item.type}
                               onClick={() => handleAddQuestion(item.type)}
@@ -577,7 +577,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={questions.map(q => q.id)}
+                  items={questions.map((q: any) => q.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   <div className={cn(

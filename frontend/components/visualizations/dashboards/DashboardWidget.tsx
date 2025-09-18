@@ -4,7 +4,7 @@ import {
   CogIcon, 
   TrashIcon, 
   ArrowsPointingOutIcon,
-  EyeIcon,
+  _EyeIcon,
   DocumentArrowDownIcon,
   ChartBarIcon,
   FunnelIcon
@@ -143,7 +143,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
   }, [widget, onExport]);
 
   // Handle cross-filtering
-  const handleCrossFilter = useCallback((filterData: any) => {
+  const _handleCrossFilter = useCallback((filterData: any) => {
     if (onCrossFilter) {
       onCrossFilter(widget.id, filterData);
     }
@@ -224,7 +224,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        onClick={(e) => {
+                        onClick={(e: any) => {
                           e.stopPropagation();
                           setShowExportMenu(!showExportMenu);
                         }}
@@ -266,7 +266,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
-                      onClick={(e) => {
+                      onClick={(e: any) => {
                         e.stopPropagation();
                         setIsExpanded(!isExpanded);
                       }}
@@ -281,7 +281,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        onClick={(e) => {
+                        onClick={(e: any) => {
                           e.stopPropagation();
                           setShowConfig(!showConfig);
                         }}
@@ -297,7 +297,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        onClick={(e) => {
+                        onClick={(e: any) => {
                           e.stopPropagation();
                           onRemove(widget.id);
                         }}
@@ -355,7 +355,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e: any) => e.stopPropagation()}
               className="bg-white rounded-xl p-6 w-96 max-h-[80vh] overflow-y-auto shadow-xl"
             >
               <h3 className="text-lg font-semibold mb-4">Configure Widget</h3>
@@ -369,7 +369,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
                   <input
                     type="text"
                     value={localConfig.title || widget.title}
-                    onChange={(e) => handleConfigUpdate({ title: e.target.value })}
+                    onChange={(e: any) => handleConfigUpdate({ title: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -380,7 +380,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
                     type="checkbox"
                     id="showTitle"
                     checked={localConfig.showTitle}
-                    onChange={(e) => handleConfigUpdate({ showTitle: e.target.checked })}
+                    onChange={(e: any) => handleConfigUpdate({ showTitle: e.target.checked })}
                     className="mr-2"
                   />
                   <label htmlFor="showTitle" className="text-sm font-medium text-gray-700">
@@ -396,7 +396,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
                   <input
                     type="color"
                     value={localConfig.backgroundColor || '#ffffff'}
-                    onChange={(e) => handleConfigUpdate({ backgroundColor: e.target.value })}
+                    onChange={(e: any) => handleConfigUpdate({ backgroundColor: e.target.value })}
                     className="w-full h-10 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -409,7 +409,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
                   <input
                     type="color"
                     value={localConfig.borderColor || '#e5e7eb'}
-                    onChange={(e) => handleConfigUpdate({ borderColor: e.target.value })}
+                    onChange={(e: any) => handleConfigUpdate({ borderColor: e.target.value })}
                     className="w-full h-10 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -448,7 +448,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e: any) => e.stopPropagation()}
               className="bg-white rounded-xl w-full h-full max-w-6xl max-h-[90vh] overflow-hidden shadow-xl"
               style={glassStyle}
             >

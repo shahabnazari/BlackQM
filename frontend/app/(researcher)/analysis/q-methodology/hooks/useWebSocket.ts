@@ -57,7 +57,7 @@ export function useWebSocket(url: string) {
       };
 
       wsRef.current = ws;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create WebSocket:', error);
       setConnectionStatus('error');
     }

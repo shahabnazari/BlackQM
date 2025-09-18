@@ -33,7 +33,7 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
     }
   ];
 
-  const filteredQuestions = bankQuestions.filter(q =>
+  const filteredQuestions = bankQuestions.filter((q: any) =>
     q.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
     q.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -55,7 +55,7 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-2">
-          {filteredQuestions.map(question => (
+          {filteredQuestions.map((question: any) => (
             <button
               key={question.id}
               onClick={() => onSelectQuestion(question)}

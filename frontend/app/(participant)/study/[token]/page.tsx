@@ -78,7 +78,7 @@ export default function ParticipantStudyPage() {
         if (participantApi.isUsingMockData()) {
           console.info('Using demo mode - backend not available');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to initialize session:', error);
         // Continue with demo mode even if there's an error
         if (participantApi.isUsingMockData()) {
@@ -132,7 +132,7 @@ export default function ParticipantStudyPage() {
               stepData: data,
             });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to submit step data:', error);
       }
     }
@@ -152,7 +152,10 @@ export default function ParticipantStudyPage() {
 
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1]);
+      const nextStep = steps[currentIndex + 1];
+      if (nextStep) {
+        setCurrentStep(nextStep);
+      }
     }
   };
 
@@ -171,7 +174,10 @@ export default function ParticipantStudyPage() {
 
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex > 0) {
-      setCurrentStep(steps[currentIndex - 1]);
+      const prevStep = steps[currentIndex - 1];
+      if (prevStep) {
+        setCurrentStep(prevStep);
+      }
     }
   };
 

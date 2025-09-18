@@ -196,7 +196,7 @@ export function MobileNav({ className = '' }: MobileNavProps) {
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-medium">
                 {user.name
                   .split(' ')
-                  .map(n => n[0])
+                  .map((n: any) => n[0])
                   .join('')
                   .toUpperCase()}
               </div>
@@ -215,7 +215,7 @@ export function MobileNav({ className = '' }: MobileNavProps) {
         {/* Menu Items */}
         <nav className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-1">
-            {getMenuItems().map(item => (
+            {getMenuItems().map((item: any) => (
               <li key={item.path}>
                 <button
                   onClick={() => navigate(item.path)}

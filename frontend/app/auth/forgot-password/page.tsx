@@ -1,17 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Button as AppleButton } from '@/components/apple-ui/Button/Button';
-import { TextField as AppleTextField } from '@/components/apple-ui/TextField/TextField';
 import { Card as AppleCard } from '@/components/apple-ui/Card/Card';
-import { LoadingOverlay } from '@/components/auth/LoadingOverlay';
+import { TextField as AppleTextField } from '@/components/apple-ui/TextField/TextField';
 import { AuthError } from '@/components/auth/AuthError';
+import { LoadingOverlay } from '@/components/auth/LoadingOverlay';
 import { usePasswordReset } from '@/hooks/auth/usePasswordReset';
+import Link from 'next/link';
+import { useState } from 'react';
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
+  // const router = useRouter(); // Will be used for navigation after reset
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +23,7 @@ export default function ForgotPasswordPage() {
     try {
       await forgotPassword(email);
       setSubmitted(true);
-    } catch (err) {
+    } catch (err: any) {
       setError(
         err instanceof Error ? err.message : 'Failed to send reset email'
       );

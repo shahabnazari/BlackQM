@@ -61,7 +61,7 @@ export default function PreSorting({ onComplete, onBack }: PreSortingProps) {
       
       // Remove from source
       newStatements[draggedFrom] = newStatements[draggedFrom].filter(
-        (s) => s.id !== draggedStatement.id
+        (s: any) => s.id !== draggedStatement.id
       );
       
       // Add to destination
@@ -118,7 +118,7 @@ export default function PreSorting({ onComplete, onBack }: PreSortingProps) {
         <div
           className={`p-4 rounded-lg border-2 ${boxColors.unsorted} min-h-[100px]`}
           onDragOver={handleDragOver}
-          onDrop={(e) => handleDrop(e, 'unsorted')}
+          onDrop={(e: any) => handleDrop(e, 'unsorted')}
         >
           <h3 className="font-medium text-label mb-3">{boxLabels.unsorted}</h3>
           <div className="flex flex-wrap gap-2">
@@ -145,7 +145,7 @@ export default function PreSorting({ onComplete, onBack }: PreSortingProps) {
               key={boxType}
               className={`p-4 rounded-lg border-2 ${boxColors[boxType]} min-h-[200px]`}
               onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, boxType)}
+              onDrop={(e: any) => handleDrop(e, boxType)}
             >
               <h3 className="font-medium text-label mb-3">{boxLabels[boxType]}</h3>
               <div className="space-y-2">

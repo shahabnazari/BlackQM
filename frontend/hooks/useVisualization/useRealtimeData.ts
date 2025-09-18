@@ -76,7 +76,7 @@ export function useRealtimeData<T = any>(
         }
       };
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: any) => {
         try {
           const message: WebSocketMessage<T> = JSON.parse(event.data);
           
@@ -92,12 +92,12 @@ export function useRealtimeData<T = any>(
               onUpdate(newData);
             }
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error('Error parsing WebSocket message:', err);
         }
       };
 
-      ws.onerror = (event) => {
+      ws.onerror = (event: any) => {
         console.error('WebSocket error:', event);
         setError('WebSocket connection error');
       };
@@ -117,7 +117,7 @@ export function useRealtimeData<T = any>(
           }, delay);
         }
       };
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error creating WebSocket:', err);
       setError('Failed to establish WebSocket connection');
     }
@@ -182,7 +182,7 @@ export function useMultiChannelRealtimeData<T = any>(
   options: Omit<RealtimeDataOptions<T>, 'channel'> = { queryKey: ['multi-channel'] }
 ) {
   const [channelData, setChannelData] = useState<Record<string, T>>({});
-  const results = channels.map(channel => 
+  const results = channels.map((channel: any) => 
     useRealtimeData<T>(channel, { ...options, channel })
   );
 

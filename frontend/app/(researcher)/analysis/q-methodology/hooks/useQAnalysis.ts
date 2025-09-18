@@ -127,7 +127,7 @@ export function useQAnalysis() {
             })
           );
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Upload failed:', error);
       } finally {
         setIsProcessing(false);
@@ -160,7 +160,7 @@ export function useQAnalysis() {
             })
           );
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Extraction failed:', error);
         setIsProcessing(false);
       }
@@ -191,7 +191,7 @@ export function useQAnalysis() {
             })
           );
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Rotation failed:', error);
         setIsProcessing(false);
       }
@@ -225,7 +225,7 @@ export function useQAnalysis() {
             progress: 100,
           }));
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Export failed:', error);
       } finally {
         setIsProcessing(false);

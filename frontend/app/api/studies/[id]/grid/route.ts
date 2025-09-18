@@ -23,7 +23,7 @@ const gridConfigurations = new Map<string, GridConfiguration>();
 
 // GET /api/studies/[id]/grid - Get grid configuration for a study
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -36,7 +36,7 @@ export async function GET(
       success: true,
       data: config
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching grid configuration:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch grid configuration' },
@@ -74,7 +74,7 @@ export async function POST(
       data: body,
       message: 'Grid configuration saved successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving grid configuration:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to save grid configuration' },
@@ -121,7 +121,7 @@ export async function PUT(
       data: updated,
       message: 'Grid configuration updated successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating grid configuration:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to update grid configuration' },
@@ -132,7 +132,7 @@ export async function PUT(
 
 // DELETE /api/studies/[id]/grid - Delete grid configuration for a study
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -151,7 +151,7 @@ export async function DELETE(
       success: true,
       message: 'Grid configuration deleted successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting grid configuration:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to delete grid configuration' },
@@ -210,7 +210,9 @@ function validateGridConfiguration(config: GridConfiguration): { valid: boolean;
     const midPoint = Math.floor(config.columns.length / 2);
     for (let i = 0; i < midPoint; i++) {
       const mirrorIndex = config.columns.length - 1 - i;
-      if (config.columns[i].cells !== config.columns[mirrorIndex].cells) {
+      const column = config.columns[i];
+      const mirrorColumn = config.columns[mirrorIndex];
+      if (column && mirrorColumn && column.cells !== mirrorColumn.cells) {
         return { valid: false, error: 'Grid must be symmetric when symmetry is enabled' };
       }
     }

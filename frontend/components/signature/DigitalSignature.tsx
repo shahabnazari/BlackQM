@@ -58,7 +58,7 @@ export const DigitalSignature: React.FC<DigitalSignatureProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = (event: any) => {
         const result = event.target?.result as string;
         setUploadedSignature(result);
         onSignatureComplete(result);
@@ -166,7 +166,7 @@ export const DigitalSignature: React.FC<DigitalSignatureProps> = ({
             <TextField
               label="Full Name"
               value={typedName}
-              onChange={(e) => setTypedName(e.target.value)}
+              onChange={(e: any) => setTypedName(e.target.value)}
               placeholder="John Doe"
               disabled={isSigned}
             />

@@ -1,7 +1,7 @@
 'use client';
 
+import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -53,7 +53,7 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   }
 
-  logErrorToService(error: Error, errorInfo: ErrorInfo) {
+  logErrorToService(_error: Error, _errorInfo: ErrorInfo) {
     // Implementation for error tracking service
     // Example: Sentry.captureException(error, { extra: errorInfo });
   }

@@ -54,3 +54,18 @@ export interface ParticipantMetrics {
   withdrawn: number;
   averageCompletionTime?: number;
 }
+
+export interface BulkImportData {
+  participants: Array<{
+    email: string;
+    name?: string;
+    metadata?: Record<string, any>;
+  }>;
+}
+
+export interface EmailCampaign {
+  subject: string;
+  body: string;
+  recipients: string[];
+  scheduledAt?: Date;
+}

@@ -1,15 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { 
-  formatShortcut, 
-  matchesShortcut, 
-  getAriaKeyShortcuts,
-  getShortcutDisplay,
-  isMac
+import {
+    formatShortcut,
+    isMac,
+    matchesShortcut
 } from '@/lib/utils/keyboard';
+import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
 
 interface Command {
   id: string;
@@ -26,7 +24,7 @@ interface CommandPaletteProps {
   className?: string;
 }
 
-export function CommandPalette({ className = '' }: CommandPaletteProps) {
+export function CommandPalette({ className: _className = '' }: CommandPaletteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -41,7 +39,7 @@ export function CommandPalette({ className = '' }: CommandPaletteProps) {
   });
 
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user: _user, logout } = useAuth();
 
   // Load recent commands and set platform-specific shortcuts
   useEffect(() => {
@@ -199,13 +197,13 @@ export function CommandPalette({ className = '' }: CommandPaletteProps) {
 
   // Filter commands based on query
   const filteredCommands = query
-    ? commands.filter(cmd => {
+    ? commands.filter((cmd: any) => {
         const searchText =
           `${cmd.title} ${cmd.description || ''} ${cmd.keywords?.join(' ') || ''}`.toLowerCase();
         return searchText.includes(query.toLowerCase());
       })
     : recentCommands.length > 0
-      ? commands.filter(cmd => recentCommands.includes(cmd.id))
+      ? commands.filter((cmd: any) => recentCommands.includes(cmd.id))
       : commands.slice(0, 5); // Show first 5 as default
 
   // Handle keyboard shortcuts
@@ -254,7 +252,7 @@ export function CommandPalette({ className = '' }: CommandPaletteProps) {
     // Save to recent commands
     const updated = [
       command.id,
-      ...recentCommands.filter(id => id !== command.id),
+      ...recentCommands.filter((id: any) => id !== command.id),
     ].slice(0, 5);
     setRecentCommands(updated);
     localStorage.setItem('recentCommands', JSON.stringify(updated));

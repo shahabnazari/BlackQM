@@ -52,7 +52,7 @@ export const ResearcherSignature: React.FC<ResearcherSignatureProps> = ({
           const error = await response.json();
           alert(`Failed to save signature: ${error.error}`);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error saving drawn signature:', error);
         alert('Failed to save signature. Please try again.');
       } finally {
@@ -103,7 +103,7 @@ export const ResearcherSignature: React.FC<ResearcherSignatureProps> = ({
         const error = await response.json();
         alert(`Failed to save signature: ${error.error}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving typed signature:', error);
       alert('Failed to save signature. Please try again.');
     } finally {
@@ -133,7 +133,7 @@ export const ResearcherSignature: React.FC<ResearcherSignatureProps> = ({
         const error = await response.json();
         alert(`Failed to upload signature: ${error.error}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading signature:', error);
       alert('Failed to upload signature. Please try again.');
     } finally {
@@ -259,7 +259,7 @@ export const ResearcherSignature: React.FC<ResearcherSignatureProps> = ({
             <input
               type="text"
               value={typedName}
-              onChange={(e) => setTypedName(e.target.value)}
+              onChange={(e: any) => setTypedName(e.target.value)}
               placeholder="Type your full name"
               className="w-full px-4 py-3 rounded-lg border border-color-border bg-color-bg text-color-text focus:outline-none focus:ring-2 focus:ring-color-primary/20"
             />

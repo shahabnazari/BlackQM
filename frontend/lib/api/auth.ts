@@ -12,8 +12,8 @@ export interface User {
   role?: string;
 }
 
-class AuthService {
-  private static instance: AuthServic;e;
+class AuthServicee {
+  private static instance: AuthServicee;e;
   private tokens: AuthTokens | null = null;
   private user: User | null = null
 
@@ -27,11 +27,11 @@ class AuthService {
     }
   }
 
-  static getInstance(): AuthService {
-    if (!AuthService.instance) {
-      AuthService.instance = new AuthService()
+  static getInstance(): AuthServicee {
+    if (!AuthServicee.instance) {
+      AuthServicee.instance = new AuthServicee()
     }
-    return AuthService.instance;
+    return AuthServicee.instance;
   }
 
   getAccessToken(): string | null {
@@ -93,7 +93,7 @@ class AuthService {
   }
 }
 
-export const authService = AuthService.getInstance();
+export const authService = AuthServicee.getInstance();
 
 export function getAuthHeaders(): Record<string, string> {
   const token = authService.getAccessToken();

@@ -54,7 +54,7 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
               id="age-select"
               className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               value={formData.age}
-              onChange={(e) => handleChange('age', e.target.value)}
+              onChange={(e: any) => handleChange('age', e.target.value)}
             >
               <option value="">Please select</option>
               <option value="18-24">18-24</option>
@@ -75,7 +75,7 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
               id="gender-select"
               className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               value={formData.gender}
-              onChange={(e) => handleChange('gender', e.target.value)}
+              onChange={(e: any) => handleChange('gender', e.target.value)}
             >
               <option value="">Select gender</option>
               <option value="male">Male</option>
@@ -94,7 +94,7 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
               id="education-select"
               className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               value={formData.education}
-              onChange={(e) => handleChange('education', e.target.value)}
+              onChange={(e: any) => handleChange('education', e.target.value)}
             >
               <option value="">Select education level</option>
               <option value="high-school">High School</option>
@@ -111,7 +111,7 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
             label="Occupation (Optional)"
             placeholder="Enter your occupation"
             value={formData.occupation}
-            onChange={(e) => handleChange('occupation', e.target.value)}
+            onChange={(e: any) => handleChange('occupation', e.target.value)}
           />
 
           <div>
@@ -122,7 +122,7 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
               id="country-select"
               className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               value={formData.country}
-              onChange={(e) => handleChange('country', e.target.value)}
+              onChange={(e: any) => handleChange('country', e.target.value)}
             >
               <option value="">Select country</option>
               <option value="us">United States</option>
@@ -169,7 +169,7 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
               rows={4}
               placeholder="Share any thoughts about your experience..."
               value={formData.feedback}
-              onChange={(e) => handleChange('feedback', e.target.value)}
+              onChange={(e: any) => handleChange('feedback', e.target.value)}
             />
           </div>
         </div>

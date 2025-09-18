@@ -4,12 +4,12 @@ export interface User {
   email: string;
   name: string;
   role: 'researcher' | 'participant' | 'admin';
-  avatar?: string;
-  emailVerified?: boolean;
+  avatar?: string | undefined;
+  emailVerified?: boolean | undefined;
   createdAt: Date;
   updatedAt: Date;
-  organization?: string;
-  twoFactorEnabled?: boolean;
+  organization?: string | undefined;
+  twoFactorEnabled?: boolean | undefined;
 }
 
 export interface Session {

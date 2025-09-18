@@ -11,18 +11,13 @@ import { ProgressBar } from '@/components/apple-ui/ProgressBar';
 import {
   Upload,
   FileText,
-  Image,
-  Video,
-  Music,
   File,
   X,
   Edit3,
   Trash2,
-  AlertCircle,
   CheckCircle,
   Loader2,
   Info,
-  Plus,
   Grid3X3,
   Type,
   Film,
@@ -176,7 +171,7 @@ export const StimuliUploadSystemV3: React.FC<StimuliUploadSystemV3Props> = ({
       const data = await response.json();
 
       setStimuli(prev =>
-        prev.map(s =>
+        prev.map((s: any) =>
           s.id === tempId
             ? {
                 ...data.data,
@@ -199,7 +194,7 @@ export const StimuliUploadSystemV3: React.FC<StimuliUploadSystemV3Props> = ({
       console.error('Upload error:', error);
 
       setStimuli(prev =>
-        prev.map(s => (s.id === tempId ? { ...s, uploadStatus: 'failed' } : s))
+        prev.map((s: any) => (s.id === tempId ? { ...s, uploadStatus: 'failed' } : s))
       );
 
       throw error;
@@ -245,7 +240,7 @@ export const StimuliUploadSystemV3: React.FC<StimuliUploadSystemV3Props> = ({
     const wordCount = textContent
       .trim()
       .split(/\s+/)
-      .filter(w => w.length > 0).length;
+      .filter((w: any) => w.length > 0).length;
 
     if (wordCount < Q_METHOD_TEXT_LIMITS.minWords) {
       showError(
@@ -257,7 +252,7 @@ export const StimuliUploadSystemV3: React.FC<StimuliUploadSystemV3Props> = ({
     if (editingStimulus) {
       // Update existing text stimulus
       setStimuli(prev =>
-        prev.map(s =>
+        prev.map((s: any) =>
           s.id === editingStimulus.id
             ? {
                 ...s,
@@ -288,7 +283,7 @@ export const StimuliUploadSystemV3: React.FC<StimuliUploadSystemV3Props> = ({
   };
 
   const removeStimulus = (id: string) => {
-    setStimuli(prev => prev.filter(s => s.id !== id));
+    setStimuli(prev => prev.filter((s: any) => s.id !== id));
     showSuccess('Stimulus removed');
   };
 
@@ -497,7 +492,7 @@ export const StimuliUploadSystemV3: React.FC<StimuliUploadSystemV3Props> = ({
                   or click to browse
                 </p>
                 <div className="flex flex-wrap justify-center gap-2">
-                  {['Images', 'Videos', 'Audio', 'PDF'].map(format => (
+                  {['Images', 'Videos', 'Audio', 'PDF'].map((format: any) => (
                     <Badge key={format} variant="secondary" size="sm">
                       {format}
                     </Badge>
@@ -786,12 +781,12 @@ export const StimuliUploadSystemV3: React.FC<StimuliUploadSystemV3Props> = ({
                     <div className="flex items-center gap-4 text-sm">
                       <span
                         className={getWordCountColor(
-                          textContent.split(/\s+/).filter(w => w.length > 0)
+                          textContent.split(/\s+/).filter((w: any) => w.length > 0)
                             .length
                         )}
                       >
                         {
-                          textContent.split(/\s+/).filter(w => w.length > 0)
+                          textContent.split(/\s+/).filter((w: any) => w.length > 0)
                             .length
                         }{' '}
                         words
@@ -801,10 +796,10 @@ export const StimuliUploadSystemV3: React.FC<StimuliUploadSystemV3Props> = ({
                         {Q_METHOD_TEXT_LIMITS.maxCharacters} characters
                       </span>
                     </div>
-                    {textContent.split(/\s+/).filter(w => w.length > 0)
+                    {textContent.split(/\s+/).filter((w: any) => w.length > 0)
                       .length >=
                       Q_METHOD_TEXT_LIMITS.recommendedWords - 10 &&
-                      textContent.split(/\s+/).filter(w => w.length > 0)
+                      textContent.split(/\s+/).filter((w: any) => w.length > 0)
                         .length <=
                         Q_METHOD_TEXT_LIMITS.recommendedWords + 10 && (
                         <Badge variant="success" size="sm">
@@ -819,7 +814,7 @@ export const StimuliUploadSystemV3: React.FC<StimuliUploadSystemV3Props> = ({
                       variant="primary"
                       onClick={saveTextStimulus}
                       disabled={
-                        textContent.split(/\s+/).filter(w => w.length > 0)
+                        textContent.split(/\s+/).filter((w: any) => w.length > 0)
                           .length < Q_METHOD_TEXT_LIMITS.minWords
                       }
                       className="flex-1"

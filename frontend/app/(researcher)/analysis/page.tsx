@@ -32,7 +32,7 @@ const analysisTools: AnalysisTool[] = [
     title: 'Q-Methodology Analysis',
     description:
       'Complete Q-sort analysis with factor extraction, rotation, and interpretation',
-    icon: CubeTransparentIcon,
+    icon: CubeTransparentIcon as any,
     href: '/analysis/q-methodology',
     status: 'available',
     category: 'statistical',
@@ -42,7 +42,7 @@ const analysisTools: AnalysisTool[] = [
     title: 'Factor Analysis',
     description:
       'Advanced factor analysis with multiple extraction and rotation methods',
-    icon: ChartBarIcon,
+    icon: ChartBarIcon as any,
     href: '/analysis/factor-analysis',
     status: 'coming-soon',
     category: 'statistical',
@@ -52,7 +52,7 @@ const analysisTools: AnalysisTool[] = [
     title: 'Cluster Analysis',
     description:
       'Hierarchical and k-means clustering for participant segmentation',
-    icon: CircleStackIcon,
+    icon: CircleStackIcon as any,
     href: '/analysis/cluster-analysis',
     status: 'coming-soon',
     category: 'statistical',
@@ -62,7 +62,7 @@ const analysisTools: AnalysisTool[] = [
     title: 'Text Analysis',
     description:
       'Sentiment analysis and theme extraction from qualitative responses',
-    icon: DocumentChartBarIcon,
+    icon: DocumentChartBarIcon as any,
     href: '/analysis/text-analysis',
     status: 'beta',
     category: 'qualitative',
@@ -71,7 +71,7 @@ const analysisTools: AnalysisTool[] = [
     id: 'correlation-matrix',
     title: 'Correlation Matrix',
     description: 'Interactive correlation matrices with significance testing',
-    icon: TableCellsIcon,
+    icon: TableCellsIcon as any,
     href: '/analysis/correlation-matrix',
     status: 'coming-soon',
     category: 'visualization',
@@ -80,7 +80,7 @@ const analysisTools: AnalysisTool[] = [
     id: 'regression-analysis',
     title: 'Regression Analysis',
     description: 'Linear, logistic, and multivariate regression models',
-    icon: ArrowTrendingUpIcon,
+    icon: ArrowTrendingUpIcon as any,
     href: '/analysis/regression',
     status: 'coming-soon',
     category: 'statistical',
@@ -89,7 +89,7 @@ const analysisTools: AnalysisTool[] = [
     id: 'thematic-analysis',
     title: 'Thematic Analysis',
     description: 'Qualitative data coding and theme development tools',
-    icon: AcademicCapIcon,
+    icon: AcademicCapIcon as any,
     href: '/analysis/thematic',
     status: 'coming-soon',
     category: 'qualitative',
@@ -98,7 +98,7 @@ const analysisTools: AnalysisTool[] = [
     id: 'data-cleaning',
     title: 'Data Cleaning',
     description: 'Data preprocessing, cleaning, and transformation utilities',
-    icon: BeakerIcon,
+    icon: BeakerIcon as any,
     href: '/analysis/data-cleaning',
     status: 'beta',
     category: 'data-processing',
@@ -126,7 +126,10 @@ export default function AnalysisHubPage() {
       if (!acc[tool.category]) {
         acc[tool.category] = [];
       }
-      acc[tool.category].push(tool);
+      const categoryTools = acc[tool.category];
+      if (categoryTools) {
+        categoryTools.push(tool);
+      }
       return acc;
     },
     {} as Record<string, AnalysisTool[]>
@@ -151,7 +154,7 @@ export default function AnalysisHubPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tools.map(tool => {
+            {tools.map((tool: any) => {
               const Icon = tool.icon;
               const isDisabled = tool.status === 'coming-soon';
 
@@ -204,19 +207,19 @@ export default function AnalysisHubPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
             <div className="text-2xl font-bold text-primary">
-              {analysisTools.filter(t => t.status === 'available').length}
+              {analysisTools.filter((t: any) => t.status === 'available').length}
             </div>
             <div className="text-text-secondary">Available Tools</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-system-blue">
-              {analysisTools.filter(t => t.status === 'beta').length}
+              {analysisTools.filter((t: any) => t.status === 'beta').length}
             </div>
             <div className="text-text-secondary">Beta Features</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-text-tertiary">
-              {analysisTools.filter(t => t.status === 'coming-soon').length}
+              {analysisTools.filter((t: any) => t.status === 'coming-soon').length}
             </div>
             <div className="text-text-secondary">Coming Soon</div>
           </div>

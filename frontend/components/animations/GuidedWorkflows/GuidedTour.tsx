@@ -4,10 +4,10 @@
  * Phase 5 - Day 14 Implementation
  */
 
-import React, { useEffect, useState } from 'react';
-import Joyride, { CallBackProps, Step, STATUS, EVENTS, ACTIONS } from 'react-joyride';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, motion } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
+import Joyride, { ACTIONS, CallBackProps, EVENTS, STATUS, Step } from 'react-joyride';
 
 interface GuidedTourProps {
   steps: Step[];
@@ -36,7 +36,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
   styles,
 }) => {
   const [tourRun, setTourRun] = useState(run);
-  const [stepIndex, setStepIndex] = useState(0);
+  const [_stepIndex, setStepIndex] = useState(0);
 
   useEffect(() => {
     // Check if tour has been completed before
@@ -212,7 +212,7 @@ export const FeatureSpotlight: React.FC<{
   show?: boolean;
   onDismiss?: () => void;
 }> = ({
-  target,
+  target: _target,
   title,
   description,
   show = false,

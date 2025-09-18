@@ -3,8 +3,8 @@ import { scaleLinear, scaleBand, scaleOrdinal } from '@visx/scale';
 import { Group } from '@visx/group';
 import { AxisLeft, AxisBottom } from '@visx/axis';
 import { GridRows } from '@visx/grid';
-import { Area, LinePath } from '@visx/shape';
-import { curveCardinal, curveBasis } from '@visx/curve';
+import { LinePath } from '@visx/shape';
+import { curveCardinal } from '@visx/curve';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BaseChart } from '../charts/BaseChart';
 import { useTooltip, TooltipWithBounds, defaultStyles } from '@visx/tooltip';
@@ -70,12 +70,12 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
   });
 
   // Get Z-score range across all statements and factors
-  const allZScores = data.flatMap(s => s.distributions.map(d => d.zScore));
+  const allZScores = data.flatMap(s => s.distributions.map((d: any) => d.zScore));
   const zScoreExtent = [Math.min(...allZScores), Math.max(...allZScores)];
 
   // Scales
   const xScale = scaleBand({
-    domain: sortedData.map(d => d.statementId),
+    domain: sortedData.map((d: any) => d.statementId),
     range: [0, innerWidth],
     padding: 0.1,
   });
@@ -92,13 +92,13 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
   });
 
   const varianceColorScale = scaleLinear({
-    domain: [0, Math.max(...data.map(d => d.variance))],
+    domain: [0, Math.max(...data.map((d: any) => d.variance))],
     range: ['#E5E5EA', '#FF3B30'] as any,
   });
 
   // Filter data based on selections
   const displayData = selectedStatements.size > 0 
-    ? sortedData.filter(d => selectedStatements.has(d.statementId))
+    ? sortedData.filter((d: any) => selectedStatements.has(d.statementId))
     : sortedData.slice(0, Math.min(20, sortedData.length)); // Limit to 20 for readability
 
   const toggleStatement = (statementId: string) => {
@@ -246,7 +246,7 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
       );
     }
 
-    const compareData = data.filter(d => selectedStatements.has(d.statementId));
+    const compareData = data.filter((d: any) => selectedStatements.has(d.statementId));
     
     return (
       <Group>
@@ -282,7 +282,7 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
               />
 
               {/* Factor points */}
-              {factorData.map((point, pointIndex) => (
+              {factorData.map((point) => (
                 <circle
                   key={`${factor}-${point.x}`}
                   cx={(factorXScale(String(point.x)) || 0) + factorXScale.bandwidth() / 2}
@@ -323,7 +323,7 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
       {sortedData.slice(0, 30).map((statement, index) => {
         const barX = xScale(statement.statementId) || 0;
         const barWidth = xScale.bandwidth();
-        const barHeight = (statement.variance / Math.max(...data.map(d => d.variance))) * innerHeight;
+        const barHeight = (statement.variance / Math.max(...data.map((d: any) => d.variance))) * innerHeight;
 
         return (
           <motion.g

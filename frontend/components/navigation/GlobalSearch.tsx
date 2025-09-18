@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { 
   formatShortcut, 
-  matchesShortcut,
-  getAriaKeyShortcuts
+  matchesShortcut
 } from '@/lib/utils/keyboard';
 
 interface SearchResult {
@@ -40,7 +39,7 @@ export function GlobalSearch({
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const { user } = useAuth();
+  const { } = useAuth();  // Auth context available if needed
 
   // Load recent searches from localStorage and set platform-specific shortcut
   useEffect(() => {
@@ -56,7 +55,7 @@ export function GlobalSearch({
   const saveRecentSearch = (search: string) => {
     if (!search.trim()) return;
 
-    const updated = [search, ...recentSearches.filter(s => s !== search)].slice(
+    const updated = [search, ...recentSearches.filter((s: any) => s !== search)].slice(
       0,
       5
     );
@@ -237,7 +236,7 @@ export function GlobalSearch({
 
   const removeRecentSearch = (search: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const updated = recentSearches.filter(s => s !== search);
+    const updated = recentSearches.filter((s: any) => s !== search);
     setRecentSearches(updated);
     localStorage.setItem('recentSearches', JSON.stringify(updated));
   };
@@ -344,7 +343,7 @@ export function GlobalSearch({
                 Recent Searches
               </p>
               <div className="space-y-1">
-                {recentSearches.map(search => (
+                {recentSearches.map((search: any) => (
                   <div
                     key={search}
                     className="flex items-center justify-between group"

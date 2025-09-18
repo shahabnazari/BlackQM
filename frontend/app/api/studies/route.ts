@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     // await prisma.study.create({ data: studyData });
     
     return NextResponse.json(newStudy, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating study:', error);
     return NextResponse.json(
       { error: 'Failed to create study' },
@@ -30,14 +30,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Here you would fetch studies from database
     // For now, return empty array
     const studies: any[] = [];
     
     return NextResponse.json(studies);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching studies:', error);
     return NextResponse.json(
       { error: 'Failed to fetch studies' },

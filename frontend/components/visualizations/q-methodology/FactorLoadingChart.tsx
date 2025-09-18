@@ -51,7 +51,7 @@ export const FactorLoadingChart: React.FC<FactorLoadingChartProps> = ({
 
   // Process data for 3D factor space
   const processedData = useMemo(() => {
-    return data.map(d => ({
+    return data.map((d: any) => ({
       ...d,
       // Apply 3D perspective transformation if enabled
       displayX: show3D && d.z !== undefined ? d.x + (d.z * 0.3) : d.x,
@@ -72,7 +72,7 @@ export const FactorLoadingChart: React.FC<FactorLoadingChartProps> = ({
 
   // Bubble size scale based on loading strength
   const radiusScale = scaleSqrt({
-    domain: [0, Math.max(...data.map(d => d.loadingStrength))],
+    domain: [0, Math.max(...data.map((d: any) => d.loadingStrength))],
     range: [4, 25],
   });
 

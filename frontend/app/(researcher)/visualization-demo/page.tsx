@@ -1,16 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  DashboardBuilder,
-  EigenvalueScreePlot,
-  CorrelationHeatmap,
-  FactorLoadingChart,
-  QSortDistribution,
-  DistinguishingStatements
+import {
+    CorrelationHeatmap,
+    DashboardBuilder,
+    DistinguishingStatements,
+    EigenvalueScreePlot,
+    FactorLoadingChart,
+    QSortDistribution
 } from '@/components/visualizations';
 import { ChartExporter } from '@/lib/visualization/export';
+import { motion } from 'framer-motion';
+import { useState } from 'react';
 
 // Generate demo data
 const generateDemoData = () => {
@@ -38,7 +38,7 @@ const generateDemoData = () => {
   });
 
   // Factor loading data
-  const factorLoadingData = participants.map(p => {
+  const factorLoadingData = participants.map((p: any) => {
     const factor1 = (Math.random() * 2 - 1) * 0.9;
     const factor2 = (Math.random() * 2 - 1) * 0.9;
     const factor3 = (Math.random() * 2 - 1) * 0.9;
@@ -55,7 +55,7 @@ const generateDemoData = () => {
       y: factor2,
       z: factor3,
       loadingStrength,
-      definingFactor: ['Factor 1', 'Factor 2', 'Factor 3'][Math.floor(Math.random() * 3)],
+      definingFactor: ['Factor 1', 'Factor 2', 'Factor 3'][Math.floor(Math.random() * 3)] || 'Factor 1',
       allLoadings,
     };
   });
@@ -63,8 +63,8 @@ const generateDemoData = () => {
   // Q-sort distribution data
   const distributionData = Array.from({ length: 9 }, (_, i) => ({
     value: i - 4,
-    count: [1, 2, 4, 6, 8, 6, 4, 2, 1][i],
-    expectedCount: [1, 2, 4, 6, 8, 6, 4, 2, 1][i],
+    count: [1, 2, 4, 6, 8, 6, 4, 2, 1][i] || 0,
+    expectedCount: [1, 2, 4, 6, 8, 6, 4, 2, 1][i] || 0,
   }));
 
   // Distinguishing statements data

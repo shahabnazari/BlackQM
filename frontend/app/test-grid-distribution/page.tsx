@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card } from '@/components/apple-ui/Card';
 import { Button } from '@/components/apple-ui/Button';
-import { AlertCircle, CheckCircle, XCircle, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { Card } from '@/components/apple-ui/Card';
+import { AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { useState } from 'react';
 
 interface DistributionTest {
   stimuliCount: number;
@@ -48,9 +48,13 @@ export default function GridDistributionTestPage() {
     // Ensure symmetry
     const halfColumns = Math.floor(columnCount / 2);
     for (let i = 0; i < halfColumns; i++) {
-      const avgValue = (bellValues[i] + bellValues[columnCount - 1 - i]) / 2;
-      bellValues[i] = avgValue;
-      bellValues[columnCount - 1 - i] = avgValue;
+      const left = bellValues[i];
+      const right = bellValues[columnCount - 1 - i];
+      if (left !== undefined && right !== undefined) {
+        const avgValue = (left + right) / 2;
+        bellValues[i] = avgValue;
+        bellValues[columnCount - 1 - i] = avgValue;
+      }
     }
     
     // Normalize and distribute cells
@@ -59,10 +63,13 @@ export default function GridDistributionTestPage() {
     let distributedCells = 0;
     
     for (let i = 0; i < columnCount; i++) {
-      const proportion = bellValues[i] / sumBellValues;
-      const cells = Math.max(1, Math.round(targetTotal * proportion));
-      cellDistribution[i] = cells;
-      distributedCells += cells;
+      const bellValue = bellValues[i];
+      if (bellValue !== undefined) {
+        const proportion = bellValue / sumBellValues;
+        const cells = Math.max(1, Math.round(targetTotal * proportion));
+        cellDistribution[i] = cells;
+        distributedCells += cells;
+      }
     }
     
     // Adjust for exact total
@@ -95,25 +102,40 @@ export default function GridDistributionTestPage() {
     
     // Apply smoothing to prevent sharp drops
     for (let i = 1; i < columnCount - 1; i++) {
-      const smoothed = (bellValues[i - 1] * 0.15 + bellValues[i] * 0.7 + bellValues[i + 1] * 0.15);
-      bellValues[i] = smoothed;
+      const prev = bellValues[i - 1];
+      const curr = bellValues[i];
+      const next = bellValues[i + 1];
+      if (prev !== undefined && curr !== undefined && next !== undefined) {
+        const smoothed = (prev * 0.15 + curr * 0.7 + next * 0.15);
+        bellValues[i] = smoothed;
+      }
     }
     
     // Ensure perfect symmetry
     for (let i = 0; i < Math.floor(columnCount / 2); i++) {
-      const avgValue = (bellValues[i] + bellValues[columnCount - 1 - i]) / 2;
-      bellValues[i] = avgValue;
-      bellValues[columnCount - 1 - i] = avgValue;
+      const left = bellValues[i];
+      const right = bellValues[columnCount - 1 - i];
+      if (left !== undefined && right !== undefined) {
+        const avgValue = (left + right) / 2;
+        bellValues[i] = avgValue;
+        bellValues[columnCount - 1 - i] = avgValue;
+      }
     }
     
     // Ensure minimum cells at edges (at least 1)
     const minEdgeCells = 1;
-    bellValues[0] = Math.max(bellValues[0], minEdgeCells / targetTotal);
-    bellValues[columnCount - 1] = Math.max(bellValues[columnCount - 1], minEdgeCells / targetTotal);
+    const firstValue = bellValues[0];
+    const lastValue = bellValues[columnCount - 1];
+    if (firstValue !== undefined) {
+      bellValues[0] = Math.max(firstValue, minEdgeCells / targetTotal);
+    }
+    if (lastValue !== undefined) {
+      bellValues[columnCount - 1] = Math.max(lastValue, minEdgeCells / targetTotal);
+    }
     
     // Normalize to get proportions
     const sumBellValues = bellValues.reduce((a, b) => a + b, 0);
-    const proportions = bellValues.map(v => v / sumBellValues);
+    const proportions = bellValues.map((v: any) => v / sumBellValues);
     
     // Distribute cells with better rounding
     let cellDistribution = new Array(columnCount).fill(0);
@@ -121,55 +143,86 @@ export default function GridDistributionTestPage() {
     
     // First pass: assign minimum cells
     for (let i = 0; i < columnCount; i++) {
-      cellDistribution[i] = Math.max(1, Math.floor(targetTotal * proportions[i]));
-      remainingCells -= cellDistribution[i];
+      const proportion = proportions[i];
+      if (proportion !== undefined) {
+        const cells = Math.max(1, Math.floor(targetTotal * proportion));
+        cellDistribution[i] = cells;
+        remainingCells -= cells;
+      }
     }
     
     // Second pass: distribute remaining cells proportionally
     if (remainingCells > 0) {
-      const errors = proportions.map((p, i) => ({
-        index: i,
-        error: (targetTotal * p) - cellDistribution[i]
-      }));
+      const errors = proportions.map((p, i) => {
+        const dist = cellDistribution[i];
+        return {
+          index: i,
+          error: dist !== undefined ? (targetTotal * p) - dist : 0
+        };
+      });
       errors.sort((a, b) => b.error - a.error);
       
       for (let i = 0; i < remainingCells; i++) {
-        const targetIndex = errors[i % errors.length].index;
-        cellDistribution[targetIndex]++;
+        const errorEntry = errors[i % errors.length];
+        if (errorEntry) {
+          const targetIndex = errorEntry.index;
+          const currentValue = cellDistribution[targetIndex];
+          if (currentValue !== undefined) {
+            cellDistribution[targetIndex] = currentValue + 1;
+          }
+        }
       }
     } else if (remainingCells < 0) {
       // Remove excess cells from the middle
       const middleIndex = Math.floor(columnCount / 2);
-      cellDistribution[middleIndex] += remainingCells;
+      const currentMiddle = cellDistribution[middleIndex];
+      if (currentMiddle !== undefined) {
+        cellDistribution[middleIndex] = currentMiddle + remainingCells;
+      }
     }
     
     // Final validation: ensure bell shape
     const centerIndex = Math.floor(columnCount / 2);
-    const centerCells = cellDistribution[centerIndex];
-    const edgeCells = (cellDistribution[0] + cellDistribution[columnCount - 1]) / 2;
+    const centerCells = cellDistribution[centerIndex] ?? 0;
+    const firstCell = cellDistribution[0] ?? 0;
+    const lastCell = cellDistribution[columnCount - 1] ?? 0;
+    const edgeCells = (firstCell + lastCell) / 2;
     
     // If center is not higher than edges, redistribute
     if (centerCells <= edgeCells && columnCount > 3) {
       const deficit = Math.ceil((edgeCells - centerCells) * 1.5) + 2;
-      cellDistribution[centerIndex] += deficit;
+      const currentCenter = cellDistribution[centerIndex];
+      if (currentCenter !== undefined) {
+        cellDistribution[centerIndex] = currentCenter + deficit;
+      }
       
       // Remove cells from edges to compensate
       const removePerEdge = Math.ceil(deficit / 2);
-      cellDistribution[0] = Math.max(1, cellDistribution[0] - removePerEdge);
-      cellDistribution[columnCount - 1] = Math.max(1, cellDistribution[columnCount - 1] - removePerEdge);
+      const currentFirst = cellDistribution[0];
+      const currentLast = cellDistribution[columnCount - 1];
+      if (currentFirst !== undefined) {
+        cellDistribution[0] = Math.max(1, currentFirst - removePerEdge);
+      }
+      if (currentLast !== undefined) {
+        cellDistribution[columnCount - 1] = Math.max(1, currentLast - removePerEdge);
+      }
       
       // Adjust total if needed
       const newTotal = cellDistribution.reduce((a, b) => a + b, 0);
       if (newTotal !== targetTotal) {
         const diff = targetTotal - newTotal;
         if (diff > 0) {
-          cellDistribution[centerIndex] += diff;
+          const current = cellDistribution[centerIndex];
+          if (current !== undefined) {
+            cellDistribution[centerIndex] = current + diff;
+          }
         } else {
           const middleThird = Math.floor(columnCount / 3);
           let adjustmentNeeded = -diff;
           for (let i = middleThird; i < columnCount - middleThird && adjustmentNeeded > 0; i++) {
-            if (cellDistribution[i] > 1) {
-              cellDistribution[i]--;
+            const currentVal = cellDistribution[i];
+            if (currentVal !== undefined && currentVal > 1) {
+              cellDistribution[i] = currentVal - 1;
               adjustmentNeeded--;
             }
           }
@@ -199,7 +252,9 @@ export default function GridDistributionTestPage() {
     
     // Check left side (should be increasing toward center)
     for (let i = 0; i < centerIndex - 1; i++) {
-      if (distribution[i] > distribution[i + 1]) {
+      const current = distribution[i];
+      const next = distribution[i + 1];
+      if (current !== undefined && next !== undefined && current > next) {
         isBellShaped = false;
         break;
       }
@@ -207,14 +262,16 @@ export default function GridDistributionTestPage() {
     
     // Check right side (should be decreasing from center)
     for (let i = centerIndex + 1; i < distribution.length; i++) {
-      if (distribution[i - 1] < distribution[i]) {
+      const prev = distribution[i - 1];
+      const current = distribution[i];
+      if (prev !== undefined && current !== undefined && prev < current) {
         isBellShaped = false;
         break;
       }
     }
     
     // Check that center is peak
-    if (centerValue <= Math.max(...edgeValues)) {
+    if (centerValue && centerValue <= Math.max(...edgeValues)) {
       isBellShaped = false;
     }
     
@@ -227,8 +284,8 @@ export default function GridDistributionTestPage() {
     const variance = distribution.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / distribution.length;
     
     return {
-      centerValue,
-      edgeValues,
+      centerValue: centerValue || 0,
+      edgeValues: edgeValues.filter((v): v is number => v !== undefined),
       isSymmetric,
       isBellShaped,
       peakPosition,
@@ -330,7 +387,7 @@ export default function GridDistributionTestPage() {
               </label>
               <select
                 value={algorithm}
-                onChange={(e) => setAlgorithm(e.target.value as 'current' | 'improved')}
+                onChange={(e: any) => setAlgorithm(e.target.value as 'current' | 'improved')}
                 className="w-full px-3 py-2 border rounded-lg"
               >
                 <option value="current">Current Algorithm</option>
@@ -344,10 +401,10 @@ export default function GridDistributionTestPage() {
               </label>
               <select
                 value={selectedRange}
-                onChange={(e) => setSelectedRange(Number(e.target.value))}
+                onChange={(e: any) => setSelectedRange(Number(e.target.value))}
                 className="w-full px-3 py-2 border rounded-lg"
               >
-                {[2, 3, 4, 5, 6].map(r => (
+                {[2, 3, 4, 5, 6].map((r: any) => (
                   <option key={r} value={r}>±{r}</option>
                 ))}
               </select>
@@ -360,7 +417,7 @@ export default function GridDistributionTestPage() {
               <input
                 type="number"
                 value={selectedStimuli}
-                onChange={(e) => setSelectedStimuli(Number(e.target.value))}
+                onChange={(e: any) => setSelectedStimuli(Number(e.target.value))}
                 min={10}
                 max={100}
                 className="w-full px-3 py-2 border rounded-lg"
@@ -392,27 +449,27 @@ export default function GridDistributionTestPage() {
         {currentTest && (
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">
-              Test Result: {currentTest.stimuliCount} stimuli, {formatRange(currentTest.range.min, currentTest.range.max)}
+              Test Result: {currentTest?.stimuliCount} stimuli, {formatRange(currentTest?.range.min, currentTest?.range.max)}
             </h2>
             
             {/* Visual Distribution */}
             <div className="mb-6">
               <div className="flex items-end justify-center gap-2" style={{ height: '200px' }}>
-                {getDistributionVisual(currentTest.distribution).map(({ value, height, index }) => (
+                {getDistributionVisual(currentTest?.distribution).map(({ value, height, index }) => (
                   <div
                     key={index}
                     className="flex flex-col items-center"
-                    style={{ width: `${100 / currentTest.distribution.length}%` }}
+                    style={{ width: `${100 / currentTest?.distribution.length}%` }}
                   >
                     <div
                       className={`w-full transition-all duration-300 ${
-                        currentTest.isValid ? 'bg-green-500' : 'bg-red-500'
+                        currentTest?.isValid ? 'bg-green-500' : 'bg-red-500'
                       }`}
                       style={{ height: `${height}%` }}
                     />
                     <span className="text-xs mt-1">{value}</span>
                     <span className="text-xs text-gray-500">
-                      {currentTest.range.min + index}
+                      {currentTest?.range.min + index}
                     </span>
                   </div>
                 ))}
@@ -424,7 +481,7 @@ export default function GridDistributionTestPage() {
               <div>
                 <h3 className="font-medium text-gray-700 mb-2">Status</h3>
                 <div className="flex items-center gap-2">
-                  {currentTest.isValid ? (
+                  {currentTest?.isValid ? (
                     <>
                       <CheckCircle className="w-5 h-5 text-green-500" />
                       <span className="text-green-600">Valid Bell Curve</span>
@@ -436,16 +493,16 @@ export default function GridDistributionTestPage() {
                     </>
                   )}
                   <span className="ml-2 px-2 py-1 bg-gray-100 rounded text-sm">
-                    Score: {currentTest.score}%
+                    Score: {currentTest?.score}%
                   </span>
                 </div>
               </div>
               
-              {currentTest.issues.length > 0 && (
+              {currentTest?.issues.length > 0 && (
                 <div>
                   <h3 className="font-medium text-gray-700 mb-2">Issues Found</h3>
                   <ul className="text-sm text-red-600 space-y-1">
-                    {currentTest.issues.map((issue, i) => (
+                    {currentTest?.issues.map((issue, i) => (
                       <li key={i} className="flex items-start gap-1">
                         <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         {issue}
@@ -473,13 +530,13 @@ export default function GridDistributionTestPage() {
               </div>
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <div className="text-2xl font-bold text-green-600">
-                  {testResults.filter(r => r.isValid).length}
+                  {testResults.filter((r: any) => r.isValid).length}
                 </div>
                 <div className="text-sm text-gray-600">Valid</div>
               </div>
               <div className="text-center p-4 bg-red-50 rounded-lg">
                 <div className="text-2xl font-bold text-red-600">
-                  {testResults.filter(r => !r.isValid).length}
+                  {testResults.filter((r: any) => !r.isValid).length}
                 </div>
                 <div className="text-sm text-gray-600">Invalid</div>
               </div>

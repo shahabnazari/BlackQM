@@ -1,30 +1,30 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/components/apple-ui/Card/Card';
-import { Button } from '@/components/apple-ui/Button/Button';
 import { Badge } from '@/components/apple-ui/Badge/Badge';
+import { Button } from '@/components/apple-ui/Button/Button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/apple-ui/Card/Card';
 import { ProgressBar } from '@/components/apple-ui/ProgressBar/ProgressBar';
 import {
-  ChartBarIcon,
-  UserGroupIcon,
-  ClockIcon,
-  DocumentTextIcon,
-  ArrowDownTrayIcon,
-  BeakerIcon,
-  PlayIcon,
-  PauseIcon,
-  CheckCircleIcon,
-  ExclamationTriangleIcon,
+    ArrowDownTrayIcon,
+    BeakerIcon,
+    ChartBarIcon,
+    CheckCircleIcon,
+    ClockIcon,
+    DocumentTextIcon,
+    ExclamationTriangleIcon,
+    PauseIcon,
+    PlayIcon,
+    UserGroupIcon,
 } from '@heroicons/react/24/outline';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 interface StudyData {
   id: string;
@@ -65,7 +65,8 @@ const mockStudyData: StudyData = {
 
 export default function StudyDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  // Router will be used for navigation
+  // const router = useRouter();
   const [study, setStudy] = useState<StudyData | null>(null);
   const [activeTab, setActiveTab] = useState<
     'overview' | 'participants' | 'analysis' | 'settings'
@@ -135,7 +136,7 @@ export default function StudyDetailPage() {
             </div>
             <p className="text-secondary-label mb-4">{study.description}</p>
             <div className="flex flex-wrap gap-2">
-              {study.tags.map(tag => (
+              {study.tags.map((tag: any) => (
                 <Badge key={tag} variant="secondary">
                   {tag}
                 </Badge>
@@ -236,7 +237,7 @@ export default function StudyDetailPage() {
             { id: 'participants', label: 'Participants', icon: UserGroupIcon },
             { id: 'analysis', label: 'Analysis', icon: BeakerIcon },
             { id: 'settings', label: 'Settings', icon: DocumentTextIcon },
-          ].map(tab => {
+          ].map((tab: any) => {
             const Icon = tab.icon;
             return (
               <button

@@ -34,7 +34,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
       const imported = JSON.parse(importText);
       onImport(imported);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       alert('Invalid JSON format');
     }
   };
@@ -106,7 +106,7 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
               </p>
               <textarea
                 value={importText}
-                onChange={(e) => setImportText(e.target.value)}
+                onChange={(e: any) => setImportText(e.target.value)}
                 placeholder="Paste your JSON here..."
                 className="w-full h-64 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 font-mono text-sm"
               />

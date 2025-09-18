@@ -60,7 +60,7 @@ export const participantApiEnhanced = {
       });
       useMockData = false;
       return response.status === 200;
-    } catch (error) {
+    } catch (error: any) {
       console.warn('Backend health check failed, switching to mock mode');
       useMockData = true;
       return false;
@@ -84,7 +84,7 @@ export const participantApiEnhanced = {
         invitationCode,
       });
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         console.warn('Backend not available, using mock data');
         useMockData = true;
@@ -108,7 +108,7 @@ export const participantApiEnhanced = {
         `/participant/session/${sessionCode}`
       );
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         useMockData = true;
         return { ...mockSession, survey: mockStudy };
@@ -137,7 +137,7 @@ export const participantApiEnhanced = {
         `/participant/session/${sessionCode}/study`
       );
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         useMockData = true;
         return {
@@ -168,7 +168,7 @@ export const participantApiEnhanced = {
         `/participant/session/${sessionCode}/statements`
       );
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         useMockData = true;
         const shuffled = [...mockStatements].sort(() => Math.random() - 0.5);
@@ -213,7 +213,7 @@ export const participantApiEnhanced = {
         progressData
       );
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         useMockData = true;
         return this.updateProgress(sessionCode, progressData);
@@ -237,7 +237,7 @@ export const participantApiEnhanced = {
         `/participant/session/${sessionCode}/progress`
       );
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         useMockData = true;
         return this.getProgress(sessionCode);
@@ -262,7 +262,7 @@ export const participantApiEnhanced = {
         { consent }
       );
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         useMockData = true;
         return this.submitConsent(sessionCode, consent);
@@ -287,7 +287,7 @@ export const participantApiEnhanced = {
         answers
       );
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         useMockData = true;
         return this.submitPreScreening(sessionCode, answers);
@@ -319,7 +319,7 @@ export const participantApiEnhanced = {
         categories
       );
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         useMockData = true;
         return this.submitPreSort(sessionCode, categories);
@@ -341,7 +341,7 @@ export const participantApiEnhanced = {
         { grid }
       );
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         useMockData = true;
         return this.submitQSort(sessionCode, grid);
@@ -369,7 +369,7 @@ export const participantApiEnhanced = {
         { comments }
       );
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         useMockData = true;
         return this.submitCommentary(sessionCode, comments);
@@ -394,7 +394,7 @@ export const participantApiEnhanced = {
         answers
       );
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         useMockData = true;
         return this.submitPostSurvey(sessionCode, answers);
@@ -423,7 +423,7 @@ export const participantApiEnhanced = {
         `/participant/session/${sessionCode}/complete`
       );
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         useMockData = true;
         return this.completeSession(sessionCode);
@@ -458,7 +458,7 @@ export const participantApiEnhanced = {
         `/participant/session/${sessionCode}/qsort/validate`
       );
       return data;
-    } catch (error) {
+    } catch (error: any) {
       if (isNetworkError(error)) {
         useMockData = true;
         return this.validateQSort(sessionCode);

@@ -33,7 +33,7 @@ export class ServiceWorkerManager {
       });
 
       // Handle messages from service worker
-      navigator.serviceWorker.addEventListener('message', (event) => {
+      navigator.serviceWorker.addEventListener('message', (event: any) => {
         this.handleServiceWorkerMessage(event);
       });
 
@@ -47,7 +47,7 @@ export class ServiceWorkerManager {
         await this.registerBackgroundSync();
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Service Worker registration failed:', error);
     }
   }
@@ -114,7 +114,7 @@ export class ServiceWorkerManager {
 
     try {
       await this.registration.update();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to check for updates:', error);
     }
   }
@@ -137,7 +137,7 @@ export class ServiceWorkerManager {
     }
   }
 
-  private notifyUploadSynced(url: string): void {
+  private notifyUploadSynced(_url: string): void {
     // Show notification that offline upload was synced
     this.showNotification('Upload Synced', {
       body: 'Your offline upload has been synchronized.',
@@ -153,7 +153,7 @@ export class ServiceWorkerManager {
     try {
       const permission = await Notification.requestPermission();
       console.log('Notification permission:', permission);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to request notification permission:', error);
     }
   }
@@ -169,7 +169,7 @@ export class ServiceWorkerManager {
         await reg.sync.register('sync-grid-changes');
         console.log('Background sync registered');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to register background sync:', error);
     }
   }
@@ -204,7 +204,7 @@ export class ServiceWorkerManager {
     try {
       await this.registration.unregister();
       console.log('Service Worker unregistered');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to unregister service worker:', error);
     }
 
@@ -226,7 +226,7 @@ export class ServiceWorkerManager {
       if (reg.sync) {
         await reg.sync.register('sync-all');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to trigger sync:', error);
     }
   }

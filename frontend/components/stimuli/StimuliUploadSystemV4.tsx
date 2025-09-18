@@ -5,7 +5,6 @@ import React, {
   useCallback,
   useEffect,
   useRef,
-  useMemo,
 } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,19 +15,13 @@ import { Badge } from '@/components/apple-ui/Badge';
 import { ProgressBar } from '@/components/apple-ui/ProgressBar';
 import {
   Upload,
-  FileText,
-  Image as ImageIcon,
-  Video,
-  Music,
   File,
   X,
   Edit3,
   Trash2,
-  AlertCircle,
   CheckCircle2,
   Loader2,
   Info,
-  Plus,
   Grid3X3,
   Type,
   Film,
@@ -38,11 +31,11 @@ import {
   LayoutGrid,
   Square,
   Eye,
-  Download,
-  MoreVertical,
+  _Download,
+  _MoreVertical,
   ChevronDown,
   ChevronUp,
-  Maximize2,
+  _Maximize2,
 } from 'lucide-react';
 
 // Q-methodology best practices for text stimuli
@@ -197,7 +190,7 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
       const data = await response.json();
 
       setStimuli(prev =>
-        prev.map(s =>
+        prev.map((s: any) =>
           s.id === tempId
             ? {
                 ...data.data,
@@ -220,7 +213,7 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
       console.error('Upload error:', error);
 
       setStimuli(prev =>
-        prev.map(s => (s.id === tempId ? { ...s, uploadStatus: 'failed' } : s))
+        prev.map((s: any) => (s.id === tempId ? { ...s, uploadStatus: 'failed' } : s))
       );
 
       throw error;
@@ -267,7 +260,7 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
     const wordCount = textContent
       .trim()
       .split(/\s+/)
-      .filter(w => w.length > 0).length;
+      .filter((w: any) => w.length > 0).length;
 
     if (wordCount < Q_METHOD_TEXT_LIMITS.minWords) {
       showError(
@@ -278,7 +271,7 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
 
     if (editingStimulus) {
       setStimuli(prev =>
-        prev.map(s =>
+        prev.map((s: any) =>
           s.id === editingStimulus.id
             ? {
                 ...s,
@@ -308,7 +301,7 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
   };
 
   const removeStimulus = (id: string) => {
-    setStimuli(prev => prev.filter(s => s.id !== id));
+    setStimuli(prev => prev.filter((s: any) => s.id !== id));
     setSelectedStimuli(prev => {
       const newSet = new Set(prev);
       newSet.delete(id);
@@ -318,7 +311,7 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
   };
 
   const removeSelectedStimuli = () => {
-    setStimuli(prev => prev.filter(s => !selectedStimuli.has(s.id)));
+    setStimuli(prev => prev.filter((s: any) => !selectedStimuli.has(s.id)));
     setSelectedStimuli(new Set());
     showSuccess(`${selectedStimuli.size} stimuli removed`);
   };
@@ -381,7 +374,7 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
     return 'text-blue-600';
   };
 
-  const formatFileSize = (bytes: number): string => {
+  const _formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
@@ -870,12 +863,12 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
                     <div className="flex items-center gap-3 text-xs">
                       <span
                         className={getWordCountColor(
-                          textContent.split(/\s+/).filter(w => w.length > 0)
+                          textContent.split(/\s+/).filter((w: any) => w.length > 0)
                             .length
                         )}
                       >
                         {
-                          textContent.split(/\s+/).filter(w => w.length > 0)
+                          textContent.split(/\s+/).filter((w: any) => w.length > 0)
                             .length
                         }{' '}
                         words
@@ -885,10 +878,10 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
                         {Q_METHOD_TEXT_LIMITS.maxCharacters} chars
                       </span>
                     </div>
-                    {textContent.split(/\s+/).filter(w => w.length > 0)
+                    {textContent.split(/\s+/).filter((w: any) => w.length > 0)
                       .length >=
                       Q_METHOD_TEXT_LIMITS.recommendedWords - 10 &&
-                      textContent.split(/\s+/).filter(w => w.length > 0)
+                      textContent.split(/\s+/).filter((w: any) => w.length > 0)
                         .length <=
                         Q_METHOD_TEXT_LIMITS.recommendedWords + 10 && (
                         <Badge variant="success" size="sm">
@@ -903,7 +896,7 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
                       variant="primary"
                       onClick={saveTextStimulus}
                       disabled={
-                        textContent.split(/\s+/).filter(w => w.length > 0)
+                        textContent.split(/\s+/).filter((w: any) => w.length > 0)
                           .length < Q_METHOD_TEXT_LIMITS.minWords
                       }
                       className="flex-1"

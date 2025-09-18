@@ -15,7 +15,7 @@ interface AIQuestionSuggestionsProps {
 }
 
 export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
-  surveyContext,
+  surveyContext: _surveyContext,  // Will be used for context-aware suggestions
   onAddQuestion
 }) => {
   const [suggestions, setSuggestions] = React.useState<any[]>([]);
@@ -96,7 +96,7 @@ export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
         </div>
       ) : (
         <div className="space-y-3">
-          {suggestions.map(suggestion => (
+          {suggestions.map((suggestion: any) => (
             <div
               key={suggestion.id}
               className="p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-purple-500 dark:hover:border-purple-400 transition-colors"

@@ -96,7 +96,7 @@ export function useRealtimeData<T = any>(
           // Trigger update callback
           onUpdate?.(newData);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error processing WebSocket message:', error);
         onError?.(error as Error);
       }
@@ -137,7 +137,7 @@ export function useRealtimeData<T = any>(
         }
         
         return data;
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error fetching ${endpoint}:`, error);
         throw error;
       }
@@ -218,7 +218,7 @@ export function useMultiChannelRealtimeData<T = any>(
   options: Omit<RealtimeDataOptions<T>, 'channel'> = {}
 ) {
   const [channelData, setChannelData] = useState<Record<string, T>>({});
-  const results = channels.map(channel => 
+  const results = channels.map((channel: any) => 
     useRealtimeData<T>(channel, { ...options, channel })
   );
 

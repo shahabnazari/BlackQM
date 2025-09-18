@@ -165,10 +165,10 @@ export class GridConfigurationService {
     
     // Normalize to get proportions
     const sum = bellValues.reduce((a, b) => a + b, 0);
-    const proportions = bellValues.map(v => v / sum);
+    const proportions = bellValues.map((v: any) => v / sum);
     
     // Distribute items
-    let remaining = totalItems - (2 * 2); // Account for edge minimums
+    let _remaining = totalItems - (2 * 2); // Account for edge minimums
     
     for (let i = 1; i < columns - 1; i++) {
       const idealCount = Math.round(totalItems * proportions[i]);
@@ -333,15 +333,15 @@ export class GridConfigurationService {
     
     // Get alternatives
     const alternatives = this.STANDARD_CONFIGS
-      .filter(c => c.id !== recommendedConfig.id)
-      .filter(c => {
+      .filter((c: any) => c.id !== recommendedConfig.id)
+      .filter((c: any) => {
         // Filter based on constraints
         if (params.timeConstraint === 'short' && c.totalItems > 36) return false;
         if (params.participantExpertise === 'general' && c.expertiseLevel === 'expert') return false;
         return true;
       })
       .slice(0, 2)
-      .map(c => ({
+      .map((c: any) => ({
         ...c,
         distribution: this.getCorrectedDistribution(c)
       }));

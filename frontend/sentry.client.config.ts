@@ -45,7 +45,7 @@ Sentry.init({
   },
   
   // Clean up sensitive data
-  beforeSend(event, hint) {
+  beforeSend(event: any, _hint: any) {
     // Remove sensitive data from URLs
     if (event.request?.url) {
       event.request.url = event.request.url.replace(/token=[^&]*/g, 'token=***');

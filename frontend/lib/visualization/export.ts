@@ -41,7 +41,7 @@ export class ChartExporter {
           saveAs(blob, fileName);
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error exporting to PNG:', error);
       throw new Error('Failed to export chart to PNG');
     }
@@ -122,7 +122,7 @@ export class ChartExporter {
         : `${filename}.pdf`;
       
       pdf.save(fileName);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error exporting to PDF:', error);
       throw new Error('Failed to export charts to PDF');
     }
@@ -161,7 +161,7 @@ export class ChartExporter {
         : `${filename}.xlsx`;
 
       XLSX.writeFile(wb, fileName);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error exporting to Excel:', error);
       throw new Error('Failed to export data to Excel');
     }
@@ -189,7 +189,7 @@ export class ChartExporter {
         : `${filename}.csv`;
       
       saveAs(blob, fileName);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error exporting to CSV:', error);
       throw new Error('Failed to export data to CSV');
     }
@@ -217,7 +217,7 @@ export class ChartExporter {
         : `${filename}.svg`;
       
       saveAs(blob, fileName);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error exporting to SVG:', error);
       throw new Error('Failed to export chart to SVG');
     }

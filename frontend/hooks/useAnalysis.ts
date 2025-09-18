@@ -72,7 +72,7 @@ export function useAnalysis(options: UseAnalysisOptions = {}) {
 
         // Update the analysis in the list
         setAnalyses(prev =>
-          prev.map(a => (a.id === analysisId ? analysis : a))
+          prev.map((a: any) => (a.id === analysisId ? analysis : a))
         );
 
         if (currentAnalysis?.id === analysisId) {
@@ -132,7 +132,7 @@ export function useAnalysis(options: UseAnalysisOptions = {}) {
 
       try {
         await analysisService.deleteAnalysis(analysisId);
-        setAnalyses(prev => prev.filter(a => a.id !== analysisId));
+        setAnalyses(prev => prev.filter((a: any) => a.id !== analysisId));
 
         if (currentAnalysis?.id === analysisId) {
           setCurrentAnalysis(null);

@@ -97,7 +97,7 @@ test.describe('Critical User Journey - Q-Methodology Study', () => {
     await page.goto('/non-existent-page-404');
     
     // Should show error page without console errors
-    const errorMessages = consoleErrors.filter(err => 
+    const errorMessages = consoleErrors.filter((err: any) => 
       !err.includes('404') && // Exclude expected 404 messages
       !err.includes('Failed to load resource') // Exclude resource loading errors
     );

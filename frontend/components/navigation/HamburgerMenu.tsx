@@ -1,24 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  HomeIcon,
-  ChartBarIcon,
-  BeakerIcon,
-  DocumentDuplicateIcon,
-  UsersIcon,
-  Cog6ToothIcon,
-  ArrowRightOnRectangleIcon,
-  XMarkIcon,
-  Bars3Icon,
-  UserCircleIcon,
-  InformationCircleIcon,
-  QuestionMarkCircleIcon,
-  ChartPieIcon,
-} from '@heroicons/react/24/outline';
 import { useAuth } from '@/components/providers/AuthProvider';
+import {
+    ArrowRightOnRectangleIcon,
+    Bars3Icon,
+    BeakerIcon,
+    ChartBarIcon,
+    Cog6ToothIcon,
+    DocumentDuplicateIcon,
+    HomeIcon,
+    InformationCircleIcon,
+    QuestionMarkCircleIcon,
+    UserCircleIcon,
+    UsersIcon,
+    XMarkIcon,
+} from '@heroicons/react/24/outline';
+import { AnimatePresence, motion } from 'framer-motion';
+import { usePathname, useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
 
 interface MenuItem {
   label: string;
@@ -201,7 +200,7 @@ export function HamburgerMenu() {
               {/* Navigation Items */}
               <nav className="p-4">
                 <div className="space-y-1">
-                  {menuItems.map(item => {
+                  {menuItems.map((item: any) => {
                     const Icon = item.icon;
                     const isActive = pathname === item.path;
 

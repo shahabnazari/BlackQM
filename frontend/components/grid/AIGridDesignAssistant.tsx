@@ -1,27 +1,26 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Brain, 
-  ChevronRight, 
-  ChevronLeft, 
-  Sparkles, 
-  Target,
-  Users,
-  BarChart3,
-  Settings,
-  CheckCircle,
-  AlertCircle,
-  Info,
-  Lightbulb,
-  TrendingUp,
-  Zap,
-  BookOpen
-} from 'lucide-react';
 import { Button } from '@/components/apple-ui/Button';
 import { Card } from '@/components/apple-ui/Card';
 import { GridConfigurationService, StandardGridConfig } from '@/lib/services/grid-configuration.service';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+    BarChart3,
+    BookOpen,
+    Brain,
+    CheckCircle,
+    ChevronLeft,
+    ChevronRight,
+    Info,
+    Lightbulb,
+    Settings,
+    Sparkles,
+    Target,
+    TrendingUp,
+    Users,
+    Zap
+} from 'lucide-react';
+import React, { useState } from 'react';
 
 interface GridRecommendation {
   config: StandardGridConfig;
@@ -247,7 +246,7 @@ export const AIGridDesignAssistant: React.FC<{
     const columns = serviceRecommendation.config.range.max - serviceRecommendation.config.range.min + 1;
     
     // Generate alternatives with proper format
-    const alternatives: GridRecommendation[] = serviceRecommendation.alternatives.map(alt => {
+    const alternatives: GridRecommendation[] = serviceRecommendation.alternatives.map((alt: any) => {
       const altColumns = alt.range.max - alt.range.min + 1;
       return {
         config: alt,
@@ -308,7 +307,7 @@ export const AIGridDesignAssistant: React.FC<{
           <h2 className="text-2xl font-bold">Analyzing Your Requirements</h2>
           <p className="text-gray-600">Our AI is calculating the optimal grid configuration...</p>
           <div className="flex justify-center gap-2 mt-4">
-            {[0, 1, 2].map((i) => (
+            {[0, 1, 2].map((i: any) => (
               <motion.div
                 key={i}
                 className="w-3 h-3 bg-blue-500 rounded-full"
@@ -557,7 +556,7 @@ export const AIGridDesignAssistant: React.FC<{
                     max={currentQuestion.max}
                     placeholder={`Enter a number between ${currentQuestion.min} and ${currentQuestion.max}`}
                     className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    onKeyPress={(e) => {
+                    onKeyPress={(e: any) => {
                       if (e.key === 'Enter') {
                         const value = parseInt((e.target as HTMLInputElement).value);
                         if (value >= (currentQuestion.min || 0) && value <= (currentQuestion.max || 100)) {

@@ -1,3 +1,9 @@
+
+// Type definitions
+
+
+
+
 // Enterprise-Grade Participant Service
 // Phase 6.91: Complete Participant Management with Error Handling
 import { apiClient, ApiResponse } from '@/lib/api/client';

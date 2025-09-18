@@ -261,7 +261,7 @@ export const InfoTooltipV2: React.FC<InfoTooltipProps> = ({
               target="_blank" 
               rel="noopener noreferrer" 
               className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e: any) => e.stopPropagation()}
             >
               {link.text}
               <ExternalLink className="w-3 h-3" />

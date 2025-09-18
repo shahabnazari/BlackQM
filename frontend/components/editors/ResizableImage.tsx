@@ -55,7 +55,7 @@ export const ResizableImage: React.FC<ResizableImageProps> = ({
     img.src = src;
   }, [src, initialSize]);
 
-  const handleResizeStop = (e: any, direction: any, ref: HTMLElement, delta: any, position: any) => {
+  const handleResizeStop = (_e: any, _direction: any, ref: HTMLElement, _delta: any, position: any) => {
     const newSize = {
       width: ref.offsetWidth,
       height: ref.offsetHeight
@@ -68,7 +68,7 @@ export const ResizableImage: React.FC<ResizableImageProps> = ({
     }
   };
 
-  const handleDragStop = (e: any, data: any) => {
+  const handleDragStop = (_e: any, data: any) => {
     setPosition({ x: data.x, y: data.y });
   };
 

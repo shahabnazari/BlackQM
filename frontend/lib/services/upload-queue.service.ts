@@ -86,7 +86,7 @@ export class UploadQueueService {
   }
 
   cancelAll(): void {
-    for (const [taskId, task] of this.queue) {
+    for (const [_taskId, task] of this.queue) {
       if (task.status === 'uploading' && task.abortController) {
         task.abortController.abort();
       }
@@ -253,7 +253,7 @@ export class UploadQueueService {
     const xhr = new XMLHttpRequest();
     
     // Track upload progress
-    xhr.upload.addEventListener('progress', (e) => {
+    xhr.upload.addEventListener('progress', (e: any) => {
       if (e.lengthComputable) {
         task.progress = (e.loaded / e.total) * 100;
         this.options.onProgress(task);

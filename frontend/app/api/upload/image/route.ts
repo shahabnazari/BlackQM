@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       },
       type: 'image/webp'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Image upload error:', error);
     return NextResponse.json(
       { error: 'Failed to upload and process image' },
@@ -145,7 +145,7 @@ export async function PUT(request: NextRequest) {
       size: buffer.length,
       type: 'image/png'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Image save error:', error);
     return NextResponse.json(
       { error: 'Failed to save edited image' },

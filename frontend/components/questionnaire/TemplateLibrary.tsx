@@ -51,7 +51,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
   return (
     <div className="p-4">
       <div className="grid gap-3">
-        {templates.map(template => (
+        {templates.map((template: any) => (
           <button
             key={template.id}
             onClick={() => onSelectTemplate(template)}

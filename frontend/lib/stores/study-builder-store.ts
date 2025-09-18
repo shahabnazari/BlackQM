@@ -214,7 +214,7 @@ export const useStudyBuilderStore = create<StudyBuilderState>()(
         }
       }),
       
-      applyDistribution: (distribution) => set((state) => {
+      applyDistribution: (distribution: any) => set((state) => {
         state.gridConfiguration.distribution = distribution;
         // Recalculate cells based on distribution
         // This would call a helper function to generate the appropriate distribution
@@ -228,7 +228,7 @@ export const useStudyBuilderStore = create<StudyBuilderState>()(
       }),
       
       removeStimulus: (id) => set((state) => {
-        state.stimuli = state.stimuli.filter(s => s.id !== id);
+        state.stimuli = state.stimuli.filter((s: any) => s.id !== id);
         state.isDirty = true;
       }),
       
@@ -273,7 +273,7 @@ export const useStudyBuilderStore = create<StudyBuilderState>()(
               const data = await response.json();
               set((state) => {
                 state.stimuli.push(data.data);
-                state.uploadQueue = state.uploadQueue.filter(f => f !== file);
+                state.uploadQueue = state.uploadQueue.filter((f: any) => f !== file);
               });
             }
           }
@@ -281,7 +281,7 @@ export const useStudyBuilderStore = create<StudyBuilderState>()(
           set((state) => {
             state.autoSaveStatus = 'saved';
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error('Upload error:', error);
           set((state) => {
             state.autoSaveStatus = 'error';
@@ -345,7 +345,8 @@ export const useStudyBuilderStore = create<StudyBuilderState>()(
       
       // Persistence actions
       saveToServer: async () => {
-        const { studyMetadata, gridConfiguration, stimuli } = get();
+        const { studyMetadata, gridConfiguration /* , stimuli */ } = get();
+        // stimuli will be used when saving is fully implemented
         
         if (!studyMetadata.id) {
           console.error('No study ID to save');
@@ -378,7 +379,7 @@ export const useStudyBuilderStore = create<StudyBuilderState>()(
             state.syncStatus = 'synced';
             state.lastSyncTime = new Date();
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error('Save error:', error);
           set((state) => {
             state.autoSaveStatus = 'error';
@@ -413,7 +414,7 @@ export const useStudyBuilderStore = create<StudyBuilderState>()(
             state.syncStatus = 'synced';
             state.lastSyncTime = new Date();
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error('Load error:', error);
           set((state) => {
             state.syncStatus = 'error';
@@ -455,7 +456,7 @@ export const useStudyBuilderStore = create<StudyBuilderState>()(
             
           case 'stimulus:removed':
             set((state) => {
-              state.stimuli = state.stimuli.filter(s => s.id !== payload.id);
+              state.stimuli = state.stimuli.filter((s: any) => s.id !== payload.id);
             });
             break;
             

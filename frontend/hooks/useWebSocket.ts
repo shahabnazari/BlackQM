@@ -78,7 +78,7 @@ export function useWebSocket(options: WebSocketOptions = {}): UseWebSocketReturn
       const socket = new WebSocket(url, protocols);
       socketRef.current = socket;
 
-      socket.addEventListener('open', (event) => {
+      socket.addEventListener('open', (event: any) => {
         console.log('WebSocket connected:', url);
         setConnectionStatus('connected');
         reconnectAttemptsRef.current = 0;
@@ -95,7 +95,7 @@ export function useWebSocket(options: WebSocketOptions = {}): UseWebSocketReturn
         onOpen?.(event);
       });
 
-      socket.addEventListener('message', (event) => {
+      socket.addEventListener('message', (event: any) => {
         setLastMessage(event);
         
         try {
@@ -153,20 +153,20 @@ export function useWebSocket(options: WebSocketOptions = {}): UseWebSocketReturn
             queryClient.invalidateQueries({ queryKey: ['visualization'] });
           }
 
-        } catch (error) {
+        } catch (error: any) {
           console.warn('Failed to parse WebSocket message as JSON:', error);
         }
 
         onMessage?.(event);
       });
 
-      socket.addEventListener('error', (event) => {
+      socket.addEventListener('error', (event: any) => {
         console.error('WebSocket error:', event);
         setConnectionStatus('error');
         onError?.(event);
       });
 
-      socket.addEventListener('close', (event) => {
+      socket.addEventListener('close', (event: any) => {
         console.log('WebSocket disconnected:', event.code, event.reason);
         setConnectionStatus('disconnected');
         socketRef.current = null;
@@ -193,7 +193,7 @@ export function useWebSocket(options: WebSocketOptions = {}): UseWebSocketReturn
         onClose?.(event);
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating WebSocket connection:', error);
       setConnectionStatus('error');
     }

@@ -1,27 +1,23 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Upload, 
-  FileText, 
-  Image, 
-  Video, 
-  Music, 
-  File, 
-  X, 
-  Edit2, 
-  Trash2,
-  AlertCircle,
-  CheckCircle,
-  Loader2,
-  RefreshCw,
-  Pause,
-  Play,
-  XCircle
-} from 'lucide-react';
 import { getUploadQueue, resetUploadQueue } from '@/lib/services/upload-queue.service';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+    AlertCircle,
+    CheckCircle,
+    Edit2,
+    File,
+    FileText,
+    Image,
+    Loader2,
+    Music,
+    RefreshCw,
+    Upload,
+    Video,
+    XCircle
+} from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
 
 interface Stimulus {
   id: string;
@@ -76,7 +72,7 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
   const [showTextEditor, setShowTextEditor] = useState(false);
   const [textContent, setTextContent] = useState('');
   const [wordLimit] = useState(100);
-  const [selectedStimulus, setSelectedStimulus] = useState<string | null>(null);
+  const [_selectedStimulus, _setSelectedStimulus] = useState<string | null>(null);
   const [queueStatus, setQueueStatus] = useState<UploadQueueStatus>({
     total: 0,
     pending: 0,
@@ -85,7 +81,7 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
     failed: 0,
     progress: 0
   });
-  const [isPaused, setIsPaused] = useState(false);
+  const [_isPaused, _setIsPaused] = useState(false);
   const completionNotified = useRef(false);
   const uploadQueue = useRef(getUploadQueue({
     maxConcurrent: 3,
@@ -93,14 +89,14 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
     retryDelay: 1000,
     chunkSize: 1024 * 1024, // 1MB chunks
     onProgress: (task) => {
-      setStimuli(prev => prev.map(s => 
+      setStimuli(prev => prev.map((s: any) => 
         s.uploadTaskId === task.id 
           ? { ...s, uploadProgress: task.progress }
           : s
       ));
     },
     onComplete: (task) => {
-      setStimuli(prev => prev.map(s => 
+      setStimuli(prev => prev.map((s: any) => 
         s.uploadTaskId === task.id 
           ? { ...s, uploadStatus: 'complete', uploadProgress: 100 }
           : s
@@ -108,13 +104,13 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
     },
     onError: (task, error) => {
       console.error(`Upload failed for task ${task.id}:`, error);
-      setStimuli(prev => prev.map(s => 
+      setStimuli(prev => prev.map((s: any) => 
         s.uploadTaskId === task.id 
           ? { ...s, uploadStatus: 'failed' }
           : s
       ));
     },
-    onQueueUpdate: (queue) => {
+    onQueueUpdate: (_queue) => {
       // Get status from the upload queue service instance
       const queueService = getUploadQueue();
       const status = queueService.getQueueStatus();
@@ -123,7 +119,7 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
   })).current;
   
   const totalCells = grid.totalCells;
-  const progress = (stimuli.length / totalCells) * 100;
+  const _progress = (stimuli.length / totalCells) * 100;
 
   useEffect(() => {
     if (onStimuliComplete && stimuli.length === totalCells && !completionNotified.current) {
@@ -152,7 +148,7 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
     }
     
     // Create temporary stimuli entries
-    const newStimuli: Stimulus[] = acceptedFiles.map(file => ({
+    const newStimuli: Stimulus[] = acceptedFiles.map((file: any) => ({
       id: Math.random().toString(36).substr(2, 9),
       type: getFileType(file),
       content: URL.createObjectURL(file),
@@ -216,7 +212,7 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
   const saveTextStimulus = async () => {
     if (!textContent.trim()) return;
     
-    const wordCount = textContent.split(/\s+/).filter(w => w.length > 0).length;
+    const wordCount = textContent.split(/\s+/).filter((w: any) => w.length > 0).length;
     
     const newStimulus: Stimulus = {
       id: Math.random().toString(36).substr(2, 9),
@@ -267,12 +263,12 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
       }
     }
     
-    setStimuli(prev => prev.filter(s => s.id !== id));
+    setStimuli(prev => prev.filter((s: any) => s.id !== id));
   };
 
   const retryFailedUploads = () => {
     uploadQueue.retryFailed();
-    setStimuli(prev => prev.map(s => 
+    setStimuli(prev => prev.map((s: any) => 
       s.uploadStatus === 'failed' 
         ? { ...s, uploadStatus: 'pending', uploadProgress: 0 }
         : s
@@ -281,7 +277,7 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
 
   const cancelAllUploads = () => {
     uploadQueue.cancelAll();
-    setStimuli(prev => prev.filter(s => s.uploadStatus !== 'processing'));
+    setStimuli(prev => prev.filter((s: any) => s.uploadStatus !== 'processing'));
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -425,14 +421,14 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
           <div className="progress-header flex justify-between mb-2">
             <span className="text-sm font-medium">Overall Progress</span>
             <span className="text-sm text-gray-600">
-              {stimuli.filter(s => s.uploadStatus === 'complete').length} / {totalCells} completed
+              {stimuli.filter((s: any) => s.uploadStatus === 'complete').length} / {totalCells} completed
             </span>
           </div>
           <div className="progress-bar-container w-full h-3 bg-gray-200 rounded-full overflow-hidden">
             <motion.div
               className="progress-bar h-full bg-gradient-to-r from-blue-500 to-green-500 rounded-full"
               initial={{ width: 0 }}
-              animate={{ width: `${(stimuli.filter(s => s.uploadStatus === 'complete').length / totalCells) * 100}%` }}
+              animate={{ width: `${(stimuli.filter((s: any) => s.uploadStatus === 'complete').length / totalCells) * 100}%` }}
               transition={{ duration: 0.3 }}
             />
           </div>
@@ -453,7 +449,7 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
             </div>
           )}
           
-          {stimuli.filter(s => s.uploadStatus === 'complete').length === totalCells && (
+          {stimuli.filter((s: any) => s.uploadStatus === 'complete').length === totalCells && (
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -545,13 +541,13 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
                 animate={{ scale: 1 }}
                 exit={{ scale: 0.9 }}
                 className="bg-white rounded-xl p-6 max-w-lg w-full"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e: any) => e.stopPropagation()}
               >
                 <h3 className="text-lg font-semibold mb-4">Create Text Stimulus</h3>
                 <textarea
                   value={textContent}
-                  onChange={(e) => {
-                    const words = e.target.value.split(/\s+/).filter(w => w.length > 0);
+                  onChange={(e: any) => {
+                    const words = e.target.value.split(/\s+/).filter((w: any) => w.length > 0);
                     if (words.length <= wordLimit) {
                       setTextContent(e.target.value);
                     }
@@ -561,7 +557,7 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
                   rows={4}
                 />
                 <div className="word-count text-sm text-gray-500 mt-2">
-                  {textContent.split(/\s+/).filter(w => w.length > 0).length}/{wordLimit} words
+                  {textContent.split(/\s+/).filter((w: any) => w.length > 0).length}/{wordLimit} words
                 </div>
                 <div className="text-actions flex gap-2 mt-4">
                   <button

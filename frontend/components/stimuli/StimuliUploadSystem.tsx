@@ -1,23 +1,20 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useUploadStore } from '@/lib/stores/upload-store';
-import { 
-  Upload, 
-  FileText, 
-  Image, 
-  Video, 
-  Music, 
-  File, 
-  X, 
-  Edit2, 
-  Trash2,
-  AlertCircle,
-  CheckCircle,
-  Loader2
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+    AlertCircle,
+    CheckCircle,
+    Edit2,
+    File,
+    FileText,
+    Image,
+    Music,
+    Upload,
+    Video
 } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
 
 interface Stimulus {
   id: string;
@@ -63,7 +60,7 @@ export const StimuliUploadSystem: React.FC<StimuliUploadSystemProps> = ({
   const [textContent, setTextContent] = useState('');
   const [wordLimit] = useState(100);
   const [uploadingFiles, setUploadingFiles] = useState<Map<string, number>>(new Map());
-  const [selectedStimulus, setSelectedStimulus] = useState<string | null>(null);
+  const [_selectedStimulus, _setSelectedStimulus] = useState<string | null>(null);
   const completionNotified = useRef(false);
   
   // Use upload store for notifications
@@ -145,7 +142,7 @@ export const StimuliUploadSystem: React.FC<StimuliUploadSystemProps> = ({
       const data = await response.json();
       
       // Update stimulus with server response
-      setStimuli(prev => prev.map(s => 
+      setStimuli(prev => prev.map((s: any) => 
         s.id === tempId 
           ? { ...data.data, uploadStatus: 'complete', uploadProgress: 100 }
           : s
@@ -162,7 +159,7 @@ export const StimuliUploadSystem: React.FC<StimuliUploadSystemProps> = ({
       console.error('Upload error:', error);
       
       // Update stimulus to failed state
-      setStimuli(prev => prev.map(s => 
+      setStimuli(prev => prev.map((s: any) => 
         s.id === tempId 
           ? { ...s, uploadStatus: 'failed' }
           : s
@@ -241,7 +238,7 @@ export const StimuliUploadSystem: React.FC<StimuliUploadSystemProps> = ({
       return;
     }
     
-    const wordCount = textContent.split(/\s+/).filter(w => w.length > 0).length;
+    const wordCount = textContent.split(/\s+/).filter((w: any) => w.length > 0).length;
     
     const newStimulus: Stimulus = {
       id: Math.random().toString(36).substr(2, 9),
@@ -288,7 +285,7 @@ export const StimuliUploadSystem: React.FC<StimuliUploadSystemProps> = ({
       }
     }
     
-    setStimuli(prev => prev.filter(s => s.id !== id));
+    setStimuli(prev => prev.filter((s: any) => s.id !== id));
   };
 
   const getGlobalCellIndex = (colIndex: number, cellIndex: number): number => {
@@ -521,13 +518,13 @@ export const StimuliUploadSystem: React.FC<StimuliUploadSystemProps> = ({
                 animate={{ scale: 1 }}
                 exit={{ scale: 0.9 }}
                 className="bg-white rounded-xl p-6 max-w-lg w-full"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e: any) => e.stopPropagation()}
               >
                 <h3 className="text-lg font-semibold mb-4">Create Text Stimulus</h3>
                 <textarea
                   value={textContent}
-                  onChange={(e) => {
-                    const words = e.target.value.split(/\s+/).filter(w => w.length > 0);
+                  onChange={(e: any) => {
+                    const words = e.target.value.split(/\s+/).filter((w: any) => w.length > 0);
                     if (words.length <= wordLimit) {
                       setTextContent(e.target.value);
                     }
@@ -537,7 +534,7 @@ export const StimuliUploadSystem: React.FC<StimuliUploadSystemProps> = ({
                   rows={4}
                 />
                 <div className="word-count text-sm text-gray-500 mt-2">
-                  {textContent.split(/\s+/).filter(w => w.length > 0).length}/{wordLimit} words
+                  {textContent.split(/\s+/).filter((w: any) => w.length > 0).length}/{wordLimit} words
                 </div>
                 <div className="text-actions flex gap-2 mt-4">
                   <button

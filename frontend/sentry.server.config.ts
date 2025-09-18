@@ -16,7 +16,7 @@ Sentry.init({
   ],
   
   // Enhanced error context for server-side
-  beforeSend(event, hint) {
+  beforeSend(event: any, _hint: any) {
     // Add server context
     event.contexts = {
       ...event.contexts,

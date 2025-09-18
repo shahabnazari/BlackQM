@@ -98,7 +98,7 @@ export const useQuestionnaireStore = create<QuestionnaireState>((set, get) => ({
     saveSnapshot();
     
     set({
-      questions: questions.map(q => 
+      questions: questions.map((q: any) => 
         q.id === id ? { ...q, ...updates } : q
       )
     });
@@ -108,7 +108,7 @@ export const useQuestionnaireStore = create<QuestionnaireState>((set, get) => ({
     const { questions, saveSnapshot, selectedQuestionIds } = get();
     saveSnapshot();
     
-    const newQuestions = questions.filter(q => q.id !== id);
+    const newQuestions = questions.filter((q: any) => q.id !== id);
     // Update order
     newQuestions.forEach((q, index) => {
       q.order = index;
@@ -177,7 +177,7 @@ export const useQuestionnaireStore = create<QuestionnaireState>((set, get) => ({
     const { questions, saveSnapshot } = get();
     saveSnapshot();
     
-    const newQuestions = questions.filter(q => !ids.includes(q.id));
+    const newQuestions = questions.filter((q: any) => !ids.includes(q.id));
     // Update order
     newQuestions.forEach((q, index) => {
       q.order = index;
@@ -191,7 +191,7 @@ export const useQuestionnaireStore = create<QuestionnaireState>((set, get) => ({
   
   copyQuestions: (ids) => {
     const { questions, addQuestion } = get();
-    const questionsToCopy = questions.filter(q => ids.includes(q.id));
+    const questionsToCopy = questions.filter((q: any) => ids.includes(q.id));
     
     questionsToCopy.forEach((question, index) => {
       const copiedQuestion = {

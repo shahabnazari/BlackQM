@@ -71,7 +71,7 @@ export function UserProfileMenu({ className = '' }: UserProfileMenuProps) {
   const getInitials = (name: string) => {
     return name
       .split(' ')
-      .map(word => word[0])
+      .map((word: any) => word[0])
       .join('')
       .toUpperCase()
       .slice(0, 2);

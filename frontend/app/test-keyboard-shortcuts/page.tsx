@@ -8,7 +8,7 @@ import {
   matchesPlatformShortcut,
   getPlatformShortcut,
   getAriaKeyShortcuts,
-  formatShortcut,
+  // formatShortcut, // Reserved for shortcut display formatting
   isMac,
   getOS
 } from '@/lib/utils/keyboard';

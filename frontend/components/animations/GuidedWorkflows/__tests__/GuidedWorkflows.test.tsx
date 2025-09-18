@@ -195,7 +195,7 @@ describe('GuidedWorkflows Components', () => {
     it('contains all required onboarding steps', () => {
       expect(researcherOnboardingSteps).toHaveLength(7);
       
-      const targets = researcherOnboardingSteps.map(step => step.target);
+      const targets = researcherOnboardingSteps.map((step: any) => step.target);
       expect(targets).toContain('[data-tour="create-study"]');
       expect(targets).toContain('[data-tour="study-list"]');
       expect(targets).toContain('[data-tour="study-settings"]');

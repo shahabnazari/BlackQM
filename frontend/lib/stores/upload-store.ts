@@ -101,7 +101,7 @@ export const useUploadStore = create<UploadState>()(
         ...initialState,
         
         addToQueue: (files) => {
-          const newFiles: UploadFile[] = files.map(file => ({
+          const newFiles: UploadFile[] = files.map((file: any) => ({
             id: Math.random().toString(36).substr(2, 9),
             file,
             progress: 0,
@@ -124,7 +124,7 @@ export const useUploadStore = create<UploadState>()(
             if (!file) return state;
             
             return {
-              uploadQueue: state.uploadQueue.filter(f => f.id !== id),
+              uploadQueue: state.uploadQueue.filter((f: any) => f.id !== id),
               totalSize: state.totalSize - file.file.size,
             };
           });
@@ -136,7 +136,7 @@ export const useUploadStore = create<UploadState>()(
         
         updateFileProgress: (id, progress) => {
           set((state) => ({
-            uploadQueue: state.uploadQueue.map(f =>
+            uploadQueue: state.uploadQueue.map((f: any) =>
               f.id === id ? { ...f, progress } : f
             ),
             uploadProgress: Math.round(
@@ -148,7 +148,7 @@ export const useUploadStore = create<UploadState>()(
         
         updateFileStatus: (id, status, error) => {
           set((state) => ({
-            uploadQueue: state.uploadQueue.map(f =>
+            uploadQueue: state.uploadQueue.map((f: any) =>
               f.id === id ? { ...f, status, error } : f
             ),
             activeUploads: status === 'uploading'
@@ -162,7 +162,7 @@ export const useUploadStore = create<UploadState>()(
         
         setFileUrl: (id, url, thumbnailUrl) => {
           set((state) => ({
-            uploadQueue: state.uploadQueue.map(f =>
+            uploadQueue: state.uploadQueue.map((f: any) =>
               f.id === id ? { ...f, url, thumbnailUrl } : f
             ),
           }));
@@ -240,7 +240,7 @@ export const useUploadStore = create<UploadState>()(
         
         startUpload: (id) => {
           set((state) => ({
-            uploadQueue: state.uploadQueue.map(f =>
+            uploadQueue: state.uploadQueue.map((f: any) =>
               f.id === id ? { ...f, status: 'uploading' as const, progress: 0 } : f
             ),
             activeUploads: state.activeUploads + 1,
@@ -250,7 +250,7 @@ export const useUploadStore = create<UploadState>()(
         
         completeUpload: (id, url) => {
           set((state) => ({
-            uploadQueue: state.uploadQueue.map(f =>
+            uploadQueue: state.uploadQueue.map((f: any) =>
               f.id === id ? { ...f, status: 'complete' as const, progress: 100, url } : f
             ),
             activeUploads: Math.max(0, state.activeUploads - 1),
@@ -261,7 +261,7 @@ export const useUploadStore = create<UploadState>()(
         
         failUpload: (id, error) => {
           set((state) => ({
-            uploadQueue: state.uploadQueue.map(f =>
+            uploadQueue: state.uploadQueue.map((f: any) =>
               f.id === id ? { ...f, status: 'failed' as const, error } : f
             ),
             activeUploads: Math.max(0, state.activeUploads - 1),

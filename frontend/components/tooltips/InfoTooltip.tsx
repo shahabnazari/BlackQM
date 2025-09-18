@@ -60,7 +60,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
         type="button"
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
-        onClick={(e) => {
+        onClick={(e: any) => {
           e.preventDefault();
           setIsVisible(!isVisible);
         }}
@@ -109,7 +109,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                   target="_blank" 
                   rel="noopener noreferrer" 
                   className="inline-flex items-center gap-1 text-xs text-system-blue hover:underline mt-2"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e: any) => e.stopPropagation()}
                 >
                   {link.text}
                   <ExternalLink className="w-3 h-3" />

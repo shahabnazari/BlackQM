@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus, ChevronDown } from 'lucide-react';
 
@@ -267,7 +267,7 @@ export const InteractiveGridBuilder: React.FC<InteractiveGridBuilderProps> = ({
         </label>
         <textarea
           value={instructions}
-          onChange={(e) => {
+          onChange={(e: any) => {
             setInstructions(e.target.value.slice(0, 500));
             setIsDirty(true);
           }}
@@ -289,10 +289,10 @@ export const InteractiveGridBuilder: React.FC<InteractiveGridBuilderProps> = ({
         <div className="relative">
           <select
             value={gridRange.max}
-            onChange={(e) => handleRangeChange(parseInt(e.target.value))}
+            onChange={(e: any) => handleRangeChange(parseInt(e.target.value))}
             className="appearance-none px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
           >
-            {[1, 2, 3, 4, 5, 6].map(val => (
+            {[1, 2, 3, 4, 5, 6].map((val: any) => (
               <option key={val} value={val}>
                 -{val} to +{val}
               </option>
@@ -324,7 +324,7 @@ export const InteractiveGridBuilder: React.FC<InteractiveGridBuilderProps> = ({
                   <input
                     type="text"
                     value={column.customLabel || column.label}
-                    onChange={(e) => updateColumnLabel(index, e.target.value)}
+                    onChange={(e: any) => updateColumnLabel(index, e.target.value)}
                     className="column-label-input w-full text-xs text-center border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none px-1 py-0.5 rounded bg-transparent"
                     placeholder="Label"
                   />
@@ -413,7 +413,7 @@ export const InteractiveGridBuilder: React.FC<InteractiveGridBuilderProps> = ({
           <input
             type="checkbox"
             checked={symmetry}
-            onChange={(e) => {
+            onChange={(e: any) => {
               setSymmetry(e.target.checked);
               setIsDirty(true);
             }}

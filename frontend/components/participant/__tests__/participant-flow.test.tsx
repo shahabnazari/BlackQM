@@ -146,7 +146,7 @@ describe('Participant Flow Components', () => {
       
       // Check for category headers
       const headers = screen.getAllByRole('heading', { level: 3 });
-      const headerTexts = headers.map(h => h.textContent);
+      const headerTexts = headers.map((h: any) => h.textContent);
       expect(headerTexts).toContain('Disagree');
       expect(headerTexts).toContain('Neutral');
       expect(headerTexts).toContain('Agree');

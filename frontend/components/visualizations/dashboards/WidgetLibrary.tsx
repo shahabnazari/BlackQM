@@ -10,7 +10,7 @@ import {
   MagnifyingGlassIcon,
   StarIcon,
   LightBulbIcon,
-  FunnelIcon,
+  _FunnelIcon,
   ArrowTrendingUpIcon,
   PresentationChartLineIcon,
   Squares2X2Icon,
@@ -305,7 +305,7 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
 
   // Filter widgets based on search and filters
   const filteredWidgets = useMemo(() => {
-    return widgetCatalog.filter(widget => {
+    return widgetCatalog.filter((widget: any) => {
       const matchesSearch = widget.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            widget.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            widget.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -377,7 +377,7 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
             type="text"
             placeholder="Search widgets..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e: any) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
           />
         </div>
@@ -386,7 +386,7 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
         <div className="flex space-x-2">
           <select
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            onChange={(e: any) => setSelectedCategory(e.target.value)}
             className="flex-1 px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="all">All Categories</option>
@@ -398,7 +398,7 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
           
           <select
             value={selectedDifficulty}
-            onChange={(e) => setSelectedDifficulty(e.target.value)}
+            onChange={(e: any) => setSelectedDifficulty(e.target.value)}
             className="flex-1 px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="all">All Levels</option>
@@ -514,7 +514,7 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
                       
                       <div className="flex items-center justify-between">
                         <div className="flex flex-wrap gap-1">
-                          {widget.tags.slice(0, 2).map(tag => (
+                          {widget.tags.slice(0, 2).map((tag: any) => (
                             <span
                               key={tag}
                               className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"

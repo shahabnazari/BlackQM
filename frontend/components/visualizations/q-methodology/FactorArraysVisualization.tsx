@@ -61,8 +61,8 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
 
   // Q-sort grid dimensions (typical -4 to +4 range)
   const qSortRange = Array.from({length: 9}, (_, i) => i - 4);
-  const maxStatementsPerColumn = Math.max(...qSortRange.map(score => 
-    sortedStatements.filter(s => s.score === score).length
+  const maxStatementsPerColumn = Math.max(...qSortRange.map((score: any) => 
+    sortedStatements.filter((s: any) => s.score === score).length
   ));
 
   // Scales for grid view
@@ -87,7 +87,7 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
 
   const distributionYScale = scaleLinear({
     domain: showZScores 
-      ? [Math.min(...sortedStatements.map(s => s.zScore)), Math.max(...sortedStatements.map(s => s.zScore))]
+      ? [Math.min(...sortedStatements.map((s: any) => s.zScore)), Math.max(...sortedStatements.map((s: any) => s.zScore))]
       : [-4, 4],
     range: [innerHeight, 0],
     nice: true,
@@ -115,8 +115,8 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
       />
 
       {/* Q-sort positions */}
-      {qSortRange.map(score => {
-        const statementsAtScore = sortedStatements.filter(s => s.score === score);
+      {qSortRange.map((score: any) => {
+        const statementsAtScore = sortedStatements.filter((s: any) => s.score === score);
         const columnX = xScale(String(score)) || 0;
         const columnWidth = xScale.bandwidth();
 
@@ -311,7 +311,7 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
           fontFamily: '-apple-system',
           textAnchor: 'middle',
         }}
-        tickFormat={(d, i) => i % 5 === 0 ? String(i + 1) : ''}
+        tickFormat={(_d, i) => i % 5 === 0 ? String(i + 1) : ''}
       />
     </Group>
   );
@@ -470,7 +470,7 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
             fontFamily="-apple-system"
             fill="#666"
           >
-            Range: {Math.min(...sortedStatements.map(s => s.score))} to {Math.max(...sortedStatements.map(s => s.score))}
+            Range: {Math.min(...sortedStatements.map((s: any) => s.score))} to {Math.max(...sortedStatements.map((s: any) => s.score))}
           </text>
         </Group>
       </BaseChart>

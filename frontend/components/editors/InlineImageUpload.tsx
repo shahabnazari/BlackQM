@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Upload, X, Check, Image as ImageIcon, FileImage } from 'lucide-react';
+import { Upload, X, Check, FileImage } from 'lucide-react';
 import { Button } from '@/components/apple-ui/Button';
 
 interface InlineImageUploadProps {
@@ -91,7 +91,7 @@ export default function InlineImageUpload({
 
     // Create preview and get dimensions
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = (e: any) => {
       const result = e.target?.result as string;
       setPreviewUrl(result);
       
@@ -168,7 +168,7 @@ export default function InlineImageUpload({
         margin: imageMargin,
         alt: altText || 'Content image',
       });
-    } catch (err) {
+    } catch (err: any) {
       clearInterval(interval);
       setError('Failed to upload image. Please try again.');
       setUploadProgress(0);
@@ -287,7 +287,7 @@ export default function InlineImageUpload({
                         min="0"
                         max="50"
                         value={imageMargin}
-                        onChange={(e) => setImageMargin(Number(e.target.value))}
+                        onChange={(e: any) => setImageMargin(Number(e.target.value))}
                         className="w-full"
                       />
                     </div>
@@ -300,7 +300,7 @@ export default function InlineImageUpload({
                       <input
                         type="text"
                         value={altText}
-                        onChange={(e) => setAltText(e.target.value)}
+                        onChange={(e: any) => setAltText(e.target.value)}
                         placeholder="Describe the image..."
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
                       />

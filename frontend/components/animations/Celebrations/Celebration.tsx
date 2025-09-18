@@ -7,9 +7,9 @@
 import React, { useEffect, useState } from 'react';
 import Confetti from 'react-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
-import Lottie from 'lottie-react';
+// import Lottie from 'lottie-react'; // Reserved for Lottie animations
 import { cn } from '@/lib/utils';
-import { CELEBRATION_CONFIG, ANIMATION_TIMING } from '@/lib/animations/constants';
+import { CELEBRATION_CONFIG } from '@/lib/animations/constants';
 
 interface CelebrationProps {
   trigger?: boolean;
@@ -32,7 +32,7 @@ export const ConfettiCelebration: React.FC<{
   trigger = false,
   duration = 5000,
   particleCount = CELEBRATION_CONFIG.confettiCount,
-  spread = CELEBRATION_CONFIG.confettiSpread,
+  // spread = CELEBRATION_CONFIG.confettiSpread, // Reserved for spread configuration
   colors = CELEBRATION_CONFIG.confettiColors,
   onComplete,
 }) => {

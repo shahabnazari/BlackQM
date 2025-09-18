@@ -195,7 +195,7 @@ class AuthService {
       localStorage.setItem('user', JSON.stringify(formattedUser));
 
       return formattedUser;
-    } catch (error) {
+    } catch (error: any) {
       const fallbackUser = this.getUser();
       if (fallbackUser) {
         return fallbackUser;

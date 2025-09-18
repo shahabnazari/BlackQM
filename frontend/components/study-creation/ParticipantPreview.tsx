@@ -266,7 +266,7 @@ export default function ParticipantPreview({ previewData, studyTitle }: Particip
               </p>
               <div className="flex gap-2 flex-wrap">
                 {(step.data as any).statements?.length > 0 ? (
-                  (step.data as any).statements.slice(0, 5).map((s: any, idx: number) => (
+                  (step.data as any).statements.slice(0, 5).map((_s: any, idx: number) => (
                     <div key={idx} className="p-2 bg-white border rounded shadow-sm text-xs">
                       Statement {idx + 1}
                     </div>

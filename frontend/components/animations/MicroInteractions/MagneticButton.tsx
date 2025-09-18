@@ -4,11 +4,11 @@
  * Phase 5 - Day 13 Implementation
  */
 
-import React, { useRef, useState, useEffect } from 'react';
-import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { MAGNETIC_CONFIG, SCALE_VALUES, ANIMATION_TIMING } from '@/lib/animations/constants';
+import { MAGNETIC_CONFIG, SCALE_VALUES } from '@/lib/animations/constants';
 import { calculateMagneticPosition, throttleAnimation } from '@/lib/animations/utils';
+import { cn } from '@/lib/utils';
+import { motion, useMotionValue, useSpring } from 'framer-motion';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface MagneticButtonProps {
   children: React.ReactNode;
@@ -42,7 +42,7 @@ export const MagneticButton: React.FC<MagneticButtonProps> = ({
 }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [isHovered, setIsHovered] = useState(false);
-  const [isPressed, setIsPressed] = useState(false);
+  const [_isPressed, setIsPressed] = useState(false);
   
   // Motion values for magnetic effect
   const x = useMotionValue(0);

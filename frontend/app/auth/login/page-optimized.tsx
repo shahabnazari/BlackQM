@@ -1,22 +1,22 @@
 'use client';
 
-import React, { useState, useEffect, FormEvent } from 'react';
+import {
+    CheckCircleIcon,
+    ExclamationCircleIcon,
+    EyeIcon,
+    EyeSlashIcon,
+} from '@heroicons/react/24/outline';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
-import {
-  EyeIcon,
-  EyeSlashIcon,
-  CheckCircleIcon,
-  ExclamationCircleIcon,
-} from '@heroicons/react/24/outline';
+import { FormEvent, useEffect, useState } from 'react';
 
-import { useLogin } from '@/hooks/auth/useLogin';
 import { Button } from '@/components/apple-ui/Button/Button';
 import { Card } from '@/components/apple-ui/Card/Card';
 import { TextField } from '@/components/apple-ui/TextField/TextField';
-import { LoadingOverlay } from '@/components/auth/LoadingOverlay';
 import { AuthError } from '@/components/auth/AuthError';
+import { LoadingOverlay } from '@/components/auth/LoadingOverlay';
+import { useLogin } from '@/hooks/auth/useLogin';
 
 // Lazy load social icons - they're not critical for initial render
 const SocialLoginButtons = dynamic(
@@ -79,14 +79,14 @@ export default function LoginPage() {
   useEffect(() => {
     if (formData.email && formData.email.includes('@')) {
       const domain = formData.email.split('@')[1];
-      if (domain.includes('.edu')) {
+      if (domain && domain.includes('.edu')) {
         setSuggestedSSO('institutional');
-      } else if (
+      } else if (domain && (
         domain.includes('microsoft.com') ||
         domain.includes('outlook.com')
-      ) {
+      )) {
         setSuggestedSSO('microsoft');
-      } else if (domain.includes('gmail.com')) {
+      } else if (domain && domain.includes('gmail.com')) {
         setSuggestedSSO('google');
       } else {
         setSuggestedSSO(null);
@@ -218,7 +218,7 @@ export default function LoginPage() {
                   autoComplete="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e: any) => setFormData({ ...formData, email: e.target.value })}
                   error={errors.email}
                 />
               </div>
@@ -233,7 +233,7 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     required
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e: any) => setFormData({ ...formData, password: e.target.value })}
                     error={errors.password}
                   />
                   <button
@@ -258,7 +258,7 @@ export default function LoginPage() {
                     type="checkbox"
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     checked={formData.rememberMe}
-                    onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
+                    onChange={(e: any) => setFormData({ ...formData, rememberMe: e.target.checked })}
                   />
                   <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
                     Remember me

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/apple-ui/Card';
 import { Button } from '@/components/apple-ui/Button';
 import { Badge } from '@/components/apple-ui/Badge';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   DocumentTextIcon,
   UserGroupIcon,
@@ -45,15 +45,15 @@ export default function FactorInterpretation({
     if (!statements.length) return { positive: [], negative: [] };
 
     const factorStatements = statements
-      .map(stmt => ({
+      .map((stmt: any) => ({
         ...stmt,
         zScore: stmt.zScores?.[`factor${factorIndex + 1}`] || 0,
       }))
       .sort((a, b) => Math.abs(b.zScore) - Math.abs(a.zScore));
 
     return {
-      positive: factorStatements.filter(s => s.zScore > 1.5).slice(0, 5),
-      negative: factorStatements.filter(s => s.zScore < -1.5).slice(0, 5),
+      positive: factorStatements.filter((s: any) => s.zScore > 1.5).slice(0, 5),
+      negative: factorStatements.filter((s: any) => s.zScore < -1.5).slice(0, 5),
     };
   };
 
@@ -185,7 +185,7 @@ export default function FactorInterpretation({
           </div>
 
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {getFactorParticipants(selectedFactor).map(participant => (
+            {getFactorParticipants(selectedFactor).map((participant: any) => (
               <div
                 key={participant.id}
                 className={`flex items-center justify-between p-2 rounded-lg ${

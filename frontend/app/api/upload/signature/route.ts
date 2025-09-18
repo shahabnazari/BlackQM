@@ -1,5 +1,5 @@
+import { mkdir, writeFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
 export async function POST(request: NextRequest) {
@@ -51,8 +51,15 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      mimeType = matches[1];
+      const extractedMimeType = matches[1];
       const base64 = matches[2];
+      if (!extractedMimeType || !base64) {
+        return NextResponse.json(
+          { error: 'Invalid base64 data' },
+          { status: 400 }
+        );
+      }
+      mimeType = extractedMimeType;
       buffer = Buffer.from(base64, 'base64');
       
       const timestamp = Date.now();
@@ -82,7 +89,7 @@ export async function POST(request: NextRequest) {
       filename: filename,
       type: mimeType
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Signature upload error:', error);
     return NextResponse.json(
       { error: 'Failed to upload signature' },

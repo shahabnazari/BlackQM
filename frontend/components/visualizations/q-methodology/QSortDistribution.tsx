@@ -1,5 +1,5 @@
 import React from 'react';
-import { scaleLinear, scaleBand } from '@visx/scale';
+import { scaleLinear } from '@visx/scale';
 import { Group } from '@visx/group';
 import { AxisLeft, AxisBottom } from '@visx/axis';
 import { GridRows } from '@visx/grid';
@@ -34,12 +34,12 @@ export const QSortDistribution: React.FC<QSortDistributionProps> = ({
 
   // Scales
   const xScale = scaleLinear({
-    domain: [Math.min(...data.map(d => d.value)), Math.max(...data.map(d => d.value))],
+    domain: [Math.min(...data.map((d: any) => d.value)), Math.max(...data.map((d: any) => d.value))],
     range: [0, innerWidth],
   });
 
   const yScale = scaleLinear({
-    domain: [0, Math.max(...data.map(d => Math.max(d.count, d.expectedCount)))],
+    domain: [0, Math.max(...data.map((d: any) => Math.max(d.count, d.expectedCount)))],
     range: [innerHeight, 0],
     nice: true,
   });
@@ -144,7 +144,7 @@ export const QSortDistribution: React.FC<QSortDistributionProps> = ({
             curve={curveNatural}
           />
           {/* Dots on expected curve */}
-          {data.map((d, i) => (
+          {data.map((d) => (
             <circle
               key={`expected-${d.value}`}
               cx={xScale(d.value)}
@@ -223,7 +223,7 @@ export const QSortDistribution: React.FC<QSortDistributionProps> = ({
           fontFamily="-apple-system"
           fill="#666"
         >
-          Range: [{Math.min(...data.map(d => d.value))}, {Math.max(...data.map(d => d.value))}]
+          Range: [{Math.min(...data.map((d: any) => d.value))}, {Math.max(...data.map((d: any) => d.value))}]
         </text>
         <text
           x={0}

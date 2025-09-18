@@ -50,7 +50,7 @@ export const DistinguishingStatements: React.FC<DistinguishingStatementsProps> =
 
   // Filter distinguishing statements (p < 0.05)
   const distinguishingStatements = data
-    .filter(s => s.pValue < 0.05 && !s.isConsensus)
+    .filter((s: any) => s.pValue < 0.05 && !s.isConsensus)
     .sort((a, b) => a.pValue - b.pValue)
     .slice(0, 10); // Top 10 most distinguishing
 
@@ -61,7 +61,7 @@ export const DistinguishingStatements: React.FC<DistinguishingStatementsProps> =
   });
 
   const yScale = scaleBand({
-    domain: distinguishingStatements.map(s => s.id),
+    domain: distinguishingStatements.map((s: any) => s.id),
     range: [0, innerHeight],
     padding: 0.3,
   });
@@ -206,7 +206,7 @@ export const DistinguishingStatements: React.FC<DistinguishingStatementsProps> =
               {/* Connecting lines between scores */}
               {statement.scores.length > 1 && (
                 <motion.path
-                  d={`M ${statement.scores.map(s => `${xScale(s.zScore)},${yPos + yScale.bandwidth() / 2}`).join(' L ')}`}
+                  d={`M ${statement.scores.map((s: any) => `${xScale(s.zScore)},${yPos + yScale.bandwidth() / 2}`).join(' L ')}`}
                   stroke="rgba(0, 0, 0, 0.2)"
                   strokeWidth={1}
                   strokeDasharray="2 2"

@@ -182,8 +182,8 @@ describe('EigenvalueScreePlot', () => {
       render(<EigenvalueScreePlot {...defaultProps} />);
       
       // Only eigenvalues >= 1.0 should be highlighted/labeled
-      const aboveKaiser = mockData.filter(d => d.eigenvalue >= 1.0);
-      const belowKaiser = mockData.filter(d => d.eigenvalue < 1.0);
+      const aboveKaiser = mockData.filter((d: any) => d.eigenvalue >= 1.0);
+      const belowKaiser = mockData.filter((d: any) => d.eigenvalue < 1.0);
       
       aboveKaiser.forEach(item => {
         expect(screen.getByText(item.eigenvalue.toFixed(2))).toBeInTheDocument();
@@ -321,7 +321,7 @@ describe('EigenvalueScreePlot', () => {
       try {
         render(<EigenvalueScreePlot data={undefined as any} />);
         expect(screen.getByText('Eigenvalue Scree Plot')).toBeInTheDocument();
-      } catch (error) {
+      } catch (error: any) {
         // Should handle gracefully or throw meaningful error
       }
       
@@ -437,8 +437,8 @@ describe('EigenvalueScreePlot', () => {
       render(<EigenvalueScreePlot {...defaultProps} />);
       
       // Kaiser criterion is eigenvalue >= 1.0
-      const aboveKaiser = mockData.filter(d => d.eigenvalue >= 1.0).length;
-      const belowKaiser = mockData.filter(d => d.eigenvalue < 1.0).length;
+      const aboveKaiser = mockData.filter((d: any) => d.eigenvalue >= 1.0).length;
+      const belowKaiser = mockData.filter((d: any) => d.eigenvalue < 1.0).length;
       
       expect(aboveKaiser).toBe(3); // Factors 1, 2, 3
       expect(belowKaiser).toBe(2); // Factors 4, 5

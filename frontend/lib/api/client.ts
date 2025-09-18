@@ -100,7 +100,7 @@ class ApiClient {
               originalRequest.headers.Authorization = `Bearer ${accessToken}`;
             }
             return this.client(originalRequest);
-          } catch (refreshError) {
+          } catch (refreshError: any) {
             this.refreshPromise = null;
             this.handleAuthError();
             return Promise.reject(refreshError);
@@ -276,8 +276,8 @@ class ApiClient {
   // Batch requests
   async batch<T = any>(requests: Array<() => Promise<any>>): Promise<T[]> {
     try {
-      return await Promise.all(requests.map(req => req()));
-    } catch (error) {
+      return await Promise.all(requests.map((req: any) => req()));
+    } catch (error: any) {
       throw error;
     }
   }

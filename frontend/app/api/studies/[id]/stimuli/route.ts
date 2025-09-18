@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
 import crypto from 'crypto';
+import { mkdir, writeFile } from 'fs/promises';
+import { NextRequest, NextResponse } from 'next/server';
+import path from 'path';
 
 // Type definitions
 interface Stimulus {
@@ -33,7 +33,7 @@ const stimuliDatabase = new Map<string, Stimulus[]>();
 
 // GET /api/studies/[id]/stimuli - Get all stimuli for a study
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -45,7 +45,7 @@ export async function GET(
       data: stimuli,
       count: stimuli.length
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching stimuli:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch stimuli' },
@@ -131,7 +131,7 @@ export async function POST(
         message: 'File uploaded successfully'
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading stimulus:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to upload stimulus' },
@@ -174,7 +174,7 @@ export async function PUT(
       data: studyStimuli[stimulusIndex],
       message: 'Stimulus updated successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating stimulus:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to update stimulus' },
@@ -201,7 +201,7 @@ export async function DELETE(
     }
     
     const studyStimuli = stimuliDatabase.get(studyId) || [];
-    const filteredStimuli = studyStimuli.filter(s => s.id !== stimulusId);
+    const filteredStimuli = studyStimuli.filter((s: any) => s.id !== stimulusId);
     
     if (filteredStimuli.length === studyStimuli.length) {
       return NextResponse.json(
@@ -216,7 +216,7 @@ export async function DELETE(
       success: true,
       message: 'Stimulus deleted successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting stimulus:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to delete stimulus' },
@@ -227,7 +227,7 @@ export async function DELETE(
 
 // Helper function to create text stimulus
 async function createTextStimulus(studyId: string, content: string): Promise<Stimulus> {
-  const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
+  const wordCount = content.split(/\s+/).filter((w: any) => w.length > 0).length;
   
   return {
     id: crypto.randomUUID(),
@@ -288,11 +288,11 @@ async function processFileUpload(studyId: string, file: File): Promise<Stimulus>
     surveyId: studyId,
     type: stimulusType,
     content: publicUrl,
-    thumbnail,
+    ...(thumbnail && { thumbnail }),
     metadata: {
       fileSize: file.size,
       mimeType: file.type,
-      dimensions
+      ...(dimensions && { dimensions })
     },
     uploadStatus: 'complete',
     virusScanStatus: 'pending', // Will be updated after scan
@@ -304,19 +304,19 @@ async function processFileUpload(studyId: string, file: File): Promise<Stimulus>
 // Chunked upload support for large files
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params: _params }: { params: { id: string } }
 ) {
   try {
-    const studyId = params.id;
+    // const studyId = params.id;
     const formData = await request.formData();
     
     const chunkIndex = parseInt(formData.get('chunkIndex') as string);
     const totalChunks = parseInt(formData.get('totalChunks') as string);
-    const fileId = formData.get('fileId') as string;
-    const chunk = formData.get('chunk') as File;
+    // const fileId = formData.get('fileId') as string;
+    // const chunk = formData.get('chunk') as File;
     
     // Store chunk (in production, use proper chunk storage)
-    const chunkKey = `${studyId}_${fileId}_${chunkIndex}`;
+    // const chunkKey = `${studyId}_${fileId}_${chunkIndex}`;
     // await storeChunk(chunkKey, chunk);
     
     // Check if all chunks received
@@ -341,7 +341,7 @@ export async function PATCH(
       progress,
       message: `Chunk ${chunkIndex + 1}/${totalChunks} received`
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error processing chunk:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to process chunk' },

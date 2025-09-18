@@ -1,24 +1,22 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
 import { InteractiveGridBuilder } from '@/components/grid/InteractiveGridBuilder';
 import { StimuliUploadSystem } from '@/components/stimuli/StimuliUploadSystem';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
-  Play, 
-  RotateCw,
-  ChevronRight,
-  Grid,
-  Upload,
-  Loader2,
-  ArrowUpDown,
-  Plus,
-  Minus,
-  MousePointer
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+    AlertCircle,
+    ArrowUpDown,
+    CheckCircle,
+    ChevronRight,
+    Grid,
+    Loader2,
+    MousePointer,
+    Play,
+    RotateCw,
+    Upload,
+    XCircle
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 interface GridConfiguration {
   rangeMin: number;
@@ -151,13 +149,17 @@ export default function GridStimuliTestPage() {
   const updateTestStatus = (categoryIndex: number, testIndex: number, status: TestResult['status'], error?: string, details?: string) => {
     setTestCategories(prev => {
       const newCategories = [...prev];
-      newCategories[categoryIndex].tests[testIndex] = {
-        ...newCategories[categoryIndex].tests[testIndex],
-        status,
-        error,
-        details,
-        time: Date.now()
-      };
+      const category = newCategories[categoryIndex];
+      const test = category?.tests?.[testIndex];
+      if (category && test) {
+        category.tests[testIndex] = {
+          ...test,
+          status,
+          ...(error && { error }),
+          ...(details && { details }),
+          time: Date.now()
+        };
+      }
       return newCategories;
     });
 
@@ -190,7 +192,7 @@ export default function GridStimuliTestPage() {
       };
       setCurrentGrid(defaultGrid);
       updateTestStatus(categoryIndex, 0, 'passed', undefined, 'Grid initialized with 7 columns');
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 0, 'failed', String(error));
     }
 
@@ -210,7 +212,7 @@ export default function GridStimuliTestPage() {
       };
       setCurrentGrid(expandedGrid);
       updateTestStatus(categoryIndex, 1, 'passed', undefined, 'Range expanded to ±6');
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 1, 'failed', String(error));
     }
 
@@ -222,7 +224,7 @@ export default function GridStimuliTestPage() {
         const flatGrid = {
           ...currentGrid,
           distribution: 'flat' as const,
-          columns: currentGrid.columns.map(col => ({
+          columns: currentGrid.columns.map((col: any) => ({
             ...col,
             cells: Math.floor(25 / currentGrid.columns.length)
           }))
@@ -230,7 +232,7 @@ export default function GridStimuliTestPage() {
         setCurrentGrid(flatGrid);
         updateTestStatus(categoryIndex, 2, 'passed', undefined, 'Flat distribution applied');
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 2, 'failed', String(error));
     }
 
@@ -250,7 +252,7 @@ export default function GridStimuliTestPage() {
         setCurrentGrid(forcedGrid);
         updateTestStatus(categoryIndex, 3, 'passed', undefined, 'Forced choice applied');
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 3, 'failed', String(error));
     }
 
@@ -266,7 +268,7 @@ export default function GridStimuliTestPage() {
           updateTestStatus(categoryIndex, 4, 'failed', `Expected 25, got ${total}`);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 4, 'failed', String(error));
     }
 
@@ -282,7 +284,7 @@ export default function GridStimuliTestPage() {
         });
         updateTestStatus(categoryIndex, 5, 'passed', undefined, `${testInstructions.length} chars`);
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 5, 'failed', String(error));
     }
 
@@ -294,7 +296,7 @@ export default function GridStimuliTestPage() {
       const gridData = JSON.stringify(currentGrid);
       localStorage.setItem('test-grid-config', gridData);
       updateTestStatus(categoryIndex, 6, 'passed', undefined, 'Saved to localStorage');
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 6, 'failed', String(error));
     }
   };
@@ -308,11 +310,14 @@ export default function GridStimuliTestPage() {
     try {
       if (currentGrid && currentGrid.columns.length > 0) {
         const updatedGrid = { ...currentGrid };
-        updatedGrid.columns[3].cells += 2;
+        const column = updatedGrid.columns[3];
+        if (column) {
+          column.cells += 2;
+        }
         setCurrentGrid(updatedGrid);
         updateTestStatus(categoryIndex, 0, 'passed', undefined, 'Added 2 cells');
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 0, 'failed', String(error));
     }
 
@@ -322,11 +327,14 @@ export default function GridStimuliTestPage() {
     try {
       if (currentGrid && currentGrid.columns.length > 0) {
         const updatedGrid = { ...currentGrid };
-        updatedGrid.columns[3].cells = Math.max(0, updatedGrid.columns[3].cells - 1);
+        const column = updatedGrid.columns[3];
+        if (column) {
+          column.cells = Math.max(0, column.cells - 1);
+        }
         setCurrentGrid(updatedGrid);
         updateTestStatus(categoryIndex, 1, 'passed', undefined, 'Removed 1 cell');
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 1, 'failed', String(error));
     }
 
@@ -338,12 +346,18 @@ export default function GridStimuliTestPage() {
         const updatedGrid = { ...currentGrid, symmetry: true };
         const leftIndex = 2;
         const rightIndex = updatedGrid.columns.length - 1 - leftIndex;
-        updatedGrid.columns[leftIndex].cells = 4;
-        updatedGrid.columns[rightIndex].cells = 4;
+        const leftColumn = updatedGrid.columns[leftIndex];
+        const rightColumn = updatedGrid.columns[rightIndex];
+        if (leftColumn) {
+          leftColumn.cells = 4;
+        }
+        if (rightColumn) {
+          rightColumn.cells = 4;
+        }
         setCurrentGrid(updatedGrid);
         updateTestStatus(categoryIndex, 2, 'passed', undefined, 'Symmetry maintained');
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 2, 'failed', String(error));
     }
 
@@ -355,7 +369,7 @@ export default function GridStimuliTestPage() {
         setCurrentGrid({ ...currentGrid, symmetry: !currentGrid.symmetry });
         updateTestStatus(categoryIndex, 3, 'passed', undefined, `Symmetry: ${!currentGrid.symmetry}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 3, 'failed', String(error));
     }
 
@@ -365,12 +379,16 @@ export default function GridStimuliTestPage() {
     try {
       if (currentGrid && currentGrid.columns.length > 0) {
         const updatedGrid = { ...currentGrid };
-        updatedGrid.columns[0].customLabel = 'Strongly Disagree';
-        updatedGrid.columns[updatedGrid.columns.length - 1].customLabel = 'Strongly Agree';
+        if (updatedGrid.columns[0]) {
+          updatedGrid.columns[0].customLabel = 'Strongly Disagree';
+        }
+        if (updatedGrid.columns[updatedGrid.columns.length - 1]) {
+          updatedGrid.columns[updatedGrid.columns.length - 1].customLabel = 'Strongly Agree';
+        }
         setCurrentGrid(updatedGrid);
         updateTestStatus(categoryIndex, 4, 'passed', undefined, 'Labels updated');
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 4, 'failed', String(error));
     }
 
@@ -380,11 +398,13 @@ export default function GridStimuliTestPage() {
     try {
       if (currentGrid) {
         const updatedGrid = { ...currentGrid };
-        updatedGrid.columns[0].cells = 0;
-        const isValid = updatedGrid.columns[0].cells >= 0;
-        updateTestStatus(categoryIndex, 5, isValid ? 'passed' : 'failed', undefined, 'Min limit: 0');
+        if (updatedGrid.columns[0]) {
+          updatedGrid.columns[0].cells = 0;
+          const isValid = updatedGrid.columns[0].cells >= 0;
+          updateTestStatus(categoryIndex, 5, isValid ? 'passed' : 'failed', undefined, 'Min limit: 0');
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 5, 'failed', String(error));
     }
 
@@ -397,7 +417,7 @@ export default function GridStimuliTestPage() {
         const cannotExceed = total <= 25;
         updateTestStatus(categoryIndex, 6, cannotExceed ? 'passed' : 'failed', undefined, `Total: ${total}/25`);
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(categoryIndex, 6, 'failed', String(error));
     }
   };
@@ -406,7 +426,7 @@ export default function GridStimuliTestPage() {
     const categoryIndex = 2;
     
     // Run each test
-    for (let i = 0; i < testCategories[categoryIndex].tests.length; i++) {
+    for (let i = 0; i < (testCategories[categoryIndex]?.tests.length || 0); i++) {
       updateTestStatus(categoryIndex, i, 'running');
       await sleep(300);
       
@@ -439,7 +459,7 @@ export default function GridStimuliTestPage() {
         } else {
           updateTestStatus(categoryIndex, i, 'passed');
         }
-      } catch (error) {
+      } catch (error: any) {
         updateTestStatus(categoryIndex, i, 'failed', String(error));
       }
     }
@@ -449,7 +469,7 @@ export default function GridStimuliTestPage() {
     const categoryIndex = 3;
     
     // Simulate upload tests
-    for (let i = 0; i < testCategories[categoryIndex].tests.length; i++) {
+    for (let i = 0; i < (testCategories[categoryIndex]?.tests.length || 0); i++) {
       updateTestStatus(categoryIndex, i, 'running');
       await sleep(400);
       
@@ -475,7 +495,7 @@ export default function GridStimuliTestPage() {
         }
         
         updateTestStatus(categoryIndex, i, 'passed', undefined, testNames[i]);
-      } catch (error) {
+      } catch (error: any) {
         updateTestStatus(categoryIndex, i, 'failed', String(error));
       }
     }
@@ -485,7 +505,7 @@ export default function GridStimuliTestPage() {
     const categoryIndex = 4;
     
     // Simulate drag and drop tests
-    for (let i = 0; i < testCategories[categoryIndex].tests.length; i++) {
+    for (let i = 0; i < (testCategories[categoryIndex]?.tests.length || 0); i++) {
       updateTestStatus(categoryIndex, i, 'running');
       await sleep(300);
       
@@ -500,7 +520,7 @@ export default function GridStimuliTestPage() {
         ];
         
         updateTestStatus(categoryIndex, i, 'passed', undefined, testDetails[i]);
-      } catch (error) {
+      } catch (error: any) {
         updateTestStatus(categoryIndex, i, 'failed', String(error));
       }
     }
@@ -510,7 +530,7 @@ export default function GridStimuliTestPage() {
     const categoryIndex = 5;
     
     // Run management tests
-    for (let i = 0; i < testCategories[categoryIndex].tests.length; i++) {
+    for (let i = 0; i < (testCategories[categoryIndex]?.tests.length || 0); i++) {
       updateTestStatus(categoryIndex, i, 'running');
       await sleep(350);
       
@@ -526,7 +546,7 @@ export default function GridStimuliTestPage() {
         ];
         
         updateTestStatus(categoryIndex, i, 'passed', undefined, testDetails[i]);
-      } catch (error) {
+      } catch (error: any) {
         updateTestStatus(categoryIndex, i, 'failed', String(error));
       }
     }
@@ -538,9 +558,9 @@ export default function GridStimuliTestPage() {
     setFailedTests(0);
     
     // Reset all tests to pending
-    setTestCategories(prev => prev.map(category => ({
+    setTestCategories(prev => prev.map((category: any) => ({
       ...category,
-      tests: category.tests.map(test => ({
+      tests: category.tests.map((test: any) => ({
         ...test,
         status: 'pending',
         error: undefined,
@@ -560,9 +580,9 @@ export default function GridStimuliTestPage() {
   };
 
   const resetTests = () => {
-    setTestCategories(prev => prev.map(category => ({
+    setTestCategories(prev => prev.map((category: any) => ({
       ...category,
-      tests: category.tests.map(test => ({
+      tests: category.tests.map((test: any) => ({
         ...test,
         status: 'pending',
         error: undefined,

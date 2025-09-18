@@ -141,9 +141,9 @@ describe('ParticipantApiEnhanced', () => {
       expect(result1).toHaveLength(mockStatements.length);
       expect(result2).toHaveLength(mockStatements.length);
       // Check that all statements are present
-      const ids1 = result1.map(s => s.id).sort();
-      const ids2 = result2.map(s => s.id).sort();
-      const originalIds = mockStatements.map(s => s.id).sort();
+      const ids1 = result1.map((s: any) => s.id).sort();
+      const ids2 = result2.map((s: any) => s.id).sort();
+      const originalIds = mockStatements.map((s: any) => s.id).sort();
       expect(ids1).toEqual(originalIds);
       expect(ids2).toEqual(originalIds);
     });
@@ -233,11 +233,11 @@ describe('ParticipantApiEnhanced', () => {
         { position: -3, statementIds: [mockStatements[1].id, mockStatements[2].id] },
         { position: -2, statementIds: [mockStatements[3].id, mockStatements[4].id, mockStatements[5].id] },
         { position: -1, statementIds: [mockStatements[6].id, mockStatements[7].id, mockStatements[8].id, mockStatements[9].id] },
-        { position: 0, statementIds: mockStatements.slice(10, 15).map(s => s.id) },
-        { position: 1, statementIds: mockStatements.slice(15, 19).map(s => s.id) },
-        { position: 2, statementIds: mockStatements.slice(19, 22).map(s => s.id) },
-        { position: 3, statementIds: mockStatements.slice(22, 24).map(s => s.id) },
-        { position: 4, statementIds: mockStatements.slice(24, 25).map(s => s.id) }
+        { position: 0, statementIds: mockStatements.slice(10, 15).map((s: any) => s.id) },
+        { position: 1, statementIds: mockStatements.slice(15, 19).map((s: any) => s.id) },
+        { position: 2, statementIds: mockStatements.slice(19, 22).map((s: any) => s.id) },
+        { position: 3, statementIds: mockStatements.slice(22, 24).map((s: any) => s.id) },
+        { position: 4, statementIds: mockStatements.slice(24, 25).map((s: any) => s.id) }
       ];
 
       localStorage.setItem('qsort-session-123', JSON.stringify(grid));

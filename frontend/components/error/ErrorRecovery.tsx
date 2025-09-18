@@ -1,21 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ExclamationTriangleIcon,
-  ArrowPathIcon,
-  HomeIcon,
-  ArrowLeftIcon,
-  QuestionMarkCircleIcon,
-  WifiIcon,
-  ServerIcon,
-  ClockIcon,
-  ShieldExclamationIcon,
-} from '@heroicons/react/24/outline';
 import { Button } from '@/components/apple-ui/Button';
 import { Card } from '@/components/apple-ui/Card';
+import {
+    ArrowPathIcon,
+    ClockIcon,
+    ExclamationTriangleIcon,
+    QuestionMarkCircleIcon,
+    ServerIcon,
+    ShieldExclamationIcon,
+    WifiIcon,
+} from '@heroicons/react/24/outline';
+import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
 
 interface ErrorRecoveryProps {
   error: Error | null;

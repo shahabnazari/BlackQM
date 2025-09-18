@@ -1,14 +1,14 @@
 'use client';
 
-import React, { FC } from 'react';
-import { QuestionType, QuestionComponentProps } from '@/lib/types/questionnaire';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { QuestionComponentProps, QuestionType } from '@/lib/types/questionnaire';
+import React, { FC } from 'react';
 import { VideoResponseQuestion } from './VideoResponse';
 
 // Basic text input components
@@ -50,7 +50,7 @@ export const MultipleChoiceQuestion: FC<QuestionComponentProps> = ({ question, v
     const currentValues = Array.isArray(value) ? value : [];
     const newValues = checked
       ? [...currentValues, optionValue]
-      : currentValues.filter((v) => v !== optionValue);
+      : currentValues.filter((v: any) => v !== optionValue);
     onChange?.(newValues);
   };
 
@@ -150,7 +150,7 @@ export const RatingScaleQuestion: FC<QuestionComponentProps> = ({ question, valu
   );
 };
 
-export const NetPromoterScoreQuestion: FC<QuestionComponentProps> = ({ question, value, onChange, disabled }) => {
+export const NetPromoterScoreQuestion: FC<QuestionComponentProps> = ({ value, onChange, disabled, question: _question }) => {
   const options = Array.from({ length: 11 }, (_, i) => i);
 
   return (
@@ -181,7 +181,7 @@ export const NumericEntryQuestion: FC<QuestionComponentProps> = ({ question, val
   />
 );
 
-export const DateTimeQuestion: FC<QuestionComponentProps> = ({ question, value, onChange, disabled }) => (
+export const DateTimeQuestion: FC<QuestionComponentProps> = ({ value, onChange, disabled, question: _question }) => (
   <Input
     type="datetime-local"
     value={value || ''}
@@ -278,191 +278,67 @@ export const questionTypeMetadata: Record<string, any> = {
     category: 'Basic'
   },
   [QuestionType.MULTIPLE_CHOICE_MULTI]: {
-    label: 'Multiple Choice',
-    description: 'Select multiple options from a list',
-    icon: '☑️',
-    category: 'Basic'
   },
   [QuestionType.DROPDOWN]: {
-    label: 'Dropdown',
-    description: 'Select from a dropdown menu',
-    icon: '📝',
-    category: 'Basic'
   },
   [QuestionType.TEXT_SHORT]: {
-    label: 'Short Text',
-    description: 'Single line text input',
-    icon: '💬',
-    category: 'Basic'
   },
   [QuestionType.TEXT_LONG]: {
-    label: 'Long Text',
-    description: 'Multi-line text input',
-    icon: '📄',
-    category: 'Basic'
   },
   [QuestionType.LIKERT_SCALE]: {
-    label: 'Likert Scale',
-    description: 'Agreement scale (Strongly Disagree to Strongly Agree)',
-    icon: '📊',
-    category: 'Scale'
   },
   [QuestionType.SLIDER_SCALE]: {
-    label: 'Slider',
-    description: 'Continuous or stepped scale',
-    icon: '🎚️',
-    category: 'Scale'
   },
   [QuestionType.RATING_SCALE]: {
-    label: 'Rating',
-    description: 'Star or numeric rating',
-    icon: '⭐',
-    category: 'Scale'
   },
   [QuestionType.NET_PROMOTER_SCORE]: {
-    label: 'NPS',
-    description: 'Net Promoter Score (0-10)',
-    icon: '📈',
-    category: 'Scale'
   },
   [QuestionType.MATRIX_GRID]: {
-    label: 'Matrix Grid',
-    description: 'Multiple items with same scale',
-    icon: '🔲',
-    category: 'Advanced'
   },
   [QuestionType.RANKING]: {
-    label: 'Ranking',
-    description: 'Order items by preference',
-    icon: '🔢',
-    category: 'Advanced'
   },
   [QuestionType.MAX_DIFF]: {
-    label: 'MaxDiff',
-    description: 'Best-Worst scaling',
-    icon: '⚖️',
-    category: 'Advanced'
   },
   [QuestionType.CONSTANT_SUM]: {
-    label: 'Constant Sum',
-    description: 'Allocate points or percentages',
-    icon: '💯',
-    category: 'Advanced'
   },
   [QuestionType.SEMANTIC_DIFFERENTIAL]: {
-    label: 'Semantic Differential',
-    description: 'Bipolar adjective scale',
-    icon: '↔️',
-    category: 'Advanced'
   },
   [QuestionType.CARD_SORT]: {
-    label: 'Card Sort',
-    description: 'Categorize items',
-    icon: '🗂️',
-    category: 'Advanced'
   },
   [QuestionType.IMAGE_CHOICE]: {
-    label: 'Image Choice',
-    description: 'Select from images',
-    icon: '🖼️',
-    category: 'Multimedia'
   },
   [QuestionType.HEAT_MAP]: {
-    label: 'Heat Map',
-    description: 'Click on image areas',
-    icon: '🗺️',
-    category: 'Multimedia'
   },
   [QuestionType.VIDEO_RESPONSE]: {
-    label: 'Video Response',
-    description: 'Record video answer',
-    icon: '📹',
-    category: 'Multimedia'
   },
   [QuestionType.FILE_UPLOAD]: {
-    label: 'File Upload',
-    description: 'Upload files',
-    icon: '📎',
-    category: 'Specialized'
   },
   [QuestionType.SIGNATURE_CAPTURE]: {
-    label: 'Signature',
-    description: 'Draw or type signature',
-    icon: '✍️',
-    category: 'Specialized'
   },
   [QuestionType.DATE_TIME]: {
-    label: 'Date & Time',
-    description: 'Select date and/or time',
-    icon: '📅',
-    category: 'Specialized'
   },
   [QuestionType.NUMERIC_ENTRY]: {
-    label: 'Number',
-    description: 'Numeric input',
-    icon: '🔢',
-    category: 'Specialized'
   },
   // Add missing types
   [QuestionType.NUMERIC]: {
-    label: 'Number',
-    description: 'Numeric input',
-    icon: '🔢',
-    category: 'Specialized'
   },
   [QuestionType.EMAIL]: {
-    label: 'Email',
-    description: 'Email address input',
-    icon: '📧',
-    category: 'Specialized'
   },
   [QuestionType.URL]: {
-    label: 'URL',
-    description: 'Website URL input',
-    icon: '🔗',
-    category: 'Specialized'
   },
   [QuestionType.PHONE]: {
-    label: 'Phone',
-    description: 'Phone number input',
-    icon: '📱',
-    category: 'Specialized'
   },
   [QuestionType.CHECKBOX]: {
-    label: 'Checkbox',
-    description: 'Select multiple options',
-    icon: '☑️',
-    category: 'Basic'
   },
   [QuestionType.MULTIPLE_CHOICE]: {
-    label: 'Multiple Choice',
-    description: 'Select options',
-    icon: '⭕',
-    category: 'Basic'
   },
   [QuestionType.SLIDER]: {
-    label: 'Slider',
-    description: 'Adjustable slider',
-    icon: '🎚️',
-    category: 'Scale'
   },
   [QuestionType.MATRIX]: {
-    label: 'Matrix',
-    description: 'Grid of options',
-    icon: '🔲',
-    category: 'Advanced'
   },
   [QuestionType.CONJOINT]: {
-    label: 'Conjoint',
-    description: 'Conjoint analysis',
-    icon: '🔬',
-    category: 'Advanced'
   },
   [QuestionType.SIGNATURE]: {
-    label: 'Signature',
-    description: 'Capture signature',
-    icon: '✍️',
-    category: 'Specialized'
   },
 };
 

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { RichTextEditor } from '@/components/editors/RichTextEditorV2';
-import { Check, X, AlertCircle, Play, RotateCw, Upload, Image, Type, List, Link2, Bold, Italic, Trash2, Move, Maximize2 } from 'lucide-react';
+import { Check, X, AlertCircle, Play, RotateCw, Upload, Image, Type, Trash2, Move, Maximize2 } from 'lucide-react';
 
 interface TestResult {
   name: string;
@@ -95,56 +95,59 @@ export default function TestImageUploadPage() {
     const results = [...testScenarios];
     
     for (let i = 0; i < results.length; i++) {
-      results[i].status = 'running';
+      const result = results[i];
+      if (!result) continue;
+      
+      result.status = 'running';
       setTestResults([...results]);
       
       await new Promise(resolve => setTimeout(resolve, 200));
       
       // Simulate test execution based on category
       try {
-        switch (results[i].category) {
+        switch (result.category) {
           case 'Image Upload':
-            if (results[i].name.includes('Upload image')) {
+            if (result.name.includes('Upload image')) {
               await simulateImageUpload();
-              results[i].status = 'passed';
-              results[i].message = 'Successfully simulated image upload';
-            } else if (results[i].name.includes('file types')) {
-              results[i].status = 'passed';
-              results[i].message = 'JPG, PNG, GIF supported';
-            } else if (results[i].name.includes('size limits')) {
-              results[i].status = 'passed';
-              results[i].message = '5MB limit enforced';
+              result.status = 'passed';
+              result.message = 'Successfully simulated image upload';
+            } else if (result.name.includes('file types')) {
+              result.status = 'passed';
+              result.message = 'JPG, PNG, GIF supported';
+            } else if (result.name.includes('size limits')) {
+              result.status = 'passed';
+              result.message = '5MB limit enforced';
             } else {
-              results[i].status = 'passed';
+              result.status = 'passed';
             }
             break;
             
           case 'Text Formatting':
             // Check if editor supports the feature
             const hasFormatting = content.length > 0;
-            results[i].status = hasFormatting ? 'passed' : 'failed';
-            results[i].message = hasFormatting ? 'Feature available' : 'Feature not found';
+            result.status = hasFormatting ? 'passed' : 'failed';
+            result.message = hasFormatting ? 'Feature available' : 'Feature not found';
             break;
             
           case 'Image Manipulation':
           case 'Image Positioning':
           case 'Image Management':
             // These require manual testing
-            results[i].status = 'passed';
-            results[i].message = 'Manual verification required';
+            result.status = 'passed';
+            result.message = 'Manual verification required';
             break;
             
           case 'Performance':
-            results[i].status = 'passed';
-            results[i].message = 'Performance within acceptable limits';
+            result.status = 'passed';
+            result.message = 'Performance within acceptable limits';
             break;
             
           default:
-            results[i].status = 'passed';
+            result.status = 'passed';
         }
-      } catch (error) {
-        results[i].status = 'failed';
-        results[i].message = error instanceof Error ? error.message : 'Test failed';
+      } catch (error: any) {
+        result.status = 'failed';
+        result.message = error instanceof Error ? error.message : 'Test failed';
       }
       
       setTestResults([...results]);
@@ -162,7 +165,7 @@ export default function TestImageUploadPage() {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = (event: any) => {
         const imgHtml = `<img src="${event.target?.result}" alt="${file.name}" style="max-width: 100%; height: auto;" />`;
         setContent(prev => prev + imgHtml);
       };
@@ -193,12 +196,12 @@ export default function TestImageUploadPage() {
 
   const testStats = {
     total: testResults.length,
-    passed: testResults.filter(t => t.status === 'passed').length,
-    failed: testResults.filter(t => t.status === 'failed').length,
-    pending: testResults.filter(t => t.status === 'pending').length,
+    passed: testResults.filter((t: any) => t.status === 'passed').length,
+    failed: testResults.filter((t: any) => t.status === 'failed').length,
+    pending: testResults.filter((t: any) => t.status === 'pending').length,
   };
 
-  const categories = [...new Set(testResults.map(t => t.category))];
+  const categories = [...new Set(testResults.map((t: any) => t.category))];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -309,7 +312,7 @@ export default function TestImageUploadPage() {
             </h2>
             
             <div className="space-y-4 max-h-[600px] overflow-y-auto">
-              {categories.map(category => (
+              {categories.map((category: any) => (
                 <div key={category} className="border border-gray-200 rounded-lg">
                   <div className="bg-gray-50 px-4 py-2 flex items-center gap-2 font-medium">
                     {getCategoryIcon(category)}
@@ -317,7 +320,7 @@ export default function TestImageUploadPage() {
                   </div>
                   <div className="divide-y divide-gray-100">
                     {testResults
-                      .filter(t => t.category === category)
+                      .filter((t: any) => t.category === category)
                       .map((test, idx) => (
                         <div key={idx} className="px-4 py-2 flex items-center justify-between">
                           <div className="flex items-center gap-3">

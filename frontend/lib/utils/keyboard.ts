@@ -154,7 +154,7 @@ export function getAriaKeyShortcuts(shortcuts: Array<{
   key: string;
 }>): string {
   return shortcuts
-    .map(shortcut => {
+    .map((shortcut: any) => {
       const parts: string[] = [];
       
       // Use the appropriate modifier for the platform

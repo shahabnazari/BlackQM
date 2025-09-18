@@ -22,33 +22,33 @@ import {
   Type,
   ChevronDown,
   ChevronUp,
-  AlertCircle,
+  _AlertCircle,
   Sparkles,
-  Zap,
+  _Zap,
   Info,
-  FileText,
-  Plus,
+  _FileText,
+  _Plus,
   LayoutGrid,
   Square,
   Grid3X3Icon,
-  Download,
-  Share2,
-  Filter,
-  SortAsc,
-  Search,
-  Copy,
-  MoreHorizontal,
-  Play,
-  Maximize2,
-  Minimize2,
-  RotateCcw,
+  _Download,
+  _Share2,
+  _Filter,
+  _SortAsc,
+  _Search,
+  _Copy,
+  _MoreHorizontal,
+  _Play,
+  _Maximize2,
+  _Minimize2,
+  _RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/apple-ui/Button';
 import {
   Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
+  _CardHeader,
+  _CardTitle,
+  _CardDescription,
   CardContent,
 } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/apple-ui/Badge/Badge';
@@ -183,8 +183,8 @@ export function StimuliUploadSystemV7({
     popupState,
     closePopup,
     showConfirm,
-    showWarning: showPopupWarning,
-    showInfo,
+    showWarning: _showPopupWarning,
+    _showInfo,
   } = usePopup();
 
   const { toasts, showSuccess, showError, showWarning, removeToast } =
@@ -224,13 +224,13 @@ export function StimuliUploadSystemV7({
     text
       .trim()
       .split(/\s+/)
-      .filter(word => word.length > 0).length;
-  const getCharCount = (text: string) => text.trim().length;
+      .filter((word: any) => word.length > 0).length;
+  const _getCharCount = (text: string) => text.trim().length;
 
   // LinkedIn-style hard limit - prevent typing beyond max words
   const handleTextInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
-    const currentWordCount = getWordCount(textInput);
+    const _currentWordCount = getWordCount(textInput);
     const newWordCount = getWordCount(newText);
 
     // If at max words and trying to add more (not deleting), block the input
@@ -373,7 +373,7 @@ export function StimuliUploadSystemV7({
 
     if (isEditingText && editingTextId) {
       setStimuli(prev =>
-        prev.map(s =>
+        prev.map((s: any) =>
           s.id === editingTextId
             ? { ...s, editedText: textInput, content: textInput }
             : s
@@ -393,7 +393,7 @@ export function StimuliUploadSystemV7({
           id,
           type: 'text',
           content: textInput,
-          title: `Text Statement ${stimuli.filter(s => s.type === 'text').length + 1}`,
+          title: `Text Statement ${stimuli.filter((s: any) => s.type === 'text').length + 1}`,
           metadata: {
             uploadedAt: new Date(),
           },
@@ -437,7 +437,7 @@ export function StimuliUploadSystemV7({
       showConfirm(
         `Are you sure you want to delete ${ids.length} stimulus/stimuli?`,
         () => {
-          const newStimuli = stimuli.filter(s => !ids.includes(s.id));
+          const newStimuli = stimuli.filter((s: any) => !ids.includes(s.id));
           setStimuli(newStimuli);
           setSelectedStimuli(new Set());
 
@@ -528,7 +528,7 @@ export function StimuliUploadSystemV7({
   }) => {
     const isActive = uploadMode === type;
     const isFull = stimuli.length >= totalCells;
-    const isDisabled = false; // Never disable buttons - allow type switching even with full grid
+    const _isDisabled = false; // Never disable buttons - allow type switching even with full grid
     const [isHovered, setIsHovered] = useState(false);
 
     const IconComponent = isActive && !isFull ? Upload : Icon;
@@ -861,7 +861,7 @@ export function StimuliUploadSystemV7({
                       grid.columns.map((column, colIndex) => {
                         // Calculate consistent column width based on total columns
                         const columnWidth = grid.columns.length > 9 ? 60 : 80;
-                        const cellSize =
+                        const _cellSize =
                           grid.columns.length > 9 ? 'w-12 h-14' : 'w-14 h-16';
 
                         return (

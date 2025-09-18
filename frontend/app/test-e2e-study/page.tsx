@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+// import { useRouter } from 'next/navigation'; // Will be used for test navigation
 
 interface TestResult {
   step: string;
@@ -11,7 +11,7 @@ interface TestResult {
 }
 
 export default function E2EStudyTestPage() {
-  const router = useRouter();
+  // const router = useRouter(); // Reserved for navigation after tests
   const [testResults, setTestResults] = useState<TestResult[]>([
     { step: 'Navigate to Study Creation Page', status: 'pending' },
     { step: 'Fill Basic Information', status: 'pending' },
@@ -34,7 +34,7 @@ export default function E2EStudyTestPage() {
       updated[index] = {
         ...updated[index],
         status,
-        message,
+        ...(message && { message }),
         timestamp: new Date().toISOString()
       };
       return updated;
@@ -82,7 +82,7 @@ export default function E2EStudyTestPage() {
       // Simulate navigation
       window.open('/studies/create', '_blank');
       updateTestStatus(0, 'passed', 'Study creation page opened successfully');
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(0, 'failed', `Failed to navigate: ${error}`);
       setIsRunning(false);
       return;
@@ -101,7 +101,7 @@ export default function E2EStudyTestPage() {
         instructions: testStudyData.instructions
       }));
       updateTestStatus(1, 'passed', 'Basic information saved to localStorage');
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(1, 'failed', `Failed to save basic info: ${error}`);
     }
 
@@ -113,7 +113,7 @@ export default function E2EStudyTestPage() {
     try {
       localStorage.setItem('studyCreation_stimuli', JSON.stringify(testStudyData.stimuli));
       updateTestStatus(2, 'passed', `Added ${testStudyData.stimuli.length} stimuli`);
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(2, 'failed', `Failed to add stimuli: ${error}`);
     }
 
@@ -125,7 +125,7 @@ export default function E2EStudyTestPage() {
     try {
       localStorage.setItem('studyCreation_gridSettings', JSON.stringify(testStudyData.gridSettings));
       updateTestStatus(3, 'passed', `Grid configured: ${testStudyData.gridSettings.columns}x${testStudyData.gridSettings.rows}`);
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(3, 'failed', `Failed to configure grid: ${error}`);
     }
 
@@ -137,7 +137,7 @@ export default function E2EStudyTestPage() {
     try {
       localStorage.setItem('studyCreation_advancedSettings', JSON.stringify(testStudyData.advancedSettings));
       updateTestStatus(4, 'passed', 'Advanced settings configured');
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(4, 'failed', `Failed to configure settings: ${error}`);
     }
 
@@ -164,7 +164,7 @@ export default function E2EStudyTestPage() {
       } else {
         updateTestStatus(5, 'failed', 'Some data missing from localStorage');
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(5, 'failed', `Persistence test failed: ${error}`);
     }
 
@@ -182,7 +182,7 @@ export default function E2EStudyTestPage() {
       };
       sessionStorage.setItem('studyPreview', JSON.stringify(previewData));
       updateTestStatus(6, 'passed', 'Study preview generated successfully');
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(6, 'failed', `Preview failed: ${error}`);
     }
 
@@ -224,7 +224,7 @@ export default function E2EStudyTestPage() {
         const error = await response.text();
         updateTestStatus(7, 'failed', `Server error: ${error}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(7, 'failed', `Submission failed: ${error}`);
     }
 
@@ -250,7 +250,7 @@ export default function E2EStudyTestPage() {
       } else {
         updateTestStatus(8, 'failed', 'No study ID available');
       }
-    } catch (error) {
+    } catch (error: any) {
       updateTestStatus(8, 'failed', `Verification failed: ${error}`);
     }
 
@@ -292,8 +292,8 @@ export default function E2EStudyTestPage() {
   };
 
   const totalTests = testResults.length;
-  const passedTests = testResults.filter(t => t.status === 'passed').length;
-  const failedTests = testResults.filter(t => t.status === 'failed').length;
+  const passedTests = testResults.filter((t: any) => t.status === 'passed').length;
+  const failedTests = testResults.filter((t: any) => t.status === 'failed').length;
   const successRate = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
 
   return (

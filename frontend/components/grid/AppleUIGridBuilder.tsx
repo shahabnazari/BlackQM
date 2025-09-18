@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Info, AlertCircle, Plus, Minus } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { AlertCircle, ChevronDown, Info, Minus, Plus } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 interface GridColumn {
   value: number;
@@ -217,11 +217,11 @@ const labelThemes = {
 };
 
 export const AppleUIGridBuilder: React.FC<AppleUIGridBuilderProps> = ({
-  studyId,
+  studyId: _studyId,
   onGridChange,
   totalStatements = 30,
-  minStatements = 20,
-  maxStatements = 100
+  minStatements: _minStatements = 20,
+  maxStatements: _maxStatements = 100
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [gridRange, setGridRange] = useState({ min: -3, max: 3 });
@@ -397,7 +397,7 @@ export const AppleUIGridBuilder: React.FC<AppleUIGridBuilderProps> = ({
 
   // Calculate dynamic cell size based on column count
   const cellHeight = useMemo(() => {
-    const maxCells = Math.max(...columns.map(c => c.cells));
+    const maxCells = Math.max(...columns.map((c: any) => c.cells));
     if (maxCells > 8) return 32;
     if (maxCells > 6) return 40;
     return 48;
@@ -422,10 +422,10 @@ export const AppleUIGridBuilder: React.FC<AppleUIGridBuilderProps> = ({
             <div className="relative">
               <select
                 value={gridRange.max}
-                onChange={(e) => handleRangeChange(parseInt(e.target.value))}
+                onChange={(e: any) => handleRangeChange(parseInt(e.target.value))}
                 className="appearance-none w-full px-4 py-2.5 pr-10 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               >
-                {[2, 3, 4, 5, 6].map(val => (
+                {[2, 3, 4, 5, 6].map((val: any) => (
                   <option key={val} value={val}>
                     −{val} to +{val} ({val * 2 + 1} columns)
                   </option>
@@ -443,7 +443,7 @@ export const AppleUIGridBuilder: React.FC<AppleUIGridBuilderProps> = ({
             <div className="relative">
               <select
                 value={selectedTheme}
-                onChange={(e) => handleThemeChange(e.target.value)}
+                onChange={(e: any) => handleThemeChange(e.target.value)}
                 className="appearance-none w-full px-4 py-2.5 pr-10 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               >
                 <option value="custom">Custom Labels</option>
@@ -463,7 +463,7 @@ export const AppleUIGridBuilder: React.FC<AppleUIGridBuilderProps> = ({
             <div className="relative">
               <select
                 value={distribution}
-                onChange={(e) => setDistribution(e.target.value as any)}
+                onChange={(e: any) => setDistribution(e.target.value as any)}
                 className="appearance-none w-full px-4 py-2.5 pr-10 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               >
                 <option value="bell">Bell Curve (Recommended)</option>
@@ -481,7 +481,7 @@ export const AppleUIGridBuilder: React.FC<AppleUIGridBuilderProps> = ({
           </label>
           <textarea
             value={instructions}
-            onChange={(e) => setInstructions(e.target.value.substring(0, 500))}
+            onChange={(e: any) => setInstructions(e.target.value.substring(0, 500))}
             placeholder="Please sort the statements according to your level of agreement..."
             className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
             rows={2}
@@ -521,7 +521,7 @@ export const AppleUIGridBuilder: React.FC<AppleUIGridBuilderProps> = ({
                       <input
                         type="text"
                         value={customLabels[column.value] || ''}
-                        onChange={(e) => handleCustomLabelChange(column.value, e.target.value)}
+                        onChange={(e: any) => handleCustomLabelChange(column.value, e.target.value)}
                         className="w-full text-xs text-center px-1 py-1 border-b-2 border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:outline-none bg-transparent transition-colors"
                         placeholder="Enter label"
                         maxLength={25}

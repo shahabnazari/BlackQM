@@ -62,7 +62,7 @@ export default function PreScreening({ onComplete, onBack }: PreScreeningProps) 
             <select
               className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               value={answers.familiarity}
-              onChange={(e) => handleChange('familiarity', e.target.value)}
+              onChange={(e: any) => handleChange('familiarity', e.target.value)}
             >
               <option value="">Select an option</option>
               <option value="very">Very familiar</option>
@@ -83,7 +83,7 @@ export default function PreScreening({ onComplete, onBack }: PreScreeningProps) 
                     name="participation"
                     value={option.toLowerCase()}
                     checked={answers.participation === option.toLowerCase()}
-                    onChange={(e) => handleChange('participation', e.target.value)}
+                    onChange={(e: any) => handleChange('participation', e.target.value)}
                     className="w-4 h-4 text-system-blue border-quaternary-fill focus:ring-2 focus:ring-blue-500/20"
                   />
                   <span className="text-label">{option}</span>
@@ -104,7 +104,7 @@ export default function PreScreening({ onComplete, onBack }: PreScreeningProps) 
                     name="timeAvailable"
                     value={option.toLowerCase()}
                     checked={answers.timeAvailable === option.toLowerCase()}
-                    onChange={(e) => handleChange('timeAvailable', e.target.value)}
+                    onChange={(e: any) => handleChange('timeAvailable', e.target.value)}
                     className="w-4 h-4 text-system-blue border-quaternary-fill focus:ring-2 focus:ring-blue-500/20"
                   />
                   <span className="text-label">{option}</span>
@@ -120,7 +120,7 @@ export default function PreScreening({ onComplete, onBack }: PreScreeningProps) 
             <select
               className="w-full px-4 py-3 rounded-lg border border-quaternary-fill bg-tertiary-background text-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               value={answers.age}
-              onChange={(e) => handleChange('age', e.target.value)}
+              onChange={(e: any) => handleChange('age', e.target.value)}
             >
               <option value="">Select age group</option>
               <option value="under18">Under 18</option>

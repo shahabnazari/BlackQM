@@ -61,7 +61,7 @@ class UploadService {
       const result = await response.json();
       console.log('Logo uploaded successfully:', result);
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Logo upload failed:', error);
       throw error;
     }
@@ -98,7 +98,7 @@ class UploadService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Signature upload failed:', error);
       throw error;
     }
@@ -142,7 +142,7 @@ class UploadService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Image upload failed:', error);
       throw error;
     }
@@ -170,7 +170,7 @@ class UploadService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Edited image upload failed:', error);
       throw error;
     }
@@ -248,7 +248,7 @@ class UploadService {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = (e) => {
+      reader.onload = (e: any) => {
         const img = new Image();
         img.src = e.target?.result as string;
         img.onload = () => {
@@ -324,7 +324,7 @@ class UploadService {
       if (!response.ok) {
         console.error('Failed to delete file');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Delete file error:', error);
     }
   }

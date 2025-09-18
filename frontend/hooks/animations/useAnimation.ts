@@ -6,9 +6,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { 
-  prefersReducedMotion,
+  _prefersReducedMotion,
   getAnimationDuration,
-  applyGpuAcceleration,
+  _applyGpuAcceleration,
   raf,
   cancelRaf
 } from '@/lib/animations/utils';
@@ -44,8 +44,8 @@ export const useAnimation = (
   const {
     duration = ANIMATION_TIMING.normal,
     delay = 0,
-    easing = 'ease',
-    spring,
+    _easing = 'ease',
+    _spring,
     respectReducedMotion = true,
     autoStart = false,
   } = options;

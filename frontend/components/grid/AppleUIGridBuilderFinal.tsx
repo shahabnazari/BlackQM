@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Info, AlertCircle, Plus, Minus, RotateCcw, Grid3X3 } from 'lucide-react';
 import RichTextEditor from '@/components/editors/RichTextEditorV2';
+import { AnimatePresence, motion } from 'framer-motion';
+import { AlertCircle, ChevronDown, Grid3X3, Info, Minus, Plus, RotateCcw } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface GridColumn {
   value: number;
@@ -167,7 +167,7 @@ const labelThemes = {
 };
 
 export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = ({
-  studyId,
+  studyId: _studyId,
   onGridChange,
   initialCells = DEFAULT_INITIAL_CELLS
 }) => {
@@ -176,14 +176,14 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
   const [columns, setColumns] = useState<GridColumn[]>([]);
   const [instructions, setInstructions] = useState('<p>Please sort the items according to your level of agreement.</p>');
   const [distribution, setDistribution] = useState<'bell' | 'flat' | 'custom'>('bell');
-  const [symmetry, setSymmetry] = useState(true); // Always enforce symmetry
+  const [_symmetry, _setSymmetry] = useState(true); // Always enforce symmetry
   const [columnWidth, setColumnWidth] = useState(80);
   const [manuallyEdited, setManuallyEdited] = useState(false);
   const [targetCells, setTargetCells] = useState(initialCells);
   const [selectedTheme, setSelectedTheme] = useState<keyof typeof labelThemes>('agreement');
   const [customLabels, setCustomLabels] = useState<Record<number, string>>({});
   const [showModeChangeNotification, setShowModeChangeNotification] = useState(false);
-  const [previousDistribution, setPreviousDistribution] = useState<'bell' | 'flat' | 'custom'>('bell');
+  const [_previousDistribution, setPreviousDistribution] = useState<'bell' | 'flat' | 'custom'>('bell');
 
   // Calculate column width dynamically - smaller for larger grids
   useEffect(() => {
@@ -460,7 +460,7 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
 
   // Calculate dynamic cell size
   const cellHeight = useMemo(() => {
-    const maxCells = Math.max(...columns.map(c => c.cells), 1);
+    const maxCells = Math.max(...columns.map((c: any) => c.cells), 1);
     const columnCount = columns.length;
     
     // Smaller cells for larger grids
@@ -530,10 +530,10 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
             <div className="relative">
               <select
                 value={gridRange.max}
-                onChange={(e) => handleRangeChange(parseInt(e.target.value))}
+                onChange={(e: any) => handleRangeChange(parseInt(e.target.value))}
                 className="appearance-none w-full px-3 py-2 pr-10 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {[2, 3, 4, 5, 6].map(val => (
+                {[2, 3, 4, 5, 6].map((val: any) => (
                   <option key={val} value={val}>
                     −{val} to +{val}
                   </option>
@@ -551,7 +551,7 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
             <div className="relative">
               <select
                 value={selectedTheme}
-                onChange={(e) => {
+                onChange={(e: any) => {
                   setSelectedTheme(e.target.value as keyof typeof labelThemes);
                   setManuallyEdited(false);
                 }}
@@ -576,7 +576,7 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
             <div className="relative">
               <select
                 value={manuallyEdited ? 'custom' : distribution}
-                onChange={(e) => {
+                onChange={(e: any) => {
                   const value = e.target.value;
                   if (value === 'custom') return;
                   handleDistributionChange(value as 'bell' | 'flat');
@@ -602,7 +602,7 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
             <input
               type="number"
               value={targetCells}
-              onChange={(e) => {
+              onChange={(e: any) => {
                 const val = Math.min(MAX_CELLS, Math.max(1, parseInt(e.target.value) || 1));
                 setTargetCells(val);
                 setManuallyEdited(false);
@@ -743,7 +743,7 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
                       <input
                         type="text"
                         value={customLabels[column.value] || ''}
-                        onChange={(e) => {
+                        onChange={(e: any) => {
                           setCustomLabels(prev => ({
                             ...prev,
                             [column.value]: e.target.value

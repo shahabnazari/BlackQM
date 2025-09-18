@@ -108,20 +108,21 @@ interface GridState {
   getFilledCells: () => GridCell[];
 }
 
-const defaultConfig: GridConfiguration = {
-  rangeMin: -3,
-  rangeMax: 3,
-  columns: [],
-  symmetry: true,
-  totalCells: 0,
-  distribution: 'bell',
-  instructions: 'Please sort the items according to your level of agreement.',
-  allowAddColumns: true,
-  allowRemoveColumns: true,
-  allowCellAdjustment: true,
-  maxColumns: 13,
-  responsive: true,
-};
+// Default config - reserved for future use
+// const defaultConfig: GridConfiguration = {
+//   rangeMin: -3,
+//   rangeMax: 3,
+//   columns: [],
+//   symmetry: true,
+//   totalCells: 0,
+//   distribution: 'bell',
+//   instructions: 'Please sort the items according to your level of agreement.',
+//   allowAddColumns: true,
+//   allowRemoveColumns: true,
+//   allowCellAdjustment: true,
+//   maxColumns: 13,
+//   responsive: true,
+// };
 
 export const useGridStore = create<GridState>()(
   devtools(
@@ -284,7 +285,7 @@ export const useGridStore = create<GridState>()(
         
         assignStimulusToCell: (cellId, stimulusId) => {
           set((state) => ({
-            cells: state.cells.map(cell =>
+            cells: state.cells.map((cell: any) =>
               cell.id === cellId ? { ...cell, stimulusId } : cell
             ),
           }));
@@ -292,7 +293,7 @@ export const useGridStore = create<GridState>()(
         
         clearCell: (cellId) => {
           set((state) => ({
-            cells: state.cells.map(cell =>
+            cells: state.cells.map((cell: any) =>
               cell.id === cellId ? { ...cell, stimulusId: undefined } : cell
             ),
           }));
@@ -306,7 +307,7 @@ export const useGridStore = create<GridState>()(
             if (!cell1 || !cell2) return state;
             
             return {
-              cells: state.cells.map(cell => {
+              cells: state.cells.map((cell: any) => {
                 if (cell.id === cellId1) {
                   return { ...cell, stimulusId: cell2.stimulusId };
                 }
@@ -503,8 +504,9 @@ export const useGridStore = create<GridState>()(
           localStorage.setItem('grid-config', JSON.stringify(state.config));
         },
         
-        loadGrid: (studyId) => {
+        loadGrid: (_studyId) => {
           // Load from localStorage for now
+          // studyId will be used when backend integration is complete
           const saved = localStorage.getItem('grid-config');
           if (saved) {
             const config = JSON.parse(saved);
@@ -541,12 +543,12 @@ export const useGridStore = create<GridState>()(
         
         getEmptyCells: () => {
           const state = get();
-          return state.cells.filter(cell => !cell.stimulusId);
+          return state.cells.filter((cell: any) => !cell.stimulusId);
         },
         
         getFilledCells: () => {
           const state = get();
-          return state.cells.filter(cell => cell.stimulusId);
+          return state.cells.filter((cell: any) => cell.stimulusId);
         },
       }),
       {
@@ -569,7 +571,7 @@ function generateColumns(
   distribution: 'bell' | 'flat' | 'custom',
   totalCells: number
 ): GridColumn[] {
-  const columnCount = max - min + 1;
+  // const columnCount = max - min + 1; // Will be used for distribution calculations
   const columns: GridColumn[] = [];
   
   for (let i = min; i <= max; i++) {

@@ -1,5 +1,5 @@
-import { Node, mergeAttributes, NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Node, _mergeAttributes, NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react';
+import React, { useState, useRef, _useEffect, useCallback } from 'react';
 import { 
   Move, 
   X, 
@@ -7,7 +7,7 @@ import {
   AlignLeft, 
   AlignCenter, 
   AlignRight,
-  Maximize2,
+  _Maximize2,
   Square,
   Image as ImageIcon
 } from 'lucide-react';
@@ -132,11 +132,11 @@ const FloatingImageComponent = ({ node, updateAttributes, deleteNode, selected }
     updateAttributes({ wrapMode: mode });
   };
 
-  const handleAlignmentChange = (align: string) => {
+  const _handleAlignmentChange = (align: string) => {
     updateAttributes({ alignment: align });
   };
 
-  const handleMarginChange = (newMargin: number) => {
+  const _handleMarginChange = (newMargin: number) => {
     updateAttributes({ margin: newMargin });
   };
 

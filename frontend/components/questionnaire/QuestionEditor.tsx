@@ -20,7 +20,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   onCancel,
   onDelete,
   questionTypes,
-  existingQuestions
+  existingQuestions: _existingQuestions  // For future skip logic validation
 }) => {
   const [editedQuestion, setEditedQuestion] = React.useState<Question>(question);
 
@@ -51,7 +51,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
             </label>
             <textarea
               value={editedQuestion.text}
-              onChange={(e) => setEditedQuestion({ ...editedQuestion, text: e.target.value })}
+              onChange={(e: any) => setEditedQuestion({ ...editedQuestion, text: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
               rows={3}
             />
@@ -64,10 +64,10 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
             </label>
             <select
               value={editedQuestion.type}
-              onChange={(e) => setEditedQuestion({ ...editedQuestion, type: e.target.value as QuestionType })}
+              onChange={(e: any) => setEditedQuestion({ ...editedQuestion, type: e.target.value as QuestionType })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
             >
-              {questionTypes.map(type => (
+              {questionTypes.map((type: any) => (
                 <option key={type} value={type}>
                   {type.replace(/_/g, ' ')}
                 </option>
@@ -81,7 +81,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
               <input
                 type="checkbox"
                 checked={editedQuestion.required}
-                onChange={(e) => setEditedQuestion({ ...editedQuestion, required: e.target.checked })}
+                onChange={(e: any) => setEditedQuestion({ ...editedQuestion, required: e.target.checked })}
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -104,7 +104,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                     <input
                       type="text"
                       value={option.text}
-                      onChange={(e) => {
+                      onChange={(e: any) => {
                         const newOptions = [...(editedQuestion.options || [])];
                         newOptions[index].text = e.target.value;
                         setEditedQuestion({ ...editedQuestion, options: newOptions });

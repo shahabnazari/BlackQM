@@ -54,7 +54,7 @@ export default function ValidationTestPage() {
               name="title"
               placeholder="Enter your study title (10-100 characters)"
               value={title}
-              onChange={(e) => {
+              onChange={(e: any) => {
                 setTitle(e.target.value);
                 // Clear error when requirement is met
                 if (e.target.value.length >= 10 && e.target.value.length <= 100) {
@@ -93,7 +93,7 @@ export default function ValidationTestPage() {
               rows={4}
               placeholder="Describe your study (50-500 characters if provided)"
               value={description}
-              onChange={(e) => {
+              onChange={(e: any) => {
                 setDescription(e.target.value);
                 // Clear error when requirement is met or field is empty
                 if (!e.target.value || e.target.value.length >= 50) {

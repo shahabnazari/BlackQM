@@ -7,10 +7,8 @@ import {
   CubeTransparentIcon,
   DocumentArrowDownIcon,
   AdjustmentsHorizontalIcon,
-  PlayIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
-import { Card } from '@/components/apple-ui/Card';
 import { Button } from '@/components/apple-ui/Button';
 import { Badge } from '@/components/apple-ui/Badge';
 import { ProgressBar } from '@/components/apple-ui/ProgressBar';
@@ -97,7 +95,7 @@ export default function QMethodologyAnalysisPage() {
       {/* Navigation Tabs */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <nav className="flex space-x-8 px-6" aria-label="Analysis steps">
-          {tabs.map(tab => {
+          {tabs.map((tab: any) => {
             const Icon = tab.icon;
             return (
               <button

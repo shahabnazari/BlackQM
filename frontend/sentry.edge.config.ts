@@ -9,7 +9,7 @@ Sentry.init({
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
   
   // Edge-specific configuration
-  beforeSend(event) {
+  beforeSend(event: any) {
     // Add edge context
     event.contexts = {
       ...event.contexts,

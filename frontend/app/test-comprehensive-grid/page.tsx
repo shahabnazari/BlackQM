@@ -23,7 +23,7 @@ interface TestResult {
 export default function ComprehensiveGridTest() {
   const [gridConfig, setGridConfig] = useState<any>(null);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
-  const [currentTest, setCurrentTest] = useState('');
+  // const [currentTest, setCurrentTest] = useState(''); // Reserved for individual test tracking
   const [showUpload, setShowUpload] = useState(false);
 
   const handleGridChange = useCallback((config: any) => {
@@ -168,7 +168,7 @@ export default function ComprehensiveGridTest() {
             </div>
             <div className="mt-4 pt-4 border-t">
               <div className="text-lg font-semibold">
-                Score: {testResults.filter(r => r.passed).length}/{testResults.length} tests passed
+                Score: {testResults.filter((r: any) => r.passed).length}/{testResults.length} tests passed
               </div>
             </div>
           </div>

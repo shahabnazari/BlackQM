@@ -1,0 +1,100 @@
+// Phase 6.86: AI Usage Tracking Models
+// Add this to your main schema.prisma file
+
+model AIUsage {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint         String   @db.VarChar(100)
+  model            String   @db.VarChar(50)
+  promptTokens     Int      @default(0) @map("prompt_tokens")
+  completionTokens Int      @default(0) @map("completion_tokens")
+  totalTokens      Int      @default(0) @map("total_tokens")
+  cost             Decimal  @default(0) @db.Decimal(10, 6)
+  responseTimeMs   Int?     @map("response_time_ms")
+  status           String   @default("success") @db.VarChar(20)
+  errorMessage     String?  @map("error_message")
+  metadata         Json?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([model])
+  @@index([status])
+  @@map("ai_usage")
+}
+
+model AIBudgetLimit {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyLimitUsd   Decimal  @default(10.00) @map("daily_limit_usd") @db.Decimal(10, 2)
+  monthlyLimitUsd Decimal  @default(300.00) @map("monthly_limit_usd") @db.Decimal(10, 2)
+  alertThreshold  Decimal  @default(0.80) @map("alert_threshold") @db.Decimal(3, 2)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("ai_budget_limits")
+}
+
+model AICache {
+  id             String   @id @default(uuid())
+  cacheKey       String   @unique @map("cache_key") @db.VarChar(255)
+  promptHash     String   @map("prompt_hash") @db.VarChar(64)
+  model          String   @db.VarChar(50)
+  response       Json
+  tokensSaved    Int      @default(0) @map("tokens_saved")
+  costSaved      Decimal  @default(0) @map("cost_saved") @db.Decimal(10, 6)
+  hitCount       Int      @default(0) @map("hit_count")
+  expiresAt      DateTime @map("expires_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  lastAccessedAt DateTime @default(now()) @map("last_accessed_at")
+
+  @@index([cacheKey])
+  @@index([expiresAt])
+  @@index([promptHash])
+  @@map("ai_cache")
+}
+
+model AIRateLimit {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  windowStart  DateTime @map("window_start")
+  windowEnd    DateTime @map("window_end")
+  requestCount Int      @default(0) @map("request_count")
+  maxRequests  Int      @default(10) @map("max_requests")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([windowStart, windowEnd])
+  @@map("ai_rate_limits")
+}
+
+// Enum for AI model types
+enum AIModel {
+  GPT_35_TURBO     @map("gpt-3.5-turbo")
+  GPT_35_TURBO_16K @map("gpt-3.5-turbo-16k")
+  GPT_4            @map("gpt-4")
+  GPT_4_TURBO      @map("gpt-4-turbo")
+  GPT_4_VISION     @map("gpt-4-vision")
+}
+
+// Enum for AI request status
+enum AIRequestStatus {
+  SUCCESS @map("success")
+  ERROR   @map("error")
+  TIMEOUT @map("timeout")
+  RATE_LIMITED @map("rate_limited")
+  BUDGET_EXCEEDED @map("budget_exceeded")
+}
+
+// Add these relations to your existing User model:
+// model User {
+//   ...existing fields...
+//   aiUsage       AIUsage[]
+//   aiBudgetLimit AIBudgetLimit?
+//   aiRateLimits  AIRateLimit[]
+// }

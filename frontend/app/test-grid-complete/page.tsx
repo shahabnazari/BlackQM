@@ -35,7 +35,8 @@ export default function TestGridComplete() {
     
     // Check if label theme is present
     if (config.labelTheme) {
-      newResults[0].status = 'pass';
+      const result = newResults[0];
+      if (result) result.status = 'pass';
     }
     
     // Check distribution types
@@ -43,32 +44,38 @@ export default function TestGridComplete() {
       const cellCounts = config.columns.map((c: any) => c.cells);
       const min = Math.min(...cellCounts);
       const max = Math.max(...cellCounts);
-      newResults[5].status = max - min <= 1 ? 'pass' : 'fail';
+      const result = newResults[5];
+      if (result) result.status = max - min <= 1 ? 'pass' : 'fail';
     }
     
     if (config.distribution === 'bell') {
       const columns = config.columns;
       const n = columns.length;
-      const isSymmetric = columns.slice(0, Math.floor(n/2)).every((col: any, i: number) => 
-        col.cells === columns[n - 1 - i].cells
-      );
-      newResults[6].status = isSymmetric ? 'pass' : 'fail';
+      const isSymmetric = columns.slice(0, Math.floor(n/2)).every((col: any, i: number) => {
+        const opposite = columns[n - 1 - i];
+        return opposite && col.cells === opposite.cells;
+      });
+      const result = newResults[6];
+      if (result) result.status = isSymmetric ? 'pass' : 'fail';
     }
     
     // Check cell counter
     if (config.totalCells <= 60) {
-      newResults[7].status = 'pass';
+      const result = newResults[7];
+      if (result) result.status = 'pass';
     }
     
     // Check grid independence (no totalStatements prop)
-    newResults[10].status = 'pass';
+    const result = newResults[10];
+    if (result) result.status = 'pass';
     
     setTestResults(newResults);
   };
 
   const markTest = (index: number, status: 'pass' | 'fail') => {
     const newResults = [...testResults];
-    newResults[index].status = status;
+    const result = newResults[index];
+    if (result) result.status = status;
     setTestResults(newResults);
   };
 
@@ -235,7 +242,7 @@ export default function TestGridComplete() {
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold">
-                  {testResults.filter(t => t.status === 'pass').length}
+                  {testResults.filter((t: any) => t.status === 'pass').length}
                 </span>
               </div>
               <span className="text-sm text-gray-600">Passed</span>
@@ -243,7 +250,7 @@ export default function TestGridComplete() {
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold">
-                  {testResults.filter(t => t.status === 'fail').length}
+                  {testResults.filter((t: any) => t.status === 'fail').length}
                 </span>
               </div>
               <span className="text-sm text-gray-600">Failed</span>
@@ -251,7 +258,7 @@ export default function TestGridComplete() {
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold">
-                  {testResults.filter(t => t.status === 'pending').length}
+                  {testResults.filter((t: any) => t.status === 'pending').length}
                 </span>
               </div>
               <span className="text-sm text-gray-600">Pending</span>

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 interface BreadcrumbItem {
   label: string;
@@ -107,14 +107,14 @@ export function Breadcrumbs({
     // Format normally
     return segment
       .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word: any) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   };
 
   // Generate preview data based on context
   const generatePreview = (
     segment: string,
-    href: string
+    _href: string
   ): BreadcrumbItem['preview'] => {
     const previewMap: Record<string, BreadcrumbItem['preview']> = {
       studies: {

@@ -1,25 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useGridStore } from '@/lib/stores/grid-store';
-import { 
-  Plus, 
-  Minus, 
-  ChevronDown, 
-  Grid3x3,
-  Maximize2,
-  Settings,
-  RefreshCw,
-  Save,
-  AlertCircle,
-  Lock,
-  Unlock,
-  ChevronLeft,
-  ChevronRight,
-  ZoomIn,
-  ZoomOut
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+    AlertCircle,
+    ChevronLeft,
+    ChevronRight,
+    Grid3x3,
+    Minus,
+    Plus,
+    RefreshCw,
+    Settings,
+    ZoomIn,
+    ZoomOut
 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface GridColumn {
   value: number;
@@ -38,24 +33,24 @@ interface EnhancedGridBuilderProps {
 }
 
 export const EnhancedGridBuilder: React.FC<EnhancedGridBuilderProps> = ({
-  studyId,
+  studyId: _studyId,
   onGridChange,
   allowColumnManagement = true,
-  showAdvancedOptions = true,
+  showAdvancedOptions: _showAdvancedOptions = true,
   minCells = 10,
   maxCells = 100
 }) => {
   const gridContainerRef = useRef<HTMLDivElement>(null);
   const prevConfigRef = useRef<any>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [autoBalance, setAutoBalance] = useState(false);
+  const [_autoBalance, _setAutoBalance] = useState(false);
   const [lockSymmetry, setLockSymmetry] = useState(true);
-  const [enableAnimation, setEnableAnimation] = useState(true);
+  const [_enableAnimation, _setEnableAnimation] = useState(true);
   const [gridScrollOffset, setGridScrollOffset] = useState(0);
   
   const {
     config,
-    isValid,
+    isValid: _isValid,
     validationErrors,
     gridScale,
     gridOverflow,
@@ -70,7 +65,7 @@ export const EnhancedGridBuilder: React.FC<EnhancedGridBuilderProps> = ({
     applyDistribution,
     setGridScale,
     toggleGridLines,
-    toggleLabels,
+    toggleLabels: _toggleLabels,
     validateGrid,
     calculateGridOverflow,
     updateViewport
@@ -312,10 +307,10 @@ export const EnhancedGridBuilder: React.FC<EnhancedGridBuilderProps> = ({
                   <label className="text-sm font-medium text-gray-700">Grid Range</label>
                   <select
                     value={config.rangeMax}
-                    onChange={(e) => updateRange(-parseInt(e.target.value), parseInt(e.target.value))}
+                    onChange={(e: any) => updateRange(-parseInt(e.target.value), parseInt(e.target.value))}
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
-                    {[1, 2, 3, 4, 5, 6].map(val => (
+                    {[1, 2, 3, 4, 5, 6].map((val: any) => (
                       <option key={val} value={val}>-{val} to +{val}</option>
                     ))}
                   </select>
@@ -326,7 +321,7 @@ export const EnhancedGridBuilder: React.FC<EnhancedGridBuilderProps> = ({
                   <label className="text-sm font-medium text-gray-700">Distribution</label>
                   <select
                     value={config.distribution}
-                    onChange={(e) => applyDistribution(e.target.value as any)}
+                    onChange={(e: any) => applyDistribution(e.target.value as any)}
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="bell">Bell Curve (Balanced)</option>
@@ -341,7 +336,7 @@ export const EnhancedGridBuilder: React.FC<EnhancedGridBuilderProps> = ({
                     <input
                       type="checkbox"
                       checked={lockSymmetry}
-                      onChange={(e) => setLockSymmetry(e.target.checked)}
+                      onChange={(e: any) => setLockSymmetry(e.target.checked)}
                       className="rounded border-gray-300"
                     />
                     <span className="text-sm text-gray-700">Lock Symmetry</span>
@@ -433,7 +428,7 @@ export const EnhancedGridBuilder: React.FC<EnhancedGridBuilderProps> = ({
                       <input
                         type="text"
                         value={column.customLabel || column.label}
-                        onChange={(e) => updateColumnLabel(index, e.target.value)}
+                        onChange={(e: any) => updateColumnLabel(index, e.target.value)}
                         className="w-24 text-xs text-center border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none px-1 py-0.5 bg-transparent"
                         placeholder="Label"
                       />

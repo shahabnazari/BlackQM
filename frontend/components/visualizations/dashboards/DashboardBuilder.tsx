@@ -158,8 +158,8 @@ export const DashboardBuilder: React.FC<DashboardBuilderProps> = ({
 
   // Remove widget
   const removeWidget = useCallback((widgetId: string) => {
-    setWidgets(widgets.filter(w => w.id !== widgetId));
-    setLayout(layout.filter(l => l.i !== widgetId));
+    setWidgets(widgets.filter((w: any) => w.id !== widgetId));
+    setLayout(layout.filter((l: any) => l.i !== widgetId));
   }, [widgets, layout]);
 
   // Render widget content
@@ -245,7 +245,7 @@ export const DashboardBuilder: React.FC<DashboardBuilderProps> = ({
                   <div className="space-y-1">
                     {widgetCatalog
                       .find(w => widgets.find(widget => widget.id === selectedWidget)?.type === w.type)
-                      ?.recommended?.map(rec => (
+                      ?.recommended?.map((rec: any) => (
                         <button
                           key={rec}
                           onClick={() => addWidget(rec as WidgetType)}
@@ -260,7 +260,7 @@ export const DashboardBuilder: React.FC<DashboardBuilderProps> = ({
 
               {/* Widget Catalog */}
               <div className="space-y-2">
-                {widgetCatalog.map(widget => (
+                {widgetCatalog.map((widget: any) => (
                   <motion.button
                     key={widget.type}
                     whileHover={{ scale: 1.02 }}
@@ -312,7 +312,7 @@ export const DashboardBuilder: React.FC<DashboardBuilderProps> = ({
           onDragStart={() => setIsDragging(true)}
           onDragStop={() => setIsDragging(false)}
         >
-          {widgets.map(widget => (
+          {widgets.map((widget: any) => (
             <div
               key={widget.id}
               className={`bg-white rounded-xl shadow-lg overflow-hidden ${
@@ -333,7 +333,7 @@ export const DashboardBuilder: React.FC<DashboardBuilderProps> = ({
                   </button>
                   {!readOnly && (
                     <button
-                      onClick={(e) => {
+                      onClick={(e: any) => {
                         e.stopPropagation();
                         removeWidget(widget.id);
                       }}

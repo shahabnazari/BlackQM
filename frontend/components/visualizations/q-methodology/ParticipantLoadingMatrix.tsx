@@ -94,7 +94,7 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
   });
 
   const yScale = scaleBand({
-    domain: sortedData.map(d => d.participant),
+    domain: sortedData.map((d: any) => d.participant),
     range: [0, innerHeight],
     padding: 0.05,
   });
@@ -116,12 +116,12 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
   // Statistics
   const stats = {
     totalParticipants: data.length,
-    flaggedParticipants: data.filter(d => d.flagged).length,
+    flaggedParticipants: data.filter((d: any) => d.flagged).length,
     meanCommunality: data.reduce((sum, d) => sum + d.communality, 0) / data.length,
     meanReliability: data.reduce((sum, d) => sum + d.reliability, 0) / data.length,
     factorCounts: factors.reduce((acc, factor) => ({
       ...acc,
-      [factor]: data.filter(d => d.definingFactor === factor).length
+      [factor]: data.filter((d: any) => d.definingFactor === factor).length
     }), {} as { [key: string]: number })
   };
 
@@ -233,7 +233,7 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
 
   const renderBarsView = () => {
     const selectedData = selectedFactor 
-      ? sortedData.map(d => ({ participant: d.participant, loading: d.loadings[selectedFactor] || 0, communality: d.communality }))
+      ? sortedData.map((d: any) => ({ participant: d.participant, loading: d.loadings[selectedFactor] || 0, communality: d.communality }))
       : [];
 
     if (!selectedFactor) {

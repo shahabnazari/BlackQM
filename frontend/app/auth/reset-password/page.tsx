@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { Button as AppleButton } from '@/components/apple-ui/Button/Button';
-import { TextField as AppleTextField } from '@/components/apple-ui/TextField/TextField';
 import { Card as AppleCard } from '@/components/apple-ui/Card/Card';
-import { LoadingOverlay } from '@/components/auth/LoadingOverlay';
+import { TextField as AppleTextField } from '@/components/apple-ui/TextField/TextField';
 import { AuthError } from '@/components/auth/AuthError';
+import { LoadingOverlay } from '@/components/auth/LoadingOverlay';
 import { usePasswordReset } from '@/hooks/auth/usePasswordReset';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -66,7 +66,7 @@ export default function ResetPasswordPage() {
       setTimeout(() => {
         router.push('/auth/login');
       }, 3000);
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to reset password');
     }
   };
@@ -239,11 +239,7 @@ export default function ResetPasswordPage() {
                 placeholder="Confirm new password"
                 required
                 autoComplete="new-password"
-                error={
-                  confirmPassword && password !== confirmPassword
-                    ? 'Passwords do not match'
-                    : undefined
-                }
+                {...(confirmPassword && password !== confirmPassword && { error: 'Passwords do not match' })}
               />
             </div>
 

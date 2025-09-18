@@ -1,27 +1,27 @@
 'use client';
 
-import React, { useState } from 'react';
+import {
+    CheckIcon,
+    EyeIcon,
+    EyeSlashIcon,
+    XMarkIcon,
+} from '@heroicons/react/24/outline';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { motion } from 'framer-motion';
-import {
-  EyeIcon,
-  EyeSlashIcon,
-  CheckIcon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline';
 
-import { useRegister } from '@/hooks/auth/useRegister';
 import { Button } from '@/components/apple-ui/Button/Button';
 import { Card } from '@/components/apple-ui/Card/Card';
 import { TextField } from '@/components/apple-ui/TextField/TextField';
-import { LoadingOverlay } from '@/components/auth/LoadingOverlay';
 import { AuthError } from '@/components/auth/AuthError';
 import { FormErrors } from '@/components/auth/FormErrors';
+import { LoadingOverlay } from '@/components/auth/LoadingOverlay';
 import { GoogleIcon, MicrosoftIcon, OrcidIcon } from '@/components/icons';
+import { useRegister } from '@/hooks/auth/useRegister';
 
 // Validation schema
 const registerSchema = z
@@ -192,7 +192,7 @@ export default function RegisterPage() {
             {Object.keys(errors).length > 0 && (
               <div className="mb-4">
                 <FormErrors
-                  errors={Object.values(errors).map(e => e?.message || '')}
+                  errors={Object.values(errors).map((e: any) => e?.message || '')}
                 />
               </div>
             )}
@@ -208,7 +208,7 @@ export default function RegisterPage() {
                       type="text"
                       placeholder="John Doe"
                       autoComplete="name"
-                      error={errors.name?.message}
+                      {...(errors.name?.message && { error: errors.name.message })}
                       {...register('name')}
                     />
                   </div>
@@ -219,7 +219,7 @@ export default function RegisterPage() {
                       type="email"
                       placeholder="you@example.com"
                       autoComplete="email"
-                      error={errors.email?.message}
+                      {...(errors.email?.message && { error: errors.email.message })}
                       {...register('email')}
                     />
                   </div>
@@ -285,7 +285,7 @@ export default function RegisterPage() {
                         type="text"
                         placeholder="University or Institution"
                         autoComplete="organization"
-                        error={errors.organization?.message}
+                        {...(errors.organization?.message && { error: errors.organization.message })}
                         {...register('organization')}
                       />
                     </div>
@@ -310,7 +310,7 @@ export default function RegisterPage() {
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Enter a strong password"
                         autoComplete="new-password"
-                        error={errors.password?.message}
+                        {...(errors.password?.message && { error: errors.password.message })}
                         {...register('password')}
                       />
                       <button
@@ -397,7 +397,7 @@ export default function RegisterPage() {
                         type={showConfirmPassword ? 'text' : 'password'}
                         placeholder="Re-enter your password"
                         autoComplete="new-password"
-                        error={errors.confirmPassword?.message}
+                        {...(errors.confirmPassword?.message && { error: errors.confirmPassword.message })}
                         {...register('confirmPassword')}
                       />
                       <button

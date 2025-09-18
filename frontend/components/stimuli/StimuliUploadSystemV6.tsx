@@ -13,7 +13,7 @@ import {
   X,
   Edit2,
   Trash2,
-  Eye,
+  _Eye,
   Grid3x3,
   CheckCircle,
   Image,
@@ -22,29 +22,29 @@ import {
   Type,
   ChevronDown,
   ChevronUp,
-  AlertCircle,
+  _AlertCircle,
   Sparkles,
-  Zap,
+  _Zap,
   Info,
-  FileText,
-  Plus,
+  _FileText,
+  _Plus,
   LayoutGrid,
   Square,
   Grid3X3Icon,
-  Download,
-  Share2,
-  Filter,
-  SortAsc,
+  _Download,
+  _Share2,
+  _Filter,
+  _SortAsc,
   Search,
-  Copy,
-  MoreHorizontal,
+  _Copy,
+  _MoreHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/apple-ui/Button';
 import {
   Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
+  _CardHeader,
+  _CardTitle,
+  _CardDescription,
   CardContent,
 } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/apple-ui/Badge/Badge';
@@ -159,7 +159,7 @@ export function StimuliUploadSystemV6({
     showError,
     showConfirm,
     showWarning,
-    showInfo,
+    _showInfo,
   } = usePopup();
 
   // Initialize locked type if we have initial stimuli
@@ -196,8 +196,8 @@ export function StimuliUploadSystemV6({
     text
       .trim()
       .split(/\s+/)
-      .filter(word => word.length > 0).length;
-  const getCharCount = (text: string) => text.trim().length;
+      .filter((word: any) => word.length > 0).length;
+  const _getCharCount = (text: string) => text.trim().length;
 
   // Handle upload mode selection
   const handleModeSelect = (mode: UploadMode) => {
@@ -312,7 +312,7 @@ export function StimuliUploadSystemV6({
 
     if (isEditingText && editingTextId) {
       setStimuli(prev =>
-        prev.map(s =>
+        prev.map((s: any) =>
           s.id === editingTextId
             ? { ...s, editedText: textInput, content: textInput }
             : s
@@ -332,7 +332,7 @@ export function StimuliUploadSystemV6({
           id,
           type: 'text',
           content: textInput,
-          title: `Text Statement ${stimuli.filter(s => s.type === 'text').length + 1}`,
+          title: `Text Statement ${stimuli.filter((s: any) => s.type === 'text').length + 1}`,
           metadata: {
             uploadedAt: new Date(),
           },
@@ -375,7 +375,7 @@ export function StimuliUploadSystemV6({
       showConfirm(
         `Are you sure you want to delete ${ids.length} stimulus/stimuli?`,
         () => {
-          const newStimuli = stimuli.filter(s => !ids.includes(s.id));
+          const newStimuli = stimuli.filter((s: any) => !ids.includes(s.id));
           setStimuli(newStimuli);
           setSelectedStimuli(new Set());
 

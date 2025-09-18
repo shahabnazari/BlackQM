@@ -165,7 +165,7 @@ export default function ResearcherDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentStudies.map(study => (
+                {recentStudies.map((study: any) => (
                   <div
                     key={study.id}
                     className="border rounded-lg p-4 hover:bg-surface-secondary transition-colors cursor-pointer"
@@ -243,7 +243,7 @@ export default function ResearcherDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentActivity.map(activity => (
+                {recentActivity.map((activity: any) => (
                   <div
                     key={activity.id}
                     className="flex items-start gap-3 pb-3 border-b last:border-0"

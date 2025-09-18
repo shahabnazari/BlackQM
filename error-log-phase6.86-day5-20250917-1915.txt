@@ -1,0 +1,1114 @@
+
+> @vqmethod/frontend@0.1.0 typecheck
+> tsc --noEmit
+
+app/api/ai/bias/route.ts(58,60): error TS2379: Argument of type '{ statements: string[]; studyTitle?: string | undefined; studyDescription?: string | undefined; checkTypes?: ("language" | "perspective" | "cultural" | "confirmation" | "sampling" | "demographic")[] | undefined; }' is not assignable to parameter of type 'BiasAnalysisRequest' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'studyTitle' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+app/api/ai/bias/route.ts(128,35): error TS2379: Argument of type '{ statements: string[]; studyTitle?: string | undefined; studyDescription?: string | undefined; checkTypes?: ("language" | "perspective" | "cultural" | "confirmation" | "sampling" | "demographic")[] | undefined; }' is not assignable to parameter of type 'BiasAnalysisRequest' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'studyTitle' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+app/api/ai/bias/route.ts(179,26): error TS2339: Property 'errors' does not exist on type 'ZodError<unknown>'.
+app/api/ai/bias/route.ts(239,31): error TS6133: 'req' is declared but its value is never read.
+app/api/ai/proxy/route.ts(13,34): error TS2307: Cannot find module 'next-auth' or its corresponding type declarations.
+app/api/ai/proxy/route.ts(201,26): error TS2339: Property 'errors' does not exist on type 'ZodError<unknown>'.
+app/api/ai/proxy/route.ts(215,31): error TS6133: 'req' is declared but its value is never read.
+app/api/ai/questionnaire/route.ts(10,10): error TS6133: 'withAuth' is declared but its value is never read.
+app/api/ai/questionnaire/route.ts(71,73): error TS2379: Argument of type '{ topic: string; questionCount: number; questionTypes?: ("text" | "textarea" | "select" | "multiselect" | "radio" | "checkbox" | "scale" | "ranking" | "matrix")[] | undefined; targetAudience?: string | undefined; context?: string | undefined; }' is not assignable to parameter of type 'QuestionnaireAIRequest' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'questionTypes' are incompatible.
+    Type '("text" | "textarea" | "select" | "multiselect" | "radio" | "checkbox" | "scale" | "ranking" | "matrix")[] | undefined' is not assignable to type 'QuestionType[]'.
+      Type 'undefined' is not assignable to type 'QuestionType[]'.
+app/api/ai/questionnaire/route.ts(124,26): error TS2339: Property 'errors' does not exist on type 'ZodError<unknown>'.
+app/api/ai/questionnaire/route.ts(168,31): error TS6133: 'req' is declared but its value is never read.
+app/api/ai/stimuli/route.ts(58,70): error TS2379: Argument of type '{ topic: string; count: number; avoidBias: boolean; academicLevel: "basic" | "intermediate" | "advanced"; perspectives?: string[] | undefined; }' is not assignable to parameter of type 'StimulusGenerationRequest' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'perspectives' are incompatible.
+    Type 'string[] | undefined' is not assignable to type 'string[]'.
+      Type 'undefined' is not assignable to type 'string[]'.
+app/api/ai/stimuli/route.ts(144,26): error TS2339: Property 'errors' does not exist on type 'ZodError<unknown>'.
+app/api/ai/stimuli/route.ts(185,31): error TS6133: 'req' is declared but its value is never read.
+app/auth/register/page.tsx(110,39): error TS2379: Argument of type '{ name: string; email: string; password: string; confirmPassword: string; role: "researcher" | "participant"; acceptTerms: boolean; organization?: string | undefined; }' is not assignable to parameter of type 'RegisterData' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'organization' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+app/test-e2e-study/page.tsx(34,7): error TS2375: Type '{ timestamp: string; message?: string; status: "pending" | "failed" | "testing" | "passed"; step?: string; }' is not assignable to type 'TestResult' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'step' is optional in type '{ timestamp: string; message?: string; status: "pending" | "failed" | "testing" | "passed"; step?: string; }' but required in type 'TestResult'.
+app/test-grid-distribution/page.tsx(274,48): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+app/test-grid-stimuli/page.tsx(386,11): error TS2532: Object is possibly 'undefined'.
+app/test-grid-validation/page.tsx(34,42): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(34,75): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(39,22): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(40,27): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(41,29): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(42,42): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(47,34): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(78,28): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(81,51): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(82,50): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(83,40): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(83,58): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(94,23): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(95,23): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(135,41): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(135,69): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(142,37): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(142,69): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(143,37): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-grid-validation/page.tsx(143,79): error TS18048: 'currentTest' is possibly 'undefined'.
+app/test-tooltips-comparison/page.tsx(33,22): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(40,22): error TS2375: Type '{ position: "bottom"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ position: "bottom"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(47,22): error TS2375: Type '{ position: "left"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ position: "left"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(54,22): error TS2375: Type '{ position: "right"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ position: "right"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(83,22): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(90,22): error TS2375: Type '{ position: "bottom"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ position: "bottom"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(97,22): error TS2375: Type '{ position: "auto"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ position: "auto"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(104,22): error TS2375: Type '{ position: "auto"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ position: "auto"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(140,20): error TS2375: Type '{ position: "auto"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ position: "auto"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(144,20): error TS2375: Type '{ position: "auto"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ position: "auto"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(148,20): error TS2375: Type '{ position: "auto"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ position: "auto"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(161,20): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(165,20): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(169,20): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(185,20): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(189,20): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips-comparison/page.tsx(193,20): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips/page.tsx(19,16): error TS2375: Type '{ position: "top"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ position: "top"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips/page.tsx(27,16): error TS2375: Type '{ position: "bottom"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ position: "bottom"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips/page.tsx(36,18): error TS2375: Type '{ position: "left"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ position: "left"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips/page.tsx(45,16): error TS2375: Type '{ position: "right"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ position: "right"; title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips/page.tsx(59,18): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips/page.tsx(63,18): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips/page.tsx(67,18): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips/page.tsx(77,18): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips/page.tsx(81,18): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips/page.tsx(90,16): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips/page.tsx(103,18): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-tooltips/page.tsx(110,18): error TS2375: Type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' is not assignable to type 'InfoTooltipProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'title' is optional in type '{ title?: string; content?: string; examples?: string[]; link?: { text: string; href: string; }; }' but required in type 'InfoTooltipProps'.
+app/test-validation/page.tsx(52,14): error TS2375: Type '{ id: string; name: string; placeholder: string; value: string; onChange: (e: any) => void; error: string | undefined; "aria-label": string; "aria-required": "true"; }' is not assignable to type 'TextFieldProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'error' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+components/ai/StatementGenerator.tsx(53,13): error TS2322: Type '{ id: string; text: string; category: string | undefined; perspective: string; }[]' is not assignable to type 'Statement[]'.
+  Type '{ id: string; text: string; category: string | undefined; perspective: string; }' is not assignable to type 'Statement' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'category' are incompatible.
+      Type 'string | undefined' is not assignable to type 'string'.
+        Type 'undefined' is not assignable to type 'string'.
+components/animations/Celebrations/Celebration.tsx(14,11): error TS6196: 'CelebrationProps' is declared but never used.
+components/animations/EmptyStates/EmptyState.tsx(102,6): error TS2375: Type '{ children: ("" | Element | undefined)[]; className: string; variants: { readonly hidden: { readonly opacity: 0; }; readonly visible: { readonly opacity: 1; }; } | undefined; initial: string | undefined; animate: string | undefined; transition: { ...; }; }' is not assignable to type 'Omit<HTMLMotionProps<"div">, "ref">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'animate' are incompatible.
+    Type 'string | undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels | LegacyAnimationControls'.
+      Type 'undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels | LegacyAnimationControls'.
+components/animations/EmptyStates/EmptyState.tsx(114,8): error TS2375: Type '{ children: string | number | bigint | true | Element | Iterable<ReactNode> | Promise<AwaitedReactNode>; className: string; variants: { ...; } | undefined; initial: string | undefined; animate: string | undefined; transition: { ...; }; }' is not assignable to type 'Omit<HTMLMotionProps<"div">, "ref">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'animate' are incompatible.
+    Type 'string | undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels | LegacyAnimationControls'.
+      Type 'undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels | LegacyAnimationControls'.
+components/animations/EmptyStates/EmptyState.tsx(125,8): error TS2375: Type '{ children: string; className: string; variants: { readonly hidden: { readonly y: 20; readonly opacity: 0; }; readonly visible: { readonly y: 0; readonly opacity: 1; }; } | undefined; initial: string | undefined; animate: string | undefined; transition: { ...; }; }' is not assignable to type 'Omit<HTMLMotionProps<"h3">, "ref">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'animate' are incompatible.
+    Type 'string | undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels | LegacyAnimationControls'.
+      Type 'undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels | LegacyAnimationControls'.
+components/animations/EmptyStates/EmptyState.tsx(136,8): error TS2375: Type '{ children: string; className: string; variants: { readonly hidden: { readonly y: 20; readonly opacity: 0; }; readonly visible: { readonly y: 0; readonly opacity: 1; }; } | undefined; initial: string | undefined; animate: string | undefined; transition: { ...; }; }' is not assignable to type 'Omit<HTMLMotionProps<"p">, "ref">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'animate' are incompatible.
+    Type 'string | undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels | LegacyAnimationControls'.
+      Type 'undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels | LegacyAnimationControls'.
+components/animations/EmptyStates/EmptyState.tsx(148,10): error TS2375: Type '{ children: ("" | Element | undefined)[]; className: string; variants: { readonly hidden: { readonly y: 20; readonly opacity: 0; }; readonly visible: { readonly y: 0; readonly opacity: 1; }; } | undefined; initial: string | undefined; animate: string | undefined; transition: { ...; }; }' is not assignable to type 'Omit<HTMLMotionProps<"div">, "ref">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'animate' are incompatible.
+    Type 'string | undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels | LegacyAnimationControls'.
+      Type 'undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels | LegacyAnimationControls'.
+components/animations/EmptyStates/EmptyState.tsx(188,6): error TS2375: Type '{ type: "noStudies"; onAction: (() => void) | undefined; className: string | undefined; size: "lg"; }' is not assignable to type 'EmptyStateProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'onAction' are incompatible.
+    Type '(() => void) | undefined' is not assignable to type '() => void'.
+      Type 'undefined' is not assignable to type '() => void'.
+components/animations/EmptyStates/EmptyState.tsx(205,6): error TS2375: Type '{ type: "noData"; onAction: (() => void) | undefined; className: string | undefined; }' is not assignable to type 'EmptyStateProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'onAction' are incompatible.
+    Type '(() => void) | undefined' is not assignable to type '() => void'.
+      Type 'undefined' is not assignable to type '() => void'.
+components/animations/EmptyStates/EmptyState.tsx(221,6): error TS2375: Type '{ type: "noParticipants"; onAction: (() => void) | undefined; className: string | undefined; }' is not assignable to type 'EmptyStateProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'onAction' are incompatible.
+    Type '(() => void) | undefined' is not assignable to type '() => void'.
+      Type 'undefined' is not assignable to type '() => void'.
+components/animations/EmptyStates/EmptyState.tsx(237,6): error TS2375: Type '{ type: "notFound"; onAction: (() => void) | undefined; className: string | undefined; size: "lg"; }' is not assignable to type 'EmptyStateProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'onAction' are incompatible.
+    Type '(() => void) | undefined' is not assignable to type '() => void'.
+      Type 'undefined' is not assignable to type '() => void'.
+components/animations/EmptyStates/EmptyState.tsx(255,6): error TS2375: Type '{ type: "error"; message: string; onAction: (() => void) | undefined; className: string | undefined; }' is not assignable to type 'EmptyStateProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'onAction' are incompatible.
+    Type '(() => void) | undefined' is not assignable to type '() => void'.
+      Type 'undefined' is not assignable to type '() => void'.
+components/animations/GuidedWorkflows/LoadingPersonality.tsx(66,14): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+components/animations/GuidedWorkflows/LoadingPersonality.tsx(186,25): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+components/animations/MicroInteractions/MagneticButton.tsx(247,6): error TS2375: Type '{ children: (Element | ReactNode)[]; className: string; variant: "ghost"; onClick: (() => void) | undefined; disabled: boolean | undefined; hapticFeedback: true; }' is not assignable to type 'MagneticButtonProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'disabled' are incompatible.
+    Type 'boolean | undefined' is not assignable to type 'boolean'.
+      Type 'undefined' is not assignable to type 'boolean'.
+components/editors/RichTextEditorV2.tsx(404,6): error TS2375: Type '{ isOpen: boolean; onClose: () => void; type: PopupType; title: string | undefined; message: string; onConfirm: (() => void) | undefined; onCancel: (() => void) | undefined; }' is not assignable to type 'PopupModalProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'title' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+components/error/ErrorRecovery.tsx(65,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/error/ErrorRecovery.tsx(84,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/error/ErrorRecovery.tsx(103,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/error/ErrorRecovery.tsx(121,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/error/ErrorRecovery.tsx(140,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/error/ErrorRecovery.tsx(160,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/error/ErrorRecovery.tsx(179,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/error/ErrorRecovery.tsx(196,21): error TS18048: 'currentError' is possibly 'undefined'.
+components/error/ErrorRecovery.tsx(268,52): error TS18048: 'currentError' is possibly 'undefined'.
+components/error/ErrorRecovery.tsx(271,52): error TS18048: 'currentError' is possibly 'undefined'.
+components/error/ErrorRecovery.tsx(302,14): error TS18048: 'currentError' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(277,24): error TS2532: Object is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(297,16): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(525,61): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(526,18): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(527,57): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(534,16): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(534,53): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(536,20): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(551,16): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(555,26): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(556,26): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(557,60): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(557,87): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(562,39): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(562,78): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(573,37): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AIGridDesignAssistant.tsx(573,76): error TS18048: 'currentQuestion' is possibly 'undefined'.
+components/grid/AppleUIGridBuilder.tsx(280,28): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilder.tsx(299,11): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilder.tsx(300,11): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilder.tsx(332,9): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+components/grid/AppleUIGridBuilder.tsx(380,38): error TS18048: 'column' is possibly 'undefined'.
+components/grid/AppleUIGridBuilder.tsx(384,37): error TS18048: 'column' is possibly 'undefined'.
+components/grid/AppleUIGridBuilder.tsx(391,5): error TS18048: 'column' is possibly 'undefined'.
+components/grid/AppleUIGridBuilderEnhanced.tsx(135,11): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderEnhanced.tsx(155,27): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderEnhanced.tsx(155,43): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderEnhanced.tsx(167,28): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderEnhanced.tsx(177,9): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderEnhanced.tsx(189,9): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+components/grid/AppleUIGridBuilderEnhanced.tsx(243,9): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderEnhanced.tsx(248,5): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderEnhanced.tsx(255,13): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderEnhanced.tsx(256,11): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderEnhanced.tsx(259,11): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderEnhanced.tsx(273,9): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderEnhanced.tsx(275,11): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(232,11): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(252,27): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(252,43): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(264,28): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(274,53): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(285,9): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+components/grid/AppleUIGridBuilderFinal.tsx(296,9): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+components/grid/AppleUIGridBuilderFinal.tsx(315,22): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(315,38): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(316,25): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(328,11): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(328,27): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(337,11): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(337,27): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(345,24): error TS2552: Cannot find name 'symmetry'. Did you mean '_symmetry'?
+components/grid/AppleUIGridBuilderFinal.tsx(347,27): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(348,28): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(359,7): error TS2552: Cannot find name 'symmetry'. Did you mean '_symmetry'?
+components/grid/AppleUIGridBuilderFinal.tsx(385,9): error TS2552: Cannot find name 'symmetry'. Did you mean '_symmetry'?
+components/grid/AppleUIGridBuilderFinal.tsx(389,71): error TS2552: Cannot find name 'symmetry'. Did you mean '_symmetry'?
+components/grid/AppleUIGridBuilderFinal.tsx(413,9): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(418,5): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(425,11): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(426,9): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderFinal.tsx(429,9): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(268,27): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(268,54): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(268,76): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(273,25): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(273,45): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(288,66): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(301,26): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(310,30): error TS2538: Type 'undefined' cannot be used as an index type.
+components/grid/AppleUIGridBuilderV5.tsx(311,28): error TS2538: Type 'undefined' cannot be used as an index type.
+components/grid/AppleUIGridBuilderV5.tsx(349,9): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+components/grid/AppleUIGridBuilderV5.tsx(391,9): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+components/grid/AppleUIGridBuilderV5.tsx(414,25): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(415,22): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(415,38): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(424,11): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(424,29): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(433,13): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(433,29): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(439,13): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(439,33): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(498,9): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(502,5): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(508,11): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(509,9): error TS2532: Object is possibly 'undefined'.
+components/grid/AppleUIGridBuilderV5.tsx(511,9): error TS2532: Object is possibly 'undefined'.
+components/grid/EnhancedGridBuilder.tsx(188,38): error TS18048: 'column' is possibly 'undefined'.
+components/grid/EnhancedGridBuilder.tsx(192,37): error TS18048: 'column' is possibly 'undefined'.
+components/grid/EnhancedGridBuilder.tsx(456,37): error TS2552: Cannot find name 'enableAnimation'. Did you mean '_enableAnimation'?
+components/grid/InteractiveGridBuilder.tsx(106,28): error TS2532: Object is possibly 'undefined'.
+components/grid/InteractiveGridBuilder.tsx(125,11): error TS2532: Object is possibly 'undefined'.
+components/grid/InteractiveGridBuilder.tsx(126,11): error TS2532: Object is possibly 'undefined'.
+components/grid/InteractiveGridBuilder.tsx(136,11): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+components/grid/InteractiveGridBuilder.tsx(175,38): error TS18048: 'column' is possibly 'undefined'.
+components/grid/InteractiveGridBuilder.tsx(179,37): error TS18048: 'column' is possibly 'undefined'.
+components/grid/InteractiveGridBuilder.tsx(186,5): error TS18048: 'column' is possibly 'undefined'.
+components/grid/InteractiveGridBuilder.tsx(192,9): error TS2532: Object is possibly 'undefined'.
+components/grid/InteractiveGridBuilder.tsx(203,5): error TS2532: Object is possibly 'undefined'.
+components/navigation/Breadcrumbs.tsx(71,24): error TS2379: Argument of type '{ label: string; href: string | undefined; preview: { title: string; description: string; stats?: { label: string; value: string | number; }[]; } | undefined; }' is not assignable to parameter of type 'BreadcrumbItem' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'href' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+components/navigation/Breadcrumbs.tsx(95,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+components/navigation/Breadcrumbs.tsx(209,16): error TS18048: 'item' is possibly 'undefined'.
+components/navigation/Breadcrumbs.tsx(211,25): error TS18048: 'item' is possibly 'undefined'.
+components/navigation/Breadcrumbs.tsx(220,22): error TS18048: 'item' is possibly 'undefined'.
+components/navigation/Breadcrumbs.tsx(229,22): error TS18048: 'item' is possibly 'undefined'.
+components/navigation/Breadcrumbs.tsx(235,42): error TS18048: 'item' is possibly 'undefined'.
+components/navigation/Breadcrumbs.tsx(245,26): error TS18048: 'item' is possibly 'undefined'.
+components/navigation/Breadcrumbs.tsx(248,26): error TS18048: 'item' is possibly 'undefined'.
+components/navigation/Breadcrumbs.tsx(252,22): error TS18048: 'item' is possibly 'undefined'.
+components/navigation/Breadcrumbs.tsx(255,28): error TS18048: 'item' is possibly 'undefined'.
+components/navigation/HamburgerMenu.tsx(70,35): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/HamburgerMenu.tsx(71,41): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/HamburgerMenu.tsx(72,39): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/HamburgerMenu.tsx(84,11): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/HamburgerMenu.tsx(90,11): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/HamburgerMenu.tsx(97,11): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/HamburgerMenu.tsx(103,11): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/HamburgerMenu.tsx(110,11): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/HamburgerMenu.tsx(122,11): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/HamburgerMenu.tsx(124,47): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/MobileNav.tsx(44,16): error TS2532: Object is possibly 'undefined'.
+components/navigation/MobileNav.tsx(48,18): error TS2532: Object is possibly 'undefined'.
+components/navigation/ResearchToolbar.example.tsx(66,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/ResearchToolbar.example.tsx(84,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/ResearchToolbar.example.tsx(102,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/ResearchToolbar.example.tsx(120,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/ResearchToolbar.example.tsx(138,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/ResearchToolbar.example.tsx(156,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/ResearchToolbar.example.tsx(174,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/ResearchToolbar.example.tsx(192,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/ResearchToolbar.example.tsx(210,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/ResearchToolbar.example.tsx(228,7): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/navigation/ResearchToolbar.example.tsx(276,28): error TS2345: Argument of type 'ResearchPhase | undefined' is not assignable to parameter of type 'ResearchPhase'.
+  Type 'undefined' is not assignable to type 'ResearchPhase'.
+components/navigation/UnifiedNavigation.tsx(47,53): error TS2345: Argument of type '() => (NavigationItem | { label: string; path: string; icon: React.ForwardRefExoticComponent<Omit<React.SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & React.RefAttributes<...>>; })[] | ({ ...; } | ... 1 more ... | { ...; })[] | { ...; }[]' is not assignable to parameter of type '() => NavigationItem[]'.
+  Type '(NavigationItem | { label: string; path: string; icon: ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<...>>; })[] | ({ ...; } | ... 1 more ... | { ...; })[] | { ...; }[]' is not assignable to type 'NavigationItem[]'.
+    Type '(NavigationItem | { label: string; path: string; icon: ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<...>>; })[]' is not assignable to type 'NavigationItem[]'.
+      Type 'NavigationItem | { label: string; path: string; icon: ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<...>>; }' is not assignable to type 'NavigationItem'.
+        Type '{ label: string; path: string; icon: React.ForwardRefExoticComponent<Omit<React.SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & React.RefAttributes<SVGSVGElement>>; }' is not assignable to type 'NavigationItem'.
+          Types of property 'icon' are incompatible.
+            Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+              Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+                Types of property 'defaultProps' are incompatible.
+                  Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+                    Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+                      Types of property 'className' are incompatible.
+                        Type 'string | undefined' is not assignable to type 'string'.
+                          Type 'undefined' is not assignable to type 'string'.
+components/navigation/UnifiedNavigation.tsx(48,11): error TS6133: '_items' is declared but its value is never read.
+components/navigation/UnifiedNavigation.tsx(55,9): error TS2322: Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; }>'.
+    Types of property 'defaultProps' are incompatible.
+      Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'Partial<{ className?: string; }> | undefined'.
+        Type 'Partial<Omit<SVGProps<SVGSVGElement>, "ref"> & { title?: string; titleId?: string; } & RefAttributes<SVGSVGElement>>' is not assignable to type 'Partial<{ className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'className' are incompatible.
+            Type 'string | undefined' is not assignable to type 'string'.
+              Type 'undefined' is not assignable to type 'string'.
+components/participant/Commentary.tsx(52,64): error TS2532: Object is possibly 'undefined'.
+components/participant/Commentary.tsx(57,8): error TS18048: 'currentStatement' is possibly 'undefined'.
+components/participant/Commentary.tsx(83,35): error TS18048: 'currentStatement' is possibly 'undefined'.
+components/participant/Commentary.tsx(109,32): error TS2532: Object is possibly 'undefined'.
+components/participant/Commentary.tsx(125,17): error TS18048: 'currentStatement' is possibly 'undefined'.
+components/participant/Commentary.tsx(127,21): error TS18048: 'currentStatement' is possibly 'undefined'.
+components/participant/Commentary.tsx(132,16): error TS18048: 'currentStatement' is possibly 'undefined'.
+components/participant/Commentary.tsx(132,58): error TS18048: 'currentStatement' is possibly 'undefined'.
+components/participant/Commentary.tsx(135,46): error TS18048: 'currentStatement' is possibly 'undefined'.
+components/participant/Familiarization.tsx(47,27): error TS18048: 'currentStatement' is possibly 'undefined'.
+components/participant/Familiarization.tsx(117,21): error TS2532: Object is possibly 'undefined'.
+components/participant/Familiarization.tsx(119,18): error TS2532: Object is possibly 'undefined'.
+components/participant/Familiarization.tsx(121,22): error TS2532: Object is possibly 'undefined'.
+components/participant/Familiarization.tsx(125,50): error TS2532: Object is possibly 'undefined'.
+components/participant/QSortGrid.tsx(73,9): error TS2532: Object is possibly 'undefined'.
+components/participant/QSortGrid.tsx(82,33): error TS2532: Object is possibly 'undefined'.
+components/participant/QSortGrid.tsx(89,33): error TS2532: Object is possibly 'undefined'.
+components/participant/QSortGrid.tsx(97,21): error TS2488: Type 'Statement[] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+components/participant/QSortGrid.tsx(112,33): error TS2532: Object is possibly 'undefined'.
+components/participant/QSortGrid.tsx(119,33): error TS2532: Object is possibly 'undefined'.
+components/participant/QSortGrid.tsx(211,22): error TS2532: Object is possibly 'undefined'.
+components/participant/QSortGrid.tsx(225,22): error TS2532: Object is possibly 'undefined'.
+components/questionnaire/question-types/index.tsx(28,5): error TS2322: Type '(e: React.ChangeEvent<HTMLInputElement>) => void | undefined' is not assignable to type 'ChangeEventHandler<HTMLTextAreaElement>'.
+  Types of parameters 'e' and 'event' are incompatible.
+    Type 'ChangeEvent<HTMLTextAreaElement>' is not assignable to type 'ChangeEvent<HTMLInputElement>'.
+      Type 'HTMLTextAreaElement' is missing the following properties from type 'HTMLInputElement': accept, align, alt, capture, and 29 more.
+components/questionnaire/question-types/index.tsx(38,4): error TS2375: Type '{ children: Element[] | undefined; value: any; onValueChange: ((value: any) => void) | undefined; disabled: boolean | undefined; }' is not assignable to type 'Omit<RadioGroupProps & RefAttributes<HTMLDivElement>, "ref">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'onValueChange' are incompatible.
+    Type '((value: any) => void) | undefined' is not assignable to type '(value: string) => void'.
+      Type 'undefined' is not assignable to type '(value: string) => void'.
+components/questionnaire/question-types/index.tsx(75,4): error TS2375: Type '{ children: Element[]; value: any; onValueChange: ((value: any) => void) | undefined; disabled: boolean | undefined; }' is not assignable to type 'SelectSharedProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'disabled' are incompatible.
+    Type 'boolean | undefined' is not assignable to type 'boolean'.
+      Type 'undefined' is not assignable to type 'boolean'.
+components/questionnaire/question-types/index.tsx(116,8): error TS2375: Type '{ value: any[]; onValueChange: ([v]: number[]) => void | undefined; min: number; max: number; step: number; disabled: boolean | undefined; }' is not assignable to type 'Omit<SliderProps & RefAttributes<HTMLSpanElement>, "ref">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'disabled' are incompatible.
+    Type 'boolean | undefined' is not assignable to type 'boolean'.
+      Type 'undefined' is not assignable to type 'boolean'.
+components/questionnaire/question-types/index.tsx(248,3): error TS2418: Type of computed property's value is 'FC<ExtendedQuestionComponentProps>', which is not assignable to type 'FC<QuestionComponentProps>'.
+  Types of property 'propTypes' are incompatible.
+    Type 'WeakValidationMap<ExtendedQuestionComponentProps> | undefined' is not assignable to type 'WeakValidationMap<QuestionComponentProps> | undefined'.
+      Type 'WeakValidationMap<ExtendedQuestionComponentProps>' is not assignable to type 'WeakValidationMap<QuestionComponentProps>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+        Types of property 'question' are incompatible.
+          Type 'React.Validator<Question>' is not assignable to type 'React.Validator<import("/Users/shahabnazariadli/Documents/blackQmethhod/frontend/lib/types/questionnaire").Question>'.
+            Type 'Question' is missing the following properties from type 'Question': surveyId, order, layout, theme, and 5 more.
+components/questionnaire/question-types/index.tsx(323,3): error TS1117: An object literal cannot have multiple properties with the same name.
+components/questionnaire/question-types/index.tsx(335,3): error TS1117: An object literal cannot have multiple properties with the same name.
+components/questionnaire/question-types/index.tsx(337,3): error TS1117: An object literal cannot have multiple properties with the same name.
+components/questionnaire/question-types/index.tsx(341,3): error TS1117: An object literal cannot have multiple properties with the same name.
+components/questionnaire/question-types/VideoResponse.tsx(29,11): error TS6196: 'ExtendedProps' is declared but never used.
+components/questionnaire/question-types/VideoResponse.tsx(60,6): error TS6196: 'ExtendedQuestion' is declared but never used.
+components/questionnaire/question-types/VideoResponse.tsx(66,3): error TS2339: Property 'disabled' does not exist on type 'ExtendedQuestionComponentProps'.
+components/questionnaire/question-types/VideoResponse.tsx(166,21): error TS2345: Argument of type '(prev: VideoState) => { isRecording: true; isPaused: false; recordingTime: number; error: undefined; hasRecording: boolean; isPlaying: boolean; }' is not assignable to parameter of type 'SetStateAction<VideoState>'.
+  Type '(prev: VideoState) => { isRecording: true; isPaused: false; recordingTime: number; error: undefined; hasRecording: boolean; isPlaying: boolean; }' is not assignable to type '(prevState: VideoState) => VideoState'.
+    Call signature return types '{ isRecording: true; isPaused: false; recordingTime: number; error: undefined; hasRecording: boolean; isPlaying: boolean; }' and 'VideoState' are incompatible.
+      The types of 'error' are incompatible between these types.
+        Type 'undefined' is not assignable to type 'string'.
+components/questionnaire/question-types/VideoResponse.tsx(261,9): error TS6133: 'togglePlayback' is declared but its value is never read.
+components/questionnaire/QuestionEditor.tsx(109,25): error TS2532: Object is possibly 'undefined'.
+components/questionnaire/QuestionEditor.tsx(118,43): error TS2345: Argument of type '{ options: { text: string; value: string; }[] | undefined; id: string; type: QuestionType; text: string; description?: string; required: boolean; settings?: Record<string, any>; validation?: Record<string, any>; logic?: Record<string, any>; order: number; }' is not assignable to parameter of type 'SetStateAction<Question>'.
+  Type '{ options: { text: string; value: string; }[] | undefined; id: string; type: QuestionType; text: string; description?: string; required: boolean; settings?: Record<string, any>; validation?: Record<string, any>; logic?: Record<string, any>; order: number; }' is not assignable to type 'Question' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'options' are incompatible.
+      Type '{ text: string; value: string; }[] | undefined' is not assignable to type '{ text: string; value: string; }[]'.
+        Type 'undefined' is not assignable to type '{ text: string; value: string; }[]'.
+components/questionnaire/QuestionnaireBuilderEnhanced.tsx(53,3): error TS6133: 'surveyId' is declared but its value is never read.
+components/questionnaire/SkipLogicBuilder.tsx(47,29): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+components/questionnaire/VisualSkipLogicBuilder.tsx(211,18): error TS2532: Object is possibly 'undefined'.
+components/questionnaire/VisualSkipLogicBuilder.tsx(211,37): error TS2532: Object is possibly 'undefined'.
+components/questionnaire/VisualSkipLogicBuilder.tsx(212,17): error TS2532: Object is possibly 'undefined'.
+components/questionnaire/VisualSkipLogicBuilder.tsx(213,17): error TS2532: Object is possibly 'undefined'.
+components/questionnaire/VisualSkipLogicBuilder.tsx(266,40): error TS6133: 'event' is declared but its value is never read.
+components/signature/DigitalSignature.tsx(117,16): error TS2786: 'SignatureCanvas' cannot be used as a JSX component.
+  Its type 'typeof SignatureCanvas' is not a valid JSX element type.
+    Type 'typeof SignatureCanvas' is not assignable to type 'new (props: any, deprecatedLegacyContext?: any) => Component<any, any, any>'.
+      Construct signature return types 'SignatureCanvas' and 'Component<any, any, any>' are incompatible.
+        The types of 'componentDidMount' are incompatible between these types.
+          Type '(() => void) | undefined' is not assignable to type '() => void'.
+            Type 'undefined' is not assignable to type '() => void'.
+components/stimuli/StimuliUploadSystem.tsx(294,16): error TS2532: Object is possibly 'undefined'.
+components/stimuli/StimuliUploadSystem.tsx(633,38): error TS2552: Cannot find name 'setSelectedStimulus'. Did you mean '_setSelectedStimulus'?
+components/stimuli/StimuliUploadSystemV2.tsx(122,9): error TS6133: '_progress' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV2.tsx(151,11): error TS2322: Type '{ id: string; type: "TEXT" | "IMAGE" | "VIDEO" | "AUDIO" | "DOCUMENT"; content: string; thumbnail: string | undefined; metadata: { fileSize: any; mimeType: any; }; uploadStatus: "pending"; uploadProgress: number; uploadTaskId: string; }[]' is not assignable to type 'Stimulus[]'.
+  Type '{ id: string; type: "TEXT" | "IMAGE" | "VIDEO" | "AUDIO" | "DOCUMENT"; content: string; thumbnail: string | undefined; metadata: { fileSize: any; mimeType: any; }; uploadStatus: "pending"; uploadProgress: number; uploadTaskId: string; }' is not assignable to type 'Stimulus' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'thumbnail' are incompatible.
+      Type 'string | undefined' is not assignable to type 'string'.
+        Type 'undefined' is not assignable to type 'string'.
+components/stimuli/StimuliUploadSystemV2.tsx(176,9): error TS2532: Object is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV2.tsx(177,9): error TS2532: Object is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV2.tsx(292,16): error TS2532: Object is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV3.tsx(300,16): error TS2532: Object is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV4.tsx(34,3): error TS6133: 'Download' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV4.tsx(35,3): error TS6133: 'MoreVertical' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV4.tsx(38,3): error TS6133: 'Maximize2' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV4.tsx(341,16): error TS2532: Object is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV4.tsx(377,9): error TS6133: 'formatFileSize' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV5.tsx(6,3): error TS6133: 'useCallback' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV5.tsx(7,3): error TS6133: 'useMemo' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV5.tsx(8,3): error TS6133: 'useEffect' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV5.tsx(16,3): error TS6133: 'Eye' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV5.tsx(25,3): error TS6133: 'AlertCircle' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV5.tsx(27,3): error TS6133: 'Zap' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV5.tsx(30,3): error TS6133: 'Plus' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV5.tsx(38,8): error TS6133: 'PopupModal' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV5.tsx(57,1): error TS6133: 'useInView' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV5.tsx(120,10): error TS6133: 'isSelectionMode' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV5.tsx(120,27): error TS6133: 'setIsSelectionMode' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV5.tsx(150,16): error TS2532: Object is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV5.tsx(161,9): error TS6133: 'getCharCount' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV5.tsx(228,39): error TS2345: Argument of type 'File | undefined' is not assignable to parameter of type 'Blob | MediaSource'.
+  Type 'undefined' is not assignable to type 'Blob | MediaSource'.
+components/stimuli/StimuliUploadSystemV5.tsx(230,23): error TS2379: Argument of type '{ id: string; type: "audio" | "video" | "image"; content: string; title: string; preview: string | undefined; duration: string | undefined; }' is not assignable to parameter of type 'Stimulus' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'preview' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+components/stimuli/StimuliUploadSystemV5.tsx(234,16): error TS18048: 'file' is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV6.tsx(16,3): error TS6133: 'Eye' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(25,3): error TS6133: 'AlertCircle' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(27,3): error TS6133: 'Zap' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(29,3): error TS6133: 'FileText' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(30,3): error TS6133: 'Plus' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(34,3): error TS6133: 'Download' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(35,3): error TS6133: 'Share2' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(36,3): error TS6133: 'Filter' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(37,3): error TS6133: 'SortAsc' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(39,3): error TS6133: 'Copy' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(40,3): error TS6133: 'MoreHorizontal' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(45,3): error TS6133: 'CardHeader' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(46,3): error TS6133: 'CardTitle' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(47,3): error TS6133: 'CardDescription' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(162,5): error TS6133: 'showInfo' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(168,21): error TS2532: Object is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV6.tsx(190,16): error TS2532: Object is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV6.tsx(200,9): error TS6133: 'getCharCount' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV6.tsx(261,39): error TS2345: Argument of type 'File | undefined' is not assignable to parameter of type 'Blob | MediaSource'.
+  Type 'undefined' is not assignable to type 'Blob | MediaSource'.
+components/stimuli/StimuliUploadSystemV6.tsx(263,23): error TS2379: Argument of type '{ id: string; type: "audio" | "video" | "image"; content: string; title: string; preview: string | undefined; duration: string | undefined; file: File | undefined; url: string; metadata: { ...; }; }' is not assignable to parameter of type 'Stimulus' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'preview' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+components/stimuli/StimuliUploadSystemV6.tsx(267,16): error TS18048: 'file' is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV6.tsx(274,17): error TS18048: 'file' is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV6.tsx(1302,8): error TS2375: Type '{ isOpen: boolean; onClose: () => void; type: PopupType; title: string | undefined; message: string; onConfirm: (() => void) | undefined; onCancel: (() => void) | undefined; }' is not assignable to type 'PopupModalProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'title' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+components/stimuli/StimuliUploadSystemV7.tsx(25,3): error TS6133: 'AlertCircle' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(27,3): error TS6133: 'Zap' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(29,3): error TS6133: 'FileText' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(30,3): error TS6133: 'Plus' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(34,3): error TS6133: 'Download' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(35,3): error TS6133: 'Share2' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(36,3): error TS6133: 'Filter' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(37,3): error TS6133: 'SortAsc' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(38,3): error TS6133: 'Search' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(39,3): error TS6133: 'Copy' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(40,3): error TS6133: 'MoreHorizontal' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(41,3): error TS6133: 'Play' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(42,3): error TS6133: 'Maximize2' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(43,3): error TS6133: 'Minimize2' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(44,3): error TS6133: 'RotateCcw' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(49,3): error TS6133: 'CardHeader' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(50,3): error TS6133: 'CardTitle' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(51,3): error TS6133: 'CardDescription' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(172,23): error TS6133: 'setSearchQuery' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(173,18): error TS6133: 'setSortBy' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(186,18): error TS6133: 'showPopupWarning' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(187,5): error TS6133: 'showInfo' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(196,21): error TS2532: Object is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV7.tsx(218,16): error TS2532: Object is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV7.tsx(228,9): error TS6133: 'getCharCount' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(233,11): error TS6133: 'currentWordCount' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(318,39): error TS2345: Argument of type 'File | undefined' is not assignable to parameter of type 'Blob | MediaSource'.
+  Type 'undefined' is not assignable to type 'Blob | MediaSource'.
+components/stimuli/StimuliUploadSystemV7.tsx(320,23): error TS2379: Argument of type '{ id: string; type: "audio" | "video" | "image"; content: string; title: string; preview: string | undefined; duration: string | undefined; file: File | undefined; url: string; metadata: { ...; }; }' is not assignable to parameter of type 'Stimulus' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'preview' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+components/stimuli/StimuliUploadSystemV7.tsx(324,16): error TS18048: 'file' is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV7.tsx(331,17): error TS18048: 'file' is possibly 'undefined'.
+components/stimuli/StimuliUploadSystemV7.tsx(531,11): error TS6133: 'isDisabled' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(864,31): error TS6133: 'cellSize' is declared but its value is never read.
+components/stimuli/StimuliUploadSystemV7.tsx(1562,8): error TS2375: Type '{ isOpen: boolean; onClose: () => void; type: PopupType; title: string | undefined; message: string; onConfirm: (() => void) | undefined; onCancel: (() => void) | undefined; }' is not assignable to type 'PopupModalProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'title' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+components/study-creation/ErrorBoundary.tsx(30,19): error TS2345: Argument of type '{ hasError: false; error: undefined; }' is not assignable to parameter of type 'ErrorBoundaryState | ((prevState: Readonly<ErrorBoundaryState>, props: Readonly<{ children: ReactNode; }>) => ErrorBoundaryState | ... 1 more ... | null) | Pick<...> | null'.
+  Type '{ hasError: false; error: undefined; }' is not assignable to type 'Pick<ErrorBoundaryState, "error" | "hasError">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'error' are incompatible.
+      Type 'undefined' is not assignable to type 'Error'.
+components/study-creation/ParticipantPreview.tsx(118,13): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(132,63): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(135,53): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(137,17): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(137,52): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(142,71): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(176,55): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(204,17): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(205,18): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(242,19): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(265,39): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(268,19): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(269,20): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(269,66): error TS6133: 's' is declared but its value is never read.
+components/study-creation/ParticipantPreview.tsx(289,17): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ParticipantPreview.tsx(290,18): error TS18048: 'step' is possibly 'undefined'.
+components/study-creation/ResearcherSignature.tsx(217,16): error TS2786: 'SignatureCanvas' cannot be used as a JSX component.
+  Its type 'typeof SignatureCanvas' is not a valid JSX element type.
+    Type 'typeof SignatureCanvas' is not assignable to type 'new (props: any, deprecatedLegacyContext?: any) => Component<any, any, any>'.
+      Construct signature return types 'SignatureCanvas' and 'Component<any, any, any>' are incompatible.
+        The types of 'componentDidMount' are incompatible between these types.
+          Type '(() => void) | undefined' is not assignable to type '() => void'.
+            Type 'undefined' is not assignable to type '() => void'.
+components/ui/badge.tsx(2,20): error TS6133: 'VariantProps' is declared but its value is never read.
+components/ui/PopupModal.tsx(224,19): error TS2345: Argument of type '{ isOpen: true; type: PopupType; message: string; title: string | undefined; onConfirm: (() => void) | undefined; onCancel: (() => void) | undefined; }' is not assignable to parameter of type 'SetStateAction<{ isOpen: boolean; type: PopupType; title?: string; message: string; onConfirm?: () => void; onCancel?: () => void; }>'.
+  Type '{ isOpen: true; type: PopupType; message: string; title: string | undefined; onConfirm: (() => void) | undefined; onCancel: (() => void) | undefined; }' is not assignable to type '{ isOpen: boolean; type: PopupType; title?: string; message: string; onConfirm?: () => void; onCancel?: () => void; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'title' are incompatible.
+      Type 'string | undefined' is not assignable to type 'string'.
+        Type 'undefined' is not assignable to type 'string'.
+components/ui/PopupModal.tsx(242,85): error TS2379: Argument of type '{ title: string | undefined; }' is not assignable to parameter of type '{ title?: string; onConfirm?: () => void; onCancel?: () => void; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'title' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+components/ui/PopupModal.tsx(243,81): error TS2379: Argument of type '{ title: string | undefined; }' is not assignable to parameter of type '{ title?: string; onConfirm?: () => void; onCancel?: () => void; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'title' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+components/ui/PopupModal.tsx(244,85): error TS2379: Argument of type '{ title: string | undefined; }' is not assignable to parameter of type '{ title?: string; onConfirm?: () => void; onCancel?: () => void; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'title' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+components/ui/PopupModal.tsx(245,79): error TS2379: Argument of type '{ title: string | undefined; }' is not assignable to parameter of type '{ title?: string; onConfirm?: () => void; onCancel?: () => void; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'title' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+components/ui/ProgressTracker.tsx(142,16): error TS2375: Type '{ children: Element; initial: { scale: number; } | undefined; animate: { scale: number; }; transition: { delay: number; }; className: string; }' is not assignable to type 'Omit<HTMLMotionProps<"div">, "ref">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'initial' are incompatible.
+    Type '{ scale: number; } | undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels'.
+      Type 'undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels'.
+components/ui/ProgressTracker.tsx(269,12): error TS2375: Type '{ cx: string; cy: string; r: number; stroke: string; strokeWidth: string; fill: string; strokeDasharray: number; initial: { strokeDashoffset: number; } | undefined; animate: { strokeDashoffset: number; }; transition: { ...; }; className: string; strokeLinecap: "round"; }' is not assignable to type 'SVGMotionProps<SVGCircleElement>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'initial' are incompatible.
+    Type '{ strokeDashoffset: number; } | undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels'.
+      Type 'undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels'.
+components/ui/ProgressTracker.tsx(333,10): error TS2375: Type '{ initial: { width: number; } | undefined; animate: { width: string; }; transition: { duration: number; ease: "easeInOut"; }; className: string; }' is not assignable to type 'Omit<HTMLMotionProps<"div">, "ref">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'initial' are incompatible.
+    Type '{ width: number; } | undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels'.
+      Type 'undefined' is not assignable to type 'boolean | TargetAndTransition | VariantLabels'.
+components/ui/ProgressTracker.tsx(379,6): error TS2375: Type '{ steps: Step[]; variant: "minimal"; animated: true; className: string | undefined; }' is not assignable to type 'ProgressTrackerProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'className' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+components/ui/ToastNotification.tsx(5,20): error TS6133: 'AlertCircle' is declared but its value is never read.
+components/ui/ToastNotification.tsx(157,21): error TS2379: Argument of type '{ type: "success"; message: string; duration: number | undefined; }' is not assignable to parameter of type 'Omit<Toast, "id">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'duration' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+components/ui/ToastNotification.tsx(169,21): error TS2379: Argument of type '{ type: "info"; message: string; duration: number | undefined; }' is not assignable to parameter of type 'Omit<Toast, "id">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'duration' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+components/visualizations/dashboards/DashboardLayout.tsx(165,26): error TS2488: Type 'Layout[] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+components/visualizations/dashboards/DashboardWidget.tsx(7,3): error TS6133: 'EyeIcon' is declared but its value is never read.
+components/visualizations/dashboards/DashboardWidget.tsx(80,27): error TS6133: 'setDragConstraints' is declared but its value is never read.
+components/visualizations/dashboards/DashboardWidget.tsx(146,9): error TS6133: 'handleCrossFilter' is declared but its value is never read.
+components/visualizations/dashboards/WidgetLibrary.tsx(13,3): error TS6133: 'FunnelIcon' is declared but its value is never read.
+components/visualizations/dashboards/WidgetLibrary.tsx(311,45): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+components/visualizations/dashboards/WidgetLibrary.tsx(327,7): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/ConsensusStatements.tsx(57,38): error TS6133: 's' is declared but its value is never read.
+components/visualizations/q-methodology/ConsensusStatements.tsx(281,8): error TS2375: Type '{ children: Element; left: number | undefined; top: number | undefined; style: { backgroundColor: "rgba(255, 255, 255, 0.95)"; backdropFilter: "blur(10px)"; border: string; ... 821 more ...; vectorEffect?: VectorEffect | undefined; }; }' is not assignable to type 'Readonly<TooltipWithBoundsProps>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'left' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+components/visualizations/q-methodology/CorrelationHeatmap.tsx(226,10): error TS2375: Type '{ children: Element; left: number | undefined; top: number | undefined; style: { backgroundColor: "rgba(255, 255, 255, 0.95)"; backdropFilter: "blur(10px)"; border: string; ... 821 more ...; vectorEffect?: VectorEffect | undefined; }; }' is not assignable to type 'Readonly<TooltipWithBoundsProps>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'left' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+components/visualizations/q-methodology/DistinguishingStatements.tsx(286,10): error TS2375: Type '{ children: Element; left: number | undefined; top: number | undefined; style: { backgroundColor: "rgba(255, 255, 255, 0.95)"; backdropFilter: "blur(10px)"; border: string; ... 821 more ...; vectorEffect?: VectorEffect | undefined; }; }' is not assignable to type 'Readonly<TooltipWithBoundsProps>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'left' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+components/visualizations/q-methodology/EigenvalueScreePlot.tsx(155,30): error TS6133: 'e' is declared but its value is never read.
+components/visualizations/q-methodology/EigenvalueScreePlot.tsx(217,10): error TS2375: Type '{ children: Element; left: number | undefined; top: number | undefined; style: { backgroundColor: "rgba(255, 255, 255, 0.95)"; backdropFilter: "blur(10px)"; border: string; ... 821 more ...; vectorEffect?: VectorEffect | undefined; }; }' is not assignable to type 'Readonly<TooltipWithBoundsProps>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'left' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+components/visualizations/q-methodology/FactorArraysVisualization.tsx(314,22): error TS6133: 'd' is declared but its value is never read.
+components/visualizations/q-methodology/FactorArraysVisualization.tsx(480,10): error TS2375: Type '{ children: Element; left: number | undefined; top: number | undefined; style: { backgroundColor: "rgba(255, 255, 255, 0.98)"; backdropFilter: "blur(10px)"; border: string; ... 821 more ...; vectorEffect?: VectorEffect | undefined; }; }' is not assignable to type 'Readonly<TooltipWithBoundsProps>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'left' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+components/visualizations/q-methodology/FactorLoadingChart.tsx(292,10): error TS2375: Type '{ children: Element; left: number | undefined; top: number | undefined; style: { backgroundColor: "rgba(255, 255, 255, 0.95)"; backdropFilter: "blur(10px)"; border: string; ... 821 more ...; vectorEffect?: VectorEffect | undefined; }; }' is not assignable to type 'Readonly<TooltipWithBoundsProps>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'left' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(43,77): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(43,89): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(86,23): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(86,23): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(86,51): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(86,51): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(87,23): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(87,23): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(87,51): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(87,51): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(115,23): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(115,23): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(115,43): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(115,43): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(116,23): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(116,23): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(116,43): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(116,43): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/FactorRotationVisualizer.tsx(671,10): error TS2375: Type '{ children: Element; left: number | undefined; top: number | undefined; style: { backgroundColor: "rgba(255, 255, 255, 0.98)"; backdropFilter: "blur(10px)"; border: string; ... 821 more ...; vectorEffect?: VectorEffect | undefined; }; }' is not assignable to type 'Readonly<TooltipWithBoundsProps>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'left' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+components/visualizations/q-methodology/ParticipantLoadingMatrix.tsx(75,16): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/ParticipantLoadingMatrix.tsx(75,40): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/ParticipantLoadingMatrix.tsx(131,10): error TS2375: Type '{ children: Element[]; key: string; top: number | undefined; }' is not assignable to type 'GroupProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'top' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+components/visualizations/q-methodology/ParticipantLoadingMatrix.tsx(388,50): error TS2538: Type 'undefined' cannot be used as an index type.
+components/visualizations/q-methodology/ParticipantLoadingMatrix.tsx(389,50): error TS2538: Type 'undefined' cannot be used as an index type.
+components/visualizations/q-methodology/ParticipantLoadingMatrix.tsx(690,33): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/ParticipantLoadingMatrix.tsx(690,64): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/ParticipantLoadingMatrix.tsx(690,83): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/ParticipantLoadingMatrix.tsx(720,16): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/ParticipantLoadingMatrix.tsx(730,16): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/ParticipantLoadingMatrix.tsx(833,10): error TS2375: Type '{ children: Element; left: number | undefined; top: number | undefined; style: { backgroundColor: "rgba(255, 255, 255, 0.98)"; backdropFilter: "blur(10px)"; border: string; ... 821 more ...; vectorEffect?: VectorEffect | undefined; }; }' is not assignable to type 'Readonly<TooltipWithBoundsProps>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'left' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+components/visualizations/q-methodology/ZScoreDistribution.tsx(158,34): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/ZScoreDistribution.tsx(594,30): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/ZScoreDistribution.tsx(594,60): error TS2532: Object is possibly 'undefined'.
+components/visualizations/q-methodology/ZScoreDistribution.tsx(601,10): error TS2375: Type '{ children: Element; left: number | undefined; top: number | undefined; style: { backgroundColor: "rgba(255, 255, 255, 0.98)"; backdropFilter: "blur(10px)"; border: string; ... 821 more ...; vectorEffect?: VectorEffect | undefined; }; }' is not assignable to type 'Readonly<TooltipWithBoundsProps>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'left' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+hooks/animations/useAnimation.ts(9,3): error TS6133: 'prefersReducedMotion' is declared but its value is never read.
+hooks/animations/useAnimation.ts(11,3): error TS6133: 'applyGpuAcceleration' is declared but its value is never read.
+hooks/animations/useAnimation.ts(47,5): error TS6133: 'easing' is declared but its value is never read.
+hooks/animations/useAnimation.ts(48,5): error TS6133: 'spring' is declared but its value is never read.
+hooks/useParticipant.ts(465,30): error TS6133: 'sessionId' is declared but its value is never read.
+hooks/useParticipant.ts(468,19): error TS6133: 'setCanUndo' is declared but its value is never read.
+hooks/useParticipant.ts(469,19): error TS6133: 'setCanRedo' is declared but its value is never read.
+hooks/useRealtimeData.ts(228,11): error TS2532: Object is possibly 'undefined'.
+hooks/useRealtimeData.ts(229,28): error TS2532: Object is possibly 'undefined'.
+hooks/useVisualization/useRealtimeData.ts(192,11): error TS2532: Object is possibly 'undefined'.
+hooks/useVisualization/useRealtimeData.ts(193,28): error TS2532: Object is possibly 'undefined'.
+lib/ai/bias-detector.ts(181,9): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type '{ suggested: string; reasoning: string; }'.
+lib/ai/bias-detector.ts(301,34): error TS2379: Argument of type '{ statements: string[]; studyTitle: string | undefined; studyDescription: string | undefined; }' is not assignable to parameter of type 'BiasAnalysisRequest' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'studyTitle' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+lib/ai/cost-management.service.ts(54,15): error TS2554: Expected 2-3 arguments, but got 1.
+lib/ai/grid-recommender.ts(114,7): error TS2322: Type 'GridConfig | undefined' is not assignable to type 'GridConfig'.
+  Type 'undefined' is not assignable to type 'GridConfig'.
+lib/ai/grid-recommender.ts(178,7): error TS2532: Object is possibly 'undefined'.
+lib/ai/grid-recommender.ts(181,11): error TS2532: Object is possibly 'undefined'.
+lib/ai/grid-recommender.ts(257,29): error TS2532: Object is possibly 'undefined'.
+lib/ai/grid-recommender.ts(267,5): error TS2322: Type 'GridConfig | undefined' is not assignable to type 'GridConfig'.
+  Type 'undefined' is not assignable to type 'GridConfig'.
+lib/ai/grid-recommender.ts(324,32): error TS2532: Object is possibly 'undefined'.
+lib/ai/grid-recommender.ts(335,11): error TS2532: Object is possibly 'undefined'.
+lib/ai/grid-recommender.ts(338,15): error TS2532: Object is possibly 'undefined'.
+lib/ai/grid-recommender.ts(339,13): error TS2532: Object is possibly 'undefined'.
+lib/ai/grid-recommender.ts(362,45): error TS2379: Argument of type '{ statementCount: number; studyType: "exploratory" | "confirmatory" | "mixed"; context: string | undefined; }' is not assignable to parameter of type 'GridRecommendationRequest' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'context' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+lib/ai/questionnaire-generator.ts(123,10): error TS18048: 'question.text' is possibly 'undefined'.
+lib/ai/questionnaire-generator.ts(137,5): error TS6133: 'request' is declared but its value is never read.
+lib/ai/statement-generator.ts(235,50): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+lib/animations/utils.ts(64,3): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+lib/animations/utils.ts(111,3): error TS6133: 'velocity' is declared but its value is never read.
+lib/animations/utils.ts(168,14): error TS6133: 'x1' is declared but its value is never read.
+lib/animations/utils.ts(168,22): error TS6133: 'x2' is declared but its value is never read.
+lib/animations/utils.ts(172,35): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+lib/api/auth.ts(16,41): error TS7008: Member 'e' implicitly has an 'any' type.
+lib/api/services/ai.service.ts(154,7): error TS2739: Type 'ApiResponse<StatementGenerationResponse>' is missing the following properties from type 'StatementGenerationResponse': statements, metadata
+lib/api/services/ai.service.ts(169,7): error TS2739: Type 'ApiResponse<GridDesignResponse>' is missing the following properties from type 'GridDesignResponse': gridStructure, reasoning, recommendations
+lib/api/services/ai.service.ts(184,7): error TS2739: Type 'ApiResponse<BiasDetectionResponse>' is missing the following properties from type 'BiasDetectionResponse': overallScore, issues
+lib/api/services/ai.service.ts(196,7): error TS2739: Type 'ApiResponse<FactorInterpretationResponse>' is missing the following properties from type 'FactorInterpretationResponse': interpretation, theme, keyStatements, narrative
+lib/api/services/ai.service.ts(211,7): error TS2739: Type 'ApiResponse<LiteratureSearchResponse>' is missing the following properties from type 'LiteratureSearchResponse': papers, totalFound
+lib/api/services/ai.service.ts(226,7): error TS2739: Type 'ApiResponse<ReportGenerationResponse>' is missing the following properties from type 'ReportGenerationResponse': reportUrl, format, generatedAt
+lib/api/services/ai.service.ts(236,7): error TS2739: Type 'ApiResponse<AIUsageResponse>' is missing the following properties from type 'AIUsageResponse': totalTokens, totalCost, byFeature, dailyUsage
+lib/api/services/ai.service.ts(246,7): error TS2741: Property 'valid' is missing in type 'ApiResponse<{ valid: boolean; issues?: string[]; }>' but required in type '{ valid: boolean; issues?: string[]; }'.
+lib/api/services/ai.service.ts(262,7): error TS2739: Type 'ApiResponse<{ score: number; issues: { statement: string; concern: string; severity: string; }[]; }>' is missing the following properties from type '{ score: number; issues: { statement: string; concern: string; severity: string; }[]; }': score, issues
+lib/api/services/ai.service.ts(280,7): error TS2739: Type 'ApiResponse<{ balanced: boolean; distribution: Record<string, number>; recommendations?: string[]; }>' is missing the following properties from type '{ balanced: boolean; distribution: Record<string, number>; recommendations?: string[]; }': balanced, distribution
+lib/api/services/ai.service.ts(302,7): error TS2741: Property 'issues' is missing in type 'ApiResponse<{ issues: { statementIndex: number; phrase: string; suggestion: string; }[]; }>' but required in type '{ issues: { statementIndex: number; phrase: string; suggestion: string; }[]; }'.
+lib/api/services/ai.service.ts(326,7): error TS2739: Type 'ApiResponse<{ reportUrl: string; metrics: { perspectiveDiversity: number; demographicReach: number; inclusionScore: number; }; }>' is missing the following properties from type '{ reportUrl: string; metrics: { perspectiveDiversity: number; demographicReach: number; inclusionScore: number; }; }': reportUrl, metrics
+lib/api/services/ai.service.ts(336,7): error TS2741: Property 'improved' is missing in type 'ApiResponse<{ improved: string; }>' but required in type '{ improved: string; }'.
+lib/api/services/ai.service.ts(348,7): error TS2739: Type 'ApiResponse<{ suggestion: string; explanation: string; }>' is missing the following properties from type '{ suggestion: string; explanation: string; }': suggestion, explanation
+lib/api/services/ai.service.ts(358,7): error TS2739: Type 'ApiResponse<BiasDetectionResponse>' is missing the following properties from type 'BiasDetectionResponse': overallScore, issues
+lib/api/services/ai.service.ts(368,7): error TS2739: Type 'ApiResponse<GridDesignResponse>' is missing the following properties from type 'GridDesignResponse': gridStructure, reasoning, recommendations
+lib/api/services/auth.service.ts(1,21): error TS6133: 'ApiResponse' is declared but its value is never read.
+lib/api/services/participant.service.ts(1,21): error TS6133: 'ApiResponse' is declared but its value is never read.
+lib/api/services/questionnaire.service.ts(132,40): error TS2339: Property 'questions' does not exist on type 'ApiResponse<{ questions: GeneratedQuestion[]; }>'.
+lib/api/study.ts(62,54): error TS2345: Argument of type '{ text: string; order: number; category: undefined; }[]' is not assignable to parameter of type 'Omit<Statement, "id">[]'.
+  Type '{ text: string; order: number; category: undefined; }' is not assignable to type 'Omit<Statement, "id">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'category' are incompatible.
+      Type 'undefined' is not assignable to type 'string'.
+lib/auth/api.ts(6,3): error TS6133: 'PasswordResetRequest' is declared but its value is never read.
+lib/auth/api.ts(8,3): error TS6133: 'EmailVerification' is declared but its value is never read.
+lib/auth/middleware.ts(7,34): error TS2307: Cannot find module 'next-auth' or its corresponding type declarations.
+lib/auth/middleware.ts(8,26): error TS2307: Cannot find module 'next-auth/jwt' or its corresponding type declarations.
+lib/auth/utils.ts(97,37): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(data: string): string', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+  Overload 2 of 2, '(data: string): string', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+lib/hooks/useAutoSave.ts(29,11): error TS6133: 'showAutoSave' is declared but its value is never read.
+lib/react-query/config.ts(160,19): error TS6133: 'context' is declared but its value is never read.
+lib/react-query/config.ts(161,16): error TS6133: 'data' is declared but its value is never read.
+lib/react-query/config.ts(187,19): error TS2339: Property 'map' does not exist on type 'T'.
+lib/react-query/config.ts(196,19): error TS2339: Property 'filter' does not exist on type 'T'.
+lib/react-query/config.ts(270,11): error TS2322: Type 'number | never[]' is not assignable to type 'number[]'.
+  Type 'number' is not assignable to type 'number[]'.
+lib/react-query/config.ts(278,30): error TS2345: Argument of type 'number[]' is not assignable to parameter of type 'number'.
+lib/react-query/config.ts(297,18): error TS2352: Conversion of type 'number' to type 'number[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+lib/service-worker/register.ts(140,30): error TS6133: 'url' is declared but its value is never read.
+lib/services/ai.service.ts(59,25): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+lib/services/ai.service.ts(169,11): error TS6133: 'openai' is declared but its value is never read.
+lib/services/ai.service.ts(184,14): error TS6133: 'apiKey' is declared but its value is never read.
+lib/services/grid-configuration.service.ts(122,7): error TS2532: Object is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(171,9): error TS6133: 'remaining' is declared but its value is never read.
+lib/services/grid-configuration.service.ts(174,50): error TS2532: Object is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(185,7): error TS2532: Object is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(189,13): error TS2532: Object is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(190,38): error TS2532: Object is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(191,11): error TS2532: Object is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(199,31): error TS2532: Object is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(199,49): error TS2532: Object is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(208,7): error TS2532: Object is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(247,9): error TS18048: 'centerValue' is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(247,24): error TS18048: 'edgeValue' is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(254,11): error TS2532: Object is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(254,29): error TS2532: Object is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(262,9): error TS2532: Object is possibly 'undefined'.
+lib/services/grid-configuration.service.ts(262,32): error TS2532: Object is possibly 'undefined'.
+lib/services/participant.service.ts(113,5): error TS2739: Type 'ApiResponse<Participant>' is missing the following properties from type 'Participant': id, studyId, status, createdAt, updatedAt
+lib/services/participant.service.ts(128,5): error TS2739: Type 'ApiResponse<{ participants: Participant[]; total: number; page: number; pageSize: number; }>' is missing the following properties from type '{ participants: Participant[]; total: number; page: number; pageSize: number; }': participants, total, page, pageSize
+lib/services/participant.service.ts(142,5): error TS2739: Type 'ApiResponse<Participant>' is missing the following properties from type 'Participant': id, studyId, status, createdAt, updatedAt
+lib/services/participant.service.ts(150,5): error TS2739: Type 'ApiResponse<Participant>' is missing the following properties from type 'Participant': id, studyId, status, createdAt, updatedAt
+lib/services/participant.service.ts(202,34): error TS2339: Property 'file' does not exist on type 'BulkImportData'.
+lib/services/participant.service.ts(203,36): error TS2339: Property 'format' does not exist on type 'BulkImportData'.
+lib/services/participant.service.ts(204,52): error TS2339: Property 'mapping' does not exist on type 'BulkImportData'.
+lib/services/participant.service.ts(205,52): error TS2339: Property 'options' does not exist on type 'BulkImportData'.
+lib/services/participant.service.ts(206,5): error TS2739: Type 'ApiResponse<ImportResult>' is missing the following properties from type 'ImportResult': success, failed, errors
+lib/services/participant.service.ts(252,5): error TS2739: Type 'ApiResponse<ParticipantInvitation>' is missing the following properties from type 'ParticipantInvitation': id, participantId, email, status, expiresAt
+lib/services/participant.service.ts(267,5): error TS2739: Type 'ApiResponse<Participant>' is missing the following properties from type 'Participant': id, studyId, status, createdAt, updatedAt
+lib/services/participant.service.ts(284,5): error TS2739: Type 'ApiResponse<ParticipantMetrics>' is missing the following properties from type 'ParticipantMetrics': total, active, completed, withdrawn
+lib/services/participant.service.ts(303,5): error TS2739: Type 'ApiResponse<{ sessions: { startTime: Date; endTime: Date; duration: number; actions: number; }[]; responses: { questionId: string; timestamp: Date; value: any; }[]; }>' is missing the following properties from type '{ sessions: { startTime: Date; endTime: Date; duration: number; actions: number; }[]; responses: { questionId: string; timestamp: Date; value: any; }[]; }': sessions, responses
+lib/services/participant.service.ts(322,5): error TS2739: Type 'ApiResponse<EmailCampaign>' is missing the following properties from type 'EmailCampaign': subject, body, recipients
+lib/services/upload-queue.service.ts(68,5): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+lib/services/upload-queue.service.ts(89,17): error TS6133: 'taskId' is declared but its value is never read.
+lib/services/upload-queue.service.ts(315,71): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(input: string | URL | Request, init?: RequestInit | undefined): Promise<Response>', gave the following error.
+    Argument of type '{ method: string; body: FormData; signal: AbortSignal | undefined; }' is not assignable to parameter of type 'RequestInit' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+      Types of property 'signal' are incompatible.
+        Type 'AbortSignal | undefined' is not assignable to type 'AbortSignal | null'.
+          Type 'undefined' is not assignable to type 'AbortSignal | null'.
+  Overload 2 of 2, '(input: URL | RequestInfo, init?: RequestInit | undefined): Promise<Response>', gave the following error.
+    Argument of type '{ method: string; body: FormData; signal: AbortSignal | undefined; }' is not assignable to parameter of type 'RequestInit' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+      Types of property 'signal' are incompatible.
+        Type 'AbortSignal | undefined' is not assignable to type 'AbortSignal | null'.
+          Type 'undefined' is not assignable to type 'AbortSignal | null'.
+lib/services/upload-queue.service.ts(344,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+lib/services/upload.service.ts(232,5): error TS6133: 'onProgress' is declared but its value is never read.
+lib/stores/grid-store.ts(217,32): error TS2532: Object is possibly 'undefined'.
+lib/stores/grid-store.ts(233,11): error TS2375: Type '{ cells: number; value?: number; label?: string; customLabel?: string; maxCells?: number; minCells?: number; }' is not assignable to type 'GridColumn' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'value' is optional in type '{ cells: number; value?: number; label?: string; customLabel?: string; maxCells?: number; minCells?: number; }' but required in type 'GridColumn'.
+lib/stores/grid-store.ts(239,15): error TS2375: Type '{ cells: number; value?: number; label?: string; customLabel?: string; maxCells?: number; minCells?: number; }' is not assignable to type 'GridColumn' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'value' is optional in type '{ cells: number; value?: number; label?: string; customLabel?: string; maxCells?: number; minCells?: number; }' but required in type 'GridColumn'.
+lib/stores/grid-store.ts(261,11): error TS2375: Type '{ customLabel: string; value?: number; label?: string; cells?: number; maxCells?: number; minCells?: number; }' is not assignable to type 'GridColumn' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'value' is optional in type '{ customLabel: string; value?: number; label?: string; cells?: number; maxCells?: number; minCells?: number; }' but required in type 'GridColumn'.
+lib/stores/grid-store.ts(273,48): error TS2532: Object is possibly 'undefined'.
+lib/stores/grid-store.ts(280,32): error TS2532: Object is possibly 'undefined'.
+lib/stores/questionnaire.store.ts(86,9): error TS2532: Object is possibly 'undefined'.
+lib/stores/questionnaire.store.ts(137,52): error TS2379: Argument of type '{ text: string; id: undefined; type: QuestionType; description?: string; required: boolean; options?: Array<{ text: string; value: string; }>; settings?: Record<string, any>; validation?: Record<string, any>; logic?: Record<string, any>; order: number; }' is not assignable to parameter of type 'Partial<Question>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'id' are incompatible.
+    Type 'undefined' is not assignable to type 'string'.
+lib/stores/questionnaire.store.ts(148,37): error TS2345: Argument of type 'Question | undefined' is not assignable to parameter of type 'Question'.
+  Type 'undefined' is not assignable to type 'Question'.
+lib/stores/questionnaire.store.ts(206,9): error TS2379: Argument of type '{ text: string; id: undefined; type: QuestionType; description?: string; required: boolean; options?: Array<{ text: string; value: string; }>; settings?: Record<string, any>; validation?: Record<string, any>; logic?: Record<string, any>; order: number; }' is not assignable to parameter of type 'Partial<Question>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'id' are incompatible.
+    Type 'undefined' is not assignable to type 'string'.
+lib/stores/questionnaire.store.ts(229,9): error TS2345: Argument of type '{ questions: Question[] | undefined; undoStack: Question[][]; redoStack: Question[][]; }' is not assignable to parameter of type 'QuestionnaireState | Partial<QuestionnaireState> | ((state: QuestionnaireState) => QuestionnaireState | Partial<...>)'.
+  Type '{ questions: Question[] | undefined; undoStack: Question[][]; redoStack: Question[][]; }' is not assignable to type 'Partial<QuestionnaireState>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'questions' are incompatible.
+      Type 'Question[] | undefined' is not assignable to type 'Question[]'.
+        Type 'undefined' is not assignable to type 'Question[]'.
+lib/stores/questionnaire.store.ts(241,9): error TS2345: Argument of type '{ questions: Question[] | undefined; undoStack: Question[][]; redoStack: Question[][]; }' is not assignable to parameter of type 'QuestionnaireState | Partial<QuestionnaireState> | ((state: QuestionnaireState) => QuestionnaireState | Partial<...>)'.
+  Type '{ questions: Question[] | undefined; undoStack: Question[][]; redoStack: Question[][]; }' is not assignable to type 'Partial<QuestionnaireState>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'questions' are incompatible.
+      Type 'Question[] | undefined' is not assignable to type 'Question[]'.
+        Type 'undefined' is not assignable to type 'Question[]'.
+lib/stores/study-builder-store.ts(238,25): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(target: {}, source: Partial<Stimulus>): Partial<Stimulus>', gave the following error.
+    Argument of type 'WritableDraft<Stimulus> | undefined' is not assignable to parameter of type '{}'.
+      Type 'undefined' is not assignable to type '{}'.
+  Overload 2 of 4, '(target: object, ...sources: any[]): any', gave the following error.
+    Argument of type 'WritableDraft<Stimulus> | undefined' is not assignable to parameter of type 'object'.
+      Type 'undefined' is not assignable to type 'object'.
+lib/stores/study-builder-store.ts(246,37): error TS2345: Argument of type 'WritableDraft<Stimulus> | undefined' is not assignable to parameter of type 'WritableDraft<Stimulus>'.
+  Type 'undefined' is not assignable to type 'WritableDraft<Stimulus>'.
+lib/tiptap/floating-image-extension.tsx(1,16): error TS6133: 'mergeAttributes' is declared but its value is never read.
+lib/tiptap/floating-image-extension.tsx(2,35): error TS6133: 'useEffect' is declared but its value is never read.
+lib/tiptap/floating-image-extension.tsx(10,3): error TS6133: 'Maximize2' is declared but its value is never read.
+lib/tiptap/floating-image-extension.tsx(135,9): error TS6133: 'handleAlignmentChange' is declared but its value is never read.
+lib/tiptap/floating-image-extension.tsx(139,9): error TS6133: 'handleMarginChange' is declared but its value is never read.
+lib/types/ai-enhanced.types.ts(10,9): error TS2304: Cannot find name 'QuestionType'.
+lib/validation/schemas.ts(469,11): error TS2739: Type '{ path: any; message: any; code: any; }[]' is missing the following properties from type 'ValidationError': path, message, code
+lib/visualization/export.ts(93,42): error TS2345: Argument of type 'HTMLElement | undefined' is not assignable to parameter of type 'HTMLElement'.
+  Type 'undefined' is not assignable to type 'HTMLElement'.
+lib/visualization/sample-data.ts(4,3): error TS6196: 'ParticipantLoadingMatrixData' is declared but never used.
+lib/visualization/sample-data.ts(49,7): error TS2322: Type '{ factor: string | undefined; value: number; }[]' is not assignable to type '{ factor: string; value: number; }[]'.
+  Type '{ factor: string | undefined; value: number; }' is not assignable to type '{ factor: string; value: number; }'.
+    Types of property 'factor' are incompatible.
+      Type 'string | undefined' is not assignable to type 'string'.
+        Type 'undefined' is not assignable to type 'string'.
+lib/visualization/sample-data.ts(65,3): error TS2322: Type '{ value: number; frequency: number; category: string; count: number; expectedCount: number | undefined; }[]' is not assignable to type 'DistributionData[]'.
+  Type '{ value: number; frequency: number; category: string; count: number; expectedCount: number | undefined; }' is not assignable to type 'DistributionData'.
+    Types of property 'expectedCount' are incompatible.
+      Type 'number | undefined' is not assignable to type 'number'.
+        Type 'undefined' is not assignable to type 'number'.
+lib/visualization/sample-data.ts(66,19): error TS2532: Object is possibly 'undefined'.
+lib/visualization/sample-data.ts(118,21): error TS2532: Object is possibly 'undefined'.
+lib/visualization/sample-data.ts(124,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+lib/visualization/sample-data.ts(125,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+lib/visualization/sample-data.ts(177,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+lib/visualization/sample-data.ts(178,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+playwright.config.ts(7,29): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '{ testDir: string; testMatch: string[]; timeout: number; globalTimeout: number; fullyParallel: true; forbidOnly: boolean; retries: number; workers: number | undefined; reporter: (["line"] | [...] | [...] | [...] | [...])[]; ... 5 more ...; snapshotPathTemplate: string; }' is not assignable to parameter of type 'PlaywrightTestConfig<unknown, unknown>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+      Types of property 'workers' are incompatible.
+        Type 'number | undefined' is not assignable to type 'string | number'.
+          Type 'undefined' is not assignable to type 'string | number'.
+vitest.config.batch.ts(8,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Type '{ environment: "jsdom"; globals: true; setupFiles: string[]; coverage: { provider: "v8"; reporter: ("html" | "text" | "json")[]; include: string[]; exclude: string[]; }; pool: "threads"; poolOptions: { threads: { ...; }; }; ... 6 more ...; outputFile: { ...; } | undefined; }' is not assignable to type 'InlineConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+      Types of property 'outputFile' are incompatible.
+        Type '{ junit: string; } | undefined' is not assignable to type 'string | (Partial<Record<"default" | "dot" | "json" | "junit" | "basic" | "verbose" | "tap" | "tap-flat" | "hanging-process" | "github-actions", string>> & Record<...>)'.
+          Type 'undefined' is not assignable to type 'string | (Partial<Record<"default" | "dot" | "json" | "junit" | "basic" | "verbose" | "tap" | "tap-flat" | "hanging-process" | "github-actions", string>> & Record<...>)'.
+npm error Lifecycle script `typecheck` failed with error:
+npm error code 2
+npm error path /Users/shahabnazariadli/Documents/blackQmethhod/frontend
+npm error workspace @vqmethod/frontend@0.1.0
+npm error location /Users/shahabnazariadli/Documents/blackQmethhod/frontend
+npm error command failed
+npm error command sh -c tsc --noEmit

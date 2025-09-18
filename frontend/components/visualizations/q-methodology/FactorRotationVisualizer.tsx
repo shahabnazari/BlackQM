@@ -5,7 +5,7 @@ import { AxisLeft, AxisBottom } from '@visx/axis';
 import { GridRows, GridColumns } from '@visx/grid';
 import { drag } from 'd3-drag';
 import { select } from 'd3-selection';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { BaseChart } from '../charts/BaseChart';
 import { useTooltip, TooltipWithBounds, defaultStyles } from '@visx/tooltip';
 
@@ -98,7 +98,7 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
     if (!enableVarimax) return 0;
     
     const [factor1, factor2] = selectedFactors;
-    const loadings = data.map(d => [
+    const loadings = data.map((d: any) => [
       d.originalLoadings[factor1] || 0,
       d.originalLoadings[factor2] || 0
     ]);
@@ -148,7 +148,7 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
   const currentRotation = rotationAngles[`${selectedFactors[0]}-${selectedFactors[1]}`] || 0;
 
   // Get rotated data
-  const displayData = data.map(d => ({
+  const displayData = data.map((d: any) => ({
     ...d,
     currentLoadings: showOriginal ? d.originalLoadings : applyRotation(d.originalLoadings, currentRotation)
   }));
@@ -161,7 +161,7 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
       .on('start', () => {
         isDragging.current = true;
       })
-      .on('drag', (event) => {
+      .on('drag', (event: any) => {
         const rect = rotationRef.current!.getBoundingClientRect();
         const centerXPage = rect.left + rect.width / 2;
         const centerYPage = rect.top + rect.height / 2;
@@ -639,7 +639,7 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
             fontFamily="-apple-system"
             fill="#666"
           >
-            Significant (≥{significanceThreshold}): {displayData.filter(d => {
+            Significant (≥{significanceThreshold}): {displayData.filter((d: any) => {
               const x1 = d.currentLoadings[selectedFactors[0]] || 0;
               const x2 = d.currentLoadings[selectedFactors[1]] || 0;
               return Math.abs(x1) >= significanceThreshold || Math.abs(x2) >= significanceThreshold;

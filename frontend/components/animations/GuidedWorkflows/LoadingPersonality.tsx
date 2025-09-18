@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { LOADING_MESSAGES, ANIMATION_TIMING } from '@/lib/animations/constants';
+import { LOADING_MESSAGES } from '@/lib/animations/constants';
 import { getRandomLoadingMessage } from '@/lib/animations/utils';
 
 interface LoadingPersonalityProps {
@@ -35,14 +35,15 @@ export const LoadingPersonality: React.FC<LoadingPersonalityProps> = ({
   size = 'medium',
 }) => {
   const [currentMessage, setCurrentMessage] = useState(messages[0]);
-  const [messageIndex, setMessageIndex] = useState(0);
+  // Message index tracked internally by effect
+  // const [messageIndex, setMessageIndex] = useState(0);
   const [tip, setTip] = useState<string>('');
 
   useEffect(() => {
     if (!show) return;
 
     const interval = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % messages.length);
+      // setMessageIndex((prev) => (prev + 1) % messages.length);
       setCurrentMessage(getRandomLoadingMessage(messages));
     }, rotationInterval);
 
@@ -201,7 +202,7 @@ export const PersonalitySkeletonLoader: React.FC<{
 
       {type === 'card' && (
         <div className="space-y-4">
-          {[0, 1, 2].map((i) => (
+          {[0, 1, 2].map((i: any) => (
             <motion.div
               key={i}
               className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 h-32"

@@ -21,8 +21,6 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  Type,
-  Palette,
 } from 'lucide-react';
 
 interface RichTextEditorProps {
@@ -71,14 +69,14 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
     <div className="flex flex-wrap items-center gap-1 p-3 border-b border-color-border bg-color-surface rounded-t-lg">
       {/* Font Family Selector */}
       <select
-        onChange={(e) => {
+        onChange={(e: any) => {
           editor.chain().focus().setFontFamily(e.target.value).run();
         }}
         value={editor.getAttributes('textStyle').fontFamily || 'inherit'}
         className="px-3 py-1.5 text-sm rounded-md border border-color-border bg-color-bg text-color-text hover:bg-color-surface focus:outline-none focus:ring-2 focus:ring-color-primary/20"
         title="Font Family"
       >
-        {fontFamilies.map(font => (
+        {fontFamilies.map((font: any) => (
           <option key={font.value} value={font.value} style={{ fontFamily: font.value }}>
             {font.label}
           </option>
@@ -182,7 +180,7 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
 
       {/* Heading Selector */}
       <select
-        onChange={(e) => {
+        onChange={(e: any) => {
           const level = parseInt(e.target.value);
           if (level === 0) {
             editor.chain().focus().setParagraph().run();
@@ -232,7 +230,7 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
       <div className="relative">
         <input
           type="color"
-          onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+          onChange={(e: any) => editor.chain().focus().setColor(e.target.value).run()}
           className="w-8 h-8 rounded-md cursor-pointer border border-color-border"
           title="Text Color"
         />
@@ -248,8 +246,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   maxLength,
   minLength,
   showToolbar = true,
-  allowImages = true,
-  allowLinks = true,
+  // allowImages = true, // Reserved for image feature toggle
+  // allowLinks = true, // Reserved for link feature toggle
   className = '',
 }) => {
   const editor = useEditor({
@@ -298,7 +296,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         class: 'prose prose-sm max-w-none focus:outline-none text-color-text',
       },
       // Allow default paste behavior for rich text and plain text
-      handlePaste: (view, event) => {
+      handlePaste: (_view, _event) => {
         // Don't prevent default paste behavior - let TipTap handle it
         // This allows both rich text and plain text paste to work
         return false;

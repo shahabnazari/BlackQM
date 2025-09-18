@@ -4,7 +4,6 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Card } from '@/components/apple-ui/Card';
 import { Button } from '@/components/apple-ui/Button';
-import { Badge } from '@/components/apple-ui/Badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DocumentArrowUpIcon,

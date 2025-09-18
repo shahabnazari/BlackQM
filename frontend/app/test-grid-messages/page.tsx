@@ -35,7 +35,7 @@ export default function TestGridMessages() {
 
     setTestResults(prev => [
       ...prev,
-      ...testScenarios.map(scenario => `Testing: ${scenario.name} - Expecting: ${scenario.expected}`)
+      ...testScenarios.map((scenario: any) => `Testing: ${scenario.name} - Expecting: ${scenario.expected}`)
     ]);
   };
 
