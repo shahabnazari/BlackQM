@@ -23,7 +23,7 @@
     "a11y:watch": "axe http://localhost:3000 --watch",
     "test:all": "npm run typecheck && npm run test:coverage && npm run apple-design:validate",
     "setup:zero-errors": "node scripts/zero-error-setup.js",
-    "fix:types": "node scripts/auto-fix-types.js",
+    "fix:types": "echo '⚠️ Automatic type fixing is disabled to prevent React import issues'",
     "types:validate": "tsc --noEmit && echo '✅ Zero TypeScript errors!'",
     "dev:strict": "next dev",
     "ready:check": "npm run typecheck:strict && echo '✅ Ready for development - 0 errors'"
