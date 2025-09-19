@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { AlertCircle, Sparkles, FileText, Plus, X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useGenerateStatements } from '@/hooks/useAIBackend';
 
 interface Statement {
   id: string;
@@ -26,11 +27,12 @@ export function StatementGenerator({ onStatementsGenerated, className }: Stateme
   const [topic, setTopic] = useState('');
   const [perspectives, setPerspectives] = useState<string[]>(['']);
   const [count, setCount] = useState(30);
-  const [loading, setLoading] = useState(false);
   const [statements, setStatements] = useState<Statement[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [academicLevel, setAcademicLevel] = useState<'basic' | 'intermediate' | 'advanced'>('intermediate');
   const [avoidBias, setAvoidBias] = useState(true);
+  
+  // Use the AI backend hook for statement generation
+  const { loading, error, execute: generateStatementsFromBackend } = useGenerateStatements();
 
   const addPerspective = () => {
     setPerspectives([...perspectives, '']);
@@ -49,35 +51,20 @@ export function StatementGenerator({ onStatementsGenerated, className }: Stateme
   const generateStatements = async () => {
     if (!topic.trim()) return;
 
-    setLoading(true);
-    setError(null);
-
     try {
       const validPerspectives = perspectives.filter(p => p.trim());
       
-      const response = await fetch('/api/ai/stimuli?action=generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          topic,
-          count,
-          perspectives: validPerspectives.length > 0 ? validPerspectives : undefined,
-          avoidBias,
-          academicLevel
-        }),
+      // Use the backend service to generate statements
+      const result = await generateStatementsFromBackend({
+        topic,
+        count,
+        perspectives: validPerspectives.length > 0 ? validPerspectives : undefined,
+        avoidBias,
+        academicLevel
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate statements');
-      }
-
-      const data = await response.json();
-      
-      if (data.success && data.data.statements) {
-        const generatedStatements = data.data.statements.map((stmt: any, idx: number) => ({
+      if (result && result.success && result.statements) {
+        const generatedStatements = result.statements.map((stmt: any, idx: number) => ({
           id: stmt.id || `stmt-${idx + 1}`,
           text: stmt.text,
           category: stmt.category,
@@ -92,15 +79,13 @@ export function StatementGenerator({ onStatementsGenerated, className }: Stateme
         }
         
         // Show validation results if available
-        if (data.data.validation) {
-          console.info('Statement validation:', data.data.validation);
+        if (result.validation) {
+          console.info('Statement validation:', result.validation);
         }
       }
     } catch (err: any) {
       console.error('Statement generation error:', err);
-      setError(err.message || 'Failed to generate statements. Please try again.');
-    } finally {
-      setLoading(false);
+      // Error is already handled by the hook
     }
   };
 

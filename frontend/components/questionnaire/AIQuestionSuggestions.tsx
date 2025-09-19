@@ -4,6 +4,7 @@ import React from 'react';
 import { Sparkles, RefreshCw, Plus } from 'lucide-react';
 import { Question } from '@/lib/stores/questionnaire.store';
 import { QuestionType } from '@/lib/types/questionnaire';
+import { useGenerateQuestionnaire } from '@/hooks/useAIBackend';
 
 interface AIQuestionSuggestionsProps {
   surveyContext: {
@@ -15,17 +16,41 @@ interface AIQuestionSuggestionsProps {
 }
 
 export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
-  surveyContext: _surveyContext,  // Will be used for context-aware suggestions
+  surveyContext,
   onAddQuestion
 }) => {
   const [suggestions, setSuggestions] = React.useState<any[]>([]);
-  const [isGenerating, setIsGenerating] = React.useState(false);
+  
+  // Use the AI backend hook for questionnaire generation
+  const { questions, loading: isGenerating, error, generateQuestionnaire } = useGenerateQuestionnaire();
 
   const generateSuggestions = async () => {
-    setIsGenerating(true);
-    
-    // Simulate AI generation
-    setTimeout(() => {
+    try {
+      // Generate questions based on survey context
+      const generatedQuestions = await generateQuestionnaire({
+        studyTopic: surveyContext.title || 'General Survey',
+        questionCount: 5,
+        questionTypes: ['likert', 'multipleChoice', 'openEnded'],
+        targetAudience: 'General',
+        includeSkipLogic: false
+      });
+
+      if (generatedQuestions) {
+        // Map generated questions to suggestion format
+        const mappedSuggestions = generatedQuestions.map((q: any, idx: number) => ({
+          id: `ai-${idx + 1}`,
+          type: mapQuestionType(q.type),
+          text: q.text,
+          category: q.category || surveyContext.category || 'General',
+          confidence: q.confidence || 85,
+          options: q.options
+        }));
+        
+        setSuggestions(mappedSuggestions);
+      }
+    } catch (err) {
+      console.error('Failed to generate suggestions:', err);
+      // Fallback to default suggestions if AI fails
       setSuggestions([
         {
           id: 'ai-1',
@@ -55,8 +80,19 @@ export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
           confidence: 82
         }
       ]);
-      setIsGenerating(false);
-    }, 1500);
+    }
+  };
+
+  // Helper function to map AI question types to app question types
+  const mapQuestionType = (aiType: string): QuestionType => {
+    const typeMap: Record<string, QuestionType> = {
+      'likert': QuestionType.LIKERT_SCALE,
+      'multipleChoice': QuestionType.MULTIPLE_CHOICE_SINGLE,
+      'openEnded': QuestionType.TEXT_LONG,
+      'ranking': QuestionType.RANKING,
+      'demographic': QuestionType.TEXT_SHORT
+    };
+    return typeMap[aiType] || QuestionType.TEXT_SHORT;
   };
 
   React.useEffect(() => {
@@ -84,6 +120,14 @@ export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
           AI-powered suggestions based on your survey context and existing questions.
         </p>
       </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+          <p className="text-sm text-red-700 dark:text-red-300">
+            {error || 'Failed to generate AI suggestions. Using default suggestions.'}
+          </p>
+        </div>
+      )}
 
       {isGenerating ? (
         <div className="flex items-center justify-center py-8">

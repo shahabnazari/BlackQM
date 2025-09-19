@@ -1,0 +1,97 @@
+/**
+ * Authentication Utilities
+ * 
+ * Helper functions for authentication-related operations
+ */
+
+// Get the auth token from local storage or session
+export async function getAuthToken(): Promise<string | null> {
+  // Check localStorage first
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    return token;
+  }
+
+  // Check sessionStorage as fallback
+  const sessionToken = sessionStorage.getItem('auth_token');
+  if (sessionToken) {
+    return sessionToken;
+  }
+
+  // If no token found, try to get from cookie
+  const cookieToken = getCookie('auth_token');
+  if (cookieToken) {
+    return cookieToken;
+  }
+
+  return null;
+}
+
+// Helper function to get cookie value
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    const part = parts.pop();
+    if (part) {
+      return part.split(';').shift() || null;
+    }
+  }
+  return null;
+}
+
+// Store auth token
+export function setAuthToken(token: string, persistent: boolean = true): void {
+  if (persistent) {
+    localStorage.setItem('auth_token', token);
+  } else {
+    sessionStorage.setItem('auth_token', token);
+  }
+}
+
+// Clear auth token
+export function clearAuthToken(): void {
+  localStorage.removeItem('auth_token');
+  sessionStorage.removeItem('auth_token');
+  
+  // Clear cookie if exists
+  if (typeof document !== 'undefined') {
+    document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  }
+}
+
+// Check if user is authenticated
+export function isAuthenticated(): boolean {
+  return Boolean(getAuthToken());
+}
+
+// Decode JWT token (basic implementation)
+export function decodeToken(token: string): any {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    console.error('Error decoding token:', e);
+    return null;
+  }
+}
+
+// Check if token is expired
+export function isTokenExpired(token: string): boolean {
+  const decoded = decodeToken(token);
+  if (!decoded || !decoded.exp) {
+    return true;
+  }
+  
+  const expirationDate = new Date(decoded.exp * 1000);
+  return expirationDate <= new Date();
+}

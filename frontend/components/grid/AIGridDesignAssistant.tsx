@@ -3,6 +3,7 @@
 import { Button } from '@/components/apple-ui/Button';
 import { Card } from '@/components/apple-ui/Card';
 import { GridConfigurationService, StandardGridConfig } from '@/lib/services/grid-configuration.service';
+import { useGridRecommendations } from '@/hooks/useAIBackend';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
     BarChart3,
@@ -71,6 +72,9 @@ export const AIGridDesignAssistant: React.FC<{
   });
   const [recommendation, setRecommendation] = useState<GridRecommendation | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  // Use the AI backend hook for recommendations
+  const { getRecommendations } = useGridRecommendations();
 
   const questions: Question[] = [
     {
@@ -228,52 +232,113 @@ export const AIGridDesignAssistant: React.FC<{
     }
   ];
 
-  const analyzeAndRecommend = (): GridRecommendation => {
-    // Use the GridConfigurationService to get AI recommendation
-    const serviceRecommendation = GridConfigurationService.getAIRecommendation({
-      studyType: context.studyType || 'exploratory',
-      participantCount: context.participantCount || 30,
-      participantExpertise: context.participantExpertise || 'general',
-      complexityLevel: context.complexityLevel || 'moderate',
-      timeConstraint: context.timeConstraint || 'medium',
-      previousExperience: context.previousExperience || 'none'
-    });
+  const analyzeAndRecommend = async (): Promise<GridRecommendation | null> => {
+    try {
+      // Prepare study topic from context
+      const studyTopic = `${context.studyType || 'exploratory'} study with ${
+        context.participantCount || 30
+      } participants, ${context.participantExpertise || 'general'} expertise level`;
+      
+      // Map context to backend parameters
+      const participantExperience = context.previousExperience === 'none' ? 'novice' :
+                                     context.previousExperience === 'some' ? 'intermediate' : 'expert';
+      
+      const researchType = context.studyType === 'exploratory' ? 'exploratory' :
+                           context.studyType === 'confirmatory' ? 'confirmatory' : 'comparative';
+      
+      // Call AI backend for recommendations
+      const aiRecommendations = await getRecommendations({
+        studyTopic,
+        expectedStatements: context.participantCount || 30,
+        participantExperience: participantExperience as 'novice' | 'intermediate' | 'expert',
+        researchType: researchType as 'exploratory' | 'confirmatory' | 'comparative'
+      });
+      
+      if (aiRecommendations && aiRecommendations.length > 0) {
+        // Use first recommendation from AI
+        const aiRec = aiRecommendations[0];
+        
+        // Get a fallback config from local service to ensure proper structure
+        const fallbackConfig = GridConfigurationService.getConfigById('optimal-36');
+        
+        // Merge AI recommendation with local config structure
+        const config: StandardGridConfig = fallbackConfig || {
+          id: 'ai-recommended',
+          name: 'AI Recommended Configuration',
+          range: { min: -4, max: 4 },
+          distribution: [1, 2, 3, 4, 5, 4, 3, 2, 1],
+          totalItems: 36,
+          description: aiRec?.reasoning || 'AI-optimized configuration',
+          citation: 'AI Analysis',
+          researchTypes: ['general'],
+          expertiseLevel: 'general' as const
+        };
+        
+        const columns = config.range.max - config.range.min + 1;
+        
+        return {
+          config,
+          columns,
+          range: config.range,
+          distribution: config.distribution,
+          totalCells: config.totalItems,
+          reasoning: [aiRec?.reasoning || 'Optimized based on AI analysis'],
+          confidence: (aiRec as any)?.confidence || 85,
+          alternativeOptions: [],
+          citation: 'AI-Generated Recommendation'
+        };
+      } else {
+        // Fallback to local service if AI fails
+        const serviceRecommendation = GridConfigurationService.getAIRecommendation({
+          studyType: context.studyType || 'exploratory',
+          participantCount: context.participantCount || 30,
+          participantExpertise: context.participantExpertise || 'general',
+          complexityLevel: context.complexityLevel || 'moderate',
+          timeConstraint: context.timeConstraint || 'medium',
+          previousExperience: context.previousExperience || 'none'
+        });
 
-    // Get additional rationale for the selected configuration
-    const additionalRationale = GridConfigurationService.getConfigurationRationale(serviceRecommendation.config);
+        // Get additional rationale for the selected configuration
+        const additionalRationale = GridConfigurationService.getConfigurationRationale(serviceRecommendation.config);
 
-    // Convert service recommendation to component format
-    const columns = serviceRecommendation.config.range.max - serviceRecommendation.config.range.min + 1;
-    
-    // Generate alternatives with proper format
-    const alternatives: GridRecommendation[] = serviceRecommendation.alternatives.map((alt: any) => {
-      const altColumns = alt.range.max - alt.range.min + 1;
-      return {
-        config: alt,
-        columns: altColumns,
-        range: alt.range,
-        distribution: alt.distribution,
-        totalCells: alt.totalItems,
-        reasoning: GridConfigurationService.getConfigurationRationale(alt),
-        confidence: serviceRecommendation.confidence - 10,
-        citation: alt.citation
-      };
-    });
+        // Convert service recommendation to component format
+        const columns = serviceRecommendation.config.range.max - serviceRecommendation.config.range.min + 1;
+        
+        // Generate alternatives with proper format
+        const alternatives: GridRecommendation[] = serviceRecommendation.alternatives.map((alt: any) => {
+          const altColumns = alt.range.max - alt.range.min + 1;
+          return {
+            config: alt,
+            columns: altColumns,
+            range: alt.range,
+            distribution: alt.distribution,
+            totalCells: alt.totalItems,
+            reasoning: GridConfigurationService.getConfigurationRationale(alt),
+            confidence: serviceRecommendation.confidence - 10,
+            citation: alt.citation
+          };
+        });
 
-    return {
-      config: serviceRecommendation.config,
-      columns,
-      range: serviceRecommendation.config.range,
-      distribution: serviceRecommendation.config.distribution,
-      totalCells: serviceRecommendation.config.totalItems,
-      reasoning: [...serviceRecommendation.reasoning, ...additionalRationale],
-      confidence: serviceRecommendation.confidence,
-      alternativeOptions: alternatives,
-      citation: serviceRecommendation.config.citation
-    };
+        return {
+          config: serviceRecommendation.config,
+          columns,
+          range: serviceRecommendation.config.range,
+          distribution: serviceRecommendation.config.distribution,
+          totalCells: serviceRecommendation.config.totalItems,
+          reasoning: [...serviceRecommendation.reasoning, ...additionalRationale],
+          confidence: serviceRecommendation.confidence,
+          alternativeOptions: alternatives,
+          citation: serviceRecommendation.config.citation
+        };
+      }
+    } catch (error) {
+      console.error('Failed to get AI recommendation:', error);
+      // Return null on error
+      return null;
+    }
   };
 
-  const handleAnswer = (value: any) => {
+  const handleAnswer = async (value: any) => {
     const questionId = questions[currentStep].id;
     setContext(prev => ({
       ...prev,
@@ -285,11 +350,17 @@ export const AIGridDesignAssistant: React.FC<{
     } else {
       // Generate recommendation
       setIsAnalyzing(true);
-      setTimeout(() => {
-        const rec = analyzeAndRecommend();
-        setRecommendation(rec);
+      try {
+        const rec = await analyzeAndRecommend();
+        if (rec) {
+          setRecommendation(rec);
+        } else {
+          // Handle error case
+          console.error('Failed to generate recommendation');
+        }
+      } finally {
         setIsAnalyzing(false);
-      }, 2000);
+      }
     }
   };
 

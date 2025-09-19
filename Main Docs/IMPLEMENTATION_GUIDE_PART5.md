@@ -21,6 +21,60 @@
 
 ---
 
+## 🔴 MANDATORY DAILY COMPLETION PROTOCOL (ALL PHASES)
+
+**Every implementation day MUST end with this 4-step process:**
+
+### Step 1: Error Check (5:00 PM)
+```bash
+npm run typecheck | tee error-log-phase$(PHASE)-day$(DAY).txt
+ERROR_COUNT=$(npm run typecheck 2>&1 | grep -c "error TS")
+# Must not exceed baseline (550 for current state)
+```
+
+### Step 2: Security & Quality Audit (5:30 PM)
+**Daily Audit Checklist:**
+- [ ] No API keys or secrets in frontend code
+- [ ] All new API routes have authentication
+- [ ] No new `any` types introduced
+- [ ] All errors are properly logged (no silent catches)
+- [ ] Tests written for new features (minimum coverage targets met)
+- [ ] Performance targets met (<3s for AI, <500ms for UI)
+- [ ] No vulnerable dependencies added
+
+### 🔵 Step 3: Dependency Check (5:45 PM)
+**Daily Dependency Verification:**
+```bash
+# Backend dependency check
+cd backend && npm ls 2>&1 | grep -c "UNMET DEPENDENCY" || echo "✓ All backend deps OK"
+
+# Frontend dependency check  
+cd ../frontend && npm ls 2>&1 | grep -c "UNMET DEPENDENCY" || echo "✓ All frontend deps OK"
+
+# Check for required packages
+npm list [key-packages] # List critical packages for the phase
+```
+- [ ] All required packages installed
+- [ ] No version conflicts
+- [ ] Package.json updated correctly
+- [ ] No security vulnerabilities in dependencies
+- [ ] Lock files committed (package-lock.json)
+
+### Step 4: Documentation Update (6:00 PM)
+- [ ] Update Phase Tracker checkboxes
+- [ ] Document any issues found during audit
+- [ ] Note security or quality concerns
+- [ ] Update implementation status
+- [ ] Record dependency changes
+
+**GATE CHECKS:**
+- **If Error Count Exceeds Baseline:** STOP → Fix → Rerun
+- **If Security Issues Found:** STOP → Fix immediately → Document
+- **If Dependency Issues Found:** STOP → Resolve → Verify → Continue
+- **If Quality Issues Found:** Document → Fix next morning
+
+---
+
 # PHASE 9: DISCOVER - LITERATURE REVIEW & RESEARCH FOUNDATION
 
 **Duration:** 6 days  
@@ -642,4 +696,4 @@ For earlier phases, see:
 - [Part 1](./IMPLEMENTATION_GUIDE_PART1.md): Phases 1-3.5 (Foundation)
 - [Part 2](./IMPLEMENTATION_GUIDE_PART2.md): Phases 4-5.5 (Core Features)
 - [Part 3](./IMPLEMENTATION_GUIDE_PART3.md): Phases 6-6.85 (Frontend Excellence)
-- [Part 4](./IMPLEMENTATION_GUIDE_PART4.md): Phases 6.86-8 (Backend AI Integration)
+- [Part 4](./IMPLEMENTATION_GUIDE_PART4.md): Phases 6.86-8 (Backend AI Integration & Hub)

@@ -13,6 +13,7 @@ import { StudyModule } from './modules/study/study.module';
 import { ParticipantModule } from './modules/participant/participant.module';
 import { HealthModule } from './modules/health/health.module';
 import { AnalysisModule } from './modules/analysis/analysis.module';
+import { AIModule } from './modules/ai/ai.module';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 
@@ -46,6 +47,7 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
     StudyModule,
     ParticipantModule,
     AnalysisModule,
+    AIModule,
     HealthModule,
   ],
   controllers: [AppController],

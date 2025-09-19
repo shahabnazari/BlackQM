@@ -44,6 +44,11 @@ model User {
   passwordResets PasswordReset[]
   emailVerifications EmailVerification[]
   
+  // AI relations (Phase 6.86b)
+  aiUsage       AIUsage[]
+  aiBudgetLimit AIBudgetLimit?
+  aiRateLimits  AIRateLimit[]
+  
   @@index([email])
   @@index([tenantId])
   @@index([isActive])
@@ -558,5 +563,81 @@ enum CollaborationRole {
   OWNER
   COLLABORATOR
   VIEWER
+}
+
+// ==========================================
+// Phase 6.86b: AI Backend Implementation
+// ==========================================
+
+model AIUsage {
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint         String   
+  model            String   
+  promptTokens     Int      @default(0) @map("prompt_tokens")
+  completionTokens Int      @default(0) @map("completion_tokens")
+  totalTokens      Int      @default(0) @map("total_tokens")
+  cost             Float    @default(0)
+  responseTimeMs   Int?     @map("response_time_ms")
+  status           String   @default("success")
+  errorMessage     String?  @map("error_message")
+  metadata         String?  // JSON stored as string in SQLite
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([model])
+  @@index([status])
+  @@map("ai_usage")
+}
+
+model AIBudgetLimit {
+  id              String   @id @default(cuid())
+  userId          String   @unique @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyLimitUsd   Float    @default(10.00) @map("daily_limit_usd")
+  monthlyLimitUsd Float    @default(300.00) @map("monthly_limit_usd")
+  alertThreshold  Float    @default(0.80) @map("alert_threshold")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("ai_budget_limits")
+}
+
+model AICache {
+  id             String   @id @default(cuid())
+  cacheKey       String   @unique @map("cache_key")
+  promptHash     String   @map("prompt_hash")
+  model          String   
+  response       String   // JSON stored as string in SQLite
+  tokensSaved    Int      @default(0) @map("tokens_saved")
+  costSaved      Float    @default(0) @map("cost_saved")
+  hitCount       Int      @default(0) @map("hit_count")
+  expiresAt      DateTime @map("expires_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  lastAccessedAt DateTime @default(now()) @map("last_accessed_at")
+
+  @@index([cacheKey])
+  @@index([expiresAt])
+  @@index([promptHash])
+  @@map("ai_cache")
+}
+
+model AIRateLimit {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  windowStart  DateTime @map("window_start")
+  windowEnd    DateTime @map("window_end")
+  requestCount Int      @default(0) @map("request_count")
+  maxRequests  Int      @default(10) @map("max_requests")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([windowStart, windowEnd])
+  @@map("ai_rate_limits")
 }
 

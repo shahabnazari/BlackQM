@@ -9,19 +9,19 @@ This folder contains the complete implementation documentation for the VQMethod 
 ### Phase Tracker
 
 - **[PHASE_TRACKER_PART1.md](./PHASE_TRACKER_PART1.md)** - Core implementation phases (1-8)
-- **[PHASE_TRACKER_PART2.md](./PHASE_TRACKER_PART2.md)** - Extended features (9-18)
-- **[PHASE_TRACKER_PART3.md](./PHASE_TRACKER_PART3.md)** - AI Backend Integration (Phase 6.86b)
+- **[PHASE_TRACKER_PART2.md](./PHASE_TRACKER_PART2.md)** - Advanced features & Enterprise (9-20)
 
 ### Implementation Guides
 
-- **[IMPLEMENTATION_GUIDE_PART1.md](./IMPLEMENTATION_GUIDE_PART1.md)** - Foundation, Authentication, Dual Interface (Phases 1-3)
-- **[IMPLEMENTATION_GUIDE_PART2.md](./IMPLEMENTATION_GUIDE_PART2.md)** - Data Visualization, Professional Polish (Phases 4-5)
-- **[IMPLEMENTATION_GUIDE_PART3.md](./IMPLEMENTATION_GUIDE_PART3.md)** - Q-Analytics Engine, Frontend Architecture (Phases 6-6.5)
-- **[IMPLEMENTATION_GUIDE_PART4.md](./IMPLEMENTATION_GUIDE_PART4.md)** - Study Creation, AI Platform (Phases 6.8-6.86)
-- **[IMPLEMENTATION_GUIDE_PART5.md](./IMPLEMENTATION_GUIDE_PART5.md)** - Enterprise Features (Phases 10-16)
+- **[IMPLEMENTATION_GUIDE_PART1.md](./IMPLEMENTATION_GUIDE_PART1.md)** - Foundation, Authentication, Dual Interface (Phases 1-3.5)
+- **[IMPLEMENTATION_GUIDE_PART2.md](./IMPLEMENTATION_GUIDE_PART2.md)** - Data Visualization, Professional Polish (Phases 4-5.5)
+- **[IMPLEMENTATION_GUIDE_PART3.md](./IMPLEMENTATION_GUIDE_PART3.md)** - Q-Analytics Engine, Study Creation (Phases 6-6.85)
+- **[IMPLEMENTATION_GUIDE_PART4.md](./IMPLEMENTATION_GUIDE_PART4.md)** - AI Platform & Analysis (Phases 6.86-8)
+- **[IMPLEMENTATION_GUIDE_PART5.md](./IMPLEMENTATION_GUIDE_PART5.md)** - Enterprise & Production (Phases 9-20)
 
 ### Architecture Documents
 
+- **[RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md](./RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md)** - Phase 8.5: Research lifecycle double toolbar navigation system
 - **[UNIFIED_HUB_ARCHITECTURE.md](./UNIFIED_HUB_ARCHITECTURE.md)** - Phase 7: Unified Analysis Hub design and implementation
 - **[AI_ANALYSIS_REPORTING.md](./AI_ANALYSIS_REPORTING.md)** - Phase 8: Advanced AI analysis and report generation
 - **[UI_INTEGRATION_SPECIFICATIONS.md](./UI_INTEGRATION_SPECIFICATIONS.md)** - Comprehensive UI/UX specifications for Phases 6.86, 7, and 8
@@ -70,6 +70,29 @@ This folder contains the complete implementation documentation for the VQMethod 
 - Advanced pattern recognition
 - Automated report generation
 - Publication-ready outputs
+
+#### Phase 8.5: Research Lifecycle Navigation System (CRITICAL)
+
+**Duration**: 8 days  
+**Purpose**: Implement world-class double toolbar navigation that unifies all platform features  
+**Key Features**:
+
+- Double toolbar architecture (10 research phases)
+- Contextual secondary toolbars for each phase
+- Feature consolidation (merge fragmented pages)
+- Smart phase availability and progress tracking
+- Mobile-responsive navigation
+
+#### Phase 9: Literature Review & Discovery
+
+**Duration**: 6 days  
+**Purpose**: Implement the DISCOVER phase tools
+**Key Features**:
+
+- Literature search engine with academic APIs
+- Reference management system
+- Knowledge mapping and visualization
+- Research gap analysis
 
 #### Phase 10: Pre-Production Readiness
 

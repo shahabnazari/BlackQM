@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { AlertCircle, Sparkles, Shield, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { useBiasDetection } from '@/hooks/useAIBackend';
+import { AISkeleton } from '@/components/ui/ai-skeleton';
 
 interface BiasIssue {
   type: string;
@@ -25,19 +27,17 @@ interface BiasDetectorProps {
 
 export function BiasDetector({ initialStatements = [], onBiasDetected, className }: BiasDetectorProps) {
   const [statements, setStatements] = useState(initialStatements.join('\n'));
-  const [loading, setLoading] = useState(false);
   const [biasScore, setBiasScore] = useState<number | null>(null);
   const [issues, setIssues] = useState<BiasIssue[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [analysisType, setAnalysisType] = useState<'quick' | 'comprehensive'>('comprehensive');
   const [diversityScore, setDiversityScore] = useState<number | null>(null);
   const [culturalScore, setCulturalScore] = useState<number | null>(null);
+  
+  // Use the AI backend hook
+  const { loading, error, detectBias: detectBiasBackend } = useBiasDetection();
 
   const detectBias = async () => {
     if (!statements.trim()) return;
-
-    setLoading(true);
-    setError(null);
     
     // Reset previous results
     setIssues([]);
@@ -48,85 +48,66 @@ export function BiasDetector({ initialStatements = [], onBiasDetected, className
     try {
       const statementsArray = statements.split('\n').filter(s => s.trim());
       
-      const action = analysisType === 'quick' ? 'quick-check' : 'comprehensive';
-      
-      const response = await fetch(`/api/ai/bias?action=${action}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          statements: statementsArray,
-          checkTypes: ['language', 'perspective', 'cultural', 'demographic']
-        }),
+      // Call backend through the hook
+      const result = await detectBiasBackend({
+        statements: statementsArray,
+        analysisDepth: analysisType,
+        suggestAlternatives: analysisType === 'comprehensive'
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze statements');
-      }
-
-      const data = await response.json();
       
-      if (data.success) {
-        if (analysisType === 'quick') {
-          // Quick check response
-          setBiasScore(data.data.score);
+      if (result) {
+        // Set overall bias score
+        setBiasScore(result.overallBiasScore);
+        
+        // Process bias types for diversity and cultural scores
+        if (result.biasTypes) {
+          // Estimate diversity score from perspective bias
+          const perspectiveBias = result.biasTypes['perspective'] || 0;
+          setDiversityScore(Math.max(0, 100 - perspectiveBias));
           
-          // Create simplified issues based on score
-          const quickIssues: BiasIssue[] = [];
-          if (data.data.score < 80) {
-            quickIssues.push({
-              type: 'General Bias',
-              severity: data.data.score < 60 ? 'high' : 'medium',
-              description: data.data.recommendation,
-              suggestion: 'Consider running comprehensive analysis for detailed feedback'
-            });
-          }
-          setIssues(quickIssues);
-        } else {
-          // Comprehensive analysis response
-          const biasData = data.data.bias || data.data;
-          const overallScore = biasData.overallScore || data.data.quickScore || 75;
-          
-          setBiasScore(overallScore);
-          
-          if (data.data.diversity) {
-            setDiversityScore(data.data.diversity.score);
-          }
-          
-          if (data.data.cultural) {
-            setCulturalScore(data.data.cultural.score);
-          }
-          
-          // Process issues from API response
-          const processedIssues: BiasIssue[] = [];
-          
-          if (biasData.issues) {
-            biasData.issues.forEach((issue: any) => {
-              processedIssues.push({
-                type: issue.type || 'Bias Issue',
-                severity: issue.severity || 'medium',
-                description: issue.description,
-                suggestion: issue.suggestion || issue.recommendation,
-                affectedText: issue.affectedStatement,
-                biasType: issue.biasType
-              });
-            });
-          }
-          
-          setIssues(processedIssues);
+          // Estimate cultural score from cultural bias
+          const culturalBias = result.biasTypes['cultural'] || 0;
+          setCulturalScore(Math.max(0, 100 - culturalBias));
         }
         
+        // Process issues from biased statements and recommendations
+        const processedIssues: BiasIssue[] = [];
+        
+        // Add issues for biased statements
+        if (result.biasedStatements && result.biasedStatements.length > 0) {
+          result.biasedStatements.forEach((statement: string) => {
+            processedIssues.push({
+              type: 'Biased Statement',
+              severity: result.overallBiasScore < 60 ? 'high' : result.overallBiasScore < 80 ? 'medium' : 'low',
+              description: `Statement contains potential bias`,
+              suggestion: result.alternatives?.[statement] || 'Consider rephrasing for neutrality',
+              affectedText: statement,
+              biasType: Object.keys(result.biasTypes || {})[0] as any || 'language'
+            });
+          });
+        }
+        
+        // Add general recommendations as issues
+        if (result.recommendations && result.recommendations.length > 0) {
+          result.recommendations.forEach((rec: string) => {
+            processedIssues.push({
+              type: 'Recommendation',
+              severity: 'low',
+              description: rec,
+              suggestion: 'Apply this suggestion to improve statement quality'
+            });
+          });
+        }
+        
+        setIssues(processedIssues);
+        
         if (onBiasDetected) {
-          onBiasDetected(issues, biasScore || 0);
+          onBiasDetected(processedIssues, result.overallBiasScore);
         }
       }
     } catch (err: any) {
       console.error('Bias detection error:', err);
-      setError(err.message || 'Failed to analyze statements. Please try again.');
-    } finally {
-      setLoading(false);
+      // Error is already set by the hook
     }
   };
 
@@ -228,6 +209,13 @@ export function BiasDetector({ initialStatements = [], onBiasDetected, className
             </>
           )}
         </Button>
+        
+        {/* Show skeleton while loading */}
+        {loading && (
+          <div className="pt-4 border-t">
+            <AISkeleton variant="compact" />
+          </div>
+        )}
 
         {error && (
           <Alert variant="destructive">
