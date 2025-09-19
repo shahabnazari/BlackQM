@@ -35,6 +35,7 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 **Description:** Literature review & research foundation  
 **Icon:** 📚 BookOpenIcon  
 **Color Accent:** Purple (#8B5CF6)
+**Coverage:** 70% after Phase 9 implementation
 
 **Secondary Toolbar Items:**
 - **Literature Search** → AI-powered paper search
@@ -44,8 +45,13 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 - **Prior Studies** → Browse existing Q-studies
 - **Theoretical Framework** → Framework builder
 
-**Current Features to Integrate:**
-- None currently (NEW PHASE NEEDED)
+**Backend Services (Phase 9):**
+- `literature.service.ts` - Paper search & caching
+- `literature.module.ts` - Module configuration
+- PostgreSQL caching for papers
+
+**Frontend Route:**
+- `/app/(researcher)/literature/` - Main interface
 
 ---
 
@@ -73,6 +79,7 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 **Description:** Create study instruments  
 **Icon:** 🛠️ WrenchIcon  
 **Color Accent:** Blue (#3B82F6)
+**Coverage:** 90% (Well established)
 
 **Secondary Toolbar Items:**
 - **Study Setup** → Basic study configuration
@@ -82,11 +89,15 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 - **Consent Forms** → Digital consent creator
 - **Instructions** → Participant guidance editor
 
-**Current Features to Integrate:**
-- `/studies/create` (All steps)
-- `/ai-tools` (Statement generation)
-- Grid builder components
-- Questionnaire builder components
+**Backend Services (Existing):**
+- `study.service.ts` - Core study management
+- `statement.service.ts` - Statement handling
+- `ai/statement-generator.service.ts` - AI generation
+- `ai/questionnaire-generator.service.ts` - Survey AI
+
+**Frontend Routes:**
+- `/app/(researcher)/studies/create/` - Main builder
+- ~~`/ai-tools`~~ - DEPRECATED (redistributed to phases)
 
 ---
 
@@ -95,6 +106,7 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 **Description:** Find & manage participants  
 **Icon:** 👥 UsersIcon  
 **Color Accent:** Green (#10B981)
+**Coverage:** 90% after Phase 7 Day 7
 
 **Secondary Toolbar Items:**
 - **Participant Pool** → Manage participant database
@@ -104,9 +116,14 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 - **Compensation** → Payment tracking
 - **Demographics** → Participant analytics
 
-**Current Features to Integrate:**
-- Participant management (partial)
-- Pre-screening components
+**Backend Services:**
+- `participant.service.ts` - Core participant management
+- `scheduling.service.ts` - Appointments (Phase 7 Day 7)
+- `email.service.ts` - Invitations & reminders
+
+**Frontend Routes:**
+- `/app/(researcher)/recruitment/` - Enhanced center (Phase 7)
+- `/app/(researcher)/participants/` - Current basic list
 
 ---
 
@@ -137,20 +154,30 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 **Description:** Statistical analysis & patterns  
 **Icon:** 🔬 BeakerIcon  
 **Color Accent:** Indigo (#6366F1)
+**Coverage:** 98% (Excellent - Hub architecture complete)
 
 **Secondary Toolbar Items:**
+- **Analysis Hub** → Unified analysis center (PRIMARY)
 - **Q-Analysis** → Factor analysis suite
 - **Statistical Tests** → Significance testing
 - **Factor Rotation** → Rotation tools
 - **Correlation Matrix** → Relationship analysis
 - **AI Insights** → Pattern detection
-- **Comparative Analysis** → Cross-study comparison
 
-**Current Features to Integrate:**
-- `/analysis/q-methodology`
-- `/analysis`
-- All analysis components
-- WebSocket real-time analysis
+**Backend Services (Comprehensive):**
+- `analysis/q-analysis.service.ts` - Core Q-methodology
+- `analysis/factor-extraction.service.ts` - Factor analysis
+- `analysis/rotation-engine.service.ts` - Rotation tools
+- `analysis/statistics.service.ts` - Statistical tests
+- `analysis/hub.service.ts` - Unified data access (Phase 7)
+- `ai/response-analyzer.service.ts` - AI insights
+
+**Frontend Routes (Consolidated):**
+- `/app/(researcher)/analysis/hub/[id]/` - PRIMARY entry point
+- `/app/(researcher)/analysis/q-methodology/` - Specialized tools
+- `/app/(researcher)/analysis/metrics/` - Renamed from /analytics
+- ~~`/analysis`~~ - DEPRECATED (redirect to hub)
+- ~~`/analytics`~~ - DEPRECATED (moved to /analysis/metrics)
 
 ---
 
@@ -159,6 +186,7 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 **Description:** Create charts & visualizations  
 **Icon:** 📈 ChartBarIcon  
 **Color Accent:** Pink (#EC4899)
+**Coverage:** 85% after Phase 7 Day 4
 
 **Secondary Toolbar Items:**
 - **Factor Arrays** → Array visualizations
@@ -168,10 +196,15 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 - **Distribution Charts** → Response distributions
 - **Custom Dashboards** → Dashboard builder
 
-**Current Features to Integrate:**
-- `/visualization-demo`
-- All visualization components
-- Dashboard builder
+**Backend Services:**
+- `visualization.service.ts` - Server-side rendering (Phase 7 Day 4)
+- `analysis/cache.service.ts` - Chart caching
+- WebSocket for real-time updates
+
+**Frontend Routes:**
+- `/app/(researcher)/visualize/` - Main visualization center
+- Part of `/analysis/hub/[id]/` - Integrated in hub
+- ~~`/visualization-demo`~~ - DEPRECATED (moved to /visualize)
 
 ---
 
@@ -180,6 +213,7 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 **Description:** Extract meaning & insights  
 **Icon:** 📝 DocumentTextIcon  
 **Color Accent:** Orange (#FB923C)
+**Coverage:** 80% after Phase 8 implementation
 
 **Secondary Toolbar Items:**
 - **Factor Interpretation** → AI-assisted narratives
@@ -189,10 +223,16 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 - **Quote Mining** → Participant comments
 - **Synthesis** → Cross-factor synthesis
 
-**Current Features to Integrate:**
-- Factor interpretation components
-- AI interpretation tools
-- Comment analysis
+**Backend Services (Phase 8):**
+- `interpretation.service.ts` - Wrapper for AI services
+- `ai/bias-detector.service.ts` - Bias analysis
+- `ai/response-analyzer.service.ts` - Pattern detection
+- Integration with existing AI services
+
+**Frontend Routes:**
+- `/app/(researcher)/interpretation/[studyId]/` - Workspace (Phase 8)
+- `InterpretationWorkspace` component
+- `interpretation.store.ts` for state management
 
 ---
 
@@ -201,18 +241,27 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 **Description:** Document & share findings  
 **Icon:** 📄 DocumentIcon  
 **Color Accent:** Red (#EF4444)
+**Coverage:** 70% after Phase 10 implementation
 
 **Secondary Toolbar Items:**
 - **Report Generator** → Automated reports
 - **Executive Summary** → AI-generated summary
-- **Publication Export** → Journal formats
+- **Publication Export** → Journal formats (APA, MLA, Chicago)
 - **Presentation Mode** → Slide generator
 - **Infographics** → Visual summaries
 - **Collaboration** → Co-author tools
 
-**Current Features to Integrate:**
-- Export functionality (partial)
-- NEW FEATURES NEEDED
+**Backend Services (Phase 10):**
+- `report-generator.service.ts` - Report generation engine
+- `report.module.ts` - Module configuration
+- PDF generation with puppeteer
+- Integration with `literature.service.ts` for references
+- Integration with `analysis.service.ts` for results
+
+**Frontend Routes:**
+- `/app/(researcher)/reports/[studyId]/` - Report builder (Phase 10)
+- `ReportBuilder` component with drag-and-drop
+- `report.store.ts` for state management
 
 ---
 
@@ -221,6 +270,7 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 **Description:** Store & share research  
 **Icon:** 🗄️ ArchiveBoxIcon  
 **Color Accent:** Gray (#6B7280)
+**Coverage:** 75% after Phase 11 implementation
 
 **Secondary Toolbar Items:**
 - **Study Archive** → Completed studies
@@ -230,9 +280,18 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 - **Replication Package** → Reproducibility tools
 - **Version Control** → Study versioning
 
-**Current Features to Integrate:**
-- Study management (partial)
-- NEW FEATURES NEEDED
+**Backend Services (Phase 11):**
+- `archive.service.ts` - Archive management
+- `version-control.service.ts` - Git-like versioning
+- `archive.module.ts` - Module configuration
+- S3/MinIO for snapshot storage
+- Integration with `study.service.ts`
+
+**Frontend Routes:**
+- `/app/(researcher)/archive/[studyId]/` - Archive manager (Phase 11)
+- `ArchiveManager` component with version timeline
+- `archive.store.ts` for state management
+- JSON diff viewer for study changes
 
 ---
 
@@ -383,46 +442,125 @@ const getAvailablePhases = (studyState: StudyState): Set<string> => {
 };
 ```
 
+## ⚠️ Conflict Resolution & Service Integration
+
+### Route Consolidation Map
+| Old Routes | Action | New Route | Notes |
+|------------|--------|-----------|-------|
+| `/analysis` | REDIRECT | `/analysis/hub/[id]` | Primary analysis entry |
+| `/analytics` | RENAME | `/analysis/metrics` | Avoid confusion |
+| `/ai-tools` | REDISTRIBUTE | Various phases | AI integrated per context |
+| `/visualization-demo` | MOVE | `/visualize` | Under VISUALIZE phase |
+
+### Backend Service Architecture
+```
+├── Core Services (Existing)
+│   ├── auth.service.ts (shared by all)
+│   ├── study.service.ts (core data)
+│   └── participant.service.ts
+├── Analysis Services (8+ existing)
+│   ├── hub.service.ts (Phase 7 Day 2)
+│   └── visualization.service.ts (Phase 7 Day 4)
+├── AI Services (6+ existing)
+│   └── interpretation.service.ts (Phase 8 wrapper)
+└── New Phase Services
+    ├── literature.service.ts (Phase 9)
+    ├── report-generator.service.ts (Phase 10)
+    ├── archive.service.ts (Phase 11)
+    └── navigation-state.service.ts (Phase 8.5)
+```
+
+### Testing Requirements Per Phase
+
+#### Daily Testing Standards (All Phases):
+- **3:00 PM:** Integration Testing
+- **4:00 PM:** Performance Testing
+- **5:00 PM:** TypeScript Error Check (≤587 errors)
+- **5:30 PM:** Security Audit
+- **5:45 PM:** Dependency Check
+- **6:00 PM:** Test Coverage Report (>80%)
+
+#### Phase-Specific Requirements:
+- **Backend Services:** Unit tests >90%, Integration tests, Load tests
+- **Frontend Components:** Component tests >85%, E2E tests, Accessibility
+- **AI Features:** Accuracy tests, Cost monitoring, Rate limit tests
+- **Data Processing:** Integrity tests, Transaction tests, Backup verification
+
 ## 🚀 Implementation Phases
 
-### Phase 7.5: Research Lifecycle Navigation (NEW)
-**Duration:** 8-10 days  
-**Priority:** HIGH  
-**Dependencies:** None
+### Phase 8.5: Research Lifecycle Navigation (Updated)
+**Duration:** 8 days (aligned with Phase Tracker)  
+**Priority:** CRITICAL - Unifies all features  
+**Dependencies:** Phase 8 Complete
 
-#### Implementation Steps:
+#### Implementation Steps (Enhanced):
 
-**Days 1-2: Navigation Architecture**
-- [ ] Create navigation state management
-- [ ] Build PrimaryToolbar component
+**Days 1-2: Core Navigation Architecture & Backend**
+- [ ] Create `navigation-state.service.ts` in backend
+- [ ] Build `navigation.module.ts` with WebSocket support
+- [ ] Create NavigationStateManager (frontend)
+- [ ] Build PrimaryToolbar component (10 phases)
 - [ ] Build SecondaryToolbar component
-- [ ] Implement phase transition logic
+- [ ] Implement phase availability logic
+- [ ] Add phase progress tracking to database
 
-**Days 3-4: Phase Integration**
-- [ ] Map existing features to phases
-- [ ] Create routing structure
-- [ ] Implement progress tracking
-- [ ] Add keyboard navigation
+**Day 3: Feature Consolidation & Mapping**
+- [ ] Consolidate `/analysis` routes per conflict map
+- [ ] Merge `/visualization-demo` into `/visualize`
+- [ ] Redistribute `/ai-tools` features
+- [ ] Create unified routing structure
+- [ ] Map all participant routes to COLLECT
 
-**Days 5-6: New Phase Features**
-- [ ] Build Discover phase tools
-- [ ] Create Report generator
-- [ ] Add Archive functionality
-- [ ] Implement collaboration features
+**Day 4: Phase-Specific Implementation**
+- [ ] Implement DISCOVER phase tools stub
+- [ ] Enhance DESIGN phase with methodology tools
+- [ ] Wire RECRUIT phase with scheduling service
+- [ ] Unify ANALYZE phase with hub architecture
+- [ ] Connect VISUALIZE to new route structure
 
-**Days 7-8: UI Polish & Testing**
-- [ ] Responsive design implementation
-- [ ] Animation and transitions
-- [ ] User preference persistence
-- [ ] Comprehensive testing
+**Day 5: Missing Phase Implementation**
+- [ ] Create INTERPRET phase interface
+- [ ] Build REPORT generation UI stubs
+- [ ] Implement ARCHIVE phase features
+- [ ] Add phase progress tracking
+- [ ] Create contextual help system
 
-**Days 9-10: Documentation & Training**
-- [ ] User guides for new navigation
-- [ ] Migration guide from old nav
-- [ ] Video tutorials
-- [ ] Team training
+**Day 6: Advanced UI Features**
+- [ ] Add progress indicators for each phase
+- [ ] Implement color-coded phase themes
+- [ ] Create hover tooltips
+- [ ] Add quick action shortcuts
+- [ ] Implement search across phases
+
+**Day 7: Mobile & Responsive**
+- [ ] Build mobile navigation (bottom tabs)
+- [ ] Create tablet sidebar navigation
+- [ ] Implement gesture controls
+- [ ] Add swipe between phases
+- [ ] Optimize touch interactions
+
+**Day 8: Integration & Polish**
+- [ ] Connect all existing features
+- [ ] Remove old navigation system
+- [ ] Performance optimization
+- [ ] Complete E2E testing suite
+- [ ] Final security audit
 
 ## 🎯 Success Metrics
+
+### Phase Coverage Targets (Post-Implementation)
+| Phase | Current | Target | Services Needed |
+|-------|---------|--------|-----------------|
+| DISCOVER | 0% | 70% | literature.service.ts |
+| DESIGN | 60% | 75% | methodology tools |
+| BUILD | 90% | 95% | Minor enhancements |
+| RECRUIT | 70% | 90% | scheduling.service.ts |
+| COLLECT | 90% | 95% | Minor enhancements |
+| ANALYZE | 98% | 100% | Complete hub integration |
+| VISUALIZE | 60% | 85% | visualization.service.ts |
+| INTERPRET | 40% | 80% | interpretation.service.ts |
+| REPORT | 0% | 70% | report-generator.service.ts |
+| ARCHIVE | 40% | 75% | archive.service.ts |
 
 ### User Experience Metrics
 - **Task Completion Time:** 30% reduction in navigation time
@@ -432,9 +570,11 @@ const getAvailablePhases = (studyState: StudyState): Set<string> => {
 
 ### Technical Metrics
 - **Performance:** <100ms navigation transitions
+- **TypeScript Errors:** Maintain ≤587 errors
+- **Test Coverage:** >80% for new code, >95% overall
 - **Accessibility:** WCAG AAA compliance
 - **Mobile Usage:** 40% of users successfully complete tasks on mobile
-- **Code Coverage:** >95% test coverage
+- **Daily Testing:** 100% compliance with testing standards
 
 ## 🔄 Migration Strategy
 

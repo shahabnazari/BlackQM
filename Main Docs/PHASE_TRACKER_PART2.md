@@ -3,6 +3,7 @@
 **Purpose:** Complete implementation checklist with research lifecycle alignment  
 **Part 1:** [PHASE_TRACKER_PART1.md](./PHASE_TRACKER_PART1.md) - Phases 1-8  
 **Reference Guides:** See Implementation Guide Parts 1-5 for ALL technical details  
+**Navigation System:** [Research Lifecycle Navigation Architecture](./RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md) - 10-phase unified navigation  
 **Status:** World-class implementation with daily error management | Ready after Phase 6.86
 
 ## 📋 PHASE TRACKER FORMATTING RULES
@@ -15,6 +16,22 @@
 5. **HIGH-LEVEL TASKS ONLY** - E.g., "Create literature service" not file paths
 6. **REFERENCES** - Link to Implementation Guide for technical details
 7. **ERROR GATES** - Track daily error checks and security audits
+
+### 🔒 MANDATORY DAILY TESTING & AUDIT STANDARDS
+
+#### Every Single Day Must Include (Non-Negotiable):
+- [ ] **3:00 PM:** Integration Testing (feature-specific tests)
+- [ ] **4:00 PM:** Performance Testing (meet phase-specific metrics)
+- [ ] **5:00 PM:** Run Daily Error Check (`npm run typecheck` - maintain ≤587 errors)
+- [ ] **5:30 PM:** Security & Quality Audit (scan for exposed secrets, API keys, credentials)
+- [ ] **5:45 PM:** Dependency Check (`npm audit` - document vulnerabilities)
+- [ ] **6:00 PM:** Test Coverage Report (maintain >80% for new code)
+
+#### Additional Testing Requirements by Phase Type:
+- **Backend Services:** Unit tests (>90%), Integration tests, Load tests
+- **Frontend Components:** Component tests (>85%), E2E tests, Accessibility tests
+- **AI Features:** Accuracy tests, Cost monitoring, Rate limit tests
+- **Data Processing:** Data integrity tests, Transaction tests, Backup verification
 
 ## 🎯 WORLD-CLASS PHASE INTEGRATION ASSESSMENT
 
@@ -63,6 +80,16 @@
 **Priority:** CRITICAL - Unifies all platform features
 **Type Safety:** MAINTAIN ≤587 ERRORS
 
+### 🔗 NAVIGATION INTEGRATION WITH OTHER PHASES
+This phase creates the unified navigation system that connects:
+- **Phase 7:** Analysis Hub → Maps to ANALYZE phase
+- **Phase 8:** AI Interpretation → Maps to INTERPRET phase  
+- **Phase 9:** Literature Review → Maps to DISCOVER phase
+- **Phase 10:** Report Generation → Maps to REPORT phase
+- **Phase 11:** Archive System → Maps to ARCHIVE phase
+
+See the [Navigation Architecture](./RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md) for complete service mappings and route structures.
+
 ### 📊 PHASE 8.5 WORLD-CLASS AUDIT
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
@@ -73,17 +100,204 @@
 | Navigation Speed | <100ms | - | 🔴 |
 | Feature Discovery | >50% increase | 0% | 🔴 |
 
-### Day 1-2: Core Navigation Architecture
-- [ ] Create NavigationStateManager service
+### 🔍 GAP ANALYSIS - DESIGN Phase (from Phase 6.8)
+**Current Coverage:** 60% 🟡  
+**Available:** Study description, research objectives in study creation  
+**Missing Features (to be implemented in Day 4):**
+- [ ] Dedicated methodology design interface
+- [ ] Research question formulation wizard
+- [ ] Hypothesis builder tool
+- [ ] Study protocol designer
+- [ ] Power analysis calculator
+
+### 🏗️ COMPREHENSIVE BACKEND/FRONTEND READINESS ANALYSIS
+
+#### Research Lifecycle Phase Implementation Status
+
+| Phase | Frontend Routes | Backend Services | Coverage | Critical Gaps |
+|-------|----------------|------------------|----------|---------------|
+| **1. DISCOVER** | ❌ None | ❌ None | 0% 🔴 | No literature service, no reference manager |
+| **2. DESIGN** | ✅ `/studies/create` (partial) | ✅ study.service | 60% 🟡 | Missing dedicated methodology tools |
+| **3. BUILD** | ✅ `/studies/create`, `/ai-tools` | ✅ statement.service, ai services | 85% ✅ | Well covered |
+| **4. RECRUIT** | ✅ `/participants` | ✅ participant.service | 70% 🟡 | Missing scheduling service |
+| **5. COLLECT** | ✅ `/study/[token]` | ✅ qsort.service, progress.service | 90% ✅ | Well covered |
+| **6. ANALYZE** | ✅ `/analysis/*`, `/hub/[id]` | ✅ 8+ analysis services | 95% ✅ | Excellent coverage |
+| **7. VISUALIZE** | ✅ `/visualization-demo` | ❌ No dedicated service | 60% 🟡 | Frontend-only, needs backend |
+| **8. INTERPRET** | ❌ None | ⚠️ AI services exist | 40% 🔴 | No dedicated interpret UI |
+| **9. REPORT** | ❌ None | ❌ None | 0% 🔴 | No report generation service |
+| **10. ARCHIVE** | ⚠️ `/studies` (basic) | ⚠️ study.service (basic) | 40% 🟡 | No version control service |
+
+#### Critical Missing Backend Services for Phase 8.5:
+1. **literature.service.ts** - For DISCOVER phase
+2. **methodology.service.ts** - For DESIGN phase  
+3. **visualization.service.ts** - For VISUALIZE phase
+4. **interpretation.service.ts** - For INTERPRET phase
+5. **report-generator.service.ts** - For REPORT phase
+6. **archive.service.ts** - For ARCHIVE phase with version control
+7. **navigation-state.service.ts** - For managing lifecycle navigation
+
+#### Critical Missing Frontend Components for Phase 8.5:
+1. **NavigationStateManager** - Core navigation state management
+2. **PrimaryToolbar** - Main lifecycle phase navigation
+3. **SecondaryToolbar** - Contextual tools per phase
+4. **PhaseProgressIndicator** - Show completion status
+5. **LifecycleWizard** - Guide users through phases
+6. DISCOVER phase UI components (literature search, knowledge map)
+7. INTERPRET phase UI workspace
+8. REPORT phase builder interface
+
+#### Implementation Priority:
+1. **Day 1-2:** Build navigation infrastructure (NavigationStateManager + Toolbars)
+2. **Day 3:** Wire existing features to lifecycle phases
+3. **Day 4-5:** Create missing phase UIs (stubs for DISCOVER, INTERPRET, REPORT)
+4. **Day 6-8:** Polish and integrate
+
+### 🎯 OVERALL PHASE 8.5 READINESS ASSESSMENT
+
+#### Strong Foundation (Ready to Wire):
+- ✅ **BUILD** (85%): Study creation, AI tools, statement management all working
+- ✅ **COLLECT** (90%): Participant flow, Q-sort, progress tracking complete
+- ✅ **ANALYZE** (95%): Comprehensive analysis services, hub started
+
+#### Partially Ready (Needs Enhancement):
+- 🟡 **DESIGN** (60%): Has study creation but needs methodology tools
+- 🟡 **RECRUIT** (70%): Has participant management but needs scheduling
+- 🟡 **VISUALIZE** (60%): Has frontend demos but needs backend service
+- 🟡 **ARCHIVE** (40%): Has basic study storage but needs version control
+
+#### Critical Gaps (Must Create):
+- 🔴 **DISCOVER** (0%): Completely missing - no literature/reference services
+- 🔴 **INTERPRET** (40%): Has AI but no dedicated UI workspace
+- 🔴 **REPORT** (0%): Completely missing - no report generation
+
+### ⚠️ DUPLICATE/CONFLICT RESOLUTION MAP
+
+#### Analysis Feature Consolidation:
+| Current Routes | Purpose | Resolution | Final Location |
+|----------------|---------|------------|----------------|
+| `/analysis` | General analysis page | **DEPRECATE** | Redirect to `/analysis/hub` |
+| `/analytics` | Analytics dashboard | **RENAME** | Move to `/analysis/metrics` |
+| `/analysis/q-methodology` | Q-specific analysis | **KEEP** | Secondary tool in ANALYZE phase |
+| `/analysis/hub/[id]` | Unified hub | **PRIMARY** | Main entry point for ANALYZE |
+
+#### AI Feature Organization:
+| Current Feature | Phase | Resolution | Integration Plan |
+|-----------------|-------|------------|------------------|
+| `/ai-tools` | Phase 6.8 | **REDISTRIBUTE** | Split across BUILD/ANALYZE/INTERPRET |
+| AI services (backend) | Phase 6.86b | **KEEP** | Core backend infrastructure |
+| AI interpretation | Phase 8 | **SPECIALIZE** | Focus on INTERPRET phase only |
+| AI insights (hub) | Phase 7 Day 5 | **INTEGRATE** | Part of hub, not separate |
+
+#### Visualization Consolidation:
+| Current Feature | Status | Resolution | Final Structure |
+|-----------------|--------|------------|-----------------|
+| `/visualization-demo` | Exists | **CONVERT** | Move to `/visualize` under Phase 8.5 |
+| Visualization Center | Phase 7 Day 4 | **MERGE** | Part of hub visualization section |
+| visualization.service.ts | Planned | **CREATE** | Backend for all viz features |
+
+#### Export/Report Deduplication:
+| Feature | Location | Resolution | Notes |
+|---------|----------|------------|--------|
+| Export in Phase 7 Day 6 | Hub | **BASIC EXPORT** | Data export only (CSV, JSON) |
+| Report in Phase 10 | Dedicated | **FULL REPORTS** | Academic papers, PDFs |
+| Export in components | Various | **CONSOLIDATE** | Use export.service.ts |
+
+#### Participant/Recruitment Alignment:
+| Feature | Current | Enhancement | Final |
+|---------|---------|-------------|-------|
+| `/participants` | Basic list | Add scheduling | Complete recruitment center |
+| scheduling.service.ts | Phase 7 Day 7 | **CREATE** | Unified scheduling backend |
+| Recruitment dashboard | Missing | Phase 7 Day 7 | Analytics and tracking |
+
+### 🔄 SERVICE INTEGRATION MAP (Prevent Duplication)
+
+#### Core Services Architecture:
+```
+Backend Services Hierarchy:
+├── auth.service.ts (existing - used by ALL)
+├── study.service.ts (existing - core data)
+│   ├── statement.service.ts (existing)
+│   ├── archive.service.ts (Phase 11 - extends study)
+│   └── version-control.service.ts (Phase 11)
+├── participant.service.ts (existing)
+│   ├── qsort.service.ts (existing)
+│   ├── progress.service.ts (existing)
+│   └── scheduling.service.ts (Phase 7 Day 7)
+├── analysis/ (existing - 8 services)
+│   ├── hub.service.ts (Phase 7 Day 2)
+│   └── visualization.service.ts (Phase 7 Day 4)
+├── ai/ (existing - 6 services)
+│   └── interpretation.service.ts (Phase 8 - wrapper)
+├── literature.service.ts (Phase 9 - NEW)
+├── report-generator.service.ts (Phase 10 - NEW)
+└── navigation-state.service.ts (Phase 8.5 - NEW)
+```
+
+#### Frontend Routes Final Structure:
+```
+/app/(researcher)/
+├── dashboard/ (existing)
+├── studies/ (existing - enhanced)
+│   ├── create/ (BUILD phase)
+│   └── [id]/ (view/edit)
+├── literature/ (Phase 9 - DISCOVER)
+├── analysis/
+│   ├── hub/[id]/ (PRIMARY - Phase 7)
+│   ├── q-methodology/ (KEEP - specialized)
+│   └── metrics/ (RENAMED from /analytics)
+├── visualize/ (MOVED from /visualization-demo)
+├── interpretation/[studyId]/ (Phase 8 - INTERPRET)
+├── reports/[studyId]/ (Phase 10 - REPORT)
+├── archive/[studyId]/ (Phase 11 - ARCHIVE)
+├── recruitment/ (Phase 7 Day 7 - enhanced /participants)
+└── [DEPRECATED: /ai-tools - redistributed]
+```
+
+#### Testing Infrastructure (No Duplication):
+- **Unit Tests:** Vitest (frontend), Jest (backend)
+- **E2E Tests:** Playwright (single source)
+- **API Tests:** Postman/Newman (single collection)
+- **Load Tests:** k6 or Artillery (Phase 12)
+- **Security:** OWASP ZAP (Phase 13)
+
+#### Risk Assessment:
+- **Low Risk:** Navigation wrapper can connect 60% of existing features immediately
+- **Medium Risk:** 3 phases need stub UIs (DISCOVER, INTERPRET, REPORT)
+- **High Risk:** Backend services for 6 phases are missing or incomplete
+- **Mitigation:** Start with navigation UI, create service stubs, implement incrementally
+
+### Day 1-2: Core Navigation Architecture & Backend Integration
+- [ ] **Create navigation-state.service.ts in backend** for phase management
+- [ ] **Build navigation.module.ts** with WebSocket support
+- [ ] Create NavigationStateManager service (frontend)
 - [ ] Build PrimaryToolbar component (10 research phases)
 - [ ] Build SecondaryToolbar component (contextual tools)
+- [ ] **Implement phase availability logic** based on study progress
+- [ ] **Create ResearchLifecycleProvider context** for React
 - [ ] Implement phase transition animations
 - [ ] Create keyboard navigation (Cmd+1-9)
 - [ ] Build breadcrumb trail system
+- [ ] **Add phase progress tracking to database** (Prisma schema update)
 - [ ] Set up navigation state persistence
+- [ ] **Integrate with existing auth.service.ts** for user context
 - [ ] **5:00 PM:** Run Daily Error Check (npm run typecheck)
 - [ ] **5:30 PM:** Security & Quality Audit (check for exposed secrets, API keys)
 - [ ] **5:45 PM:** Dependency Check (npm audit)
+
+### 📌 BACKEND SERVICE CREATION PRIORITY
+
+#### Immediate (Block Phase 8.5 Day 1-2):
+- [ ] **navigation-state.service.ts** - Manage phase transitions, availability, progress
+
+#### High Priority (Needed by Day 4-5):
+- [ ] **literature.service.ts** stub - DISCOVER phase basic operations
+- [ ] **interpretation.service.ts** - Wrap existing AI services for INTERPRET
+- [ ] **report-generator.service.ts** stub - REPORT phase basic structure
+
+#### Medium Priority (Can be deferred):
+- [ ] **visualization.service.ts** - Backend for chart generation
+- [ ] **methodology.service.ts** - DESIGN phase enhancements
+- [ ] **archive.service.ts** - Version control for studies
 
 ### Day 3: Feature Consolidation & Mapping
 - [ ] Consolidate /analysis and /analytics into ANALYZE phase
@@ -99,15 +313,18 @@
 
 ### Day 4: Phase-Specific Implementation
 - [ ] Implement DISCOVER phase tools (NEW)
-- [ ] Enhance DESIGN phase with existing tools
+- [ ] Enhance DESIGN phase with existing tools  
 - [ ] Complete BUILD phase integration
 - [ ] Wire RECRUIT phase features
 - [ ] Connect COLLECT phase components
-- [ ] Unify ANALYZE phase tools
-- [ ] Integrate VISUALIZE features
+- [ ] Unify ANALYZE phase tools (consolidate /analysis routes per conflict map)
+- [ ] Integrate VISUALIZE features (merge /visualization-demo)
+- [ ] **3:00 PM:** Integration Testing (test phase transitions)
+- [ ] **4:00 PM:** Performance Check (ensure <100ms navigation)
 - [ ] **5:00 PM:** Run Daily Error Check (npm run typecheck)
 - [ ] **5:30 PM:** Security & Quality Audit (check for exposed secrets, API keys)
 - [ ] **5:45 PM:** Dependency Check (npm audit)
+- [ ] **6:00 PM:** Update conflict resolution progress
 
 ### Day 5: Missing Phase Implementation
 - [ ] Create INTERPRET phase interface (NEW)
@@ -185,8 +402,10 @@
 **Duration:** 6 days  
 **Status:** 🔴 Not Started  
 **Reference:** [Implementation Guide Part 5](./IMPLEMENTATION_GUIDE_PART5.md#phase-9)  
+**Navigation Architecture:** [Research Lifecycle Navigation](./RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md#-1-discover)
 **Dependencies:** Phase 8.5 Navigation should be complete
 **Type Safety:** ZERO NEW ERRORS DAILY
+**Lifecycle Phase:** DISCOVER - Literature Review (20% Coverage 🟡)
 
 ### 📊 PHASE 9 WORLD-CLASS AUDIT
 | Metric | Target | Current | Status |
@@ -196,14 +415,30 @@
 | Test Coverage | >80% | 0% | 🔴 |
 | TypeScript Errors | ≤587 | - | 🔴 |
 | API Response | <3s | - | 🔴 |
+| DISCOVER Coverage | 100% | 20% | 🟡 |
 
-### Day 1: Literature Search Engine
-- [ ] Create literature service
-- [ ] Create knowledge graph store
+### 🔍 GAP ANALYSIS - DISCOVER Phase
+**Current Coverage:** 20% 🟡  
+**Missing Features (to be implemented in this phase):**
+- [ ] Literature search engine with AI integration
+- [ ] Reference management system
+- [ ] Knowledge mapping visualization
+- [ ] Automated theme extraction from papers
+- [ ] Citation network analysis
+- [ ] Research gap identification AI
+
+### Day 1: Literature Search Engine & Backend Foundation
+- [ ] **Create literature.module.ts and literature.service.ts in backend**
+- [ ] **Build /app/(researcher)/literature/page.tsx** main interface
+- [ ] Create knowledge graph store (Zustand)
+- [ ] **Design LiteratureSearch component** with advanced filters
 - [ ] Build researcher input form
-- [ ] Integrate Semantic Scholar API
-- [ ] Integrate CrossRef API
-- [ ] Set up IndexedDB for persistence
+- [ ] **Create paper.entity.ts and reference.entity.ts** in Prisma
+- [ ] Integrate Semantic Scholar API (backend service)
+- [ ] Integrate CrossRef API (backend service)
+- [ ] **Implement paper caching in PostgreSQL**
+- [ ] Set up IndexedDB for offline persistence
+- [ ] **Create literature-api.service.ts** for frontend API calls
 - [ ] Write API integration tests
 - [ ] Daily error check at 5 PM
 
@@ -214,8 +449,13 @@
 - [ ] Create citation formatters
 - [ ] Build reference storage
 - [ ] Add PDF attachment support
-- [ ] Write parser tests
-- [ ] Daily error check at 5 PM
+- [ ] Write parser tests (min 10 unit tests)
+- [ ] **3:00 PM:** API Integration Testing
+- [ ] **4:00 PM:** Performance Testing (< 2s for 100 references)
+- [ ] **5:00 PM:** Run Daily Error Check (npm run typecheck)
+- [ ] **5:30 PM:** Security & Quality Audit (check for exposed secrets, API keys)
+- [ ] **5:45 PM:** Dependency Check (npm audit)
+- [ ] **6:00 PM:** Test Coverage Report (target >80%)
 
 ### Day 3: Knowledge Mapping
 - [ ] Create knowledge map component
@@ -223,19 +463,29 @@
 - [ ] Implement theme extraction
 - [ ] Add zoom/pan controls
 - [ ] Create theme-to-statement pipeline
-- [ ] Connect themes to statements
-- [ ] Write visualization tests
-- [ ] Daily error check at 5 PM
+- [ ] Connect themes to statements (avoid conflict with Phase 6.8 statements)
+- [ ] Write visualization tests (min 15 tests)
+- [ ] **3:00 PM:** Integration Testing (test theme extraction accuracy)
+- [ ] **4:00 PM:** Performance Testing (render 500+ nodes < 3s)
+- [ ] **5:00 PM:** Run Daily Error Check (npm run typecheck)
+- [ ] **5:30 PM:** Security & Quality Audit
+- [ ] **5:45 PM:** Dependency Check (npm audit)
+- [ ] **6:00 PM:** Visualization Performance Report
 
 ### Day 4: Gap Analysis
-- [ ] Create gap analyzer service
+- [ ] Create gap analyzer service (integrate with existing AI services)
 - [ ] Build keyword extraction
 - [ ] Implement topic modeling
 - [ ] Add trend detection
-- [ ] Create gap identification
+- [ ] Create gap identification (feed into Phase 6.8 study design)
 - [ ] Build opportunity scoring
-- [ ] Write analysis tests
-- [ ] Daily error check at 5 PM
+- [ ] Write analysis tests (min 20 tests)
+- [ ] **3:00 PM:** Integration Testing with AI services
+- [ ] **4:00 PM:** Performance Testing (analyze 100 papers < 5s)
+- [ ] **5:00 PM:** Run Daily Error Check (npm run typecheck)
+- [ ] **5:30 PM:** Security & Quality Audit
+- [ ] **5:45 PM:** Dependency Check (npm audit)
+- [ ] **6:00 PM:** AI Cost Analysis Report
 
 ### Day 5: Prior Studies Browser
 - [ ] Create study repository interface
@@ -276,8 +526,10 @@
 **Duration:** 5 days  
 **Status:** 🔴 Not Started  
 **Reference:** [Implementation Guide Part 5](./IMPLEMENTATION_GUIDE_PART5.md#phase-10)  
+**Navigation Architecture:** [Research Lifecycle Navigation](./RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md#-9-report)
 **Dependencies:** Phase 8 AI Analysis recommended
 **Type Safety:** ZERO NEW ERRORS DAILY
+**Lifecycle Phase:** REPORT - Documentation (30% Coverage 🟡)
 
 ### 📊 PHASE 10 WORLD-CLASS AUDIT
 | Metric | Target | Current | Status |
@@ -287,15 +539,36 @@
 | Test Coverage | >75% | 0% | 🔴 |
 | TypeScript Errors | ≤587 | - | 🔴 |
 | Report Generation | <10s | - | 🔴 |
-| Export Formats | 5+ | 0 | 🔴 |
+| Export Formats | 5+ | 1 | 🟡 |
+| REPORT Coverage | 100% | 30% | 🟡 |
 
-### Day 1: Report Builder Core
-- [ ] Create report generator service
-- [ ] Build template engine
-- [ ] Set up section management
-- [ ] Create content blocks
-- [ ] Implement variable substitution
-- [ ] Add conditional logic
+### 🔍 GAP ANALYSIS - REPORT Phase
+**Current Coverage:** 30% 🟡  
+**Available:** Basic export functionality in various components  
+**Missing Features (to be implemented in this phase):**
+- [ ] Comprehensive report generation system
+- [ ] Academic formatting templates (APA, MLA, Chicago)
+- [ ] Auto-generated literature review section from Phase 9 data
+- [ ] Methods section with statement provenance
+- [ ] Discussion section comparing with literature
+- [ ] Collaborative report editing
+- [ ] Version control for reports
+- [ ] Multi-format export (PDF, Word, LaTeX, HTML, Markdown)
+
+### Day 1: Report Builder Core & Backend Service
+- [ ] **Create report.module.ts and report-generator.service.ts in backend**
+- [ ] **Build /app/(researcher)/reports/[studyId]/page.tsx** builder interface
+- [ ] **Design ReportBuilder component** with drag-and-drop sections
+- [ ] Build template engine (Handlebars.js or similar)
+- [ ] **Create report-template.entity.ts** in Prisma
+- [ ] Set up section management system
+- [ ] Create content blocks (methods, results, discussion)
+- [ ] **Integrate with literature.service.ts** for references
+- [ ] **Connect to analysis.service.ts** for results data
+- [ ] Implement variable substitution engine
+- [ ] **Add PDF generation service** (puppeteer or similar)
+- [ ] Add conditional logic for dynamic sections
+- [ ] **Create report.store.ts** for state management
 - [ ] Write template tests
 - [ ] Daily error check at 5 PM
 
@@ -358,15 +631,38 @@
 **Duration:** 4 days  
 **Status:** 🔴 Not Started  
 **Reference:** [Implementation Guide Part 5](./IMPLEMENTATION_GUIDE_PART5.md#phase-11)  
+**Navigation Architecture:** [Research Lifecycle Navigation](./RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md#-10-archive)
 **Dependencies:** Core platform complete
+**Lifecycle Phase:** ARCHIVE - Preservation (40% Coverage 🟡)
 
-### Day 1: Version Control System
-- [ ] Create version service
-- [ ] Build commit system
-- [ ] Implement branching
-- [ ] Add diff viewer
-- [ ] Create merge logic
-- [ ] Build history browser
+### 🔍 GAP ANALYSIS - ARCHIVE Phase
+**Current Coverage:** 40% 🟡  
+**Available:** Basic study management and storage  
+**Missing Features (to be implemented in this phase):**
+- [ ] Version control system for studies
+- [ ] DOI (Digital Object Identifier) integration
+- [ ] Long-term preservation standards compliance
+- [ ] Study package export with complete metadata
+- [ ] Integration with research repositories
+- [ ] Automated backup and recovery system
+- [ ] Study citation generator
+- [ ] Research network linking
+
+### Day 1: Version Control System & Archive Service
+- [ ] **Create archive.module.ts and archive.service.ts in backend**
+- [ ] **Build /app/(researcher)/archive/[studyId]/page.tsx** interface
+- [ ] **Create version-control.service.ts** for Git-like functionality
+- [ ] **Design ArchiveManager component** with version timeline
+- [ ] Build commit system with metadata tracking
+- [ ] **Create study-version.entity.ts** in Prisma
+- [ ] Implement branching for study variants
+- [ ] **Add JSON diff viewer** for study changes
+- [ ] Create merge logic for collaborative studies
+- [ ] **Implement snapshot storage in S3/MinIO**
+- [ ] Build history browser with visual timeline
+- [ ] **Create archive.store.ts** for state management
+- [ ] **Add study package export** with all data and metadata
+- [ ] **Integrate with existing study.service.ts**
 - [ ] Write version tests
 - [ ] Daily error check at 5 PM
 
@@ -419,6 +715,15 @@
 **Duration:** 5 days  
 **Status:** 🔴 Not Started  
 **Reference:** [Implementation Guide Part 5](./IMPLEMENTATION_GUIDE_PART5.md#phase-12)
+
+### ⚠️ PRE-PRODUCTION TESTING REQUIREMENTS
+- **Unit Test Coverage:** 95% minimum
+- **E2E Test Suite:** All critical paths covered
+- **Load Testing:** 1000+ concurrent users
+- **Security Audit:** Professional penetration testing
+- **Performance Budget:** All pages < 3s load time
+- **Accessibility:** WCAG AAA compliance
+- **Browser Support:** Last 2 versions of major browsers
 
 ### Day 1: Environment Setup
 - [ ] Configure production environment

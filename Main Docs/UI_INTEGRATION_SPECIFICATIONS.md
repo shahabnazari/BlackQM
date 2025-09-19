@@ -3,7 +3,8 @@
 **Version:** 1.0  
 **Phases:** 6.86, 7, 8  
 **Purpose:** Comprehensive UI/UX specifications for AI and Hub features  
-**Status:** 📋 Planning Document
+**Status:** 📋 Planning Document  
+**Note:** ⚠️ UI components will be integrated into Phase 8.5 Research Lifecycle Navigation System
 
 ## 🎨 Phase 6.86: AI Platform UI Components
 

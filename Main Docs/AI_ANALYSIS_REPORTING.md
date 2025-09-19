@@ -3,7 +3,16 @@
 **Version:** 1.0  
 **Phase:** 8  
 **Purpose:** Complete the AI-powered research assistant with advanced analysis and report generation  
-**Status:** 🔴 Not Started
+**Status:** 🔴 Not Started  
+**Note:** ⚠️ Features will be distributed across Phase 8.5 Research Lifecycle Navigation phases
+
+## ⚠️ IMPORTANT: Integration with Phase 8.5 Navigation
+
+The AI features described in this document will be integrated into the Research Lifecycle Navigation System (Phase 8.5):
+- Analysis AI → ANALYZE phase (Phase 6 of lifecycle)
+- Visualization AI → VISUALIZE phase (Phase 7 of lifecycle)  
+- Interpretation AI → INTERPRET phase (Phase 8 of lifecycle)
+- Report Generation → REPORT phase (Phase 9 of lifecycle)
 
 ## 🎯 Overview
 
