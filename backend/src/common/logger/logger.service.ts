@@ -28,23 +28,27 @@ export class LoggerService implements NestLoggerService {
 
   private initializeLogger() {
     const logLevel = this.configService.get('LOG_LEVEL', 'info');
-    
+
     // Custom format for structured logging
     const jsonFormat = winston.format.combine(
       winston.format.timestamp(),
       winston.format.errors({ stack: true }),
-      winston.format.json()
+      winston.format.json(),
     );
 
     // Console format for development
     const consoleFormat = winston.format.combine(
       winston.format.colorize(),
       winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-      winston.format.printf(({ timestamp, level, message, context, ...meta }) => {
-        const contextStr = context ? `[${context}]` : '';
-        const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
-        return `${timestamp} ${level} ${contextStr}: ${message} ${metaStr}`;
-      })
+      winston.format.printf(
+        ({ timestamp, level, message, context, ...meta }) => {
+          const contextStr = context ? `[${context}]` : '';
+          const metaStr = Object.keys(meta).length
+            ? JSON.stringify(meta, null, 2)
+            : '';
+          return `${timestamp} ${level} ${contextStr}: ${message} ${metaStr}`;
+        },
+      ),
     );
 
     // Transports configuration
@@ -55,7 +59,7 @@ export class LoggerService implements NestLoggerService {
       transports.push(
         new winston.transports.Console({
           format: consoleFormat,
-        })
+        }),
       );
     }
 
@@ -69,7 +73,7 @@ export class LoggerService implements NestLoggerService {
         maxSize: '20m',
         maxFiles: '14d',
         zippedArchive: true,
-      })
+      }),
     );
 
     // File transport for all logs
@@ -81,7 +85,7 @@ export class LoggerService implements NestLoggerService {
         maxSize: '20m',
         maxFiles: '14d',
         zippedArchive: true,
-      })
+      }),
     );
 
     // File transport for security logs
@@ -94,7 +98,7 @@ export class LoggerService implements NestLoggerService {
         maxSize: '20m',
         maxFiles: '30d',
         zippedArchive: true,
-      })
+      }),
     );
 
     this.logger = winston.createLogger({
@@ -108,7 +112,7 @@ export class LoggerService implements NestLoggerService {
       this.logger.add(
         new winston.transports.Console({
           format: jsonFormat,
-        })
+        }),
       );
     }
   }
@@ -142,7 +146,7 @@ export class LoggerService implements NestLoggerService {
   logRequest(req: Request, context?: LogContext): void {
     const { method, url, headers, body, params, query } = req;
     const userId = (req as any).user?.id;
-    
+
     this.logger.info('HTTP Request', {
       type: 'http_request',
       method,
@@ -161,12 +165,18 @@ export class LoggerService implements NestLoggerService {
   /**
    * Log HTTP response
    */
-  logResponse(req: Request, statusCode: number, responseTime: number, context?: LogContext): void {
+  logResponse(
+    req: Request,
+    statusCode: number,
+    responseTime: number,
+    context?: LogContext,
+  ): void {
     const { method, url } = req;
     const userId = (req as any).user?.id;
-    
-    const level = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
-    
+
+    const level =
+      statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
+
     this.logger.log(level, 'HTTP Response', {
       type: 'http_response',
       method,
@@ -181,9 +191,14 @@ export class LoggerService implements NestLoggerService {
   /**
    * Log security events
    */
-  logSecurity(event: string, details: any, severity: 'low' | 'medium' | 'high' | 'critical' = 'medium'): void {
-    const level = severity === 'critical' ? 'error' : severity === 'high' ? 'warn' : 'info';
-    
+  logSecurity(
+    event: string,
+    details: any,
+    severity: 'low' | 'medium' | 'high' | 'critical' = 'medium',
+  ): void {
+    const level =
+      severity === 'critical' ? 'error' : severity === 'high' ? 'warn' : 'info';
+
     this.logger.log(level, `Security Event: ${event}`, {
       type: 'security',
       event,
@@ -234,7 +249,12 @@ export class LoggerService implements NestLoggerService {
   /**
    * Log audit trail
    */
-  logAudit(action: string, resource: string, userId: string, details: any): void {
+  logAudit(
+    action: string,
+    resource: string,
+    userId: string,
+    details: any,
+  ): void {
     this.logger.info('Audit Trail', {
       type: 'audit',
       action,
@@ -260,9 +280,15 @@ export class LoggerService implements NestLoggerService {
   /**
    * Log external service calls
    */
-  logExternalCall(service: string, method: string, success: boolean, duration: number, details?: any): void {
+  logExternalCall(
+    service: string,
+    method: string,
+    success: boolean,
+    duration: number,
+    details?: any,
+  ): void {
     const level = success ? 'info' : 'warn';
-    
+
     this.logger.log(level, `External Service Call: ${service}`, {
       type: 'external_service',
       service,
@@ -276,7 +302,11 @@ export class LoggerService implements NestLoggerService {
   /**
    * Log cache operations
    */
-  logCache(operation: 'hit' | 'miss' | 'set' | 'delete', key: string, metadata?: any): void {
+  logCache(
+    operation: 'hit' | 'miss' | 'set' | 'delete',
+    key: string,
+    metadata?: any,
+  ): void {
     this.logger.debug(`Cache ${operation}: ${key}`, {
       type: 'cache',
       operation,
@@ -311,16 +341,23 @@ export class LoggerService implements NestLoggerService {
    */
   private sanitizeBody(body: any): any {
     if (!body) return body;
-    
-    const sensitiveFields = ['password', 'token', 'secret', 'apiKey', 'creditCard', 'ssn'];
+
+    const sensitiveFields = [
+      'password',
+      'token',
+      'secret',
+      'apiKey',
+      'creditCard',
+      'ssn',
+    ];
     const sanitized = { ...body };
-    
+
     for (const field of sensitiveFields) {
       if (sanitized[field]) {
         sanitized[field] = '[REDACTED]';
       }
     }
-    
+
     return sanitized;
   }
 

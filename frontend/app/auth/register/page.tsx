@@ -1,10 +1,10 @@
 'use client';
 
 import {
-    CheckIcon,
-    EyeIcon,
-    EyeSlashIcon,
-    XMarkIcon,
+  CheckIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
@@ -109,7 +109,7 @@ export default function RegisterPage() {
     clearError();
     const submitData = {
       ...data,
-      organization: data.organization || undefined
+      organization: data.organization || undefined,
     };
     const result = await registerUser(submitData as any);
 
@@ -196,7 +196,9 @@ export default function RegisterPage() {
             {Object.keys(errors).length > 0 && (
               <div className="mb-4">
                 <FormErrors
-                  errors={Object.values(errors).map((e: any) => e?.message || '')}
+                  errors={Object.values(errors).map(
+                    (e: any) => e?.message || ''
+                  )}
                 />
               </div>
             )}
@@ -212,7 +214,9 @@ export default function RegisterPage() {
                       type="text"
                       placeholder="John Doe"
                       autoComplete="name"
-                      {...(errors.name?.message && { error: errors.name.message })}
+                      {...(errors.name?.message && {
+                        error: errors.name.message,
+                      })}
                       {...register('name')}
                     />
                   </div>
@@ -223,7 +227,9 @@ export default function RegisterPage() {
                       type="email"
                       placeholder="you@example.com"
                       autoComplete="email"
-                      {...(errors.email?.message && { error: errors.email.message })}
+                      {...(errors.email?.message && {
+                        error: errors.email.message,
+                      })}
                       {...register('email')}
                     />
                   </div>
@@ -289,7 +295,9 @@ export default function RegisterPage() {
                         type="text"
                         placeholder="University or Institution"
                         autoComplete="organization"
-                        {...(errors.organization?.message && { error: errors.organization.message })}
+                        {...(errors.organization?.message && {
+                          error: errors.organization.message,
+                        })}
                         {...register('organization')}
                       />
                     </div>
@@ -314,7 +322,9 @@ export default function RegisterPage() {
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Enter a strong password"
                         autoComplete="new-password"
-                        {...(errors.password?.message && { error: errors.password.message })}
+                        {...(errors.password?.message && {
+                          error: errors.password.message,
+                        })}
                         {...register('password')}
                       />
                       <button
@@ -401,7 +411,9 @@ export default function RegisterPage() {
                         type={showConfirmPassword ? 'text' : 'password'}
                         placeholder="Re-enter your password"
                         autoComplete="new-password"
-                        {...(errors.confirmPassword?.message && { error: errors.confirmPassword.message })}
+                        {...(errors.confirmPassword?.message && {
+                          error: errors.confirmPassword.message,
+                        })}
                         {...register('confirmPassword')}
                       />
                       <button

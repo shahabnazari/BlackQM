@@ -1,6 +1,6 @@
 /**
  * Hub API Service - Phase 7 Day 2 Implementation
- * 
+ *
  * Enterprise-grade API client for the Analysis Hub
  * Provides typed methods for all hub operations with proper error handling
  */
@@ -128,7 +128,9 @@ class HubAPIService {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch response data: ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch response data: ${response.statusText}`
+        );
       }
 
       return await response.json();
@@ -199,16 +201,18 @@ class HubAPIService {
     this.wsConnection.onopen = () => {
       console.log('WebSocket connected');
       // Subscribe to study updates
-      this.wsConnection?.send(JSON.stringify({
-        type: 'subscribe',
-        studyId,
-      }));
+      this.wsConnection?.send(
+        JSON.stringify({
+          type: 'subscribe',
+          studyId,
+        })
+      );
     };
 
-    this.wsConnection.onmessage = (event) => {
+    this.wsConnection.onmessage = event => {
       try {
         const data = JSON.parse(event.data);
-        
+
         // Handle different message types
         switch (data.type) {
           case 'hub:initial':
@@ -222,7 +226,7 @@ class HubAPIService {
         }
 
         // Call registered callbacks
-        this.wsCallbacks.forEach((callback) => {
+        this.wsCallbacks.forEach(callback => {
           callback(data);
         });
       } catch (error) {
@@ -230,14 +234,14 @@ class HubAPIService {
       }
     };
 
-    this.wsConnection.onerror = (error) => {
+    this.wsConnection.onerror = error => {
       console.error('WebSocket error:', error);
     };
 
     this.wsConnection.onclose = () => {
       console.log('WebSocket disconnected');
       this.wsConnection = null;
-      
+
       // Attempt to reconnect after 5 seconds
       setTimeout(() => {
         if (!this.wsConnection) {
@@ -296,7 +300,10 @@ class HubAPIService {
   /**
    * Unsubscribe from study updates
    */
-  async unsubscribeFromUpdates(studyId: string, clientId: string): Promise<any> {
+  async unsubscribeFromUpdates(
+    studyId: string,
+    clientId: string
+  ): Promise<any> {
     try {
       const response = await fetch(`${this.baseUrl}/${studyId}/unsubscribe`, {
         method: 'POST',
@@ -387,7 +394,9 @@ class HubAPIService {
       });
 
       if (!response.ok) {
-        throw new Error(`Statistics calculation failed: ${response.statusText}`);
+        throw new Error(
+          `Statistics calculation failed: ${response.statusText}`
+        );
       }
 
       return await response.json();
@@ -441,11 +450,17 @@ class HubAPIService {
   /**
    * Download analysis results
    */
-  async downloadResults(studyId: string, format: 'excel' | 'pqmethod'): Promise<void> {
+  async downloadResults(
+    studyId: string,
+    format: 'excel' | 'pqmethod'
+  ): Promise<void> {
     try {
-      const response = await fetch(`/api/analysis/download/${studyId}/${format}`, {
-        headers: this.getHeaders(),
-      });
+      const response = await fetch(
+        `/api/analysis/download/${studyId}/${format}`,
+        {
+          headers: this.getHeaders(),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Download failed: ${response.statusText}`);
@@ -470,7 +485,7 @@ class HubAPIService {
    * Generate factor narratives - Phase 7 Day 5
    */
   async generateFactorNarratives(
-    studyId: string, 
+    studyId: string,
     options?: {
       includeDistinguishing?: boolean;
       includeConsensus?: boolean;
@@ -478,11 +493,14 @@ class HubAPIService {
     }
   ): Promise<any> {
     try {
-      const response = await fetch(`/api/interpretation/${studyId}/narratives`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify(options || {}),
-      });
+      const response = await fetch(
+        `/api/interpretation/${studyId}/narratives`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify(options || {}),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Narrative generation failed: ${response.statusText}`);
@@ -505,14 +523,19 @@ class HubAPIService {
     }
   ): Promise<any> {
     try {
-      const response = await fetch(`/api/interpretation/${studyId}/recommendations`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify(options || {}),
-      });
+      const response = await fetch(
+        `/api/interpretation/${studyId}/recommendations`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify(options || {}),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`Recommendation generation failed: ${response.statusText}`);
+        throw new Error(
+          `Recommendation generation failed: ${response.statusText}`
+        );
       }
 
       return await response.json();
@@ -586,7 +609,9 @@ class HubAPIService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to get insights summary: ${response.statusText}`);
+        throw new Error(
+          `Failed to get insights summary: ${response.statusText}`
+        );
       }
 
       return await response.json();

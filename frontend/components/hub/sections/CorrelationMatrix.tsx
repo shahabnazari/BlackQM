@@ -8,14 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 // Switch component available but not used in this file
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { 
-  Grid,
-  Download,
-  ZoomIn,
-  ZoomOut,
-  Eye,
-  EyeOff
-} from 'lucide-react';
+import { Grid, Download, ZoomIn, ZoomOut, Eye, EyeOff } from 'lucide-react';
 import { hubAPIService } from '@/lib/services/hub-api.service';
 
 interface CorrelationMatrixProps {
@@ -27,10 +20,10 @@ interface CorrelationMatrixProps {
 
 /**
  * Correlation Matrix Component - Phase 7 Day 3 Implementation
- * 
+ *
  * Enterprise-grade interactive correlation matrix visualization
  * Part of Q-methodology analysis suite
- * 
+ *
  * @features
  * - Color-coded correlation values
  * - Interactive cell selection
@@ -39,17 +32,21 @@ interface CorrelationMatrixProps {
  * - Threshold highlighting
  * - Clustering visualization
  */
-export function CorrelationMatrix({ 
-  studyId, 
+export function CorrelationMatrix({
+  studyId,
   data: initialData,
   participants: initialParticipants,
-  onCellClick 
+  onCellClick,
 }: CorrelationMatrixProps) {
-  const [matrixData, setMatrixData] = useState<number[][] | null>(initialData || null);
-  const [participants, setParticipants] = useState<string[]>(initialParticipants || []);
+  const [matrixData, setMatrixData] = useState<number[][] | null>(
+    initialData || null
+  );
+  const [participants, setParticipants] = useState<string[]>(
+    initialParticipants || []
+  );
   const [isLoading, setIsLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [viewSettings, setViewSettings] = useState({
     zoom: 1,
     showLabels: true,
@@ -61,8 +58,14 @@ export function CorrelationMatrix({
     precision: 2,
   });
 
-  const [selectedCell, setSelectedCell] = useState<{row: number, col: number} | null>(null);
-  const [hoveredCell, setHoveredCell] = useState<{row: number, col: number} | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{
+    row: number;
+    col: number;
+  } | null>(null);
+  const [hoveredCell, setHoveredCell] = useState<{
+    row: number;
+    col: number;
+  } | null>(null);
 
   // Load correlation matrix if not provided
   useEffect(() => {
@@ -74,12 +77,12 @@ export function CorrelationMatrix({
   const loadCorrelationMatrix = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await hubAPIService.runStatistics(studyId, {
         calculateCorrelation: true,
       });
-      
+
       setMatrixData(response.correlationMatrix);
       setParticipants(response.participants || []);
     } catch (err: any) {
@@ -95,21 +98,21 @@ export function CorrelationMatrix({
       // Red-White-Blue diverging scale
       if (value < 0) {
         const intensity = Math.abs(value);
-        const red = Math.round(220 + (35 * (1 - intensity)));
-        const blue = Math.round(53 + (202 * intensity));
+        const red = Math.round(220 + 35 * (1 - intensity));
+        const blue = Math.round(53 + 202 * intensity);
         return `rgb(${red}, 53, ${blue})`;
       } else {
         const intensity = value;
-        const red = Math.round(220 - (167 * intensity));
-        const green = Math.round(53 + (77 * intensity));
+        const red = Math.round(220 - 167 * intensity);
+        const green = Math.round(53 + 77 * intensity);
         return `rgb(${red}, ${green}, 53)`;
       }
     } else if (viewSettings.colorScheme === 'sequential') {
       // Blue sequential scale
       const intensity = (value + 1) / 2; // Normalize to 0-1
-      const blue = Math.round(240 - (100 * intensity));
-      const green = Math.round(250 - (150 * intensity));
-      const red = Math.round(250 - (200 * intensity));
+      const blue = Math.round(240 - 100 * intensity);
+      const green = Math.round(250 - 150 * intensity);
+      const red = Math.round(250 - 200 * intensity);
       return `rgb(${red}, ${green}, ${blue})`;
     } else {
       // Categorical (threshold-based)
@@ -128,9 +131,13 @@ export function CorrelationMatrix({
       // Generate CSV
       let csv = 'Participant,' + participants.join(',') + '\n';
       matrixData.forEach((row, i) => {
-        csv += participants[i] + ',' + row.map(v => v.toFixed(viewSettings.precision)).join(',') + '\n';
+        csv +=
+          participants[i] +
+          ',' +
+          row.map(v => v.toFixed(viewSettings.precision)).join(',') +
+          '\n';
       });
-      
+
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -200,22 +207,34 @@ export function CorrelationMatrix({
             <Grid className="h-5 w-5" />
             Correlation Matrix
           </CardTitle>
-          
+
           <div className="flex items-center gap-2">
             {/* Zoom controls */}
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setViewSettings({...viewSettings, zoom: Math.max(0.5, viewSettings.zoom - 0.1)})}
+                onClick={() =>
+                  setViewSettings({
+                    ...viewSettings,
+                    zoom: Math.max(0.5, viewSettings.zoom - 0.1),
+                  })
+                }
               >
                 <ZoomOut className="h-4 w-4" />
               </Button>
-              <span className="text-sm px-2">{(viewSettings.zoom * 100).toFixed(0)}%</span>
+              <span className="text-sm px-2">
+                {(viewSettings.zoom * 100).toFixed(0)}%
+              </span>
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setViewSettings({...viewSettings, zoom: Math.min(2, viewSettings.zoom + 0.1)})}
+                onClick={() =>
+                  setViewSettings({
+                    ...viewSettings,
+                    zoom: Math.min(2, viewSettings.zoom + 0.1),
+                  })
+                }
               >
                 <ZoomIn className="h-4 w-4" />
               </Button>
@@ -225,9 +244,18 @@ export function CorrelationMatrix({
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setViewSettings({...viewSettings, showLabels: !viewSettings.showLabels})}
+              onClick={() =>
+                setViewSettings({
+                  ...viewSettings,
+                  showLabels: !viewSettings.showLabels,
+                })
+              }
             >
-              {viewSettings.showLabels ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              {viewSettings.showLabels ? (
+                <Eye className="h-4 w-4" />
+              ) : (
+                <EyeOff className="h-4 w-4" />
+              )}
             </Button>
 
             {/* Export button */}
@@ -247,10 +275,17 @@ export function CorrelationMatrix({
         <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Color Scheme</label>
+              <label className="text-sm font-medium mb-1 block">
+                Color Scheme
+              </label>
               <select
                 value={viewSettings.colorScheme}
-                onChange={(e) => setViewSettings({...viewSettings, colorScheme: e.target.value as any})}
+                onChange={e =>
+                  setViewSettings({
+                    ...viewSettings,
+                    colorScheme: e.target.value as any,
+                  })
+                }
                 className="w-full px-3 py-1 border rounded-md"
               >
                 <option value="diverging">Diverging</option>
@@ -265,7 +300,12 @@ export function CorrelationMatrix({
               </label>
               <Slider
                 value={[viewSettings.highlightThreshold]}
-                onValueChange={([v]) => setViewSettings({...viewSettings, highlightThreshold: v || viewSettings.highlightThreshold})}
+                onValueChange={([v]) =>
+                  setViewSettings({
+                    ...viewSettings,
+                    highlightThreshold: v || viewSettings.highlightThreshold,
+                  })
+                }
                 min={0.3}
                 max={1}
                 step={0.05}
@@ -279,7 +319,12 @@ export function CorrelationMatrix({
               </label>
               <Slider
                 value={[viewSettings.precision]}
-                onValueChange={([v]) => setViewSettings({...viewSettings, precision: v || viewSettings.precision})}
+                onValueChange={([v]) =>
+                  setViewSettings({
+                    ...viewSettings,
+                    precision: v || viewSettings.precision,
+                  })
+                }
                 min={1}
                 max={4}
                 step={1}
@@ -303,15 +348,19 @@ export function CorrelationMatrix({
                 <thead>
                   <tr>
                     <th className="p-2 border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700"></th>
-                    {viewSettings.showLabels && participants.map((p, i) => (
-                      <th
-                        key={i}
-                        className="p-2 border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-xs"
-                        style={{ writingMode: 'vertical-lr', textOrientation: 'mixed' }}
-                      >
-                        {p}
-                      </th>
-                    ))}
+                    {viewSettings.showLabels &&
+                      participants.map((p, i) => (
+                        <th
+                          key={i}
+                          className="p-2 border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-xs"
+                          style={{
+                            writingMode: 'vertical-lr',
+                            textOrientation: 'mixed',
+                          }}
+                        >
+                          {p}
+                        </th>
+                      ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -323,10 +372,14 @@ export function CorrelationMatrix({
                         </td>
                       )}
                       {row.map((value, colIndex) => {
-                        const isSelected = selectedCell?.row === rowIndex && selectedCell?.col === colIndex;
-                        const isHovered = hoveredCell?.row === rowIndex && hoveredCell?.col === colIndex;
+                        const isSelected =
+                          selectedCell?.row === rowIndex &&
+                          selectedCell?.col === colIndex;
+                        const isHovered =
+                          hoveredCell?.row === rowIndex &&
+                          hoveredCell?.col === colIndex;
                         const isDiagonal = rowIndex === colIndex;
-                        
+
                         return (
                           <td
                             key={colIndex}
@@ -343,7 +396,9 @@ export function CorrelationMatrix({
                               height: '40px',
                             }}
                             onClick={() => handleCellClick(rowIndex, colIndex)}
-                            onMouseEnter={() => handleCellHover(rowIndex, colIndex)}
+                            onMouseEnter={() =>
+                              handleCellHover(rowIndex, colIndex)
+                            }
                             onMouseLeave={handleCellLeave}
                             title={`${participants[rowIndex]} × ${participants[colIndex]}: ${value.toFixed(viewSettings.precision)}`}
                           >
@@ -369,17 +424,23 @@ export function CorrelationMatrix({
             <div className="text-sm font-medium mb-2">Correlation Scale</div>
             <div className="flex items-center gap-2">
               <span className="text-xs">-1.0</span>
-              <div className="flex-1 h-6 rounded" style={{
-                background: 'linear-gradient(to right, #dc3545, white, #35dc53)',
-              }} />
+              <div
+                className="flex-1 h-6 rounded"
+                style={{
+                  background:
+                    'linear-gradient(to right, #dc3545, white, #35dc53)',
+                }}
+              />
               <span className="text-xs">+1.0</span>
             </div>
             {hoveredCell && matrixData && (
               <div className="mt-2 text-sm">
                 <Badge variant="secondary">
-                  {participants[hoveredCell.row]} × {participants[hoveredCell.col]}: {
-                    matrixData[hoveredCell.row]?.[hoveredCell.col]?.toFixed(viewSettings.precision) || 'N/A'
-                  }
+                  {participants[hoveredCell.row]} ×{' '}
+                  {participants[hoveredCell.col]}:{' '}
+                  {matrixData[hoveredCell.row]?.[hoveredCell.col]?.toFixed(
+                    viewSettings.precision
+                  ) || 'N/A'}
                 </Badge>
               </div>
             )}

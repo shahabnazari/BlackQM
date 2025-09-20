@@ -2,14 +2,14 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
+import {
   DocumentDuplicateIcon,
   PlayCircleIcon,
   CheckCircleIcon,
   ClockIcon,
   CalendarIcon,
   ArrowRightIcon,
-  ExclamationCircleIcon
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { Card } from '@/components/apple-ui/Card';
 import { Button } from '@/components/apple-ui/Button';
@@ -43,7 +43,7 @@ const mockStudies: Study[] = [
     currentStage: 'Q-Sort',
     token: 'ENV2024',
     estimatedTime: '45 minutes',
-    compensation: '$10 gift card'
+    compensation: '$10 gift card',
   },
   {
     id: '2',
@@ -55,7 +55,7 @@ const mockStudies: Study[] = [
     progress: 0,
     status: 'not-started',
     token: 'EDU2024',
-    estimatedTime: '30 minutes'
+    estimatedTime: '30 minutes',
   },
   {
     id: '3',
@@ -67,7 +67,7 @@ const mockStudies: Study[] = [
     status: 'completed',
     token: 'HEALTH2024',
     estimatedTime: '40 minutes',
-    compensation: '$15 gift card'
+    compensation: '$15 gift card',
   },
   {
     id: '4',
@@ -80,8 +80,8 @@ const mockStudies: Study[] = [
     status: 'expired',
     currentStage: 'Pre-sort',
     token: 'WORK2024',
-    estimatedTime: '25 minutes'
-  }
+    estimatedTime: '25 minutes',
+  },
 ];
 
 export default function MyStudiesPage() {
@@ -90,24 +90,30 @@ export default function MyStudiesPage() {
 
   const filteredStudies = mockStudies.filter(study => {
     if (filter === 'all') return true;
-    if (filter === 'active') return study.status === 'in-progress' || study.status === 'not-started';
+    if (filter === 'active')
+      return study.status === 'in-progress' || study.status === 'not-started';
     if (filter === 'completed') return study.status === 'completed';
     return true;
   });
 
-  const activeCount = mockStudies.filter(s => s.status === 'in-progress' || s.status === 'not-started').length;
-  const completedCount = mockStudies.filter(s => s.status === 'completed').length;
+  const activeCount = mockStudies.filter(
+    s => s.status === 'in-progress' || s.status === 'not-started'
+  ).length;
+  const completedCount = mockStudies.filter(
+    s => s.status === 'completed'
+  ).length;
 
   const handleContinueStudy = (study: Study) => {
     if (study.status === 'expired') return;
-    
+
     // Navigate to the appropriate stage
-    const stage = study.currentStage?.toLowerCase().replace(' ', '-') || 'welcome';
+    const stage =
+      study.currentStage?.toLowerCase().replace(' ', '-') || 'welcome';
     router.push(`/study/${study.token}/${stage}`);
   };
 
   const getStatusBadge = (status: Study['status']) => {
-    switch(status) {
+    switch (status) {
       case 'in-progress':
         return <Badge variant="secondary">In Progress</Badge>;
       case 'not-started':
@@ -122,11 +128,11 @@ export default function MyStudiesPage() {
   };
 
   const getActionButton = (study: Study) => {
-    switch(study.status) {
+    switch (study.status) {
       case 'in-progress':
         return (
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             size="small"
             onClick={() => handleContinueStudy(study)}
             className="flex items-center gap-1"
@@ -136,8 +142,8 @@ export default function MyStudiesPage() {
         );
       case 'not-started':
         return (
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             size="small"
             onClick={() => handleContinueStudy(study)}
             className="flex items-center gap-1"
@@ -147,8 +153,8 @@ export default function MyStudiesPage() {
         );
       case 'completed':
         return (
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             size="small"
             disabled
             className="flex items-center gap-1"
@@ -158,11 +164,7 @@ export default function MyStudiesPage() {
         );
       case 'expired':
         return (
-          <Button 
-            variant="secondary" 
-            size="small"
-            disabled
-          >
+          <Button variant="secondary" size="small" disabled>
             Expired
           </Button>
         );
@@ -196,7 +198,9 @@ export default function MyStudiesPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-text-secondary">Completed</p>
-              <p className="text-2xl font-bold text-system-green">{completedCount}</p>
+              <p className="text-2xl font-bold text-system-green">
+                {completedCount}
+              </p>
             </div>
             <CheckCircleIcon className="w-8 h-8 text-system-green" />
           </div>
@@ -247,11 +251,11 @@ export default function MyStudiesPage() {
                   <h3 className="text-lg font-semibold">{study.title}</h3>
                   {getStatusBadge(study.status)}
                 </div>
-                
+
                 <p className="text-sm text-text-secondary mb-1">
                   by {study.researcherName}
                 </p>
-                
+
                 <p className="text-sm text-text-secondary mb-3">
                   {study.description}
                 </p>
@@ -279,7 +283,8 @@ export default function MyStudiesPage() {
                 </div>
 
                 {/* Progress Bar */}
-                {(study.status === 'in-progress' || study.status === 'expired') && (
+                {(study.status === 'in-progress' ||
+                  study.status === 'expired') && (
                   <div className="mt-4">
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-text-secondary">
@@ -288,9 +293,11 @@ export default function MyStudiesPage() {
                       <span className="font-medium">{study.progress}%</span>
                     </div>
                     <div className="w-full bg-surface-secondary rounded-full h-2">
-                      <div 
+                      <div
                         className={`h-2 rounded-full transition-all ${
-                          study.status === 'expired' ? 'bg-text-tertiary' : 'bg-primary'
+                          study.status === 'expired'
+                            ? 'bg-text-tertiary'
+                            : 'bg-primary'
                         }`}
                         style={{ width: `${study.progress}%` }}
                       />
@@ -299,9 +306,7 @@ export default function MyStudiesPage() {
                 )}
               </div>
 
-              <div className="flex items-center">
-                {getActionButton(study)}
-              </div>
+              <div className="flex items-center">{getActionButton(study)}</div>
             </div>
           </Card>
         ))}
@@ -313,16 +318,13 @@ export default function MyStudiesPage() {
           <DocumentDuplicateIcon className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No studies found</h3>
           <p className="text-text-secondary mb-4">
-            {filter === 'active' 
-              ? "You don't have any active studies" 
+            {filter === 'active'
+              ? "You don't have any active studies"
               : filter === 'completed'
-              ? "You haven't completed any studies yet"
-              : "You haven't joined any studies yet"}
+                ? "You haven't completed any studies yet"
+                : "You haven't joined any studies yet"}
           </p>
-          <Button 
-            variant="primary"
-            onClick={() => router.push('/join')}
-          >
+          <Button variant="primary" onClick={() => router.push('/join')}>
             Join a Study
           </Button>
         </Card>
@@ -338,7 +340,7 @@ export default function MyStudiesPage() {
                 Join new studies and contribute to important research
               </p>
             </div>
-            <Button 
+            <Button
               variant="primary"
               onClick={() => router.push('/join')}
               className="flex items-center gap-1"

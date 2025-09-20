@@ -45,7 +45,7 @@ export interface ThemeDto {
 
 /**
  * Interpretation Service - Phase 7 Day 5
- * 
+ *
  * Provides AI-powered interpretation capabilities for Q-methodology studies
  * Integrates with OpenAI for narrative generation and insight extraction
  */
@@ -84,24 +84,31 @@ export class InterpretationService {
 
     const results = analysis.results as any;
     const factors = results.factors || [];
-    
+
     const narratives: FactorNarrativeDto[] = [];
 
     for (const factor of factors) {
       const prompt = this.buildNarrativePrompt(factor, options);
-      
+
       try {
-        const systemPrompt = 'You are an expert Q-methodology researcher skilled at interpreting factor analysis results and creating meaningful narratives.\n\n';
+        const systemPrompt =
+          'You are an expert Q-methodology researcher skilled at interpreting factor analysis results and creating meaningful narratives.\n\n';
         const fullPrompt = systemPrompt + prompt;
-        const response = await this.openaiService.generateCompletion(fullPrompt, {
-          temperature: 0.7,
-          maxTokens: 800,
-        });
+        const response = await this.openaiService.generateCompletion(
+          fullPrompt,
+          {
+            temperature: 0.7,
+            maxTokens: 800,
+          },
+        );
 
         const narrative = this.parseNarrativeResponse(response.content, factor);
         narratives.push(narrative);
       } catch (error: any) {
-        console.error(`Failed to generate narrative for factor ${factor.number}:`, error);
+        console.error(
+          `Failed to generate narrative for factor ${factor.number}:`,
+          error,
+        );
         // Create a fallback narrative
         narratives.push({
           factorNumber: factor.number,
@@ -153,14 +160,17 @@ export class InterpretationService {
     const prompt = this.buildRecommendationPrompt(study, options);
 
     try {
-      const systemPrompt = 'You are a Q-methodology expert providing actionable research recommendations.\n\n';
+      const systemPrompt =
+        'You are a Q-methodology expert providing actionable research recommendations.\n\n';
       const fullPrompt = systemPrompt + prompt;
       const response = await this.openaiService.generateCompletion(fullPrompt, {
         temperature: 0.6,
         maxTokens: 1000,
       });
 
-      const recommendations = this.parseRecommendationResponse(response.content);
+      const recommendations = this.parseRecommendationResponse(
+        response.content,
+      );
       const result = { recommendations };
       await this.cacheService.set(cacheKey, result, 3600);
       return result;
@@ -199,7 +209,12 @@ export class InterpretationService {
       throw new BadRequestException('Study not found');
     }
 
-    const dimensions = options.dimensions || ['selection', 'response', 'interpretation', 'demographic'];
+    const dimensions = options.dimensions || [
+      'selection',
+      'response',
+      'interpretation',
+      'demographic',
+    ];
     const biasAnalysis: BiasAnalysisDto = {
       dimensions: {},
       recommendations: [],
@@ -217,7 +232,8 @@ export class InterpretationService {
     biasAnalysis.overallScore = totalScore / dimensions.length;
 
     if (options.includeRecommendations) {
-      biasAnalysis.recommendations = await this.generateBiasRecommendations(biasAnalysis);
+      biasAnalysis.recommendations =
+        await this.generateBiasRecommendations(biasAnalysis);
     }
 
     await this.cacheService.set(cacheKey, biasAnalysis, 3600);
@@ -264,12 +280,13 @@ export class InterpretationService {
    * Generate insights summary
    */
   async generateInsightsSummary(studyId: string): Promise<any> {
-    const [narratives, recommendations, biasAnalysis, themes] = await Promise.all([
-      this.generateFactorNarratives(studyId, { analysisDepth: 'standard' }),
-      this.generateRecommendations(studyId, { includeActionItems: true }),
-      this.analyzeBias(studyId, { includeRecommendations: true }),
-      this.extractThemes(studyId, { includeQuotes: true }),
-    ]);
+    const [narratives, recommendations, biasAnalysis, themes] =
+      await Promise.all([
+        this.generateFactorNarratives(studyId, { analysisDepth: 'standard' }),
+        this.generateRecommendations(studyId, { includeActionItems: true }),
+        this.analyzeBias(studyId, { includeRecommendations: true }),
+        this.extractThemes(studyId, { includeQuotes: true }),
+      ]);
 
     return {
       studyId,
@@ -318,7 +335,10 @@ export class InterpretationService {
     return prompt;
   }
 
-  private parseNarrativeResponse(response: string, factor: any): FactorNarrativeDto {
+  private parseNarrativeResponse(
+    response: string,
+    factor: any,
+  ): FactorNarrativeDto {
     // Parse AI response - this would need more sophisticated parsing in production
     const lines = response.split('\n');
     let title = `Factor ${factor.number}`;
@@ -333,7 +353,10 @@ export class InterpretationService {
       } else if (line.includes('Theme:') || line.includes('theme:')) {
         mainTheme = line.replace(/^.*?:\s*/, '');
       } else if (line.includes('Narrative:') || line.includes('narrative:')) {
-        narrative = lines.slice(i + 1).join(' ').trim();
+        narrative = lines
+          .slice(i + 1)
+          .join(' ')
+          .trim();
         break;
       }
     }
@@ -347,7 +370,8 @@ export class InterpretationService {
       title,
       mainTheme: mainTheme || 'Theme analysis in progress',
       narrative,
-      distinguishingStatements: factor.distinguishing?.map((s: any) => s.text) || [],
+      distinguishingStatements:
+        factor.distinguishing?.map((s: any) => s.text) || [],
       consensusStatements: factor.consensus?.map((s: any) => s.text) || [],
       confidence: 0.85,
       participantCount: factor.loadings?.length || 0,
@@ -387,10 +411,15 @@ export class InterpretationService {
 
   private parseRecommendationResponse(response: string): RecommendationDto[] {
     const recommendations: RecommendationDto[] = [];
-    
+
     // Simple parsing - would be more sophisticated in production
-    const categories = ['Data Collection', 'Analysis', 'Interpretation', 'Next Steps'];
-    
+    const categories = [
+      'Data Collection',
+      'Analysis',
+      'Interpretation',
+      'Next Steps',
+    ];
+
     for (const category of categories) {
       if (response.includes(category)) {
         recommendations.push({
@@ -409,7 +438,11 @@ export class InterpretationService {
   private async analyzeBiasDimension(
     study: any,
     dimension: string,
-  ): Promise<{ level: 'low' | 'medium' | 'high'; score: number; recommendation?: string }> {
+  ): Promise<{
+    level: 'low' | 'medium' | 'high';
+    score: number;
+    recommendation?: string;
+  }> {
     // Simplified bias analysis - would be more sophisticated in production
     let score = Math.random() * 0.5; // Low bias by default
     let level: 'low' | 'medium' | 'high' = 'low';
@@ -418,7 +451,9 @@ export class InterpretationService {
     switch (dimension) {
       case 'selection':
         // Check participant diversity
-        const uniqueParticipants = new Set(study.responses?.map((r: any) => r.userId));
+        const uniqueParticipants = new Set(
+          study.responses?.map((r: any) => r.userId),
+        );
         if (uniqueParticipants.size < 10) {
           score = 0.7;
           level = 'medium';
@@ -458,25 +493,36 @@ export class InterpretationService {
     return { level, score, recommendation };
   }
 
-  private async generateBiasRecommendations(biasAnalysis: BiasAnalysisDto): Promise<string[]> {
+  private async generateBiasRecommendations(
+    biasAnalysis: BiasAnalysisDto,
+  ): Promise<string[]> {
     const recommendations: string[] = [];
 
-    for (const [dimension, analysis] of Object.entries(biasAnalysis.dimensions)) {
+    for (const [dimension, analysis] of Object.entries(
+      biasAnalysis.dimensions,
+    )) {
       if (analysis.level === 'high') {
-        recommendations.push(`Urgent: Address ${dimension} bias - ${analysis.recommendation || 'Review methodology'}`);
+        recommendations.push(
+          `Urgent: Address ${dimension} bias - ${analysis.recommendation || 'Review methodology'}`,
+        );
       } else if (analysis.level === 'medium') {
         recommendations.push(`Consider: Improve ${dimension} representation`);
       }
     }
 
     if (biasAnalysis.overallScore > 0.7) {
-      recommendations.unshift('Critical: Overall bias levels are high. Review entire methodology.');
+      recommendations.unshift(
+        'Critical: Overall bias levels are high. Review entire methodology.',
+      );
     }
 
     return recommendations;
   }
 
-  private async performThemeExtraction(study: any, options: any): Promise<ThemeDto[]> {
+  private async performThemeExtraction(
+    study: any,
+    options: any,
+  ): Promise<ThemeDto[]> {
     const themes: ThemeDto[] = [];
 
     if (!study.responses || study.responses.length === 0) {
@@ -505,14 +551,18 @@ export class InterpretationService {
 
     if (options.method === 'ai-powered') {
       try {
-        const systemPrompt = 'You are an expert qualitative researcher skilled at thematic analysis.\n\n';
+        const systemPrompt =
+          'You are an expert qualitative researcher skilled at thematic analysis.\n\n';
         const prompt = `Extract key themes from these Q-methodology participant comments:\n\n${textData.join('\n\n')}\n\nIdentify 3-5 main themes with descriptions.`;
         const fullPrompt = systemPrompt + prompt;
-        
-        const response = await this.openaiService.generateCompletion(fullPrompt, {
-          temperature: 0.6,
-          maxTokens: 800,
-        });
+
+        const response = await this.openaiService.generateCompletion(
+          fullPrompt,
+          {
+            temperature: 0.6,
+            maxTokens: 800,
+          },
+        );
 
         // Parse themes from response
         themes.push({

@@ -17,7 +17,7 @@ import { Response } from 'express';
 
 /**
  * Report Controller - Phase 7 Day 6
- * 
+ *
  * RESTful endpoints for report generation and export
  * Foundation for Phase 10 complete implementation
  */
@@ -63,7 +63,7 @@ export class ReportController {
   ) {
     try {
       const userId = req.user.sub;
-      
+
       if (!options.format) {
         throw new BadRequestException('Export format is required');
       }
@@ -107,9 +107,9 @@ export class ReportController {
   ) {
     try {
       const userId = req.user.sub;
-      
+
       const options: ExportOptions = {
-        format: format as any || 'pdf',
+        format: (format as any) || 'pdf',
         includeAnalysis,
         includeRawData,
         includeVisualizations,

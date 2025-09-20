@@ -5,10 +5,10 @@ import { hubAPIService } from '@/lib/services/hub-api.service';
 
 /**
  * Study Hub Store - Phase 7 Day 1 Implementation
- * 
+ *
  * World-class state management for the Unified Analysis Hub
  * Aligned with Phase 8.5 Research Lifecycle Navigation
- * 
+ *
  * @features
  * - Single data load strategy (load once, use everywhere)
  * - Intelligent caching with persistence
@@ -17,13 +17,13 @@ import { hubAPIService } from '@/lib/services/hub-api.service';
  * - Performance optimized
  */
 
-export type HubSection = 
-  | 'overview' 
-  | 'data' 
-  | 'analyze' 
-  | 'visualize' 
-  | 'insights' 
-  | 'report' 
+export type HubSection =
+  | 'overview'
+  | 'data'
+  | 'analyze'
+  | 'visualize'
+  | 'insights'
+  | 'report'
   | 'export';
 
 export interface StudyMetadata {
@@ -132,18 +132,22 @@ export const useStudyHub = create<StudyHubState>()(
         ...initialState,
 
         // Navigation Actions
-        setSection: (section) => 
+        setSection: section =>
           set({ currentSection: section }, false, 'setSection'),
 
-        toggleSidebar: () => 
-          set((state) => ({ 
-            sidebarCollapsed: !state.sidebarCollapsed 
-          }), false, 'toggleSidebar'),
+        toggleSidebar: () =>
+          set(
+            state => ({
+              sidebarCollapsed: !state.sidebarCollapsed,
+            }),
+            false,
+            'toggleSidebar'
+          ),
 
         // Data Loading with Intelligent Caching (Using Hub Service)
-        loadStudy: async (studyId) => {
+        loadStudy: async studyId => {
           const state = get();
-          
+
           // Check cache validity (5 minutes)
           if (
             state.studyData?.study.id === studyId &&
@@ -160,21 +164,25 @@ export const useStudyHub = create<StudyHubState>()(
             // Use the new hub service for unified data loading
             const hubData = await hubAPIService.getHubData(studyId);
 
-            set({
-              studyData: {
-                study: hubData.study,
-                responses: hubData.qsorts.data,
-                statements: hubData.study.statements || [],
+            set(
+              {
+                studyData: {
+                  study: hubData.study,
+                  responses: hubData.qsorts.data,
+                  statements: hubData.study.statements || [],
+                },
+                analysisResults: hubData.analysis,
+                isLoading: false,
+                lastFetch: new Date(hubData.metadata.lastUpdated),
+                cacheValid: true,
+                error: null,
               },
-              analysisResults: hubData.analysis,
-              isLoading: false,
-              lastFetch: new Date(hubData.metadata.lastUpdated),
-              cacheValid: true,
-              error: null,
-            }, false, 'loadStudy:success');
+              false,
+              'loadStudy:success'
+            );
 
             // Connect to WebSocket for real-time updates
-            hubAPIService.connectWebSocket(studyId, (update) => {
+            hubAPIService.connectWebSocket(studyId, update => {
               console.log('Real-time update received:', update);
               // Handle real-time updates here
               if (update.type === 'hub:update') {
@@ -183,16 +191,20 @@ export const useStudyHub = create<StudyHubState>()(
               }
             });
           } catch (error: any) {
-            set({
-              isLoading: false,
-              error: error as Error,
-              cacheValid: false,
-            }, false, 'loadStudy:error');
+            set(
+              {
+                isLoading: false,
+                error: error as Error,
+                cacheValid: false,
+              },
+              false,
+              'loadStudy:error'
+            );
           }
         },
 
         // Analysis Actions
-        runAnalysis: async (type) => {
+        runAnalysis: async type => {
           const { studyData } = get();
           if (!studyData) return;
 
@@ -204,23 +216,31 @@ export const useStudyHub = create<StudyHubState>()(
               responses: studyData.responses,
             });
 
-            set((state) => ({
-              analysisResults: {
-                ...state.analysisResults,
-                [type]: result.data,
-              },
-              isAnalyzing: false,
-            }), false, 'runAnalysis:success');
+            set(
+              state => ({
+                analysisResults: {
+                  ...state.analysisResults,
+                  [type]: result.data,
+                },
+                isAnalyzing: false,
+              }),
+              false,
+              'runAnalysis:success'
+            );
           } catch (error: any) {
-            set({
-              isAnalyzing: false,
-              error: error as Error,
-            }, false, 'runAnalysis:error');
+            set(
+              {
+                isAnalyzing: false,
+                error: error as Error,
+              },
+              false,
+              'runAnalysis:error'
+            );
           }
         },
 
         // Visualization Actions
-        generateVisualization: async (config) => {
+        generateVisualization: async config => {
           const { analysisResults } = get();
           if (!analysisResults) return;
 
@@ -230,11 +250,19 @@ export const useStudyHub = create<StudyHubState>()(
               data: analysisResults,
             });
 
-            set((state) => ({
-              visualizations: [...state.visualizations, viz.data],
-            }), false, 'generateVisualization');
+            set(
+              state => ({
+                visualizations: [...state.visualizations, viz.data],
+              }),
+              false,
+              'generateVisualization'
+            );
           } catch (error: any) {
-            set({ error: error as Error }, false, 'generateVisualization:error');
+            set(
+              { error: error as Error },
+              false,
+              'generateVisualization:error'
+            );
           }
         },
 
@@ -249,18 +277,26 @@ export const useStudyHub = create<StudyHubState>()(
               analysis: analysisResults,
             });
 
-            set({ 
-              aiInsights: insights.data 
-            }, false, 'requestAIInterpretation');
+            set(
+              {
+                aiInsights: insights.data,
+              },
+              false,
+              'requestAIInterpretation'
+            );
           } catch (error: any) {
-            set({ error: error as Error }, false, 'requestAIInterpretation:error');
+            set(
+              { error: error as Error },
+              false,
+              'requestAIInterpretation:error'
+            );
           }
         },
 
         // Report Actions
-        buildReport: async (sections) => {
+        buildReport: async sections => {
           const state = get();
-          
+
           try {
             const report = await api.post('/reports/build', {
               studyId: state.studyData?.study.id,
@@ -269,18 +305,22 @@ export const useStudyHub = create<StudyHubState>()(
               insights: state.aiInsights,
             });
 
-            set({ 
-              reportDraft: report.data 
-            }, false, 'buildReport');
+            set(
+              {
+                reportDraft: report.data,
+              },
+              false,
+              'buildReport'
+            );
           } catch (error: any) {
             set({ error: error as Error }, false, 'buildReport:error');
           }
         },
 
         // Export Actions
-        exportData: async (format) => {
+        exportData: async format => {
           const state = get();
-          
+
           try {
             const response = await api.post('/export', {
               studyId: state.studyData?.study.id,
@@ -293,7 +333,9 @@ export const useStudyHub = create<StudyHubState>()(
             });
 
             // Handle download
-            const blob = new Blob([response.data], { type: 'application/octet-stream' });
+            const blob = new Blob([response.data], {
+              type: 'application/octet-stream',
+            });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -306,19 +348,22 @@ export const useStudyHub = create<StudyHubState>()(
         },
 
         // Cache Management
-        clearCache: () => 
-          set({ 
-            cacheValid: false, 
-            lastFetch: null 
-          }, false, 'clearCache'),
+        clearCache: () =>
+          set(
+            {
+              cacheValid: false,
+              lastFetch: null,
+            },
+            false,
+            'clearCache'
+          ),
 
         // Reset Store
-        reset: () => 
-          set(initialState, false, 'reset'),
+        reset: () => set(initialState, false, 'reset'),
       }),
       {
         name: 'study-hub-storage',
-        partialize: (state) => ({
+        partialize: state => ({
           currentSection: state.currentSection,
           sidebarCollapsed: state.sidebarCollapsed,
         }),

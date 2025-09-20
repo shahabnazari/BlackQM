@@ -1,6 +1,6 @@
 /**
  * Analysis Hub E2E Tests - Phase 7
- * 
+ *
  * Critical path tests for the Analysis Hub functionality
  */
 
@@ -24,7 +24,7 @@ describe('Analysis Hub E2E Tests', () => {
 
     app = moduleFixture.createNestApplication();
     prisma = app.get<PrismaService>(PrismaService);
-    
+
     await app.init();
 
     // Create test user and authenticate
@@ -306,7 +306,12 @@ describe('Analysis Hub E2E Tests', () => {
         .send({
           format: 'pdf',
           template: 'apa',
-          sections: ['executive-summary', 'methodology', 'findings', 'recommendations'],
+          sections: [
+            'executive-summary',
+            'methodology',
+            'findings',
+            'recommendations',
+          ],
         })
         .set('Authorization', authToken)
         .expect(200);
@@ -317,7 +322,7 @@ describe('Analysis Hub E2E Tests', () => {
 
     it('should export report in multiple formats', async () => {
       const formats = ['pdf', 'docx', 'markdown'];
-      
+
       for (const format of formats) {
         const response = await request(app.getHttpServer())
           .post(`/api/reports/${testStudyId}/export`)
@@ -335,12 +340,12 @@ describe('Analysis Hub E2E Tests', () => {
       const requests = Array.from({ length: 10 }, () =>
         request(app.getHttpServer())
           .get(`/api/analysis/hub/${testStudyId}`)
-          .set('Authorization', authToken)
+          .set('Authorization', authToken),
       );
 
       const responses = await Promise.all(requests);
-      
-      responses.forEach(response => {
+
+      responses.forEach((response) => {
         expect(response.status).toBe(200);
         expect(response.body).toHaveProperty('study');
       });
@@ -348,14 +353,14 @@ describe('Analysis Hub E2E Tests', () => {
 
     it('should maintain response time under threshold', async () => {
       const start = Date.now();
-      
+
       await request(app.getHttpServer())
         .get(`/api/analysis/hub/${testStudyId}`)
         .set('Authorization', authToken)
         .expect(200);
 
       const duration = Date.now() - start;
-      
+
       // Response should be under 500ms
       expect(duration).toBeLessThan(500);
     });

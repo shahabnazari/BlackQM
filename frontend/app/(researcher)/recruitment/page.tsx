@@ -18,9 +18,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { 
-  recruitmentAPI
-} from '@/lib/services/recruitment-api.service';
+import { recruitmentAPI } from '@/lib/services/recruitment-api.service';
 
 interface Participant {
   id: string;
@@ -202,25 +200,25 @@ export default function RecruitmentPage() {
               <Card className="p-6">
                 <h3 className="font-semibold mb-4">Recruitment Funnel</h3>
                 <div className="space-y-3">
-                  <FunnelStage 
-                    label="Invited" 
-                    count={metrics?.totalInvited || 0} 
-                    percentage={100} 
+                  <FunnelStage
+                    label="Invited"
+                    count={metrics?.totalInvited || 0}
+                    percentage={100}
                   />
-                  <FunnelStage 
-                    label="Responded" 
-                    count={Math.floor((metrics?.totalInvited || 0) * 0.6)} 
-                    percentage={60} 
+                  <FunnelStage
+                    label="Responded"
+                    count={Math.floor((metrics?.totalInvited || 0) * 0.6)}
+                    percentage={60}
                   />
-                  <FunnelStage 
-                    label="Scheduled" 
-                    count={metrics?.totalScheduled || 0} 
-                    percentage={metrics?.conversionRate || 0} 
+                  <FunnelStage
+                    label="Scheduled"
+                    count={metrics?.totalScheduled || 0}
+                    percentage={metrics?.conversionRate || 0}
                   />
-                  <FunnelStage 
-                    label="Completed" 
-                    count={metrics?.totalCompleted || 0} 
-                    percentage={metrics?.completionRate || 0} 
+                  <FunnelStage
+                    label="Completed"
+                    count={metrics?.totalCompleted || 0}
+                    percentage={metrics?.completionRate || 0}
                   />
                 </div>
               </Card>
@@ -229,14 +227,21 @@ export default function RecruitmentPage() {
               <Card className="p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-semibold">Upcoming Appointments</h3>
-                  <Button variant="ghost" size="sm">View All</Button>
+                  <Button variant="ghost" size="sm">
+                    View All
+                  </Button>
                 </div>
                 <div className="space-y-3">
                   {appointments
-                    .filter(a => a.status === 'scheduled' || a.status === 'confirmed')
+                    .filter(
+                      a => a.status === 'scheduled' || a.status === 'confirmed'
+                    )
                     .slice(0, 5)
                     .map(appointment => (
-                      <AppointmentRow key={appointment.id} appointment={appointment} />
+                      <AppointmentRow
+                        key={appointment.id}
+                        appointment={appointment}
+                      />
                     ))}
                 </div>
               </Card>
@@ -279,7 +284,10 @@ export default function RecruitmentPage() {
                     </thead>
                     <tbody>
                       {participants.map(participant => (
-                        <ParticipantRow key={participant.id} participant={participant} />
+                        <ParticipantRow
+                          key={participant.id}
+                          participant={participant}
+                        />
                       ))}
                     </tbody>
                   </table>
@@ -339,7 +347,9 @@ export default function RecruitmentPage() {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="text-sm text-gray-600">Total Owed</p>
-                      <p className="text-2xl font-semibold">${metrics?.compensationTotal || 0}</p>
+                      <p className="text-2xl font-semibold">
+                        ${metrics?.compensationTotal || 0}
+                      </p>
                     </div>
                     <CurrencyDollarIcon className="w-8 h-8 text-yellow-500" />
                   </div>
@@ -384,9 +394,7 @@ export default function RecruitmentPage() {
                         <th className="text-left py-2">Actions</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {/* Payment rows would go here */}
-                    </tbody>
+                    <tbody>{/* Payment rows would go here */}</tbody>
                   </table>
                 </div>
               </Card>
@@ -420,9 +428,18 @@ export default function RecruitmentPage() {
               <Card className="p-6">
                 <h3 className="font-semibold mb-4">Key Metrics</h3>
                 <div className="space-y-3">
-                  <MetricRow label="Average Time to Schedule" value="3.2 days" />
-                  <MetricRow label="No-Show Rate" value={`${metrics?.noShowRate || 0}%`} />
-                  <MetricRow label="Completion Rate" value={`${metrics?.completionRate || 0}%`} />
+                  <MetricRow
+                    label="Average Time to Schedule"
+                    value="3.2 days"
+                  />
+                  <MetricRow
+                    label="No-Show Rate"
+                    value={`${metrics?.noShowRate || 0}%`}
+                  />
+                  <MetricRow
+                    label="Completion Rate"
+                    value={`${metrics?.completionRate || 0}%`}
+                  />
                   <MetricRow label="Avg Compensation" value="$50" />
                   <MetricRow label="Response Rate" value="62%" />
                 </div>
@@ -445,8 +462,11 @@ function MetricCard({ icon: Icon, label, value, trend, color }: any) {
           <p className="text-sm text-gray-600">{label}</p>
           <p className="text-2xl font-semibold mt-1">{value}</p>
           {trend !== 0 && (
-            <p className={`text-xs mt-1 ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {trend > 0 ? '+' : ''}{trend}% from last week
+            <p
+              className={`text-xs mt-1 ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}
+            >
+              {trend > 0 ? '+' : ''}
+              {trend}% from last week
             </p>
           )}
         </div>
@@ -465,13 +485,15 @@ function FunnelStage({ label, count, percentage }: any) {
           <span className="text-sm font-semibold">{count}</span>
         </div>
         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div 
+          <div
             className="h-full bg-blue-500 rounded-full"
             style={{ width: `${percentage}%` }}
           />
         </div>
       </div>
-      <span className="text-xs text-gray-500 w-12 text-right">{percentage}%</span>
+      <span className="text-xs text-gray-500 w-12 text-right">
+        {percentage}%
+      </span>
     </div>
   );
 }
@@ -486,10 +508,14 @@ function AppointmentRow({ appointment }: { appointment: Appointment }) {
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <Badge variant={appointment.type === 'online' ? 'default' : 'secondary'}>
+        <Badge
+          variant={appointment.type === 'online' ? 'default' : 'secondary'}
+        >
           {appointment.type}
         </Badge>
-        <Button variant="ghost" size="sm">View</Button>
+        <Button variant="ghost" size="sm">
+          View
+        </Button>
       </div>
     </div>
   );
@@ -506,7 +532,7 @@ function ParticipantRow({ participant }: { participant: Participant }) {
         </Badge>
       </td>
       <td className="py-3">
-        {participant.scheduledDate 
+        {participant.scheduledDate
           ? new Date(participant.scheduledDate).toLocaleDateString()
           : '-'}
       </td>
@@ -516,7 +542,9 @@ function ParticipantRow({ participant }: { participant: Participant }) {
           : '-'}
       </td>
       <td className="py-3">
-        <Button variant="ghost" size="sm">Manage</Button>
+        <Button variant="ghost" size="sm">
+          Manage
+        </Button>
       </td>
     </tr>
   );
@@ -525,10 +553,16 @@ function ParticipantRow({ participant }: { participant: Participant }) {
 function TimeSlot({ time, available, total }: any) {
   const isFull = available === 0;
   return (
-    <div className={`p-3 rounded-lg border ${isFull ? 'bg-gray-50' : 'bg-white'}`}>
+    <div
+      className={`p-3 rounded-lg border ${isFull ? 'bg-gray-50' : 'bg-white'}`}
+    >
       <div className="flex justify-between items-center">
         <span className={isFull ? 'text-gray-400' : ''}>{time}</span>
-        <Badge variant={isFull ? 'secondary' : available === total ? 'default' : 'outline'}>
+        <Badge
+          variant={
+            isFull ? 'secondary' : available === total ? 'default' : 'outline'
+          }
+        >
           {available}/{total} slots
         </Badge>
       </div>
@@ -559,13 +593,20 @@ function MetricRow({ label, value }: any) {
   );
 }
 
-function getStatusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+function getStatusVariant(
+  status: string
+): 'default' | 'secondary' | 'destructive' | 'outline' {
   switch (status) {
-    case 'completed': return 'default';
-    case 'scheduled': return 'outline';
-    case 'no_show': return 'destructive';
-    case 'declined': return 'secondary';
-    default: return 'default';
+    case 'completed':
+      return 'default';
+    case 'scheduled':
+      return 'outline';
+    case 'no_show':
+      return 'destructive';
+    case 'declined':
+      return 'secondary';
+    default:
+      return 'default';
   }
 }
 

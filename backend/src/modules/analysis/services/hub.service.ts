@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
 import { QAnalysisService } from './q-analysis.service';
 import { StatisticsService } from './statistics.service';
@@ -10,13 +14,13 @@ import { QSortService } from '../../participant/qsort.service';
 
 /**
  * Analysis Hub Service - Phase 7 Day 2 Implementation
- * 
+ *
  * World-class unified service for the Analysis Hub, providing:
  * - Centralized data access for all analysis features
  * - Intelligent caching with cache.service.ts
  * - Real-time updates via WebSocket
  * - Aggregated data from multiple services
- * 
+ *
  * This service acts as the single source of truth for the Analysis Hub,
  * reducing redundant API calls and ensuring data consistency.
  */
@@ -59,7 +63,7 @@ export class HubService {
           participant: true,
         },
       });
-      
+
       // Fetch Q-sorts data
       const responses = await this.prisma.response.findMany({
         where: { surveyId: studyId },
@@ -67,8 +71,8 @@ export class HubService {
           qSorts: true,
         },
       });
-      const qsorts = responses.flatMap(r => r.qSorts);
-      
+      const qsorts = responses.flatMap((r) => r.qSorts);
+
       // Get analysis data if available
       let analysisData = null;
       if (qsorts && qsorts.length > 0) {
@@ -87,8 +91,11 @@ export class HubService {
         study,
         participants: {
           total: participants.length,
-          completed: participants.filter((p: any) => p.status === 'completed').length,
-          inProgress: participants.filter((p: any) => p.status === 'in_progress').length,
+          completed: participants.filter((p: any) => p.status === 'completed')
+            .length,
+          inProgress: participants.filter(
+            (p: any) => p.status === 'in_progress',
+          ).length,
           data: participants,
         },
         qsorts: {
@@ -128,7 +135,7 @@ export class HubService {
       sortOrder?: 'asc' | 'desc';
       page?: number;
       limit?: number;
-    }
+    },
   ) {
     const cacheKey = `responses:${studyId}:${JSON.stringify(filters)}`;
     const cached = await this.cache.get(cacheKey);
@@ -146,15 +153,15 @@ export class HubService {
 
       // Build query
       const where: any = { studyId };
-      
+
       if (filters?.participantId) {
         where.participantId = filters.participantId;
       }
-      
+
       if (filters?.status) {
         where.status = filters.status;
       }
-      
+
       if (filters?.dateFrom || filters?.dateTo) {
         where.createdAt = {};
         if (filters.dateFrom) {
@@ -174,7 +181,7 @@ export class HubService {
             qSorts: true,
             answers: true,
           },
-          orderBy: filters?.sortBy 
+          orderBy: filters?.sortBy
             ? { [filters.sortBy]: filters.sortOrder || 'desc' }
             : { createdAt: 'desc' },
           skip,
@@ -214,7 +221,7 @@ export class HubService {
       includeRawData?: boolean;
       includeAnalysis?: boolean;
       includeStatistics?: boolean;
-    }
+    },
   ) {
     try {
       // Verify access
@@ -250,7 +257,7 @@ export class HubService {
     this.websocket.joinRoom(clientId, `study:${studyId}`);
 
     // Send initial data
-    this.getHubData(studyId, userId).then(data => {
+    this.getHubData(studyId, userId).then((data) => {
       this.websocket.sendToClient(clientId, 'hub:initial', data);
     });
 
@@ -276,11 +283,8 @@ export class HubService {
    */
   async notifyDataChange(studyId: string, changeType: string, data?: any) {
     // Invalidate cache for this study
-    const cacheKeys = [
-      `hub:${studyId}:*`,
-      `responses:${studyId}:*`,
-    ];
-    
+    const cacheKeys = [`hub:${studyId}:*`, `responses:${studyId}:*`];
+
     for (const key of cacheKeys) {
       await this.cache.delete(key);
     }
@@ -303,15 +307,17 @@ export class HubService {
     }
 
     try {
-      const correlationMatrix = await this.statistics.calculateCorrelationMatrix(
-        qsorts.map((q: any) => q.rankings)
-      );
+      const correlationMatrix =
+        await this.statistics.calculateCorrelationMatrix(
+          qsorts.map((q: any) => q.rankings),
+        );
 
       const basicStats = {
         participantCount: qsorts.length,
         averageCompletionTime: this.calculateAverageTime(qsorts),
         responseRate: this.calculateResponseRate(qsorts),
-        correlationStrength: this.calculateCorrelationStrength(correlationMatrix),
+        correlationStrength:
+          this.calculateCorrelationStrength(correlationMatrix),
       };
 
       return {
@@ -330,12 +336,12 @@ export class HubService {
   private exportToCSV(data: any, options?: any): string {
     // Implementation for CSV export
     const rows = [];
-    
+
     // Headers
     rows.push(['Study Export - ' + data.study.title]);
     rows.push(['Generated:', new Date().toISOString()]);
     rows.push([]);
-    
+
     // Participant data
     if (options?.includeRawData !== false) {
       rows.push(['Participants']);
@@ -347,7 +353,7 @@ export class HubService {
     }
 
     // Convert to CSV string
-    return rows.map(row => row.join(',')).join('\n');
+    return rows.map((row) => row.join(',')).join('\n');
   }
 
   /**
@@ -403,11 +409,11 @@ export class HubService {
    */
   private calculateAverageTime(qsorts: any[]): number {
     const times = qsorts
-      .filter(q => q.completionTime)
-      .map(q => q.completionTime);
-    
+      .filter((q) => q.completionTime)
+      .map((q) => q.completionTime);
+
     if (times.length === 0) return 0;
-    
+
     return times.reduce((a, b) => a + b, 0) / times.length;
   }
 
@@ -415,7 +421,7 @@ export class HubService {
    * Calculate response rate
    */
   private calculateResponseRate(qsorts: any[]): number {
-    const completed = qsorts.filter(q => q.status === 'completed').length;
+    const completed = qsorts.filter((q) => q.status === 'completed').length;
     return qsorts.length > 0 ? (completed / qsorts.length) * 100 : 0;
   }
 
@@ -424,20 +430,20 @@ export class HubService {
    */
   private calculateCorrelationStrength(matrix: number[][]): string {
     if (!matrix || matrix.length === 0) return 'N/A';
-    
+
     // Calculate average absolute correlation
     let sum = 0;
     let count = 0;
-    
+
     for (let i = 0; i < matrix.length; i++) {
       for (let j = i + 1; j < matrix[i].length; j++) {
         sum += Math.abs(matrix[i][j]);
         count++;
       }
     }
-    
+
     const avg = count > 0 ? sum / count : 0;
-    
+
     if (avg < 0.3) return 'Weak';
     if (avg < 0.6) return 'Moderate';
     return 'Strong';

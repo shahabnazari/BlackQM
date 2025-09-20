@@ -47,7 +47,7 @@ export interface CollaborationStateDto {
 @Injectable()
 export class CollaborationService {
   private collaborationStates: Map<string, CollaborationStateDto> = new Map();
-  
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly wsService: WebSocketService,
@@ -60,15 +60,21 @@ export class CollaborationService {
   // ========== Collaborator Management ==========
 
   async addCollaborator(
-    studyId: string, 
-    inviterId: string, 
-    email: string, 
-    role: 'editor' | 'viewer' | 'commenter'
+    studyId: string,
+    inviterId: string,
+    email: string,
+    role: 'editor' | 'viewer' | 'commenter',
   ): Promise<CollaboratorDto> {
     // Check if inviter has permission
-    const hasPermission = await this.checkPermission(studyId, inviterId, 'manage_collaborators');
+    const hasPermission = await this.checkPermission(
+      studyId,
+      inviterId,
+      'manage_collaborators',
+    );
     if (!hasPermission) {
-      throw new ForbiddenException('You do not have permission to add collaborators');
+      throw new ForbiddenException(
+        'You do not have permission to add collaborators',
+      );
     }
 
     // Check if user exists
@@ -114,10 +120,20 @@ export class CollaborationService {
     return this.mapToCollaboratorDto(collaborator);
   }
 
-  async removeCollaborator(studyId: string, requesterId: string, userId: string): Promise<void> {
-    const hasPermission = await this.checkPermission(studyId, requesterId, 'manage_collaborators');
+  async removeCollaborator(
+    studyId: string,
+    requesterId: string,
+    userId: string,
+  ): Promise<void> {
+    const hasPermission = await this.checkPermission(
+      studyId,
+      requesterId,
+      'manage_collaborators',
+    );
     if (!hasPermission) {
-      throw new ForbiddenException('You do not have permission to remove collaborators');
+      throw new ForbiddenException(
+        'You do not have permission to remove collaborators',
+      );
     }
 
     await this.prisma.studyCollaborator.delete({
@@ -130,7 +146,9 @@ export class CollaborationService {
     });
 
     // Log activity
-    await this.logActivity(studyId, requesterId, 'collaborator_removed', { userId });
+    await this.logActivity(studyId, requesterId, 'collaborator_removed', {
+      userId,
+    });
 
     // Notify via WebSocket
     this.wsService.emitToRoom(`study:${studyId}`, 'collaboration', {
@@ -143,14 +161,20 @@ export class CollaborationService {
   }
 
   async updateCollaboratorRole(
-    studyId: string, 
-    requesterId: string, 
-    userId: string, 
-    newRole: 'editor' | 'viewer' | 'commenter'
+    studyId: string,
+    requesterId: string,
+    userId: string,
+    newRole: 'editor' | 'viewer' | 'commenter',
   ): Promise<CollaboratorDto> {
-    const hasPermission = await this.checkPermission(studyId, requesterId, 'manage_collaborators');
+    const hasPermission = await this.checkPermission(
+      studyId,
+      requesterId,
+      'manage_collaborators',
+    );
     if (!hasPermission) {
-      throw new ForbiddenException('You do not have permission to update collaborator roles');
+      throw new ForbiddenException(
+        'You do not have permission to update collaborator roles',
+      );
     }
 
     const updated = await this.prisma.studyCollaborator.update({
@@ -184,7 +208,7 @@ export class CollaborationService {
   async getCollaborators(studyId: string): Promise<CollaboratorDto[]> {
     // Check cache first
     const cacheKey = `study:${studyId}:collaborators`;
-    const cached = await this.cache.get(cacheKey) as CollaboratorDto[] | null;
+    const cached = (await this.cache.get(cacheKey)) as CollaboratorDto[] | null;
     if (cached) return cached;
 
     const collaborators = await this.prisma.studyCollaborator.findMany({
@@ -197,19 +221,23 @@ export class CollaborationService {
       },
     });
 
-    const result = collaborators.map(c => this.mapToCollaboratorDto(c));
-    
+    const result = collaborators.map((c) => this.mapToCollaboratorDto(c));
+
     // Cache for 5 minutes
     await this.cache.set(cacheKey, result, 300);
-    
+
     return result;
   }
 
   // ========== Real-time Collaboration ==========
 
-  async handleUserJoin(studyId: string, userId: string, metadata: any): Promise<void> {
+  async handleUserJoin(
+    studyId: string,
+    userId: string,
+    metadata: any,
+  ): Promise<void> {
     const state = this.getOrCreateCollaborationState(studyId);
-    
+
     // Add user to active users
     state.activeUsers.set(userId, {
       userId,
@@ -232,7 +260,7 @@ export class CollaborationService {
 
   async handleUserLeave(studyId: string, userId: string): Promise<void> {
     const state = this.getOrCreateCollaborationState(studyId);
-    
+
     // Remove user from active users
     state.activeUsers.delete(userId);
 
@@ -258,9 +286,13 @@ export class CollaborationService {
     await this.logActivity(studyId, userId, 'session_ended', {});
   }
 
-  async handleSectionLock(studyId: string, userId: string, sectionId: string): Promise<boolean> {
+  async handleSectionLock(
+    studyId: string,
+    userId: string,
+    sectionId: string,
+  ): Promise<boolean> {
     const state = this.getOrCreateCollaborationState(studyId);
-    
+
     // Check if section is already locked
     if (state.lockedSections.has(sectionId)) {
       return false;
@@ -281,7 +313,7 @@ export class CollaborationService {
 
   async handleSectionUnlock(studyId: string, sectionId: string): Promise<void> {
     const state = this.getOrCreateCollaborationState(studyId);
-    
+
     // Unlock the section
     state.lockedSections.delete(sectionId);
 
@@ -292,9 +324,13 @@ export class CollaborationService {
     });
   }
 
-  async handleCollaborativeChange(studyId: string, userId: string, change: any): Promise<void> {
+  async handleCollaborativeChange(
+    studyId: string,
+    userId: string,
+    change: any,
+  ): Promise<void> {
     const state = this.getOrCreateCollaborationState(studyId);
-    
+
     // Add change to pending changes
     state.pendingChanges.push({
       userId,
@@ -318,11 +354,11 @@ export class CollaborationService {
   // ========== Comments & Discussion ==========
 
   async addComment(
-    studyId: string, 
-    userId: string, 
-    content: string, 
+    studyId: string,
+    userId: string,
+    content: string,
     sectionId?: string,
-    parentId?: string
+    parentId?: string,
   ): Promise<CommentDto> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -368,7 +404,10 @@ export class CollaborationService {
     return commentDto;
   }
 
-  async getComments(studyId: string, sectionId?: string): Promise<CommentDto[]> {
+  async getComments(
+    studyId: string,
+    sectionId?: string,
+  ): Promise<CommentDto[]> {
     const where: any = { studyId };
     if (sectionId) {
       where.sectionId = sectionId;
@@ -393,7 +432,7 @@ export class CollaborationService {
       },
     });
 
-    return comments.map(c => ({
+    return comments.map((c) => ({
       id: c.id,
       studyId: c.studyId,
       userId: c.userId,
@@ -407,7 +446,11 @@ export class CollaborationService {
     }));
   }
 
-  async resolveComment(studyId: string, commentId: string, userId: string): Promise<void> {
+  async resolveComment(
+    studyId: string,
+    commentId: string,
+    userId: string,
+  ): Promise<void> {
     await this.prisma.studyComment.update({
       where: { id: commentId },
       data: {
@@ -426,7 +469,12 @@ export class CollaborationService {
 
   // ========== Activity Logging ==========
 
-  async logActivity(studyId: string, userId: string, action: string, details: any): Promise<void> {
+  async logActivity(
+    studyId: string,
+    userId: string,
+    action: string,
+    details: any,
+  ): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { name: true },
@@ -462,7 +510,7 @@ export class CollaborationService {
   async getActivityLog(studyId: string, limit = 50): Promise<ActivityLogDto[]> {
     // Check cache first
     const cacheKey = `study:${studyId}:activity`;
-    const cached = await this.cache.get(cacheKey) as ActivityLogDto[] | null;
+    const cached = (await this.cache.get(cacheKey)) as ActivityLogDto[] | null;
     if (cached) return cached;
 
     const activities = await this.prisma.studyActivityLog.findMany({
@@ -478,7 +526,7 @@ export class CollaborationService {
       take: limit,
     });
 
-    const result = activities.map(a => ({
+    const result = activities.map((a) => ({
       id: a.id,
       studyId: a.studyId,
       userId: a.userId,
@@ -497,7 +545,11 @@ export class CollaborationService {
 
   // ========== Permissions & Access Control ==========
 
-  async checkPermission(studyId: string, userId: string, permission: string): Promise<boolean> {
+  async checkPermission(
+    studyId: string,
+    userId: string,
+    permission: string,
+  ): Promise<boolean> {
     // Check if user is study owner
     const study = await this.prisma.survey.findUnique({
       where: { id: studyId },
@@ -546,12 +598,16 @@ export class CollaborationService {
       },
     });
 
-    return collaborator?.permissions ? JSON.parse(collaborator.permissions) : [];
+    return collaborator?.permissions
+      ? JSON.parse(collaborator.permissions)
+      : [];
   }
 
   // ========== Helper Methods ==========
 
-  private getOrCreateCollaborationState(studyId: string): CollaborationStateDto {
+  private getOrCreateCollaborationState(
+    studyId: string,
+  ): CollaborationStateDto {
     if (!this.collaborationStates.has(studyId)) {
       this.collaborationStates.set(studyId, {
         studyId,
@@ -564,7 +620,9 @@ export class CollaborationService {
     return this.collaborationStates.get(studyId)!;
   }
 
-  private getDefaultPermissions(role: 'owner' | 'editor' | 'viewer' | 'commenter'): string[] {
+  private getDefaultPermissions(
+    role: 'owner' | 'editor' | 'viewer' | 'commenter',
+  ): string[] {
     const permissions = {
       owner: this.getAllPermissions(),
       editor: [
@@ -577,18 +635,8 @@ export class CollaborationService {
         'add_comments',
         'view_comments',
       ],
-      viewer: [
-        'view_study',
-        'view_data',
-        'view_comments',
-        'export_data',
-      ],
-      commenter: [
-        'view_study',
-        'view_data',
-        'add_comments',
-        'view_comments',
-      ],
+      viewer: ['view_study', 'view_data', 'view_comments', 'export_data'],
+      commenter: ['view_study', 'view_data', 'add_comments', 'view_comments'],
     };
 
     return permissions[role] || [];
@@ -614,7 +662,11 @@ export class CollaborationService {
     ];
   }
 
-  private async createPendingInvitation(studyId: string, email: string, role: string): Promise<CollaboratorDto> {
+  private async createPendingInvitation(
+    studyId: string,
+    email: string,
+    role: string,
+  ): Promise<CollaboratorDto> {
     // This would create a pending invitation and send an email
     // For now, returning a placeholder
     return {
@@ -626,10 +678,17 @@ export class CollaborationService {
     };
   }
 
-  private async processCollaborativeChange(studyId: string, userId: string, change: any): Promise<void> {
+  private async processCollaborativeChange(
+    studyId: string,
+    userId: string,
+    change: any,
+  ): Promise<void> {
     // Process and save the collaborative change
     // This would integrate with your existing data update logic
-    console.log(`Processing collaborative change for study ${studyId} by user ${userId}`, change);
+    console.log(
+      `Processing collaborative change for study ${studyId} by user ${userId}`,
+      change,
+    );
   }
 
   private mapToCollaboratorDto(collaborator: any): CollaboratorDto {

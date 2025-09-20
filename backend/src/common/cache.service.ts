@@ -4,7 +4,7 @@ import NodeCache from 'node-cache';
 
 /**
  * Cache Service - Phase 7 Day 4 Implementation
- * 
+ *
  * In-memory caching service for performance optimization
  * Used by visualization service for chart caching
  */
@@ -50,7 +50,7 @@ export class CacheService {
    */
   async deletePattern(pattern: string): Promise<number> {
     const keys = this.cache.keys();
-    const matchingKeys = keys.filter(key => key.includes(pattern));
+    const matchingKeys = keys.filter((key) => key.includes(pattern));
     return this.cache.del(matchingKeys);
   }
 

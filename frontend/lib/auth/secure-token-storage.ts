@@ -1,6 +1,6 @@
 /**
  * Secure Token Storage Utility - Phase 7 Day 2 Security Enhancement
- * 
+ *
  * Provides secure token storage with:
  * - sessionStorage for sensitive tokens (cleared on tab close)
  * - localStorage for remember-me functionality

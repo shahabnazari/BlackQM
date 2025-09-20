@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
 import { CacheService } from '../../common/cache.service';
 import { StudyService } from '../study/study.service';
@@ -34,10 +38,10 @@ export interface ExportOptions {
 
 /**
  * Report Service - Phase 7 Day 6 Implementation (Foundation)
- * 
+ *
  * Basic report generation service that will be enhanced in Phase 10
  * Provides export functionality for study reports
- * 
+ *
  * @features
  * - PDF generation
  * - Multiple format support preparation
@@ -91,14 +95,16 @@ export class ReportService {
         case 'docx':
         case 'latex':
           // Phase 10 will implement these
-          throw new BadRequestException(`${options.format} format coming in Phase 10`);
+          throw new BadRequestException(
+            `${options.format} format coming in Phase 10`,
+          );
         default:
           throw new BadRequestException('Unsupported export format');
       }
 
       // Cache for 1 hour
       await this.cacheService.set(cacheKey, result, 3600);
-      
+
       return result;
     } catch (error: any) {
       console.error('Report generation failed:', error);
@@ -137,11 +143,16 @@ export class ReportService {
     // Methodology
     doc.fontSize(16).text('Methodology', { underline: true });
     doc.moveDown();
-    doc.fontSize(11)
+    doc
+      .fontSize(11)
       .text(`Study Type: Q-Methodology`)
       .text(`Number of Statements: ${study.statements?.length || 0}`)
-      .text(`Grid Configuration: ${study.gridConfig?.minValue || -4} to ${study.gridConfig?.maxValue || 4}`)
-      .text(`Collection Period: ${study.createdAt ? new Date(study.createdAt).toLocaleDateString() : 'N/A'}`);
+      .text(
+        `Grid Configuration: ${study.gridConfig?.minValue || -4} to ${study.gridConfig?.maxValue || 4}`,
+      )
+      .text(
+        `Collection Period: ${study.createdAt ? new Date(study.createdAt).toLocaleDateString() : 'N/A'}`,
+      );
     doc.moveDown();
 
     // Participants
@@ -150,7 +161,9 @@ export class ReportService {
       doc.fontSize(16).text('Participants', { underline: true });
       doc.moveDown();
       // Add participant summary (Phase 10 will add detailed data)
-      doc.fontSize(11).text('Participant data will be included in Phase 10 implementation');
+      doc
+        .fontSize(11)
+        .text('Participant data will be included in Phase 10 implementation');
     }
 
     // Analysis Results
@@ -159,7 +172,9 @@ export class ReportService {
       doc.fontSize(16).text('Analysis Results', { underline: true });
       doc.moveDown();
       // Add analysis summary (Phase 10 will add detailed results)
-      doc.fontSize(11).text('Detailed analysis results will be included in Phase 10');
+      doc
+        .fontSize(11)
+        .text('Detailed analysis results will be included in Phase 10');
     }
 
     // Finalize PDF
@@ -311,13 +326,62 @@ export class ReportService {
         name: 'APA 7th Edition',
         format: 'apa',
         sections: [
-          { id: 'title', type: 'title', title: 'Title Page', content: '', order: 1, enabled: true },
-          { id: 'abstract', type: 'abstract', title: 'Abstract', content: '', order: 2, enabled: true },
-          { id: 'intro', type: 'introduction', title: 'Introduction', content: '', order: 3, enabled: true },
-          { id: 'method', type: 'methodology', title: 'Method', content: '', order: 4, enabled: true },
-          { id: 'results', type: 'results', title: 'Results', content: '', order: 5, enabled: true },
-          { id: 'discussion', type: 'discussion', title: 'Discussion', content: '', order: 6, enabled: true },
-          { id: 'references', type: 'references', title: 'References', content: '', order: 7, enabled: true },
+          {
+            id: 'title',
+            type: 'title',
+            title: 'Title Page',
+            content: '',
+            order: 1,
+            enabled: true,
+          },
+          {
+            id: 'abstract',
+            type: 'abstract',
+            title: 'Abstract',
+            content: '',
+            order: 2,
+            enabled: true,
+          },
+          {
+            id: 'intro',
+            type: 'introduction',
+            title: 'Introduction',
+            content: '',
+            order: 3,
+            enabled: true,
+          },
+          {
+            id: 'method',
+            type: 'methodology',
+            title: 'Method',
+            content: '',
+            order: 4,
+            enabled: true,
+          },
+          {
+            id: 'results',
+            type: 'results',
+            title: 'Results',
+            content: '',
+            order: 5,
+            enabled: true,
+          },
+          {
+            id: 'discussion',
+            type: 'discussion',
+            title: 'Discussion',
+            content: '',
+            order: 6,
+            enabled: true,
+          },
+          {
+            id: 'references',
+            type: 'references',
+            title: 'References',
+            content: '',
+            order: 7,
+            enabled: true,
+          },
         ],
       },
       {
@@ -325,10 +389,38 @@ export class ReportService {
         name: 'MLA 9th Edition',
         format: 'mla',
         sections: [
-          { id: 'intro', type: 'introduction', title: 'Introduction', content: '', order: 1, enabled: true },
-          { id: 'body', type: 'body', title: 'Body', content: '', order: 2, enabled: true },
-          { id: 'conclusion', type: 'conclusion', title: 'Conclusion', content: '', order: 3, enabled: true },
-          { id: 'works', type: 'references', title: 'Works Cited', content: '', order: 4, enabled: true },
+          {
+            id: 'intro',
+            type: 'introduction',
+            title: 'Introduction',
+            content: '',
+            order: 1,
+            enabled: true,
+          },
+          {
+            id: 'body',
+            type: 'body',
+            title: 'Body',
+            content: '',
+            order: 2,
+            enabled: true,
+          },
+          {
+            id: 'conclusion',
+            type: 'conclusion',
+            title: 'Conclusion',
+            content: '',
+            order: 3,
+            enabled: true,
+          },
+          {
+            id: 'works',
+            type: 'references',
+            title: 'Works Cited',
+            content: '',
+            order: 4,
+            enabled: true,
+          },
         ],
       },
     ];

@@ -16,7 +16,7 @@ import { HubService } from '../services/hub.service';
 
 /**
  * Hub Controller - Phase 7 Day 2 Implementation
- * 
+ *
  * Enterprise-grade API endpoints for the Analysis Hub
  * Provides unified access to all analysis data and features
  */
@@ -69,7 +69,8 @@ export class HubController {
   @Post(':studyId/export')
   async exportData(
     @Param('studyId') studyId: string,
-    @Body() body: {
+    @Body()
+    body: {
       format: 'csv' | 'json' | 'excel' | 'spss';
       options?: {
         includeRawData?: boolean;
@@ -78,13 +79,13 @@ export class HubController {
       };
     },
     @Req() req: any,
-    @Res() res: Response
+    @Res() res: Response,
   ) {
     const data = await this.hubService.exportData(
       studyId,
       req.user.id,
       body.format,
-      body.options
+      body.options,
     );
 
     // Set appropriate headers based on format
@@ -101,7 +102,8 @@ export class HubController {
         filename += '.json';
         break;
       case 'excel':
-        contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        contentType =
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
         filename += '.xlsx';
         break;
       case 'spss':
@@ -122,7 +124,7 @@ export class HubController {
   async subscribe(
     @Param('studyId') studyId: string,
     @Body('clientId') clientId: string,
-    @Req() req: any
+    @Req() req: any,
   ) {
     return this.hubService.subscribeToUpdates(studyId, req.user.id, clientId);
   }
@@ -133,7 +135,7 @@ export class HubController {
   @Post(':studyId/unsubscribe')
   async unsubscribe(
     @Param('studyId') studyId: string,
-    @Body('clientId') clientId: string
+    @Body('clientId') clientId: string,
   ) {
     return this.hubService.unsubscribeFromUpdates(studyId, clientId);
   }

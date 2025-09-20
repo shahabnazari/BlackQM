@@ -9,7 +9,13 @@ import {
   Req,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { InterpretationService } from '../services/interpretation.service';
 
@@ -37,7 +43,7 @@ class ExtractThemesDto {
 
 /**
  * Interpretation Controller - Phase 7 Day 5
- * 
+ *
  * Exposes AI-powered interpretation endpoints for the Analysis Hub
  */
 @ApiTags('interpretation')
@@ -52,12 +58,18 @@ export class InterpretationController {
   @Post(':studyId/narratives')
   @ApiOperation({ summary: 'Generate factor narratives using AI' })
   @ApiParam({ name: 'studyId', description: 'Study ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Narratives generated successfully' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Narratives generated successfully',
+  })
   async generateNarratives(
     @Param('studyId') studyId: string,
     @Body() options: GenerateNarrativesDto,
   ) {
-    return await this.interpretationService.generateFactorNarratives(studyId, options);
+    return await this.interpretationService.generateFactorNarratives(
+      studyId,
+      options,
+    );
   }
 
   /**
@@ -66,12 +78,18 @@ export class InterpretationController {
   @Post(':studyId/recommendations')
   @ApiOperation({ summary: 'Generate AI-powered study recommendations' })
   @ApiParam({ name: 'studyId', description: 'Study ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Recommendations generated successfully' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Recommendations generated successfully',
+  })
   async generateRecommendations(
     @Param('studyId') studyId: string,
     @Body() options: GenerateRecommendationsDto,
   ) {
-    return await this.interpretationService.generateRecommendations(studyId, options);
+    return await this.interpretationService.generateRecommendations(
+      studyId,
+      options,
+    );
   }
 
   /**
@@ -80,7 +98,10 @@ export class InterpretationController {
   @Post(':studyId/bias')
   @ApiOperation({ summary: 'Analyze bias dimensions in the study' })
   @ApiParam({ name: 'studyId', description: 'Study ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Bias analysis completed' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Bias analysis completed',
+  })
   async analyzeBias(
     @Param('studyId') studyId: string,
     @Body() options: AnalyzeBiasDto,
@@ -94,7 +115,10 @@ export class InterpretationController {
   @Post(':studyId/themes')
   @ApiOperation({ summary: 'Extract themes from study responses' })
   @ApiParam({ name: 'studyId', description: 'Study ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Themes extracted successfully' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Themes extracted successfully',
+  })
   async extractThemes(
     @Param('studyId') studyId: string,
     @Body() options: ExtractThemesDto,
@@ -108,7 +132,10 @@ export class InterpretationController {
   @Get(':studyId/summary')
   @ApiOperation({ summary: 'Get comprehensive AI insights summary' })
   @ApiParam({ name: 'studyId', description: 'Study ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Insights summary retrieved' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Insights summary retrieved',
+  })
   async getInsightsSummary(@Param('studyId') studyId: string) {
     return await this.interpretationService.generateInsightsSummary(studyId);
   }
@@ -121,13 +148,18 @@ export class InterpretationController {
   @ApiParam({ name: 'studyId', description: 'Study ID' })
   @ApiQuery({ name: 'includeDistinguishing', required: false, type: Boolean })
   @ApiQuery({ name: 'includeConsensus', required: false, type: Boolean })
-  @ApiQuery({ name: 'analysisDepth', required: false, enum: ['basic', 'standard', 'comprehensive'] })
+  @ApiQuery({
+    name: 'analysisDepth',
+    required: false,
+    enum: ['basic', 'standard', 'comprehensive'],
+  })
   @ApiResponse({ status: HttpStatus.OK, description: 'Narratives retrieved' })
   async getNarratives(
     @Param('studyId') studyId: string,
     @Query('includeDistinguishing') includeDistinguishing?: boolean,
     @Query('includeConsensus') includeConsensus?: boolean,
-    @Query('analysisDepth') analysisDepth?: 'basic' | 'standard' | 'comprehensive',
+    @Query('analysisDepth')
+    analysisDepth?: 'basic' | 'standard' | 'comprehensive',
   ) {
     return await this.interpretationService.generateFactorNarratives(studyId, {
       includeDistinguishing,
@@ -144,7 +176,10 @@ export class InterpretationController {
   @ApiParam({ name: 'studyId', description: 'Study ID' })
   @ApiQuery({ name: 'includeActionItems', required: false, type: Boolean })
   @ApiQuery({ name: 'prioritize', required: false, type: Boolean })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Recommendations retrieved' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Recommendations retrieved',
+  })
   async getRecommendations(
     @Param('studyId') studyId: string,
     @Query('includeActionItems') includeActionItems?: boolean,
@@ -164,7 +199,10 @@ export class InterpretationController {
   @ApiParam({ name: 'studyId', description: 'Study ID' })
   @ApiQuery({ name: 'dimensions', required: false, type: [String] })
   @ApiQuery({ name: 'includeRecommendations', required: false, type: Boolean })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Bias analysis retrieved' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Bias analysis retrieved',
+  })
   async getBiasAnalysis(
     @Param('studyId') studyId: string,
     @Query('dimensions') dimensions?: string[],
@@ -182,7 +220,11 @@ export class InterpretationController {
   @Get(':studyId/themes')
   @ApiOperation({ summary: 'Get cached extracted themes' })
   @ApiParam({ name: 'studyId', description: 'Study ID' })
-  @ApiQuery({ name: 'method', required: false, enum: ['ai-powered', 'statistical'] })
+  @ApiQuery({
+    name: 'method',
+    required: false,
+    enum: ['ai-powered', 'statistical'],
+  })
   @ApiQuery({ name: 'minOccurrence', required: false, type: Number })
   @ApiQuery({ name: 'includeQuotes', required: false, type: Boolean })
   @ApiResponse({ status: HttpStatus.OK, description: 'Themes retrieved' })

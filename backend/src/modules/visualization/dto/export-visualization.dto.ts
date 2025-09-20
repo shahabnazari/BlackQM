@@ -1,4 +1,10 @@
-import { IsArray, IsEnum, IsOptional, IsBoolean, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsOptional,
+  IsBoolean,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { VisualizationType, ChartFormat } from './create-visualization.dto';

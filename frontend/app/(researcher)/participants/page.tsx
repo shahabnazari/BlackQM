@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  UsersIcon, 
-  MagnifyingGlassIcon, 
+import {
+  UsersIcon,
+  MagnifyingGlassIcon,
   ArrowUpIcon,
   ArrowDownIcon,
   UserCircleIcon,
   EnvelopeIcon,
   CalendarIcon,
-  ChartBarIcon
+  ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ const mockParticipants: Participant[] = [
     studiesCompleted: 3,
     studiesInProgress: 1,
     lastActive: '2024-09-18',
-    status: 'active'
+    status: 'active',
   },
   {
     id: '2',
@@ -45,7 +45,7 @@ const mockParticipants: Participant[] = [
     studiesCompleted: 5,
     studiesInProgress: 0,
     lastActive: '2024-09-17',
-    status: 'active'
+    status: 'active',
   },
   {
     id: '3',
@@ -55,8 +55,8 @@ const mockParticipants: Participant[] = [
     studiesCompleted: 1,
     studiesInProgress: 2,
     lastActive: '2024-09-10',
-    status: 'inactive'
-  }
+    status: 'inactive',
+  },
 ];
 
 export default function ParticipantsPage() {
@@ -65,20 +65,29 @@ export default function ParticipantsPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [, setSelectedParticipant] = useState<Participant | null>(null);
 
-  const filteredParticipants = mockParticipants.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredParticipants = mockParticipants.filter(
+    p =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const sortedParticipants = [...filteredParticipants].sort((a, b) => {
     const order = sortOrder === 'asc' ? 1 : -1;
-    switch(sortBy) {
+    switch (sortBy) {
       case 'name':
         return order * a.name.localeCompare(b.name);
       case 'date':
-        return order * (new Date(a.joinedDate).getTime() - new Date(b.joinedDate).getTime());
+        return (
+          order *
+          (new Date(a.joinedDate).getTime() - new Date(b.joinedDate).getTime())
+        );
       case 'studies':
-        return order * ((a.studiesCompleted + a.studiesInProgress) - (b.studiesCompleted + b.studiesInProgress));
+        return (
+          order *
+          (a.studiesCompleted +
+            a.studiesInProgress -
+            (b.studiesCompleted + b.studiesInProgress))
+        );
       default:
         return 0;
     }
@@ -130,7 +139,10 @@ export default function ParticipantsPage() {
             <div>
               <p className="text-sm text-text-secondary">Studies Completed</p>
               <p className="text-2xl font-bold">
-                {mockParticipants.reduce((acc, p) => acc + p.studiesCompleted, 0)}
+                {mockParticipants.reduce(
+                  (acc, p) => acc + p.studiesCompleted,
+                  0
+                )}
               </p>
             </div>
             <ChartBarIcon className="w-8 h-8 text-system-blue" />
@@ -141,7 +153,10 @@ export default function ParticipantsPage() {
             <div>
               <p className="text-sm text-text-secondary">In Progress</p>
               <p className="text-2xl font-bold text-system-orange">
-                {mockParticipants.reduce((acc, p) => acc + p.studiesInProgress, 0)}
+                {mockParticipants.reduce(
+                  (acc, p) => acc + p.studiesInProgress,
+                  0
+                )}
               </p>
             </div>
             <ChartBarIcon className="w-8 h-8 text-system-orange" />
@@ -158,7 +173,7 @@ export default function ParticipantsPage() {
               type="text"
               placeholder="Search participants by name or email..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-surface-secondary rounded-lg border border-border focus:outline-none focus:border-primary"
             />
           </div>
@@ -170,7 +185,12 @@ export default function ParticipantsPage() {
               className="flex items-center gap-1"
             >
               Name
-              {sortBy === 'name' && (sortOrder === 'asc' ? <ArrowUpIcon className="w-3 h-3" /> : <ArrowDownIcon className="w-3 h-3" />)}
+              {sortBy === 'name' &&
+                (sortOrder === 'asc' ? (
+                  <ArrowUpIcon className="w-3 h-3" />
+                ) : (
+                  <ArrowDownIcon className="w-3 h-3" />
+                ))}
             </Button>
             <Button
               variant="secondary"
@@ -179,7 +199,12 @@ export default function ParticipantsPage() {
               className="flex items-center gap-1"
             >
               Joined
-              {sortBy === 'date' && (sortOrder === 'asc' ? <ArrowUpIcon className="w-3 h-3" /> : <ArrowDownIcon className="w-3 h-3" />)}
+              {sortBy === 'date' &&
+                (sortOrder === 'asc' ? (
+                  <ArrowUpIcon className="w-3 h-3" />
+                ) : (
+                  <ArrowDownIcon className="w-3 h-3" />
+                ))}
             </Button>
             <Button
               variant="secondary"
@@ -188,7 +213,12 @@ export default function ParticipantsPage() {
               className="flex items-center gap-1"
             >
               Studies
-              {sortBy === 'studies' && (sortOrder === 'asc' ? <ArrowUpIcon className="w-3 h-3" /> : <ArrowDownIcon className="w-3 h-3" />)}
+              {sortBy === 'studies' &&
+                (sortOrder === 'asc' ? (
+                  <ArrowUpIcon className="w-3 h-3" />
+                ) : (
+                  <ArrowDownIcon className="w-3 h-3" />
+                ))}
             </Button>
           </div>
         </div>
@@ -197,8 +227,8 @@ export default function ParticipantsPage() {
       {/* Participants List */}
       <div className="grid grid-cols-1 gap-4">
         {sortedParticipants.map(participant => (
-          <Card 
-            key={participant.id} 
+          <Card
+            key={participant.id}
             className="p-6 hover:shadow-lg transition-all cursor-pointer"
             onClick={() => setSelectedParticipant(participant)}
           >
@@ -213,21 +243,32 @@ export default function ParticipantsPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-text-secondary mt-1">
                     <CalendarIcon className="w-4 h-4" />
-                    Joined {new Date(participant.joinedDate).toLocaleDateString()}
+                    Joined{' '}
+                    {new Date(participant.joinedDate).toLocaleDateString()}
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-6">
                 <div className="text-center">
-                  <p className="text-2xl font-bold">{participant.studiesCompleted}</p>
+                  <p className="text-2xl font-bold">
+                    {participant.studiesCompleted}
+                  </p>
                   <p className="text-xs text-text-secondary">Completed</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-system-orange">{participant.studiesInProgress}</p>
+                  <p className="text-2xl font-bold text-system-orange">
+                    {participant.studiesInProgress}
+                  </p>
                   <p className="text-xs text-text-secondary">In Progress</p>
                 </div>
-                <Badge 
-                  variant={participant.status === 'active' ? 'default' : participant.status === 'inactive' ? 'secondary' : 'outline'}
+                <Badge
+                  variant={
+                    participant.status === 'active'
+                      ? 'default'
+                      : participant.status === 'inactive'
+                        ? 'secondary'
+                        : 'outline'
+                  }
                 >
                   {participant.status}
                 </Badge>
@@ -243,7 +284,9 @@ export default function ParticipantsPage() {
           <UsersIcon className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No participants found</h3>
           <p className="text-text-secondary">
-            {searchTerm ? 'Try adjusting your search criteria' : 'Participants will appear here once they join your studies'}
+            {searchTerm
+              ? 'Try adjusting your search criteria'
+              : 'Participants will appear here once they join your studies'}
           </p>
         </Card>
       )}

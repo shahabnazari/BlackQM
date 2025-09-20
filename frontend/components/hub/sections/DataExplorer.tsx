@@ -1,7 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import { Search, Download, Filter, RefreshCw, User, ChevronDown } from 'lucide-react';
+import {
+  Search,
+  Download,
+  Filter,
+  RefreshCw,
+  User,
+  ChevronDown,
+} from 'lucide-react';
 // import { useStudyHub } from '@/lib/stores/study-hub.store'; // Available if needed
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
@@ -56,7 +63,7 @@ interface Pagination {
 
 /**
  * DataExplorer Component - Phase 7 Day 2 Implementation
- * 
+ *
  * World-class data exploration interface with:
  * - Advanced filtering and search
  * - Real-time data updates via WebSocket
@@ -66,7 +73,7 @@ interface Pagination {
  */
 function DataExplorerComponent({ studyId }: DataExplorerProps) {
   // const { studyData } = useStudyHub(); // Available if needed
-  
+
   const [responses, setResponses] = useState<ResponseData[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
@@ -74,7 +81,7 @@ function DataExplorerComponent({ studyId }: DataExplorerProps) {
     total: 0,
     totalPages: 0,
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -122,7 +129,15 @@ function DataExplorerComponent({ studyId }: DataExplorerProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [studyId, pagination.page, pagination.limit, sortBy, sortOrder, statusFilter, searchTerm]);
+  }, [
+    studyId,
+    pagination.page,
+    pagination.limit,
+    sortBy,
+    sortOrder,
+    statusFilter,
+    searchTerm,
+  ]);
 
   /**
    * Handle data export
@@ -206,7 +221,9 @@ function DataExplorerComponent({ studyId }: DataExplorerProps) {
       case 'completed':
         return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
       case 'in_progress':
-        return <Badge className="bg-yellow-100 text-yellow-800">In Progress</Badge>;
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800">In Progress</Badge>
+        );
       case 'abandoned':
         return <Badge className="bg-red-100 text-red-800">Abandoned</Badge>;
       default:
@@ -236,7 +253,7 @@ function DataExplorerComponent({ studyId }: DataExplorerProps) {
               <Input
                 placeholder="Search participants..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={e => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -299,7 +316,9 @@ function DataExplorerComponent({ studyId }: DataExplorerProps) {
             onClick={fetchResponses}
             disabled={isLoading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`}
+            />
             Refresh
           </Button>
         </div>
@@ -308,7 +327,8 @@ function DataExplorerComponent({ studyId }: DataExplorerProps) {
         {selectedRows.size > 0 && (
           <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
             <span className="text-sm text-blue-700 dark:text-blue-300">
-              {selectedRows.size} row{selectedRows.size !== 1 ? 's' : ''} selected
+              {selectedRows.size} row{selectedRows.size !== 1 ? 's' : ''}{' '}
+              selected
             </span>
             <Button
               variant="ghost"
@@ -362,7 +382,7 @@ function DataExplorerComponent({ studyId }: DataExplorerProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {responses.map((response) => (
+                {responses.map(response => (
                   <TableRow key={response.id}>
                     <TableCell>
                       <input
@@ -375,7 +395,9 @@ function DataExplorerComponent({ studyId }: DataExplorerProps) {
                     <TableCell>
                       <div>
                         <p className="font-medium">
-                          {response.participant.name || response.participant.email || 'Anonymous'}
+                          {response.participant.name ||
+                            response.participant.email ||
+                            'Anonymous'}
                         </p>
                         <p className="text-sm text-gray-500">
                           ID: {response.participantId.slice(0, 8)}...
@@ -428,16 +450,22 @@ function DataExplorerComponent({ studyId }: DataExplorerProps) {
                 </span>{' '}
                 to{' '}
                 <span className="font-medium">
-                  {Math.min(pagination.page * pagination.limit, pagination.total)}
+                  {Math.min(
+                    pagination.page * pagination.limit,
+                    pagination.total
+                  )}
                 </span>{' '}
-                of <span className="font-medium">{pagination.total}</span> results
+                of <span className="font-medium">{pagination.total}</span>{' '}
+                results
               </div>
-              
+
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+                  onClick={() =>
+                    setPagination(p => ({ ...p, page: p.page - 1 }))
+                  }
                   disabled={pagination.page === 1}
                 >
                   Previous
@@ -445,7 +473,9 @@ function DataExplorerComponent({ studyId }: DataExplorerProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+                  onClick={() =>
+                    setPagination(p => ({ ...p, page: p.page + 1 }))
+                  }
                   disabled={pagination.page === pagination.totalPages}
                 >
                   Next

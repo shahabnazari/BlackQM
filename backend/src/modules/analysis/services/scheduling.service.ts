@@ -1,9 +1,21 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
 import { WebSocketService } from '../../../services/websocket.service';
 import { CacheService } from '../../../common/cache.service';
 import { EmailService } from '../../email/services/email.service';
-import { addDays, addHours, startOfDay, endOfDay, format, isAfter, isBefore } from 'date-fns';
+import {
+  addDays,
+  addHours,
+  startOfDay,
+  endOfDay,
+  format,
+  isAfter,
+  isBefore,
+} from 'date-fns';
 
 export interface AppointmentDto {
   id: string;
@@ -98,10 +110,14 @@ export class SchedulingService {
     scheduledStart: Date,
     scheduledEnd: Date,
     type: 'online' | 'in-person' | 'phone' = 'online',
-    location?: string
+    location?: string,
   ): Promise<AppointmentDto> {
     // Validate time slot availability
-    const isAvailable = await this.checkSlotAvailability(studyId, scheduledStart, scheduledEnd);
+    const isAvailable = await this.checkSlotAvailability(
+      studyId,
+      scheduledStart,
+      scheduledEnd,
+    );
     if (!isAvailable) {
       throw new BadRequestException('This time slot is not available');
     }
@@ -122,13 +138,20 @@ export class SchedulingService {
         status: 'scheduled',
         type,
         location,
-        meetingUrl: type === 'online' ? await this.generateMeetingUrl(studyId, participantId) : undefined,
+        meetingUrl:
+          type === 'online'
+            ? await this.generateMeetingUrl(studyId, participantId)
+            : undefined,
         remindersSent: 0,
       },
     });
 
     // Schedule reminders
-    await this.scheduleReminders(appointment.id, scheduledStart, participant?.email);
+    await this.scheduleReminders(
+      appointment.id,
+      scheduledStart,
+      participant?.email,
+    );
 
     // Clear cache
     await this.cache.delete(`study:${studyId}:appointments`);
@@ -145,7 +168,7 @@ export class SchedulingService {
 
   async updateAppointment(
     appointmentId: string,
-    updates: Partial<AppointmentDto>
+    updates: Partial<AppointmentDto>,
   ): Promise<AppointmentDto> {
     const existing = await this.prisma.appointment.findUnique({
       where: { id: appointmentId },
@@ -162,7 +185,7 @@ export class SchedulingService {
         existing.studyId,
         updates.scheduledStart,
         updates.scheduledEnd,
-        appointmentId // Exclude current appointment from check
+        appointmentId, // Exclude current appointment from check
       );
 
       if (!isAvailable) {
@@ -175,12 +198,14 @@ export class SchedulingService {
 
     // Convert DTO fields to Prisma fields
     const updateData: any = {};
-    if (updates.scheduledStart) updateData.scheduledStart = updates.scheduledStart;
+    if (updates.scheduledStart)
+      updateData.scheduledStart = updates.scheduledStart;
     if (updates.scheduledEnd) updateData.scheduledEnd = updates.scheduledEnd;
     if (updates.status) updateData.status = updates.status;
     if (updates.type) updateData.type = updates.type;
     if (updates.location !== undefined) updateData.location = updates.location;
-    if (updates.meetingUrl !== undefined) updateData.meetingUrl = updates.meetingUrl;
+    if (updates.meetingUrl !== undefined)
+      updateData.meetingUrl = updates.meetingUrl;
     if (updates.notes !== undefined) updateData.notes = updates.notes;
 
     const updated = await this.prisma.appointment.update({
@@ -202,7 +227,10 @@ export class SchedulingService {
     return this.mapToAppointmentDto(updated);
   }
 
-  async cancelAppointment(appointmentId: string, reason?: string): Promise<void> {
+  async cancelAppointment(
+    appointmentId: string,
+    reason?: string,
+  ): Promise<void> {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id: appointmentId },
     });
@@ -261,7 +289,7 @@ export class SchedulingService {
       startDate?: Date;
       endDate?: Date;
       participantId?: string;
-    }
+    },
   ): Promise<AppointmentDto[]> {
     const where: any = { studyId };
 
@@ -292,14 +320,14 @@ export class SchedulingService {
       },
     });
 
-    return appointments.map(a => this.mapToAppointmentDto(a));
+    return appointments.map((a) => this.mapToAppointmentDto(a));
   }
 
   // ========== Availability Management ==========
 
   async setStudyAvailability(
     studyId: string,
-    availability: AvailabilityDto[]
+    availability: AvailabilityDto[],
   ): Promise<void> {
     // Clear existing availability
     await this.prisma.studyAvailability.deleteMany({
@@ -308,7 +336,7 @@ export class SchedulingService {
 
     // Create new availability
     await this.prisma.studyAvailability.createMany({
-      data: availability.map(a => ({
+      data: availability.map((a) => ({
         ...a,
         studyId,
       })),
@@ -322,11 +350,11 @@ export class SchedulingService {
   async getAvailableSlots(
     studyId: string,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): Promise<TimeSlotDto[]> {
     // Check cache first
     const cacheKey = `study:${studyId}:slots:${startDate.getTime()}-${endDate.getTime()}`;
-    const cached = await this.cache.get(cacheKey) as TimeSlotDto[] | null;
+    const cached = (await this.cache.get(cacheKey)) as TimeSlotDto[] | null;
     if (cached) return cached;
 
     // Get study availability settings
@@ -358,13 +386,15 @@ export class SchedulingService {
 
     while (current <= endDate) {
       const dayOfWeek = current.getDay();
-      const dayAvailability = availability.find(a => a.dayOfWeek === dayOfWeek);
+      const dayAvailability = availability.find(
+        (a) => a.dayOfWeek === dayOfWeek,
+      );
 
       if (dayAvailability) {
         const daySlots = this.generateDaySlots(
           current,
           dayAvailability,
-          appointments
+          appointments,
         );
         slots.push(...daySlots);
       }
@@ -381,10 +411,12 @@ export class SchedulingService {
   private generateDaySlots(
     date: Date,
     availability: any,
-    appointments: any[]
+    appointments: any[],
   ): TimeSlotDto[] {
     const slots: TimeSlotDto[] = [];
-    const [startHour, startMinute] = availability.startTime.split(':').map(Number);
+    const [startHour, startMinute] = availability.startTime
+      .split(':')
+      .map(Number);
     const [endHour, endMinute] = availability.endTime.split(':').map(Number);
 
     const slotStart = new Date(date);
@@ -398,10 +430,11 @@ export class SchedulingService {
       slotEnd.setMinutes(slotEnd.getMinutes() + availability.slotDuration);
 
       // Count appointments in this slot
-      const booked = appointments.filter(a => 
-        a.scheduledStart >= slotStart && 
-        a.scheduledStart < slotEnd &&
-        a.status !== 'cancelled'
+      const booked = appointments.filter(
+        (a) =>
+          a.scheduledStart >= slotStart &&
+          a.scheduledStart < slotEnd &&
+          a.status !== 'cancelled',
       ).length;
 
       slots.push({
@@ -414,9 +447,9 @@ export class SchedulingService {
 
       // Move to next slot with buffer time
       slotStart.setMinutes(
-        slotStart.getMinutes() + 
-        availability.slotDuration + 
-        availability.bufferTime
+        slotStart.getMinutes() +
+          availability.slotDuration +
+          availability.bufferTime,
       );
     }
 
@@ -427,7 +460,7 @@ export class SchedulingService {
     studyId: string,
     start: Date,
     end: Date,
-    excludeAppointmentId?: string
+    excludeAppointmentId?: string,
   ): Promise<boolean> {
     const where: any = {
       studyId,
@@ -470,7 +503,7 @@ export class SchedulingService {
     appointmentId: string,
     amount: number,
     method: 'cash' | 'check' | 'gift_card' | 'bank_transfer' | 'other',
-    currency = 'USD'
+    currency = 'USD',
   ): Promise<CompensationDto> {
     // Get the appointment to get participantId
     const appointment = await this.prisma.appointment.findUnique({
@@ -499,7 +532,7 @@ export class SchedulingService {
   async updateCompensationStatus(
     compensationId: string,
     status: 'approved' | 'paid' | 'cancelled',
-    reference?: string
+    reference?: string,
   ): Promise<CompensationDto> {
     const updated = await this.prisma.compensation.update({
       where: { id: compensationId },
@@ -528,17 +561,17 @@ export class SchedulingService {
     const summary = {
       total: compensations.reduce((sum, c) => sum + c.amount, 0),
       paid: compensations
-        .filter(c => c.status === 'paid')
+        .filter((c) => c.status === 'paid')
         .reduce((sum, c) => sum + c.amount, 0),
       pending: compensations
-        .filter(c => c.status === 'pending')
+        .filter((c) => c.status === 'pending')
         .reduce((sum, c) => sum + c.amount, 0),
       byMethod: {} as Record<string, number>,
       byStatus: {} as Record<string, number>,
     };
 
     // Group by method and status
-    compensations.forEach(c => {
+    compensations.forEach((c) => {
       summary.byMethod[c.method] = (summary.byMethod[c.method] || 0) + c.amount;
       summary.byStatus[c.status] = (summary.byStatus[c.status] || 0) + c.amount;
     });
@@ -551,7 +584,7 @@ export class SchedulingService {
   async scheduleReminders(
     appointmentId: string,
     appointmentTime: Date,
-    email?: string
+    email?: string,
   ): Promise<void> {
     const reminders = [
       { type: 'email', hoursBefore: 48 },
@@ -577,7 +610,10 @@ export class SchedulingService {
     }
   }
 
-  async rescheduleReminders(appointmentId: string, newTime: Date): Promise<void> {
+  async rescheduleReminders(
+    appointmentId: string,
+    newTime: Date,
+  ): Promise<void> {
     // Cancel existing reminders
     await this.cancelReminders(appointmentId);
 
@@ -591,7 +627,7 @@ export class SchedulingService {
       await this.scheduleReminders(
         appointmentId,
         newTime,
-        appointment.participant?.email
+        appointment.participant?.email,
       );
     }
   }
@@ -636,7 +672,7 @@ export class SchedulingService {
     for (const reminder of pendingReminders) {
       try {
         await this.sendReminder(reminder);
-        
+
         await this.prisma.reminder.update({
           where: { id: reminder.id },
           data: {
@@ -656,7 +692,7 @@ export class SchedulingService {
         });
       } catch (error: any) {
         console.error(`Failed to send reminder ${reminder.id}:`, error);
-        
+
         await this.prisma.reminder.update({
           where: { id: reminder.id },
           data: {
@@ -723,10 +759,14 @@ export class SchedulingService {
         html,
       });
 
-      console.log(`Email reminder sent to ${participant.email} for appointment ${appointment.id}`);
+      console.log(
+        `Email reminder sent to ${participant.email} for appointment ${appointment.id}`,
+      );
     } else if (reminder.type === 'sms') {
       // SMS implementation would go here if needed
-      console.log(`SMS reminders not yet implemented for appointment ${appointment.id}`);
+      console.log(
+        `SMS reminders not yet implemented for appointment ${appointment.id}`,
+      );
     }
   }
 
@@ -735,7 +775,9 @@ export class SchedulingService {
   async getRecruitmentMetrics(studyId: string): Promise<RecruitmentMetricsDto> {
     // Check cache first
     const cacheKey = `study:${studyId}:recruitment:metrics`;
-    const cached = await this.cache.get(cacheKey) as RecruitmentMetricsDto | null;
+    const cached = (await this.cache.get(
+      cacheKey,
+    )) as RecruitmentMetricsDto | null;
     if (cached) return cached;
 
     // Get all participants and appointments
@@ -753,12 +795,14 @@ export class SchedulingService {
       }),
     ]);
 
-    const scheduled = appointments.filter(a => 
-      ['scheduled', 'confirmed', 'completed'].includes(a.status)
+    const scheduled = appointments.filter((a) =>
+      ['scheduled', 'confirmed', 'completed'].includes(a.status),
     ).length;
-    
-    const completed = appointments.filter(a => a.status === 'completed').length;
-    const noShows = appointments.filter(a => a.status === 'no-show').length;
+
+    const completed = appointments.filter(
+      (a) => a.status === 'completed',
+    ).length;
+    const noShows = appointments.filter((a) => a.status === 'no-show').length;
 
     const metrics: RecruitmentMetricsDto = {
       studyId,
@@ -782,13 +826,19 @@ export class SchedulingService {
 
   // ========== Helper Methods ==========
 
-  private async generateMeetingUrl(studyId: string, participantId: string): Promise<string> {
+  private async generateMeetingUrl(
+    studyId: string,
+    participantId: string,
+  ): Promise<string> {
     // Generate unique meeting URL
     // This could integrate with Zoom, Google Meet, etc.
     return `https://meet.vqmethod.com/${studyId}/${participantId}/${Date.now()}`;
   }
 
-  private mapToAppointmentDto(appointment: any, participant?: any): AppointmentDto {
+  private mapToAppointmentDto(
+    appointment: any,
+    participant?: any,
+  ): AppointmentDto {
     return {
       id: appointment.id,
       studyId: appointment.studyId,
@@ -803,8 +853,9 @@ export class SchedulingService {
       meetingUrl: appointment.meetingUrl,
       notes: appointment.notes,
       remindersSent: appointment.remindersSent,
-      compensation: appointment.compensation ? 
-        this.mapToCompensationDto(appointment.compensation) : undefined,
+      compensation: appointment.compensation
+        ? this.mapToCompensationDto(appointment.compensation)
+        : undefined,
       createdAt: appointment.createdAt,
       updatedAt: appointment.updatedAt,
     };

@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { 
+import {
   Brain,
   Sparkles,
   FileText,
@@ -20,7 +20,7 @@ import {
   ChevronRight,
   AlertTriangle,
   Info,
-  CheckCircle2
+  CheckCircle2,
 } from 'lucide-react';
 import { hubAPIService } from '@/lib/services/hub-api.service';
 import { cn } from '@/lib/utils';
@@ -60,10 +60,10 @@ interface InsightCache {
 
 /**
  * AI Insights Section - Phase 7 Day 5 Implementation
- * 
+ *
  * Central hub for all AI-powered interpretation capabilities
  * Integrates narrative generation, recommendations, bias detection
- * 
+ *
  * @features
  * - Factor narrative generation with AI
  * - Study recommendations and action items
@@ -73,23 +73,27 @@ interface InsightCache {
  * - Export capabilities for all insights
  * - Real-time interpretation updates
  */
-export function AIInsights({ 
-  studyId, 
+export function AIInsights({
+  studyId,
   analysisData: _analysisData,
-  onInsightUpdate 
+  onInsightUpdate,
 }: AIInsightsProps) {
   // State management
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('narratives');
   const [narratives, setNarratives] = useState<FactorNarrative[]>([]);
-  const [recommendations, setRecommendations] = useState<StudyRecommendation[]>([]);
+  const [recommendations, setRecommendations] = useState<StudyRecommendation[]>(
+    []
+  );
   const [biasAnalysis, setBiasAnalysis] = useState<any>(null);
   const [themes, setThemes] = useState<any[]>([]);
   const [selectedFactor, setSelectedFactor] = useState<number | null>(null);
   const [insightCache, setInsightCache] = useState<InsightCache>({});
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
+  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(
+    null
+  );
 
   // Load cached insights on mount
   useEffect(() => {
@@ -138,7 +142,7 @@ export function AIInsights({
     const newCache = {
       ...insightCache,
       ...updates,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
     setInsightCache(newCache);
     localStorage.setItem(cacheKey, JSON.stringify(newCache));
@@ -151,9 +155,9 @@ export function AIInsights({
       const response = await hubAPIService.generateFactorNarratives(studyId, {
         includeDistinguishing: true,
         includeConsensus: true,
-        analysisDepth: 'comprehensive'
+        analysisDepth: 'comprehensive',
       });
-      
+
       const narrativeData = response.narratives.map((n: any) => ({
         factorNumber: n.factor,
         title: n.title || `Factor ${n.factor}`,
@@ -162,9 +166,9 @@ export function AIInsights({
         distinguishingStatements: n.distinguishing || [],
         consensusStatements: n.consensus || [],
         confidence: n.confidence || 0.85,
-        participantCount: n.participantCount || 0
+        participantCount: n.participantCount || 0,
       }));
-      
+
       setNarratives(narrativeData);
       saveToCache({ narratives: narrativeData });
       onInsightUpdate?.({ type: 'narratives', data: narrativeData });
@@ -181,17 +185,19 @@ export function AIInsights({
     try {
       const response = await hubAPIService.generateRecommendations(studyId, {
         includeActionItems: true,
-        prioritize: true
+        prioritize: true,
       });
-      
-      const recData: StudyRecommendation[] = response.recommendations.map((r: any) => ({
-        category: r.category,
-        priority: r.priority,
-        recommendation: r.text,
-        rationale: r.rationale,
-        actionItems: r.actions || []
-      }));
-      
+
+      const recData: StudyRecommendation[] = response.recommendations.map(
+        (r: any) => ({
+          category: r.category,
+          priority: r.priority,
+          recommendation: r.text,
+          rationale: r.rationale,
+          actionItems: r.actions || [],
+        })
+      );
+
       setRecommendations(recData);
       saveToCache({ recommendations: recData });
       onInsightUpdate?.({ type: 'recommendations', data: recData });
@@ -208,9 +214,9 @@ export function AIInsights({
     try {
       const response = await hubAPIService.analyzeBias(studyId, {
         dimensions: ['selection', 'response', 'interpretation', 'demographic'],
-        includeRecommendations: true
+        includeRecommendations: true,
       });
-      
+
       setBiasAnalysis(response);
       saveToCache({ biasAnalysis: response });
       onInsightUpdate?.({ type: 'bias', data: response });
@@ -228,9 +234,9 @@ export function AIInsights({
       const response = await hubAPIService.extractThemes(studyId, {
         method: 'ai-powered',
         minOccurrence: 2,
-        includeQuotes: true
+        includeQuotes: true,
       });
-      
+
       setThemes(response.themes);
       saveToCache({ themes: response.themes });
       onInsightUpdate?.({ type: 'themes', data: response.themes });
@@ -248,7 +254,7 @@ export function AIInsights({
       generateNarratives(),
       generateRecommendations(),
       runBiasAnalysis(),
-      extractThemes()
+      extractThemes(),
     ]);
     setLoading(false);
   };
@@ -261,10 +267,12 @@ export function AIInsights({
       narratives,
       recommendations,
       biasAnalysis,
-      themes
+      themes,
     };
-    
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -277,11 +285,11 @@ export function AIInsights({
 
   // Render factor narrative card
   const renderNarrativeCard = (narrative: FactorNarrative) => (
-    <Card 
+    <Card
       key={narrative.factorNumber}
       className={cn(
-        "cursor-pointer transition-all hover:shadow-lg",
-        selectedFactor === narrative.factorNumber && "ring-2 ring-primary"
+        'cursor-pointer transition-all hover:shadow-lg',
+        selectedFactor === narrative.factorNumber && 'ring-2 ring-primary'
       )}
       onClick={() => setSelectedFactor(narrative.factorNumber)}
     >
@@ -297,15 +305,19 @@ export function AIInsights({
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <p className="text-sm font-medium text-muted-foreground mb-2">Main Theme</p>
+          <p className="text-sm font-medium text-muted-foreground mb-2">
+            Main Theme
+          </p>
           <p className="text-sm">{narrative.mainTheme}</p>
         </div>
-        
+
         <div>
-          <p className="text-sm font-medium text-muted-foreground mb-2">AI-Generated Narrative</p>
+          <p className="text-sm font-medium text-muted-foreground mb-2">
+            AI-Generated Narrative
+          </p>
           <p className="text-sm line-clamp-4">{narrative.narrative}</p>
         </div>
-        
+
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
             <Brain className="h-4 w-4 text-muted-foreground" />
@@ -328,11 +340,13 @@ export function AIInsights({
             <Lightbulb className="h-5 w-5 text-yellow-500" />
             <CardTitle className="text-base">{rec.category}</CardTitle>
           </div>
-          <Badge 
+          <Badge
             variant={
-              rec.priority === 'high' ? 'destructive' :
-              rec.priority === 'medium' ? 'default' :
-              'secondary'
+              rec.priority === 'high'
+                ? 'destructive'
+                : rec.priority === 'medium'
+                  ? 'default'
+                  : 'secondary'
             }
           >
             {rec.priority} priority
@@ -341,14 +355,14 @@ export function AIInsights({
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm">{rec.recommendation}</p>
-        
+
         {rec.rationale && (
           <div className="p-3 bg-muted rounded-lg">
             <p className="text-xs text-muted-foreground mb-1">Rationale</p>
             <p className="text-xs">{rec.rationale}</p>
           </div>
         )}
-        
+
         {rec.actionItems.length > 0 && (
           <div>
             <p className="text-xs font-medium mb-2">Action Items</p>
@@ -380,39 +394,55 @@ export function AIInsights({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {Object.entries(biasAnalysis.dimensions || {}).map(([dimension, data]: [string, any]) => (
-                  <div key={dimension}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium capitalize">
-                        {dimension} Bias
-                      </span>
-                      <Badge variant={data.level === 'low' ? 'default' : data.level === 'medium' ? 'secondary' : 'destructive'}>
-                        {data.level}
-                      </Badge>
+                {Object.entries(biasAnalysis.dimensions || {}).map(
+                  ([dimension, data]: [string, any]) => (
+                    <div key={dimension}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium capitalize">
+                          {dimension} Bias
+                        </span>
+                        <Badge
+                          variant={
+                            data.level === 'low'
+                              ? 'default'
+                              : data.level === 'medium'
+                                ? 'secondary'
+                                : 'destructive'
+                          }
+                        >
+                          {data.level}
+                        </Badge>
+                      </div>
+                      <Progress value={data.score * 100} className="h-2" />
+                      {data.recommendation && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {data.recommendation}
+                        </p>
+                      )}
                     </div>
-                    <Progress value={data.score * 100} className="h-2" />
-                    {data.recommendation && (
-                      <p className="text-xs text-muted-foreground mt-1">{data.recommendation}</p>
-                    )}
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             </CardContent>
           </Card>
-          
+
           {biasAnalysis.recommendations && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Bias Mitigation Recommendations</CardTitle>
+                <CardTitle className="text-base">
+                  Bias Mitigation Recommendations
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {biasAnalysis.recommendations.map((rec: string, idx: number) => (
-                    <li key={idx} className="text-sm flex items-start gap-2">
-                      <Info className="h-4 w-4 text-blue-500 mt-0.5" />
-                      <span>{rec}</span>
-                    </li>
-                  ))}
+                  {biasAnalysis.recommendations.map(
+                    (rec: string, idx: number) => (
+                      <li key={idx} className="text-sm flex items-start gap-2">
+                        <Info className="h-4 w-4 text-blue-500 mt-0.5" />
+                        <span>{rec}</span>
+                      </li>
+                    )
+                  )}
                 </ul>
               </CardContent>
             </Card>
@@ -448,18 +478,23 @@ export function AIInsights({
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm">{theme.description}</p>
-              
+
               {theme.quotes && theme.quotes.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs font-medium">Supporting Quotes</p>
-                  {theme.quotes.slice(0, 3).map((quote: string, qIdx: number) => (
-                    <blockquote key={qIdx} className="text-xs italic border-l-2 pl-3 text-muted-foreground">
-                      "{quote}"
-                    </blockquote>
-                  ))}
+                  {theme.quotes
+                    .slice(0, 3)
+                    .map((quote: string, qIdx: number) => (
+                      <blockquote
+                        key={qIdx}
+                        className="text-xs italic border-l-2 pl-3 text-muted-foreground"
+                      >
+                        "{quote}"
+                      </blockquote>
+                    ))}
                 </div>
               )}
-              
+
               {theme.keywords && (
                 <div className="flex flex-wrap gap-1">
                   {theme.keywords.map((keyword: string, kIdx: number) => (
@@ -518,17 +553,19 @@ export function AIInsights({
             Advanced interpretation and narrative generation
           </p>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <label htmlFor="auto-refresh" className="text-sm">Auto-refresh</label>
-            <Switch 
+            <label htmlFor="auto-refresh" className="text-sm">
+              Auto-refresh
+            </label>
+            <Switch
               id="auto-refresh"
               checked={autoRefresh}
               onCheckedChange={setAutoRefresh}
             />
           </div>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -542,12 +579,8 @@ export function AIInsights({
             )}
             Refresh All
           </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={exportInsights}
-          >
+
+          <Button variant="outline" size="sm" onClick={exportInsights}>
             <Download className="h-4 w-4" />
             Export
           </Button>
@@ -571,7 +604,7 @@ export function AIInsights({
               )}
               <span className="text-xs">Generate Narratives</span>
             </Button>
-            
+
             <Button
               variant={generating === 'recommendations' ? 'default' : 'outline'}
               onClick={generateRecommendations}
@@ -585,7 +618,7 @@ export function AIInsights({
               )}
               <span className="text-xs">Get Recommendations</span>
             </Button>
-            
+
             <Button
               variant={generating === 'bias' ? 'default' : 'outline'}
               onClick={runBiasAnalysis}
@@ -599,7 +632,7 @@ export function AIInsights({
               )}
               <span className="text-xs">Analyze Bias</span>
             </Button>
-            
+
             <Button
               variant={generating === 'themes' ? 'default' : 'outline'}
               onClick={extractThemes}
@@ -618,7 +651,11 @@ export function AIInsights({
       </Card>
 
       {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4"
+      >
         <TabsList className="grid grid-cols-4 w-full">
           <TabsTrigger value="narratives" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -629,7 +666,10 @@ export function AIInsights({
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="recommendations" className="flex items-center gap-2">
+          <TabsTrigger
+            value="recommendations"
+            className="flex items-center gap-2"
+          >
             <Lightbulb className="h-4 w-4" />
             Recommendations
             {recommendations.length > 0 && (
@@ -665,9 +705,12 @@ export function AIInsights({
               <Card>
                 <CardContent className="py-12 text-center">
                   <Brain className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Narratives Generated</h3>
+                  <h3 className="text-lg font-medium mb-2">
+                    No Narratives Generated
+                  </h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Click "Generate Narratives" to create AI-powered factor interpretations
+                    Click "Generate Narratives" to create AI-powered factor
+                    interpretations
                   </p>
                   <Button onClick={generateNarratives}>
                     <Sparkles className="h-4 w-4 mr-2" />
@@ -689,7 +732,9 @@ export function AIInsights({
               <Card>
                 <CardContent className="py-12 text-center">
                   <Lightbulb className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Recommendations Yet</h3>
+                  <h3 className="text-lg font-medium mb-2">
+                    No Recommendations Yet
+                  </h3>
                   <p className="text-sm text-muted-foreground mb-4">
                     Generate AI-powered recommendations for your study
                   </p>
@@ -703,11 +748,7 @@ export function AIInsights({
           </TabsContent>
 
           <TabsContent value="bias" className="mt-4">
-            {generating === 'bias' ? (
-              <LoadingSkeleton />
-            ) : (
-              renderBiasAnalysis()
-            )}
+            {generating === 'bias' ? <LoadingSkeleton /> : renderBiasAnalysis()}
           </TabsContent>
 
           <TabsContent value="themes" className="mt-4">
@@ -725,7 +766,8 @@ export function AIInsights({
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            Insights cached at {new Date(insightCache.timestamp).toLocaleString()}
+            Insights cached at{' '}
+            {new Date(insightCache.timestamp).toLocaleString()}
             {autoRefresh && ' • Auto-refresh enabled (every 5 minutes)'}
           </AlertDescription>
         </Alert>

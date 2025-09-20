@@ -8,16 +8,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { 
-  Brain, 
-  Sparkles, 
+import {
+  Brain,
+  Sparkles,
   AlertCircle,
   UserCheck,
   Activity,
   Target,
   Download,
   RefreshCw,
-  CheckCircle
+  CheckCircle,
 } from 'lucide-react';
 import { aiBackendService } from '@/lib/services/ai-backend.service';
 import { hubAPIService } from '@/lib/services/hub-api.service';
@@ -30,10 +30,10 @@ interface ResponseAnalyzerProps {
 
 /**
  * AI Response Analyzer Component - Phase 7 Day 3 Implementation
- * 
+ *
  * Integrates Phase 6.86b Response Analyzer AI
  * Enterprise-grade AI-powered response analysis
- * 
+ *
  * @features
  * - Pattern detection across Q-sorts
  * - Quality assessment and anomaly detection
@@ -42,16 +42,18 @@ interface ResponseAnalyzerProps {
  * - AI-powered interpretations
  * - Real-time analysis updates
  */
-export function ResponseAnalyzer({ 
-  studyId, 
+export function ResponseAnalyzer({
+  studyId,
   responses: initialResponses,
-  onInsightsGenerated 
+  onInsightsGenerated,
 }: ResponseAnalyzerProps) {
   const [responses, setResponses] = useState(initialResponses || []);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedAnalysis, setSelectedAnalysis] = useState<'patterns' | 'quality' | 'anomalies' | 'insights'>('patterns');
+  const [selectedAnalysis, setSelectedAnalysis] = useState<
+    'patterns' | 'quality' | 'anomalies' | 'insights'
+  >('patterns');
 
   const [analysisConfig, setAnalysisConfig] = useState({
     includePatterns: true,
@@ -92,7 +94,12 @@ export function ResponseAnalyzer({
 
     try {
       // Prepare analysis types based on configuration
-      const analysisTypes: ('patterns' | 'quality' | 'anomalies' | 'insights')[] = [];
+      const analysisTypes: (
+        | 'patterns'
+        | 'quality'
+        | 'anomalies'
+        | 'insights'
+      )[] = [];
       if (analysisConfig.includePatterns) analysisTypes.push('patterns');
       if (analysisConfig.includeQuality) analysisTypes.push('quality');
       if (analysisConfig.includeAnomalies) analysisTypes.push('anomalies');
@@ -129,7 +136,7 @@ export function ResponseAnalyzer({
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Pattern Analysis</h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <CardHeader>
@@ -137,12 +144,17 @@ export function ResponseAnalyzer({
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {analysisResults.patterns.dominantPerspectives?.map((perspective: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between">
-                    <span className="text-sm">{perspective.name}</span>
-                    <Badge>{perspective.frequency}%</Badge>
-                  </div>
-                ))}
+                {analysisResults.patterns.dominantPerspectives?.map(
+                  (perspective: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="text-sm">{perspective.name}</span>
+                      <Badge>{perspective.frequency}%</Badge>
+                    </div>
+                  )
+                )}
               </div>
             </CardContent>
           </Card>
@@ -155,11 +167,15 @@ export function ResponseAnalyzer({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Identified Clusters</span>
-                  <Badge variant="secondary">{analysisResults.patterns.clusterCount || 0}</Badge>
+                  <Badge variant="secondary">
+                    {analysisResults.patterns.clusterCount || 0}
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Cohesion Score</span>
-                  <Badge variant="secondary">{analysisResults.patterns.cohesionScore || '0%'}</Badge>
+                  <Badge variant="secondary">
+                    {analysisResults.patterns.cohesionScore || '0%'}
+                  </Badge>
                 </div>
               </div>
             </CardContent>
@@ -173,14 +189,19 @@ export function ResponseAnalyzer({
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {analysisResults.patterns.consensusStatements.map((statement: any, idx: number) => (
-                  <div key={idx} className="p-2 bg-green-50 dark:bg-green-900/20 rounded">
-                    <p className="text-sm">{statement.text}</p>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      Agreement: {statement.agreement}%
-                    </span>
-                  </div>
-                ))}
+                {analysisResults.patterns.consensusStatements.map(
+                  (statement: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="p-2 bg-green-50 dark:bg-green-900/20 rounded"
+                    >
+                      <p className="text-sm">{statement.text}</p>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        Agreement: {statement.agreement}%
+                      </span>
+                    </div>
+                  )
+                )}
               </div>
             </CardContent>
           </Card>
@@ -195,7 +216,7 @@ export function ResponseAnalyzer({
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Quality Assessment</h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardHeader>
@@ -249,19 +270,24 @@ export function ResponseAnalyzer({
           </Card>
         </div>
 
-        {analysisResults.quality.warnings && analysisResults.quality.warnings.length > 0 && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <div className="font-semibold mb-2">Quality Warnings</div>
-              <ul className="list-disc list-inside space-y-1">
-                {analysisResults.quality.warnings.map((warning: string, idx: number) => (
-                  <li key={idx} className="text-sm">{warning}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
+        {analysisResults.quality.warnings &&
+          analysisResults.quality.warnings.length > 0 && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="font-semibold mb-2">Quality Warnings</div>
+                <ul className="list-disc list-inside space-y-1">
+                  {analysisResults.quality.warnings.map(
+                    (warning: string, idx: number) => (
+                      <li key={idx} className="text-sm">
+                        {warning}
+                      </li>
+                    )
+                  )}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
       </div>
     );
   };
@@ -272,36 +298,44 @@ export function ResponseAnalyzer({
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Anomaly Detection</h3>
-        
+
         {analysisResults.anomalies.detected ? (
           <>
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                {analysisResults.anomalies.count} anomalies detected in response data
+                {analysisResults.anomalies.count} anomalies detected in response
+                data
               </AlertDescription>
             </Alert>
 
             <div className="space-y-3">
-              {analysisResults.anomalies.details?.map((anomaly: any, idx: number) => (
-                <Card key={idx} className="border-orange-200 dark:border-orange-800">
-                  <CardHeader>
-                    <CardTitle className="text-sm flex items-center justify-between">
-                      <span>Participant {anomaly.participantId}</span>
-                      <Badge variant="destructive">{anomaly.type}</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {anomaly.description}
-                    </p>
-                    <div className="mt-2">
-                      <span className="text-xs font-semibold">Confidence: </span>
-                      <span className="text-xs">{anomaly.confidence}%</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {analysisResults.anomalies.details?.map(
+                (anomaly: any, idx: number) => (
+                  <Card
+                    key={idx}
+                    className="border-orange-200 dark:border-orange-800"
+                  >
+                    <CardHeader>
+                      <CardTitle className="text-sm flex items-center justify-between">
+                        <span>Participant {anomaly.participantId}</span>
+                        <Badge variant="destructive">{anomaly.type}</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {anomaly.description}
+                      </p>
+                      <div className="mt-2">
+                        <span className="text-xs font-semibold">
+                          Confidence:{' '}
+                        </span>
+                        <span className="text-xs">{anomaly.confidence}%</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              )}
             </div>
           </>
         ) : (
@@ -322,27 +356,31 @@ export function ResponseAnalyzer({
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">AI-Generated Insights</h3>
-        
+
         <div className="space-y-3">
-          {analysisResults.insights.keyFindings?.map((finding: any, idx: number) => (
-            <Card key={idx}>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-yellow-500" />
-                  {finding.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm">{finding.description}</p>
-                {finding.recommendations && (
-                  <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                    <p className="text-xs font-semibold mb-1">Recommendation:</p>
-                    <p className="text-xs">{finding.recommendations}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+          {analysisResults.insights.keyFindings?.map(
+            (finding: any, idx: number) => (
+              <Card key={idx}>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-yellow-500" />
+                    {finding.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm">{finding.description}</p>
+                  {finding.recommendations && (
+                    <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                      <p className="text-xs font-semibold mb-1">
+                        Recommendation:
+                      </p>
+                      <p className="text-xs">{finding.recommendations}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          )}
         </div>
 
         {analysisResults.insights.interpretation && (
@@ -351,7 +389,9 @@ export function ResponseAnalyzer({
               <CardTitle className="text-sm">Overall Interpretation</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm">{analysisResults.insights.interpretation}</p>
+              <p className="text-sm">
+                {analysisResults.insights.interpretation}
+              </p>
             </CardContent>
           </Card>
         )}
@@ -368,7 +408,7 @@ export function ResponseAnalyzer({
             AI Response Analyzer
             <Badge variant="secondary">Phase 6.86b Integration</Badge>
           </CardTitle>
-          
+
           <div className="flex items-center gap-2">
             {analysisResults && (
               <Button
@@ -409,28 +449,36 @@ export function ResponseAnalyzer({
               <label className="text-sm">Pattern Detection</label>
               <Switch
                 checked={analysisConfig.includePatterns}
-                onCheckedChange={(v: boolean) => setAnalysisConfig({...analysisConfig, includePatterns: v})}
+                onCheckedChange={(v: boolean) =>
+                  setAnalysisConfig({ ...analysisConfig, includePatterns: v })
+                }
               />
             </div>
             <div className="flex items-center justify-between">
               <label className="text-sm">Quality Check</label>
               <Switch
                 checked={analysisConfig.includeQuality}
-                onCheckedChange={(v: boolean) => setAnalysisConfig({...analysisConfig, includeQuality: v})}
+                onCheckedChange={(v: boolean) =>
+                  setAnalysisConfig({ ...analysisConfig, includeQuality: v })
+                }
               />
             </div>
             <div className="flex items-center justify-between">
               <label className="text-sm">Anomaly Detection</label>
               <Switch
                 checked={analysisConfig.includeAnomalies}
-                onCheckedChange={(v: boolean) => setAnalysisConfig({...analysisConfig, includeAnomalies: v})}
+                onCheckedChange={(v: boolean) =>
+                  setAnalysisConfig({ ...analysisConfig, includeAnomalies: v })
+                }
               />
             </div>
             <div className="flex items-center justify-between">
               <label className="text-sm">AI Insights</label>
               <Switch
                 checked={analysisConfig.includeInsights}
-                onCheckedChange={(v: boolean) => setAnalysisConfig({...analysisConfig, includeInsights: v})}
+                onCheckedChange={(v: boolean) =>
+                  setAnalysisConfig({ ...analysisConfig, includeInsights: v })
+                }
               />
             </div>
           </div>
@@ -440,19 +488,31 @@ export function ResponseAnalyzer({
         {responses.length > 0 && (
           <div className="mb-6 grid grid-cols-3 gap-4">
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Responses</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Total Responses
+              </div>
               <div className="text-xl font-bold">{responses.length}</div>
             </div>
             <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <div className="text-sm text-gray-600 dark:text-gray-400">Complete</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Complete
+              </div>
               <div className="text-xl font-bold">
                 {responses.filter((r: any) => r.completedAt).length}
               </div>
             </div>
             <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-              <div className="text-sm text-gray-600 dark:text-gray-400">Avg Duration</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Avg Duration
+              </div>
               <div className="text-xl font-bold">
-                {Math.round(responses.reduce((sum: number, r: any) => sum + (r.duration || 0), 0) / responses.length)} min
+                {Math.round(
+                  responses.reduce(
+                    (sum: number, r: any) => sum + (r.duration || 0),
+                    0
+                  ) / responses.length
+                )}{' '}
+                min
               </div>
             </div>
           </div>
@@ -460,26 +520,29 @@ export function ResponseAnalyzer({
 
         {/* Analysis Results */}
         {analysisResults ? (
-          <Tabs value={selectedAnalysis} onValueChange={(v: any) => setSelectedAnalysis(v)}>
+          <Tabs
+            value={selectedAnalysis}
+            onValueChange={(v: any) => setSelectedAnalysis(v)}
+          >
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="patterns">Patterns</TabsTrigger>
               <TabsTrigger value="quality">Quality</TabsTrigger>
               <TabsTrigger value="anomalies">Anomalies</TabsTrigger>
               <TabsTrigger value="insights">Insights</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="patterns" className="mt-4">
               {renderPatternAnalysis()}
             </TabsContent>
-            
+
             <TabsContent value="quality" className="mt-4">
               {renderQualityAnalysis()}
             </TabsContent>
-            
+
             <TabsContent value="anomalies" className="mt-4">
               {renderAnomalyAnalysis()}
             </TabsContent>
-            
+
             <TabsContent value="insights" className="mt-4">
               {renderInsights()}
             </TabsContent>

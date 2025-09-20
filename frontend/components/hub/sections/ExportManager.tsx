@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { 
+import {
   Download,
   FileText,
   FileSpreadsheet,
@@ -24,7 +24,7 @@ import {
   Archive,
   Database,
   FileCode,
-  GraduationCap
+  GraduationCap,
 } from 'lucide-react';
 import { useStudyHub } from '@/lib/stores/study-hub.store';
 import { cn } from '@/lib/utils';
@@ -61,10 +61,10 @@ interface ExportPreset {
 
 /**
  * Export Manager Component - Phase 7 Day 6 Implementation
- * 
+ *
  * Enterprise-grade export management system with download queue
  * Supports multiple formats and batch exports
- * 
+ *
  * @features
  * - Download queue management
  * - Multiple export formats (PDF, Word, CSV, JSON, LaTeX)
@@ -92,8 +92,8 @@ export function ExportManager({ studyId }: ExportManagerProps) {
         { type: 'report', format: 'pdf' },
         { type: 'data', format: 'csv' },
         { type: 'analysis', format: 'json' },
-        { type: 'visualization', format: 'png' }
-      ]
+        { type: 'visualization', format: 'png' },
+      ],
     },
     {
       id: 'academic-submission',
@@ -103,8 +103,8 @@ export function ExportManager({ studyId }: ExportManagerProps) {
       exports: [
         { type: 'report', format: 'latex' },
         { type: 'data', format: 'csv' },
-        { type: 'analysis', format: 'spss' }
-      ]
+        { type: 'analysis', format: 'spss' },
+      ],
     },
     {
       id: 'data-only',
@@ -114,8 +114,8 @@ export function ExportManager({ studyId }: ExportManagerProps) {
       exports: [
         { type: 'data', format: 'csv' },
         { type: 'data', format: 'json' },
-        { type: 'data', format: 'xlsx' }
-      ]
+        { type: 'data', format: 'xlsx' },
+      ],
     },
     {
       id: 'visualizations',
@@ -125,8 +125,8 @@ export function ExportManager({ studyId }: ExportManagerProps) {
       exports: [
         { type: 'visualization', format: 'png' },
         { type: 'visualization', format: 'svg' },
-        { type: 'visualization', format: 'pdf' }
-      ]
+        { type: 'visualization', format: 'pdf' },
+      ],
     },
     {
       id: 'pqmethod',
@@ -135,9 +135,9 @@ export function ExportManager({ studyId }: ExportManagerProps) {
       icon: FileCode,
       exports: [
         { type: 'data', format: 'pqmethod' },
-        { type: 'analysis', format: 'pqmethod' }
-      ]
-    }
+        { type: 'analysis', format: 'pqmethod' },
+      ],
+    },
   ];
 
   // Load export history on mount
@@ -160,11 +160,13 @@ export function ExportManager({ studyId }: ExportManagerProps) {
     const savedHistory = localStorage.getItem(`export_history_${studyId}`);
     if (savedHistory) {
       const history = JSON.parse(savedHistory);
-      setExportHistory(history.map((job: any) => ({
-        ...job,
-        startedAt: job.startedAt ? new Date(job.startedAt) : undefined,
-        completedAt: job.completedAt ? new Date(job.completedAt) : undefined
-      })));
+      setExportHistory(
+        history.map((job: any) => ({
+          ...job,
+          startedAt: job.startedAt ? new Date(job.startedAt) : undefined,
+          completedAt: job.completedAt ? new Date(job.completedAt) : undefined,
+        }))
+      );
     }
   };
 
@@ -181,11 +183,11 @@ export function ExportManager({ studyId }: ExportManagerProps) {
       format,
       filename: generateFilename(type, format),
       status: 'pending',
-      progress: 0
+      progress: 0,
     };
 
     setExportQueue(prev => [...prev, job]);
-    
+
     if (!isProcessing) {
       setIsProcessing(true);
     }
@@ -193,7 +195,8 @@ export function ExportManager({ studyId }: ExportManagerProps) {
 
   // Generate filename based on type and format
   const generateFilename = (type: string, format: string): string => {
-    const studyName = studyData?.study?.title?.replace(/[^a-z0-9]/gi, '_') || 'study';
+    const studyName =
+      studyData?.study?.title?.replace(/[^a-z0-9]/gi, '_') || 'study';
     const timestamp = new Date().toISOString().split('T')[0];
     return `${studyName}_${type}_${timestamp}.${format}`;
   };
@@ -212,13 +215,12 @@ export function ExportManager({ studyId }: ExportManagerProps) {
     try {
       // Simulate export process (Phase 10 will use real backend)
       await simulateExport(job);
-      
+
       // Mark as completed
       updateJobStatus(job.id, 'completed', 100);
-      
+
       // Move to history
       moveJobToHistory(job.id);
-      
     } catch (error: any) {
       updateJobStatus(job.id, 'failed', 0, error.message);
     }
@@ -238,7 +240,7 @@ export function ExportManager({ studyId }: ExportManagerProps) {
       const interval = setInterval(() => {
         progress += 10;
         updateJobProgress(job.id, progress);
-        
+
         if (progress >= 100) {
           clearInterval(interval);
           resolve();
@@ -254,26 +256,34 @@ export function ExportManager({ studyId }: ExportManagerProps) {
   };
 
   // Update job status
-  const updateJobStatus = (jobId: string, status: ExportJob['status'], progress: number, error?: string) => {
-    setExportQueue(prev => prev.map(job => 
-      job.id === jobId 
-        ? { 
-            ...job, 
-            status, 
-            progress,
-            error,
-            startedAt: status === 'processing' ? new Date() : job.startedAt,
-            completedAt: status === 'completed' ? new Date() : job.completedAt
-          } as ExportJob
-        : job
-    ));
+  const updateJobStatus = (
+    jobId: string,
+    status: ExportJob['status'],
+    progress: number,
+    error?: string
+  ) => {
+    setExportQueue(prev =>
+      prev.map(job =>
+        job.id === jobId
+          ? ({
+              ...job,
+              status,
+              progress,
+              error,
+              startedAt: status === 'processing' ? new Date() : job.startedAt,
+              completedAt:
+                status === 'completed' ? new Date() : job.completedAt,
+            } as ExportJob)
+          : job
+      )
+    );
   };
 
   // Update job progress
   const updateJobProgress = (jobId: string, progress: number) => {
-    setExportQueue(prev => prev.map(job =>
-      job.id === jobId ? { ...job, progress } : job
-    ));
+    setExportQueue(prev =>
+      prev.map(job => (job.id === jobId ? { ...job, progress } : job))
+    );
   };
 
   // Move completed job to history
@@ -325,23 +335,34 @@ export function ExportManager({ studyId }: ExportManagerProps) {
   // Get icon for export type
   const getExportIcon = (type: string) => {
     switch (type) {
-      case 'report': return FileText;
-      case 'data': return FileSpreadsheet;
-      case 'visualization': return FileImage;
-      case 'analysis': return FileJson;
-      default: return FileText;
+      case 'report':
+        return FileText;
+      case 'data':
+        return FileSpreadsheet;
+      case 'visualization':
+        return FileImage;
+      case 'analysis':
+        return FileJson;
+      default:
+        return FileText;
     }
   };
 
   // Get status color
   const getStatusColor = (status: ExportJob['status']) => {
     switch (status) {
-      case 'pending': return 'text-gray-500';
-      case 'processing': return 'text-blue-500';
-      case 'completed': return 'text-green-500';
-      case 'failed': return 'text-red-500';
-      case 'cancelled': return 'text-orange-500';
-      default: return 'text-gray-500';
+      case 'pending':
+        return 'text-gray-500';
+      case 'processing':
+        return 'text-blue-500';
+      case 'completed':
+        return 'text-green-500';
+      case 'failed':
+        return 'text-red-500';
+      case 'cancelled':
+        return 'text-orange-500';
+      default:
+        return 'text-gray-500';
     }
   };
 
@@ -359,7 +380,9 @@ export function ExportManager({ studyId }: ExportManagerProps) {
           <Button
             variant="outline"
             onClick={() => setIsProcessing(!isProcessing)}
-            disabled={exportQueue.filter(j => j.status === 'pending').length === 0}
+            disabled={
+              exportQueue.filter(j => j.status === 'pending').length === 0
+            }
           >
             {isProcessing ? (
               <>
@@ -393,8 +416,8 @@ export function ExportManager({ studyId }: ExportManagerProps) {
                   key={preset.id}
                   onClick={() => applyPreset(preset.id)}
                   className={cn(
-                    "p-4 border rounded-lg text-left hover:bg-accent transition-colors",
-                    selectedPreset === preset.id && "border-primary bg-accent"
+                    'p-4 border rounded-lg text-left hover:bg-accent transition-colors',
+                    selectedPreset === preset.id && 'border-primary bg-accent'
                   )}
                 >
                   <div className="flex items-start gap-3">
@@ -406,7 +429,11 @@ export function ExportManager({ studyId }: ExportManagerProps) {
                       </div>
                       <div className="flex gap-1 mt-2">
                         {preset.exports.map((exp, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">
+                          <Badge
+                            key={idx}
+                            variant="secondary"
+                            className="text-xs"
+                          >
                             {exp.format.toUpperCase()}
                           </Badge>
                         ))}
@@ -427,9 +454,7 @@ export function ExportManager({ studyId }: ExportManagerProps) {
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5" />
               Export Queue
-              {exportQueue.length > 0 && (
-                <Badge>{exportQueue.length}</Badge>
-              )}
+              {exportQueue.length > 0 && <Badge>{exportQueue.length}</Badge>}
             </CardTitle>
             {exportQueue.length > 0 && (
               <Button
@@ -457,36 +482,46 @@ export function ExportManager({ studyId }: ExportManagerProps) {
                     className="flex items-center gap-3 p-3 border rounded-lg"
                   >
                     <Icon className="w-5 h-5 text-muted-foreground" />
-                    
+
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{job.filename}</span>
+                        <span className="font-medium text-sm">
+                          {job.filename}
+                        </span>
                         <Badge variant="outline" className="text-xs">
                           {job.format.toUpperCase()}
                         </Badge>
                       </div>
-                      
+
                       {job.status === 'processing' && (
                         <Progress value={job.progress} className="h-2 mt-2" />
                       )}
-                      
+
                       {job.error && (
                         <p className="text-xs text-red-500 mt-1">{job.error}</p>
                       )}
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       {job.status === 'processing' && (
                         <LoadingSpinner className="w-4 h-4" />
                       )}
-                      
-                      <span className={cn("text-sm", getStatusColor(job.status))}>
+
+                      <span
+                        className={cn('text-sm', getStatusColor(job.status))}
+                      >
                         {job.status === 'processing' && `${job.progress}%`}
-                        {job.status === 'completed' && <CheckCircle2 className="w-4 h-4" />}
-                        {job.status === 'failed' && <XCircle className="w-4 h-4" />}
-                        {job.status === 'cancelled' && <AlertCircle className="w-4 h-4" />}
+                        {job.status === 'completed' && (
+                          <CheckCircle2 className="w-4 h-4" />
+                        )}
+                        {job.status === 'failed' && (
+                          <XCircle className="w-4 h-4" />
+                        )}
+                        {job.status === 'cancelled' && (
+                          <AlertCircle className="w-4 h-4" />
+                        )}
                       </span>
-                      
+
                       {job.status === 'failed' && (
                         <Button
                           size="sm"
@@ -496,8 +531,9 @@ export function ExportManager({ studyId }: ExportManagerProps) {
                           <RefreshCw className="w-4 h-4" />
                         </Button>
                       )}
-                      
-                      {(job.status === 'pending' || job.status === 'processing') && (
+
+                      {(job.status === 'pending' ||
+                        job.status === 'processing') && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -527,11 +563,7 @@ export function ExportManager({ studyId }: ExportManagerProps) {
               )}
             </CardTitle>
             {exportHistory.length > 0 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={clearHistory}
-              >
+              <Button size="sm" variant="ghost" onClick={clearHistory}>
                 Clear History
               </Button>
             )}
@@ -544,44 +576,47 @@ export function ExportManager({ studyId }: ExportManagerProps) {
             </div>
           ) : (
             <div className="space-y-2">
-              {exportHistory.slice().reverse().map(job => {
-                const Icon = getExportIcon(job.type);
-                return (
-                  <div
-                    key={job.id}
-                    className="flex items-center gap-3 p-2 hover:bg-accent rounded-lg transition-colors"
-                  >
-                    <Icon className="w-4 h-4 text-muted-foreground" />
-                    
-                    <div className="flex-1">
-                      <span className="text-sm">{job.filename}</span>
-                      {job.completedAt && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          {job.completedAt.toLocaleTimeString()}
-                        </span>
+              {exportHistory
+                .slice()
+                .reverse()
+                .map(job => {
+                  const Icon = getExportIcon(job.type);
+                  return (
+                    <div
+                      key={job.id}
+                      className="flex items-center gap-3 p-2 hover:bg-accent rounded-lg transition-colors"
+                    >
+                      <Icon className="w-4 h-4 text-muted-foreground" />
+
+                      <div className="flex-1">
+                        <span className="text-sm">{job.filename}</span>
+                        {job.completedAt && (
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {job.completedAt.toLocaleTimeString()}
+                          </span>
+                        )}
+                      </div>
+
+                      <Badge variant="outline" className="text-xs">
+                        {job.format.toUpperCase()}
+                      </Badge>
+
+                      {job.status === 'completed' ? (
+                        <Button size="sm" variant="ghost">
+                          <Download className="w-4 h-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => retryJob(job.id)}
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                        </Button>
                       )}
                     </div>
-                    
-                    <Badge variant="outline" className="text-xs">
-                      {job.format.toUpperCase()}
-                    </Badge>
-                    
-                    {job.status === 'completed' ? (
-                      <Button size="sm" variant="ghost">
-                        <Download className="w-4 h-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => retryJob(job.id)}
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           )}
         </CardContent>
@@ -591,8 +626,8 @@ export function ExportManager({ studyId }: ExportManagerProps) {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Exported files are available for download for 7 days. 
-          Consider saving important exports to your local storage or cloud service.
+          Exported files are available for download for 7 days. Consider saving
+          important exports to your local storage or cloud service.
         </AlertDescription>
       </Alert>
     </div>

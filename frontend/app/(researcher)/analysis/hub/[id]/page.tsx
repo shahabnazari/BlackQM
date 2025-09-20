@@ -16,10 +16,10 @@ import { HubLoadingSkeleton } from '@/components/hub/LoadingSkeleton';
 
 /**
  * Analysis Hub Main Page - Phase 7 Day 1 Implementation
- * 
+ *
  * Aligned with Phase 8.5 Research Lifecycle Navigation System
  * This hub is integrated into the ANALYZE phase of the lifecycle
- * 
+ *
  * @world-class Features:
  * - Unified data loading (load once, use everywhere)
  * - Context-aware navigation
@@ -29,14 +29,9 @@ import { HubLoadingSkeleton } from '@/components/hub/LoadingSkeleton';
 export default function AnalysisHubPage() {
   const params = useParams();
   const studyId = params.id as string;
-  
-  const {
-    studyData,
-    isLoading,
-    error,
-    loadStudy,
-    currentSection,
-  } = useStudyHub();
+
+  const { studyData, isLoading, error, loadStudy, currentSection } =
+    useStudyHub();
 
   // Load study data on mount
   useEffect(() => {

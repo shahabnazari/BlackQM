@@ -14,19 +14,19 @@ const sizeClasses = {
   xl: 'w-12 h-12 border-4',
 };
 
-export function LoadingSpinner({ 
-  className, 
-  size = 'md', 
-  color = 'border-blue-500' 
+export function LoadingSpinner({
+  className,
+  size = 'md',
+  color = 'border-blue-500',
 }: LoadingSpinnerProps) {
   return (
-    <div 
+    <div
       className={cn(
         'animate-spin rounded-full border-t-transparent',
         sizeClasses[size],
         color,
         className
-      )} 
+      )}
       role="status"
       aria-label="Loading"
     >
@@ -35,7 +35,11 @@ export function LoadingSpinner({
   );
 }
 
-export function LoadingOverlay({ message = 'Loading...' }: { message?: string }) {
+export function LoadingOverlay({
+  message = 'Loading...',
+}: {
+  message?: string;
+}) {
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
       <div className="bg-white rounded-lg p-6 flex flex-col items-center gap-4">

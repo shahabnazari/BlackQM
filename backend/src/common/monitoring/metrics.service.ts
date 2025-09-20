@@ -1,33 +1,39 @@
 import { Injectable } from '@nestjs/common';
-import { Counter, Histogram, Gauge, Registry, collectDefaultMetrics } from 'prom-client';
+import {
+  Counter,
+  Histogram,
+  Gauge,
+  Registry,
+  collectDefaultMetrics,
+} from 'prom-client';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MetricsService {
   private readonly registry: Registry;
-  
+
   // HTTP Metrics
   private readonly httpRequestDuration: Histogram<string>;
   private readonly httpRequestTotal: Counter<string>;
   private readonly httpRequestErrors: Counter<string>;
-  
+
   // Business Metrics
   private readonly studiesCreated: Counter<string>;
   private readonly participantsRegistered: Counter<string>;
   private readonly analysisRuns: Counter<string>;
   private readonly aiApiCalls: Counter<string>;
-  
+
   // System Metrics
   private readonly activeUsers: Gauge<string>;
   private readonly activeSessions: Gauge<string>;
   private readonly queueSize: Gauge<string>;
   private readonly cacheHitRatio: Gauge<string>;
-  
+
   // Database Metrics
   private readonly dbQueryDuration: Histogram<string>;
   private readonly dbConnectionPool: Gauge<string>;
   private readonly dbQueryErrors: Counter<string>;
-  
+
   // Performance Metrics
   private readonly responseTime: Histogram<string>;
   private readonly throughput: Counter<string>;
@@ -35,9 +41,9 @@ export class MetricsService {
 
   constructor(private configService: ConfigService) {
     this.registry = new Registry();
-    
+
     // Collect default Node.js metrics
-    collectDefaultMetrics({ 
+    collectDefaultMetrics({
       register: this.registry,
       prefix: 'vqmethod_',
     });
@@ -168,16 +174,21 @@ export class MetricsService {
   }
 
   // HTTP Metrics Methods
-  recordHttpRequest(method: string, route: string, statusCode: number, duration: number): void {
+  recordHttpRequest(
+    method: string,
+    route: string,
+    statusCode: number,
+    duration: number,
+  ): void {
     const labels = { method, route, status_code: statusCode.toString() };
     this.httpRequestDuration.observe(labels, duration);
     this.httpRequestTotal.inc(labels);
-    
+
     if (statusCode >= 400) {
-      this.httpRequestErrors.inc({ 
-        method, 
-        route, 
-        error_type: statusCode >= 500 ? 'server_error' : 'client_error' 
+      this.httpRequestErrors.inc({
+        method,
+        route,
+        error_type: statusCode >= 500 ? 'server_error' : 'client_error',
       });
     }
   }
@@ -192,17 +203,17 @@ export class MetricsService {
   }
 
   recordAnalysisRun(analysisType: string, success: boolean): void {
-    this.analysisRuns.inc({ 
-      analysis_type: analysisType, 
-      status: success ? 'success' : 'failure' 
+    this.analysisRuns.inc({
+      analysis_type: analysisType,
+      status: success ? 'success' : 'failure',
     });
   }
 
   recordAIApiCall(service: string, model: string, success: boolean): void {
-    this.aiApiCalls.inc({ 
-      service, 
-      model, 
-      status: success ? 'success' : 'failure' 
+    this.aiApiCalls.inc({
+      service,
+      model,
+      status: success ? 'success' : 'failure',
     });
   }
 
@@ -224,9 +235,14 @@ export class MetricsService {
   }
 
   // Database Metrics Methods
-  recordDbQuery(operation: string, table: string, duration: number, error?: boolean): void {
+  recordDbQuery(
+    operation: string,
+    table: string,
+    duration: number,
+    error?: boolean,
+  ): void {
     this.dbQueryDuration.observe({ operation, table }, duration);
-    
+
     if (error) {
       this.dbQueryErrors.inc({ operation, error_type: 'query_error' });
     }
@@ -304,11 +320,16 @@ export class MetricsService {
   // Helper methods
   private async getCounterValue(counter: Counter<string>): Promise<number> {
     // Get the metric value directly from counter
-    const metric = await this.registry.getSingleMetric((counter as any).name || '');
+    const metric = await this.registry.getSingleMetric(
+      (counter as any).name || '',
+    );
     if (metric) {
       const values = await metric.get();
       // Sum all values from the metric
-      return values.values.reduce((sum: number, v: any) => sum + (v.value || 0), 0);
+      return values.values.reduce(
+        (sum: number, v: any) => sum + (v.value || 0),
+        0,
+      );
     }
     return 0;
   }
@@ -326,10 +347,11 @@ export class MetricsService {
   // Alert thresholds
   async checkAlertThresholds(): Promise<any[]> {
     const alerts = [];
-    
+
     // Check error rate threshold
     const errorRateValue = (await this.errorRate.get()).values[0]?.value || 0;
-    if (errorRateValue > 0.05) { // 5% error rate
+    if (errorRateValue > 0.05) {
+      // 5% error rate
       alerts.push({
         level: 'warning',
         metric: 'error_rate',
@@ -338,13 +360,13 @@ export class MetricsService {
         message: 'Error rate exceeds 5%',
       });
     }
-    
+
     // Check response time threshold
     // Would need to calculate p95 from histogram
-    
+
     // Check queue size threshold
     // Would need to check specific queue sizes
-    
+
     return alerts;
   }
 }

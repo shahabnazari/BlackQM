@@ -5,20 +5,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { 
+import {
   FileText,
   Eye,
   ChevronUp,
   ChevronDown,
   Save,
   GraduationCap,
-  Layout
+  Layout,
 } from 'lucide-react';
 import { useStudyHub } from '@/lib/stores/study-hub.store';
 
@@ -29,8 +35,18 @@ interface ReportBuilderProps {
 
 interface ReportSection {
   id: string;
-  type: 'title' | 'abstract' | 'introduction' | 'literature' | 'methodology' | 
-        'results' | 'discussion' | 'conclusion' | 'references' | 'appendix' | 'custom';
+  type:
+    | 'title'
+    | 'abstract'
+    | 'introduction'
+    | 'literature'
+    | 'methodology'
+    | 'results'
+    | 'discussion'
+    | 'conclusion'
+    | 'references'
+    | 'appendix'
+    | 'custom';
   title: string;
   content: string;
   order: number;
@@ -60,10 +76,10 @@ interface ReportTemplate {
 
 /**
  * Report Builder Component - Phase 7 Day 6 Implementation
- * 
+ *
  * Enterprise-grade report generation interface aligned with REPORT phase
  * in Research Lifecycle. Provides foundation for Phase 10 full implementation.
- * 
+ *
  * @features
  * - Multiple academic format templates (APA, MLA, Chicago, IEEE, Harvard)
  * - Drag-and-drop section management
@@ -79,7 +95,9 @@ export function ReportBuilder({ studyId }: ReportBuilderProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('apa');
   const [sections, setSections] = useState<ReportSection[]>([]);
   const [autoGenerate, setAutoGenerate] = useState(true);
-  const [exportFormat, setExportFormat] = useState<'pdf' | 'word' | 'latex' | 'markdown'>('pdf');
+  const [exportFormat, setExportFormat] = useState<
+    'pdf' | 'word' | 'latex' | 'markdown'
+  >('pdf');
   const [reportTitle, setReportTitle] = useState('');
   const [authors, setAuthors] = useState('');
   const [abstract, setAbstract] = useState('');
@@ -96,15 +114,78 @@ export function ReportBuilder({ studyId }: ReportBuilderProps) {
       category: 'academic',
       format: 'apa',
       sections: [
-        { id: 'title', type: 'title', title: 'Title Page', content: '', order: 1, enabled: true },
-        { id: 'abstract', type: 'abstract', title: 'Abstract', content: '', order: 2, enabled: true },
-        { id: 'intro', type: 'introduction', title: 'Introduction', content: '', order: 3, enabled: true },
-        { id: 'lit', type: 'literature', title: 'Literature Review', content: '', order: 4, enabled: true },
-        { id: 'method', type: 'methodology', title: 'Method', content: '', order: 5, enabled: true },
-        { id: 'results', type: 'results', title: 'Results', content: '', order: 6, enabled: true },
-        { id: 'discuss', type: 'discussion', title: 'Discussion', content: '', order: 7, enabled: true },
-        { id: 'refs', type: 'references', title: 'References', content: '', order: 8, enabled: true },
-        { id: 'appendix', type: 'appendix', title: 'Appendix', content: '', order: 9, enabled: false }
+        {
+          id: 'title',
+          type: 'title',
+          title: 'Title Page',
+          content: '',
+          order: 1,
+          enabled: true,
+        },
+        {
+          id: 'abstract',
+          type: 'abstract',
+          title: 'Abstract',
+          content: '',
+          order: 2,
+          enabled: true,
+        },
+        {
+          id: 'intro',
+          type: 'introduction',
+          title: 'Introduction',
+          content: '',
+          order: 3,
+          enabled: true,
+        },
+        {
+          id: 'lit',
+          type: 'literature',
+          title: 'Literature Review',
+          content: '',
+          order: 4,
+          enabled: true,
+        },
+        {
+          id: 'method',
+          type: 'methodology',
+          title: 'Method',
+          content: '',
+          order: 5,
+          enabled: true,
+        },
+        {
+          id: 'results',
+          type: 'results',
+          title: 'Results',
+          content: '',
+          order: 6,
+          enabled: true,
+        },
+        {
+          id: 'discuss',
+          type: 'discussion',
+          title: 'Discussion',
+          content: '',
+          order: 7,
+          enabled: true,
+        },
+        {
+          id: 'refs',
+          type: 'references',
+          title: 'References',
+          content: '',
+          order: 8,
+          enabled: true,
+        },
+        {
+          id: 'appendix',
+          type: 'appendix',
+          title: 'Appendix',
+          content: '',
+          order: 9,
+          enabled: false,
+        },
       ],
       settings: {
         includeTableOfContents: false,
@@ -114,8 +195,8 @@ export function ReportBuilder({ studyId }: ReportBuilderProps) {
         includeTables: true,
         includeAppendix: false,
         pageNumbering: true,
-        citationStyle: 'apa'
-      }
+        citationStyle: 'apa',
+      },
     },
     {
       id: 'mla',
@@ -124,10 +205,38 @@ export function ReportBuilder({ studyId }: ReportBuilderProps) {
       category: 'academic',
       format: 'mla',
       sections: [
-        { id: 'intro', type: 'introduction', title: 'Introduction', content: '', order: 1, enabled: true },
-        { id: 'body', type: 'custom', title: 'Body', content: '', order: 2, enabled: true },
-        { id: 'conclusion', type: 'conclusion', title: 'Conclusion', content: '', order: 3, enabled: true },
-        { id: 'works', type: 'references', title: 'Works Cited', content: '', order: 4, enabled: true }
+        {
+          id: 'intro',
+          type: 'introduction',
+          title: 'Introduction',
+          content: '',
+          order: 1,
+          enabled: true,
+        },
+        {
+          id: 'body',
+          type: 'custom',
+          title: 'Body',
+          content: '',
+          order: 2,
+          enabled: true,
+        },
+        {
+          id: 'conclusion',
+          type: 'conclusion',
+          title: 'Conclusion',
+          content: '',
+          order: 3,
+          enabled: true,
+        },
+        {
+          id: 'works',
+          type: 'references',
+          title: 'Works Cited',
+          content: '',
+          order: 4,
+          enabled: true,
+        },
       ],
       settings: {
         includeTableOfContents: false,
@@ -137,8 +246,8 @@ export function ReportBuilder({ studyId }: ReportBuilderProps) {
         includeTables: true,
         includeAppendix: false,
         pageNumbering: true,
-        citationStyle: 'mla'
-      }
+        citationStyle: 'mla',
+      },
     },
     {
       id: 'chicago',
@@ -147,12 +256,54 @@ export function ReportBuilder({ studyId }: ReportBuilderProps) {
       category: 'academic',
       format: 'chicago',
       sections: [
-        { id: 'title', type: 'title', title: 'Title Page', content: '', order: 1, enabled: true },
-        { id: 'toc', type: 'custom', title: 'Table of Contents', content: '', order: 2, enabled: true },
-        { id: 'intro', type: 'introduction', title: 'Introduction', content: '', order: 3, enabled: true },
-        { id: 'chapters', type: 'custom', title: 'Chapters', content: '', order: 4, enabled: true },
-        { id: 'conclusion', type: 'conclusion', title: 'Conclusion', content: '', order: 5, enabled: true },
-        { id: 'biblio', type: 'references', title: 'Bibliography', content: '', order: 6, enabled: true }
+        {
+          id: 'title',
+          type: 'title',
+          title: 'Title Page',
+          content: '',
+          order: 1,
+          enabled: true,
+        },
+        {
+          id: 'toc',
+          type: 'custom',
+          title: 'Table of Contents',
+          content: '',
+          order: 2,
+          enabled: true,
+        },
+        {
+          id: 'intro',
+          type: 'introduction',
+          title: 'Introduction',
+          content: '',
+          order: 3,
+          enabled: true,
+        },
+        {
+          id: 'chapters',
+          type: 'custom',
+          title: 'Chapters',
+          content: '',
+          order: 4,
+          enabled: true,
+        },
+        {
+          id: 'conclusion',
+          type: 'conclusion',
+          title: 'Conclusion',
+          content: '',
+          order: 5,
+          enabled: true,
+        },
+        {
+          id: 'biblio',
+          type: 'references',
+          title: 'Bibliography',
+          content: '',
+          order: 6,
+          enabled: true,
+        },
       ],
       settings: {
         includeTableOfContents: true,
@@ -162,9 +313,9 @@ export function ReportBuilder({ studyId }: ReportBuilderProps) {
         includeTables: true,
         includeAppendix: true,
         pageNumbering: true,
-        citationStyle: 'chicago'
-      }
-    }
+        citationStyle: 'chicago',
+      },
+    },
   ];
 
   // Load template on mount or template change
@@ -187,19 +338,19 @@ export function ReportBuilder({ studyId }: ReportBuilderProps) {
           return {
             ...section,
             content: studyData?.study?.title || '',
-            autoGenerated: true
+            autoGenerated: true,
           };
         case 'methodology':
           return {
             ...section,
             content: generateMethodologySection(),
-            autoGenerated: true
+            autoGenerated: true,
           };
         case 'results':
           return {
             ...section,
             content: generateResultsSection(),
-            autoGenerated: true
+            autoGenerated: true,
           };
         default:
           return section;
@@ -211,10 +362,11 @@ export function ReportBuilder({ studyId }: ReportBuilderProps) {
   // Generate methodology section from study data
   const generateMethodologySection = (): string => {
     if (!studyData) return '';
-    
+
     const { study, responses, statements } = studyData;
-    const completedResponses = responses?.filter((r: any) => r.status === 'completed').length || 0;
-    
+    const completedResponses =
+      responses?.filter((r: any) => r.status === 'completed').length || 0;
+
     return `## Methodology
 
 ### Research Design
@@ -233,7 +385,7 @@ Data collection took place between ${study?.createdAt ? new Date(study.createdAt
   // Generate results section from analysis data
   const generateResultsSection = (): string => {
     if (!analysisResults) return '';
-    
+
     return `## Results
 
 ### Factor Analysis
@@ -253,7 +405,7 @@ Each factor was characterized by unique distinguishing statements that different
   const moveSection = (index: number, direction: 'up' | 'down') => {
     const newSections = [...sections];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    
+
     if (newIndex >= 0 && newIndex < sections.length) {
       const temp = newSections[index]!;
       newSections[index] = newSections[newIndex]!;
@@ -268,20 +420,24 @@ Each factor was characterized by unique distinguishing statements that different
 
   // Handle section toggle
   const toggleSection = (sectionId: string) => {
-    setSections(sections.map(section => 
-      section.id === sectionId 
-        ? { ...section, enabled: !section.enabled }
-        : section
-    ));
+    setSections(
+      sections.map(section =>
+        section.id === sectionId
+          ? { ...section, enabled: !section.enabled }
+          : section
+      )
+    );
   };
 
   // Handle section content update
   const updateSectionContent = (sectionId: string, content: string) => {
-    setSections(sections.map(section =>
-      section.id === sectionId
-        ? { ...section, content, autoGenerated: false }
-        : section
-    ));
+    setSections(
+      sections.map(section =>
+        section.id === sectionId
+          ? { ...section, content, autoGenerated: false }
+          : section
+      )
+    );
   };
 
   // Save report draft
@@ -298,12 +454,15 @@ Each factor was characterized by unique distinguishing statements that different
         abstract,
         keywords,
         sections,
-        savedAt: new Date().toISOString()
+        savedAt: new Date().toISOString(),
       };
-      
-      localStorage.setItem(`report_draft_${studyId}`, JSON.stringify(reportData));
+
+      localStorage.setItem(
+        `report_draft_${studyId}`,
+        JSON.stringify(reportData)
+      );
       setLastSaved(new Date());
-      
+
       // Show success notification
       setTimeout(() => setIsSaving(false), 500);
     } catch (error: any) {
@@ -318,7 +477,7 @@ Each factor was characterized by unique distinguishing statements that different
     return enabledSections.map(section => ({
       title: section.title,
       content: section.content || '[Section content will be generated]',
-      type: section.type
+      type: section.type,
     }));
   };
 
@@ -365,7 +524,10 @@ Each factor was characterized by unique distinguishing statements that different
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Academic Format</Label>
-              <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+              <Select
+                value={selectedTemplate}
+                onValueChange={setSelectedTemplate}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -383,10 +545,13 @@ Each factor was characterized by unique distinguishing statements that different
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <Label>Export Format</Label>
-              <Select value={exportFormat} onValueChange={(v: any) => setExportFormat(v)}>
+              <Select
+                value={exportFormat}
+                onValueChange={(v: any) => setExportFormat(v)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -401,10 +566,7 @@ Each factor was characterized by unique distinguishing statements that different
           </div>
 
           <div className="flex items-center gap-2 mt-4">
-            <Switch
-              checked={autoGenerate}
-              onCheckedChange={setAutoGenerate}
-            />
+            <Switch checked={autoGenerate} onCheckedChange={setAutoGenerate} />
             <Label>Auto-generate content from study data</Label>
           </div>
         </CardContent>
@@ -438,35 +600,35 @@ Each factor was characterized by unique distinguishing statements that different
                 <Label>Title</Label>
                 <Input
                   value={reportTitle}
-                  onChange={(e) => setReportTitle(e.target.value)}
+                  onChange={e => setReportTitle(e.target.value)}
                   placeholder="Enter report title"
                 />
               </div>
-              
+
               <div>
                 <Label>Authors</Label>
                 <Input
                   value={authors}
-                  onChange={(e) => setAuthors(e.target.value)}
+                  onChange={e => setAuthors(e.target.value)}
                   placeholder="Author names (comma-separated)"
                 />
               </div>
-              
+
               <div>
                 <Label>Abstract</Label>
                 <Textarea
                   value={abstract}
-                  onChange={(e) => setAbstract(e.target.value)}
+                  onChange={e => setAbstract(e.target.value)}
                   placeholder="Enter abstract (150-250 words)"
                   rows={4}
                 />
               </div>
-              
+
               <div>
                 <Label>Keywords</Label>
                 <Input
                   value={keywords}
-                  onChange={(e) => setKeywords(e.target.value)}
+                  onChange={e => setKeywords(e.target.value)}
                   placeholder="Keywords (comma-separated)"
                 />
               </div>
@@ -474,38 +636,42 @@ Each factor was characterized by unique distinguishing statements that different
           </Card>
 
           {/* Section Content Editor */}
-          {sections.filter(s => s.enabled).map(section => (
-            <Card key={section.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    {section.title}
-                    {section.autoGenerated && (
-                      <Badge variant="secondary" className="text-xs">
-                        Auto-generated
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => updateSectionContent(section.id, '')}
-                  >
-                    Clear
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={section.content}
-                  onChange={(e) => updateSectionContent(section.id, e.target.value)}
-                  placeholder={`Enter content for ${section.title}`}
-                  rows={8}
-                  className="font-mono text-sm"
-                />
-              </CardContent>
-            </Card>
-          ))}
+          {sections
+            .filter(s => s.enabled)
+            .map(section => (
+              <Card key={section.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      {section.title}
+                      {section.autoGenerated && (
+                        <Badge variant="secondary" className="text-xs">
+                          Auto-generated
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => updateSectionContent(section.id, '')}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    value={section.content}
+                    onChange={e =>
+                      updateSectionContent(section.id, e.target.value)
+                    }
+                    placeholder={`Enter content for ${section.title}`}
+                    rows={8}
+                    className="font-mono text-sm"
+                  />
+                </CardContent>
+              </Card>
+            ))}
         </TabsContent>
 
         <TabsContent value="sections" className="space-y-4">
@@ -524,15 +690,15 @@ Each factor was characterized by unique distinguishing statements that different
                       checked={section.enabled}
                       onCheckedChange={() => toggleSection(section.id)}
                     />
-                    
+
                     <span className="flex-1 font-medium">{section.title}</span>
-                    
+
                     {section.autoGenerated && (
                       <Badge variant="secondary" className="text-xs">
                         Auto
                       </Badge>
                     )}
-                    
+
                     <div className="flex gap-1">
                       <Button
                         size="sm"
@@ -566,18 +732,22 @@ Each factor was characterized by unique distinguishing statements that different
             <CardContent>
               <div className="prose prose-sm max-w-none">
                 <h1>{reportTitle || 'Untitled Report'}</h1>
-                <p className="text-muted-foreground">By: {authors || 'Author Name'}</p>
-                
+                <p className="text-muted-foreground">
+                  By: {authors || 'Author Name'}
+                </p>
+
                 {abstract && (
                   <div>
                     <h2>Abstract</h2>
                     <p>{abstract}</p>
                     {keywords && (
-                      <p><strong>Keywords:</strong> {keywords}</p>
+                      <p>
+                        <strong>Keywords:</strong> {keywords}
+                      </p>
                     )}
                   </div>
                 )}
-                
+
                 {generatePreview().map((section, index) => (
                   <div key={index}>
                     <h2>{section.title}</h2>

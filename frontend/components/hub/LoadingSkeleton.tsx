@@ -17,8 +17,11 @@ export function HubLoadingSkeleton() {
 
       {/* Stats Cards Skeleton */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+        {[1, 2, 3, 4].map(i => (
+          <div
+            key={i}
+            className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm"
+          >
             <Skeleton className="h-4 w-24 mb-3 bg-gray-200 dark:bg-gray-700" />
             <Skeleton className="h-8 w-16 mb-2 bg-gray-200 dark:bg-gray-700" />
             <Skeleton className="h-3 w-32 bg-gray-200 dark:bg-gray-700" />
@@ -31,8 +34,11 @@ export function HubLoadingSkeleton() {
         {/* Tab Navigation Skeleton */}
         <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex space-x-8">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-4 w-20 bg-gray-200 dark:bg-gray-700" />
+            {[1, 2, 3, 4].map(i => (
+              <Skeleton
+                key={i}
+                className="h-4 w-20 bg-gray-200 dark:bg-gray-700"
+              />
             ))}
           </div>
         </div>
@@ -49,19 +55,24 @@ export function HubLoadingSkeleton() {
           <div className="space-y-3">
             {/* Table Header */}
             <div className="grid grid-cols-5 gap-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-4 bg-gray-200 dark:bg-gray-700" />
+              {[1, 2, 3, 4, 5].map(i => (
+                <Skeleton
+                  key={i}
+                  className="h-4 bg-gray-200 dark:bg-gray-700"
+                />
               ))}
             </div>
 
             {/* Table Rows */}
-            {[1, 2, 3, 4, 5].map((row) => (
+            {[1, 2, 3, 4, 5].map(row => (
               <div key={row} className="grid grid-cols-5 gap-4 py-3">
-                {[1, 2, 3, 4, 5].map((col) => (
-                  <Skeleton 
-                    key={col} 
+                {[1, 2, 3, 4, 5].map(col => (
+                  <Skeleton
+                    key={col}
                     className="h-4 bg-gray-200 dark:bg-gray-700"
-                    style={{ width: col === 1 ? '100%' : `${80 + Math.random() * 20}%` }}
+                    style={{
+                      width: col === 1 ? '100%' : `${80 + Math.random() * 20}%`,
+                    }}
                   />
                 ))}
               </div>
@@ -117,7 +128,10 @@ export function ListLoadingSkeleton({ items = 5 }: { items?: number }) {
   return (
     <div className="space-y-3">
       {Array.from({ length: items }, (_, i) => (
-        <div key={i} className="flex items-center space-x-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+        <div
+          key={i}
+          className="flex items-center space-x-3 p-3 bg-white dark:bg-gray-800 rounded-lg"
+        >
           <Skeleton className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700" />

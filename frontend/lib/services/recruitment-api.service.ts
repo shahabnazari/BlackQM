@@ -1,6 +1,6 @@
 /**
  * Recruitment API Service - Phase 7 Day 7 Implementation
- * 
+ *
  * Connects the recruitment frontend to backend scheduling and participant services
  * Provides comprehensive recruitment management functionality
  */
@@ -96,7 +96,7 @@ export interface UpdateAppointmentDto {
 class RecruitmentAPIService {
   private baseUrl = '/api/scheduling';
   private collaborationUrl = '/api/collaboration';
-  
+
   /**
    * Get authentication headers
    */
@@ -122,7 +122,7 @@ class RecruitmentAPIService {
    * Create a new appointment
    */
   async createAppointment(
-    studyId: string, 
+    studyId: string,
     data: CreateAppointmentDto
   ): Promise<Appointment> {
     try {
@@ -150,11 +150,14 @@ class RecruitmentAPIService {
     updates: UpdateAppointmentDto
   ): Promise<Appointment> {
     try {
-      const response = await fetch(`${this.baseUrl}/appointments/${appointmentId}`, {
-        method: 'PATCH',
-        headers: this.getHeaders(),
-        body: JSON.stringify(updates),
-      });
+      const response = await fetch(
+        `${this.baseUrl}/appointments/${appointmentId}`,
+        {
+          method: 'PATCH',
+          headers: this.getHeaders(),
+          body: JSON.stringify(updates),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to update appointment: ${response.statusText}`);
@@ -169,13 +172,19 @@ class RecruitmentAPIService {
   /**
    * Cancel an appointment
    */
-  async cancelAppointment(appointmentId: string, reason?: string): Promise<void> {
+  async cancelAppointment(
+    appointmentId: string,
+    reason?: string
+  ): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/appointments/${appointmentId}/cancel`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ reason }),
-      });
+      const response = await fetch(
+        `${this.baseUrl}/appointments/${appointmentId}/cancel`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify({ reason }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to cancel appointment: ${response.statusText}`);
@@ -190,13 +199,18 @@ class RecruitmentAPIService {
    */
   async markAppointmentCompleted(appointmentId: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/appointments/${appointmentId}/complete`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-      });
+      const response = await fetch(
+        `${this.baseUrl}/appointments/${appointmentId}/complete`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`Failed to mark appointment as completed: ${response.statusText}`);
+        throw new Error(
+          `Failed to mark appointment as completed: ${response.statusText}`
+        );
       }
     } catch (error) {
       return this.handleError(error);
@@ -208,13 +222,18 @@ class RecruitmentAPIService {
    */
   async markNoShow(appointmentId: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/appointments/${appointmentId}/no-show`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-      });
+      const response = await fetch(
+        `${this.baseUrl}/appointments/${appointmentId}/no-show`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`Failed to mark appointment as no-show: ${response.statusText}`);
+        throw new Error(
+          `Failed to mark appointment as no-show: ${response.statusText}`
+        );
       }
     } catch (error) {
       return this.handleError(error);
@@ -231,9 +250,12 @@ class RecruitmentAPIService {
     try {
       const params = new URLSearchParams();
       if (filters?.status) params.append('status', filters.status);
-      if (filters?.startDate) params.append('startDate', filters.startDate.toISOString());
-      if (filters?.endDate) params.append('endDate', filters.endDate.toISOString());
-      if (filters?.participantId) params.append('participantId', filters.participantId);
+      if (filters?.startDate)
+        params.append('startDate', filters.startDate.toISOString());
+      if (filters?.endDate)
+        params.append('endDate', filters.endDate.toISOString());
+      if (filters?.participantId)
+        params.append('participantId', filters.participantId);
 
       const url = `${this.baseUrl}/${studyId}/appointments${params.toString() ? `?${params.toString()}` : ''}`;
       const response = await fetch(url, {
@@ -288,12 +310,17 @@ class RecruitmentAPIService {
         endDate: endDate.toISOString(),
       });
 
-      const response = await fetch(`${this.baseUrl}/${studyId}/slots?${params.toString()}`, {
-        headers: this.getHeaders(),
-      });
+      const response = await fetch(
+        `${this.baseUrl}/${studyId}/slots?${params.toString()}`,
+        {
+          headers: this.getHeaders(),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch available slots: ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch available slots: ${response.statusText}`
+        );
       }
 
       return await response.json();
@@ -314,11 +341,14 @@ class RecruitmentAPIService {
     currency = 'USD'
   ): Promise<Compensation> {
     try {
-      const response = await fetch(`${this.baseUrl}/appointments/${appointmentId}/compensation`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ amount, method, currency }),
-      });
+      const response = await fetch(
+        `${this.baseUrl}/appointments/${appointmentId}/compensation`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify({ amount, method, currency }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to add compensation: ${response.statusText}`);
@@ -339,14 +369,19 @@ class RecruitmentAPIService {
     reference?: string
   ): Promise<Compensation> {
     try {
-      const response = await fetch(`${this.baseUrl}/compensation/${compensationId}/status`, {
-        method: 'PATCH',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ status, reference }),
-      });
+      const response = await fetch(
+        `${this.baseUrl}/compensation/${compensationId}/status`,
+        {
+          method: 'PATCH',
+          headers: this.getHeaders(),
+          body: JSON.stringify({ status, reference }),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`Failed to update compensation status: ${response.statusText}`);
+        throw new Error(
+          `Failed to update compensation status: ${response.statusText}`
+        );
       }
 
       return await response.json();
@@ -360,12 +395,17 @@ class RecruitmentAPIService {
    */
   async getCompensationSummary(studyId: string): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/${studyId}/compensation/summary`, {
-        headers: this.getHeaders(),
-      });
+      const response = await fetch(
+        `${this.baseUrl}/${studyId}/compensation/summary`,
+        {
+          headers: this.getHeaders(),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch compensation summary: ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch compensation summary: ${response.statusText}`
+        );
       }
 
       return await response.json();
@@ -386,7 +426,9 @@ class RecruitmentAPIService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch recruitment metrics: ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch recruitment metrics: ${response.statusText}`
+        );
       }
 
       return await response.json();
@@ -405,11 +447,14 @@ class RecruitmentAPIService {
     reminderTimes: number[] // hours before appointment
   ): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/appointments/${appointmentId}/reminders`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ reminderTimes }),
-      });
+      const response = await fetch(
+        `${this.baseUrl}/appointments/${appointmentId}/reminders`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify({ reminderTimes }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to schedule reminders: ${response.statusText}`);
@@ -424,10 +469,13 @@ class RecruitmentAPIService {
    */
   async cancelReminders(appointmentId: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/appointments/${appointmentId}/reminders`, {
-        method: 'DELETE',
-        headers: this.getHeaders(),
-      });
+      const response = await fetch(
+        `${this.baseUrl}/appointments/${appointmentId}/reminders`,
+        {
+          method: 'DELETE',
+          headers: this.getHeaders(),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to cancel reminders: ${response.statusText}`);
@@ -506,7 +554,9 @@ class RecruitmentAPIService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to bulk update appointments: ${response.statusText}`);
+        throw new Error(
+          `Failed to bulk update appointments: ${response.statusText}`
+        );
       }
     } catch (error) {
       return this.handleError(error);
@@ -522,14 +572,19 @@ class RecruitmentAPIService {
     message: string
   ): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/${studyId}/invitations/bulk`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ participantIds, message }),
-      });
+      const response = await fetch(
+        `${this.baseUrl}/${studyId}/invitations/bulk`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify({ participantIds, message }),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`Failed to send bulk invitations: ${response.statusText}`);
+        throw new Error(
+          `Failed to send bulk invitations: ${response.statusText}`
+        );
       }
     } catch (error) {
       return this.handleError(error);

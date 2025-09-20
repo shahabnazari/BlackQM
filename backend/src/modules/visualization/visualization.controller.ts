@@ -29,10 +29,10 @@ import { ExportVisualizationDto } from './dto/export-visualization.dto';
 
 /**
  * Visualization Controller - Phase 7 Day 4 Implementation
- * 
+ *
  * Provides REST endpoints for server-side chart generation
  * Part of VISUALIZE phase in Research Lifecycle
- * 
+ *
  * @security JWT authentication required
  * @rateLimit 30 requests per minute
  */
@@ -81,7 +81,10 @@ export class VisualizationController {
   @ApiQuery({ name: 'format', required: false, enum: ['svg', 'png', 'pdf'] })
   @ApiQuery({ name: 'showLabels', required: false, type: Boolean })
   @ApiQuery({ name: 'threshold', required: false, type: Number })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Factor loading plot generated' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Factor loading plot generated',
+  })
   async generateFactorLoading(
     @Param('studyId') studyId: string,
     @Query('factorX') factorX?: number,
@@ -118,10 +121,10 @@ export class VisualizationController {
     @Query('showKaiserCriterion') showKaiserCriterion?: boolean,
     @CurrentUser() user?: any,
   ) {
-    const result = await this.visualizationService.generateScreePlot(
-      studyId,
-      { format, showKaiserCriterion },
-    );
+    const result = await this.visualizationService.generateScreePlot(studyId, {
+      format,
+      showKaiserCriterion,
+    });
 
     if (format === 'svg') {
       return { data: result, format: 'svg' };
@@ -136,9 +139,16 @@ export class VisualizationController {
   @Get('study/:studyId/factor-arrays/:factorNumber')
   @ApiOperation({ summary: 'Generate factor array visualization' })
   @ApiParam({ name: 'studyId', description: 'Study ID' })
-  @ApiParam({ name: 'factorNumber', description: 'Factor number', type: Number })
+  @ApiParam({
+    name: 'factorNumber',
+    description: 'Factor number',
+    type: Number,
+  })
   @ApiQuery({ name: 'format', required: false, enum: ['svg', 'png', 'pdf'] })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Factor array visualization generated' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Factor array visualization generated',
+  })
   async generateFactorArrays(
     @Param('studyId') studyId: string,
     @Param('factorNumber') factorNumber: number,
@@ -164,7 +174,10 @@ export class VisualizationController {
   @Post('study/:studyId/custom')
   @ApiOperation({ summary: 'Generate custom visualization' })
   @ApiParam({ name: 'studyId', description: 'Study ID' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Custom visualization generated' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Custom visualization generated',
+  })
   async generateCustomVisualization(
     @Param('studyId') studyId: string,
     @Body() createDto: CreateVisualizationDto,

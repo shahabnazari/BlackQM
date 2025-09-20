@@ -46,12 +46,14 @@ export class WebSocketService {
     this.io.use(async (socket: AuthenticatedSocket, next) => {
       try {
         const token = socket.handshake.auth.token;
-        
+
         if (!token) {
           return next(new Error('Authentication required'));
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+          userId: string;
+        };
         socket.userId = decoded.userId;
 
         // Verify user exists
@@ -106,7 +108,7 @@ export class WebSocketService {
 
           socket.surveyId = surveyId;
           socket.join(`survey:${surveyId}`);
-          
+
           // Notify others in the room
           socket.to(`survey:${surveyId}`).emit('user:joined', {
             userId: socket.userId,
@@ -206,7 +208,7 @@ export class WebSocketService {
       // Handle disconnection
       socket.on('disconnect', () => {
         console.log(`User ${socket.userId} disconnected`);
-        
+
         this.removeUserConnection(socket.userId!, socket.id);
 
         if (socket.surveyId) {
@@ -276,7 +278,7 @@ export class WebSocketService {
   public emitToUser(userId: string, event: string, data: any): void {
     const connections = this.connectedUsers.get(userId);
     if (connections && this.io) {
-      connections.forEach(socketId => {
+      connections.forEach((socketId) => {
         this.io!.to(socketId).emit(event, data);
       });
     }
@@ -302,13 +304,15 @@ export class WebSocketService {
 
   public getRoomMembers(room: string): string[] {
     if (!this.io) return [];
-    
+
     const roomSockets = this.io.sockets.adapter.rooms.get(room);
     if (!roomSockets) return [];
 
     const members: string[] = [];
-    roomSockets.forEach(socketId => {
-      const socket = this.io!.sockets.sockets.get(socketId) as AuthenticatedSocket;
+    roomSockets.forEach((socketId) => {
+      const socket = this.io!.sockets.sockets.get(
+        socketId,
+      ) as AuthenticatedSocket;
       if (socket?.userId) {
         members.push(socket.userId);
       }

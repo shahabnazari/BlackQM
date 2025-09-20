@@ -6,11 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { 
+import {
   BarChart3,
   LineChart,
   PieChart,
@@ -28,7 +34,7 @@ import {
   Eye,
   EyeOff,
   FileText,
-  Sparkles
+  Sparkles,
 } from 'lucide-react';
 import { useStudyHub } from '@/lib/stores/study-hub.store';
 
@@ -52,11 +58,11 @@ interface ChartConfig {
 
 /**
  * Visualization Center Component - Phase 7 Day 4 Implementation
- * 
+ *
  * World-class chart visualization hub with server-side rendering
  * Integrates with backend visualization.service.ts
  * Part of VISUALIZE phase in Research Lifecycle
- * 
+ *
  * @features
  * - Server-side D3.js chart rendering
  * - Real-time chart updates via WebSocket
@@ -66,15 +72,18 @@ interface ChartConfig {
  * - Performance optimized with caching
  * - PQMethod-compatible visualizations
  */
-function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenterProps) {
-  const { } = useStudyHub();
+function VisualizationCenterComponent({
+  studyId,
+  onExport,
+}: VisualizationCenterProps) {
+  const {} = useStudyHub();
   const [activeTab, setActiveTab] = useState('standard');
   const [selectedChart, setSelectedChart] = useState('correlation-heatmap');
   const [isLoading, setIsLoading] = useState(false);
   const [chartData, setChartData] = useState<any>(null);
   const [realtimeEnabled, setRealtimeEnabled] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  
+
   const [config, setConfig] = useState<ChartConfig>({
     type: 'heatmap',
     width: 800,
@@ -171,23 +180,25 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
 
   const connectWebSocket = () => {
     const ws = new WebSocket(`ws://localhost:3001/ws`);
-    
+
     ws.onopen = () => {
       console.log('WebSocket connected for visualization updates');
-      ws.send(JSON.stringify({ 
-        type: 'subscribe', 
-        channel: `visualization:${studyId}` 
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'subscribe',
+          channel: `visualization:${studyId}`,
+        })
+      );
     };
 
-    ws.onmessage = (event) => {
+    ws.onmessage = event => {
       const message = JSON.parse(event.data);
       if (message.type === 'visualization-update') {
         handleRealtimeUpdate(message.data);
       }
     };
 
-    ws.onerror = (error) => {
+    ws.onerror = error => {
       console.error('WebSocket error:', error);
     };
 
@@ -249,11 +260,14 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
           params.type = chartId;
       }
 
-      const response = await fetch(endpoint + '?' + new URLSearchParams(params), {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await fetch(
+        endpoint + '?' + new URLSearchParams(params),
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
 
       if (config.format === 'svg') {
         const data = await response.json();
@@ -298,21 +312,24 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
   const exportBatch = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/visualization/study/${studyId}/export-batch`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          charts: exportQueue.map(id => ({
-            type: id,
-            include: true,
-          })),
-          format: config.format,
-          combine: true,
-        }),
-      });
+      const response = await fetch(
+        `/api/visualization/study/${studyId}/export-batch`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            charts: exportQueue.map(id => ({
+              type: id,
+              include: true,
+            })),
+            format: config.format,
+            combine: true,
+          }),
+        }
+      );
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -331,7 +348,7 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
     await fetch(`/api/visualization/study/${studyId}/cache`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
     });
     chartCache.clear();
@@ -341,13 +358,13 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
     <div className="space-y-6">
       {/* Chart Selection Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {standardCharts.map((chart) => {
+        {standardCharts.map(chart => {
           const Icon = chart.icon;
           const isSelected = selectedChart === chart.id;
           const isQueued = exportQueue.includes(chart.id);
 
           return (
-            <Card 
+            <Card
               key={chart.id}
               className={`cursor-pointer transition-all ${
                 isSelected ? 'ring-2 ring-blue-500' : ''
@@ -357,9 +374,13 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      isSelected ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-800'
-                    }`}>
+                    <div
+                      className={`p-2 rounded-lg ${
+                        isSelected
+                          ? 'bg-blue-100 dark:bg-blue-900'
+                          : 'bg-gray-100 dark:bg-gray-800'
+                      }`}
+                    >
                       <Icon className="h-5 w-5" />
                     </div>
                     <div>
@@ -378,16 +399,20 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation();
-                        setExportQueue(prev => 
-                          isQueued 
+                        setExportQueue(prev =>
+                          isQueued
                             ? prev.filter(id => id !== chart.id)
                             : [...prev, chart.id]
                         );
                       }}
                     >
-                      {isQueued ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {isQueued ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -414,14 +439,18 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
               <div className="space-y-3">
                 <Slider
                   value={[config.width]}
-                  onValueChange={([v]) => setConfig({...config, width: v || config.width})}
+                  onValueChange={([v]) =>
+                    setConfig({ ...config, width: v || config.width })
+                  }
                   min={400}
                   max={1600}
                   step={100}
                 />
                 <Slider
                   value={[config.height]}
-                  onValueChange={([v]) => setConfig({...config, height: v || config.height})}
+                  onValueChange={([v]) =>
+                    setConfig({ ...config, height: v || config.height })
+                  }
                   min={300}
                   max={1200}
                   step={100}
@@ -430,10 +459,12 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Color Scheme</label>
-              <Select 
-                value={config.colorScheme} 
-                onValueChange={(v) => setConfig({...config, colorScheme: v})}
+              <label className="text-sm font-medium mb-2 block">
+                Color Scheme
+              </label>
+              <Select
+                value={config.colorScheme}
+                onValueChange={v => setConfig({ ...config, colorScheme: v })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -449,10 +480,14 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Export Format</label>
-              <Select 
-                value={config.format} 
-                onValueChange={(v: 'svg' | 'png' | 'pdf') => setConfig({...config, format: v})}
+              <label className="text-sm font-medium mb-2 block">
+                Export Format
+              </label>
+              <Select
+                value={config.format}
+                onValueChange={(v: 'svg' | 'png' | 'pdf') =>
+                  setConfig({ ...config, format: v })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -470,14 +505,14 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
                 <label className="text-sm font-medium">Show Labels</label>
                 <Switch
                   checked={config.showLabels}
-                  onCheckedChange={(v) => setConfig({...config, showLabels: v})}
+                  onCheckedChange={v => setConfig({ ...config, showLabels: v })}
                 />
               </div>
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Show Legend</label>
                 <Switch
                   checked={config.showLegend}
-                  onCheckedChange={(v) => setConfig({...config, showLegend: v})}
+                  onCheckedChange={v => setConfig({ ...config, showLegend: v })}
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -492,11 +527,7 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
 
           <div className="mt-6 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearCache}
-              >
+              <Button variant="outline" size="sm" onClick={clearCache}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Clear Cache
               </Button>
@@ -506,7 +537,7 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
                 </Badge>
               )}
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button
                 onClick={() => generateChart(selectedChart)}
@@ -524,22 +555,16 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
                   </>
                 )}
               </Button>
-              
+
               {chartData && (
-                <Button
-                  variant="outline"
-                  onClick={exportChart}
-                >
+                <Button variant="outline" onClick={exportChart}>
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
               )}
 
               {exportQueue.length > 0 && (
-                <Button
-                  variant="secondary"
-                  onClick={exportBatch}
-                >
+                <Button variant="secondary" onClick={exportBatch}>
                   <Save className="h-4 w-4 mr-2" />
                   Export Batch
                 </Button>
@@ -567,7 +592,7 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
           </CardHeader>
           <CardContent>
             {config.format === 'svg' && chartData.data ? (
-              <div 
+              <div
                 className="w-full overflow-auto"
                 dangerouslySetInnerHTML={{ __html: chartData.data }}
               />
@@ -577,7 +602,8 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
 
             {chartData.timestamp && (
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                Last updated: {new Date(chartData.timestamp).toLocaleTimeString()}
+                Last updated:{' '}
+                {new Date(chartData.timestamp).toLocaleTimeString()}
               </p>
             )}
           </CardContent>
@@ -591,7 +617,8 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
       <Alert>
         <Sparkles className="h-4 w-4" />
         <AlertDescription>
-          Create custom visualizations by selecting chart type and configuring data mappings
+          Create custom visualizations by selecting chart type and configuring
+          data mappings
         </AlertDescription>
       </Alert>
 
@@ -601,15 +628,17 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {customChartTypes.map((type) => {
+            {customChartTypes.map(type => {
               const Icon = type.icon;
               return (
                 <button
                   key={type.value}
                   className={`p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
-                    config.type === type.value ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
+                    config.type === type.value
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : ''
                   }`}
-                  onClick={() => setConfig({...config, type: type.value})}
+                  onClick={() => setConfig({ ...config, type: type.value })}
                 >
                   <Icon className="h-8 w-8 mx-auto mb-2" />
                   <p className="text-sm font-medium">{type.label}</p>
@@ -621,7 +650,8 @@ function VisualizationCenterComponent({ studyId, onExport }: VisualizationCenter
           <div className="mt-6">
             <Alert variant="default">
               <AlertDescription>
-                Custom chart builder will connect to your data and provide interactive configuration
+                Custom chart builder will connect to your data and provide
+                interactive configuration
               </AlertDescription>
             </Alert>
           </div>
