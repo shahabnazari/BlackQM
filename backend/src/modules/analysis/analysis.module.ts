@@ -6,12 +6,25 @@ import { FactorExtractionService } from './services/factor-extraction.service';
 import { RotationEngineService } from './services/rotation-engine.service';
 import { StatisticalOutputService } from './services/statistical-output.service';
 import { PQMethodCompatibilityService } from './services/pqmethod-compatibility.service';
-import { CacheService } from './services/cache.service';
+import { CacheService } from '../../common/cache.service';
 import { AnalysisLoggerService } from './services/analysis-logger.service';
 import { StatisticsService } from './services/statistics.service';
+import { HubService } from './services/hub.service';
+import { InterpretationService } from './services/interpretation.service';
+import { CollaborationService } from './services/collaboration.service';
+import { SchedulingService } from './services/scheduling.service';
 import { AnalysisController } from './controllers/analysis.controller';
+import { HubController } from './controllers/hub.controller';
+import { InterpretationController } from './controllers/interpretation.controller';
+import { CollaborationController } from './controllers/collaboration.controller';
+import { SchedulingController } from './controllers/scheduling.controller';
 import { AnalysisGateway } from './gateways/analysis.gateway';
 import { PrismaService } from '../../common/prisma.service';
+import { StudyModule } from '../study/study.module';
+import { ParticipantModule } from '../participant/participant.module';
+import { AIModule } from '../ai/ai.module';
+import { EmailModule } from '../email/email.module';
+import { WebSocketService } from '../../services/websocket.service';
 
 /**
  * Q-Analytics Engine Module
@@ -30,8 +43,20 @@ import { PrismaService } from '../../common/prisma.service';
  * - Enterprise-grade error handling and recovery
  */
 @Module({
-  imports: [ConfigModule],
-  controllers: [AnalysisController],
+  imports: [
+    ConfigModule,
+    StudyModule,
+    ParticipantModule,
+    AIModule,
+    EmailModule,
+  ],
+  controllers: [
+    AnalysisController,
+    HubController,
+    InterpretationController,
+    CollaborationController,
+    SchedulingController,
+  ],
   providers: [
     // Core Analysis Services
     QMethodValidatorService,
@@ -42,8 +67,24 @@ import { PrismaService } from '../../common/prisma.service';
     StatisticsService,
     PQMethodCompatibilityService,
 
+    // Hub Service (Phase 7 Day 2)
+    HubService,
+
+    // Interpretation Service (Phase 7 Day 5)
+    InterpretationService,
+
+    // Collaboration Service (Phase 7 Day 7)
+    CollaborationService,
+
+    // Scheduling Service (Phase 7 Day 7)
+    SchedulingService,
+
     // Real-time WebSocket Gateway
     AnalysisGateway,
+    {
+      provide: WebSocketService,
+      useFactory: () => WebSocketService.getInstance(),
+    },
 
     // Enterprise Features
     CacheService,
@@ -60,6 +101,10 @@ import { PrismaService } from '../../common/prisma.service';
     StatisticalOutputService,
     StatisticsService,
     PQMethodCompatibilityService,
+    HubService,
+    InterpretationService,
+    CollaborationService,
+    SchedulingService,
     CacheService,
     AnalysisLoggerService,
   ],

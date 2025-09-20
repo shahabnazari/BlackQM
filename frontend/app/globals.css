@@ -372,3 +372,68 @@
 .save-success-check {
   animation: save-success 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
+
+/* Phase 7 UI/UX Polish - Animation classes for smooth transitions */
+@layer utilities {
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .animate-slideIn {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .animate-scaleIn {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Smooth hover transitions */
+  .transition-smooth {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  /* Glass morphism effect */
+  .glass-effect {
+    @apply backdrop-blur-md bg-white/80 dark:bg-gray-900/80;
+  }
+
+  /* Enhanced shadows */
+  .shadow-smooth {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  }
+
+  .shadow-smooth-lg {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+}

@@ -74,11 +74,17 @@
 ## PHASE 8.5: RESEARCH LIFECYCLE NAVIGATION SYSTEM
 
 **Duration:** 8 days  
-**Status:** 🔴 Not Started  
+**Status:** 🔴 Not Started (BUT Architecture Document EXISTS)  
 **Reference:** [Research Lifecycle Navigation Architecture](./RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md)  
 **Dependencies:** Phase 8 Complete (AI Analysis & Reporting)
 **Priority:** CRITICAL - Unifies all platform features
 **Type Safety:** MAINTAIN ≤587 ERRORS
+
+### ⚠️ CRITICAL ALIGNMENT ISSUE FOUND
+- The Navigation Architecture document EXISTS and is comprehensive
+- Phase 7 components claim alignment with "Phase 8.5" 
+- BUT Phase 8.5 implementation hasn't actually started
+- **Resolution:** Need to implement the navigation system ASAP to match architecture
 
 ### 🔗 NAVIGATION INTEGRATION WITH OTHER PHASES
 This phase creates the unified navigation system that connects:
@@ -397,35 +403,57 @@ Backend Services Hierarchy:
 
 ---
 
-## PHASE 9: LITERATURE REVIEW & DISCOVERY
+## PHASE 9: LITERATURE REVIEW & DISCOVERY (ENHANCED)
 
-**Duration:** 6 days  
+**Duration:** 8 days (expanded from 6)  
 **Status:** 🔴 Not Started  
 **Reference:** [Implementation Guide Part 5](./IMPLEMENTATION_GUIDE_PART5.md#phase-9)  
 **Navigation Architecture:** [Research Lifecycle Navigation](./RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md#-1-discover)
 **Dependencies:** Phase 8.5 Navigation should be complete
 **Type Safety:** ZERO NEW ERRORS DAILY
-**Lifecycle Phase:** DISCOVER - Literature Review (20% Coverage 🟡)
+**Lifecycle Phase:** DISCOVER - Literature Review & Social Intelligence (20% Coverage 🟡)
 
 ### 📊 PHASE 9 WORLD-CLASS AUDIT
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| Days Completed | 6 | 0 | 🔴 |
+| Days Completed | 8 | 0 | 🔴 |
 | Code Quality | World-Class | - | 🔴 |
 | Test Coverage | >80% | 0% | 🔴 |
 | TypeScript Errors | ≤587 | - | 🔴 |
 | API Response | <3s | - | 🔴 |
 | DISCOVER Coverage | 100% | 20% | 🟡 |
+| Social Media Sources | 6+ | 0 | 🔴 |
+| Alternative Sources | 8+ | 0 | 🔴 |
 
 ### 🔍 GAP ANALYSIS - DISCOVER Phase
 **Current Coverage:** 20% 🟡  
-**Missing Features (to be implemented in this phase):**
+**Core Academic Features (Days 1-6):**
 - [ ] Literature search engine with AI integration
 - [ ] Reference management system
 - [ ] Knowledge mapping visualization
 - [ ] Automated theme extraction from papers
 - [ ] Citation network analysis
 - [ ] Research gap identification AI
+
+**Social Media Intelligence (Day 7):**
+- [ ] Twitter/X scraping (hashtags, threads, sentiment)
+- [ ] Reddit analysis (subreddit mining, discussion threads)
+- [ ] LinkedIn professional opinions scraping
+- [ ] Facebook groups & public posts analysis
+- [ ] Instagram research-relevant content
+- [ ] TikTok trend analysis for public opinion
+
+**Alternative Sources & Gray Literature (Day 8):**
+- [ ] News aggregation (Google News, major outlets)
+- [ ] Blog post mining (Medium, Substack, WordPress)
+- [ ] YouTube transcripts & comments analysis
+- [ ] Podcast transcript extraction
+- [ ] Forum discussions (Stack Overflow, Quora, HackerNews)
+- [ ] Patent database searching
+- [ ] Preprint servers (arXiv, bioRxiv, SSRN)
+- [ ] Government reports & white papers
+- [ ] Conference proceedings & presentations
+- [ ] GitHub discussions & technical documentation
 
 ### Day 1: Literature Search Engine & Backend Foundation
 - [ ] **Create literature.module.ts and literature.service.ts in backend**
@@ -497,15 +525,121 @@ Backend Services Hierarchy:
 - [ ] Write repository tests
 - [ ] Daily error check at 5 PM
 
-### Day 6: Integration & Polish
-- [ ] Wire all DISCOVER tools together
+### Day 6: Integration & Polish (Academic Sources)
+- [ ] Wire all academic DISCOVER tools together
 - [ ] Connect to navigation system
 - [ ] Add to research workflow
-- [ ] Create unified search
+- [ ] Create unified search for academic sources
 - [ ] Performance optimization
 - [ ] Mobile responsiveness
-- [ ] Final testing and documentation
-- [ ] Final error check
+- [ ] Testing for Days 1-5 features
+- [ ] **5:00 PM:** Run Daily Error Check
+- [ ] **5:30 PM:** Security & Quality Audit
+- [ ] **5:45 PM:** Dependency Check
+
+### Day 7: Social Media Intelligence & Public Opinion Mining
+- [ ] **Create social-scraping.module.ts and social-scraping.service.ts in backend**
+- [ ] **Build /app/(researcher)/literature/social/page.tsx** social media interface
+- [ ] **Twitter/X Integration:**
+  - [ ] Implement Twitter API v2 integration (backend)
+  - [ ] Create hashtag tracking system
+  - [ ] Build thread unroller service
+  - [ ] Add sentiment analysis pipeline
+  - [ ] Implement influencer identification
+  - [ ] Create real-time trend monitoring
+- [ ] **Reddit Integration:**
+  - [ ] Implement Reddit API wrapper (backend)
+  - [ ] Create subreddit scraper service
+  - [ ] Build comment thread analyzer
+  - [ ] Add upvote/engagement metrics
+  - [ ] Implement user credibility scoring
+- [ ] **LinkedIn Integration:**
+  - [ ] Set up LinkedIn scraping (with ethical limits)
+  - [ ] Extract professional opinions
+  - [ ] Identify industry experts
+  - [ ] Track company research posts
+- [ ] **Other Platforms:**
+  - [ ] Facebook public groups scraper
+  - [ ] Instagram hashtag analyzer
+  - [ ] TikTok trend tracker (for public opinion)
+- [ ] **Privacy & Ethics Compliance:**
+  - [ ] Implement rate limiting per platform
+  - [ ] Add user consent tracking
+  - [ ] Create data anonymization pipeline
+  - [ ] Build GDPR compliance checks
+- [ ] **Create social-data.entity.ts** in Prisma for storing social data
+- [ ] **Build SocialOpinionAnalyzer component** with filters
+- [ ] Add sentiment visualization dashboard
+- [ ] Create engagement metrics tracker
+- [ ] **Integration with Knowledge Graph:**
+  - [ ] Link social opinions to academic themes
+  - [ ] Create controversy detection system
+  - [ ] Build public vs. academic opinion comparison
+- [ ] Write scraping tests (min 15 tests)
+- [ ] **3:00 PM:** API Rate Limit Testing
+- [ ] **4:00 PM:** Performance Testing (process 1000 posts < 10s)
+- [ ] **5:00 PM:** Run Daily Error Check
+- [ ] **5:30 PM:** Security Audit (API keys, data privacy)
+- [ ] **5:45 PM:** Dependency Check
+- [ ] **6:00 PM:** Ethics Compliance Review
+
+### Day 8: Alternative Sources & Gray Literature Mining
+- [ ] **Create alternative-sources.service.ts in backend**
+- [ ] **Build /app/(researcher)/literature/alternative/page.tsx** interface
+- [ ] **News Aggregation:**
+  - [ ] Integrate Google News API
+  - [ ] Add RSS feed parser for major outlets
+  - [ ] Create news sentiment analyzer
+  - [ ] Build topic clustering for news
+- [ ] **Blog & Content Platforms:**
+  - [ ] Medium API integration
+  - [ ] Substack newsletter scraper
+  - [ ] WordPress blog aggregator
+  - [ ] Dev.to technical articles
+- [ ] **Video & Audio Content:**
+  - [ ] YouTube Data API integration
+  - [ ] Extract video transcripts (YouTube API)
+  - [ ] Analyze video comments
+  - [ ] Podcast transcript extraction (multiple platforms)
+  - [ ] Create audio content summarizer
+- [ ] **Technical Forums:**
+  - [ ] Stack Overflow API integration
+  - [ ] Quora topic scraper
+  - [ ] Hacker News API integration
+  - [ ] GitHub Discussions API
+  - [ ] Discord/Slack public channels (where allowed)
+- [ ] **Patent & Preprint Integration:**
+  - [ ] Google Patents API
+  - [ ] USPTO database connector
+  - [ ] arXiv API integration
+  - [ ] bioRxiv and medRxiv scrapers
+  - [ ] SSRN paper fetcher
+- [ ] **Government & Reports:**
+  - [ ] Government publication APIs
+  - [ ] Think tank report scrapers
+  - [ ] NGO research aggregator
+  - [ ] Conference proceedings databases
+- [ ] **Create alternative-source.entity.ts** in Prisma
+- [ ] **Build UnifiedSourceExplorer component** 
+- [ ] Create source credibility scorer
+- [ ] Add multi-language support framework
+- [ ] **AI Processing Pipeline:**
+  - [ ] Implement content summarization
+  - [ ] Create key point extraction
+  - [ ] Build cross-source theme identification
+  - [ ] Add contradiction detection
+- [ ] **Integration with Main Literature System:**
+  - [ ] Merge alternative sources into knowledge graph
+  - [ ] Create source type filtering
+  - [ ] Build credibility weighting system
+  - [ ] Add citation generation for all sources
+- [ ] Write integration tests (min 20 tests)
+- [ ] **3:00 PM:** Multi-source Integration Testing
+- [ ] **4:00 PM:** Performance Testing (aggregate 50 sources < 15s)
+- [ ] **5:00 PM:** Run Daily Error Check
+- [ ] **5:30 PM:** Security & API Compliance Audit
+- [ ] **5:45 PM:** Dependency Check
+- [ ] **6:00 PM:** Data Quality Report
 
 ### Testing Requirements
 - [ ] 25+ unit tests passing

@@ -1,6 +1,6 @@
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
 export interface ExportOptions {
@@ -131,36 +131,53 @@ export class ChartExporter {
   /**
    * Export data to Excel format
    */
-  static exportToExcel(
+  static async exportToExcel(
     data: Record<string, any[]>,
     options: ExportOptions = {}
-  ): void {
+  ): Promise<void> {
     const {
       filename = 'data',
       includeTimestamp = true,
     } = options;
 
     try {
-      const wb = XLSX.utils.book_new();
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'VQMethod';
+      workbook.created = new Date();
 
       // Add each dataset as a separate sheet
       Object.entries(data).forEach(([sheetName, sheetData]) => {
-        const ws = XLSX.utils.json_to_sheet(sheetData);
+        const worksheet = workbook.addWorksheet(sheetName);
         
-        // Auto-size columns
-        const colWidths = Object.keys(sheetData[0] || {}).map(() => ({
-          wch: 15,
-        }));
-        ws['!cols'] = colWidths;
-
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        // Add headers if data exists
+        if (sheetData.length > 0) {
+          const headers = Object.keys(sheetData[0]);
+          worksheet.columns = headers.map(header => ({
+            header: header,
+            key: header,
+            width: 15
+          }));
+          
+          // Add data rows
+          sheetData.forEach(row => {
+            worksheet.addRow(row);
+          });
+          
+          // Style the header row
+          worksheet.getRow(1).font = { bold: true };
+        }
       });
 
       const fileName = includeTimestamp
         ? `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`
         : `${filename}.xlsx`;
 
-      XLSX.writeFile(wb, fileName);
+      // Generate buffer and save
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      saveAs(blob, fileName);
     } catch (error: any) {
       console.error('Error exporting to Excel:', error);
       throw new Error('Failed to export data to Excel');
@@ -180,8 +197,27 @@ export class ChartExporter {
     } = options;
 
     try {
-      const ws = XLSX.utils.json_to_sheet(data);
-      const csv = XLSX.utils.sheet_to_csv(ws);
+      // Convert data to CSV manually
+      let csv = '';
+      
+      if (data.length > 0) {
+        // Add headers
+        const headers = Object.keys(data[0]);
+        csv = headers.join(',') + '\n';
+        
+        // Add data rows
+        data.forEach(row => {
+          const values = headers.map(header => {
+            const value = row[header];
+            // Escape values containing commas or quotes
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+              return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value ?? '';
+          });
+          csv += values.join(',') + '\n';
+        });
+      }
       
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       const fileName = includeTimestamp

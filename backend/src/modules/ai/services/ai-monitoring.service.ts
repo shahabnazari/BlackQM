@@ -4,7 +4,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '@/common/prisma.service';
+import { PrismaService } from '../../../common/prisma.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConfigService } from '@nestjs/config';

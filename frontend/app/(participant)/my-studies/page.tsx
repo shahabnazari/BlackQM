@@ -109,13 +109,13 @@ export default function MyStudiesPage() {
   const getStatusBadge = (status: Study['status']) => {
     switch(status) {
       case 'in-progress':
-        return <Badge variant="warning">In Progress</Badge>;
+        return <Badge variant="secondary">In Progress</Badge>;
       case 'not-started':
         return <Badge variant="secondary">Not Started</Badge>;
       case 'completed':
-        return <Badge variant="success">Completed</Badge>;
+        return <Badge variant="default">Completed</Badge>;
       case 'expired':
-        return <Badge variant="error">Expired</Badge>;
+        return <Badge variant="destructive">Expired</Badge>;
       default:
         return null;
     }

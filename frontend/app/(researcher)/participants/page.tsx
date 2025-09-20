@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { 
   UsersIcon, 
   MagnifyingGlassIcon, 
-  FunnelIcon,
   ArrowUpIcon,
   ArrowDownIcon,
   UserCircleIcon,
@@ -12,9 +11,9 @@ import {
   CalendarIcon,
   ChartBarIcon
 } from '@heroicons/react/24/outline';
-import { Card } from '@/components/apple-ui/Card';
-import { Button } from '@/components/apple-ui/Button';
-import { Badge } from '@/components/apple-ui/Badge';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface Participant {
   id: string;
@@ -64,7 +63,7 @@ export default function ParticipantsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'studies'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
+  const [, setSelectedParticipant] = useState<Participant | null>(null);
 
   const filteredParticipants = mockParticipants.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -166,7 +165,7 @@ export default function ParticipantsPage() {
           <div className="flex gap-2">
             <Button
               variant="secondary"
-              size="small"
+              size="sm"
               onClick={() => toggleSort('name')}
               className="flex items-center gap-1"
             >
@@ -175,7 +174,7 @@ export default function ParticipantsPage() {
             </Button>
             <Button
               variant="secondary"
-              size="small"
+              size="sm"
               onClick={() => toggleSort('date')}
               className="flex items-center gap-1"
             >
@@ -184,7 +183,7 @@ export default function ParticipantsPage() {
             </Button>
             <Button
               variant="secondary"
-              size="small"
+              size="sm"
               onClick={() => toggleSort('studies')}
               className="flex items-center gap-1"
             >
@@ -228,7 +227,7 @@ export default function ParticipantsPage() {
                   <p className="text-xs text-text-secondary">In Progress</p>
                 </div>
                 <Badge 
-                  variant={participant.status === 'active' ? 'success' : participant.status === 'inactive' ? 'secondary' : 'warning'}
+                  variant={participant.status === 'active' ? 'default' : participant.status === 'inactive' ? 'secondary' : 'outline'}
                 >
                   {participant.status}
                 </Badge>

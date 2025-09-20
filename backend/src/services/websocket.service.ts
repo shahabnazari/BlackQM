@@ -64,7 +64,7 @@ export class WebSocketService {
         }
 
         next();
-      } catch (error) {
+      } catch (error: any) {
         next(new Error('Authentication failed'));
       }
     });
@@ -237,6 +237,36 @@ export class WebSocketService {
   }
 
   // Public methods for emitting events from other services
+  public joinRoom(clientId: string, room: string): void {
+    if (this.io) {
+      const socket = this.io.sockets.sockets.get(clientId);
+      if (socket) {
+        socket.join(room);
+      }
+    }
+  }
+
+  public leaveRoom(clientId: string, room: string): void {
+    if (this.io) {
+      const socket = this.io.sockets.sockets.get(clientId);
+      if (socket) {
+        socket.leave(room);
+      }
+    }
+  }
+
+  public sendToClient(clientId: string, event: string, data: any): void {
+    if (this.io) {
+      this.io.to(clientId).emit(event, data);
+    }
+  }
+
+  public sendToRoom(room: string, event: string, data: any): void {
+    if (this.io) {
+      this.io.to(room).emit(event, data);
+    }
+  }
+
   public emitToRoom(room: string, event: string, data: any): void {
     if (this.io) {
       this.io.to(room).emit(event, data);
@@ -256,6 +286,10 @@ export class WebSocketService {
     if (this.io) {
       this.io.emit(event, data);
     }
+  }
+
+  public sendToStudy(studyId: string, data: any): void {
+    this.emitToRoom(`study:${studyId}`, 'study:update', data);
   }
 
   public getConnectedUsers(): string[] {

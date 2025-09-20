@@ -107,7 +107,11 @@ export default function RegisterPage() {
   // Handle form submission
   const onSubmit = async (data: RegisterFormData) => {
     clearError();
-    const result = await registerUser(data);
+    const submitData = {
+      ...data,
+      organization: data.organization || undefined
+    };
+    const result = await registerUser(submitData as any);
 
     if (result.success) {
       router.push('/auth/verify-email');

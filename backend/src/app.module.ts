@@ -14,7 +14,8 @@ import { ParticipantModule } from './modules/participant/participant.module';
 import { HealthModule } from './modules/health/health.module';
 import { AnalysisModule } from './modules/analysis/analysis.module';
 import { AIModule } from './modules/ai/ai.module';
-import { CsrfMiddleware } from './common/middleware/csrf.middleware';
+import { VisualizationModule } from './modules/visualization/visualization.module';
+import { ReportModule } from './modules/report/report.module';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 
 @Module({
@@ -48,6 +49,8 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
     ParticipantModule,
     AnalysisModule,
     AIModule,
+    VisualizationModule,
+    ReportModule,
     HealthModule,
   ],
   controllers: [AppController],
@@ -63,6 +66,6 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(SecurityMiddleware, CsrfMiddleware).forRoutes('*');
+    consumer.apply(SecurityMiddleware).forRoutes('*');
   }
 }

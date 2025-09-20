@@ -39,7 +39,7 @@ async function bootstrap() {
   // Compression middleware
   app.use(compression());
 
-  // Cookie parser middleware (required for CSRF)
+  // Cookie parser middleware
   app.use(cookieParser());
 
   // Dynamic CORS configuration
@@ -99,9 +99,7 @@ async function bootstrap() {
       'Content-Type',
       'Authorization',
       'X-Requested-With',
-      'X-CSRF-Token',
     ],
-    exposedHeaders: ['X-CSRF-Token'],
   });
 
   // Global validation pipe

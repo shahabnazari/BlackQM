@@ -49,6 +49,11 @@ model User {
   aiBudgetLimit AIBudgetLimit?
   aiRateLimits  AIRateLimit[]
   
+  // Phase 7 Day 7 relations
+  studyCollaborations StudyCollaborator[] @relation("StudyCollaboratorUser")
+  studyComments       StudyComment[] @relation("StudyCommentUser")
+  studyActivityLogs   StudyActivityLog[] @relation("StudyActivityLogUser")
+  
   @@index([email])
   @@index([tenantId])
   @@index([isActive])
@@ -639,5 +644,187 @@ model AIRateLimit {
   @@index([userId])
   @@index([windowStart, windowEnd])
   @@map("ai_rate_limits")
+}
+
+// ==========================================
+// Phase 7 Day 7: Collaboration & Scheduling
+// ==========================================
+
+// Enhanced collaboration for real-time features
+model StudyCollaborator {
+  id           String   @id @default(cuid())
+  studyId      String   @map("study_id")
+  userId       String   @map("user_id")
+  role         String   @default("viewer") // owner, editor, viewer, commenter
+  permissions  String   // JSON array of specific permissions
+  invitedBy    String   @map("invited_by")
+  invitedAt    DateTime @default(now()) @map("invited_at")
+  acceptedAt   DateTime? @map("accepted_at")
+  lastActiveAt DateTime? @map("last_active_at")
+  
+  user         User     @relation("StudyCollaboratorUser", fields: [userId], references: [id])
+  
+  @@unique([studyId, userId])
+  @@index([studyId])
+  @@index([userId])
+  @@map("study_collaborators")
+}
+
+// Comments and discussions
+model StudyComment {
+  id          String   @id @default(cuid())
+  studyId     String   @map("study_id")
+  userId      String   @map("user_id")
+  content     String
+  sectionId   String?  @map("section_id") // Which section of the study
+  parentId    String?  @map("parent_id") // For threaded comments
+  edited      Boolean  @default(false)
+  resolved    Boolean  @default(false)
+  resolvedBy  String?  @map("resolved_by")
+  resolvedAt  DateTime? @map("resolved_at")
+  timestamp   DateTime @default(now())
+  
+  user        User     @relation("StudyCommentUser", fields: [userId], references: [id])
+  replies     StudyComment[] @relation("CommentReplies")
+  parent      StudyComment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  
+  @@index([studyId])
+  @@index([userId])
+  @@index([parentId])
+  @@map("study_comments")
+}
+
+// Activity logging for collaboration
+model StudyActivityLog {
+  id          String   @id @default(cuid())
+  studyId     String   @map("study_id")
+  userId      String   @map("user_id")
+  action      String   // collaborator_added, comment_added, data_updated, etc.
+  details     String?  // JSON details about the action
+  metadata    String?  // Additional context
+  timestamp   DateTime @default(now())
+  
+  user        User     @relation("StudyActivityLogUser", fields: [userId], references: [id])
+  
+  @@index([studyId])
+  @@index([userId])
+  @@index([action])
+  @@index([timestamp])
+  @@map("study_activity_logs")
+}
+
+// Participant management for recruitment
+model Participant {
+  id              String   @id @default(cuid())
+  studyId         String   @map("study_id")
+  name            String?
+  email           String
+  phone           String?
+  status          String   @default("invited") // invited, scheduled, completed, no_show, declined
+  tags            String?  // JSON array of tags
+  notes           String?
+  customFields    String?  @map("custom_fields") // JSON for additional data
+  invitedAt       DateTime @default(now()) @map("invited_at")
+  respondedAt     DateTime? @map("responded_at")
+  completedAt     DateTime? @map("completed_at")
+  
+  appointments    Appointment[]
+  compensations   Compensation[]
+  
+  @@unique([studyId, email])
+  @@index([studyId])
+  @@index([email])
+  @@index([status])
+  @@map("participants")
+}
+
+// Appointment scheduling
+model Appointment {
+  id               String   @id @default(cuid())
+  studyId          String   @map("study_id")
+  participantId    String   @map("participant_id")
+  scheduledStart   DateTime @map("scheduled_start")
+  scheduledEnd     DateTime @map("scheduled_end")
+  status           String   @default("scheduled") // scheduled, confirmed, completed, cancelled, no-show
+  type             String   @default("online") // online, in-person, phone
+  location         String?
+  meetingUrl       String?  @map("meeting_url")
+  notes            String?
+  remindersSent    Int      @default(0) @map("reminders_sent")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  
+  participant      Participant @relation(fields: [participantId], references: [id])
+  reminders        Reminder[]
+  compensation     Compensation?
+  
+  @@index([studyId])
+  @@index([participantId])
+  @@index([scheduledStart])
+  @@index([status])
+  @@map("appointments")
+}
+
+// Reminder system
+model Reminder {
+  id              String   @id @default(cuid())
+  appointmentId   String   @map("appointment_id")
+  type            String   @default("email") // email, sms
+  scheduledFor    DateTime @map("scheduled_for")
+  sentAt          DateTime? @map("sent_at")
+  status          String   @default("pending") // pending, sent, failed, cancelled
+  attempts        Int      @default(0)
+  lastAttemptAt   DateTime? @map("last_attempt_at")
+  errorMessage    String?  @map("error_message")
+  
+  appointment     Appointment @relation(fields: [appointmentId], references: [id])
+  
+  @@index([appointmentId])
+  @@index([scheduledFor])
+  @@index([status])
+  @@map("reminders")
+}
+
+// Compensation tracking
+model Compensation {
+  id              String   @id @default(cuid())
+  appointmentId   String   @unique @map("appointment_id")
+  participantId   String   @map("participant_id")
+  amount          Float
+  currency        String   @default("USD")
+  method          String   // cash, check, gift_card, bank_transfer, other
+  status          String   @default("pending") // pending, approved, paid, cancelled
+  approvedBy      String?  @map("approved_by")
+  approvedAt      DateTime? @map("approved_at")
+  paidAt          DateTime? @map("paid_at")
+  reference       String?  // Payment reference number
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  appointment     Appointment @relation(fields: [appointmentId], references: [id])
+  participant     Participant @relation(fields: [participantId], references: [id])
+  
+  @@index([participantId])
+  @@index([status])
+  @@map("compensations")
+}
+
+// Study availability for scheduling
+model StudyAvailability {
+  id                     String   @id @default(cuid())
+  studyId                String   @map("study_id")
+  dayOfWeek              Int      @map("day_of_week") // 0-6 (Sunday-Saturday)
+  startTime              String   @map("start_time") // HH:MM format
+  endTime                String   @map("end_time") // HH:MM format
+  timezone               String   @default("UTC")
+  slotDuration           Int      @default(60) @map("slot_duration") // in minutes
+  bufferTime             Int      @default(15) @map("buffer_time") // buffer between appointments
+  maxParticipantsPerSlot Int      @default(1) @map("max_participants_per_slot")
+  isActive               Boolean  @default(true) @map("is_active")
+  createdAt              DateTime @default(now()) @map("created_at")
+  
+  @@index([studyId])
+  @@index([dayOfWeek])
+  @@map("study_availability")
 }
 

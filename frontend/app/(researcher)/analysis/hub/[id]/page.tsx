@@ -4,8 +4,15 @@ import { useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useStudyHub } from '@/lib/stores/study-hub.store';
 import { HubOverview } from '@/components/hub/sections/HubOverview';
+import { DataExplorer } from '@/components/hub/sections/DataExplorer';
+import { AnalysisTools } from '@/components/hub/sections/AnalysisTools';
+import { VisualizationCenter } from '@/components/hub/sections/VisualizationCenter';
+import { AIInsights } from '@/components/hub/sections/AIInsights';
+import { ReportBuilder } from '@/components/hub/sections/ReportBuilder';
+import { ExportManager } from '@/components/hub/sections/ExportManager';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Alert } from '@/components/ui/alert';
+import { HubLoadingSkeleton } from '@/components/hub/LoadingSkeleton';
 
 /**
  * Analysis Hub Main Page - Phase 7 Day 1 Implementation
@@ -40,14 +47,7 @@ export default function AnalysisHubPage() {
 
   // Handle loading state
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <LoadingSpinner size="lg" />
-        <span className="ml-3 text-gray-600 dark:text-gray-400">
-          Loading analysis hub...
-        </span>
-      </div>
-    );
+    return <HubLoadingSkeleton />;
   }
 
   // Handle error state
@@ -81,17 +81,17 @@ export default function AnalysisHubPage() {
       case 'overview':
         return <HubOverview studyData={studyData} />;
       case 'data':
-        return <div>Data Explorer (Coming soon)</div>;
+        return <DataExplorer studyId={studyId} />;
       case 'analyze':
-        return <div>Analysis Tools (Coming soon)</div>;
+        return <AnalysisTools studyId={studyId} />;
       case 'visualize':
-        return <div>Visualization Center (Coming soon)</div>;
+        return <VisualizationCenter studyId={studyId} />;
       case 'insights':
-        return <div>AI Insights (Coming soon)</div>;
+        return <AIInsights studyId={studyId} />;
       case 'report':
-        return <div>Report Builder (Coming soon)</div>;
+        return <ReportBuilder studyId={studyId} />;
       case 'export':
-        return <div>Export Manager (Coming soon)</div>;
+        return <ExportManager studyId={studyId} />;
       default:
         return <HubOverview studyData={studyData} />;
     }

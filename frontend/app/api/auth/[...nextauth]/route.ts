@@ -13,7 +13,7 @@ const credentialsSchema = z.object({
   password: z.string().min(8)
 });
 
-export const authOptions: NextAuthOptions = {
+const authOptions: NextAuthOptions = {
   // Configure authentication providers
   providers: [
     CredentialsProvider({
@@ -22,7 +22,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials) {
+      async authorize(credentials, _req) {
         try {
           // Validate credentials
           const validatedCreds = credentialsSchema.parse(credentials);
@@ -36,13 +36,13 @@ export const authOptions: NextAuthOptions = {
             return {
               id: '1',
               email: validatedCreds.email,
-              name: validatedCreds.email.split('@')[0],
+              name: validatedCreds.email.split('@')[0] || null,
               role: 'researcher'
-            };
+            } as any;
           }
           
           return null;
-        } catch (error) {
+        } catch (error: any) {
           console.error('Authentication error:', error);
           return null;
         }
@@ -73,7 +73,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.email = user.email;
+        token.email = user.email || null;
         token.role = (user as any).role;
       }
       return token;

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { api } from '@/lib/api';
+import { hubAPIService } from '@/lib/services/hub-api.service';
 
 /**
  * Study Hub Store - Phase 7 Day 1 Implementation
@@ -139,7 +140,7 @@ export const useStudyHub = create<StudyHubState>()(
             sidebarCollapsed: !state.sidebarCollapsed 
           }), false, 'toggleSidebar'),
 
-        // Data Loading with Intelligent Caching
+        // Data Loading with Intelligent Caching (Using Hub Service)
         loadStudy: async (studyId) => {
           const state = get();
           
@@ -156,27 +157,32 @@ export const useStudyHub = create<StudyHubState>()(
           set({ isLoading: true, error: null }, false, 'loadStudy:start');
 
           try {
-            // Parallel data fetching for performance
-            const [study, responses, statements, analysis] = await Promise.all([
-              api.get(`/studies/${studyId}`),
-              api.get(`/studies/${studyId}/responses`),
-              api.get(`/studies/${studyId}/statements`),
-              api.get(`/studies/${studyId}/analysis`).catch(() => null),
-            ]);
+            // Use the new hub service for unified data loading
+            const hubData = await hubAPIService.getHubData(studyId);
 
             set({
               studyData: {
-                study: study.data,
-                responses: responses.data,
-                statements: statements.data,
+                study: hubData.study,
+                responses: hubData.qsorts.data,
+                statements: hubData.study.statements || [],
               },
-              analysisResults: analysis?.data || null,
+              analysisResults: hubData.analysis,
               isLoading: false,
-              lastFetch: new Date(),
+              lastFetch: new Date(hubData.metadata.lastUpdated),
               cacheValid: true,
               error: null,
             }, false, 'loadStudy:success');
-          } catch (error) {
+
+            // Connect to WebSocket for real-time updates
+            hubAPIService.connectWebSocket(studyId, (update) => {
+              console.log('Real-time update received:', update);
+              // Handle real-time updates here
+              if (update.type === 'hub:update') {
+                // Refresh data when updates arrive
+                get().loadStudy(studyId);
+              }
+            });
+          } catch (error: any) {
             set({
               isLoading: false,
               error: error as Error,
@@ -205,7 +211,7 @@ export const useStudyHub = create<StudyHubState>()(
               },
               isAnalyzing: false,
             }), false, 'runAnalysis:success');
-          } catch (error) {
+          } catch (error: any) {
             set({
               isAnalyzing: false,
               error: error as Error,
@@ -227,7 +233,7 @@ export const useStudyHub = create<StudyHubState>()(
             set((state) => ({
               visualizations: [...state.visualizations, viz.data],
             }), false, 'generateVisualization');
-          } catch (error) {
+          } catch (error: any) {
             set({ error: error as Error }, false, 'generateVisualization:error');
           }
         },
@@ -246,7 +252,7 @@ export const useStudyHub = create<StudyHubState>()(
             set({ 
               aiInsights: insights.data 
             }, false, 'requestAIInterpretation');
-          } catch (error) {
+          } catch (error: any) {
             set({ error: error as Error }, false, 'requestAIInterpretation:error');
           }
         },
@@ -266,7 +272,7 @@ export const useStudyHub = create<StudyHubState>()(
             set({ 
               reportDraft: report.data 
             }, false, 'buildReport');
-          } catch (error) {
+          } catch (error: any) {
             set({ error: error as Error }, false, 'buildReport:error');
           }
         },
@@ -294,7 +300,7 @@ export const useStudyHub = create<StudyHubState>()(
             a.download = `study-export.${format}`;
             a.click();
             window.URL.revokeObjectURL(url);
-          } catch (error) {
+          } catch (error: any) {
             set({ error: error as Error }, false, 'exportData:error');
           }
         },
