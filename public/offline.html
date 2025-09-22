@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>VQMethod - Offline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #333;
+        }
+
+        .offline-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .offline-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: #f0f0f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .wifi-icon {
+            width: 40px;
+            height: 40px;
+        }
+
+        .offline-slash {
+            position: absolute;
+            width: 60px;
+            height: 3px;
+            background: #dc3545;
+            transform: rotate(-45deg);
+            border-radius: 2px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1a1a1a;
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .status-message {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #856404;
+        }
+
+        .features-list {
+            text-align: left;
+            margin: 24px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .features-list h2 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .features-list ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .features-list li {
+            padding: 8px 0;
+            padding-left: 24px;
+            position: relative;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .features-list li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .retry-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .retry-button:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+
+        .retry-button:active {
+            transform: translateY(0);
+        }
+
+        .retry-button:focus {
+            outline: 2px solid #007bff;
+            outline-offset: 2px;
+        }
+
+        .cache-info {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            }
+
+            .offline-container {
+                background: #333;
+                color: #f0f0f0;
+            }
+
+            h1 {
+                color: #f0f0f0;
+            }
+
+            p {
+                color: #ccc;
+            }
+
+            .offline-icon {
+                background: #444;
+            }
+
+            .features-list {
+                background: #2a2a2a;
+            }
+
+            .features-list h2 {
+                color: #f0f0f0;
+            }
+
+            .features-list li {
+                color: #ccc;
+            }
+
+            .status-message {
+                background: #3a3a2a;
+                border-color: #ffc107;
+                color: #ffeb3b;
+            }
+
+            .cache-info {
+                color: #666;
+                border-top-color: #444;
+            }
+        }
+
+        /* High contrast mode */
+        @media (prefers-contrast: high) {
+            .retry-button {
+                border: 2px solid currentColor;
+            }
+
+            .offline-container {
+                border: 2px solid currentColor;
+            }
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 480px) {
+            .offline-container {
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            p {
+                font-size: 14px;
+            }
+
+            .retry-button {
+                width: 100%;
+            }
+        }
+
+        /* Keyboard focus indicators */
+        *:focus-visible {
+            outline: 3px solid #007bff;
+            outline-offset: 2px;
+        }
+
+        /* Skip to content link */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: #000;
+            color: #fff;
+            padding: 8px;
+            text-decoration: none;
+            z-index: 100;
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
+    </style>
+</head>
+<body>
+    <a href="#main" class="skip-link">Skip to main content</a>
+    
+    <main id="main" class="offline-container" role="main" aria-labelledby="offline-title">
+        <div class="offline-icon" role="img" aria-label="No internet connection">
+            <svg class="wifi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                <line x1="12" y1="20" x2="12.01" y2="20"></line>
+            </svg>
+            <div class="offline-slash"></div>
+        </div>
+
+        <h1 id="offline-title">You're Offline</h1>
+        <p>It looks like you've lost your internet connection. Don't worry - VQMethod works offline too!</p>
+
+        <div class="status-message" role="alert">
+            <strong>Offline Mode Active:</strong> Your work is being saved locally and will sync automatically when you're back online.
+        </div>
+
+        <div class="features-list">
+            <h2>Available Offline:</h2>
+            <ul>
+                <li>Continue working on questionnaires</li>
+                <li>Access saved responses</li>
+                <li>Review participant data</li>
+                <li>Draft new questions</li>
+                <li>Local auto-save enabled</li>
+            </ul>
+        </div>
+
+        <button 
+            class="retry-button" 
+            onclick="checkConnection()"
+            aria-label="Check internet connection and reload page"
+        >
+            Try Again
+        </button>
+
+        <div class="cache-info">
+            <p>Last sync: <span id="last-sync">Checking...</span></p>
+            <p>Cached data: <span id="cache-size">Calculating...</span></p>
+        </div>
+    </main>
+
+    <script>
+        // Check connection and reload
+        function checkConnection() {
+            const button = document.querySelector('.retry-button');
+            button.textContent = 'Checking...';
+            button.disabled = true;
+
+            // Try to fetch a small resource
+            fetch('/api/ping', { method: 'HEAD' })
+                .then(() => {
+                    // Connection restored
+                    button.textContent = 'Reconnected! Reloading...';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                })
+                .catch(() => {
+                    // Still offline
+                    button.textContent = 'Still Offline';
+                    setTimeout(() => {
+                        button.textContent = 'Try Again';
+                        button.disabled = false;
+                    }, 2000);
+                });
+        }
+
+        // Update last sync time
+        function updateLastSync() {
+            const lastSync = localStorage.getItem('lastSync');
+            const element = document.getElementById('last-sync');
+            
+            if (lastSync) {
+                const date = new Date(lastSync);
+                const now = new Date();
+                const diff = Math.floor((now - date) / 1000 / 60); // minutes
+                
+                if (diff < 1) {
+                    element.textContent = 'Just now';
+                } else if (diff < 60) {
+                    element.textContent = `${diff} minute${diff > 1 ? 's' : ''} ago`;
+                } else {
+                    const hours = Math.floor(diff / 60);
+                    element.textContent = `${hours} hour${hours > 1 ? 's' : ''} ago`;
+                }
+            } else {
+                element.textContent = 'Never synced';
+            }
+        }
+
+        // Estimate cache size
+        async function updateCacheSize() {
+            const element = document.getElementById('cache-size');
+            
+            if ('storage' in navigator && 'estimate' in navigator.storage) {
+                try {
+                    const estimate = await navigator.storage.estimate();
+                    const usage = estimate.usage || 0;
+                    const mb = (usage / 1024 / 1024).toFixed(2);
+                    element.textContent = `${mb} MB`;
+                } catch (error) {
+                    element.textContent = 'Unknown';
+                }
+            } else {
+                element.textContent = 'Not available';
+            }
+        }
+
+        // Auto-check connection every 30 seconds
+        setInterval(checkConnection, 30000);
+
+        // Initialize
+        updateLastSync();
+        updateCacheSize();
+
+        // Listen for online event
+        window.addEventListener('online', () => {
+            checkConnection();
+        });
+
+        // Accessibility: Announce status changes
+        function announceStatus(message) {
+            const announcement = document.createElement('div');
+            announcement.setAttribute('role', 'status');
+            announcement.setAttribute('aria-live', 'polite');
+            announcement.setAttribute('aria-atomic', 'true');
+            announcement.className = 'sr-only';
+            announcement.textContent = message;
+            document.body.appendChild(announcement);
+            
+            setTimeout(() => {
+                document.body.removeChild(announcement);
+            }, 1000);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.target.classList.contains('retry-button')) {
+                checkConnection();
+            }
+        });
+    </script>
+</body>
+</html>
