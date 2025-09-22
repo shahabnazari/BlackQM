@@ -5,6 +5,7 @@
 **Updated:** September 2025 - Aligned with Phase Tracker Organization  
 **Previous Part**: [IMPLEMENTATION_GUIDE_PART4.md](./IMPLEMENTATION_GUIDE_PART4.md) - Phases 6.86-8  
 **Phase Tracker**: [PHASE_TRACKER_PART2.md](./PHASE_TRACKER_PART2.md) - Complete phase list  
+**Patent Strategy**: [PATENT_ROADMAP_SUMMARY.md](./PATENT_ROADMAP_SUMMARY.md) - Innovation documentation guide  
 **Document Rule**: Maximum 20,000 tokens per document. This is the final part.
 
 ### Phase Coverage
@@ -77,9 +78,18 @@ npm list [key-packages] # List critical packages for the phase
 
 # PHASE 9: DISCOVER - LITERATURE REVIEW & RESEARCH FOUNDATION
 
-**Duration:** 6 days  
+**Duration:** 8 days  
 **Status:** 🔴 NOT STARTED  
-**Target:** Build knowledge graph from literature that powers entire research flow
+**Target:** Build knowledge graph from literature that powers entire research flow  
+**Reference:** See [Phase Tracker Part 2](./PHASE_TRACKER_PART2.md#phase-9) for daily tasks
+
+## 📝 Technical Documentation for Innovative Features
+
+When implementing unique algorithms in this phase, document them clearly in the code:
+- **Literature→Statement Pipeline (Days 3-4):** Add detailed comments explaining the algorithm
+- **Social Media Mining (Day 7):** Document the extraction and synthesis methodology
+- Save complex algorithms in `/docs/technical/` for future reference
+- **Patent Strategy:** See [Patent Roadmap](./PATENT_ROADMAP_SUMMARY.md) for enhancement opportunities
 
 ## 9.1 Knowledge Graph Architecture
 
@@ -153,13 +163,56 @@ export class StatementGenerator {
       statements.push(...this.themeToStatements(theme));
     }
     
-    // Add controversy statements
+    // Innovative: Controversy detection to balanced statements
     for (const controversy of knowledgeGraph.controversies) {
+      // Document this algorithm: 
+      // 1. Identify opposing viewpoints in citations
+      // 2. Extract core disagreement
+      // 3. Generate balanced statement pairs
       statements.push(...this.controversyToStatements(controversy));
     }
     
     // Ensure perspective balance
     return this.balanceStatements(statements, preferences);
+  }
+  
+  // Innovative approach: Controversy detection from citation patterns
+  private detectControversies(papers: Paper[]): Controversy[] {
+    // Algorithm worth documenting:
+    // 1. Build citation network
+    // 2. Find opposing citation clusters
+    // 3. Extract semantic disagreements
+    // 4. Generate controversy themes
+    // Enhancement: Add temporal analysis of controversy evolution
+  }
+}
+```
+
+## 9.3 Social Media Intelligence (Day 7)
+
+```typescript
+// backend/src/services/social/social-statement-generator.ts
+export class SocialStatementService {
+  async generateFromSocial(
+    topic: string,
+    platforms: Platform[]
+  ): Promise<Statement[]> {
+    // Innovative: Multi-platform opinion aggregation
+    const opinions = await this.aggregatePlatforms(platforms);
+    
+    // Innovative: Viral controversy detection algorithm
+    const viral = await this.detectViralControversies(opinions);
+    
+    // Innovative: Balance public vs expert views
+    const balanced = await this.balancePublicExpert(opinions);
+    
+    // Document extraction methodology:
+    // - Sentiment clustering
+    // - Engagement weighting
+    // - Demographic inference
+    // - Vernacular preservation
+    
+    return this.generateStatements(balanced);
   }
 }
 ```
@@ -170,7 +223,8 @@ export class StatementGenerator {
 
 **Duration:** 5 days  
 **Status:** 🔴 NOT STARTED  
-**Target:** Auto-generate academic reports using all accumulated knowledge
+**Target:** Auto-generate academic reports using all accumulated knowledge  
+**Reference:** See [Phase Tracker Part 2](./PHASE_TRACKER_PART2.md#phase-10) for daily tasks
 
 ## 10.1 Report Generation with Full Context
 
@@ -330,11 +384,49 @@ app.use(helmet({
 
 # PHASE 13: ADVANCED SECURITY & COMPLIANCE
 
-**Duration:** 4-5 days  
+**Duration:** 4 days  
 **Status:** 🔴 NOT STARTED  
-**Target:** Enterprise security features
+**Target:** Enterprise security features and compliance  
+**Reference:** See [Phase Tracker Part 2](./PHASE_TRACKER_PART2.md#phase-13) for daily tasks
 
-## 13.1 SAML 2.0 SSO Implementation
+## 13.1 IP Documentation Review (Part of Day 1 Compliance)
+
+As part of compliance and security review, compile technical documentation for potential IP protection:
+
+```typescript
+// Innovative features to document (from Phases 9-11):
+const innovativeFeatures = {
+  "literature-statement": {
+    description: "Algorithm that generates Q-sort statements from academic literature",
+    location: "Phase 9 Day 3-4",
+    documentation: "/docs/technical/literature-statement.md"
+  },
+  "social-mining": {
+    description: "Social media opinion extraction for research",
+    location: "Phase 9 Day 7",
+    documentation: "/docs/technical/social-mining.md"
+  },
+  "ai-manuscript": {
+    description: "AI-powered full manuscript generation",
+    location: "Phase 10 Day 2",
+    documentation: "/docs/technical/ai-manuscript.md"
+  },
+  "version-control": {
+    description: "Git-like version control for research studies",
+    location: "Phase 11 Day 1",
+    documentation: "/docs/technical/version-control.md"
+  }
+};
+```
+
+### Documentation Checklist
+- [ ] Review technical documentation from Phases 9-11
+- [ ] Compile algorithm descriptions
+- [ ] Create technical diagrams if needed
+- [ ] Store in `/docs/technical/` for future reference
+- [ ] Consider IP protection strategy (can be deferred)
+
+## 13.2 SAML 2.0 SSO Implementation
 
 ```typescript
 // backend/src/modules/auth/saml/saml.service.ts

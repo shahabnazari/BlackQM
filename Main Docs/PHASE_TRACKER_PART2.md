@@ -4,6 +4,7 @@
 **Part 1:** [PHASE_TRACKER_PART1.md](./PHASE_TRACKER_PART1.md) - Phases 1-8  
 **Reference Guides:** See Implementation Guide Parts 1-5 for ALL technical details  
 **Navigation System:** [Research Lifecycle Navigation Architecture](./RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md) - 10-phase unified navigation  
+**Patent Strategy:** [PATENT_ROADMAP_SUMMARY.md](./PATENT_ROADMAP_SUMMARY.md) - Simple approach: build first, patent later  
 **Status:** World-class implementation with daily error management | Ready after Phase 6.86
 
 ## 📋 PHASE TRACKER FORMATTING RULES
@@ -383,6 +384,8 @@ Backend Services Hierarchy:
 - [ ] Performance optimization
 - [ ] Write navigation documentation
 - [ ] User onboarding tour
+- [ ] **Enhancement:** Add AI research assistant for navigation suggestions
+- [ ] **Technical Documentation:** Save navigation algorithm details
 - [ ] **5:00 PM:** Final Error Check (npm run typecheck)
 - [ ] **5:30 PM:** Final Security Audit (check for exposed secrets, API keys)
 - [ ] **5:45 PM:** Final Dependency Check (npm audit)
@@ -407,6 +410,21 @@ Backend Services Hierarchy:
 - [ ] **5:30 PM:** Security & Quality Audit (check for exposed secrets, API keys)
 - [ ] **5:45 PM:** Dependency Check (npm audit)
 - [ ] **6:00 PM:** Mark completed tasks for the day
+
+---
+
+## OPTIONAL: ENHANCE EXISTING FEATURES FOR PATENT POTENTIAL
+
+**Note:** These are small tweaks to already-built features that increase innovation value  
+**When:** Can be done anytime during development when you have spare time  
+**Reference:** [Patent Roadmap](./PATENT_ROADMAP_SUMMARY.md) for complete list
+
+### Quick Enhancements (1-2 hours each):
+- [ ] **Rotation Engine (Phase 7):** Add AI-suggested optimal rotation angle
+- [ ] **Collaboration System (Phase 7):** Add activity playback/replay feature  
+- [ ] **Smart Validator (Phase 6.86b):** Add predictive quality scoring
+- [ ] **Response Analyzer (Phase 6.86b):** Add bot detection algorithm
+- [ ] **Pre-Screening (Phase 8.2):** Add ML participant-study matching
 
 ---
 
@@ -492,13 +510,17 @@ Backend Services Hierarchy:
 - [ ] **5:45 PM:** Dependency Check (npm audit)
 - [ ] **6:00 PM:** Test Coverage Report (target >80%)
 
-### Day 3: Knowledge Mapping
+### Day 3: Knowledge Mapping & AI Statement Pipeline
 - [ ] Create knowledge map component
 - [ ] Build D3.js visualization
 - [ ] Implement theme extraction
 - [ ] Add zoom/pan controls
-- [ ] Create theme-to-statement pipeline
-- [ ] Connect themes to statements (avoid conflict with Phase 6.8 statements)
+- [ ] Create theme-to-statement AI pipeline
+- [ ] Connect literature themes to AI statement generator
+- [ ] Add controversy detection for balanced statements
+- [ ] **Enhancement:** Add citation pattern analysis for disagreements
+- [ ] **Enhancement:** Add semantic opposition detection in abstracts
+- [ ] **Technical Documentation:** Save algorithm details to `/docs/technical/`
 - [ ] Write visualization tests (min 15 tests)
 - [ ] **3:00 PM:** Integration Testing (test theme extraction accuracy)
 - [ ] **4:00 PM:** Performance Testing (render 500+ nodes < 3s)
@@ -507,13 +529,14 @@ Backend Services Hierarchy:
 - [ ] **5:45 PM:** Dependency Check (npm audit)
 - [ ] **6:00 PM:** Visualization Performance Report
 
-### Day 4: Gap Analysis
+### Day 4: Gap Analysis & Research Opportunity AI
 - [ ] Create gap analyzer service (integrate with existing AI services)
 - [ ] Build keyword extraction
 - [ ] Implement topic modeling
 - [ ] Add trend detection
-- [ ] Create gap identification (feed into Phase 6.8 study design)
-- [ ] Build opportunity scoring
+- [ ] Create AI gap identification with automatic study suggestions
+- [ ] Build opportunity scoring with market potential
+- [ ] **Technical Documentation:** Save gap analysis algorithm details
 - [ ] Write analysis tests (min 20 tests)
 - [ ] **3:00 PM:** Integration Testing with AI services
 - [ ] **4:00 PM:** Performance Testing (analyze 100 papers < 5s)
@@ -579,9 +602,12 @@ Backend Services Hierarchy:
 - [ ] Add sentiment visualization dashboard
 - [ ] Create engagement metrics tracker
 - [ ] **Integration with Knowledge Graph:**
-  - [ ] Link social opinions to academic themes
-  - [ ] Create controversy detection system
-  - [ ] Build public vs. academic opinion comparison
+  - [ ] Link social opinions to Q statement generation
+  - [ ] Create controversy detection for balanced perspectives  
+  - [ ] Build public vs. academic opinion synthesizer
+  - [ ] **Enhancement:** Add viral trend prediction algorithm
+  - [ ] **Enhancement:** Add engagement-weighted opinion scoring
+  - [ ] **Technical Documentation:** Save social mining algorithm details
 - [ ] Write scraping tests (min 15 tests)
 - [ ] **3:00 PM:** API Rate Limit Testing
 - [ ] **4:00 PM:** Performance Testing (process 1000 posts < 10s)
@@ -713,13 +739,19 @@ Backend Services Hierarchy:
 - [ ] Write template tests
 - [ ] Daily error check at 5 PM
 
-### Day 2: Export Formats
+### Day 2: Export Formats & AI Paper Generation
 - [ ] Build PDF generator
 - [ ] Create Word exporter
 - [ ] Implement LaTeX formatter
 - [ ] Add HTML export
 - [ ] Create Markdown export
 - [ ] Build citation manager
+- [ ] Create AI-powered full manuscript generator
+- [ ] Auto-write methods section from study data
+- [ ] Generate discussion comparing to literature
+- [ ] **Enhancement:** Add journal-specific formatting AI (APA, MLA, Chicago)
+- [ ] **Enhancement:** Add literature synthesis from Phase 9 knowledge graph
+- [ ] **Technical Documentation:** Save AI manuscript generation algorithm
 - [ ] Write export tests
 - [ ] Daily error check at 5 PM
 
@@ -792,7 +824,12 @@ Backend Services Hierarchy:
 ### Day 1: Version Control System & Archive Service
 - [ ] **Create archive.module.ts and archive.service.ts in backend**
 - [ ] **Build /app/(researcher)/archive/[studyId]/page.tsx** interface
-- [ ] **Create version-control.service.ts** for Git-like functionality
+- [ ] Create version-control.service.ts for Git-like study management
+- [ ] Implement cross-study meta-analysis from version history
+- [ ] **Enhancement:** Add study evolution pattern detection
+- [ ] **Enhancement:** Add diff visualization for Q-sort changes
+- [ ] **Enhancement:** Add branching for study variants
+- [ ] **Technical Documentation:** Save version control system details
 - [ ] **Design ArchiveManager component** with version timeline
 - [ ] Build commit system with metadata tracking
 - [ ] **Create study-version.entity.ts** in Prisma
@@ -932,12 +969,13 @@ Backend Services Hierarchy:
 
 ### Day 1: Compliance Framework
 - [ ] GDPR compliance audit
-- [ ] CCPA compliance check
+- [ ] CCPA compliance check  
 - [ ] HIPAA assessment
 - [ ] Create privacy policies
 - [ ] Build consent management
 - [ ] Add data retention
 - [ ] Document compliance
+- [ ] **IP Documentation Review:** Compile technical documentation from Phases 9-11 for future patent consideration
 - [ ] Daily error check at 5 PM
 
 ### Day 2: Advanced Security
