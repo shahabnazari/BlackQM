@@ -25,7 +25,7 @@ export const TextShortQuestion: FC<QuestionComponentProps> = ({ question, value,
 export const TextLongQuestion: FC<QuestionComponentProps> = ({ question, value, onChange, disabled }) => (
   <Textarea
     value={value || ''}
-    onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange?.(e.target.value)}
+    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange?.(e.target.value)}
     disabled={disabled}
     placeholder={question.config?.placeholder}
     rows={question.config?.rows || 4}
@@ -35,7 +35,7 @@ export const TextLongQuestion: FC<QuestionComponentProps> = ({ question, value, 
 
 // Choice-based components
 export const SingleChoiceQuestion: FC<QuestionComponentProps> = ({ question, value, onChange, disabled }) => (
-  <RadioGroup value={value || ''} onValueChange={onChange} disabled={disabled}>
+  <RadioGroup value={value || ''} {...(onChange && { onValueChange: onChange })} disabled={disabled}>
     {question.options?.map((option) => (
       <div key={option.id} className="flex items-center space-x-2">
         <RadioGroupItem value={option.value} id={option.id} />
@@ -72,7 +72,7 @@ export const MultipleChoiceQuestion: FC<QuestionComponentProps> = ({ question, v
 };
 
 export const DropdownQuestion: FC<QuestionComponentProps> = ({ question, value, onChange, disabled }) => (
-  <Select value={value || ''} onValueChange={onChange} disabled={disabled}>
+  <Select value={value || ''} {...(onChange && { onValueChange: onChange })} {...(disabled !== undefined && { disabled })}>
     <SelectTrigger>
       <SelectValue placeholder={question.config?.placeholder || 'Select an option'} />
     </SelectTrigger>
@@ -119,7 +119,7 @@ export const SliderScaleQuestion: FC<QuestionComponentProps> = ({ question, valu
         min={min}
         max={max}
         step={step}
-        disabled={disabled}
+        {...(disabled !== undefined && { disabled })}
       />
       <div className="flex justify-between text-sm text-muted-foreground">
         <span>{min}</span>
@@ -245,7 +245,7 @@ const questionComponents: Record<string, FC<QuestionComponentProps>> = {
   [QuestionType.CARD_SORT]: CardSortQuestion,
   [QuestionType.HEAT_MAP]: HeatMapQuestion,
   [QuestionType.IMAGE_CHOICE]: ImageChoiceQuestion,
-  [QuestionType.VIDEO_RESPONSE]: VideoResponseQuestion,
+  [QuestionType.VIDEO_RESPONSE]: VideoResponseQuestion as FC<QuestionComponentProps>,
   [QuestionType.NET_PROMOTER_SCORE]: NetPromoterScoreQuestion,
   [QuestionType.SEMANTIC_DIFFERENTIAL]: SemanticDifferentialQuestion,
   [QuestionType.YES_NO]: SingleChoiceQuestion,
@@ -318,27 +318,6 @@ export const questionTypeMetadata: Record<string, any> = {
   [QuestionType.DATE_TIME]: {
   },
   [QuestionType.NUMERIC_ENTRY]: {
-  },
-  // Add missing types
-  [QuestionType.NUMERIC]: {
-  },
-  [QuestionType.EMAIL]: {
-  },
-  [QuestionType.URL]: {
-  },
-  [QuestionType.PHONE]: {
-  },
-  [QuestionType.CHECKBOX]: {
-  },
-  [QuestionType.MULTIPLE_CHOICE]: {
-  },
-  [QuestionType.SLIDER]: {
-  },
-  [QuestionType.MATRIX]: {
-  },
-  [QuestionType.CONJOINT]: {
-  },
-  [QuestionType.SIGNATURE]: {
   },
 };
 

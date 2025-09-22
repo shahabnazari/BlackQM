@@ -297,7 +297,10 @@ export const StimuliUploadSystemV3: React.FC<StimuliUploadSystemV3Props> = ({
   const getGlobalCellIndex = (colIndex: number, cellIndex: number): number => {
     let index = 0;
     for (let i = 0; i < colIndex; i++) {
-      index += grid.columns[i].cells;
+      const column = grid.columns[i];
+      if (column) {
+        index += column.cells;
+      }
     }
     return index + cellIndex;
   };

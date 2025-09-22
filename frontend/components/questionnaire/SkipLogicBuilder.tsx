@@ -44,9 +44,11 @@ export const SkipLogicBuilder: React.FC<SkipLogicBuilderProps> = ({
           <button
             onClick={() => {
               // Add logic here
-              onUpdateLogic(selectedQuestionId, {
-                conditions: []
-              });
+              if (selectedQuestionId) {
+                onUpdateLogic(selectedQuestionId, {
+                  conditions: []
+                });
+              }
             }}
             className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >

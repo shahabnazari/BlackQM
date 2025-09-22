@@ -324,7 +324,7 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
       if (!groups[widget.category]) {
         groups[widget.category] = [];
       }
-      groups[widget.category].push(widget);
+      groups[widget.category]!.push(widget);
     });
     return groups;
   }, [filteredWidgets]);

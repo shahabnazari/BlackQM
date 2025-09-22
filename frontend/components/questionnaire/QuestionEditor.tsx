@@ -106,15 +106,17 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                       value={option.text}
                       onChange={(e: any) => {
                         const newOptions = [...(editedQuestion.options || [])];
-                        newOptions[index].text = e.target.value;
-                        setEditedQuestion({ ...editedQuestion, options: newOptions });
+                        if (newOptions[index]) {
+                          newOptions[index].text = e.target.value;
+                          setEditedQuestion({ ...editedQuestion, options: newOptions });
+                        }
                       }}
                       className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
                       placeholder="Option text"
                     />
                     <button
                       onClick={() => {
-                        const newOptions = editedQuestion.options?.filter((_, i) => i !== index);
+                        const newOptions = editedQuestion.options?.filter((_, i) => i !== index) || [];
                         setEditedQuestion({ ...editedQuestion, options: newOptions });
                       }}
                       className="px-3 py-2 bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 rounded-lg transition-colors"

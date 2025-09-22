@@ -247,8 +247,8 @@ export const MagneticIconButton: React.FC<{
     <MagneticButton
       className={cn('!p-0', sizeClasses[size], className)}
       variant="ghost"
-      onClick={onClick}
-      disabled={disabled}
+      {...(onClick && { onClick })}
+      {...(disabled !== undefined && { disabled })}
       hapticFeedback
     >
       <span className="sr-only">{ariaLabel}</span>

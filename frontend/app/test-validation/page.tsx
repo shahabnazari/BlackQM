@@ -64,7 +64,7 @@ export default function ValidationTestPage() {
                   });
                 }
               }}
-              error={validationErrors.title}
+              error={validationErrors.title || ''}
               aria-label="Study title"
               aria-required="true"
             />

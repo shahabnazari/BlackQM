@@ -13,7 +13,7 @@ import {
   X,
   Edit2,
   Trash2,
-  _Eye,
+  Eye,
   Grid3x3,
   CheckCircle,
   Image,
@@ -22,29 +22,29 @@ import {
   Type,
   ChevronDown,
   ChevronUp,
-  _AlertCircle,
+  AlertCircle,
   Sparkles,
-  _Zap,
+  Zap,
   Info,
-  _FileText,
-  _Plus,
+  FileText,
+  Plus,
   LayoutGrid,
   Square,
   Grid3X3Icon,
-  _Download,
-  _Share2,
-  _Filter,
-  _SortAsc,
+  Download,
+  Share2,
+  Filter,
+  SortAsc,
   Search,
-  _Copy,
-  _MoreHorizontal,
+  Copy,
+  MoreHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/apple-ui/Button';
 import {
   Card,
-  _CardHeader,
-  _CardTitle,
-  _CardDescription,
+  CardHeader,
+  CardTitle,
+  CardDescription,
   CardContent,
 } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/apple-ui/Badge/Badge';
@@ -158,13 +158,12 @@ export function StimuliUploadSystemV6({
     showSuccess,
     showError,
     showConfirm,
-    showWarning,
-    _showInfo,
+    showWarning
   } = usePopup();
 
   // Initialize locked type if we have initial stimuli
   useEffect(() => {
-    if (initialStimuli.length > 0 && !lockedType) {
+    if (initialStimuli.length > 0 && !lockedType && initialStimuli[0]) {
       setLockedType(initialStimuli[0].type);
     }
   }, [initialStimuli]);
@@ -187,7 +186,7 @@ export function StimuliUploadSystemV6({
     if (!grid || !grid.columns) return 0;
     let index = 0;
     for (let i = 0; i < colIndex; i++) {
-      index += grid.columns[i].cells;
+      index += grid.columns[i]?.cells || 0;
     }
     return index + cellIndex;
   };
@@ -197,7 +196,6 @@ export function StimuliUploadSystemV6({
       .trim()
       .split(/\s+/)
       .filter((word: any) => word.length > 0).length;
-  const _getCharCount = (text: string) => text.trim().length;
 
   // Handle upload mode selection
   const handleModeSelect = (mode: UploadMode) => {
@@ -257,6 +255,7 @@ export function StimuliUploadSystemV6({
     const newStimuli: Stimulus[] = [];
     for (let i = 0; i < filesToUpload; i++) {
       const file = files[i];
+      if (!file) continue;
       const id = Math.random().toString(36).substr(2, 9);
       const url = URL.createObjectURL(file);
 

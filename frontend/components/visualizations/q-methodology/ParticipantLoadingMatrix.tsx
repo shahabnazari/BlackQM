@@ -72,7 +72,7 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
         const aDefining = a.definingFactor || 'Z';
         const bDefining = b.definingFactor || 'Z';
         if (aDefining !== bDefining) return aDefining.localeCompare(bDefining);
-        return b.loadings[aDefining] - a.loadings[bDefining]; // Secondary sort by loading strength
+        return (b.loadings[aDefining] || 0) - (a.loadings[bDefining] || 0); // Secondary sort by loading strength
       case 'communality':
         return b.communality - a.communality;
       case 'reliability':

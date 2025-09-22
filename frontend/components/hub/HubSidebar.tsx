@@ -13,6 +13,7 @@ import {
   HomeIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  LightBulbIcon,
 } from '@heroicons/react/24/outline';
 
 interface HubSidebarProps {
@@ -38,7 +39,7 @@ interface SidebarItem {
  * - Responsive design with collapse functionality
  * - Accessibility compliant (WCAG AAA)
  */
-export function HubSidebar({ lifecycle = 'analyze' }: HubSidebarProps) {
+export function HubSidebar({ lifecycle: _lifecycle = 'analyze' }: HubSidebarProps) {
   // Use lifecycle to show context - this is part of the research journey
   const { 
     currentSection, 
@@ -84,10 +85,18 @@ export function HubSidebar({ lifecycle = 'analyze' }: HubSidebarProps) {
       available: !!analysisResults,
     },
     {
+      id: 'interpret',
+      label: 'Interpretation',
+      icon: LightBulbIcon,
+      description: 'Factor interpretation & themes',
+      color: 'text-orange-600',
+      available: !!analysisResults?.factorAnalysis,
+    },
+    {
       id: 'insights',
       label: 'AI Insights',
       icon: SparklesIcon,
-      description: 'Intelligent interpretations',
+      description: 'Intelligent recommendations',
       color: 'text-yellow-600',
       available: !!analysisResults?.factorAnalysis,
     },

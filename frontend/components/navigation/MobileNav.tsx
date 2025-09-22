@@ -41,11 +41,17 @@ export function MobileNav({ className = '' }: MobileNavProps) {
     let currentX = 0;
 
     const handleTouchStart = (e: TouchEvent) => {
-      startX = e.touches[0].clientX;
+      const touch = e.touches[0];
+      if (touch) {
+        startX = touch.clientX;
+      }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      currentX = e.touches[0].clientX;
+      const touch = e.touches[0];
+      if (touch) {
+        currentX = touch.clientX;
+      }
     };
 
     const handleTouchEnd = () => {

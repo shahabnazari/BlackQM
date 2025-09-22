@@ -16,6 +16,9 @@ import { AnalysisModule } from './modules/analysis/analysis.module';
 import { AIModule } from './modules/ai/ai.module';
 import { VisualizationModule } from './modules/visualization/visualization.module';
 import { ReportModule } from './modules/report/report.module';
+import { QuestionModule } from './modules/question.module';
+import { PostSurveyModule } from './modules/post-survey.module';
+import { ParticipantFlowModule } from './modules/participant-flow.module';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 
 @Module({
@@ -47,6 +50,9 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
     FileUploadModule,
     StudyModule,
     ParticipantModule,
+    QuestionModule, // Phase 8.2 Day 1: Dynamic questionnaire infrastructure
+    PostSurveyModule, // Phase 8.2 Day 2: Post-survey management
+    ParticipantFlowModule, // Phase 8.2 Day 3: Flow orchestration and state management
     AnalysisModule,
     AIModule,
     VisualizationModule,

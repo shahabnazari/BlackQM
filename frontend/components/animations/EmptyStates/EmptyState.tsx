@@ -105,18 +105,22 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         sizeClasses[size],
         className
       )}
-      variants={animate ? ANIMATION_VARIANTS.fadeIn : undefined}
-      initial={animate ? 'hidden' : undefined}
-      animate={animate ? 'visible' : undefined}
-      transition={{ duration: 0.4 }}
+      {...(animate && {
+        variants: ANIMATION_VARIANTS.fadeIn,
+        initial: 'hidden',
+        animate: 'visible',
+        transition: { duration: 0.4 }
+      })}
     >
       {/* Illustration */}
       <motion.div
         className={cn('mb-6', illustrationSizes[size])}
-        variants={animate ? ANIMATION_VARIANTS.scaleIn : undefined}
-        initial={animate ? 'hidden' : undefined}
-        animate={animate ? 'visible' : undefined}
-        transition={{ delay: 0.1, duration: 0.5, type: 'spring' }}
+        {...(animate && {
+          variants: ANIMATION_VARIANTS.scaleIn,
+          initial: 'hidden',
+          animate: 'visible',
+          transition: { delay: 0.1, duration: 0.5, type: 'spring' }
+        })}
       >
         {getIllustration()}
       </motion.div>
@@ -124,10 +128,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {/* Title */}
       <motion.h3
         className="mb-2 text-xl font-semibold text-gray-900 dark:text-white"
-        variants={animate ? ANIMATION_VARIANTS.slideUp : undefined}
-        initial={animate ? 'hidden' : undefined}
-        animate={animate ? 'visible' : undefined}
-        transition={{ delay: 0.2, duration: 0.4 }}
+        {...(animate && {
+          variants: ANIMATION_VARIANTS.slideUp,
+          initial: 'hidden',
+          animate: 'visible',
+          transition: { delay: 0.2, duration: 0.4 }
+        })}
       >
         {finalTitle}
       </motion.h3>
@@ -135,10 +141,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {/* Message */}
       <motion.p
         className="mb-6 text-gray-600 dark:text-gray-400 max-w-sm"
-        variants={animate ? ANIMATION_VARIANTS.slideUp : undefined}
-        initial={animate ? 'hidden' : undefined}
-        animate={animate ? 'visible' : undefined}
-        transition={{ delay: 0.3, duration: 0.4 }}
+        {...(animate && {
+          variants: ANIMATION_VARIANTS.slideUp,
+          initial: 'hidden',
+          animate: 'visible',
+          transition: { delay: 0.3, duration: 0.4 }
+        })}
       >
         {finalMessage}
       </motion.p>
@@ -147,10 +155,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {(finalActionLabel || secondaryActionLabel) && (
         <motion.div
           className="flex flex-col sm:flex-row gap-3"
-          variants={animate ? ANIMATION_VARIANTS.slideUp : undefined}
-          initial={animate ? 'hidden' : undefined}
-          animate={animate ? 'visible' : undefined}
-          transition={{ delay: 0.4, duration: 0.4 }}
+          {...(animate && {
+            variants: ANIMATION_VARIANTS.slideUp,
+            initial: 'hidden',
+            animate: 'visible',
+            transition: { delay: 0.4, duration: 0.4 }
+          })}
         >
           {finalActionLabel && onAction && (
             <Button
@@ -187,8 +197,8 @@ export const EmptyStudyState: React.FC<{
   return (
     <EmptyState
       type="noStudies"
-      onAction={onCreateStudy}
-      className={className}
+      {...(onCreateStudy && { onAction: onCreateStudy })}
+      {...(className && { className })}
       size="lg"
     />
   );
@@ -204,8 +214,8 @@ export const EmptyDataState: React.FC<{
   return (
     <EmptyState
       type="noData"
-      onAction={onInviteParticipants}
-      className={className}
+      {...(onInviteParticipants && { onAction: onInviteParticipants })}
+      {...(className && { className })}
     />
   );
 };
@@ -220,8 +230,8 @@ export const EmptyParticipantState: React.FC<{
   return (
     <EmptyState
       type="noParticipants"
-      onAction={onShareStudy}
-      className={className}
+      {...(onShareStudy && { onAction: onShareStudy })}
+      {...(className && { className })}
     />
   );
 };
@@ -236,8 +246,8 @@ export const NotFoundState: React.FC<{
   return (
     <EmptyState
       type="notFound"
-      onAction={onGoHome}
-      className={className}
+      {...(onGoHome && { onAction: onGoHome })}
+      {...(className && { className })}
       size="lg"
     />
   );
@@ -255,8 +265,8 @@ export const ErrorState: React.FC<{
     <EmptyState
       type="error"
       message={error || EMPTY_STATE_CONFIG.error.message}
-      onAction={onRetry}
-      className={className}
+      {...(onRetry && { onAction: onRetry })}
+      {...(className && { className })}
     />
   );
 };

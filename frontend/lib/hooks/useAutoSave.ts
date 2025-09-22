@@ -26,7 +26,7 @@ export function useAutoSave<T extends Record<string, any>>(
     validateBeforeSave,
   } = options;
 
-  const { _showAutoSave, showError } = useToast();
+  const { showError } = useToast();
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
   const [autoSaveError, setAutoSaveError] = useState<Error | null>(null);

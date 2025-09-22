@@ -265,12 +265,17 @@ export const AppleUIGridBuilderV5: React.FC<AppleUIGridBuilderV5Props> = ({
     // Apply smoothing to prevent sharp drops
     const smoothedValues = [...bellValues];
     for (let i = 1; i < columnCount - 1; i++) {
-      smoothedValues[i] = bellValues[i - 1] * 0.15 + bellValues[i] * 0.7 + bellValues[i + 1] * 0.15;
+      const prev = bellValues[i - 1] || 0;
+      const curr = bellValues[i] || 0;
+      const next = bellValues[i + 1] || 0;
+      smoothedValues[i] = prev * 0.15 + curr * 0.7 + next * 0.15;
     }
     
     // Ensure perfect symmetry
     for (let i = 0; i < Math.floor(columnCount / 2); i++) {
-      const avgValue = (smoothedValues[i] + smoothedValues[columnCount - 1 - i]) / 2;
+      const leftValue = smoothedValues[i] || 0;
+      const rightValue = smoothedValues[columnCount - 1 - i] || 0;
+      const avgValue = (leftValue + rightValue) / 2;
       smoothedValues[i] = avgValue;
       smoothedValues[columnCount - 1 - i] = avgValue;
     }
@@ -285,7 +290,8 @@ export const AppleUIGridBuilderV5: React.FC<AppleUIGridBuilderV5Props> = ({
     
     // First pass: assign minimum cells based on proportions
     for (let i = 0; i < columnCount; i++) {
-      cellDistribution[i] = Math.max(1, Math.floor(targetTotal * proportions[i]));
+      const proportion = proportions[i] || 0;
+      cellDistribution[i] = Math.max(1, Math.floor(targetTotal * proportion));
       remainingCells -= cellDistribution[i];
     }
     
@@ -298,7 +304,10 @@ export const AppleUIGridBuilderV5: React.FC<AppleUIGridBuilderV5Props> = ({
       errors.sort((a, b) => b.error - a.error);
       
       for (let i = 0; i < remainingCells && i < errors.length; i++) {
-        cellDistribution[errors[i].index]++;
+        const error = errors[i];
+        if (error) {
+          cellDistribution[error.index]++;
+        }
       }
     } else if (remainingCells < 0) {
       // Remove excess cells starting from edges
@@ -307,7 +316,7 @@ export const AppleUIGridBuilderV5: React.FC<AppleUIGridBuilderV5Props> = ({
       
       while (remainingCells < 0 && adjustmentIndex < columnCount * 2) {
         const idx = adjustmentIndices[adjustmentIndex % adjustmentIndices.length];
-        if (cellDistribution[idx] > 1) {
+        if (idx !== undefined && cellDistribution[idx] > 1) {
           cellDistribution[idx]--;
           remainingCells++;
         }
@@ -346,7 +355,7 @@ export const AppleUIGridBuilderV5: React.FC<AppleUIGridBuilderV5Props> = ({
       let label = '';
       
       if (selectedTheme === 'custom' && customLabels[i]) {
-        label = customLabels[i];
+        label = customLabels[i] || '';
       } else if ((theme.labels as any)[i]) {
         label = (theme.labels as any)[i];
       } else {
@@ -388,7 +397,7 @@ export const AppleUIGridBuilderV5: React.FC<AppleUIGridBuilderV5Props> = ({
       let label = '';
       
       if (selectedTheme === 'custom' && customLabels[i]) {
-        label = customLabels[i];
+        label = customLabels[i] || '';
       } else if ((theme.labels as any)[i]) {
         label = (theme.labels as any)[i];
       } else {
@@ -411,8 +420,11 @@ export const AppleUIGridBuilderV5: React.FC<AppleUIGridBuilderV5Props> = ({
     
     let score = 100;
     const centerIndex = Math.floor(cols.length / 2);
-    const centerCells = cols[centerIndex].cells;
-    const edgeAvg = (cols[0].cells + cols[cols.length - 1].cells) / 2;
+    const centerCol = cols[centerIndex];
+    const firstCol = cols[0];
+    const lastCol = cols[cols.length - 1];
+    const centerCells = centerCol ? centerCol.cells : 0;
+    const edgeAvg = (firstCol && lastCol) ? (firstCol.cells + lastCol.cells) / 2 : 0;
     
     // Check if center is higher than edges (for bell curve)
     if (distribution === 'bell' && centerCells <= edgeAvg) {
@@ -421,7 +433,9 @@ export const AppleUIGridBuilderV5: React.FC<AppleUIGridBuilderV5Props> = ({
     
     // Check symmetry
     for (let i = 0; i < Math.floor(cols.length / 2); i++) {
-      if (cols[i].cells !== cols[cols.length - 1 - i].cells) {
+      const leftCol = cols[i];
+      const rightCol = cols[cols.length - 1 - i];
+      if (leftCol && rightCol && leftCol.cells !== rightCol.cells) {
         score -= 5;
       }
     }
@@ -430,13 +444,17 @@ export const AppleUIGridBuilderV5: React.FC<AppleUIGridBuilderV5Props> = ({
     if (distribution === 'bell') {
       // Left side should increase
       for (let i = 0; i < centerIndex - 1; i++) {
-        if (cols[i].cells > cols[i + 1].cells) {
+        const currentCol = cols[i];
+        const nextCol = cols[i + 1];
+        if (currentCol && nextCol && currentCol.cells > nextCol.cells) {
           score -= 10;
         }
       }
       // Right side should decrease
       for (let i = centerIndex + 1; i < cols.length; i++) {
-        if (cols[i - 1].cells < cols[i].cells) {
+        const prevCol = cols[i - 1];
+        const currentCol = cols[i];
+        if (prevCol && currentCol && prevCol.cells < currentCol.cells) {
           score -= 10;
         }
       }
@@ -495,20 +513,22 @@ export const AppleUIGridBuilderV5: React.FC<AppleUIGridBuilderV5Props> = ({
       return;
     }
     
-    if (newColumns[columnIndex].cells + delta < 0) {
+    const targetColumn = newColumns[columnIndex];
+    if (!targetColumn || targetColumn.cells + delta < 0) {
       return;
     }
     
-    newColumns[columnIndex].cells += delta;
+    targetColumn.cells += delta;
     
     // Always maintain symmetry
     const mirrorIndex = newColumns.length - 1 - columnIndex;
-    if (mirrorIndex !== columnIndex && mirrorIndex >= 0 && mirrorIndex < newColumns.length) {
+    const mirrorColumn = newColumns[mirrorIndex];
+    if (mirrorIndex !== columnIndex && mirrorIndex >= 0 && mirrorIndex < newColumns.length && mirrorColumn) {
       const newTotal = newColumns.reduce((sum, col) => sum + col.cells, 0) + delta;
-      if (newColumns[mirrorIndex].cells + delta >= 0 && newTotal <= MAX_CELLS) {
-        newColumns[mirrorIndex].cells += delta;
+      if (mirrorColumn.cells + delta >= 0 && newTotal <= MAX_CELLS) {
+        mirrorColumn.cells += delta;
       } else {
-        newColumns[columnIndex].cells -= delta;
+        targetColumn.cells -= delta;
         return;
       }
     }

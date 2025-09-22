@@ -67,9 +67,9 @@ export function HamburgerMenu() {
 
   const getMenuItems = (): MenuItem[] => {
     const publicItems: MenuItem[] = [
-      { label: 'Home', path: '/', icon: HomeIcon },
-      { label: 'About', path: '/about', icon: InformationCircleIcon },
-      { label: 'Help', path: '/help', icon: QuestionMarkCircleIcon },
+      { label: 'Home', path: '/', icon: HomeIcon as any },
+      { label: 'About', path: '/about', icon: InformationCircleIcon as any },
+      { label: 'Help', path: '/help', icon: QuestionMarkCircleIcon as any },
     ];
 
     if (!isAuthenticated) {
@@ -81,33 +81,33 @@ export function HamburgerMenu() {
         {
           label: 'Dashboard',
           path: '/dashboard',
-          icon: HomeIcon,
+          icon: HomeIcon as any,
           description: 'Main overview',
         },
         {
           label: 'Studies',
           path: '/studies',
-          icon: DocumentDuplicateIcon,
+          icon: DocumentDuplicateIcon as any,
           description: 'Manage your studies',
           badge: '3',
         },
         {
           label: 'Analytics',
           path: '/analytics',
-          icon: ChartBarIcon,
+          icon: ChartBarIcon as any,
           description: 'Platform metrics & insights',
         },
         {
           label: 'Analysis',
           path: '/analysis',
-          icon: BeakerIcon,
+          icon: BeakerIcon as any,
           description: 'Q-methodology & research tools',
           badge: 'NEW',
         },
         {
           label: 'Participants',
           path: '/participants',
-          icon: UsersIcon,
+          icon: UsersIcon as any,
           description: 'Manage participants',
         },
         ...publicItems,
@@ -119,9 +119,9 @@ export function HamburgerMenu() {
         {
           label: 'My Studies',
           path: '/my-studies',
-          icon: DocumentDuplicateIcon,
+          icon: DocumentDuplicateIcon as any,
         },
-        { label: 'Join Study', path: '/join', icon: UsersIcon },
+        { label: 'Join Study', path: '/join', icon: UsersIcon as any },
         ...publicItems,
       ];
     }

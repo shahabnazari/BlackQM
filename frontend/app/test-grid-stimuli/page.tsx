@@ -382,8 +382,9 @@ export default function GridStimuliTestPage() {
         if (updatedGrid.columns[0]) {
           updatedGrid.columns[0].customLabel = 'Strongly Disagree';
         }
-        if (updatedGrid.columns[updatedGrid.columns.length - 1]) {
-          updatedGrid.columns[updatedGrid.columns.length - 1].customLabel = 'Strongly Agree';
+        const lastColumn = updatedGrid.columns[updatedGrid.columns.length - 1];
+        if (lastColumn) {
+          lastColumn.customLabel = 'Strongly Agree';
         }
         setCurrentGrid(updatedGrid);
         updateTestStatus(categoryIndex, 4, 'passed', undefined, 'Labels updated');

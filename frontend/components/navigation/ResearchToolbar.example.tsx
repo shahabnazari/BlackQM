@@ -63,7 +63,7 @@ export function ResearchToolbar() {
     {
       id: 'discover',
       label: 'Discover',
-      icon: BookOpenIcon,
+      icon: BookOpenIcon as any,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50 hover:bg-purple-100',
       description: 'Literature review & research foundation',
@@ -81,7 +81,7 @@ export function ResearchToolbar() {
     {
       id: 'design',
       label: 'Design',
-      icon: LightBulbIcon,
+      icon: LightBulbIcon as any,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-50 hover:bg-yellow-100',
       description: 'Formulate questions & methodology',
@@ -99,7 +99,7 @@ export function ResearchToolbar() {
     {
       id: 'build',
       label: 'Build',
-      icon: WrenchScrewdriverIcon,
+      icon: WrenchScrewdriverIcon as any,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50 hover:bg-blue-100',
       description: 'Create study instruments',
@@ -117,7 +117,7 @@ export function ResearchToolbar() {
     {
       id: 'recruit',
       label: 'Recruit',
-      icon: UsersIcon,
+      icon: UsersIcon as any,
       color: 'text-green-600',
       bgColor: 'bg-green-50 hover:bg-green-100',
       description: 'Find & manage participants',
@@ -135,7 +135,7 @@ export function ResearchToolbar() {
     {
       id: 'collect',
       label: 'Collect',
-      icon: ClipboardDocumentListIcon,
+      icon: ClipboardDocumentListIcon as any,
       color: 'text-teal-600',
       bgColor: 'bg-teal-50 hover:bg-teal-100',
       description: 'Gather research data',
@@ -153,7 +153,7 @@ export function ResearchToolbar() {
     {
       id: 'analyze',
       label: 'Analyze',
-      icon: BeakerIcon,
+      icon: BeakerIcon as any,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-50 hover:bg-indigo-100',
       description: 'Statistical analysis & patterns',
@@ -171,7 +171,7 @@ export function ResearchToolbar() {
     {
       id: 'visualize',
       label: 'Visualize',
-      icon: ChartBarIcon,
+      icon: ChartBarIcon as any,
       color: 'text-pink-600',
       bgColor: 'bg-pink-50 hover:bg-pink-100',
       description: 'Create charts & visualizations',
@@ -189,7 +189,7 @@ export function ResearchToolbar() {
     {
       id: 'interpret',
       label: 'Interpret',
-      icon: DocumentTextIcon,
+      icon: DocumentTextIcon as any,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50 hover:bg-orange-100',
       description: 'Extract meaning & insights',
@@ -207,7 +207,7 @@ export function ResearchToolbar() {
     {
       id: 'report',
       label: 'Report',
-      icon: DocumentIcon,
+      icon: DocumentIcon as any,
       color: 'text-red-600',
       bgColor: 'bg-red-50 hover:bg-red-100',
       description: 'Document & share findings',
@@ -225,7 +225,7 @@ export function ResearchToolbar() {
     {
       id: 'archive',
       label: 'Archive',
-      icon: ArchiveBoxIcon,
+      icon: ArchiveBoxIcon as any,
       color: 'text-gray-600',
       bgColor: 'bg-gray-50 hover:bg-gray-100',
       description: 'Store & share research',
@@ -273,7 +273,10 @@ export function ResearchToolbar() {
         e.preventDefault();
         const index = parseInt(e.key) - 1;
         if (index < researchPhases.length) {
-          handlePhaseClick(researchPhases[index]);
+          const phase = researchPhases[index];
+          if (phase) {
+            handlePhaseClick(phase);
+          }
         }
       }
       // Escape to close secondary

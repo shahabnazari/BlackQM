@@ -10,7 +10,7 @@ import { VisualizationCenter } from '@/components/hub/sections/VisualizationCent
 import { AIInsights } from '@/components/hub/sections/AIInsights';
 import { ReportBuilder } from '@/components/hub/sections/ReportBuilder';
 import { ExportManager } from '@/components/hub/sections/ExportManager';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { InterpretationSection } from '@/components/hub/sections/InterpretationSection';
 import { Alert } from '@/components/ui/alert';
 import { HubLoadingSkeleton } from '@/components/hub/LoadingSkeleton';
 
@@ -81,6 +81,8 @@ export default function AnalysisHubPage() {
         return <AnalysisTools studyId={studyId} />;
       case 'visualize':
         return <VisualizationCenter studyId={studyId} />;
+      case 'interpret':
+        return <InterpretationSection studyId={studyId} />;
       case 'insights':
         return <AIInsights studyId={studyId} />;
       case 'report':

@@ -44,7 +44,9 @@ export default function Familiarization({ onComplete, onBack }: FamiliarizationP
   const handleNext = () => {
     if (currentIndex < mockStatements.length - 1) {
       const currentStatement = mockStatements[currentIndex];
-      handleStatementView(currentStatement.id);
+      if (currentStatement) {
+        handleStatementView(currentStatement.id);
+      }
       setCurrentIndex(currentIndex + 1);
     }
   };
@@ -57,6 +59,11 @@ export default function Familiarization({ onComplete, onBack }: FamiliarizationP
 
   const allViewed = viewedStatements.size === mockStatements.length;
   const progress = (viewedStatements.size / mockStatements.length) * 100;
+  const currentStatement = mockStatements[currentIndex];
+
+  if (!currentStatement) {
+    return null;
+  }
 
   return (
     <Card className="max-w-6xl mx-auto">
@@ -114,15 +121,15 @@ export default function Familiarization({ onComplete, onBack }: FamiliarizationP
             <Card className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <span className="text-xs font-medium text-tertiary-label">
-                  #{mockStatements[currentIndex].id}
+                  #{currentStatement.id}
                 </span>
-                {mockStatements[currentIndex].category && (
+                {currentStatement.category && (
                   <Badge variant="secondary" size="sm">
-                    {mockStatements[currentIndex].category}
+                    {currentStatement.category}
                   </Badge>
                 )}
               </div>
-              <p className="text-lg text-label">{mockStatements[currentIndex].text}</p>
+              <p className="text-lg text-label">{currentStatement.text}</p>
             </Card>
             <div className="flex justify-between">
               <Button

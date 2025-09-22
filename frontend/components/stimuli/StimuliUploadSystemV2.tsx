@@ -119,7 +119,6 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
   })).current;
   
   const totalCells = grid.totalCells;
-  const _progress = (stimuli.length / totalCells) * 100;
 
   useEffect(() => {
     if (onStimuliComplete && stimuli.length === totalCells && !completionNotified.current) {
@@ -152,7 +151,7 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
       id: Math.random().toString(36).substr(2, 9),
       type: getFileType(file),
       content: URL.createObjectURL(file),
-      thumbnail: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
+      thumbnail: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
       metadata: {
         fileSize: file.size,
         mimeType: file.type
@@ -173,8 +172,11 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
       const updated = [...prev];
       const startIndex = updated.length - newStimuli.length;
       taskIds.forEach((taskId, index) => {
-        updated[startIndex + index].uploadTaskId = taskId;
-        updated[startIndex + index].uploadStatus = 'processing';
+        const item = updated[startIndex + index];
+        if (item) {
+          item.uploadTaskId = taskId;
+          item.uploadStatus = 'processing';
+        }
       });
       return updated;
     });
@@ -289,7 +291,10 @@ export const StimuliUploadSystemV2: React.FC<StimuliUploadSystemV2Props> = ({
   const getGlobalCellIndex = (colIndex: number, cellIndex: number): number => {
     let index = 0;
     for (let i = 0; i < colIndex; i++) {
-      index += grid.columns[i].cells;
+      const column = grid.columns[i];
+      if (column) {
+        index += column.cells;
+      }
     }
     return index + cellIndex;
   };

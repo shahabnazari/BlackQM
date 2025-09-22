@@ -3,9 +3,9 @@
 import React, {
   useState,
   useRef,
-  _useCallback,
-  _useMemo,
-  _useEffect,
+  useCallback,
+  useMemo,
+  useEffect,
 } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -13,7 +13,7 @@ import {
   X,
   Edit2,
   Trash2,
-  _Eye,
+  Eye,
   Grid3x3,
   CheckCircle,
   Image,
@@ -22,12 +22,12 @@ import {
   Type,
   ChevronDown,
   ChevronUp,
-  _AlertCircle,
+  AlertCircle,
   Sparkles,
-  _Zap,
+  Zap,
   Info,
   FileText,
-  _Plus,
+  Plus,
   LayoutGrid,
   Square,
   Grid3X3Icon,
@@ -35,7 +35,7 @@ import {
 import { Button } from '@/components/apple-ui/Button';
 import { Card } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/apple-ui/Badge/Badge';
-import _PopupModal, { usePopup } from '@/components/ui/_PopupModal';
+import _PopupModal, { usePopup } from '@/components/ui/PopupModal';
 
 interface PopupFunctions {
   showSuccess: (message: string) => void;
@@ -54,7 +54,6 @@ const useExtendedPopup = (): PopupFunctions => {
       ((message: string) => basePopup.showError(message)),
   };
 };
-import { useInView } from 'react-intersection-observer';
 import { cn } from '@/lib/utils';
 
 // Q-Method text requirements
@@ -117,7 +116,6 @@ export function StimuliUploadSystemV5({ grid }: StimuliUploadSystemV5Props) {
   const [selectedStimuli, setSelectedStimuli] = useState<Set<string>>(
     new Set()
   );
-  const [_isSelectionMode, setIsSelectionMode] = useState(false);
   const [uploadMode, setUploadMode] = useState<UploadMode>(null);
   const [lockedType, setLockedType] = useState<UploadMode>(null); // Track the locked stimuli type
   const [showGridPreview, setShowGridPreview] = useState(true); // Show grid preview by default
@@ -147,7 +145,7 @@ export function StimuliUploadSystemV5({ grid }: StimuliUploadSystemV5Props) {
     if (!grid || !grid.columns) return 0;
     let index = 0;
     for (let i = 0; i < colIndex; i++) {
-      index += grid.columns[i].cells;
+      index += grid.columns[i]?.cells || 0;
     }
     return index + cellIndex;
   };
@@ -158,7 +156,6 @@ export function StimuliUploadSystemV5({ grid }: StimuliUploadSystemV5Props) {
       .trim()
       .split(/\s+/)
       .filter((word: any) => word.length > 0).length;
-  const _getCharCount = (text: string) => text.trim().length;
 
   // Handle upload mode selection
   const handleModeSelect = (mode: UploadMode) => {
@@ -224,6 +221,7 @@ export function StimuliUploadSystemV5({ grid }: StimuliUploadSystemV5Props) {
     const newStimuli: Stimulus[] = [];
     for (let i = 0; i < filesToUpload; i++) {
       const file = files[i];
+      if (!file) continue;
       const id = Math.random().toString(36).substr(2, 9);
       const url = URL.createObjectURL(file);
 

@@ -277,7 +277,8 @@ export const AppleUIGridBuilder: React.FC<AppleUIGridBuilderProps> = ({
       const hasMiddle = columnCount % 2 === 1;
       
       for (let i = 0; i < halfColumns; i++) {
-        const proportion = bellValues[i] / sumBellValues;
+        const bellValue = bellValues[i] || 0;
+        const proportion = bellValue / sumBellValues;
         const cells = Math.max(1, Math.round(totalStatements * proportion));
         
         // Set symmetric cells
@@ -296,8 +297,18 @@ export const AppleUIGridBuilder: React.FC<AppleUIGridBuilderProps> = ({
         if (adjustment !== 0) {
           const perColumn = Math.floor(adjustment / 2);
           const remainder = adjustment % 2;
-          cellDistribution[halfColumns - 1] += perColumn + remainder;
-          cellDistribution[halfColumns] += perColumn;
+          const leftMiddleIdx = halfColumns - 1;
+          const rightMiddleIdx = halfColumns;
+          
+          const leftValue = cellDistribution[leftMiddleIdx];
+          const rightValue = cellDistribution[rightMiddleIdx];
+          
+          if (leftValue !== undefined) {
+            cellDistribution[leftMiddleIdx] = leftValue + perColumn + remainder;
+          }
+          if (rightValue !== undefined) {
+            cellDistribution[rightMiddleIdx] = rightValue + perColumn;
+          }
         }
       }
     } else {
@@ -319,7 +330,7 @@ export const AppleUIGridBuilder: React.FC<AppleUIGridBuilderProps> = ({
     // Create columns with proper cell distribution
     for (let i = min; i <= max; i++) {
       const index = i - min;
-      const cells = cellDistribution[index];
+      const cells = cellDistribution[index] || 0;
       
       const theme = labelThemes[selectedTheme === 'custom' ? 'agreement' : selectedTheme as keyof typeof labelThemes];
       const label = showCustomLabels && customLabels[i] 
@@ -377,6 +388,8 @@ export const AppleUIGridBuilder: React.FC<AppleUIGridBuilderProps> = ({
   const adjustCells = (columnIndex: number, delta: number) => {
     const newColumns = [...columns];
     const column = newColumns[columnIndex];
+    if (!column) return;
+    
     const newCellCount = Math.max(0, column.cells + delta);
     
     // Calculate current total

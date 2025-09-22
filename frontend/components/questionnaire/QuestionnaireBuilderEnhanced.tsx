@@ -50,7 +50,7 @@ interface QuestionnaireBuilderEnhancedProps {
 }
 
 export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhancedProps> = ({
-  _surveyId,
+  surveyId: _surveyId,
   onSave,
   onPublish
 }) => {

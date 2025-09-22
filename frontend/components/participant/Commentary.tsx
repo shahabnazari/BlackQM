@@ -49,9 +49,10 @@ export default function Commentary({ onComplete, onBack }: CommentaryProps) {
 
   const currentStatement = mockExtremeStatements[currentIndex];
   const isLastStatement = currentIndex === mockExtremeStatements.length - 1;
-  const allCommented = mockExtremeStatements.every((s: any) => comments[s.id]?.length >= 50);
+  const allCommented = mockExtremeStatements.every((s: any) => (comments[s.id]?.length || 0) >= 50);
 
   const handleCommentChange = (value: string) => {
+    if (!currentStatement) return;
     setComments((prev) => ({
       ...prev,
       [currentStatement.id]: value,
@@ -80,6 +81,10 @@ export default function Commentary({ onComplete, onBack }: CommentaryProps) {
     onComplete({ commentary: commentaryData });
   };
 
+  if (!currentStatement) {
+    return null;
+  }
+
   const currentComment = comments[currentStatement.id] || '';
   const wordCount = currentComment.split(/\s+/).filter(Boolean).length;
 
@@ -106,7 +111,7 @@ export default function Commentary({ onComplete, onBack }: CommentaryProps) {
                 className={`w-2 h-2 rounded-full ${
                   index === currentIndex
                     ? 'bg-system-blue'
-                    : comments[mockExtremeStatements[index].id]
+                    : comments[mockExtremeStatements[index]?.id || '']
                     ? 'bg-system-green'
                     : 'bg-quaternary-fill'
                 }`}

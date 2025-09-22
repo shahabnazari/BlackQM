@@ -405,10 +405,10 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
       isOpen={popupState.isOpen}
       onClose={closePopup}
       type={popupState.type}
-      title={popupState.title}
+      {...(popupState.title && { title: popupState.title })}
       message={popupState.message}
-      onConfirm={popupState.onConfirm}
-      onCancel={popupState.onCancel}
+      {...(popupState.onConfirm && { onConfirm: popupState.onConfirm })}
+      {...(popupState.onCancel && { onCancel: popupState.onCancel })}
     />
     </>
   );

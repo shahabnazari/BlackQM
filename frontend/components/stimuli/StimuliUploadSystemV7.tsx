@@ -22,33 +22,33 @@ import {
   Type,
   ChevronDown,
   ChevronUp,
-  _AlertCircle,
+  AlertCircle,
   Sparkles,
-  _Zap,
+  Zap,
   Info,
-  _FileText,
-  _Plus,
+  FileText,
+  Plus,
   LayoutGrid,
   Square,
   Grid3X3Icon,
-  _Download,
-  _Share2,
-  _Filter,
-  _SortAsc,
-  _Search,
-  _Copy,
-  _MoreHorizontal,
-  _Play,
-  _Maximize2,
-  _Minimize2,
-  _RotateCcw,
+  Download,
+  Share2,
+  Filter,
+  SortAsc,
+  Search,
+  Copy,
+  MoreHorizontal,
+  Play,
+  Maximize2,
+  Minimize2,
+  RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/apple-ui/Button';
 import {
   Card,
-  _CardHeader,
-  _CardTitle,
-  _CardDescription,
+  CardHeader,
+  CardTitle,
+  CardDescription,
   CardContent,
 } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/apple-ui/Badge/Badge';
@@ -169,8 +169,8 @@ export function StimuliUploadSystemV7({
     'grid'
   );
   const [galleryColumns, setGalleryColumns] = useState(6);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'date' | 'name' | 'type'>('date');
+  const [searchQuery, _setSearchQuery] = useState('');
+  const [sortBy, _setSortBy] = useState<'date' | 'name' | 'type'>('date');
   const [previewStimulus, setPreviewStimulus] = useState<Stimulus | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -183,8 +183,7 @@ export function StimuliUploadSystemV7({
     popupState,
     closePopup,
     showConfirm,
-    showWarning: _showPopupWarning,
-    _showInfo,
+    showWarning: _showPopupWarning
   } = usePopup();
 
   const { toasts, showSuccess, showError, showWarning, removeToast } =
@@ -192,7 +191,7 @@ export function StimuliUploadSystemV7({
 
   // Initialize locked type if we have initial stimuli
   useEffect(() => {
-    if (initialStimuli.length > 0 && !lockedType) {
+    if (initialStimuli.length > 0 && !lockedType && initialStimuli[0]) {
       setLockedType(initialStimuli[0].type);
     }
   }, [initialStimuli]);
@@ -215,7 +214,7 @@ export function StimuliUploadSystemV7({
     if (!grid || !grid.columns) return 0;
     let index = 0;
     for (let i = 0; i < colIndex; i++) {
-      index += grid.columns[i].cells;
+      index += grid.columns[i]?.cells || 0;
     }
     return index + cellIndex;
   };
@@ -225,12 +224,10 @@ export function StimuliUploadSystemV7({
       .trim()
       .split(/\s+/)
       .filter((word: any) => word.length > 0).length;
-  const _getCharCount = (text: string) => text.trim().length;
 
   // LinkedIn-style hard limit - prevent typing beyond max words
   const handleTextInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
-    const _currentWordCount = getWordCount(textInput);
     const newWordCount = getWordCount(newText);
 
     // If at max words and trying to add more (not deleting), block the input
@@ -314,6 +311,7 @@ export function StimuliUploadSystemV7({
     const newStimuli: Stimulus[] = [];
     for (let i = 0; i < filesToUpload; i++) {
       const file = files[i];
+      if (!file) continue;
       const id = Math.random().toString(36).substr(2, 9);
       const url = URL.createObjectURL(file);
 
@@ -528,7 +526,6 @@ export function StimuliUploadSystemV7({
   }) => {
     const isActive = uploadMode === type;
     const isFull = stimuli.length >= totalCells;
-    const _isDisabled = false; // Never disable buttons - allow type switching even with full grid
     const [isHovered, setIsHovered] = useState(false);
 
     const IconComponent = isActive && !isFull ? Upload : Icon;
@@ -861,8 +858,6 @@ export function StimuliUploadSystemV7({
                       grid.columns.map((column, colIndex) => {
                         // Calculate consistent column width based on total columns
                         const columnWidth = grid.columns.length > 9 ? 60 : 80;
-                        const _cellSize =
-                          grid.columns.length > 9 ? 'w-12 h-14' : 'w-14 h-16';
 
                         return (
                           <div

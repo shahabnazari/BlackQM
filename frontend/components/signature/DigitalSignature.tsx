@@ -2,6 +2,9 @@
 
 import React, { useRef, useState } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
+
+// Type assertion for SignatureCanvas due to type incompatibility
+const SignatureCanvasComponent = SignatureCanvas as any;
 import { Button } from '@/components/apple-ui/Button';
 import { TextField } from '@/components/apple-ui/TextField';
 import { Upload, Pen, Type, RotateCcw, Check } from 'lucide-react';
@@ -114,7 +117,7 @@ export const DigitalSignature: React.FC<DigitalSignatureProps> = ({
             
             <div className="signature-canvas-wrapper relative border-2 border-dashed border-color-border rounded-lg p-2 bg-white shadow-inner">
               <div className="absolute top-2 left-2 text-xs text-color-text-tertiary pointer-events-none">Sign here</div>
-              <SignatureCanvas
+              <SignatureCanvasComponent
                 ref={sigCanvas}
                 penColor="#000033"
                 canvasProps={{

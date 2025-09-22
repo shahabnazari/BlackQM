@@ -68,11 +68,38 @@ export function Breadcrumbs({
       // Add preview data based on path segment
       const preview = generatePreview(segment, href);
 
-      breadcrumbs.push({
-        label,
-        href: index < paths.length - 1 ? href : undefined,
-        preview,
-      });
+      const breadcrumbHref = index < paths.length - 1 ? href : undefined;
+      if (breadcrumbHref !== undefined && preview) {
+        breadcrumbs.push({
+          label,
+          href: breadcrumbHref,
+          preview,
+        });
+      } else if (breadcrumbHref !== undefined && !preview) {
+        breadcrumbs.push({
+          label,
+          href: breadcrumbHref,
+          preview: {
+            title: label,
+            description: ''
+          },
+        });
+      } else if (preview) {
+        breadcrumbs.push({
+          label,
+          href: '',
+          preview,
+        });
+      } else {
+        breadcrumbs.push({
+          label,
+          href: '',
+          preview: {
+            title: label,
+            description: ''
+          },
+        });
+      }
     });
 
     return breadcrumbs;
@@ -91,8 +118,9 @@ export function Breadcrumbs({
       help: 'Help',
     };
 
-    if (specialCases[segment.toLowerCase()]) {
-      return specialCases[segment.toLowerCase()];
+    const specialCase = specialCases[segment.toLowerCase()];
+    if (specialCase) {
+      return specialCase;
     }
 
     // Handle UUID-like segments
@@ -206,7 +234,7 @@ export function Breadcrumbs({
             )}
 
             <div className="relative">
-              {item.href ? (
+              {item && item.href ? (
                 <Link
                   href={item.href}
                   className="relative inline-flex items-center px-2 py-1 rounded-md text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -217,10 +245,10 @@ export function Breadcrumbs({
                     <HomeIcon className="w-4 h-4 mr-1" />
                   )}
                   <span className="truncate max-w-[200px] sm:max-w-none">
-                    {item.label}
+                    {item?.label || ''}
                   </span>
                 </Link>
-              ) : (
+              ) : item ? (
                 <span className="inline-flex items-center px-2 py-1 text-gray-900 dark:text-gray-100 font-medium">
                   {index === 0 && showHome && (
                     <HomeIcon className="w-4 h-4 mr-1" />
@@ -229,10 +257,10 @@ export function Breadcrumbs({
                     {item.label}
                   </span>
                 </span>
-              )}
+              ) : null}
 
               {/* Preview on Hover */}
-              {hoveredIndex === index && item.preview && (
+              {hoveredIndex === index && item?.preview && (
                 <div
                   ref={previewRef}
                   className={`absolute left-0 z-50 mt-1 w-64 p-4 bg-white dark:bg-gray-900 rounded-lg shadow-xl ring-1 ring-black/5 dark:ring-white/10 animate-in fade-in slide-in-from-top-1 duration-200 ${

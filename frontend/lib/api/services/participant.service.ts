@@ -1,4 +1,4 @@
-import { apiClient, ApiResponse } from '../client';
+import { apiClient } from '../client';
 
 // Types
 export interface ParticipantSession {

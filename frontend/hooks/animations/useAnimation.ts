@@ -44,8 +44,6 @@ export const useAnimation = (
   const {
     duration = ANIMATION_TIMING.normal,
     delay = 0,
-    _easing = 'ease',
-    _spring,
     respectReducedMotion = true,
     autoStart = false,
   } = options;

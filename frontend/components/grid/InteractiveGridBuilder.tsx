@@ -103,7 +103,8 @@ export const InteractiveGridBuilder: React.FC<InteractiveGridBuilderProps> = ({
       const hasMiddle = columnCount % 2 === 1;
       
       for (let i = 0; i < halfColumns; i++) {
-        const proportion = bellValues[i] / sumBellValues;
+        const bellValue = bellValues[i] || 0;
+        const proportion = bellValue / sumBellValues;
         const cells = Math.max(1, Math.round(total * proportion));
         
         // Set symmetric cells
@@ -122,8 +123,16 @@ export const InteractiveGridBuilder: React.FC<InteractiveGridBuilderProps> = ({
         if (adjustment !== 0) {
           const perColumn = Math.floor(adjustment / 2);
           const remainder = adjustment % 2;
-          cellCounts[halfColumns - 1] += perColumn + remainder;
-          cellCounts[halfColumns] += perColumn;
+          const leftMiddleIdx = halfColumns - 1;
+          const rightMiddleIdx = halfColumns;
+          const leftMiddleValue = cellCounts[leftMiddleIdx];
+          const rightMiddleValue = cellCounts[rightMiddleIdx];
+          if (leftMiddleValue !== undefined) {
+            cellCounts[leftMiddleIdx] = leftMiddleValue + perColumn + remainder;
+          }
+          if (rightMiddleValue !== undefined) {
+            cellCounts[rightMiddleIdx] = rightMiddleValue + perColumn;
+          }
         }
       }
       
@@ -133,7 +142,7 @@ export const InteractiveGridBuilder: React.FC<InteractiveGridBuilderProps> = ({
         newColumns.push({
           value: i,
           label: defaultLabels[i] || `Position ${i}`,
-          cells: cellCounts[index]
+          cells: cellCounts[index] || 0
         });
       }
     } else {
@@ -172,6 +181,7 @@ export const InteractiveGridBuilder: React.FC<InteractiveGridBuilderProps> = ({
   const adjustCells = (columnIndex: number, delta: number) => {
     const newColumns = [...columns];
     const column = newColumns[columnIndex];
+    if (!column) return;
     const newCellCount = Math.max(0, column.cells + delta);
     
     // Calculate current total
@@ -188,8 +198,9 @@ export const InteractiveGridBuilder: React.FC<InteractiveGridBuilderProps> = ({
     // Maintain symmetry if enabled
     if (symmetry) {
       const mirrorIndex = newColumns.length - 1 - columnIndex;
-      if (mirrorIndex !== columnIndex && mirrorIndex >= 0) {
-        newColumns[mirrorIndex].cells = newCellCount;
+      const mirrorColumn = newColumns[mirrorIndex];
+      if (mirrorIndex !== columnIndex && mirrorIndex >= 0 && mirrorColumn) {
+        mirrorColumn.cells = newCellCount;
       }
     }
     
@@ -200,7 +211,9 @@ export const InteractiveGridBuilder: React.FC<InteractiveGridBuilderProps> = ({
 
   const updateColumnLabel = (columnIndex: number, newLabel: string) => {
     const newColumns = [...columns];
-    newColumns[columnIndex].customLabel = newLabel;
+    const column = newColumns[columnIndex];
+    if (!column) return;
+    column.customLabel = newLabel;
     setColumns(newColumns);
     setIsDirty(true);
     notifyChange(newColumns);

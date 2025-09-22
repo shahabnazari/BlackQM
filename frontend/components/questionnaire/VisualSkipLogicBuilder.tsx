@@ -207,14 +207,18 @@ export const VisualSkipLogicBuilder: React.FC<VisualSkipLogicBuilderProps> = ({
 
     // Create linear flow between questions
     for (let i = 0; i < questions.length - 1; i++) {
-      flowEdges.push({
-        id: `e-${questions[i].id}-${questions[i + 1].id}`,
-        source: questions[i].id,
-        target: questions[i + 1].id,
-        type: 'smoothstep',
-        style: { stroke: '#94a3b8', strokeWidth: 2 },
-        animated: false
-      });
+      const currentQuestion = questions[i];
+      const nextQuestion = questions[i + 1];
+      if (currentQuestion && nextQuestion) {
+        flowEdges.push({
+          id: `e-${currentQuestion.id}-${nextQuestion.id}`,
+          source: currentQuestion.id,
+          target: nextQuestion.id,
+          type: 'smoothstep',
+          style: { stroke: '#94a3b8', strokeWidth: 2 },
+          animated: false
+        });
+      }
     }
 
     // Add conditional edges

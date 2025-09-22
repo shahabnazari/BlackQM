@@ -465,8 +465,8 @@ export function useParticipant(options: UseParticipantOptions = {}) {
 export function useQSortGrid(_sessionId: string) {
   const [grid, setGrid] = useState<GridPosition[]>([]);
   const [unsorted, setUnsorted] = useState<string[]>([]);
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
+  const [canUndo, _setCanUndo] = useState(false);
+  const [canRedo, _setCanRedo] = useState(false);
 
   // Move statement between positions
   const moveStatement = useCallback(

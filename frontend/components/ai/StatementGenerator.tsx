@@ -58,7 +58,7 @@ export function StatementGenerator({ onStatementsGenerated, className }: Stateme
       const result = await generateStatementsFromBackend({
         topic,
         count,
-        perspectives: validPerspectives.length > 0 ? validPerspectives : undefined,
+        ...(validPerspectives.length > 0 && { perspectives: validPerspectives }),
         avoidBias,
         academicLevel
       });

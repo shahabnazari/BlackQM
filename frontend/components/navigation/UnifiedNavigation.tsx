@@ -45,14 +45,12 @@ export function UnifiedNavigation() {
 
   // Navigation configuration based on user role
   const navigationItems = useMemo<NavigationItem[]>(() => {
-    const _items: NavigationItem[] = [];
-
     // Public items (always visible)
     const publicItems: NavigationItem[] = [
       {
         label: 'Home',
         path: '/',
-        icon: HomeIcon,
+        icon: HomeIcon as any,
         description: 'Welcome page',
       },
     ];
@@ -63,12 +61,12 @@ export function UnifiedNavigation() {
         {
           label: 'About',
           path: '/about',
-          icon: HomeIcon,
+          icon: HomeIcon as any,
         },
         {
           label: 'Help',
           path: '/help',
-          icon: HomeIcon,
+          icon: HomeIcon as any,
         },
       ];
     }
@@ -79,40 +77,40 @@ export function UnifiedNavigation() {
         {
           label: 'Dashboard',
           path: '/dashboard',
-          icon: HomeIcon,
+          icon: HomeIcon as any,
           description: 'Overview & insights',
           roles: ['researcher'],
         },
         {
           label: 'Studies',
           path: '/studies',
-          icon: DocumentDuplicateIcon,
+          icon: DocumentDuplicateIcon as any,
           description: 'Manage research studies',
           roles: ['researcher'],
           children: [
             {
               label: 'All Studies',
               path: '/studies',
-              icon: DocumentDuplicateIcon,
+              icon: DocumentDuplicateIcon as any,
             },
             {
               label: 'Create Study',
               path: '/studies/create',
-              icon: DocumentDuplicateIcon,
+              icon: DocumentDuplicateIcon as any,
             },
           ],
         },
         {
           label: 'Analytics',
           path: '/analytics',
-          icon: ChartBarIcon,
+          icon: ChartBarIcon as any,
           description: 'Platform metrics & performance',
           roles: ['researcher'],
         },
         {
           label: 'Analysis',
           path: '/analysis',
-          icon: BeakerIcon,
+          icon: BeakerIcon as any,
           description: 'Research tools & Q-methodology',
           badge: 'NEW',
           roles: ['researcher'],
@@ -120,19 +118,19 @@ export function UnifiedNavigation() {
             {
               label: 'Tools Hub',
               path: '/analysis',
-              icon: BeakerIcon,
+              icon: BeakerIcon as any,
             },
             {
               label: 'Q-Methodology',
               path: '/analysis/q-methodology',
-              icon: BeakerIcon,
+              icon: BeakerIcon as any,
             },
           ],
         },
         {
           label: 'Participants',
           path: '/participants',
-          icon: UsersIcon,
+          icon: UsersIcon as any,
           description: 'Manage participants',
           roles: ['researcher'],
         },
@@ -145,14 +143,14 @@ export function UnifiedNavigation() {
         {
           label: 'My Studies',
           path: '/my-studies',
-          icon: DocumentDuplicateIcon,
+          icon: DocumentDuplicateIcon as any,
           description: 'Your active studies',
           roles: ['participant'],
         },
         {
           label: 'Join Study',
           path: '/join',
-          icon: UsersIcon,
+          icon: UsersIcon as any,
           description: 'Enter study code',
           roles: ['participant'],
         },

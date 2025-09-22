@@ -229,7 +229,10 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
       if (remainder > 0) {
         const middleStart = Math.floor((columnCount - remainder) / 2);
         for (let i = 0; i < remainder; i++) {
-          cellDistribution[middleStart + i]++;
+          const idx = middleStart + i;
+          if (cellDistribution[idx] !== undefined) {
+            cellDistribution[idx]++;
+          }
         }
       }
     } else {
@@ -249,7 +252,9 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
       // Ensure symmetry
       const halfColumns = Math.floor(columnCount / 2);
       for (let i = 0; i < halfColumns; i++) {
-        const avgValue = (bellValues[i] + bellValues[columnCount - 1 - i]) / 2;
+        const leftVal = bellValues[i] || 0;
+        const rightVal = bellValues[columnCount - 1 - i] || 0;
+        const avgValue = (leftVal + rightVal) / 2;
         bellValues[i] = avgValue;
         bellValues[columnCount - 1 - i] = avgValue;
       }
@@ -261,7 +266,8 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
       
       // Distribute cells proportionally
       for (let i = 0; i < columnCount; i++) {
-        const proportion = bellValues[i] / sumBellValues;
+        const bellValue = bellValues[i] || 0;
+        const proportion = bellValue / sumBellValues;
         const cells = Math.max(1, Math.round(actualTarget * proportion));
         cellDistribution[i] = cells;
         distributedCells += cells;
@@ -271,7 +277,8 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
       const adjustment = actualTarget - distributedCells;
       if (adjustment !== 0) {
         const middleIndex = Math.floor(columnCount / 2);
-        cellDistribution[middleIndex] = Math.max(0, cellDistribution[middleIndex] + adjustment);
+        const currentValue = cellDistribution[middleIndex] || 0;
+        cellDistribution[middleIndex] = Math.max(0, currentValue + adjustment);
       }
     }
     
@@ -282,7 +289,7 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
       // Use custom label if available, otherwise use theme label, otherwise default
       let label = '';
       if (selectedTheme === 'custom' && customLabels[i]) {
-        label = customLabels[i];
+        label = customLabels[i] || '';
       } else if ((theme.labels as any)[i]) {
         label = (theme.labels as any)[i];
       } else {
@@ -293,7 +300,7 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
       newColumns.push({
         value: i,
         label: label,
-        cells: cellDistribution[index]
+        cells: cellDistribution[index] || 0
       });
     }
     
@@ -312,8 +319,14 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
     const tolerance = 0.2; // 20% tolerance
     
     // For bell curve, center should be higher than edges
-    const edgeAvg = (cols[0].cells + cols[columnCount - 1].cells) / 2;
-    const centerCells = cols[centerIndex].cells;
+    const firstCol = cols[0];
+    const lastCol = cols[columnCount - 1];
+    const centerCol = cols[centerIndex];
+    
+    if (!firstCol || !lastCol || !centerCol) return false;
+    
+    const edgeAvg = (firstCol.cells + lastCol.cells) / 2;
+    const centerCells = centerCol.cells;
     
     // Check if distribution is roughly bell-shaped
     if (centerCells <= edgeAvg) {
@@ -325,7 +338,10 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
     
     // Check left side
     for (let i = 0; i < centerIndex - 1; i++) {
-      if (cols[i].cells > cols[i + 1].cells * (1 + tolerance)) {
+      const current = cols[i];
+      const next = cols[i + 1];
+      if (!current || !next) continue;
+      if (current.cells > next.cells * (1 + tolerance)) {
         // Edge column is significantly higher than inner column
         isValidBell = false;
         break;
@@ -334,7 +350,10 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
     
     // Check right side
     for (let i = columnCount - 1; i > centerIndex + 1; i--) {
-      if (cols[i].cells > cols[i - 1].cells * (1 + tolerance)) {
+      const current = cols[i];
+      const prev = cols[i - 1];
+      if (!current || !prev) continue;
+      if (current.cells > prev.cells * (1 + tolerance)) {
         // Edge column is significantly higher than inner column
         isValidBell = false;
         break;
@@ -342,10 +361,14 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
     }
     
     // Check symmetry for bell curve
-    if (isValidBell && symmetry) {
+    if (isValidBell && _symmetry) {
       for (let i = 0; i < Math.floor(columnCount / 2); i++) {
-        const leftCells = cols[i].cells;
-        const rightCells = cols[columnCount - 1 - i].cells;
+        const leftCol = cols[i];
+        const rightCol = cols[columnCount - 1 - i];
+        if (!leftCol || !rightCol) continue;
+        
+        const leftCells = leftCol.cells;
+        const rightCells = rightCol.cells;
         const diff = Math.abs(leftCells - rightCells);
         const avg = (leftCells + rightCells) / 2;
         if (avg > 0 && diff / avg > tolerance) {
@@ -356,7 +379,7 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
     }
     
     return isValidBell;
-  }, [symmetry]);
+  }, [_symmetry]);
 
   // Initialize and update grid
   useEffect(() => {
@@ -382,11 +405,11 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
         distribution: manuallyEdited ? 'custom' : distribution,
         instructions,
         labelTheme: selectedTheme,
-        symmetry
+        symmetry: _symmetry
       };
       onGridChange(config);
     }
-  }, [columns, gridRange, instructions, distribution, manuallyEdited, symmetry, onGridChange]);
+  }, [columns, gridRange, instructions, distribution, manuallyEdited, _symmetry, onGridChange]);
 
   const handleRangeChange = (newMax: number) => {
     setGridRange({ min: -newMax, max: newMax });
@@ -402,6 +425,9 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
 
   const adjustCells = (columnIndex: number, delta: number) => {
     const newColumns = [...columns];
+    const column = newColumns[columnIndex];
+    if (!column) return;
+    
     const currentTotal = newColumns.reduce((sum, col) => sum + col.cells, 0);
     
     // Can't exceed MAX_CELLS
@@ -410,23 +436,26 @@ export const AppleUIGridBuilderFinal: React.FC<AppleUIGridBuilderFinalProps> = (
     }
     
     // Can't go below 0
-    if (newColumns[columnIndex].cells + delta < 0) {
+    if (column.cells + delta < 0) {
       return;
     }
     
     // Apply change
-    newColumns[columnIndex].cells += delta;
+    column.cells += delta;
     
     // ALWAYS maintain symmetry - this is now mandatory
     const mirrorIndex = newColumns.length - 1 - columnIndex;
     if (mirrorIndex !== columnIndex && mirrorIndex >= 0 && mirrorIndex < newColumns.length) {
+      const mirrorColumn = newColumns[mirrorIndex];
+      if (!mirrorColumn) return;
+      
       // Check if mirror can also be adjusted
       const newTotal = newColumns.reduce((sum, col) => sum + col.cells, 0) + delta;
-      if (newColumns[mirrorIndex].cells + delta >= 0 && newTotal <= MAX_CELLS) {
-        newColumns[mirrorIndex].cells += delta;
+      if (mirrorColumn.cells + delta >= 0 && newTotal <= MAX_CELLS) {
+        mirrorColumn.cells += delta;
       } else {
         // Revert the original change if mirror can't be adjusted
-        newColumns[columnIndex].cells -= delta;
+        column.cells -= delta;
         return;
       }
     }

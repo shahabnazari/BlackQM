@@ -132,7 +132,10 @@ export const AppleUIGridBuilderEnhanced: React.FC<AppleUIGridBuilderEnhancedProp
       if (remainder > 0) {
         const middleStart = Math.floor((columnCount - remainder) / 2);
         for (let i = 0; i < remainder; i++) {
-          cellDistribution[middleStart + i]++;
+          const idx = middleStart + i;
+          if (cellDistribution[idx] !== undefined) {
+            cellDistribution[idx]++;
+          }
         }
       }
     } else {
@@ -152,7 +155,9 @@ export const AppleUIGridBuilderEnhanced: React.FC<AppleUIGridBuilderEnhancedProp
       // Ensure perfect symmetry
       const halfColumns = Math.floor(columnCount / 2);
       for (let i = 0; i < halfColumns; i++) {
-        const avgValue = (bellValues[i] + bellValues[columnCount - 1 - i]) / 2;
+        const leftVal = bellValues[i] || 0;
+        const rightVal = bellValues[columnCount - 1 - i] || 0;
+        const avgValue = (leftVal + rightVal) / 2;
         bellValues[i] = avgValue;
         bellValues[columnCount - 1 - i] = avgValue;
       }
@@ -164,7 +169,8 @@ export const AppleUIGridBuilderEnhanced: React.FC<AppleUIGridBuilderEnhancedProp
       
       // Distribute cells proportionally
       for (let i = 0; i < columnCount; i++) {
-        const proportion = bellValues[i] / sumBellValues;
+        const bellValue = bellValues[i] || 0;
+        const proportion = bellValue / sumBellValues;
         const cells = Math.max(1, Math.round(totalStatements * proportion));
         cellDistribution[i] = cells;
         distributedCells += cells;
@@ -174,7 +180,9 @@ export const AppleUIGridBuilderEnhanced: React.FC<AppleUIGridBuilderEnhancedProp
       const adjustment = totalStatements - distributedCells;
       if (adjustment !== 0) {
         const middleIndex = Math.floor(columnCount / 2);
-        cellDistribution[middleIndex] += adjustment;
+        if (cellDistribution[middleIndex] !== undefined) {
+          cellDistribution[middleIndex] += adjustment;
+        }
       }
     }
     
@@ -186,7 +194,7 @@ export const AppleUIGridBuilderEnhanced: React.FC<AppleUIGridBuilderEnhancedProp
       newColumns.push({
         value: i,
         label: label,
-        cells: cellDistribution[index]
+        cells: cellDistribution[index] || 0
       });
     }
     
@@ -232,6 +240,9 @@ export const AppleUIGridBuilderEnhanced: React.FC<AppleUIGridBuilderEnhancedProp
 
   const adjustCells = (columnIndex: number, delta: number) => {
     const newColumns = [...columns];
+    const column = newColumns[columnIndex];
+    if (!column) return;
+    
     const currentTotal = newColumns.reduce((sum, col) => sum + col.cells, 0);
     
     // Can't exceed total statements
@@ -240,23 +251,26 @@ export const AppleUIGridBuilderEnhanced: React.FC<AppleUIGridBuilderEnhancedProp
     }
     
     // Can't go below 0
-    if (newColumns[columnIndex].cells + delta < 0) {
+    if (column.cells + delta < 0) {
       return;
     }
     
     // Apply change
-    newColumns[columnIndex].cells += delta;
+    column.cells += delta;
     
     // Maintain symmetry if enabled
     if (symmetry) {
       const mirrorIndex = newColumns.length - 1 - columnIndex;
       if (mirrorIndex !== columnIndex && mirrorIndex >= 0 && mirrorIndex < newColumns.length) {
+        const mirrorColumn = newColumns[mirrorIndex];
+        if (!mirrorColumn) return;
+        
         // Check if mirror can also be adjusted
-        if (newColumns[mirrorIndex].cells + delta >= 0) {
-          newColumns[mirrorIndex].cells += delta;
+        if (mirrorColumn.cells + delta >= 0) {
+          mirrorColumn.cells += delta;
         } else {
           // Revert the original change if mirror can't be adjusted
-          newColumns[columnIndex].cells -= delta;
+          column.cells -= delta;
           return;
         }
       }
@@ -270,9 +284,11 @@ export const AppleUIGridBuilderEnhanced: React.FC<AppleUIGridBuilderEnhancedProp
       const remainder = totalCells % newColumns.length;
       
       for (let i = 0; i < newColumns.length; i++) {
-        newColumns[i].cells = targetPerColumn;
+        const column = newColumns[i];
+        if (!column) continue;
+        column.cells = targetPerColumn;
         if (i < remainder) {
-          newColumns[i].cells++;
+          column.cells++;
         }
       }
     }

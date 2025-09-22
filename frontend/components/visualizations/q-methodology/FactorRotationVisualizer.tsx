@@ -83,8 +83,8 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
     const originalF1 = loadings[factor1] || 0;
     const originalF2 = loadings[factor2] || 0;
     
-    const rotatedF1 = matrix[0][0] * originalF1 + matrix[0][1] * originalF2;
-    const rotatedF2 = matrix[1][0] * originalF1 + matrix[1][1] * originalF2;
+    const rotatedF1 = (matrix[0]?.[0] || 0) * originalF1 + (matrix[0]?.[1] || 0) * originalF2;
+    const rotatedF2 = (matrix[1]?.[0] || 0) * originalF1 + (matrix[1]?.[1] || 0) * originalF2;
     
     return {
       ...loadings,

@@ -291,7 +291,10 @@ export const StimuliUploadSystem: React.FC<StimuliUploadSystemProps> = ({
   const getGlobalCellIndex = (colIndex: number, cellIndex: number): number => {
     let index = 0;
     for (let i = 0; i < colIndex; i++) {
-      index += grid.columns[i].cells;
+      const column = grid.columns[i];
+      if (column) {
+        index += column.cells;
+      }
     }
     return index + cellIndex;
   };
@@ -630,7 +633,7 @@ export const StimuliUploadSystem: React.FC<StimuliUploadSystemProps> = ({
                   {/* Actions */}
                   <div className="item-actions flex gap-1 p-2">
                     <button
-                      onClick={() => setSelectedStimulus(stimulus.id)}
+                      onClick={() => _setSelectedStimulus(stimulus.id)}
                       className="action-btn flex-1 py-1 text-xs font-medium rounded bg-gray-100 hover:bg-gray-200 transition-colors"
                     >
                       Edit

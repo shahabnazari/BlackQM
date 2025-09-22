@@ -270,8 +270,9 @@ export const AIGridDesignAssistant: React.FC<{
           totalItems: 36,
           description: aiRec?.reasoning || 'AI-optimized configuration',
           citation: 'AI Analysis',
-          researchTypes: ['general'],
-          expertiseLevel: 'general' as const
+          recommendedFor: ['general research'],
+          timeEstimate: '15-20 minutes',
+          expertiseLevel: 'intermediate'
         };
         
         const columns = config.range.max - config.range.min + 1;
@@ -339,7 +340,9 @@ export const AIGridDesignAssistant: React.FC<{
   };
 
   const handleAnswer = async (value: any) => {
-    const questionId = questions[currentStep].id;
+    const question = questions[currentStep];
+    if (!question) return;
+    const questionId = question.id;
     setContext(prev => ({
       ...prev,
       [questionId]: value
@@ -365,6 +368,7 @@ export const AIGridDesignAssistant: React.FC<{
   };
 
   const currentQuestion = questions[currentStep];
+  if (!currentQuestion) return null;
   const Icon = currentQuestion.icon;
 
   if (isAnalyzing) {

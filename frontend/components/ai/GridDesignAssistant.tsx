@@ -45,7 +45,7 @@ export function GridDesignAssistant({
   const [loading, setLoading] = useState(false);
   const [recommendation, setRecommendation] = useState<GridRecommendation | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDesign, setSelectedDesign] = useState<'main' | number>('main');
+  const [_selectedDesign, setSelectedDesign] = useState<'main' | number>('main');
 
   const generateGridDesign = async () => {
     if (!researchObjective.trim()) return;

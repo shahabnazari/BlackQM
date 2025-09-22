@@ -31,11 +31,8 @@ import {
   LayoutGrid,
   Square,
   Eye,
-  _Download,
-  _MoreVertical,
   ChevronDown,
   ChevronUp,
-  _Maximize2,
 } from 'lucide-react';
 
 // Q-methodology best practices for text stimuli
@@ -338,7 +335,7 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
   const getGlobalCellIndex = (colIndex: number, cellIndex: number): number => {
     let index = 0;
     for (let i = 0; i < colIndex; i++) {
-      index += grid.columns[i].cells;
+      index += grid.columns[i]?.cells || 0;
     }
     return index + cellIndex;
   };
@@ -372,12 +369,6 @@ export const StimuliUploadSystemV4: React.FC<StimuliUploadSystemV4Props> = ({
     )
       return 'text-green-600';
     return 'text-blue-600';
-  };
-
-  const _formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
   // Instagram-style gallery item renderer

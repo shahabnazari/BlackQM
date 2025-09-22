@@ -22,7 +22,7 @@ export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
   const [suggestions, setSuggestions] = React.useState<any[]>([]);
   
   // Use the AI backend hook for questionnaire generation
-  const { questions, loading: isGenerating, error, generateQuestionnaire } = useGenerateQuestionnaire();
+  const { questions: _questions, loading: isGenerating, error, generateQuestionnaire } = useGenerateQuestionnaire();
 
   const generateSuggestions = async () => {
     try {

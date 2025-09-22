@@ -1,6 +1,5 @@
 'use client';
 
-import { QuestionComponentProps } from '@/lib/types/questionnaire';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import {
@@ -26,13 +25,6 @@ interface VideoState {
 }
 
 
-interface ExtendedProps extends QuestionComponentProps {
-  error?: string;
-  preview?: boolean;
-}
-
-
-
 // Complete type definitions
 interface Question {
   id: string;
@@ -55,9 +47,8 @@ interface ExtendedQuestionComponentProps {
   onChange?: (value: any) => void;
   error?: string;
   preview?: boolean;
+  disabled?: boolean;
 }
-
-type ExtendedQuestion = Question;
 
 export const VideoResponseQuestion: React.FC<ExtendedQuestionComponentProps> = ({
   question,
@@ -163,13 +154,15 @@ export const VideoResponseQuestion: React.FC<ExtendedQuestionComponentProps> = (
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start(1000); // Collect data every second
 
-      setVideoState(prev => ({
-        ...prev,
-        isRecording: true,
-        isPaused: false,
-        recordingTime: 0,
-        error: undefined
-      }));
+      setVideoState(prev => {
+        const { error, ...rest } = prev;
+        return {
+          ...rest,
+          isRecording: true,
+          isPaused: false,
+          recordingTime: 0
+        };
+      });
 
       // Start timer
       timerRef.current = setInterval(() => {
@@ -257,16 +250,6 @@ export const VideoResponseQuestion: React.FC<ExtendedQuestionComponentProps> = (
       playbackRef.current.src = '';
     }
   }, [disabled, preview, onChange, stopRecording]);
-
-  const _togglePlayback = useCallback(() => {
-    if (!playbackRef.current) return;
-    
-    if (videoState.isPlaying) {
-      playbackRef.current.pause();
-    } else {
-      playbackRef.current.play();
-    }
-  }, [videoState.isPlaying]);
 
   // Cleanup on unmount
   React.useEffect(() => {

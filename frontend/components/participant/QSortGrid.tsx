@@ -70,7 +70,10 @@ export default function QSortGrid({ onComplete, onBack, preSortData }: QSortGrid
     if (!columnConfig) return;
 
     // Check if column is full
-    if (grid[column].length >= columnConfig.maxItems) {
+    const currentColumn = grid[column];
+    if (!currentColumn) return;
+    
+    if (currentColumn.length >= columnConfig.maxItems) {
       alert(`This column can only hold ${columnConfig.maxItems} statement(s)`);
       return;
     }
@@ -79,14 +82,14 @@ export default function QSortGrid({ onComplete, onBack, preSortData }: QSortGrid
     if (draggedFrom.type === 'box') {
       setSourceBoxes((prev) => ({
         ...prev,
-        [draggedFrom.location]: prev[draggedFrom.location as string].filter(
+        [draggedFrom.location]: (prev[draggedFrom.location as string] || []).filter(
           (s: any) => s.id !== draggedStatement.id
         ),
       }));
     } else {
       setGrid((prev) => ({
         ...prev,
-        [draggedFrom.location]: prev[draggedFrom.location as number].filter(
+        [draggedFrom.location]: (prev[draggedFrom.location as number] || []).filter(
           (s: any) => s.id !== draggedStatement.id
         ),
       }));
@@ -94,7 +97,7 @@ export default function QSortGrid({ onComplete, onBack, preSortData }: QSortGrid
 
     setGrid((prev) => ({
       ...prev,
-      [column]: [...prev[column], draggedStatement],
+      [column]: [...(prev[column] || []), draggedStatement],
     }));
 
     setDraggedStatement(null);
@@ -109,14 +112,14 @@ export default function QSortGrid({ onComplete, onBack, preSortData }: QSortGrid
     if (draggedFrom.type === 'box') {
       setSourceBoxes((prev) => ({
         ...prev,
-        [draggedFrom.location]: prev[draggedFrom.location as string].filter(
+        [draggedFrom.location]: (prev[draggedFrom.location as string] || []).filter(
           (s: any) => s.id !== draggedStatement.id
         ),
       }));
     } else {
       setGrid((prev) => ({
         ...prev,
-        [draggedFrom.location]: prev[draggedFrom.location as number].filter(
+        [draggedFrom.location]: (prev[draggedFrom.location as number] || []).filter(
           (s: any) => s.id !== draggedStatement.id
         ),
       }));
@@ -125,7 +128,7 @@ export default function QSortGrid({ onComplete, onBack, preSortData }: QSortGrid
     // Add to box
     setSourceBoxes((prev) => ({
       ...prev,
-      [boxName]: [...prev[boxName], draggedStatement],
+      [boxName]: [...(prev[boxName] || []), draggedStatement],
     }));
 
     setDraggedStatement(null);
@@ -208,7 +211,7 @@ export default function QSortGrid({ onComplete, onBack, preSortData }: QSortGrid
                   onDrop={(e: any) => handleDropOnGrid(e, col.column)}
                 >
                   <div className="space-y-1">
-                    {grid[col.column].map((statement) => (
+                    {(grid[col.column] || []).map((statement) => (
                       <div
                         key={statement.id}
                         draggable
@@ -222,7 +225,7 @@ export default function QSortGrid({ onComplete, onBack, preSortData }: QSortGrid
                     ))}
                   </div>
                   <div className="text-xs text-tertiary-label text-center mt-2">
-                    {grid[col.column].length}/{col.maxItems}
+                    {(grid[col.column] || []).length}/{col.maxItems}
                   </div>
                 </div>
               </div>

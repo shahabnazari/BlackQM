@@ -31,8 +31,11 @@ export default function E2EStudyTestPage() {
   const updateTestStatus = (index: number, status: TestResult['status'], message?: string) => {
     setTestResults(prev => {
       const updated = [...prev];
+      const current = updated[index];
+      if (!current) return updated;
       updated[index] = {
-        ...updated[index],
+        ...current,
+        step: current.step,
         status,
         ...(message && { message }),
         timestamp: new Date().toISOString()

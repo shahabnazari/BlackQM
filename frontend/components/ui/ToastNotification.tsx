@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, _AlertCircle, Info, AlertTriangle, Save } from 'lucide-react';
+import { X, Check, Info, AlertTriangle, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info' | 'autosave';

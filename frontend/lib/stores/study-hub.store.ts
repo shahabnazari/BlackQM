@@ -22,6 +22,7 @@ export type HubSection =
   | 'data'
   | 'analyze'
   | 'visualize'
+  | 'interpret'
   | 'insights'
   | 'report'
   | 'export';
@@ -63,6 +64,7 @@ export interface StudyData {
   study: StudyMetadata;
   responses: QSortResponse[];
   statements: Statement[];
+  comments?: string[];
 }
 
 export interface AnalysisResults {
@@ -70,6 +72,8 @@ export interface AnalysisResults {
   factorAnalysis?: FactorAnalysisResult;
   distinguishingStatements?: Statement[];
   consensusStatements?: Statement[];
+  factors?: any[];
+  correlations?: any;
 }
 
 export interface StudyHubState {

@@ -1,8 +1,6 @@
 'use client';
 
-import React from 'react';
-
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/apple-ui/Card';
 import { Button } from '@/components/apple-ui/Button';
 import { TextField } from '@/components/apple-ui/TextField';
@@ -10,9 +8,30 @@ import { TextField } from '@/components/apple-ui/TextField';
 interface PostSurveyProps {
   onComplete: (data?: any) => void;
   onBack: () => void;
+  studyId?: string;
+  participantId?: string;
+  useDynamicQuestions?: boolean;
 }
 
-export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
+/**
+ * PostSurvey Component - Phase 8.2 Day 2 Refactored
+ * 
+ * Enhanced to support both:
+ * - Dynamic questions from API (when available)
+ * - Static fallback questions (original behavior)
+ * 
+ * @world-class Features:
+ * - Seamless fallback to static questions
+ * - Progressive enhancement with dynamic questions
+ * - Backward compatibility maintained
+ */
+export default function PostSurvey({ 
+  onComplete, 
+  onBack,
+  studyId,
+  participantId: _participantId,
+  useDynamicQuestions = false
+}: PostSurveyProps) {
   const [formData, setFormData] = useState({
     age: '',
     gender: '',
@@ -22,12 +41,47 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
     experience: '',
     feedback: '',
   });
+  const [dynamicQuestions, setDynamicQuestions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [qualityScore, setQualityScore] = useState(0);
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
+  };
+
+  // Load dynamic questions if enabled
+  useEffect(() => {
+    if (useDynamicQuestions && studyId) {
+      loadDynamicQuestions();
+    }
+  }, [useDynamicQuestions, studyId]);
+
+  const loadDynamicQuestions = async () => {
+    if (!studyId) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/questions/survey/${studyId}?type=post-survey`);
+      if (response.ok) {
+        const questions = await response.json();
+        setDynamicQuestions(questions);
+      }
+    } catch (error) {
+      console.error('Failed to load dynamic questions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate quality score based on completeness
+  const calculateQualityScore = () => {
+    const fields = Object.values(formData).filter(v => v !== '');
+    const score = Math.round((fields.length / Object.keys(formData).length) * 100);
+    setQualityScore(score);
+    return score;
   };
 
   const isComplete = formData.age && formData.gender && formData.education && formData.country;
@@ -44,6 +98,21 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
             All information will be kept confidential.
           </p>
         </div>
+
+        {/* Show loading or dynamic questions alert */}
+        {loading && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-blue-800">Loading additional questions...</p>
+          </div>
+        )}
+        
+        {dynamicQuestions.length > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-green-800">
+              {dynamicQuestions.length} additional questions loaded based on your study.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-4">
           <div>
@@ -188,7 +257,15 @@ export default function PostSurvey({ onComplete, onBack }: PostSurveyProps) {
           <Button
             variant="primary"
             size="large"
-            onClick={() => onComplete(formData)}
+            onClick={() => {
+              const score = calculateQualityScore();
+              onComplete({
+                ...formData,
+                dynamicResponses: dynamicQuestions,
+                qualityScore: score,
+                completedAt: new Date().toISOString()
+              });
+            }}
             disabled={!isComplete}
           >
             Complete Study

@@ -85,7 +85,9 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 - **Study Setup** → Basic study configuration
 - **Q-Grid Designer** → Grid configuration tool
 - **Statement Generator** → AI-powered stimuli creation
-- **Questionnaire Builder** → Pre/post survey design
+- **Questionnaire Builder Pro** → Advanced 3-column builder (Phase 8.3)
+- **Pre-Screening Designer** → Qualification questionnaire (Phase 8.2)
+- **Post-Survey Builder** → Post Q-sort questions (Phase 8.2)
 - **Consent Forms** → Digital consent creator
 - **Instructions** → Participant guidance editor
 
@@ -94,9 +96,12 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 - `statement.service.ts` - Statement handling
 - `ai/statement-generator.service.ts` - AI generation
 - `ai/questionnaire-generator.service.ts` - Survey AI
+- `screening.service.ts` - Pre-screening logic (Phase 8.2)
+- `post-survey.service.ts` - Post-survey data (Phase 8.2)
 
 **Frontend Routes:**
 - `/app/(researcher)/studies/create/` - Main builder
+- `/app/(researcher)/questionnaire/builder-pro/` - Advanced builder (Phase 8.3)
 - ~~`/ai-tools`~~ - DEPRECATED (redistributed to phases)
 
 ---
@@ -106,24 +111,27 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 **Description:** Find & manage participants  
 **Icon:** 👥 UsersIcon  
 **Color Accent:** Green (#10B981)
-**Coverage:** 90% after Phase 7 Day 7
+**Coverage:** 95% after Phase 8.2 implementation
 
 **Secondary Toolbar Items:**
 - **Participant Pool** → Manage participant database
 - **Invitations** → Send study invites
-- **Screening** → Pre-screening setup
+- **Pre-Screening Questionnaire** → Qualification screening (Phase 8.2)
+- **Screening Results** → View pass/fail outcomes
 - **Scheduling** → Session scheduling
 - **Compensation** → Payment tracking
 - **Demographics** → Participant analytics
 
 **Backend Services:**
 - `participant.service.ts` - Core participant management
+- `screening.service.ts` - Pre-screening qualification (Phase 8.2)
 - `scheduling.service.ts` - Appointments (Phase 7 Day 7)
 - `email.service.ts` - Invitations & reminders
 
 **Frontend Routes:**
 - `/app/(researcher)/recruitment/` - Enhanced center (Phase 7)
 - `/app/(researcher)/participants/` - Current basic list
+- `/app/(participant)/study/pre-screening/` - Screening questionnaire (Phase 8.2)
 
 ---
 
@@ -132,20 +140,27 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 **Description:** Gather research data  
 **Icon:** 📊 ClipboardDocumentListIcon  
 **Color Accent:** Teal (#14B8A6)
+**Coverage:** 95% after Phase 8.2 implementation
 
 **Secondary Toolbar Items:**
 - **Active Sessions** → Live data collection monitor
 - **Q-Sort Interface** → Participant sorting view
-- **Survey Responses** → Track questionnaires
+- **Post-Q-Sort Survey** → Supplementary data collection (Phase 8.2)
+- **Survey Responses** → Track all questionnaires
 - **Progress Tracker** → Completion statistics
 - **Quality Control** → Data quality checks
 - **Export Raw Data** → Download options
 
-**Current Features to Integrate:**
-- `/study/[token]` (Participant flow)
-- `/join` (Study entry)
-- Q-Sort grid component
-- Real-time monitoring
+**Backend Services:**
+- `post-survey.service.ts` - Post-survey responses (Phase 8.2)
+- `session.service.ts` - Active session management
+- `qsort.service.ts` - Q-sort data collection
+
+**Frontend Routes:**
+- `/study/[token]` - Participant flow
+- `/join` - Study entry
+- `/app/(participant)/study/post-survey/` - Post-Q-sort questionnaire (Phase 8.2)
+- `/app/(researcher)/data/collection/` - Monitor active collection
 
 ---
 
@@ -553,12 +568,12 @@ const getAvailablePhases = (studyState: StudyState): Set<string> => {
 |-------|---------|--------|-----------------|
 | DISCOVER | 0% | 70% | ❌ literature.service.ts NOT CREATED |
 | DESIGN | 60% | 75% | 🟡 Partial in study creation |
-| BUILD | 90% | 95% | ✅ Statement & AI services working |
-| RECRUIT | 70% | 90% | ❌ scheduling.service.ts NOT CREATED |
-| COLLECT | 90% | 95% | ✅ QSort services functional |
+| BUILD | 90% | 98% | ✅ Statement & AI services working, 🔴 Phase 8.3 builder pending |
+| RECRUIT | 70% | 95% | ❌ screening.service.ts NOT CREATED (Phase 8.2) |
+| COLLECT | 90% | 95% | ✅ QSort services, ❌ post-survey.service.ts NOT CREATED (Phase 8.2) |
 | ANALYZE | 98% | 100% | ✅ hub.service.ts CREATED (Phase 7 Day 2) |
 | VISUALIZE | 85% | 85% | ✅ visualization.service.ts CREATED (Phase 7 Day 4) |
-| INTERPRET | 80% | 80% | ✅ interpretation.service.ts CREATED (Phase 7 Day 5) |
+| INTERPRET | 85% | 85% | ✅ interpretation.service.ts CREATED (Phase 8 Day 1) |
 | REPORT | 15% | 70% | 🟡 report.service.ts CREATED (Phase 7 Day 6) - basic foundation |
 | ARCHIVE | 40% | 75% | ❌ archive.service.ts NOT CREATED |
 
@@ -677,3 +692,34 @@ interface NavigationAssistant {
 **Transitions:** Smooth animations between phases
 
 This architecture transforms your platform from a feature-based navigation to a research-journey-based navigation, making it the most intuitive Q-methodology platform available.
+
+## 📋 Questionnaire Integration in Research Lifecycle (Phase 8.2-8.3)
+
+### Participant Journey with Questionnaires:
+1. **RECRUIT Phase:** Participant receives invitation
+2. **Pre-Screening:** Takes qualification questionnaire
+   - Pass → Continue to study
+   - Fail → Redirect to disqualification page
+3. **COLLECT Phase:** 
+   - Welcome & Consent
+   - Q-Sort Activity
+   - **Post-Q-Sort Survey:** Demographic & experience questions
+4. **Thank You:** Study complete
+
+### Researcher Workflow:
+1. **BUILD Phase:** 
+   - Design pre-screening questions with qualification logic
+   - Create post-survey questions for demographics/feedback
+   - Use Advanced Questionnaire Builder Pro (3-column layout)
+2. **RECRUIT Phase:** Monitor screening results
+3. **COLLECT Phase:** Track survey responses
+4. **ANALYZE Phase:** Integrate questionnaire data with Q-sort analysis
+
+### Technical Implementation:
+- **Phase 8.2:** Pre/Post questionnaire pages and flow integration
+- **Phase 8.3:** Advanced 3-column builder with professional features
+- **Backend Services:** screening.service.ts, post-survey.service.ts
+- **Frontend Routes:** 
+  - /study/pre-screening/ (participant)
+  - /study/post-survey/ (participant)
+  - /questionnaire/builder-pro/ (researcher)

@@ -27,6 +27,7 @@ export function HubBreadcrumb({ lifecycle, section }: HubBreadcrumbProps) {
     data: 'Data Explorer',
     analyze: 'Analysis Tools',
     visualize: 'Visualizations',
+    interpret: 'Interpretation',
     insights: 'AI Insights',
     report: 'Report Builder',
     export: 'Export',

@@ -11,13 +11,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { CELEBRATION_CONFIG } from '@/lib/animations/constants';
 
-interface CelebrationProps {
-  trigger?: boolean;
-  duration?: number;
-  message?: string;
-  onComplete?: () => void;
-}
-
 /**
  * Confetti Celebration Component
  */

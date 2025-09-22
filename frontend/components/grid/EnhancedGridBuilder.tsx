@@ -185,6 +185,7 @@ export const EnhancedGridBuilder: React.FC<EnhancedGridBuilderProps> = ({
     if (!config) return;
     
     const column = config.columns[columnIndex];
+    if (!column) return;
     const newCellCount = Math.max(0, column.cells + delta);
     
     // Calculate current total
@@ -453,7 +454,7 @@ export const EnhancedGridBuilder: React.FC<EnhancedGridBuilderProps> = ({
                           stiffness: 300,
                           damping: 20
                         }}
-                        whileHover={enableAnimation ? { scale: 1.05 } : {}}
+                        whileHover={_enableAnimation ? { scale: 1.05 } : {}}
                       />
                     ))}
                   </div>

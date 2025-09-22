@@ -7,10 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/apple-ui/Card';
-import { Badge } from '@/components/ui/badge';
 import { 
-  TrendingUp, 
-  TrendingDown, 
   DollarSign, 
   Activity, 
   AlertCircle,
@@ -19,8 +16,6 @@ import {
   Zap
 } from 'lucide-react';
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   PieChart,
@@ -30,8 +25,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  Legend
+  ResponsiveContainer
 } from 'recharts';
 
 interface AIMetrics {
@@ -301,7 +295,7 @@ export function AIUsageDashboard() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ model, count }) => `${model}: ${count}`}
+                label={(entry: any) => `${entry.model}: ${entry.count}`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="count"

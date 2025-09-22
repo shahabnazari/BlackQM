@@ -271,7 +271,8 @@ export default function GridDistributionTestPage() {
     }
     
     // Check that center is peak
-    if (centerValue && centerValue <= Math.max(...edgeValues)) {
+    const definedEdgeValues = edgeValues.filter((v): v is number => v !== undefined);
+    if (centerValue && definedEdgeValues.length > 0 && centerValue <= Math.max(...definedEdgeValues)) {
       isBellShaped = false;
     }
     

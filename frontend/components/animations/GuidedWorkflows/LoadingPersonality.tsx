@@ -63,7 +63,9 @@ export const LoadingPersonality: React.FC<LoadingPersonalityProps> = ({
 
     if (showTips && show) {
       const randomTip = tips[Math.floor(Math.random() * tips.length)];
-      setTip(randomTip);
+      if (randomTip) {
+        setTip(randomTip);
+      }
     }
   }, [show, showTips]);
 
@@ -183,7 +185,10 @@ export const PersonalitySkeletonLoader: React.FC<{
     ];
 
     const interval = setInterval(() => {
-      setCurrentMessage(messages[Math.floor(Math.random() * messages.length)]);
+      const message = messages[Math.floor(Math.random() * messages.length)];
+      if (message) {
+        setCurrentMessage(message);
+      }
     }, 2000);
 
     return () => clearInterval(interval);

@@ -26,7 +26,7 @@ interface ErrorType {
   code: string;
   title: string;
   description: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: any; // SVG icon components have complex types
   actions: {
     label: string;
     action: () => void;
@@ -193,6 +193,7 @@ export function ErrorRecovery({
   };
 
   const currentError = errorTypes[errorCode] || errorTypes.UNKNOWN;
+  if (!currentError) return null; // This should never happen, but satisfies TypeScript
   const ErrorIcon = currentError.icon;
 
   // Auto-retry for network errors
