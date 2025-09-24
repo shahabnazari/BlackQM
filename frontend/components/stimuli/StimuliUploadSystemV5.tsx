@@ -3,9 +3,6 @@
 import React, {
   useState,
   useRef,
-  useCallback,
-  useMemo,
-  useEffect,
 } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -13,7 +10,6 @@ import {
   X,
   Edit2,
   Trash2,
-  Eye,
   Grid3x3,
   CheckCircle,
   Image,
@@ -22,12 +18,9 @@ import {
   Type,
   ChevronDown,
   ChevronUp,
-  AlertCircle,
   Sparkles,
-  Zap,
   Info,
   FileText,
-  Plus,
   LayoutGrid,
   Square,
   Grid3X3Icon,
@@ -225,15 +218,22 @@ export function StimuliUploadSystemV5({ grid }: StimuliUploadSystemV5Props) {
       const id = Math.random().toString(36).substr(2, 9);
       const url = URL.createObjectURL(file);
 
-      newStimuli.push({
+      const stimulus: Stimulus = {
         id,
         type: uploadMode,
         content: url,
         title: file.name,
-        preview: uploadMode === 'image' ? url : undefined,
-        duration:
-          uploadMode === 'video' || uploadMode === 'audio' ? '0:00' : undefined,
-      });
+      };
+      
+      if (uploadMode === 'image') {
+        stimulus.preview = url;
+      }
+      
+      if (uploadMode === 'video' || uploadMode === 'audio') {
+        stimulus.duration = '0:00';
+      }
+      
+      newStimuli.push(stimulus);
     }
 
     setStimuli(prev => [...prev, ...newStimuli]);

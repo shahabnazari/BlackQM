@@ -87,7 +87,7 @@ export class ParticipantFlowService {
   private readonly SAVE_POINT_VALIDITY = 604800000; // 7 days
 
   // Stage configuration with advanced rules
-  private readonly stageConfig = {
+  private readonly stageConfig: Record<string, any> = {
     [ParticipantFlowStage.PRE_SCREENING]: {
       required: true,
       canSkip: false,
@@ -127,6 +127,39 @@ export class ParticipantFlowService {
       estimatedTime: 10,
       nextStages: [ParticipantFlowStage.COMPLETED],
       validationRules: ['hasPostSurveyResponses']
+    },
+    // Terminal and special states
+    [ParticipantFlowStage.NOT_STARTED]: {
+      required: false,
+      canSkip: false,
+      canRevisit: false,
+      estimatedTime: 0,
+      nextStages: [ParticipantFlowStage.PRE_SCREENING],
+      validationRules: []
+    },
+    [ParticipantFlowStage.PRE_SCREENING_FAILED]: {
+      required: false,
+      canSkip: false,
+      canRevisit: false,
+      estimatedTime: 0,
+      nextStages: [],
+      validationRules: []
+    },
+    [ParticipantFlowStage.COMPLETED]: {
+      required: false,
+      canSkip: false,
+      canRevisit: false,
+      estimatedTime: 0,
+      nextStages: [],
+      validationRules: []
+    },
+    [ParticipantFlowStage.ABANDONED]: {
+      required: false,
+      canSkip: false,
+      canRevisit: false,
+      estimatedTime: 0,
+      nextStages: [],
+      validationRules: []
     }
   };
 

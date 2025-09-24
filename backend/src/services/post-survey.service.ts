@@ -4,8 +4,7 @@ import { QuestionService } from './question.service';
 import { 
   Question, 
   Response, 
-  Survey, 
-  ResponseStatus,
+  Survey,
   Prisma 
 } from '@prisma/client';
 
@@ -94,10 +93,10 @@ export class PostSurveyService {
     participantId: string,
     qsortData?: any
   ): Promise<Question[]> {
-    // Get base post-survey questions
-    const baseQuestions = await this.questionService.getQuestionsBySurveyAndType(
-      surveyId,
-      'post-survey'
+    // Get base post-survey questions - using TEXT_ENTRY as placeholder
+    // TODO: Add POST_SURVEY to QuestionType enum or use a different filter
+    const baseQuestions = await this.questionService.findBySurvey(
+      surveyId
     );
 
     // Get participant context
@@ -145,7 +144,30 @@ export class PostSurveyService {
 
     // Persist responses with transaction
     const savedResponses = await this.prisma.$transaction(async (tx) => {
-      const responseRecords = [];
+      // First, find or create the main Response record for this session
+      let responseSession = await tx.response.findFirst({
+        where: {
+          surveyId,
+          participantId
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      if (!responseSession) {
+        // Create a new Response session if one doesn't exist
+        responseSession = await tx.response.create({
+          data: {
+            surveyId,
+            participantId,
+            sessionCode: `PS-${Date.now()}`,
+            timeSpent: 0
+          }
+        });
+      }
+
+      const answerRecords = [];
 
       for (const response of responses) {
         const question = await tx.question.findUnique({
@@ -154,31 +176,29 @@ export class PostSurveyService {
 
         if (!question) continue;
 
-        const responseRecord = await tx.response.create({
+        // Create Answer record for each question response
+        const answerRecord = await tx.answer.create({
           data: {
-            surveyId,
-            participantId,
             questionId: response.questionId,
-            questionType: question.type,
-            answer: response.answer,
-            metadata: {
-              ...response.metadata,
+            responseId: responseSession.id,
+            value: {
+              answer: response.answer,
               timeSpent: response.timeSpent,
+              metadata: response.metadata,
               qualityScore,
               postSurvey: true,
               qsortContext: qsortData
-            } as Prisma.JsonObject,
-            status: ResponseStatus.COMPLETED
+            } as Prisma.JsonObject
           }
         });
 
-        responseRecords.push(responseRecord);
+        answerRecords.push(answerRecord);
       }
 
       // Update participant completion status
       await this.updateParticipantStatus(tx, surveyId, participantId, 'post-survey-complete');
 
-      return responseRecords;
+      return answerRecords;
     });
 
     // Trigger analysis pipeline integration
@@ -196,21 +216,22 @@ export class PostSurveyService {
    * Get aggregated post-survey results for analysis
    */
   async getAggregatedResults(surveyId: string): Promise<any> {
-    const responses = await this.prisma.response.findMany({
+    // Get all answers for this survey
+    // TODO: Filter by post-survey questions when type is added to schema
+    const answers = await this.prisma.answer.findMany({
       where: {
-        surveyId,
-        metadata: {
-          path: ['postSurvey'],
-          equals: true
+        question: {
+          surveyId
         }
       },
       include: {
-        question: true
+        question: true,
+        response: true
       }
     });
 
     // Group by question type for analysis
-    const grouped = this.groupResponsesByType(responses);
+    const grouped = this.groupResponsesByType(answers);
 
     // Calculate statistics for quantitative questions
     const statistics = this.calculateStatistics(grouped);
@@ -222,13 +243,13 @@ export class PostSurveyService {
     const demographics = this.analyzeDemographics(grouped.demographic || []);
 
     return {
-      totalResponses: responses.length,
+      totalResponses: answers.length,
       statistics,
       themes,
       demographics,
       qualityMetrics: {
-        averageCompletionTime: this.calculateAverageTime(responses),
-        averageQualityScore: this.calculateAverageQuality(responses),
+        averageCompletionTime: this.calculateAverageTime(answers),
+        averageQualityScore: this.calculateAverageQuality(answers),
         responseRate: await this.calculateResponseRate(surveyId)
       }
     };
@@ -241,24 +262,36 @@ export class PostSurveyService {
     surveyId: string,
     participantId: string
   ): Promise<any> {
-    const responses = await this.prisma.response.findMany({
+    // Get the response session for this participant
+    const responseSession = await this.prisma.response.findFirst({
       where: {
         surveyId,
-        participantId,
-        metadata: {
-          path: ['postSurvey'],
-          equals: true
-        }
+        participantId
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    if (!responseSession) {
+      return null;
+    }
+
+    // Get all answers for this response session
+    const answers = await this.prisma.answer.findMany({
+      where: {
+        responseId: responseSession.id
       },
       include: {
         question: true
       }
     });
 
-    // Extract experience-related responses
-    const experienceQuestions = responses.filter(r => 
-      r.question.metadata && 
-      (r.question.metadata as any).category === 'experience'
+    // Extract experience-related answers
+    // Note: Question model doesn't have metadata field in current schema
+    const experienceQuestions = answers.filter(a => 
+      a.question && a.value && 
+      (a.value as any).category === 'experience'
     );
 
     // Analyze sentiment
@@ -294,11 +327,14 @@ export class PostSurveyService {
     });
 
     const participant = await this.prisma.participant.findUnique({
-      where: { id: participantId },
-      include: {
-        responses: {
-          where: { surveyId }
-        }
+      where: { id: participantId }
+    });
+    
+    // Get responses for this participant separately
+    const responses = await this.prisma.response.findMany({
+      where: { 
+        surveyId,
+        participantId
       }
     });
 
@@ -314,13 +350,13 @@ export class PostSurveyService {
       },
       participantProfile: {
         id: participantId,
-        demographics: participant?.demographics as Record<string, any>,
-        previousResponses: participant?.responses.length || 0
+        demographics: {} as Record<string, any>, // Demographics not stored on Participant model
+        previousResponses: responses.length || 0
       },
       studyContext: {
         topic: survey?.title || '',
-        researchQuestions: (survey?.metadata as any)?.researchQuestions || [],
-        targetAudience: (survey?.metadata as any)?.targetAudience || ''
+        researchQuestions: (survey?.settings as any)?.researchQuestions || [],
+        targetAudience: (survey?.settings as any)?.targetAudience || ''
       }
     };
   }
@@ -335,7 +371,7 @@ export class PostSurveyService {
     const dynamicQuestions: Question[] = [];
     
     for (const rule of applicableRules) {
-      const question = await this.questionService.getQuestionById(rule.questionId);
+      const question = await this.questionService.findOne(rule.questionId);
       if (question) {
         dynamicQuestions.push(question);
       }
@@ -359,8 +395,9 @@ export class PostSurveyService {
 
     // Sort by priority if available in metadata
     return merged.sort((a, b) => {
-      const priorityA = (a.metadata as any)?.priority || 999;
-      const priorityB = (b.metadata as any)?.priority || 999;
+      // Use order field for sorting
+      const priorityA = a.order || 999;
+      const priorityB = b.order || 999;
       return priorityA - priorityB;
     });
   }
@@ -403,9 +440,9 @@ export class PostSurveyService {
 
   private categorizeQuestions(questions: Question[]): any {
     return {
-      openEnded: questions.filter(q => q.type === 'TEXT' || q.type === 'TEXTAREA'),
-      rating: questions.filter(q => q.type === 'RATING' || q.type === 'LIKERT'),
-      demographic: questions.filter(q => (q.metadata as any)?.category === 'demographic')
+      openEnded: questions.filter(q => q.type === 'TEXT_ENTRY'),
+      rating: questions.filter(q => q.type === 'RATING_SCALE' || q.type === 'LIKERT_SCALE'),
+      demographic: questions.filter(q => (q.validation as any)?.category === 'demographic')
     };
   }
 
@@ -428,7 +465,7 @@ export class PostSurveyService {
     const errors: string[] = [];
 
     for (const response of responses) {
-      const question = await this.questionService.getQuestionById(response.questionId);
+      const question = await this.questionService.findOne(response.questionId);
       if (!question) {
         errors.push(`Question ${response.questionId} not found`);
         continue;
@@ -467,8 +504,7 @@ export class PostSurveyService {
 
     // Type-specific validation
     switch (question.type) {
-      case 'TEXT':
-      case 'TEXTAREA':
+      case 'TEXT_ENTRY':
         if (validation.minLength && answer.length < validation.minLength) {
           return { 
             valid: false, 
@@ -483,8 +519,8 @@ export class PostSurveyService {
         }
         break;
         
-      case 'RATING':
-      case 'LIKERT':
+      case 'RATING_SCALE':
+      case 'LIKERT_SCALE':
         const value = Number(answer);
         if (validation.min && value < validation.min) {
           return { 
@@ -768,21 +804,20 @@ export class PostSurveyService {
 
   private async calculateResponseRate(surveyId: string): Promise<number> {
     const totalParticipants = await this.prisma.participant.count({
-      where: { surveyId }
+      where: { studyId: surveyId }
     });
 
-    const completedParticipants = await this.prisma.participant.count({
+    const completedResponses = await this.prisma.response.count({
       where: {
         surveyId,
-        metadata: {
-          path: [`survey_${surveyId}_post_survey_completed`],
-          not: Prisma.JsonNull
+        completedAt: {
+          not: null
         }
       }
     });
 
     return totalParticipants > 0 
-      ? (completedParticipants / totalParticipants) * 100 
+      ? (completedResponses / totalParticipants) * 100 
       : 0;
   }
 

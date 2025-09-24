@@ -62,9 +62,9 @@ export class QuestionService {
         description: data.description,
         required: data.required ?? true,
         order: data.order,
-        validation: data.validation ? JSON.stringify(data.validation) : null,
-        options: processedOptions ? JSON.stringify(processedOptions) : null,
-        logic: data.logic ? JSON.stringify(data.logic) : null
+        validation: data.validation as any || null,
+        options: processedOptions as any || null,
+        logic: data.logic as any || null
       },
       include: {
         survey: true
@@ -218,9 +218,9 @@ export class QuestionService {
             description: q.description,
             required: q.required ?? true,
             order: q.order ?? (currentOrder + index),
-            validation: q.validation ? JSON.stringify(q.validation) : null,
-            options: q.options ? JSON.stringify(this.processOptionsForType(q.type, q.options)) : null,
-            logic: q.logic ? JSON.stringify(q.logic) : null
+            validation: q.validation as any || null,
+            options: q.options ? this.processOptionsForType(q.type, q.options) as any : null,
+            logic: q.logic as any || null
           }
         })
       )
@@ -247,9 +247,9 @@ export class QuestionService {
             description: q.description,
             required: q.required,
             order: q.order,
-            validation: q.validation,
-            options: q.options,
-            logic: q.logic
+            validation: q.validation as any,
+            options: q.options as any,
+            logic: q.logic as any
           }
         })
       )

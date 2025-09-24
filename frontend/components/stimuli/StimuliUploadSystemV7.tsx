@@ -22,33 +22,15 @@ import {
   Type,
   ChevronDown,
   ChevronUp,
-  AlertCircle,
   Sparkles,
-  Zap,
   Info,
-  FileText,
-  Plus,
   LayoutGrid,
   Square,
   Grid3X3Icon,
-  Download,
-  Share2,
-  Filter,
-  SortAsc,
-  Search,
-  Copy,
-  MoreHorizontal,
-  Play,
-  Maximize2,
-  Minimize2,
-  RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/apple-ui/Button';
 import {
   Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
   CardContent,
 } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/apple-ui/Badge/Badge';
@@ -320,9 +302,9 @@ export function StimuliUploadSystemV7({
         type: uploadMode,
         content: url,
         title: file.name,
-        preview: uploadMode === 'image' ? url : undefined,
+        preview: uploadMode === 'image' ? url : '',
         duration:
-          uploadMode === 'video' || uploadMode === 'audio' ? '0:00' : undefined,
+          uploadMode === 'video' || uploadMode === 'audio' ? '0:00' : '',
         file,
         url,
         metadata: {

@@ -18,10 +18,32 @@ const nextConfig = {
     } : false,
   },
 
-  // Experimental features for better performance
+  // Experimental features for better performance - Phase 8.5 Day 5 optimizations
   experimental: {
     optimizeCss: true,
     scrollRestoration: true,
+    // New optimizations for Phase 8.5
+    optimizePackageImports: [
+      '@mui/material',
+      '@mui/icons-material',
+      'lucide-react',
+      '@heroicons/react',
+      'framer-motion',
+      'd3',
+      'recharts',
+      '@visx/visx',
+    ],
+    webVitalsAttribution: ['CLS', 'LCP', 'FCP', 'FID', 'TTFB'],
+  },
+  
+  // Code splitting for phase-based routing
+  modularizeImports: {
+    '@mui/icons-material': {
+      transform: '@mui/icons-material/{{member}}',
+    },
+    'lucide-react': {
+      transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}',
+    },
   },
 
   // Headers for caching and security
@@ -152,6 +174,28 @@ const nextConfig = {
               test: /[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom)[\\/]/,
               chunks: 'all',
               priority: 30,
+            },
+            // Phase-specific bundles for Phase 8.5 optimization
+            phaseDiscover: {
+              name: 'phase-discover',
+              test: /[\\/](app|components)[\\/].*discover.*\.(js|jsx|ts|tsx)$/,
+              chunks: 'async',
+              priority: 25,
+              reuseExistingChunk: true,
+            },
+            phaseAnalyze: {
+              name: 'phase-analyze',
+              test: /[\\/](app|components)[\\/].*analy[zs].*\.(js|jsx|ts|tsx)$/,
+              chunks: 'async',
+              priority: 25,
+              reuseExistingChunk: true,
+            },
+            phaseVisualize: {
+              name: 'phase-visualize',
+              test: /[\\/](app|components)[\\/].*visual.*\.(js|jsx|ts|tsx)$/,
+              chunks: 'async',
+              priority: 25,
+              reuseExistingChunk: true,
             },
             framerMotion: {
               name: 'framer-motion',

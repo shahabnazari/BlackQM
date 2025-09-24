@@ -145,10 +145,10 @@ export class ScreeningService {
       throw new BadRequestException('Survey not found');
     }
 
-    // Parse screening rules from survey metadata
-    const metadata = survey.metadata as any;
-    if (metadata?.screeningConfig) {
-      return metadata.screeningConfig;
+    // Parse screening rules from survey settings
+    const settings = survey.settings as any;
+    if (settings?.screeningConfig) {
+      return settings.screeningConfig;
     }
 
     // Generate default configuration
@@ -162,10 +162,10 @@ export class ScreeningService {
     await this.prisma.survey.update({
       where: { id: config.surveyId },
       data: {
-        metadata: {
+        settings: {
           ...(await this.prisma.survey.findUnique({ 
             where: { id: config.surveyId } 
-          }))?.metadata as any,
+          }))?.settings as any,
           screeningConfig: config
         }
       }
@@ -366,14 +366,15 @@ export class ScreeningService {
       data: {
         surveyId,
         participantId,
-        status: result.qualified ? 'QUALIFIED' : 'DISQUALIFIED',
-        metadata: {
+        sessionCode: `SCREEN-${Date.now()}`,
+        demographics: {
           screening: {
             responses,
             result,
+            qualified: result.qualified,
             timestamp: new Date().toISOString()
           }
-        }
+        } as any
       }
     });
 
@@ -501,7 +502,7 @@ export class ScreeningService {
     const responses = await this.prisma.response.findMany({
       where: { 
         surveyId,
-        status: { in: ['QUALIFIED', 'DISQUALIFIED'] }
+        sessionCode: { startsWith: 'SCREEN-' }
       },
       include: {
         answers: true
@@ -510,8 +511,8 @@ export class ScreeningService {
 
     const stats = {
       total: responses.length,
-      qualified: responses.filter(r => r.status === 'QUALIFIED').length,
-      disqualified: responses.filter(r => r.status === 'DISQUALIFIED').length,
+      qualified: responses.filter(r => (r.demographics as any)?.screening?.qualified === true).length,
+      disqualified: responses.filter(r => (r.demographics as any)?.screening?.qualified === false).length,
       qualificationRate: 0,
       disqualificationReasons: {} as Record<string, number>,
       averageScreeningTime: 0
@@ -522,9 +523,9 @@ export class ScreeningService {
     }
 
     // Analyze disqualification reasons
-    for (const response of responses.filter((r: any) => r.status === 'DISQUALIFIED')) {
-      const metadata = response.metadata as any;
-      const reason = metadata?.screening?.result?.reason || 'Unknown';
+    for (const response of responses.filter((r: any) => (r.demographics as any)?.screening?.qualified === false)) {
+      const demographics = response.demographics as any;
+      const reason = demographics?.screening?.result?.reason || 'Unknown';
       stats.disqualificationReasons[reason] = (stats.disqualificationReasons[reason] || 0) + 1;
     }
 

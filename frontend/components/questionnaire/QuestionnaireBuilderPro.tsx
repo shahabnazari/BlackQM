@@ -67,10 +67,7 @@ import { Textarea } from '@/components/ui/textarea';
 //   TooltipProvider,
 //   TooltipTrigger,
 // } from '@/components/ui/tooltip';
-const Tooltip = ({ children }: any) => children;
-const TooltipContent = ({ children }: any) => <div>{children}</div>;
-const TooltipProvider = ({ children }: any) => children;
-const TooltipTrigger = ({ children }: any) => children;
+// Tooltip components removed as unused
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -158,19 +155,20 @@ const QuestionTypeItem: React.FC<{
   label: string;
   description: string;
 }> = ({ type, label, description }) => {
-  const [{ isDragging }, drag] = useDrag({
+  const [collected, drag] = useDrag(() => ({
     type: ITEM_TYPE,
     item: { id: `new-${type}`, type, source: 'library' },
     collect: (monitor: any) => ({
       isDragging: monitor.isDragging(),
     }),
-  });
+  }));
 
   const Icon = questionTypeIcons[type] || FileText;
+  const isDragging = (collected as any)?.isDragging || false;
 
   return (
     <div
-      ref={drag}
+      ref={drag as any}
       className={cn(
         'p-3 rounded-lg border border-gray-200 bg-white cursor-move transition-all',
         'hover:border-blue-400 hover:shadow-md hover:scale-[1.02]',
@@ -272,7 +270,7 @@ export const QuestionnaireBuilderPro: React.FC<{
   };
 
   // Handle dropping questions
-  const [{ isOver }, drop] = useDrop({
+  const [dropCollected, drop] = useDrop(() => ({
     accept: ITEM_TYPE,
     drop: (item: DragItem, _monitor: any) => {
       if (item.source === 'library') {
@@ -296,7 +294,7 @@ export const QuestionnaireBuilderPro: React.FC<{
     collect: (monitor: any) => ({
       isOver: monitor.isOver(),
     }),
-  });
+  }));
 
   // Undo/Redo functionality
   const handleUndo = () => {
@@ -304,7 +302,7 @@ export const QuestionnaireBuilderPro: React.FC<{
     
     const previousState = undoStack[undoStack.length - 1];
     setRedoStack((prev) => [...prev, questions]);
-    setQuestions(previousState);
+    setQuestions(previousState || []);
     setUndoStack((prev) => prev.slice(0, -1));
   };
 
@@ -313,7 +311,7 @@ export const QuestionnaireBuilderPro: React.FC<{
     
     const nextState = redoStack[redoStack.length - 1];
     setUndoStack((prev) => [...prev, questions]);
-    setQuestions(nextState);
+    setQuestions(nextState || []);
     setRedoStack((prev) => prev.slice(0, -1));
   };
 
@@ -357,11 +355,11 @@ export const QuestionnaireBuilderPro: React.FC<{
           initial={{ x: -20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           style={{
-            width: columns[0].collapsed ? '60px' : `${columns[0].width}%`,
+            width: columns[0]?.collapsed ? '60px' : `${columns[0]?.width}%`,
           }}
           className="relative bg-white border-r border-gray-200 flex flex-col"
         >
-          {columns[0].collapsed ? (
+          {columns[0]?.collapsed ? (
             <div className="flex flex-col items-center py-4">
               <Button
                 variant="ghost"
@@ -444,18 +442,18 @@ export const QuestionnaireBuilderPro: React.FC<{
 
         {/* Column 2: Active Builder Workspace */}
         <motion.div
-          ref={drop}
+          ref={drop as any}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           style={{
-            width: columns[1].collapsed ? '60px' : `${columns[1].width}%`,
+            width: columns[1]?.collapsed ? '60px' : `${columns[1]?.width}%`,
           }}
           className={cn(
             'relative bg-gray-50 flex flex-col',
-            isOver && 'bg-blue-50'
+            (dropCollected as any)?.isOver && 'bg-blue-50'
           )}
         >
-          {columns[1].collapsed ? (
+          {columns[1]?.collapsed ? (
             <div className="flex flex-col items-center py-4">
               <Button
                 variant="ghost"
@@ -541,15 +539,17 @@ export const QuestionnaireBuilderPro: React.FC<{
                 ) : (
                   <div className="space-y-4">
                     {questions.map((question, index) => (
-                      <Card
+                      <div
                         key={question.id}
-                        className={cn(
-                          'p-4 cursor-pointer transition-all',
-                          selectedQuestion === question.id &&
-                            'ring-2 ring-blue-500'
-                        )}
                         onClick={() => setSelectedQuestion(question.id)}
                       >
+                        <Card
+                          className={cn(
+                            'p-4 cursor-pointer transition-all',
+                            selectedQuestion === question.id &&
+                              'ring-2 ring-blue-500'
+                          )}
+                        >
                         <div className="flex items-start gap-3">
                           <div className="p-2 rounded bg-gray-50">
                             {React.createElement(
@@ -592,7 +592,8 @@ export const QuestionnaireBuilderPro: React.FC<{
                             </div>
                           </div>
                         </div>
-                      </Card>
+                        </Card>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -612,11 +613,11 @@ export const QuestionnaireBuilderPro: React.FC<{
           initial={{ x: 20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           style={{
-            width: columns[2].collapsed ? '60px' : `${columns[2].width}%`,
+            width: columns[2]?.collapsed ? '60px' : `${columns[2]?.width}%`,
           }}
           className="relative bg-white border-l border-gray-200 flex flex-col"
         >
-          {columns[2].collapsed ? (
+          {columns[2]?.collapsed ? (
             <div className="flex flex-col items-center py-4">
               <Button
                 variant="ghost"

@@ -108,7 +108,7 @@ export default function QuestionnaireBuilderProPage() {
       {/* Main Content */}
       <main className="h-[calc(100vh-73px)]">
         <QuestionnaireBuilderPro
-          studyId={studyId || undefined}
+          {...(studyId ? { studyId } : {})}
           onSave={handleSave}
           onCancel={handleCancel}
         />

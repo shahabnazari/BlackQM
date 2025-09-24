@@ -91,6 +91,7 @@
     "react-joyride": "^2.9.3",
     "react-rnd": "^10.5.2",
     "react-signature-canvas": "^1.1.0-alpha.2",
+    "react-swipeable": "^7.0.2",
     "recharts": "^3.1.2",
     "sharp": "^0.34.3",
     "simple-statistics": "^7.8.8",

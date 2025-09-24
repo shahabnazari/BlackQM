@@ -59,7 +59,7 @@ const OptimizedInterpretationWorkspace = memo(({
 }: InterpretationWorkspaceProps) => {
   const [selectedFactor, setSelectedFactor] = useState(1);
   const [editMode, setEditMode] = useState(false);
-  const [localThemes, setThemes] = useState(themes || []);
+  const [_localThemes, setThemes] = useState(themes || []);
 
   // Memoized computations
   const factors = useMemo(() => analysisResults?.factors || [], [analysisResults]);
@@ -100,7 +100,16 @@ const OptimizedInterpretationWorkspace = memo(({
         return (
           <FactorNarrativePanel
             {...commonProps}
-            narrative={narratives[selectedFactor - 1]}
+            narrative={narratives[selectedFactor - 1] || {
+              factorNumber: selectedFactor,
+              title: '',
+              mainTheme: '',
+              narrative: '',
+              distinguishingStatements: [],
+              consensusStatements: [],
+              confidence: 0,
+              participantCount: 0
+            }}
             factor={analysisResults?.factors?.[selectedFactor - 1]}
             factorNumber={selectedFactor}
             onEditToggle={() => {}}
@@ -116,7 +125,14 @@ const OptimizedInterpretationWorkspace = memo(({
               comments: studyData?.comments,
               responses: studyData?.responses
             }}
-            onThemesExtracted={(extractedThemes) => setThemes(extractedThemes)}
+            onThemesExtracted={(extractedThemes) => setThemes(extractedThemes.map(et => ({
+              name: et.name,
+              description: et.description,
+              occurrences: et.prevalence || 0,
+              quotes: et.quotes.map(q => q.text),
+              keywords: et.keywords,
+              factors: []
+            })))}
           />
         );
       case 'consensus':
@@ -145,42 +161,51 @@ const OptimizedInterpretationWorkspace = memo(({
         return (
           <PerspectiveValidator
             {...commonProps}
+            statements={[]}
           />
         );
       case 'alternatives':
         return (
           <AlternativeViewpointGenerator
             {...commonProps}
+            currentNarratives={narratives}
+            factors={factors}
           />
         );
       case 'mining':
         return (
           <QuoteMiner
             {...commonProps}
+            data={{}}
           />
         );
       case 'patterns':
         return (
           <QualitativePatternDetector
             {...commonProps}
+            data={{}}
           />
         );
       case 'distinguishing':
         return (
           <DistinguishingViewAnalyzer
             {...commonProps}
+            factors={factors}
           />
         );
       case 'interactions':
         return (
           <FactorInteractionMapper
             {...commonProps}
+            factors={factors}
+            narratives={narratives}
           />
         );
       case 'insights':
         return (
           <InsightAggregator
             {...commonProps}
+            insights={[]}
           />
         );
       case 'recommendations':
@@ -194,13 +219,15 @@ const OptimizedInterpretationWorkspace = memo(({
       case 'comparison':
         return (
           <ComparativeInsights
-            {...commonProps}
+            data={analysisResults}
+            groups={studyData?.groups}
           />
         );
       case 'trends':
         return (
           <TrendIdentifier
-            {...commonProps}
+            data={analysisResults?.data}
+            timeSeriesData={analysisResults?.timeSeriesData}
           />
         );
       case 'actionable':
@@ -215,7 +242,12 @@ const OptimizedInterpretationWorkspace = memo(({
         return (
           <FactorNarrativePanel
             {...commonProps}
-            narrative={narratives[selectedFactor - 1]}
+            narrative={narratives[selectedFactor - 1] || {
+              title: '',
+              content: '',
+              keyThemes: [],
+              distinguishingStatements: []
+            }}
             factor={analysisResults?.factors?.[selectedFactor - 1]}
             factorNumber={selectedFactor}
             onEditToggle={() => {}}

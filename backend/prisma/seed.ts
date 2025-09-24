@@ -3,7 +3,6 @@ import {
   Role,
   SurveyStatus,
   QuestionType,
-  ResponseStatus,
 } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
@@ -63,7 +62,7 @@ async function main() {
       title: 'Climate Change Perspectives Study',
       description:
         'A Q-methodology study exploring different perspectives on climate change and environmental policies.',
-      userId: researcherUser.id,
+      createdBy: researcherUser.id,
       status: SurveyStatus.ACTIVE,
       settings: {
         qSort: {
@@ -92,78 +91,69 @@ async function main() {
         create: [
           // Q-sort statements
           {
-            type: QuestionType.QSORT,
+            type: QuestionType.TEXT_ENTRY,
             text: 'Climate change is primarily caused by human activities.',
             order: 1,
             required: true,
-            category: 'Environmental',
           },
           {
-            type: QuestionType.QSORT,
+            type: QuestionType.TEXT_ENTRY,
             text: 'Economic growth should be prioritized over environmental protection.',
             order: 2,
             required: true,
-            category: 'Economic',
           },
           {
-            type: QuestionType.QSORT,
+            type: QuestionType.TEXT_ENTRY,
             text: 'Individual actions can make a significant difference in combating climate change.',
             order: 3,
             required: true,
-            category: 'Personal',
           },
           {
-            type: QuestionType.QSORT,
+            type: QuestionType.TEXT_ENTRY,
             text: 'Governments should impose strict regulations on carbon emissions.',
             order: 4,
             required: true,
-            category: 'Policy',
           },
           {
-            type: QuestionType.QSORT,
+            type: QuestionType.TEXT_ENTRY,
             text: 'Renewable energy is a viable replacement for fossil fuels.',
             order: 5,
             required: true,
-            category: 'Technology',
           },
           {
-            type: QuestionType.QSORT,
+            type: QuestionType.TEXT_ENTRY,
             text: 'Climate change effects are exaggerated by the media.',
             order: 6,
             required: true,
-            category: 'Media',
           },
           {
-            type: QuestionType.QSORT,
+            type: QuestionType.TEXT_ENTRY,
             text: 'Future generations will find technological solutions to climate problems.',
             order: 7,
             required: true,
-            category: 'Technology',
           },
           {
-            type: QuestionType.QSORT,
+            type: QuestionType.TEXT_ENTRY,
             text: 'Developed nations should bear more responsibility for climate action.',
             order: 8,
             required: true,
-            category: 'Global',
           },
           {
-            type: QuestionType.QSORT,
+            type: QuestionType.TEXT_ENTRY,
             text: 'Climate change is a natural cycle, not influenced by humans.',
             order: 9,
             required: true,
-            category: 'Environmental',
           },
           // Post-sort questions
           {
-            type: QuestionType.TEXT,
+            type: QuestionType.TEXT_ENTRY,
             text: 'Please explain why you placed the statements at the extremes of your distribution.',
             order: 10,
             required: true,
             validation: { minLength: 50 },
           },
           {
-            type: QuestionType.LIKERT,
+            type: QuestionType.LIKERT_SCALE,
             text: 'How confident are you in your sorting decisions?',
             order: 11,
             required: true,
@@ -176,7 +166,7 @@ async function main() {
             ],
           },
           {
-            type: QuestionType.MULTIPLE_CHOICE,
+            type: QuestionType.MULTIPLE_CHOICE_SINGLE,
             text: 'What is your primary source of information about climate change?',
             order: 12,
             required: true,
@@ -199,30 +189,15 @@ async function main() {
   const participantResponse = await prisma.response.create({
     data: {
       surveyId: survey.id,
-      userId: participantUser.id,
-      status: ResponseStatus.IN_PROGRESS,
-      startedAt: new Date(),
-      data: {
-        qSort: {
-          placements: {
-            '1': 2, // Statement 1 placed at position 2
-            '2': -3, // Statement 2 placed at position -3
-            '3': 0, // Statement 3 placed at position 0
-            '4': 4, // Statement 4 placed at position 4
-            '5': 1, // Statement 5 placed at position 1
-            '6': -4, // Statement 6 placed at position -4
-            '7': -1, // Statement 7 placed at position -1
-            '8': 3, // Statement 8 placed at position 3
-            '9': -2, // Statement 9 placed at position -2
-          },
-          timeSpent: 450, // seconds
-        },
-        demographics: {
-          age: 28,
-          gender: 'Female',
-          education: 'Bachelors',
-        },
+      participantId: participantUser.id,
+      sessionCode: 'test-session-001',
+      createdAt: new Date(),
+      demographics: {
+        age: 28,
+        gender: 'Female',
+        education: 'Bachelors',
       },
+      timeSpent: 450, // seconds
     },
   });
 
@@ -234,8 +209,8 @@ async function main() {
       title: 'PQMethod Benchmark Study',
       description:
         'Reference dataset for validating statistical calculations against PQMethod.',
-      userId: researcherUser.id,
-      status: SurveyStatus.COMPLETED,
+      createdBy: researcherUser.id,
+      status: SurveyStatus.ENDED,
       settings: {
         qSort: {
           enabled: true,
@@ -259,9 +234,9 @@ async function main() {
 
   console.log('🎉 Database seed completed successfully!');
   console.log('\n📝 Test Credentials:');
-  console.log('Admin: admin@vqmethod.test / TestPassword123!');
-  console.log('Researcher: researcher@vqmethod.test / TestPassword123!');
-  console.log('Participant: participant@vqmethod.test / TestPassword123!');
+  console.log('Admin: admin@test.com / TestPassword123!');
+  console.log('Researcher: researcher@test.com / TestPassword123!');
+  console.log('Participant: participant@test.com / TestPassword123!');
 }
 
 main()

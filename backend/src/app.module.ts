@@ -19,7 +19,9 @@ import { ReportModule } from './modules/report/report.module';
 import { QuestionModule } from './modules/question.module';
 import { PostSurveyModule } from './modules/post-survey.module';
 import { ParticipantFlowModule } from './modules/participant-flow.module';
+import { NavigationModule } from './modules/navigation/navigation.module';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
+import { ArchiveService } from './services/archive.service';
 
 @Module({
   imports: [
@@ -57,12 +59,14 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
     AIModule,
     VisualizationModule,
     ReportModule,
+    NavigationModule, // Phase 8.5: Research Lifecycle Navigation
     HealthModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     PrismaService,
+    ArchiveService, // Phase 8.5 Day 4: Archive service for version control
     // Apply throttler guard globally
     {
       provide: APP_GUARD,

@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ChevronLeft, ChevronRight, Menu, Save, Eye, WifiOff, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState as useStateReact } from 'react';
 
 // Mock Sheet components since they may not exist
-const Sheet = ({ open, onOpenChange, children }: any) => {
+const Sheet = ({ open, children }: any) => {
   if (!open) return null;
   return <>{children}</>;
 };
@@ -88,11 +86,15 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
 
   // Touch gesture handlers
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    setTouchStartX(e.targetTouches[0].clientX);
+    if (e.targetTouches[0]) {
+      setTouchStartX(e.targetTouches[0].clientX);
+    }
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    setTouchEndX(e.targetTouches[0].clientX);
+    if (e.targetTouches[0]) {
+      setTouchEndX(e.targetTouches[0].clientX);
+    }
   }, []);
 
   const handleTouchEnd = useCallback(() => {

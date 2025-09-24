@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { ResearcherNavigation } from '@/components/navigation/ResearcherNavigation';
+import { PrimaryToolbar } from '@/components/navigation/PrimaryToolbar';
+import { NavigationProvider } from '@/hooks/useNavigationState';
 import KeyboardShortcutsHelp from '@/components/navigation/KeyboardShortcutsHelp';
 import '../globals.css';
 
@@ -14,11 +16,17 @@ export default function ResearcherLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-system-background">
-      <ResearcherNavigation />
-      <KeyboardShortcutsHelp />
+    <NavigationProvider>
+      <div className="min-h-screen bg-system-background">
+        {/* Phase 8.5: Research Lifecycle Navigation */}
+        <PrimaryToolbar />
+        
+        {/* Legacy navigation - will be phased out */}
+        <ResearcherNavigation />
+        <KeyboardShortcutsHelp />
 
-      <main className="max-w-7xl mx-auto px-6 py-8">{children}</main>
-    </div>
+        <main className="max-w-7xl mx-auto px-6 py-8">{children}</main>
+      </div>
+    </NavigationProvider>
   );
 }

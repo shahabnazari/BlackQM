@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,507 +7,673 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-// User model for authentication and authorization
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  role      Role     @default(RESEARCHER)
-  isActive  Boolean  @default(true)
-  emailVerified Boolean @default(false)
-  twoFactorEnabled Boolean @default(false)
-  twoFactorSecret String?
-  lastLoginAt DateTime?
-  passwordChangedAt DateTime @default(now())
-  failedLoginAttempts Int @default(0)
-  lockedUntil DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Multi-tenant isolation
-  tenantId  String?  @default("default")
-  
-  surveys   Survey[]
-  responses Response[]
-  sessions  Session[]
-  auditLogs AuditLog[]
-  supportTickets SupportTicket[]
-  collaborations Collaboration[]
-  sentInvitations CollaborationInvitation[] @relation("InvitationSender")
-  invitedCollaborations Collaboration[] @relation("CollaborationInviter")
-  twoFactorBackups TwoFactorBackup[]
-  mediaFiles MediaFile[]
-  passwordResets PasswordReset[]
-  emailVerifications EmailVerification[]
-  
-  // AI relations (Phase 6.86b)
-  aiUsage       AIUsage[]
-  aiBudgetLimit AIBudgetLimit?
-  aiRateLimits  AIRateLimit[]
-  
-  // Phase 7 Day 7 relations
-  studyCollaborations StudyCollaborator[] @relation("StudyCollaboratorUser")
-  studyComments       StudyComment[] @relation("StudyCommentUser")
-  studyActivityLogs   StudyActivityLog[] @relation("StudyActivityLogUser")
-  
+  id                    String                    @id @default(cuid())
+  email                 String                    @unique
+  password              String
+  name                  String?
+  role                  Role                      @default(RESEARCHER)
+  isActive              Boolean                   @default(true)
+  emailVerified         Boolean                   @default(false)
+  twoFactorEnabled      Boolean                   @default(false)
+  twoFactorSecret       String?
+  lastLoginAt           DateTime?
+  passwordChangedAt     DateTime                  @default(now())
+  failedLoginAttempts   Int                       @default(0)
+  lockedUntil           DateTime?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  tenantId              String?                   @default("default")
+  auditLogs             AuditLog[]
+  invitedCollaborations Collaboration[]           @relation("CollaborationInviter")
+  collaborations        Collaboration[]
+  sentInvitations       CollaborationInvitation[] @relation("InvitationSender")
+  emailVerifications    EmailVerification[]
+  mediaFiles            MediaFile[]
+  passwordResets        PasswordReset[]
+  responses             Response[]
+  sessions              Session[]
+  supportTickets        SupportTicket[]
+  surveys               Survey[]
+  twoFactorBackups      TwoFactorBackup[]
+  aiBudgetLimit         AIBudgetLimit?
+  aiRateLimits          AIRateLimit[]
+  aiUsage               AIUsage[]
+  studyActivityLogs     StudyActivityLog[]        @relation("StudyActivityLogUser")
+  studyCollaborations   StudyCollaborator[]       @relation("StudyCollaboratorUser")
+  studyComments         StudyComment[]            @relation("StudyCommentUser")
+
   @@index([email])
   @@index([tenantId])
   @@index([isActive])
 }
 
-// Two-factor authentication backup codes
 model TwoFactorBackup {
   id        String   @id @default(cuid())
   userId    String
-  code      String   // Hashed backup code
+  code      String
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
-  
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId])
   @@index([used])
 }
 
-// Session model for JWT refresh tokens
 model Session {
   id           String   @id @default(cuid())
   userId       String
   refreshToken String   @unique
   expiresAt    DateTime
   createdAt    DateTime @default(now())
-  
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
-// Password reset tokens
 model PasswordReset {
   id        String   @id @default(cuid())
   userId    String
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
-  
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId])
   @@index([token])
 }
 
-// Email verification tokens
 model EmailVerification {
   id        String   @id @default(cuid())
   userId    String
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
-  
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId])
   @@index([token])
 }
 
-// Survey model for Q-methodology studies
 model Survey {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  status      SurveyStatus @default(DRAFT)
-  createdBy   String
-  tenantId    String?  @default("default")
-  scheduledStart DateTime?
-  scheduledEnd DateTime?
-  maxResponses Int?
-  currentResponses Int @default(0)
-  
-  // Q-Sort Configuration
-  gridColumns Int @default(9) // Number of columns in Q-sort grid
-  gridShape   String @default("quasi-normal") // forced, free, quasi-normal
-  gridConfig  Json? // Detailed grid configuration with max items per column
-  
-  // Study Flow Configuration
-  welcomeMessage String?
-  consentText String?
-  enablePreScreening Boolean @default(false)
-  enablePostSurvey Boolean @default(true)
-  enableVideoConferencing Boolean @default(false)
-  
-  settings   Json? // Additional survey configuration
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  statements  Statement[]
-  responses   Response[]
-  questions   Question[]
-  mediaFiles  MediaFile[]
-  collaborations Collaboration[]
-  analyses    Analysis[]
-  creator     User @relation(fields: [createdBy], references: [id])
-  gridConfiguration GridConfiguration?
-  stimuli     Stimulus[]
-  
+  id                      String             @id @default(cuid())
+  title                   String
+  description             String?
+  status                  SurveyStatus       @default(DRAFT)
+  createdBy               String
+  tenantId                String?            @default("default")
+  scheduledStart          DateTime?
+  scheduledEnd            DateTime?
+  maxResponses            Int?
+  currentResponses        Int                @default(0)
+  gridColumns             Int                @default(9)
+  gridShape               String             @default("quasi-normal")
+  gridConfig              Json?
+  welcomeMessage          String?
+  consentText             String?
+  enablePreScreening      Boolean            @default(false)
+  enablePostSurvey        Boolean            @default(true)
+  enableVideoConferencing Boolean            @default(false)
+  settings                Json?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  analyses                Analysis[]
+  collaborations          Collaboration[]
+  gridConfiguration       GridConfiguration?
+  mediaFiles              MediaFile[]
+  questions               Question[]
+  responses               Response[]
+  statements              Statement[]
+  stimuli                 Stimulus[]
+  creator                 User               @relation(fields: [createdBy], references: [id])
+
   @@index([createdBy])
   @@index([tenantId])
   @@index([status])
 }
 
-// Statement model for Q-sort items
 model Statement {
-  id       String @id @default(cuid())
+  id       String  @id @default(cuid())
   surveyId String
   text     String
   order    Int
-  
-  survey   Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   sorts    QSort[]
-  
+  survey   Survey  @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
   @@index([surveyId])
 }
 
-// Response model for participant submissions
 model Response {
-  id           String   @id @default(cuid())
-  surveyId     String
+  id            String               @id @default(cuid())
+  surveyId      String
   participantId String?
-  sessionCode  String   @unique
-  completedAt  DateTime?
-  timeSpent    Int? // Total time in seconds
-  ipAddress    String?
-  userAgent    String?
-  createdAt    DateTime @default(now())
-  
-  survey       Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  participant  User? @relation(fields: [participantId], references: [id])
-  demographics Json?
-  qSorts       QSort[]
-  answers      Answer[]
-  progress     ParticipantProgress?
-  preSort      PreSort?
-  commentaries Commentary[]
-  
+  sessionCode   String               @unique
+  completedAt   DateTime?
+  timeSpent     Int?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime             @default(now())
+  demographics  Json?
+  answers       Answer[]
+  commentaries  Commentary[]
+  progress      ParticipantProgress?
+  preSort       PreSort?
+  qSorts        QSort[]
+  participant   User?                @relation(fields: [participantId], references: [id])
+  survey        Survey               @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
   @@index([surveyId])
   @@index([participantId])
   @@index([sessionCode])
 }
 
-// QSort model for statement rankings
 model QSort {
-  id          String @id @default(cuid())
+  id          String    @id @default(cuid())
   responseId  String
   statementId String
   position    Int
-  
-  response    Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
   statement   Statement @relation(fields: [statementId], references: [id])
-  
+  response    Response  @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
   @@unique([responseId, statementId])
   @@index([responseId])
 }
 
-// Advanced Questionnaire Engine Models
 model Question {
-  id          String @id @default(cuid())
+  id          String       @id @default(cuid())
   surveyId    String
   type        QuestionType
   text        String
   description String?
-  required    Boolean @default(true)
+  required    Boolean      @default(true)
   order       Int
-  validation  Json? // Validation rules
-  options     Json? // Answer options for multiple choice, etc.
-  logic       Json? // Skip logic and branching
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  survey      Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  validation  Json?
+  options     Json?
+  logic       Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   answers     Answer[]
-  
+  survey      Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
   @@index([surveyId])
   @@index([type])
 }
 
 model Answer {
-  id         String @id @default(cuid())
+  id         String   @id @default(cuid())
   questionId String
   responseId String
-  value      Json   // Flexible answer storage
+  value      Json
   createdAt  DateTime @default(now())
-  
-  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
-  
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
   @@unique([questionId, responseId])
   @@index([responseId])
 }
 
-// Media and File Management
 model MediaFile {
-  id          String @id @default(cuid())
-  filename    String
-  originalName String
-  mimeType    String
-  size        Int
-  path        String
-  url         String
-  uploadedBy  String
-  surveyId    String?
-  isPublic    Boolean @default(false)
-  virusScanStatus String @default("pending") // pending, clean, infected
-  createdAt   DateTime @default(now())
-  
-  uploader    User @relation(fields: [uploadedBy], references: [id])
-  survey      Survey? @relation(fields: [surveyId], references: [id])
-  
+  id              String   @id @default(cuid())
+  filename        String
+  originalName    String
+  mimeType        String
+  size            Int
+  path            String
+  url             String
+  uploadedBy      String
+  surveyId        String?
+  isPublic        Boolean  @default(false)
+  virusScanStatus String   @default("pending")
+  createdAt       DateTime @default(now())
+  survey          Survey?  @relation(fields: [surveyId], references: [id])
+  uploader        User     @relation(fields: [uploadedBy], references: [id])
+
   @@index([uploadedBy])
   @@index([surveyId])
   @@index([virusScanStatus])
 }
 
-// Audit Logging for Security
 model AuditLog {
-  id        String @id @default(cuid())
-  userId    String?
-  action    String
-  resource  String?
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  resource   String?
   resourceId String?
-  details   Json?
-  ipAddress String?
-  userAgent String?
-  timestamp DateTime @default(now())
-  
-  user      User? @relation(fields: [userId], references: [id])
-  
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  timestamp  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+
   @@index([userId])
   @@index([action])
   @@index([timestamp])
 }
 
-// Support System
 model SupportTicket {
-  id          String @id @default(cuid())
+  id          String           @id @default(cuid())
   userId      String
   category    String
-  priority    String @default("medium")
+  priority    String           @default("medium")
   subject     String
   description String
-  status      String @default("open")
+  status      String           @default("open")
   assignedTo  String?
-  context     Json? // Browser info, error logs, etc.
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  user        User @relation(fields: [userId], references: [id])
+  context     Json?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   messages    SupportMessage[]
-  
+  user        User             @relation(fields: [userId], references: [id])
+
   @@index([userId])
   @@index([status])
   @@index([priority])
 }
 
 model SupportMessage {
-  id        String @id @default(cuid())
-  ticketId  String
-  senderId  String?
-  message   String
-  isInternal Boolean @default(false)
-  createdAt DateTime @default(now())
-  
-  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  
+  id         String        @id @default(cuid())
+  ticketId   String
+  senderId   String?
+  message    String
+  isInternal Boolean       @default(false)
+  createdAt  DateTime      @default(now())
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
   @@index([ticketId])
 }
 
-// Collaboration System
 model Collaboration {
-  id        String @id @default(cuid())
-  studyId   String
-  userId    String
-  role      CollaborationRole
-  permissions Json // Granular permissions
-  invitedBy String
-  acceptedAt DateTime?
-  createdAt DateTime @default(now())
-  
-  study     Survey @relation(fields: [studyId], references: [id], onDelete: Cascade)
-  user      User @relation(fields: [userId], references: [id])
-  inviter   User @relation("CollaborationInviter", fields: [invitedBy], references: [id])
-  
+  id          String            @id @default(cuid())
+  studyId     String
+  userId      String
+  role        CollaborationRole
+  permissions Json
+  invitedBy   String
+  acceptedAt  DateTime?
+  createdAt   DateTime          @default(now())
+  inviter     User              @relation("CollaborationInviter", fields: [invitedBy], references: [id])
+  user        User              @relation(fields: [userId], references: [id])
+  study       Survey            @relation(fields: [studyId], references: [id], onDelete: Cascade)
+
   @@unique([studyId, userId])
   @@index([studyId])
   @@index([userId])
 }
 
 model CollaborationInvitation {
-  id        String @id @default(cuid())
-  studyId   String
-  email     String
-  role      CollaborationRole
-  token     String @unique
-  expiresAt DateTime
+  id         String            @id @default(cuid())
+  studyId    String
+  email      String
+  role       CollaborationRole
+  token      String            @unique
+  expiresAt  DateTime
   acceptedAt DateTime?
-  invitedBy String
-  createdAt DateTime @default(now())
-  
-  inviter   User @relation("InvitationSender", fields: [invitedBy], references: [id])
-  
+  invitedBy  String
+  createdAt  DateTime          @default(now())
+  inviter    User              @relation("InvitationSender", fields: [invitedBy], references: [id])
+
   @@index([studyId])
   @@index([email])
   @@index([token])
 }
 
-// Rate Limiting and Security
 model RateLimit {
-  id        String @id @default(cuid())
-  identifier String // IP address or user ID
-  endpoint   String
-  count     Int
+  id          String   @id @default(cuid())
+  identifier  String
+  endpoint    String
+  count       Int
   windowStart DateTime
-  createdAt DateTime @default(now())
-  
+  createdAt   DateTime @default(now())
+
   @@unique([identifier, endpoint, windowStart])
   @@index([identifier])
   @@index([endpoint])
 }
 
-// System Health Monitoring
 model SystemHealth {
-  id        String @id @default(cuid())
+  id        String   @id @default(cuid())
   service   String
-  status    String // healthy, warning, critical
+  status    String
   metrics   Json
   timestamp DateTime @default(now())
-  
+
   @@index([service])
   @@index([timestamp])
 }
 
-// Participant Journey Progress
 model ParticipantProgress {
-  id           String   @id @default(cuid())
-  responseId   String   @unique
-  currentStep  String   @default("welcome")
-  completedSteps Json   @default("[]")
-  stepData     Json?    // Data collected at each step
-  lastActiveAt DateTime @default(now())
-  
-  response     Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
-  
+  id             String   @id @default(cuid())
+  responseId     String   @unique
+  currentStep    String   @default("welcome")
+  completedSteps Json     @default("[]")
+  stepData       Json?
+  lastActiveAt   DateTime @default(now())
+  response       Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
   @@index([responseId])
 }
 
-// Pre-Sort Data (Three-box categorization)
 model PreSort {
-  id          String @id @default(cuid())
-  responseId  String @unique
-  disagree    Json   // Array of statement IDs
-  neutral     Json   // Array of statement IDs
-  agree       Json   // Array of statement IDs
+  id          String   @id @default(cuid())
+  responseId  String   @unique
+  disagree    Json
+  neutral     Json
+  agree       Json
   completedAt DateTime @default(now())
-  
   response    Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
-  
+
   @@index([responseId])
 }
 
-// Commentary on extreme positions
 model Commentary {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   responseId  String
   statementId String
   position    Int
   comment     String
   wordCount   Int
   createdAt   DateTime @default(now())
-  
   response    Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
-  
+
   @@index([responseId])
   @@index([statementId])
 }
 
-// Q-Analysis results model
 model Analysis {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   surveyId    String
   userId      String?
-  config      Json     // Analysis configuration (extraction method, rotation, etc.)
-  results     Json     // Complete analysis results (factors, loadings, etc.)
+  config      Json
+  results     Json
   status      AnalysisStatus @default(PENDING)
   startedAt   DateTime?
   completedAt DateTime?
   error       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  survey      Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
   @@index([surveyId])
   @@index([userId])
   @@index([status])
 }
 
-// Grid Configuration for Phase 6.85
 model GridConfiguration {
-  id         String   @id @default(cuid())
-  surveyId   String   @unique
-  survey     Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  
-  // Grid dimensions
-  rangeMin   Int      @default(-3)
-  rangeMax   Int      @default(3)
-  columns    Json     // Array of column configurations
-  
-  // Grid properties
-  symmetry   Boolean  @default(true)
-  totalCells Int
-  distribution String @default("bell") // bell, flat, forced
+  id           String   @id @default(cuid())
+  surveyId     String   @unique
+  rangeMin     Int      @default(-3)
+  rangeMax     Int      @default(3)
+  columns      Json
+  symmetry     Boolean  @default(true)
+  totalCells   Int
+  distribution String   @default("bell")
   instructions String?
-  
-  // Metadata
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  survey       Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
   @@index([surveyId])
 }
 
-// Stimulus model for Phase 6.85
 model Stimulus {
-  id           String   @id @default(cuid())
-  surveyId     String
-  survey       Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  
-  // Stimulus properties
-  type         StimulusType
-  content      String   // URL for media files, text for text stimuli
-  thumbnail    String?  // Thumbnail URL for media
-  metadata     Json?    // Additional metadata (dimensions, duration, etc.)
-  
-  // Organization
-  position     Int?     // Position in grid
-  category     String?  // Optional categorization
-  tags         Json?    // Array of tags
-  
-  // Upload tracking
-  uploadStatus String   @default("pending") // pending, processing, complete, failed
-  uploadedBy   String?
-  fileSize     Int?
-  mimeType     String?
-  
-  // Virus scanning
-  virusScanStatus String @default("pending") // pending, clean, infected
+  id              String       @id @default(cuid())
+  surveyId        String
+  type            StimulusType
+  content         String
+  thumbnail       String?
+  metadata        Json?
+  position        Int?
+  category        String?
+  tags            Json?
+  uploadStatus    String       @default("pending")
+  uploadedBy      String?
+  fileSize        Int?
+  mimeType        String?
+  virusScanStatus String       @default("pending")
   virusScanDate   DateTime?
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  survey          Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
   @@index([surveyId])
   @@index([type])
   @@index([uploadStatus])
   @@index([virusScanStatus])
+}
+
+model AIUsage {
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  endpoint         String
+  model            String
+  promptTokens     Int      @default(0) @map("prompt_tokens")
+  completionTokens Int      @default(0) @map("completion_tokens")
+  totalTokens      Int      @default(0) @map("total_tokens")
+  cost             Float    @default(0)
+  responseTimeMs   Int?     @map("response_time_ms")
+  status           String   @default("success")
+  errorMessage     String?  @map("error_message")
+  metadata         String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([model])
+  @@index([status])
+  @@map("ai_usage")
+}
+
+model AIBudgetLimit {
+  id              String   @id @default(cuid())
+  userId          String   @unique @map("user_id")
+  dailyLimitUsd   Float    @default(10.00) @map("daily_limit_usd")
+  monthlyLimitUsd Float    @default(300.00) @map("monthly_limit_usd")
+  alertThreshold  Float    @default(0.80) @map("alert_threshold")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_budget_limits")
+}
+
+model AICache {
+  id             String   @id @default(cuid())
+  cacheKey       String   @unique @map("cache_key")
+  promptHash     String   @map("prompt_hash")
+  model          String
+  response       String
+  tokensSaved    Int      @default(0) @map("tokens_saved")
+  costSaved      Float    @default(0) @map("cost_saved")
+  hitCount       Int      @default(0) @map("hit_count")
+  expiresAt      DateTime @map("expires_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  lastAccessedAt DateTime @default(now()) @map("last_accessed_at")
+
+  @@index([cacheKey])
+  @@index([expiresAt])
+  @@index([promptHash])
+  @@map("ai_cache")
+}
+
+model AIRateLimit {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  windowStart  DateTime @map("window_start")
+  windowEnd    DateTime @map("window_end")
+  requestCount Int      @default(0) @map("request_count")
+  maxRequests  Int      @default(10) @map("max_requests")
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([windowStart, windowEnd])
+  @@map("ai_rate_limits")
+}
+
+model StudyCollaborator {
+  id           String    @id @default(cuid())
+  studyId      String    @map("study_id")
+  userId       String    @map("user_id")
+  role         String    @default("viewer")
+  permissions  String
+  invitedBy    String    @map("invited_by")
+  invitedAt    DateTime  @default(now()) @map("invited_at")
+  acceptedAt   DateTime? @map("accepted_at")
+  lastActiveAt DateTime? @map("last_active_at")
+  user         User      @relation("StudyCollaboratorUser", fields: [userId], references: [id])
+
+  @@unique([studyId, userId])
+  @@index([studyId])
+  @@index([userId])
+  @@map("study_collaborators")
+}
+
+model StudyComment {
+  id         String         @id @default(cuid())
+  studyId    String         @map("study_id")
+  userId     String         @map("user_id")
+  content    String
+  sectionId  String?        @map("section_id")
+  parentId   String?        @map("parent_id")
+  edited     Boolean        @default(false)
+  resolved   Boolean        @default(false)
+  resolvedBy String?        @map("resolved_by")
+  resolvedAt DateTime?      @map("resolved_at")
+  timestamp  DateTime       @default(now())
+  parent     StudyComment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies    StudyComment[] @relation("CommentReplies")
+  user       User           @relation("StudyCommentUser", fields: [userId], references: [id])
+
+  @@index([studyId])
+  @@index([userId])
+  @@index([parentId])
+  @@map("study_comments")
+}
+
+model StudyActivityLog {
+  id        String   @id @default(cuid())
+  studyId   String   @map("study_id")
+  userId    String   @map("user_id")
+  action    String
+  details   String?
+  metadata  String?
+  timestamp DateTime @default(now())
+  user      User     @relation("StudyActivityLogUser", fields: [userId], references: [id])
+
+  @@index([studyId])
+  @@index([userId])
+  @@index([action])
+  @@index([timestamp])
+  @@map("study_activity_logs")
+}
+
+model Participant {
+  id            String         @id @default(cuid())
+  studyId       String         @map("study_id")
+  name          String?
+  email         String
+  phone         String?
+  status        String         @default("invited")
+  tags          String?
+  notes         String?
+  customFields  String?        @map("custom_fields")
+  invitedAt     DateTime       @default(now()) @map("invited_at")
+  respondedAt   DateTime?      @map("responded_at")
+  completedAt   DateTime?      @map("completed_at")
+  appointments  Appointment[]
+  compensations Compensation[]
+
+  @@unique([studyId, email])
+  @@index([studyId])
+  @@index([email])
+  @@index([status])
+  @@map("participants")
+}
+
+model Appointment {
+  id             String        @id @default(cuid())
+  studyId        String        @map("study_id")
+  participantId  String        @map("participant_id")
+  scheduledStart DateTime      @map("scheduled_start")
+  scheduledEnd   DateTime      @map("scheduled_end")
+  status         String        @default("scheduled")
+  type           String        @default("online")
+  location       String?
+  meetingUrl     String?       @map("meeting_url")
+  notes          String?
+  remindersSent  Int           @default(0) @map("reminders_sent")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  participant    Participant   @relation(fields: [participantId], references: [id])
+  compensation   Compensation?
+  reminders      Reminder[]
+
+  @@index([studyId])
+  @@index([participantId])
+  @@index([scheduledStart])
+  @@index([status])
+  @@map("appointments")
+}
+
+model Reminder {
+  id            String      @id @default(cuid())
+  appointmentId String      @map("appointment_id")
+  type          String      @default("email")
+  scheduledFor  DateTime    @map("scheduled_for")
+  sentAt        DateTime?   @map("sent_at")
+  status        String      @default("pending")
+  attempts      Int         @default(0)
+  lastAttemptAt DateTime?   @map("last_attempt_at")
+  errorMessage  String?     @map("error_message")
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@index([appointmentId])
+  @@index([scheduledFor])
+  @@index([status])
+  @@map("reminders")
+}
+
+model Compensation {
+  id            String      @id @default(cuid())
+  appointmentId String      @unique @map("appointment_id")
+  participantId String      @map("participant_id")
+  amount        Float
+  currency      String      @default("USD")
+  method        String
+  status        String      @default("pending")
+  approvedBy    String?     @map("approved_by")
+  approvedAt    DateTime?   @map("approved_at")
+  paidAt        DateTime?   @map("paid_at")
+  reference     String?
+  notes         String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  participant   Participant @relation(fields: [participantId], references: [id])
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@index([participantId])
+  @@index([status])
+  @@map("compensations")
+}
+
+model StudyAvailability {
+  id                     String   @id @default(cuid())
+  studyId                String   @map("study_id")
+  dayOfWeek              Int      @map("day_of_week")
+  startTime              String   @map("start_time")
+  endTime                String   @map("end_time")
+  timezone               String   @default("UTC")
+  slotDuration           Int      @default(60) @map("slot_duration")
+  bufferTime             Int      @default(15) @map("buffer_time")
+  maxParticipantsPerSlot Int      @default(1) @map("max_participants_per_slot")
+  isActive               Boolean  @default(true) @map("is_active")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  @@index([studyId])
+  @@index([dayOfWeek])
+  @@map("study_availability")
 }
 
 enum StimulusType {
@@ -569,262 +732,3 @@ enum CollaborationRole {
   COLLABORATOR
   VIEWER
 }
-
-// ==========================================
-// Phase 6.86b: AI Backend Implementation
-// ==========================================
-
-model AIUsage {
-  id               String   @id @default(cuid())
-  userId           String   @map("user_id")
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  endpoint         String   
-  model            String   
-  promptTokens     Int      @default(0) @map("prompt_tokens")
-  completionTokens Int      @default(0) @map("completion_tokens")
-  totalTokens      Int      @default(0) @map("total_tokens")
-  cost             Float    @default(0)
-  responseTimeMs   Int?     @map("response_time_ms")
-  status           String   @default("success")
-  errorMessage     String?  @map("error_message")
-  metadata         String?  // JSON stored as string in SQLite
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-
-  @@index([userId])
-  @@index([createdAt])
-  @@index([model])
-  @@index([status])
-  @@map("ai_usage")
-}
-
-model AIBudgetLimit {
-  id              String   @id @default(cuid())
-  userId          String   @unique @map("user_id")
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dailyLimitUsd   Float    @default(10.00) @map("daily_limit_usd")
-  monthlyLimitUsd Float    @default(300.00) @map("monthly_limit_usd")
-  alertThreshold  Float    @default(0.80) @map("alert_threshold")
-  isActive        Boolean  @default(true) @map("is_active")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  @@map("ai_budget_limits")
-}
-
-model AICache {
-  id             String   @id @default(cuid())
-  cacheKey       String   @unique @map("cache_key")
-  promptHash     String   @map("prompt_hash")
-  model          String   
-  response       String   // JSON stored as string in SQLite
-  tokensSaved    Int      @default(0) @map("tokens_saved")
-  costSaved      Float    @default(0) @map("cost_saved")
-  hitCount       Int      @default(0) @map("hit_count")
-  expiresAt      DateTime @map("expires_at")
-  createdAt      DateTime @default(now()) @map("created_at")
-  lastAccessedAt DateTime @default(now()) @map("last_accessed_at")
-
-  @@index([cacheKey])
-  @@index([expiresAt])
-  @@index([promptHash])
-  @@map("ai_cache")
-}
-
-model AIRateLimit {
-  id           String   @id @default(cuid())
-  userId       String   @map("user_id")
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  windowStart  DateTime @map("window_start")
-  windowEnd    DateTime @map("window_end")
-  requestCount Int      @default(0) @map("request_count")
-  maxRequests  Int      @default(10) @map("max_requests")
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  @@index([userId])
-  @@index([windowStart, windowEnd])
-  @@map("ai_rate_limits")
-}
-
-// ==========================================
-// Phase 7 Day 7: Collaboration & Scheduling
-// ==========================================
-
-// Enhanced collaboration for real-time features
-model StudyCollaborator {
-  id           String   @id @default(cuid())
-  studyId      String   @map("study_id")
-  userId       String   @map("user_id")
-  role         String   @default("viewer") // owner, editor, viewer, commenter
-  permissions  String   // JSON array of specific permissions
-  invitedBy    String   @map("invited_by")
-  invitedAt    DateTime @default(now()) @map("invited_at")
-  acceptedAt   DateTime? @map("accepted_at")
-  lastActiveAt DateTime? @map("last_active_at")
-  
-  user         User     @relation("StudyCollaboratorUser", fields: [userId], references: [id])
-  
-  @@unique([studyId, userId])
-  @@index([studyId])
-  @@index([userId])
-  @@map("study_collaborators")
-}
-
-// Comments and discussions
-model StudyComment {
-  id          String   @id @default(cuid())
-  studyId     String   @map("study_id")
-  userId      String   @map("user_id")
-  content     String
-  sectionId   String?  @map("section_id") // Which section of the study
-  parentId    String?  @map("parent_id") // For threaded comments
-  edited      Boolean  @default(false)
-  resolved    Boolean  @default(false)
-  resolvedBy  String?  @map("resolved_by")
-  resolvedAt  DateTime? @map("resolved_at")
-  timestamp   DateTime @default(now())
-  
-  user        User     @relation("StudyCommentUser", fields: [userId], references: [id])
-  replies     StudyComment[] @relation("CommentReplies")
-  parent      StudyComment?  @relation("CommentReplies", fields: [parentId], references: [id])
-  
-  @@index([studyId])
-  @@index([userId])
-  @@index([parentId])
-  @@map("study_comments")
-}
-
-// Activity logging for collaboration
-model StudyActivityLog {
-  id          String   @id @default(cuid())
-  studyId     String   @map("study_id")
-  userId      String   @map("user_id")
-  action      String   // collaborator_added, comment_added, data_updated, etc.
-  details     String?  // JSON details about the action
-  metadata    String?  // Additional context
-  timestamp   DateTime @default(now())
-  
-  user        User     @relation("StudyActivityLogUser", fields: [userId], references: [id])
-  
-  @@index([studyId])
-  @@index([userId])
-  @@index([action])
-  @@index([timestamp])
-  @@map("study_activity_logs")
-}
-
-// Participant management for recruitment
-model Participant {
-  id              String   @id @default(cuid())
-  studyId         String   @map("study_id")
-  name            String?
-  email           String
-  phone           String?
-  status          String   @default("invited") // invited, scheduled, completed, no_show, declined
-  tags            String?  // JSON array of tags
-  notes           String?
-  customFields    String?  @map("custom_fields") // JSON for additional data
-  invitedAt       DateTime @default(now()) @map("invited_at")
-  respondedAt     DateTime? @map("responded_at")
-  completedAt     DateTime? @map("completed_at")
-  
-  appointments    Appointment[]
-  compensations   Compensation[]
-  
-  @@unique([studyId, email])
-  @@index([studyId])
-  @@index([email])
-  @@index([status])
-  @@map("participants")
-}
-
-// Appointment scheduling
-model Appointment {
-  id               String   @id @default(cuid())
-  studyId          String   @map("study_id")
-  participantId    String   @map("participant_id")
-  scheduledStart   DateTime @map("scheduled_start")
-  scheduledEnd     DateTime @map("scheduled_end")
-  status           String   @default("scheduled") // scheduled, confirmed, completed, cancelled, no-show
-  type             String   @default("online") // online, in-person, phone
-  location         String?
-  meetingUrl       String?  @map("meeting_url")
-  notes            String?
-  remindersSent    Int      @default(0) @map("reminders_sent")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  
-  participant      Participant @relation(fields: [participantId], references: [id])
-  reminders        Reminder[]
-  compensation     Compensation?
-  
-  @@index([studyId])
-  @@index([participantId])
-  @@index([scheduledStart])
-  @@index([status])
-  @@map("appointments")
-}
-
-// Reminder system
-model Reminder {
-  id              String   @id @default(cuid())
-  appointmentId   String   @map("appointment_id")
-  type            String   @default("email") // email, sms
-  scheduledFor    DateTime @map("scheduled_for")
-  sentAt          DateTime? @map("sent_at")
-  status          String   @default("pending") // pending, sent, failed, cancelled
-  attempts        Int      @default(0)
-  lastAttemptAt   DateTime? @map("last_attempt_at")
-  errorMessage    String?  @map("error_message")
-  
-  appointment     Appointment @relation(fields: [appointmentId], references: [id])
-  
-  @@index([appointmentId])
-  @@index([scheduledFor])
-  @@index([status])
-  @@map("reminders")
-}
-
-// Compensation tracking
-model Compensation {
-  id              String   @id @default(cuid())
-  appointmentId   String   @unique @map("appointment_id")
-  participantId   String   @map("participant_id")
-  amount          Float
-  currency        String   @default("USD")
-  method          String   // cash, check, gift_card, bank_transfer, other
-  status          String   @default("pending") // pending, approved, paid, cancelled
-  approvedBy      String?  @map("approved_by")
-  approvedAt      DateTime? @map("approved_at")
-  paidAt          DateTime? @map("paid_at")
-  reference       String?  // Payment reference number
-  notes           String?
-  createdAt       DateTime @default(now()) @map("created_at")
-  
-  appointment     Appointment @relation(fields: [appointmentId], references: [id])
-  participant     Participant @relation(fields: [participantId], references: [id])
-  
-  @@index([participantId])
-  @@index([status])
-  @@map("compensations")
-}
-
-// Study availability for scheduling
-model StudyAvailability {
-  id                     String   @id @default(cuid())
-  studyId                String   @map("study_id")
-  dayOfWeek              Int      @map("day_of_week") // 0-6 (Sunday-Saturday)
-  startTime              String   @map("start_time") // HH:MM format
-  endTime                String   @map("end_time") // HH:MM format
-  timezone               String   @default("UTC")
-  slotDuration           Int      @default(60) @map("slot_duration") // in minutes
-  bufferTime             Int      @default(15) @map("buffer_time") // buffer between appointments
-  maxParticipantsPerSlot Int      @default(1) @map("max_participants_per_slot")
-  isActive               Boolean  @default(true) @map("is_active")
-  createdAt              DateTime @default(now()) @map("created_at")
-  
-  @@index([studyId])
-  @@index([dayOfWeek])
-  @@map("study_availability")
-}
-

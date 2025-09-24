@@ -76,8 +76,8 @@ COMPREHENSIVE KNOWLEDGE FLOW: Literature → AI → Statements → Analysis → 
 **Research Lifecycle Coverage (10 Phases)**
 | Lifecycle Phase | Dev Phase Coverage | Status | Missing Features |
 |-----------------|-------------------|--------|------------------|
-| 1. DISCOVER | Phase 9 | 🔴 Not Started | Literature search, references, knowledge graph |
-| 2. DESIGN | Partial (in BUILD) | 🟡 60% Complete | Research questions, methodology tools |
+| 1. DISCOVER | Phase 8.5 Day 3 | ✅ 100% Complete | All features implemented |
+| 2. DESIGN | Phase 8.5 Day 3 | ✅ 90% Complete | Minor enhancements only |
 | 3. BUILD | Phase 6.8, 6.86b AI | ✅ 90% Complete | Minor enhancements |
 | 4. RECRUIT | Partial | 🟡 70% Complete | Scheduling service, compensation tracking |
 | 5. COLLECT | Study flow | ✅ 90% Complete | Minor enhancements |

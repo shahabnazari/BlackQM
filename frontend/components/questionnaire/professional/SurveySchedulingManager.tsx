@@ -72,7 +72,6 @@ interface SurveySchedule {
 }
 
 export function SurveySchedulingManager() {
-  const [selectedSchedule] = useState<SurveySchedule | null>(null);
   const [quotaSettings, setQuotaSettings] = useState({
     total: 500,
     daily: 50,

@@ -201,8 +201,8 @@ export default function StudyLayout({ children }: StudyLayoutProps) {
               canGoBack,
               canSkip
             }}
-            onGoBack={canGoBack ? () => { handleGoBack() } : undefined}
-            onSkip={canSkip ? handleSkip : undefined}
+            onGoBack={canGoBack ? () => { handleGoBack() } : () => {}}
+            onSkip={canSkip ? handleSkip : () => {}}
             onSave={handleSaveProgress}
             isSaving={isSaving}
             lastSaved={flowState.lastActivity}

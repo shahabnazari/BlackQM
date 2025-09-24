@@ -95,8 +95,6 @@ export function CollaborationManager() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showCommentDialog, setShowCommentDialog] = useState(false);
-  const [newComment] = useState('');
-  const [selectedComment] = useState<Comment | null>(null);
   const [showPresence, setShowPresence] = useState(true);
   const [lockMode, setLockMode] = useState<'none' | 'section' | 'full'>('none');
 

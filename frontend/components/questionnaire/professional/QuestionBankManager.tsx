@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 // ScrollArea not available - using overflow-y-auto instead
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+// Tabs components removed as unused
 import {
   Select,
   SelectContent,
@@ -74,7 +74,7 @@ interface QuestionCategory {
 export function QuestionBankManager() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTags] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);

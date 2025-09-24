@@ -21,13 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+// Select components removed as unused
 import {
   Tabs,
   TabsContent,
@@ -77,10 +71,9 @@ export function VersionControlManager() {
   const [selectedVersion, setSelectedVersion] = useState<Version | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [showCommitDialog, setShowCommitDialog] = useState(false);
-  const [showMergeDialog, setShowMergeDialog] = useState(false);
   const [showDiffView, setShowDiffView] = useState(false);
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
   const [commitMessage, setCommitMessage] = useState('');
-  const [diffView] = useState<'unified' | 'split'>('unified');
 
   // Mock data
   const versions: Version[] = [
@@ -214,13 +207,13 @@ export function VersionControlManager() {
           <GitCommit className="w-3 h-3" />
         </div>
 
-        <Card
-          className={cn(
-            "p-4 cursor-pointer hover:shadow-md transition-all",
-            selectedVersion?.id === version.id && "ring-2 ring-blue-500"
-          )}
-          onClick={() => setSelectedVersion(version)}
-        >
+        <div onClick={() => setSelectedVersion(version)}>
+          <Card
+            className={cn(
+              "p-4 cursor-pointer hover:shadow-md transition-all",
+              selectedVersion?.id === version.id && "ring-2 ring-blue-500"
+            )}
+          >
           <div className="flex items-start justify-between mb-2">
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -254,7 +247,8 @@ export function VersionControlManager() {
               ))}
             </div>
           </div>
-        </Card>
+          </Card>
+        </div>
       </div>
     ));
   };

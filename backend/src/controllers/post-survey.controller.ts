@@ -73,7 +73,7 @@ export class PostSurveyController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Successfully retrieved post-survey questions',
-    type: [Question]
+    type: [GetPostSurveyQuestionsDto]
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,

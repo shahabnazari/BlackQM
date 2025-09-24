@@ -13,7 +13,6 @@ import {
   X,
   Edit2,
   Trash2,
-  Eye,
   Grid3x3,
   CheckCircle,
   Image,
@@ -22,31 +21,15 @@ import {
   Type,
   ChevronDown,
   ChevronUp,
-  AlertCircle,
   Sparkles,
-  Zap,
   Info,
-  FileText,
-  Plus,
   LayoutGrid,
   Square,
   Grid3X3Icon,
-  Download,
-  Share2,
-  Filter,
-  SortAsc,
   Search,
-  Copy,
-  MoreHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/apple-ui/Button';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/components/apple-ui/Card';
+import { Card, CardContent } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/apple-ui/Badge/Badge';
 import PopupModal, { usePopup } from '@/components/ui/PopupModal';
 import { cn } from '@/lib/utils';
@@ -259,21 +242,28 @@ export function StimuliUploadSystemV6({
       const id = Math.random().toString(36).substr(2, 9);
       const url = URL.createObjectURL(file);
 
-      newStimuli.push({
+      const stimulus: Stimulus = {
         id,
         type: uploadMode,
         content: url,
         title: file.name,
-        preview: uploadMode === 'image' ? url : undefined,
-        duration:
-          uploadMode === 'video' || uploadMode === 'audio' ? '0:00' : undefined,
         file,
         url,
         metadata: {
           size: file.size,
           uploadedAt: new Date(),
         },
-      });
+      };
+      
+      if (uploadMode === 'image') {
+        stimulus.preview = url;
+      }
+      
+      if (uploadMode === 'video' || uploadMode === 'audio') {
+        stimulus.duration = '0:00';
+      }
+      
+      newStimuli.push(stimulus);
     }
 
     setStimuli(prev => [...prev, ...newStimuli]);
@@ -1302,7 +1292,7 @@ export function StimuliUploadSystemV6({
         isOpen={popupState.isOpen}
         onClose={closePopup}
         type={popupState.type}
-        title={popupState.title}
+        title={popupState.title || ''}
         message={popupState.message}
         onConfirm={popupState.onConfirm}
         onCancel={popupState.onCancel}
