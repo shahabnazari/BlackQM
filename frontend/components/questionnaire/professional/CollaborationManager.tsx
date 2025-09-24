@@ -38,8 +38,19 @@ import {
 import { cn } from '@/lib/utils';
 
 // Simple Avatar component replacement
-const Avatar = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)}>
+const Avatar = ({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <div
+    className={cn(
+      'relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full',
+      className
+    )}
+  >
     {children}
   </div>
 );
@@ -145,10 +156,11 @@ export function CollaborationManager() {
 
     // Only set active users if collaborators exist
     if (collaborators.length >= 2) {
-      setActiveUsers([
-        collaborators[0],
-        collaborators[1],
-      ].filter((c): c is Collaborator => c !== undefined));
+      setActiveUsers(
+        [collaborators[0], collaborators[1]].filter(
+          (c): c is Collaborator => c !== undefined
+        )
+      );
     }
 
     // Only set comments if collaborators exist
@@ -165,7 +177,7 @@ export function CollaborationManager() {
             {
               id: '2',
               author: collaborators[0]!,
-              text: 'Yes, it\'s essential for our analysis',
+              text: "Yes, it's essential for our analysis",
               timestamp: new Date(Date.now() - 180000),
               resolved: false,
             },
@@ -212,20 +224,29 @@ export function CollaborationManager() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'owner': return 'bg-purple-100 text-purple-700';
-      case 'editor': return 'bg-blue-100 text-blue-700';
-      case 'reviewer': return 'bg-yellow-100 text-yellow-700';
-      case 'viewer': return 'bg-gray-100 text-gray-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'owner':
+        return 'bg-purple-100 text-purple-700';
+      case 'editor':
+        return 'bg-blue-100 text-blue-700';
+      case 'reviewer':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'viewer':
+        return 'bg-gray-100 text-gray-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
     }
   };
 
   const getStatusIndicator = (status: string) => {
     switch (status) {
-      case 'online': return 'bg-green-500';
-      case 'away': return 'bg-yellow-500';
-      case 'offline': return 'bg-gray-400';
-      default: return 'bg-gray-400';
+      case 'online':
+        return 'bg-green-500';
+      case 'away':
+        return 'bg-yellow-500';
+      case 'offline':
+        return 'bg-gray-400';
+      default:
+        return 'bg-gray-400';
     }
   };
 
@@ -278,21 +299,26 @@ export function CollaborationManager() {
                 />
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
-              {activeUsers.map((user) => (
-                <div 
+              {activeUsers.map(user => (
+                <div
                   key={user.id}
                   className="relative"
                   title={`${user.name}\nEditing: ${user.currentSection || 'Not editing'}`}
                 >
                   <Avatar className={`ring-2`}>
                     <AvatarImage src={user.avatar || ''} />
-                    <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    <AvatarFallback>
+                      {user.name
+                        .split(' ')
+                        .map(n => n[0])
+                        .join('')}
+                    </AvatarFallback>
                   </Avatar>
                   <Circle
                     className={cn(
-                      "absolute -bottom-1 -right-1 w-3 h-3 fill-current",
+                      'absolute -bottom-1 -right-1 w-3 h-3 fill-current',
                       getStatusIndicator(user.status)
                     )}
                   />
@@ -313,7 +339,7 @@ export function CollaborationManager() {
             </div>
 
             <div className="space-y-3">
-              {collaborators.map((collaborator) => (
+              {collaborators.map(collaborator => (
                 <div
                   key={collaborator.id}
                   className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
@@ -323,36 +349,49 @@ export function CollaborationManager() {
                       <Avatar>
                         <AvatarImage src={collaborator.avatar || ''} />
                         <AvatarFallback>
-                          {collaborator.name.split(' ').map(n => n[0]).join('')}
+                          {collaborator.name
+                            .split(' ')
+                            .map(n => n[0])
+                            .join('')}
                         </AvatarFallback>
                       </Avatar>
                       <Circle
                         className={cn(
-                          "absolute -bottom-1 -right-1 w-3 h-3 fill-current",
+                          'absolute -bottom-1 -right-1 w-3 h-3 fill-current',
                           getStatusIndicator(collaborator.status)
                         )}
                       />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm">{collaborator.name}</p>
-                        <Badge className={cn("text-xs", getRoleColor(collaborator.role))}>
+                        <p className="font-medium text-sm">
+                          {collaborator.name}
+                        </p>
+                        <Badge
+                          className={cn(
+                            'text-xs',
+                            getRoleColor(collaborator.role)
+                          )}
+                        >
                           {collaborator.role}
                         </Badge>
                       </div>
-                      <p className="text-xs text-gray-600">{collaborator.email}</p>
-                      {collaborator.currentSection && collaborator.status === 'online' && (
-                        <p className="text-xs text-blue-600 mt-1">
-                          Editing: {collaborator.currentSection}
-                        </p>
-                      )}
+                      <p className="text-xs text-gray-600">
+                        {collaborator.email}
+                      </p>
+                      {collaborator.currentSection &&
+                        collaborator.status === 'online' && (
+                          <p className="text-xs text-blue-600 mt-1">
+                            Editing: {collaborator.currentSection}
+                          </p>
+                        )}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-8 w-8"
                       title="Message"
                     >
@@ -365,15 +404,27 @@ export function CollaborationManager() {
                       </Button>
                       <div className="absolute right-0 mt-2 w-48 hidden group-hover:block bg-white border rounded-md shadow-lg z-10">
                         <div className="space-y-2 p-2">
-                          <Button variant="ghost" className="w-full justify-start" size="sm">
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start"
+                            size="sm"
+                          >
                             <Edit3 className="w-4 h-4 mr-2" />
                             Change Role
                           </Button>
-                          <Button variant="ghost" className="w-full justify-start" size="sm">
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start"
+                            size="sm"
+                          >
                             <Mail className="w-4 h-4 mr-2" />
                             Send Email
                           </Button>
-                          <Button variant="ghost" className="w-full justify-start text-red-600" size="sm">
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start text-red-600"
+                            size="sm"
+                          >
                             <X className="w-4 h-4 mr-2" />
                             Remove
                           </Button>
@@ -400,12 +451,12 @@ export function CollaborationManager() {
 
             <div className="h-64 overflow-y-auto">
               <div className="space-y-3 pr-4">
-                {comments.map((comment) => (
+                {comments.map(comment => (
                   <div
                     key={comment.id}
                     className={cn(
-                      "p-3 rounded-lg border",
-                      comment.resolved ? "bg-gray-50 opacity-60" : "bg-white"
+                      'p-3 rounded-lg border',
+                      comment.resolved ? 'bg-gray-50 opacity-60' : 'bg-white'
                     )}
                   >
                     <div className="flex items-start justify-between mb-2">
@@ -413,10 +464,15 @@ export function CollaborationManager() {
                         <Avatar className="w-6 h-6">
                           <AvatarImage src={comment.author.avatar || ''} />
                           <AvatarFallback>
-                            {comment.author.name.split(' ').map(n => n[0]).join('')}
+                            {comment.author.name
+                              .split(' ')
+                              .map(n => n[0])
+                              .join('')}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm font-medium">{comment.author.name}</span>
+                        <span className="text-sm font-medium">
+                          {comment.author.name}
+                        </span>
                         <span className="text-xs text-gray-500">
                           {new Date(comment.timestamp).toLocaleTimeString()}
                         </span>
@@ -428,37 +484,45 @@ export function CollaborationManager() {
                             Resolved
                           </Badge>
                         ) : (
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                          >
                             <Check className="w-3 h-3" />
                           </Button>
                         )}
                       </div>
                     </div>
-                    
+
                     <p className="text-sm text-gray-700 mb-2">{comment.text}</p>
-                    
+
                     {comment.questionId && (
                       <Badge variant="outline" className="text-xs mb-2">
                         Question: {comment.questionId}
                       </Badge>
                     )}
-                    
+
                     {comment.replies && comment.replies.length > 0 && (
                       <div className="ml-6 mt-2 space-y-2 border-l-2 border-gray-200 pl-3">
-                        {comment.replies.map((reply) => (
+                        {comment.replies.map(reply => (
                           <div key={reply.id}>
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-medium">{reply.author.name}</span>
+                              <span className="text-xs font-medium">
+                                {reply.author.name}
+                              </span>
                               <span className="text-xs text-gray-500">
                                 {new Date(reply.timestamp).toLocaleTimeString()}
                               </span>
                             </div>
-                            <p className="text-xs text-gray-600">{reply.text}</p>
+                            <p className="text-xs text-gray-600">
+                              {reply.text}
+                            </p>
                           </div>
                         ))}
                       </div>
                     )}
-                    
+
                     <button className="text-xs text-blue-600 hover:underline mt-2">
                       Reply
                     </button>
@@ -480,7 +544,10 @@ export function CollaborationManager() {
             <div className="space-y-3">
               <div>
                 <Label className="text-sm">Lock Mode</Label>
-                <Select value={lockMode} onValueChange={(v: any) => setLockMode(v)}>
+                <Select
+                  value={lockMode}
+                  onValueChange={(v: any) => setLockMode(v)}
+                >
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
@@ -506,11 +573,12 @@ export function CollaborationManager() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {lockMode !== 'none' && (
                 <div className="p-2 bg-yellow-50 rounded text-xs text-yellow-700">
                   <AlertCircle className="w-3 h-3 inline mr-1" />
-                  Only one person can edit {lockMode === 'section' ? 'each section' : 'at a time'}
+                  Only one person can edit{' '}
+                  {lockMode === 'section' ? 'each section' : 'at a time'}
                 </div>
               )}
             </div>
@@ -524,18 +592,22 @@ export function CollaborationManager() {
             </h4>
             <div className="h-64 overflow-y-auto">
               <div className="space-y-3 pr-4">
-                {activities.map((activity) => (
+                {activities.map(activity => (
                   <div key={activity.id} className="flex items-start gap-2">
                     <Avatar className="w-6 h-6">
                       <AvatarImage src={activity.user.avatar || ''} />
                       <AvatarFallback>
-                        {activity.user.name.split(' ').map(n => n[0]).join('')}
+                        {activity.user.name
+                          .split(' ')
+                          .map(n => n[0])
+                          .join('')}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <p className="text-xs">
-                        <span className="font-medium">{activity.user.name}</span>
-                        {' '}
+                        <span className="font-medium">
+                          {activity.user.name}
+                        </span>{' '}
                         <span className="text-gray-600">{activity.action}</span>
                       </p>
                       <p className="text-xs text-gray-500">
@@ -557,11 +629,15 @@ export function CollaborationManager() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Switch defaultChecked />
-                <Label className="text-sm font-normal">Comments & mentions</Label>
+                <Label className="text-sm font-normal">
+                  Comments & mentions
+                </Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch defaultChecked />
-                <Label className="text-sm font-normal">Edits to my sections</Label>
+                <Label className="text-sm font-normal">
+                  Edits to my sections
+                </Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch />
@@ -596,9 +672,15 @@ export function CollaborationManager() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="editor">Editor - Can edit questions</SelectItem>
-                    <SelectItem value="reviewer">Reviewer - Can comment and approve</SelectItem>
-                    <SelectItem value="viewer">Viewer - Can only view</SelectItem>
+                    <SelectItem value="editor">
+                      Editor - Can edit questions
+                    </SelectItem>
+                    <SelectItem value="reviewer">
+                      Reviewer - Can comment and approve
+                    </SelectItem>
+                    <SelectItem value="viewer">
+                      Viewer - Can only view
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -611,7 +693,10 @@ export function CollaborationManager() {
               </div>
             </div>
             <div className="flex gap-2 justify-end mt-6">
-              <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowInviteDialog(false)}
+              >
                 Cancel
               </Button>
               <Button>

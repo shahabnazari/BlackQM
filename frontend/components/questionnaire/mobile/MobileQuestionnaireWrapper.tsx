@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ChevronLeft, ChevronRight, Menu, Save, Eye, WifiOff, Wifi } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  Save,
+  Eye,
+  WifiOff,
+  Wifi,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Mock Sheet components since they may not exist
@@ -14,7 +22,9 @@ const SheetTrigger = ({ asChild, children }: any) => {
   return <>{children}</>;
 };
 const SheetContent = ({ side, className, children }: any) => (
-  <div className={`fixed inset-y-0 ${side === 'left' ? 'left-0' : 'right-0'} w-80 bg-background border-r p-6 z-50 ${className}`}>
+  <div
+    className={`fixed inset-y-0 ${side === 'left' ? 'left-0' : 'right-0'} w-80 bg-background border-r p-6 z-50 ${className}`}
+  >
     {children}
   </div>
 );
@@ -34,7 +44,9 @@ interface MobileQuestionnaireWrapperProps {
   className?: string;
 }
 
-export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProps> = ({
+export const MobileQuestionnaireWrapper: React.FC<
+  MobileQuestionnaireWrapperProps
+> = ({
   children,
   currentStep = 1,
   totalSteps = 1,
@@ -44,10 +56,12 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
   onSave,
   onPreview,
   isOffline = false,
-  className
+  className,
 }) => {
   const [isMobile, setIsMobile] = useState(false);
-  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>(
+    'portrait'
+  );
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchEndX, setTouchEndX] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -64,7 +78,9 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
   useEffect(() => {
     const checkDevice = () => {
       setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
-      setOrientation(window.innerHeight > window.innerWidth ? 'portrait' : 'landscape');
+      setOrientation(
+        window.innerHeight > window.innerWidth ? 'portrait' : 'landscape'
+      );
     };
 
     checkDevice();
@@ -122,7 +138,8 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
           if (currentStep > 1 && onStepChange) onStepChange(currentStep - 1);
           break;
         case 'ArrowRight':
-          if (currentStep < totalSteps && onStepChange) onStepChange(currentStep + 1);
+          if (currentStep < totalSteps && onStepChange)
+            onStepChange(currentStep + 1);
           break;
         case 'Escape':
           setIsMenuOpen(false);
@@ -163,9 +180,12 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
         questionnaireName,
         currentStep,
         timestamp: new Date().toISOString(),
-        data: {} // Add actual form data here
+        data: {}, // Add actual form data here
       };
-      localStorage.setItem(`offline_questionnaire_${questionnaireId}`, JSON.stringify(offlineData));
+      localStorage.setItem(
+        `offline_questionnaire_${questionnaireId}`,
+        JSON.stringify(offlineData)
+      );
       toast.success('Saved locally (offline mode)');
     } else {
       onSave?.();
@@ -180,7 +200,7 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
     small: 'text-sm',
     medium: 'text-base',
     large: 'text-lg',
-    xlarge: 'text-xl'
+    xlarge: 'text-xl',
   };
 
   return (
@@ -207,9 +227,13 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-80">
-              <nav className="space-y-4" role="navigation" aria-label="Main menu">
+              <nav
+                className="space-y-4"
+                role="navigation"
+                aria-label="Main menu"
+              >
                 <h2 className="text-lg font-semibold">{questionnaireName}</h2>
-                
+
                 <div className="space-y-2">
                   <Button
                     variant="ghost"
@@ -220,7 +244,7 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
                     <Save className="mr-2 h-4 w-4" />
                     Save Progress
                   </Button>
-                  
+
                   <Button
                     variant="ghost"
                     className="w-full justify-start"
@@ -233,13 +257,13 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
 
                 <div className="border-t pt-4">
                   <h3 className="text-sm font-semibold mb-2">Accessibility</h3>
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Font Size</span>
                       <select
                         value={fontSize}
-                        onChange={(e) => setFontSize(e.target.value)}
+                        onChange={e => setFontSize(e.target.value)}
                         className="text-sm border rounded px-2 py-1"
                         aria-label="Font size"
                       >
@@ -254,7 +278,7 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
                       <input
                         type="checkbox"
                         checked={highContrast}
-                        onChange={(e) => setHighContrast(e.target.checked)}
+                        onChange={e => setHighContrast(e.target.checked)}
                         aria-label="High contrast mode"
                       />
                       <span className="text-sm">High Contrast</span>
@@ -264,7 +288,7 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
                       <input
                         type="checkbox"
                         checked={reducedMotion}
-                        onChange={(e) => setReducedMotion(e.target.checked)}
+                        onChange={e => setReducedMotion(e.target.checked)}
                         aria-label="Reduced motion"
                       />
                       <span className="text-sm">Reduced Motion</span>
@@ -274,7 +298,7 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
                       <input
                         type="checkbox"
                         checked={keyboardMode}
-                        onChange={(e) => setKeyboardMode(e.target.checked)}
+                        onChange={e => setKeyboardMode(e.target.checked)}
                         aria-label="Keyboard navigation"
                       />
                       <span className="text-sm">Keyboard Navigation</span>
@@ -284,7 +308,7 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
                       <input
                         type="checkbox"
                         checked={autoSaveEnabled}
-                        onChange={(e) => setAutoSaveEnabled(e.target.checked)}
+                        onChange={e => setAutoSaveEnabled(e.target.checked)}
                         aria-label="Auto-save"
                       />
                       <span className="text-sm">Auto-save</span>
@@ -302,7 +326,9 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
           </Sheet>
 
           <div className="flex-1 text-center">
-            <h1 className="text-lg font-semibold truncate px-4">{questionnaireName}</h1>
+            <h1 className="text-lg font-semibold truncate px-4">
+              {questionnaireName}
+            </h1>
             <p className="text-sm text-muted-foreground">
               Step {currentStep} of {totalSteps}
             </p>
@@ -324,22 +350,24 @@ export const MobileQuestionnaireWrapper: React.FC<MobileQuestionnaireWrapperProp
         </div>
 
         {/* Progress bar */}
-        <Progress value={progress} className="h-1" aria-label={`Progress: ${Math.round(progress)}%`} />
+        <Progress
+          value={progress}
+          className="h-1"
+          aria-label={`Progress: ${Math.round(progress)}%`}
+        />
       </header>
 
       {/* Main content area */}
-      <main 
+      <main
         className={cn(
-          "flex-1",
-          isMobile ? "px-4 py-6" : "container mx-auto px-6 py-8",
-          orientation === 'landscape' && isMobile && "py-4"
+          'flex-1',
+          isMobile ? 'px-4 py-6' : 'container mx-auto px-6 py-8',
+          orientation === 'landscape' && isMobile && 'py-4'
         )}
         role="main"
         aria-live="polite"
       >
-        <div className="max-w-4xl mx-auto">
-          {children}
-        </div>
+        <div className="max-w-4xl mx-auto">{children}</div>
       </main>
 
       {/* Mobile navigation footer */}

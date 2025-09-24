@@ -1,12 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { QuestionService } from './question.service';
-import { 
-  Question, 
-  Response, 
-  Survey,
-  Prisma 
-} from '@prisma/client';
+import { Question, Response, Survey, Prisma } from '@prisma/client';
 
 interface PostSurveyContext {
   qsortData: {
@@ -60,28 +59,28 @@ export class PostSurveyService {
     {
       condition: (ctx) => ctx.qsortData.changesCount > 20,
       questionId: 'high-uncertainty-followup',
-      priority: 1
+      priority: 1,
     },
     {
       condition: (ctx) => ctx.qsortData.timeSpent < 300, // Less than 5 minutes
       questionId: 'quick-sort-reasoning',
-      priority: 2
+      priority: 2,
     },
     {
       condition: (ctx) => ctx.qsortData.extremeStatements.mostAgree.length > 0,
       questionId: 'extreme-agreement-explanation',
-      priority: 1
+      priority: 1,
     },
     {
       condition: (ctx) => ctx.participantProfile.previousResponses === 0,
       questionId: 'first-time-experience',
-      priority: 3
-    }
+      priority: 3,
+    },
   ];
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly questionService: QuestionService
+    private readonly questionService: QuestionService,
   ) {}
 
   /**
@@ -91,28 +90,26 @@ export class PostSurveyService {
   async getPostSurveyQuestions(
     surveyId: string,
     participantId: string,
-    qsortData?: any
+    qsortData?: any,
   ): Promise<Question[]> {
     // Get base post-survey questions - using TEXT_ENTRY as placeholder
     // TODO: Add POST_SURVEY to QuestionType enum or use a different filter
-    const baseQuestions = await this.questionService.findBySurvey(
-      surveyId
-    );
+    const baseQuestions = await this.questionService.findBySurvey(surveyId);
 
     // Get participant context
     const context = await this.buildPostSurveyContext(
       surveyId,
       participantId,
-      qsortData
+      qsortData,
     );
 
     // Apply dynamic rules to add context-aware questions
     const dynamicQuestions = await this.applyDynamicRules(context);
-    
+
     // Combine and prioritize questions
     const allQuestions = this.mergeAndPrioritizeQuestions(
       baseQuestions,
-      dynamicQuestions
+      dynamicQuestions,
     );
 
     // Apply adaptive ordering based on participant engagement
@@ -126,7 +123,7 @@ export class PostSurveyService {
     surveyId: string,
     participantId: string,
     responses: PostSurveyResponse[],
-    qsortData?: any
+    qsortData?: any,
   ): Promise<PostSurveyResult> {
     const startTime = Date.now();
 
@@ -148,11 +145,11 @@ export class PostSurveyService {
       let responseSession = await tx.response.findFirst({
         where: {
           surveyId,
-          participantId
+          participantId,
         },
         orderBy: {
-          createdAt: 'desc'
-        }
+          createdAt: 'desc',
+        },
       });
 
       if (!responseSession) {
@@ -162,8 +159,8 @@ export class PostSurveyService {
             surveyId,
             participantId,
             sessionCode: `PS-${Date.now()}`,
-            timeSpent: 0
-          }
+            timeSpent: 0,
+          },
         });
       }
 
@@ -171,7 +168,7 @@ export class PostSurveyService {
 
       for (const response of responses) {
         const question = await tx.question.findUnique({
-          where: { id: response.questionId }
+          where: { id: response.questionId },
         });
 
         if (!question) continue;
@@ -187,16 +184,21 @@ export class PostSurveyService {
               metadata: response.metadata,
               qualityScore,
               postSurvey: true,
-              qsortContext: qsortData
-            } as Prisma.JsonObject
-          }
+              qsortContext: qsortData,
+            } as Prisma.JsonObject,
+          },
         });
 
         answerRecords.push(answerRecord);
       }
 
       // Update participant completion status
-      await this.updateParticipantStatus(tx, surveyId, participantId, 'post-survey-complete');
+      await this.updateParticipantStatus(
+        tx,
+        surveyId,
+        participantId,
+        'post-survey-complete',
+      );
 
       return answerRecords;
     });
@@ -208,7 +210,7 @@ export class PostSurveyService {
       responses: responses,
       completionTime: Date.now() - startTime,
       qualityScore,
-      insights
+      insights,
     };
   }
 
@@ -221,13 +223,13 @@ export class PostSurveyService {
     const answers = await this.prisma.answer.findMany({
       where: {
         question: {
-          surveyId
-        }
+          surveyId,
+        },
       },
       include: {
         question: true,
-        response: true
-      }
+        response: true,
+      },
     });
 
     // Group by question type for analysis
@@ -250,8 +252,8 @@ export class PostSurveyService {
       qualityMetrics: {
         averageCompletionTime: this.calculateAverageTime(answers),
         averageQualityScore: this.calculateAverageQuality(answers),
-        responseRate: await this.calculateResponseRate(surveyId)
-      }
+        responseRate: await this.calculateResponseRate(surveyId),
+      },
     };
   }
 
@@ -260,17 +262,17 @@ export class PostSurveyService {
    */
   async generateExperienceFeedback(
     surveyId: string,
-    participantId: string
+    participantId: string,
   ): Promise<any> {
     // Get the response session for this participant
     const responseSession = await this.prisma.response.findFirst({
       where: {
         surveyId,
-        participantId
+        participantId,
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: 'desc',
+      },
     });
 
     if (!responseSession) {
@@ -280,18 +282,18 @@ export class PostSurveyService {
     // Get all answers for this response session
     const answers = await this.prisma.answer.findMany({
       where: {
-        responseId: responseSession.id
+        responseId: responseSession.id,
       },
       include: {
-        question: true
-      }
+        question: true,
+      },
     });
 
     // Extract experience-related answers
     // Note: Question model doesn't have metadata field in current schema
-    const experienceQuestions = answers.filter(a => 
-      a.question && a.value && 
-      (a.value as any).category === 'experience'
+    const experienceQuestions = answers.filter(
+      (a) =>
+        a.question && a.value && (a.value as any).category === 'experience',
     );
 
     // Analyze sentiment
@@ -309,33 +311,33 @@ export class PostSurveyService {
       painPoints,
       improvements,
       positiveAspects: this.extractPositiveAspects(experienceQuestions),
-      wouldRecommend: this.extractRecommendation(experienceQuestions)
+      wouldRecommend: this.extractRecommendation(experienceQuestions),
     };
   }
 
   /**
    * Private helper methods
    */
-  
+
   private async buildPostSurveyContext(
     surveyId: string,
     participantId: string,
-    qsortData?: any
+    qsortData?: any,
   ): Promise<PostSurveyContext> {
     const survey = await this.prisma.survey.findUnique({
-      where: { id: surveyId }
+      where: { id: surveyId },
     });
 
     const participant = await this.prisma.participant.findUnique({
-      where: { id: participantId }
+      where: { id: participantId },
     });
-    
+
     // Get responses for this participant separately
     const responses = await this.prisma.response.findMany({
-      where: { 
+      where: {
         surveyId,
-        participantId
-      }
+        participantId,
+      },
     });
 
     return {
@@ -345,31 +347,31 @@ export class PostSurveyService {
         changesCount: 0,
         extremeStatements: {
           mostAgree: [],
-          mostDisagree: []
-        }
+          mostDisagree: [],
+        },
       },
       participantProfile: {
         id: participantId,
         demographics: {} as Record<string, any>, // Demographics not stored on Participant model
-        previousResponses: responses.length || 0
+        previousResponses: responses.length || 0,
       },
       studyContext: {
         topic: survey?.title || '',
         researchQuestions: (survey?.settings as any)?.researchQuestions || [],
-        targetAudience: (survey?.settings as any)?.targetAudience || ''
-      }
+        targetAudience: (survey?.settings as any)?.targetAudience || '',
+      },
     };
   }
 
   private async applyDynamicRules(
-    context: PostSurveyContext
+    context: PostSurveyContext,
   ): Promise<Question[]> {
     const applicableRules = this.dynamicRules
-      .filter(rule => rule.condition(context))
+      .filter((rule) => rule.condition(context))
       .sort((a, b) => a.priority - b.priority);
 
     const dynamicQuestions: Question[] = [];
-    
+
     for (const rule of applicableRules) {
       const question = await this.questionService.findOne(rule.questionId);
       if (question) {
@@ -382,10 +384,10 @@ export class PostSurveyService {
 
   private mergeAndPrioritizeQuestions(
     baseQuestions: Question[],
-    dynamicQuestions: Question[]
+    dynamicQuestions: Question[],
   ): Question[] {
     const merged = [...baseQuestions];
-    const baseIds = new Set(baseQuestions.map(q => q.id));
+    const baseIds = new Set(baseQuestions.map((q) => q.id));
 
     for (const dq of dynamicQuestions) {
       if (!baseIds.has(dq.id)) {
@@ -404,27 +406,27 @@ export class PostSurveyService {
 
   private applyAdaptiveOrdering(
     questions: Question[],
-    context: PostSurveyContext
+    context: PostSurveyContext,
   ): Question[] {
     // Group questions by category
     const categorized = this.categorizeQuestions(questions);
 
     // Determine optimal order based on engagement
     const engagementLevel = this.assessEngagementLevel(context);
-    
+
     if (engagementLevel === 'high') {
       // Start with open-ended, then rating, then demographic
       return [
         ...categorized.openEnded,
         ...categorized.rating,
-        ...categorized.demographic
+        ...categorized.demographic,
       ];
     } else if (engagementLevel === 'low') {
       // Start with quick rating questions, minimize open-ended
       return [
         ...categorized.rating,
         ...categorized.demographic,
-        ...categorized.openEnded.slice(0, 2) // Limit open-ended
+        ...categorized.openEnded.slice(0, 2), // Limit open-ended
       ];
     } else {
       // Balanced approach
@@ -433,34 +435,40 @@ export class PostSurveyService {
         ...categorized.openEnded.slice(0, 2),
         ...categorized.rating.slice(3),
         ...categorized.demographic,
-        ...categorized.openEnded.slice(2)
+        ...categorized.openEnded.slice(2),
       ];
     }
   }
 
   private categorizeQuestions(questions: Question[]): any {
     return {
-      openEnded: questions.filter(q => q.type === 'TEXT_ENTRY'),
-      rating: questions.filter(q => q.type === 'RATING_SCALE' || q.type === 'LIKERT_SCALE'),
-      demographic: questions.filter(q => (q.validation as any)?.category === 'demographic')
+      openEnded: questions.filter((q) => q.type === 'TEXT_ENTRY'),
+      rating: questions.filter(
+        (q) => q.type === 'RATING_SCALE' || q.type === 'LIKERT_SCALE',
+      ),
+      demographic: questions.filter(
+        (q) => (q.validation as any)?.category === 'demographic',
+      ),
     };
   }
 
-  private assessEngagementLevel(context: PostSurveyContext): 'high' | 'medium' | 'low' {
+  private assessEngagementLevel(
+    context: PostSurveyContext,
+  ): 'high' | 'medium' | 'low' {
     const { qsortData } = context;
-    
+
     if (qsortData.timeSpent > 600 && qsortData.changesCount > 10) {
       return 'high';
     } else if (qsortData.timeSpent < 180 || qsortData.changesCount < 5) {
       return 'low';
     }
-    
+
     return 'medium';
   }
 
   private async validateResponses(
     surveyId: string,
-    responses: PostSurveyResponse[]
+    responses: PostSurveyResponse[],
   ): Promise<{ valid: boolean; errors?: string[] }> {
     const errors: string[] = [];
 
@@ -480,25 +488,25 @@ export class PostSurveyService {
 
     return {
       valid: errors.length === 0,
-      errors: errors.length > 0 ? errors : undefined
+      errors: errors.length > 0 ? errors : undefined,
     };
   }
 
   private validateAnswer(
     question: Question,
-    answer: any
+    answer: any,
   ): { valid: boolean; error?: string } {
     const validation = question.validation as any;
-    
+
     if (!validation) {
       return { valid: true };
     }
 
     // Check required
     if (validation.required && !answer) {
-      return { 
-        valid: false, 
-        error: `Question "${question.text}" is required` 
+      return {
+        valid: false,
+        error: `Question "${question.text}" is required`,
       };
     }
 
@@ -506,32 +514,32 @@ export class PostSurveyService {
     switch (question.type) {
       case 'TEXT_ENTRY':
         if (validation.minLength && answer.length < validation.minLength) {
-          return { 
-            valid: false, 
-            error: `Answer must be at least ${validation.minLength} characters` 
+          return {
+            valid: false,
+            error: `Answer must be at least ${validation.minLength} characters`,
           };
         }
         if (validation.maxLength && answer.length > validation.maxLength) {
-          return { 
-            valid: false, 
-            error: `Answer must not exceed ${validation.maxLength} characters` 
+          return {
+            valid: false,
+            error: `Answer must not exceed ${validation.maxLength} characters`,
           };
         }
         break;
-        
+
       case 'RATING_SCALE':
       case 'LIKERT_SCALE':
         const value = Number(answer);
         if (validation.min && value < validation.min) {
-          return { 
-            valid: false, 
-            error: `Rating must be at least ${validation.min}` 
+          return {
+            valid: false,
+            error: `Rating must be at least ${validation.min}`,
           };
         }
         if (validation.max && value > validation.max) {
-          return { 
-            valid: false, 
-            error: `Rating must not exceed ${validation.max}` 
+          return {
+            valid: false,
+            error: `Rating must not exceed ${validation.max}`,
           };
         }
         break;
@@ -550,17 +558,17 @@ export class PostSurveyService {
     factors++;
 
     // Factor 2: Response depth (30%)
-    const textResponses = responses.filter(r => 
-      typeof r.answer === 'string' && r.answer.length > 20
+    const textResponses = responses.filter(
+      (r) => typeof r.answer === 'string' && r.answer.length > 20,
     );
     const depthScore = (textResponses.length / responses.length) * 30;
     score += depthScore;
     factors++;
 
     // Factor 3: Time investment (20%)
-    const avgTimePerQuestion = responses.reduce((sum, r) => 
-      sum + (r.timeSpent || 0), 0
-    ) / responses.length;
+    const avgTimePerQuestion =
+      responses.reduce((sum, r) => sum + (r.timeSpent || 0), 0) /
+      responses.length;
     const timeScore = Math.min((avgTimePerQuestion / 30) * 20, 20); // 30s ideal per question
     score += timeScore;
     factors++;
@@ -576,8 +584,8 @@ export class PostSurveyService {
   private assessResponseConsistency(responses: PostSurveyResponse[]): number {
     // Check for patterns suggesting random or careless responding
     const ratingResponses = responses
-      .filter(r => typeof r.answer === 'number')
-      .map(r => Number(r.answer));
+      .filter((r) => typeof r.answer === 'number')
+      .map((r) => Number(r.answer));
 
     if (ratingResponses.length < 3) return 1;
 
@@ -594,17 +602,17 @@ export class PostSurveyService {
 
   private calculateVariance(values: number[]): number {
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
-    const squaredDiffs = values.map(v => Math.pow(v - mean, 2));
+    const squaredDiffs = values.map((v) => Math.pow(v - mean, 2));
     return squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
   }
 
   private async extractInsights(
     responses: PostSurveyResponse[],
-    qsortData?: any
+    qsortData?: any,
   ): Promise<any> {
     const textResponses = responses
-      .filter(r => typeof r.answer === 'string')
-      .map(r => r.answer as string);
+      .filter((r) => typeof r.answer === 'string')
+      .map((r) => r.answer as string);
 
     // Extract key themes (simplified - in production, use NLP)
     const keyThemes = this.extractKeyThemes(textResponses);
@@ -618,19 +626,32 @@ export class PostSurveyService {
     return {
       keyThemes,
       sentiment,
-      engagement
+      engagement,
     };
   }
 
   private extractKeyThemes(texts: string[]): string[] {
     // Simplified theme extraction
     const wordFrequency = new Map<string, number>();
-    const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for']);
+    const stopWords = new Set([
+      'the',
+      'a',
+      'an',
+      'and',
+      'or',
+      'but',
+      'in',
+      'on',
+      'at',
+      'to',
+      'for',
+    ]);
 
     for (const text of texts) {
-      const words = text.toLowerCase()
+      const words = text
+        .toLowerCase()
         .split(/\s+/)
-        .filter(w => w.length > 3 && !stopWords.has(w));
+        .filter((w) => w.length > 3 && !stopWords.has(w));
 
       for (const word of words) {
         wordFrequency.set(word, (wordFrequency.get(word) || 0) + 1);
@@ -644,18 +665,35 @@ export class PostSurveyService {
       .map(([word]) => word);
   }
 
-  private analyzeSentimentFromText(texts: string[]): 'positive' | 'neutral' | 'negative' {
+  private analyzeSentimentFromText(
+    texts: string[],
+  ): 'positive' | 'neutral' | 'negative' {
     // Simplified sentiment analysis
-    const positiveWords = ['good', 'great', 'excellent', 'helpful', 'easy', 'clear', 'enjoyed'];
-    const negativeWords = ['difficult', 'confusing', 'hard', 'unclear', 'frustrating', 'boring'];
+    const positiveWords = [
+      'good',
+      'great',
+      'excellent',
+      'helpful',
+      'easy',
+      'clear',
+      'enjoyed',
+    ];
+    const negativeWords = [
+      'difficult',
+      'confusing',
+      'hard',
+      'unclear',
+      'frustrating',
+      'boring',
+    ];
 
     let positiveCount = 0;
     let negativeCount = 0;
 
     for (const text of texts) {
       const lower = text.toLowerCase();
-      positiveCount += positiveWords.filter(w => lower.includes(w)).length;
-      negativeCount += negativeWords.filter(w => lower.includes(w)).length;
+      positiveCount += positiveWords.filter((w) => lower.includes(w)).length;
+      negativeCount += negativeWords.filter((w) => lower.includes(w)).length;
     }
 
     if (positiveCount > negativeCount * 1.5) return 'positive';
@@ -665,14 +703,14 @@ export class PostSurveyService {
 
   private assessEngagement(
     responses: PostSurveyResponse[],
-    qsortData?: any
+    qsortData?: any,
   ): 'high' | 'medium' | 'low' {
-    const avgTimeSpent = responses.reduce((sum, r) => 
-      sum + (r.timeSpent || 0), 0
-    ) / responses.length;
+    const avgTimeSpent =
+      responses.reduce((sum, r) => sum + (r.timeSpent || 0), 0) /
+      responses.length;
 
     const textLength = responses
-      .filter(r => typeof r.answer === 'string')
+      .filter((r) => typeof r.answer === 'string')
       .reduce((sum, r) => sum + (r.answer as string).length, 0);
 
     if (avgTimeSpent > 45 && textLength > 500) return 'high';
@@ -683,13 +721,13 @@ export class PostSurveyService {
   private async triggerAnalysisPipeline(
     surveyId: string,
     participantId: string,
-    responses: any[]
+    responses: any[],
   ): Promise<void> {
     // In production, this would trigger analysis jobs
     console.log('Triggering analysis pipeline for:', {
       surveyId,
       participantId,
-      responseCount: responses.length
+      responseCount: responses.length,
     });
   }
 
@@ -697,23 +735,26 @@ export class PostSurveyService {
     tx: any,
     surveyId: string,
     participantId: string,
-    status: string
+    status: string,
   ): Promise<void> {
     await tx.participant.update({
       where: { id: participantId },
       data: {
         metadata: {
-          ...(await tx.participant.findUnique({ where: { id: participantId } }))?.metadata as any,
+          ...((
+            await tx.participant.findUnique({ where: { id: participantId } })
+          )?.metadata as any),
           [`survey_${surveyId}_status`]: status,
-          [`survey_${surveyId}_post_survey_completed`]: new Date().toISOString()
-        }
-      }
+          [`survey_${surveyId}_post_survey_completed`]:
+            new Date().toISOString(),
+        },
+      },
     });
   }
 
   private groupResponsesByType(responses: any[]): any {
     const grouped: any = {};
-    
+
     for (const response of responses) {
       const type = response.question.type;
       if (!grouped[type]) {
@@ -721,25 +762,25 @@ export class PostSurveyService {
       }
       grouped[type].push(response);
     }
-    
+
     return grouped;
   }
 
   private calculateStatistics(grouped: any): any {
     const stats: any = {};
-    
+
     // Calculate stats for rating questions
     if (grouped.RATING || grouped.LIKERT) {
       const ratings = [...(grouped.RATING || []), ...(grouped.LIKERT || [])]
-        .map(r => Number(r.answer))
-        .filter(n => !isNaN(n));
+        .map((r) => Number(r.answer))
+        .filter((n) => !isNaN(n));
 
       if (ratings.length > 0) {
         stats.rating = {
           mean: ratings.reduce((a, b) => a + b, 0) / ratings.length,
           median: this.calculateMedian(ratings),
           stdDev: Math.sqrt(this.calculateVariance(ratings)),
-          distribution: this.calculateDistribution(ratings)
+          distribution: this.calculateDistribution(ratings),
         };
       }
     }
@@ -764,38 +805,39 @@ export class PostSurveyService {
   }
 
   private async extractThemes(openEndedResponses: any[]): Promise<string[]> {
-    const texts = openEndedResponses.map(r => r.answer as string);
+    const texts = openEndedResponses.map((r) => r.answer as string);
     return this.extractKeyThemes(texts);
   }
 
   private analyzeDemographics(demographicResponses: any[]): any {
     const demographics: any = {};
-    
+
     for (const response of demographicResponses) {
       const questionText = response.question.text;
       demographics[questionText] = demographics[questionText] || {};
-      
+
       const answer = response.answer;
-      demographics[questionText][answer] = (demographics[questionText][answer] || 0) + 1;
+      demographics[questionText][answer] =
+        (demographics[questionText][answer] || 0) + 1;
     }
-    
+
     return demographics;
   }
 
   private calculateAverageTime(responses: any[]): number {
     const times = responses
-      .map(r => (r.metadata as any)?.timeSpent)
-      .filter(t => typeof t === 'number');
+      .map((r) => (r.metadata as any)?.timeSpent)
+      .filter((t) => typeof t === 'number');
 
-    return times.length > 0 
-      ? times.reduce((a, b) => a + b, 0) / times.length 
+    return times.length > 0
+      ? times.reduce((a, b) => a + b, 0) / times.length
       : 0;
   }
 
   private calculateAverageQuality(responses: any[]): number {
     const scores = responses
-      .map(r => (r.metadata as any)?.qualityScore)
-      .filter(s => typeof s === 'number');
+      .map((r) => (r.metadata as any)?.qualityScore)
+      .filter((s) => typeof s === 'number');
 
     return scores.length > 0
       ? scores.reduce((a, b) => a + b, 0) / scores.length
@@ -804,98 +846,117 @@ export class PostSurveyService {
 
   private async calculateResponseRate(surveyId: string): Promise<number> {
     const totalParticipants = await this.prisma.participant.count({
-      where: { studyId: surveyId }
+      where: { studyId: surveyId },
     });
 
     const completedResponses = await this.prisma.response.count({
       where: {
         surveyId,
         completedAt: {
-          not: null
-        }
-      }
+          not: null,
+        },
+      },
     });
 
-    return totalParticipants > 0 
-      ? (completedResponses / totalParticipants) * 100 
+    return totalParticipants > 0
+      ? (completedResponses / totalParticipants) * 100
       : 0;
   }
 
   private analyzeSentiment(responses: any[]): any {
     const texts = responses
-      .filter(r => r.questionType === 'TEXT' || r.questionType === 'TEXTAREA')
-      .map(r => r.answer as string);
+      .filter((r) => r.questionType === 'TEXT' || r.questionType === 'TEXTAREA')
+      .map((r) => r.answer as string);
 
     return this.analyzeSentimentFromText(texts);
   }
 
   private identifyPainPoints(responses: any[]): string[] {
     const painPoints: string[] = [];
-    
+
     // Look for negative sentiment in text responses
     for (const response of responses) {
-      if (response.questionType === 'TEXT' || response.questionType === 'TEXTAREA') {
+      if (
+        response.questionType === 'TEXT' ||
+        response.questionType === 'TEXTAREA'
+      ) {
         const text = (response.answer as string).toLowerCase();
-        if (text.includes('difficult') || text.includes('confusing') || 
-            text.includes('unclear') || text.includes('frustrating')) {
+        if (
+          text.includes('difficult') ||
+          text.includes('confusing') ||
+          text.includes('unclear') ||
+          text.includes('frustrating')
+        ) {
           painPoints.push(text);
         }
       }
     }
-    
+
     return painPoints;
   }
 
   private generateImprovements(painPoints: string[]): string[] {
     const improvements: string[] = [];
-    
+
     // Map pain points to improvements
     for (const pain of painPoints) {
       if (pain.includes('difficult')) {
-        improvements.push('Simplify the interface and provide clearer instructions');
+        improvements.push(
+          'Simplify the interface and provide clearer instructions',
+        );
       }
       if (pain.includes('confusing')) {
         improvements.push('Improve clarity of statements and questions');
       }
       if (pain.includes('time')) {
-        improvements.push('Optimize the study length and provide time estimates');
+        improvements.push(
+          'Optimize the study length and provide time estimates',
+        );
       }
     }
-    
+
     return [...new Set(improvements)]; // Remove duplicates
   }
 
   private calculateSatisfactionScore(responses: any[]): number {
     const ratingResponses = responses
-      .filter(r => r.questionType === 'RATING' || r.questionType === 'LIKERT')
-      .map(r => Number(r.answer));
+      .filter((r) => r.questionType === 'RATING' || r.questionType === 'LIKERT')
+      .map((r) => Number(r.answer));
 
     if (ratingResponses.length === 0) return 0;
 
-    const avg = ratingResponses.reduce((a, b) => a + b, 0) / ratingResponses.length;
+    const avg =
+      ratingResponses.reduce((a, b) => a + b, 0) / ratingResponses.length;
     return (avg / 5) * 100; // Convert to percentage assuming 5-point scale
   }
 
   private extractPositiveAspects(responses: any[]): string[] {
     const positives: string[] = [];
-    
+
     for (const response of responses) {
-      if (response.questionType === 'TEXT' || response.questionType === 'TEXTAREA') {
+      if (
+        response.questionType === 'TEXT' ||
+        response.questionType === 'TEXTAREA'
+      ) {
         const text = (response.answer as string).toLowerCase();
-        if (text.includes('good') || text.includes('easy') || 
-            text.includes('helpful') || text.includes('clear')) {
+        if (
+          text.includes('good') ||
+          text.includes('easy') ||
+          text.includes('helpful') ||
+          text.includes('clear')
+        ) {
           positives.push(text);
         }
       }
     }
-    
+
     return positives;
   }
 
   private extractRecommendation(responses: any[]): boolean | null {
     // Look for specific recommendation question
-    const recommendQuestion = responses.find(r => 
-      (r.question.text as string).toLowerCase().includes('recommend')
+    const recommendQuestion = responses.find((r) =>
+      (r.question.text as string).toLowerCase().includes('recommend'),
     );
 
     if (!recommendQuestion) return null;
@@ -904,8 +965,10 @@ export class PostSurveyService {
     if (typeof answer === 'boolean') return answer;
     if (typeof answer === 'number') return answer >= 4; // Assuming 5-point scale
     if (typeof answer === 'string') {
-      return answer.toLowerCase().includes('yes') || 
-             answer.toLowerCase().includes('definitely');
+      return (
+        answer.toLowerCase().includes('yes') ||
+        answer.toLowerCase().includes('definitely')
+      );
     }
 
     return null;

@@ -1,12 +1,18 @@
-'use client'
+'use client';
 
-import React from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   BarChart3,
   TrendingUp,
@@ -19,20 +25,20 @@ import {
   Calculator,
   ChartBar,
   GitBranch,
-  Layers
-} from 'lucide-react'
+  Layers,
+} from 'lucide-react';
 
 interface AnalysisTool {
-  title: string
-  description: string
-  href: string
-  icon: React.ElementType
-  status: 'ready' | 'processing' | 'not-started'
-  badge?: string
+  title: string;
+  description: string;
+  href: string;
+  icon: React.ElementType;
+  status: 'ready' | 'processing' | 'not-started';
+  badge?: string;
 }
 
 export default function AnalyzePhasePage() {
-  const router = useRouter()
+  const router = useRouter();
 
   const analysisTools: AnalysisTool[] = [
     {
@@ -41,7 +47,7 @@ export default function AnalyzePhasePage() {
       href: '/analysis/hub/current',
       icon: Activity,
       status: 'ready',
-      badge: 'PRIMARY'
+      badge: 'PRIMARY',
     },
     {
       title: 'Q-Methodology Analysis',
@@ -49,21 +55,21 @@ export default function AnalyzePhasePage() {
       href: '/analysis/q-methodology',
       icon: GitBranch,
       status: 'ready',
-      badge: 'SPECIALIZED'
+      badge: 'SPECIALIZED',
     },
     {
       title: 'Statistical Metrics',
       description: 'View detailed statistical metrics and reports',
       href: '/analyze/metrics',
       icon: Calculator,
-      status: 'ready'
+      status: 'ready',
     },
     {
       title: 'Factor Explorer',
       description: 'Interactive factor analysis and rotation',
       href: '/analysis/hub/current#analysis',
       icon: Network,
-      status: 'ready'
+      status: 'ready',
     },
     {
       title: 'AI Analysis',
@@ -71,46 +77,46 @@ export default function AnalyzePhasePage() {
       href: '/analysis/hub/current#ai-insights',
       icon: Sparkles,
       status: 'processing',
-      badge: 'AI-POWERED'
+      badge: 'AI-POWERED',
     },
     {
       title: 'Correlation Matrix',
       description: 'Explore participant correlations and relationships',
       href: '/analysis/hub/current#correlations',
       icon: Layers,
-      status: 'ready'
-    }
-  ]
+      status: 'ready',
+    },
+  ];
 
   const getStatusColor = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'ready':
-        return 'bg-green-100 text-green-700'
+        return 'bg-green-100 text-green-700';
       case 'processing':
-        return 'bg-blue-100 text-blue-700'
+        return 'bg-blue-100 text-blue-700';
       default:
-        return 'bg-gray-100 text-gray-700'
+        return 'bg-gray-100 text-gray-700';
     }
-  }
+  };
 
   const getStatusText = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'ready':
-        return 'Ready'
+        return 'Ready';
       case 'processing':
-        return 'Processing'
+        return 'Processing';
       default:
-        return 'Not Started'
+        return 'Not Started';
     }
-  }
+  };
 
   const studyMetrics = {
     participants: 28,
     factors: 4,
     variance: 67.8,
     consensusStatements: 5,
-    distinguishingStatements: 12
-  }
+    distinguishingStatements: 12,
+  };
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -135,7 +141,9 @@ export default function AnalyzePhasePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Participants</p>
-                <p className="text-2xl font-bold">{studyMetrics.participants}</p>
+                <p className="text-2xl font-bold">
+                  {studyMetrics.participants}
+                </p>
               </div>
               <Users className="h-6 w-6 text-muted-foreground" />
             </div>
@@ -168,7 +176,9 @@ export default function AnalyzePhasePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Consensus</p>
-                <p className="text-2xl font-bold">{studyMetrics.consensusStatements}</p>
+                <p className="text-2xl font-bold">
+                  {studyMetrics.consensusStatements}
+                </p>
               </div>
               <FileBarChart className="h-6 w-6 text-muted-foreground" />
             </div>
@@ -179,7 +189,9 @@ export default function AnalyzePhasePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Distinguishing</p>
-                <p className="text-2xl font-bold">{studyMetrics.distinguishingStatements}</p>
+                <p className="text-2xl font-bold">
+                  {studyMetrics.distinguishingStatements}
+                </p>
               </div>
               <TrendingUp className="h-6 w-6 text-muted-foreground" />
             </div>
@@ -197,12 +209,14 @@ export default function AnalyzePhasePage() {
                 Access all analysis tools from a single, integrated dashboard
               </CardDescription>
             </div>
-            <Badge className="bg-primary text-primary-foreground">RECOMMENDED</Badge>
+            <Badge className="bg-primary text-primary-foreground">
+              RECOMMENDED
+            </Badge>
           </div>
         </CardHeader>
         <CardContent>
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             className="w-full md:w-auto"
             onClick={() => router.push('/analysis/hub/current')}
           >
@@ -214,8 +228,8 @@ export default function AnalyzePhasePage() {
 
       {/* Analysis Tools Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {analysisTools.slice(1).map((tool) => {
-          const Icon = tool.icon
+        {analysisTools.slice(1).map(tool => {
+          const Icon = tool.icon;
           return (
             <Card key={tool.href} className="hover:shadow-lg transition-shadow">
               <CardHeader>
@@ -239,9 +253,11 @@ export default function AnalyzePhasePage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <CardDescription className="mb-4">{tool.description}</CardDescription>
+                <CardDescription className="mb-4">
+                  {tool.description}
+                </CardDescription>
                 <Link href={tool.href}>
-                  <Button 
+                  <Button
                     variant="outline"
                     className="w-full"
                     disabled={tool.status === 'not-started'}
@@ -252,7 +268,7 @@ export default function AnalyzePhasePage() {
                 </Link>
               </CardContent>
             </Card>
-          )
+          );
         })}
       </div>
 
@@ -271,42 +287,50 @@ export default function AnalyzePhasePage() {
                 step: 1,
                 title: 'Data Quality Check',
                 description: 'Review completion rates and response patterns',
-                completed: true
+                completed: true,
               },
               {
                 step: 2,
                 title: 'Factor Extraction',
                 description: 'Extract factors using PCA or centroid method',
-                completed: true
+                completed: true,
               },
               {
                 step: 3,
                 title: 'Factor Rotation',
                 description: 'Apply varimax rotation or manual adjustments',
-                completed: false
+                completed: false,
               },
               {
                 step: 4,
                 title: 'Factor Interpretation',
-                description: 'Analyze distinguishing statements and create narratives',
-                completed: false
+                description:
+                  'Analyze distinguishing statements and create narratives',
+                completed: false,
               },
               {
                 step: 5,
                 title: 'Consensus Analysis',
-                description: 'Identify statements with agreement across factors',
-                completed: false
-              }
-            ].map((item) => (
+                description:
+                  'Identify statements with agreement across factors',
+                completed: false,
+              },
+            ].map(item => (
               <div key={item.step} className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  item.completed ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                }`}>
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    item.completed
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
+                >
                   {item.completed ? '✓' : item.step}
                 </div>
                 <div className="flex-1">
                   <h3 className="font-medium">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {item.description}
+                  </p>
                 </div>
               </div>
             ))}
@@ -318,8 +342,9 @@ export default function AnalyzePhasePage() {
       <Alert>
         <AlertTitle>Unified Analysis Experience</AlertTitle>
         <AlertDescription>
-          We've consolidated all analysis tools into the Analysis Hub for a better experience.
-          Legacy routes will automatically redirect to the appropriate section in the hub.
+          We've consolidated all analysis tools into the Analysis Hub for a
+          better experience. Legacy routes will automatically redirect to the
+          appropriate section in the hub.
         </AlertDescription>
       </Alert>
 
@@ -339,5 +364,5 @@ export default function AnalyzePhasePage() {
         </Link>
       </div>
     </div>
-  )
+  );
 }

@@ -6,12 +6,9 @@ export async function GET(request: NextRequest) {
   try {
     // Check authentication
     const session = await getServerSession(authOptions);
-    
+
     if (!session || !session.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get studyId from query params if provided
@@ -49,11 +46,14 @@ export async function GET(request: NextRequest) {
     if (process.env.BACKEND_URL) {
       try {
         const params = studyId ? `?studyId=${studyId}` : '';
-        const response = await fetch(`${process.env.BACKEND_URL}/api/navigation/state${params}`, {
-          headers: {
-            'Authorization': request.headers.get('Authorization') || '',
-          },
-        });
+        const response = await fetch(
+          `${process.env.BACKEND_URL}/api/navigation/state${params}`,
+          {
+            headers: {
+              Authorization: request.headers.get('Authorization') || '',
+            },
+          }
+        );
 
         if (response.ok) {
           const data = await response.json();

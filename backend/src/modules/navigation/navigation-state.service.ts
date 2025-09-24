@@ -50,23 +50,28 @@ export class NavigationStateService {
   /**
    * Get navigation state for a user
    */
-  async getNavigationState(userId: string, studyId?: string): Promise<NavigationState> {
+  async getNavigationState(
+    userId: string,
+    studyId?: string,
+  ): Promise<NavigationState> {
     // Get user's current study context
-    const study = studyId ? await this.prisma.survey.findUnique({
-      where: { id: studyId },
-      include: {
-        statements: true,
-        questions: true,
-        responses: true,
-      }
-    }) : null;
+    const study = studyId
+      ? await this.prisma.survey.findUnique({
+          where: { id: studyId },
+          include: {
+            statements: true,
+            questions: true,
+            responses: true,
+          },
+        })
+      : null;
 
     // Calculate available phases based on study progress
     const availablePhases = await this.calculateAvailablePhases(userId, study);
-    
+
     // Calculate phase progress
     const phaseProgress = await this.calculatePhaseProgress(userId, study);
-    
+
     // Get user preferences
     const preferences = await this.getUserNavigationPreferences(userId);
 
@@ -87,9 +92,9 @@ export class NavigationStateService {
    * Update current phase for a user
    */
   async updateCurrentPhase(
-    userId: string, 
-    phase: ResearchPhase, 
-    studyId?: string
+    userId: string,
+    phase: ResearchPhase,
+    studyId?: string,
   ): Promise<void> {
     // Store in database (extend User model with navigation state)
     // For now, emit through WebSocket
@@ -105,8 +110,8 @@ export class NavigationStateService {
    * Calculate available phases based on study progress
    */
   private async calculateAvailablePhases(
-    userId: string, 
-    study: any
+    userId: string,
+    study: any,
   ): Promise<ResearchPhase[]> {
     const available: ResearchPhase[] = [
       ResearchPhase.DISCOVER,
@@ -151,8 +156,8 @@ export class NavigationStateService {
    * Calculate progress for each phase
    */
   private async calculatePhaseProgress(
-    userId: string, 
-    study: any
+    userId: string,
+    study: any,
   ): Promise<Record<ResearchPhase, number>> {
     const progress: Record<ResearchPhase, number> = {
       [ResearchPhase.DISCOVER]: 0,
@@ -171,7 +176,7 @@ export class NavigationStateService {
 
     // DISCOVER: Check for literature searches
     // (Will be implemented in Phase 9)
-    
+
     // DESIGN: Check for research questions and methodology
     if (study.researchQuestion) progress[ResearchPhase.DESIGN] += 50;
     if (study.methodology) progress[ResearchPhase.DESIGN] += 50;
@@ -183,16 +188,22 @@ export class NavigationStateService {
 
     // RECRUIT: Check for participants
     const participants = await this.prisma.participant.count({
-      where: { studyId: study.id }
+      where: { studyId: study.id },
     });
     if (participants > 0) {
-      progress[ResearchPhase.RECRUIT] = Math.min(100, (participants / (study.targetParticipants || 30)) * 100);
+      progress[ResearchPhase.RECRUIT] = Math.min(
+        100,
+        (participants / (study.targetParticipants || 30)) * 100,
+      );
     }
 
     // COLLECT: Check for responses
     const responses = study.responses?.length || 0;
     if (responses > 0) {
-      progress[ResearchPhase.COLLECT] = Math.min(100, (responses / (study.targetParticipants || 30)) * 100);
+      progress[ResearchPhase.COLLECT] = Math.min(
+        100,
+        (responses / (study.targetParticipants || 30)) * 100,
+      );
     }
 
     // ANALYZE: Check for analysis completion
@@ -220,7 +231,10 @@ export class NavigationStateService {
   /**
    * Get current phase based on study progress
    */
-  private async getCurrentPhase(userId: string, study: any): Promise<ResearchPhase> {
+  private async getCurrentPhase(
+    userId: string,
+    study: any,
+  ): Promise<ResearchPhase> {
     if (!study) return ResearchPhase.DISCOVER;
 
     // Check phases in order and return the first incomplete one
@@ -238,7 +252,7 @@ export class NavigationStateService {
     ];
 
     const progress = await this.calculatePhaseProgress(userId, study);
-    
+
     for (const phase of phaseOrder) {
       if (progress[phase] < 100) {
         return phase;
@@ -299,7 +313,7 @@ export class NavigationStateService {
     userId: string,
     studyId: string,
     phase: ResearchPhase,
-    action: string
+    action: string,
   ): Promise<void> {
     // Track user actions for progress calculation
     this.server.emit('actionCompleted', {

@@ -41,10 +41,25 @@ export interface Hypothesis {
 }
 
 export interface StudyDesign {
-  type: 'experimental' | 'quasi-experimental' | 'observational' | 'correlational' | 'descriptive';
-  approach: 'cross-sectional' | 'longitudinal' | 'retrospective' | 'prospective';
+  type:
+    | 'experimental'
+    | 'quasi-experimental'
+    | 'observational'
+    | 'correlational'
+    | 'descriptive';
+  approach:
+    | 'cross-sectional'
+    | 'longitudinal'
+    | 'retrospective'
+    | 'prospective';
   sampling: {
-    method: 'random' | 'stratified' | 'cluster' | 'convenience' | 'purposive' | 'snowball';
+    method:
+      | 'random'
+      | 'stratified'
+      | 'cluster'
+      | 'convenience'
+      | 'purposive'
+      | 'snowball';
     size: number;
     power: number;
     confidence: number;
@@ -76,7 +91,7 @@ export interface PowerAnalysis {
 @Injectable()
 export class MethodologyService {
   private readonly logger = new Logger(MethodologyService.name);
-  
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -98,17 +113,26 @@ export class MethodologyService {
       if (wordCount >= 10 && wordCount <= 25) {
         score += 20;
       } else {
-        feedback.push('Question length should be between 10-25 words for optimal clarity');
-        suggestions.push('Consider breaking down complex questions into main and sub-questions');
+        feedback.push(
+          'Question length should be between 10-25 words for optimal clarity',
+        );
+        suggestions.push(
+          'Consider breaking down complex questions into main and sub-questions',
+        );
       }
 
       // Check for question words
-      const hasQuestionWord = /^(how|what|why|when|where|who|which|to what extent)/i.test(question.main);
+      const hasQuestionWord =
+        /^(how|what|why|when|where|who|which|to what extent)/i.test(
+          question.main,
+        );
       if (hasQuestionWord) {
         score += 20;
       } else {
         feedback.push('Question should start with an interrogative word');
-        suggestions.push('Begin with How, What, Why, When, Where, Who, or Which');
+        suggestions.push(
+          'Begin with How, What, Why, When, Where, Who, or Which',
+        );
       }
     }
 
@@ -117,11 +141,17 @@ export class MethodologyService {
       score += 20;
     } else {
       feedback.push('Question lacks specific context');
-      suggestions.push('Define your population, setting, and timeframe clearly');
+      suggestions.push(
+        'Define your population, setting, and timeframe clearly',
+      );
     }
 
     // Check feasibility
-    if (question.variables && question.variables.length > 0 && question.variables.length <= 5) {
+    if (
+      question.variables &&
+      question.variables.length > 0 &&
+      question.variables.length <= 5
+    ) {
       score += 20;
     } else {
       feedback.push('Consider the number of variables for feasibility');
@@ -130,12 +160,17 @@ export class MethodologyService {
 
     // Check methodology alignment
     if (question.methodology === 'q-methodology') {
-      const hasSubjectivity = /viewpoint|perspective|opinion|attitude|belief|perception/i.test(question.main || '');
+      const hasSubjectivity =
+        /viewpoint|perspective|opinion|attitude|belief|perception/i.test(
+          question.main || '',
+        );
       if (hasSubjectivity) {
         score += 20;
         feedback.push('Well-suited for Q methodology');
       } else {
-        suggestions.push('Q methodology works best with questions about subjective viewpoints');
+        suggestions.push(
+          'Q methodology works best with questions about subjective viewpoints',
+        );
       }
     } else {
       score += 20;
@@ -145,7 +180,7 @@ export class MethodologyService {
       valid: score >= 60,
       score,
       feedback,
-      suggestions
+      suggestions,
     };
   }
 
@@ -158,13 +193,16 @@ export class MethodologyService {
     methodology: ResearchQuestion['methodology'];
     context?: string;
   }): Promise<string[]> {
-    const templates = this.getQuestionTemplates(params.type, params.methodology);
-    
-    return templates.map(template => 
+    const templates = this.getQuestionTemplates(
+      params.type,
+      params.methodology,
+    );
+
+    return templates.map((template) =>
       this.fillTemplate(template, {
         topic: params.topic,
-        context: params.context || '[context]'
-      })
+        context: params.context || '[context]',
+      }),
     );
   }
 
@@ -183,7 +221,7 @@ export class MethodologyService {
       variables: params.variables,
       testable: this.isTestable(params.variables),
       measurable: this.isMeasurable(params.variables),
-      rationale: this.generateRationale(params)
+      rationale: this.generateRationale(params),
     };
 
     // Save to database if needed
@@ -207,7 +245,7 @@ export class MethodologyService {
     // Determine appropriate study design based on question type
     const studyType = this.determineStudyType(params.researchQuestion);
     const approach = this.determineApproach(params.researchQuestion);
-    
+
     // Calculate sample size
     const powerAnalysis = await this.calculatePower({
       effectSize: 0.5, // Medium effect size as default
@@ -215,28 +253,30 @@ export class MethodologyService {
       power: 0.8,
       sampleSize: 0, // Will be calculated
       type: 'a-priori',
-      test: this.determineStatisticalTest(params.researchQuestion)
+      test: this.determineStatisticalTest(params.researchQuestion),
     });
 
     // Design sampling strategy
     const sampling = this.designSamplingStrategy(
       params.researchQuestion,
       powerAnalysis.sampleSize,
-      params.constraints
+      params.constraints,
     );
 
     // Create timeline
     const timeline = this.createStudyTimeline(
       params.researchQuestion,
-      params.constraints.timeLimit
+      params.constraints.timeLimit,
     );
 
     return {
       type: studyType,
       approach,
       sampling,
-      dataCollection: this.determineDataCollectionMethods(params.researchQuestion),
-      timeline
+      dataCollection: this.determineDataCollectionMethods(
+        params.researchQuestion,
+      ),
+      timeline,
     };
   }
 
@@ -246,15 +286,15 @@ export class MethodologyService {
   async calculatePower(params: PowerAnalysis): Promise<PowerAnalysis> {
     // Simplified power calculation
     // In production, would use proper statistical libraries
-    
+
     let sampleSize: number;
-    
+
     if (params.type === 'a-priori') {
       // Calculate sample size for given power
       const z_alpha = this.getZScore(params.alpha);
       const z_beta = this.getZScore(1 - params.power);
       sampleSize = Math.ceil(
-        2 * Math.pow((z_alpha + z_beta) / params.effectSize, 2)
+        2 * Math.pow((z_alpha + z_beta) / params.effectSize, 2),
       );
     } else {
       sampleSize = params.sampleSize;
@@ -264,7 +304,7 @@ export class MethodologyService {
 
     return {
       ...params,
-      sampleSize
+      sampleSize,
     };
   }
 
@@ -294,10 +334,15 @@ export class MethodologyService {
         strengths.push('Purposive sampling appropriate for Q methodology');
       } else {
         weaknesses.push('Consider purposive sampling for Q methodology');
-        recommendations.push('Select participants who represent different viewpoints');
+        recommendations.push(
+          'Select participants who represent different viewpoints',
+        );
       }
 
-      if (params.proposedDesign.sampling.size >= 20 && params.proposedDesign.sampling.size <= 60) {
+      if (
+        params.proposedDesign.sampling.size >= 20 &&
+        params.proposedDesign.sampling.size <= 60
+      ) {
         alignment += 25;
         strengths.push('Sample size appropriate for Q methodology');
       } else {
@@ -306,9 +351,13 @@ export class MethodologyService {
     }
 
     // Check design appropriateness
-    if (this.isDesignAppropriate(params.question.type, params.proposedDesign.type)) {
+    if (
+      this.isDesignAppropriate(params.question.type, params.proposedDesign.type)
+    ) {
       alignment += 25;
-      strengths.push(`${params.proposedDesign.type} design suits ${params.question.type} questions`);
+      strengths.push(
+        `${params.proposedDesign.type} design suits ${params.question.type} questions`,
+      );
     } else {
       weaknesses.push('Study design may not be optimal for question type');
       alternatives.push(this.suggestAlternativeDesign(params.question.type));
@@ -328,7 +377,7 @@ export class MethodologyService {
       strengths,
       weaknesses,
       alternatives,
-      recommendations
+      recommendations,
     };
   }
 
@@ -338,7 +387,7 @@ export class MethodologyService {
   async generateMethodologySection(studyId: string): Promise<string> {
     // Generate formatted methodology section for paper/proposal
     const study = await this.getStudyDetails(studyId);
-    
+
     return `
 # Methodology
 
@@ -352,11 +401,14 @@ ${study.sampling.method} sampling was used to recruit ${study.sampling.size} par
 Data were collected using ${study.dataCollection.join(', ')}.
 
 ## Procedure
-${study.timeline.phases.map((phase: any) => 
-  `### ${phase.name} (${phase.duration})
+${study.timeline.phases
+  .map(
+    (phase: any) =>
+      `### ${phase.name} (${phase.duration})
   Activities: ${phase.activities.join(', ')}
-  Deliverables: ${phase.deliverables.join(', ')}`
-).join('\n')}
+  Deliverables: ${phase.deliverables.join(', ')}`,
+  )
+  .join('\n')}
 
 ## Data Analysis
 ${study.analysisMethod}
@@ -373,37 +425,40 @@ ${study.ethicalConsiderations}
       exploratory: [
         'What factors influence {topic} in {context}?',
         'How do stakeholders perceive {topic}?',
-        'What patterns emerge in {topic}?'
+        'What patterns emerge in {topic}?',
       ],
       descriptive: [
         'What is the current state of {topic}?',
         'What are the characteristics of {topic}?',
-        'How prevalent is {topic} in {context}?'
+        'How prevalent is {topic} in {context}?',
       ],
       explanatory: [
         'Why does {topic} occur in {context}?',
         'How does X affect {topic}?',
-        'What causes {topic}?'
+        'What causes {topic}?',
       ],
       evaluative: [
         'How effective is {topic}?',
         'What is the impact of {topic}?',
-        'To what extent does {topic} achieve its goals?'
-      ]
+        'To what extent does {topic} achieve its goals?',
+      ],
     };
 
     if (methodology === 'q-methodology') {
       return [
         'What are the distinct viewpoints on {topic}?',
         'How do stakeholders subjectively understand {topic}?',
-        'What perspectives exist regarding {topic}?'
+        'What perspectives exist regarding {topic}?',
       ];
     }
 
     return templates[type] || templates.exploratory;
   }
 
-  private fillTemplate(template: string, values: Record<string, string>): string {
+  private fillTemplate(
+    template: string,
+    values: Record<string, string>,
+  ): string {
     let filled = template;
     Object.entries(values).forEach(([key, value]) => {
       filled = filled.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
@@ -413,7 +468,7 @@ ${study.ethicalConsiderations}
 
   private generateHypothesisStatement(params: any): string {
     const { type, variables } = params;
-    
+
     if (type === 'null') {
       return `There is no significant relationship between ${variables.independent.join(', ')} and ${variables.dependent.join(', ')}.`;
     } else if (type === 'alternative') {
@@ -443,13 +498,18 @@ ${study.ethicalConsiderations}
       exploratory: 'observational',
       descriptive: 'descriptive',
       explanatory: 'correlational',
-      evaluative: 'quasi-experimental'
+      evaluative: 'quasi-experimental',
     };
     return typeMap[question.type];
   }
 
-  private determineApproach(question: ResearchQuestion): StudyDesign['approach'] {
-    if (question.timeframe.includes('over time') || question.timeframe.includes('years')) {
+  private determineApproach(
+    question: ResearchQuestion,
+  ): StudyDesign['approach'] {
+    if (
+      question.timeframe.includes('over time') ||
+      question.timeframe.includes('years')
+    ) {
       return 'longitudinal';
     }
     return 'cross-sectional';
@@ -467,10 +527,10 @@ ${study.ethicalConsiderations}
   private designSamplingStrategy(
     question: ResearchQuestion,
     targetSize: number,
-    constraints: any
+    constraints: any,
   ): StudyDesign['sampling'] {
     let method: StudyDesign['sampling']['method'] = 'random';
-    
+
     if (question.methodology === 'q-methodology') {
       method = 'purposive';
       targetSize = Math.min(60, Math.max(20, targetSize));
@@ -482,51 +542,62 @@ ${study.ethicalConsiderations}
       method,
       size: targetSize,
       power: 0.8,
-      confidence: 0.95
+      confidence: 0.95,
     };
   }
 
-  private createStudyTimeline(question: ResearchQuestion, timeLimit?: string): StudyDesign['timeline'] {
+  private createStudyTimeline(
+    question: ResearchQuestion,
+    timeLimit?: string,
+  ): StudyDesign['timeline'] {
     const phases: StudyPhase[] = [
       {
         name: 'Preparation',
         duration: '2 weeks',
-        activities: ['Ethics approval', 'Participant recruitment', 'Material preparation'],
+        activities: [
+          'Ethics approval',
+          'Participant recruitment',
+          'Material preparation',
+        ],
         deliverables: ['Ethics certificate', 'Recruitment materials'],
-        milestones: ['Ethics approved', 'Recruitment started']
+        milestones: ['Ethics approved', 'Recruitment started'],
       },
       {
         name: 'Data Collection',
         duration: '4 weeks',
         activities: ['Conduct interviews/surveys', 'Q-sorts', 'Follow-ups'],
         deliverables: ['Raw data', 'Transcripts'],
-        milestones: ['50% completion', '100% completion']
+        milestones: ['50% completion', '100% completion'],
       },
       {
         name: 'Analysis',
         duration: '3 weeks',
-        activities: ['Data processing', 'Statistical analysis', 'Interpretation'],
+        activities: [
+          'Data processing',
+          'Statistical analysis',
+          'Interpretation',
+        ],
         deliverables: ['Analysis results', 'Findings summary'],
-        milestones: ['Analysis complete']
+        milestones: ['Analysis complete'],
       },
       {
         name: 'Reporting',
         duration: '2 weeks',
         activities: ['Write report', 'Create visualizations', 'Peer review'],
         deliverables: ['Final report', 'Presentation'],
-        milestones: ['Report submitted']
-      }
+        milestones: ['Report submitted'],
+      },
     ];
 
     return {
       phases,
-      totalDuration: '11 weeks'
+      totalDuration: '11 weeks',
     };
   }
 
   private determineDataCollectionMethods(question: ResearchQuestion): string[] {
     const methods: string[] = [];
-    
+
     if (question.methodology === 'q-methodology') {
       methods.push('Q-sort', 'Post-sort interview');
     } else if (question.methodology === 'qualitative') {
@@ -536,18 +607,21 @@ ${study.ethicalConsiderations}
     } else {
       methods.push('Mixed methods', 'Triangulation');
     }
-    
+
     return methods;
   }
 
-  private isDesignAppropriate(questionType: string, designType: string): boolean {
+  private isDesignAppropriate(
+    questionType: string,
+    designType: string,
+  ): boolean {
     const appropriate: Record<string, string[]> = {
       exploratory: ['observational', 'descriptive'],
       descriptive: ['descriptive', 'observational'],
       explanatory: ['correlational', 'experimental', 'quasi-experimental'],
-      evaluative: ['experimental', 'quasi-experimental']
+      evaluative: ['experimental', 'quasi-experimental'],
     };
-    
+
     return appropriate[questionType]?.includes(designType) || false;
   }
 
@@ -562,7 +636,8 @@ ${study.ethicalConsiderations}
       exploratory: 'Consider case study or grounded theory approach',
       descriptive: 'Consider cross-sectional survey design',
       explanatory: 'Consider experimental or longitudinal design',
-      evaluative: 'Consider randomized controlled trial or quasi-experimental design'
+      evaluative:
+        'Consider randomized controlled trial or quasi-experimental design',
     };
     return suggestions[questionType] || 'Consider mixed methods approach';
   }
@@ -574,7 +649,7 @@ ${study.ethicalConsiderations}
       0.01: 2.58,
       0.8: 0.84,
       0.9: 1.28,
-      0.95: 1.65
+      0.95: 1.65,
     };
     return zScores[probability] || 1.96;
   }
@@ -593,7 +668,7 @@ ${study.ethicalConsiderations}
       dataCollection: ['Q-sort', 'Interview'],
       timeline: { phases: [] },
       analysisMethod: 'Factor analysis',
-      ethicalConsiderations: 'Informed consent obtained'
+      ethicalConsiderations: 'Informed consent obtained',
     };
   }
 }

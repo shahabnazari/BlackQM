@@ -1,4 +1,9 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { ScreeningService } from './screening.service';
 import { PostSurveyService } from './post-survey.service';
@@ -7,7 +12,7 @@ import { Prisma } from '@prisma/client';
 /**
  * World-class Participant Flow Service
  * Manages the complete participant journey with advanced state management
- * 
+ *
  * Features:
  * - Multi-stage flow orchestration
  * - Intelligent navigation guards
@@ -26,7 +31,7 @@ export enum ParticipantFlowStage {
   Q_SORT = 'Q_SORT',
   POST_SURVEY = 'POST_SURVEY',
   COMPLETED = 'COMPLETED',
-  ABANDONED = 'ABANDONED'
+  ABANDONED = 'ABANDONED',
 }
 
 export interface FlowState {
@@ -93,8 +98,11 @@ export class ParticipantFlowService {
       canSkip: false,
       canRevisit: false,
       estimatedTime: 5, // minutes
-      nextStages: [ParticipantFlowStage.CONSENT, ParticipantFlowStage.PRE_SCREENING_FAILED],
-      validationRules: ['hasScreeningResponses', 'passedQualification']
+      nextStages: [
+        ParticipantFlowStage.CONSENT,
+        ParticipantFlowStage.PRE_SCREENING_FAILED,
+      ],
+      validationRules: ['hasScreeningResponses', 'passedQualification'],
     },
     [ParticipantFlowStage.CONSENT]: {
       required: true,
@@ -102,7 +110,7 @@ export class ParticipantFlowService {
       canRevisit: true,
       estimatedTime: 2,
       nextStages: [ParticipantFlowStage.INSTRUCTIONS],
-      validationRules: ['hasConsent', 'isAdult']
+      validationRules: ['hasConsent', 'isAdult'],
     },
     [ParticipantFlowStage.INSTRUCTIONS]: {
       required: true,
@@ -110,7 +118,7 @@ export class ParticipantFlowService {
       canRevisit: true,
       estimatedTime: 3,
       nextStages: [ParticipantFlowStage.Q_SORT],
-      validationRules: ['hasViewedInstructions']
+      validationRules: ['hasViewedInstructions'],
     },
     [ParticipantFlowStage.Q_SORT]: {
       required: true,
@@ -118,7 +126,7 @@ export class ParticipantFlowService {
       canRevisit: false,
       estimatedTime: 20,
       nextStages: [ParticipantFlowStage.POST_SURVEY],
-      validationRules: ['hasCompletedSort', 'hasValidDistribution']
+      validationRules: ['hasCompletedSort', 'hasValidDistribution'],
     },
     [ParticipantFlowStage.POST_SURVEY]: {
       required: true,
@@ -126,7 +134,7 @@ export class ParticipantFlowService {
       canRevisit: false,
       estimatedTime: 10,
       nextStages: [ParticipantFlowStage.COMPLETED],
-      validationRules: ['hasPostSurveyResponses']
+      validationRules: ['hasPostSurveyResponses'],
     },
     // Terminal and special states
     [ParticipantFlowStage.NOT_STARTED]: {
@@ -135,7 +143,7 @@ export class ParticipantFlowService {
       canRevisit: false,
       estimatedTime: 0,
       nextStages: [ParticipantFlowStage.PRE_SCREENING],
-      validationRules: []
+      validationRules: [],
     },
     [ParticipantFlowStage.PRE_SCREENING_FAILED]: {
       required: false,
@@ -143,7 +151,7 @@ export class ParticipantFlowService {
       canRevisit: false,
       estimatedTime: 0,
       nextStages: [],
-      validationRules: []
+      validationRules: [],
     },
     [ParticipantFlowStage.COMPLETED]: {
       required: false,
@@ -151,7 +159,7 @@ export class ParticipantFlowService {
       canRevisit: false,
       estimatedTime: 0,
       nextStages: [],
-      validationRules: []
+      validationRules: [],
     },
     [ParticipantFlowStage.ABANDONED]: {
       required: false,
@@ -159,14 +167,14 @@ export class ParticipantFlowService {
       canRevisit: false,
       estimatedTime: 0,
       nextStages: [],
-      validationRules: []
-    }
+      validationRules: [],
+    },
   };
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly screeningService: ScreeningService,
-    private readonly postSurveyService: PostSurveyService
+    private readonly postSurveyService: PostSurveyService,
   ) {}
 
   /**
@@ -176,10 +184,10 @@ export class ParticipantFlowService {
     surveyId: string,
     participantId: string,
     sessionId: string,
-    metadata?: Partial<FlowState['metadata']>
+    metadata?: Partial<FlowState['metadata']>,
   ): Promise<FlowState> {
     const cacheKey = `${surveyId}-${participantId}`;
-    
+
     // Check cache first
     if (this.flowCache.has(cacheKey)) {
       const cached = this.flowCache.get(cacheKey)!;
@@ -193,14 +201,19 @@ export class ParticipantFlowService {
       where: {
         surveyId,
         participantId,
-        sessionCode: sessionId
-      }
+        sessionCode: sessionId,
+      },
     });
 
     if (existingFlow && existingFlow.demographics) {
       const flowData = existingFlow.demographics as any;
       if (flowData.flowState) {
-        const restoredState = this.restoreFlowState(flowData.flowState, surveyId, participantId, sessionId);
+        const restoredState = this.restoreFlowState(
+          flowData.flowState,
+          surveyId,
+          participantId,
+          sessionId,
+        );
         this.flowCache.set(cacheKey, restoredState);
         return restoredState;
       }
@@ -221,13 +234,13 @@ export class ParticipantFlowService {
         percentage: 0,
         stagesCompleted: 0,
         totalStages: 5,
-        estimatedTimeRemaining: 40
+        estimatedTimeRemaining: 40,
       },
       navigation: {
         nextStage: ParticipantFlowStage.PRE_SCREENING,
         previousStage: null,
         canGoBack: false,
-        canSkip: false
+        canSkip: false,
       },
       metadata: {
         startTime: new Date(),
@@ -235,8 +248,8 @@ export class ParticipantFlowService {
         browser: metadata?.browser || 'unknown',
         screenResolution: metadata?.screenResolution || 'unknown',
         timezone: metadata?.timezone || 'UTC',
-        language: metadata?.language || 'en'
-      }
+        language: metadata?.language || 'en',
+      },
     };
 
     this.flowCache.set(cacheKey, newState);
@@ -251,10 +264,10 @@ export class ParticipantFlowService {
     surveyId: string,
     participantId: string,
     targetStage: ParticipantFlowStage,
-    stageData?: any
+    stageData?: any,
   ): Promise<FlowState> {
     const currentState = await this.getFlowState(surveyId, participantId);
-    
+
     // Validate transition
     const validation = await this.validateTransition(currentState, targetStage);
     if (!validation.valid) {
@@ -262,7 +275,7 @@ export class ParticipantFlowService {
         message: 'Invalid stage transition',
         currentStage: currentState.currentStage,
         targetStage,
-        errors: validation.errors
+        errors: validation.errors,
       });
     }
 
@@ -273,16 +286,18 @@ export class ParticipantFlowService {
       timestamp: new Date(),
       duration: this.calculateStageDuration(currentState),
       trigger: 'user_action',
-      metadata: stageData
+      metadata: stageData,
     };
 
     // Update state
     currentState.currentStage = targetStage;
-    if (!currentState.completedStages.includes(transition.from) && 
-        transition.from !== ParticipantFlowStage.NOT_STARTED) {
+    if (
+      !currentState.completedStages.includes(transition.from) &&
+      transition.from !== ParticipantFlowStage.NOT_STARTED
+    ) {
       currentState.completedStages.push(transition.from);
     }
-    
+
     if (stageData) {
       currentState.stageData[targetStage] = stageData;
     }
@@ -299,7 +314,9 @@ export class ParticipantFlowService {
     this.flowCache.set(`${surveyId}-${participantId}`, currentState);
 
     // Log transition
-    this.logger.log(`Flow transition: ${transition.from} → ${transition.to} for participant ${participantId}`);
+    this.logger.log(
+      `Flow transition: ${transition.from} → ${transition.to} for participant ${participantId}`,
+    );
 
     return currentState;
   }
@@ -311,27 +328,30 @@ export class ParticipantFlowService {
     surveyId: string,
     participantId: string,
     data: any,
-    isPartial: boolean = false
+    isPartial: boolean = false,
   ): Promise<SavePointData> {
     const currentState = await this.getFlowState(surveyId, participantId);
-    
+
     const savePoint: SavePointData = {
       stageId: currentState.currentStage,
       data,
       timestamp: new Date(),
       isPartial,
-      validUntil: new Date(Date.now() + this.SAVE_POINT_VALIDITY)
+      validUntil: new Date(Date.now() + this.SAVE_POINT_VALIDITY),
     };
 
     // Store save point in stage data
-    currentState.stageData[`${currentState.currentStage}_savepoint`] = savePoint;
+    currentState.stageData[`${currentState.currentStage}_savepoint`] =
+      savePoint;
     currentState.lastActivity = new Date();
 
     // Persist to database
     await this.persistFlowState(currentState);
-    
-    this.logger.log(`Progress saved for participant ${participantId} at stage ${currentState.currentStage}`);
-    
+
+    this.logger.log(
+      `Progress saved for participant ${participantId} at stage ${currentState.currentStage}`,
+    );
+
     return savePoint;
   }
 
@@ -341,36 +361,43 @@ export class ParticipantFlowService {
   async resumeFromSavePoint(
     surveyId: string,
     participantId: string,
-    sessionId: string
+    sessionId: string,
   ): Promise<FlowState> {
-    const flowState = await this.initializeFlow(surveyId, participantId, sessionId);
-    
+    const flowState = await this.initializeFlow(
+      surveyId,
+      participantId,
+      sessionId,
+    );
+
     // Check for valid save points
     const savePoints = Object.keys(flowState.stageData)
-      .filter(key => key.endsWith('_savepoint'))
-      .map(key => flowState.stageData[key] as SavePointData)
-      .filter(sp => sp.validUntil && new Date(sp.validUntil) > new Date());
+      .filter((key) => key.endsWith('_savepoint'))
+      .map((key) => flowState.stageData[key] as SavePointData)
+      .filter((sp) => sp.validUntil && new Date(sp.validUntil) > new Date());
 
     if (savePoints.length === 0) {
       return flowState;
     }
 
     // Find most recent valid save point
-    const latestSavePoint = savePoints.sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    const latestSavePoint = savePoints.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     )[0];
 
     // Restore to save point stage
     flowState.currentStage = latestSavePoint.stageId;
     flowState.stageData[latestSavePoint.stageId] = latestSavePoint.data;
-    
+
     // Recalculate state
     flowState.progress = this.calculateProgress(flowState);
     flowState.navigation = this.calculateNavigation(flowState);
     flowState.canProceed = await this.checkCanProceed(flowState);
-    
-    this.logger.log(`Resumed from save point for participant ${participantId} at stage ${latestSavePoint.stageId}`);
-    
+
+    this.logger.log(
+      `Resumed from save point for participant ${participantId} at stage ${latestSavePoint.stageId}`,
+    );
+
     return flowState;
   }
 
@@ -379,7 +406,7 @@ export class ParticipantFlowService {
    */
   async getNavigationGuards(
     surveyId: string,
-    participantId: string
+    participantId: string,
   ): Promise<{
     canProceed: boolean;
     canGoBack: boolean;
@@ -395,7 +422,7 @@ export class ParticipantFlowService {
       canGoBack: state.navigation.canGoBack,
       canSkip: config?.canSkip || false,
       blockers: [] as string[],
-      warnings: [] as string[]
+      warnings: [] as string[],
     };
 
     // Check stage-specific validation rules
@@ -411,12 +438,16 @@ export class ParticipantFlowService {
 
     // Check session timeout
     if (Date.now() - state.lastActivity.getTime() > this.SESSION_TIMEOUT) {
-      guards.warnings.push('Your session is about to expire. Please save your progress.');
+      guards.warnings.push(
+        'Your session is about to expire. Please save your progress.',
+      );
     }
 
     // Check incomplete required fields
     if (state.requiredActions.length > 0) {
-      guards.warnings.push(`Complete required actions: ${state.requiredActions.join(', ')}`);
+      guards.warnings.push(
+        `Complete required actions: ${state.requiredActions.join(', ')}`,
+      );
     }
 
     return guards;
@@ -433,23 +464,25 @@ export class ParticipantFlowService {
       errors?: number;
       helperUsage?: boolean;
       deviceChanges?: boolean;
-    }
+    },
   ): Promise<void> {
     const state = await this.getFlowState(surveyId, participantId);
-    
+
     // Store metrics in stage data
     const stageMetricsKey = `${state.currentStage}_metrics`;
     state.stageData[stageMetricsKey] = {
       ...state.stageData[stageMetricsKey],
       ...metrics,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     await this.persistFlowState(state);
 
     // Log significant metrics
     if (metrics.errors && metrics.errors > 5) {
-      this.logger.warn(`High error rate for participant ${participantId} at stage ${state.currentStage}`);
+      this.logger.warn(
+        `High error rate for participant ${participantId} at stage ${state.currentStage}`,
+      );
     }
   }
 
@@ -459,21 +492,24 @@ export class ParticipantFlowService {
   async handleAbandonedFlow(
     surveyId: string,
     participantId: string,
-    reason?: string
+    reason?: string,
   ): Promise<void> {
     const state = await this.getFlowState(surveyId, participantId);
-    
+
     state.currentStage = ParticipantFlowStage.ABANDONED;
     state.stageData.abandonmentReason = reason || 'unknown';
     state.stageData.abandonmentTime = new Date();
-    state.stageData.lastCompletedStage = state.completedStages[state.completedStages.length - 1];
-    
+    state.stageData.lastCompletedStage =
+      state.completedStages[state.completedStages.length - 1];
+
     await this.persistFlowState(state);
-    
+
     // Send recovery email if applicable
     await this.triggerRecoveryProcess(surveyId, participantId, state);
-    
-    this.logger.log(`Flow abandoned by participant ${participantId} at stage ${state.stageData.lastCompletedStage}`);
+
+    this.logger.log(
+      `Flow abandoned by participant ${participantId} at stage ${state.stageData.lastCompletedStage}`,
+    );
   }
 
   /**
@@ -487,7 +523,7 @@ export class ParticipantFlowService {
     errorRates: Record<string, number>;
   }> {
     const responses = await this.prisma.response.findMany({
-      where: { surveyId }
+      where: { surveyId },
     });
 
     const analytics = {
@@ -495,35 +531,40 @@ export class ParticipantFlowService {
       averageTimePerStage: {} as Record<string, number>,
       dropoffPoints: {} as Record<string, number>,
       deviceBreakdown: {} as Record<string, number>,
-      errorRates: {} as Record<string, number>
+      errorRates: {} as Record<string, number>,
     };
 
     // Calculate metrics from response data
     const completed = responses.filter((r: any) => {
       const flowData = r.demographics as any;
-      return flowData?.flowState?.currentStage === ParticipantFlowStage.COMPLETED;
+      return (
+        flowData?.flowState?.currentStage === ParticipantFlowStage.COMPLETED
+      );
     });
 
-    analytics.completionRate = responses.length > 0 
-      ? (completed.length / responses.length) * 100 
-      : 0;
+    analytics.completionRate =
+      responses.length > 0 ? (completed.length / responses.length) * 100 : 0;
 
     // Aggregate stage times, dropoffs, etc.
     responses.forEach((response: any) => {
       const flowData = response.demographics as any;
       if (flowData?.flowState) {
         // Track dropoff points
-        if (flowData.flowState.currentStage === ParticipantFlowStage.ABANDONED) {
+        if (
+          flowData.flowState.currentStage === ParticipantFlowStage.ABANDONED
+        ) {
           const lastStage = flowData.flowState.stageData?.lastCompletedStage;
           if (lastStage) {
-            analytics.dropoffPoints[lastStage] = (analytics.dropoffPoints[lastStage] || 0) + 1;
+            analytics.dropoffPoints[lastStage] =
+              (analytics.dropoffPoints[lastStage] || 0) + 1;
           }
         }
 
         // Track device breakdown
         const device = flowData.flowState.metadata?.device;
         if (device) {
-          analytics.deviceBreakdown[device] = (analytics.deviceBreakdown[device] || 0) + 1;
+          analytics.deviceBreakdown[device] =
+            (analytics.deviceBreakdown[device] || 0) + 1;
         }
       }
     });
@@ -532,10 +573,13 @@ export class ParticipantFlowService {
   }
 
   // Private helper methods
-  
-  private async getFlowState(surveyId: string, participantId: string): Promise<FlowState> {
+
+  private async getFlowState(
+    surveyId: string,
+    participantId: string,
+  ): Promise<FlowState> {
     const cacheKey = `${surveyId}-${participantId}`;
-    
+
     if (this.flowCache.has(cacheKey)) {
       const cached = this.flowCache.get(cacheKey)!;
       if (Date.now() - cached.lastActivity.getTime() < this.CACHE_TTL) {
@@ -546,8 +590,8 @@ export class ParticipantFlowService {
     const response = await this.prisma.response.findFirst({
       where: {
         surveyId,
-        participantId
-      }
+        participantId,
+      },
     });
 
     if (!response) {
@@ -559,12 +603,22 @@ export class ParticipantFlowService {
       throw new NotFoundException('Invalid flow state data');
     }
 
-    const state = this.restoreFlowState(flowData.flowState, surveyId, participantId, response.sessionCode);
+    const state = this.restoreFlowState(
+      flowData.flowState,
+      surveyId,
+      participantId,
+      response.sessionCode,
+    );
     this.flowCache.set(cacheKey, state);
     return state;
   }
 
-  private restoreFlowState(data: any, surveyId: string, participantId: string, sessionId: string): FlowState {
+  private restoreFlowState(
+    data: any,
+    surveyId: string,
+    participantId: string,
+    sessionId: string,
+  ): FlowState {
     return {
       ...data,
       surveyId,
@@ -573,20 +627,20 @@ export class ParticipantFlowService {
       lastActivity: new Date(data.lastActivity),
       metadata: {
         ...data.metadata,
-        startTime: new Date(data.metadata.startTime)
-      }
+        startTime: new Date(data.metadata.startTime),
+      },
     };
   }
 
   private async persistFlowState(state: FlowState): Promise<void> {
     await this.prisma.response.upsert({
       where: {
-        id: `${state.surveyId}-${state.participantId}`
+        id: `${state.surveyId}-${state.participantId}`,
       },
       update: {
         demographics: {
-          flowState: state
-        } as any
+          flowState: state,
+        } as any,
       },
       create: {
         id: `${state.surveyId}-${state.participantId}`,
@@ -594,23 +648,25 @@ export class ParticipantFlowService {
         participantId: state.participantId,
         sessionCode: state.sessionId,
         demographics: {
-          flowState: state
+          flowState: state,
         } as any,
-        createdAt: new Date()
-      }
+        createdAt: new Date(),
+      },
     });
   }
 
   private async validateTransition(
     currentState: FlowState,
-    targetStage: ParticipantFlowStage
+    targetStage: ParticipantFlowStage,
   ): Promise<{ valid: boolean; errors: string[] }> {
     const errors: string[] = [];
     const config = this.stageConfig[currentState.currentStage];
 
     // Check if target is allowed from current
     if (config && !config.nextStages.includes(targetStage)) {
-      errors.push(`Cannot transition from ${currentState.currentStage} to ${targetStage}`);
+      errors.push(
+        `Cannot transition from ${currentState.currentStage} to ${targetStage}`,
+      );
     }
 
     // Check required stages completed
@@ -630,37 +686,41 @@ export class ParticipantFlowService {
 
     return {
       valid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
-  private async validateRule(rule: string, state: FlowState): Promise<{ passed: boolean; message: string }> {
+  private async validateRule(
+    rule: string,
+    state: FlowState,
+  ): Promise<{ passed: boolean; message: string }> {
     switch (rule) {
       case 'hasScreeningResponses':
         return {
           passed: !!state.stageData[ParticipantFlowStage.PRE_SCREENING],
-          message: 'Complete screening questions'
+          message: 'Complete screening questions',
         };
       case 'passedQualification':
-        const screeningData = state.stageData[ParticipantFlowStage.PRE_SCREENING];
+        const screeningData =
+          state.stageData[ParticipantFlowStage.PRE_SCREENING];
         return {
           passed: screeningData?.qualified === true,
-          message: 'Did not meet study requirements'
+          message: 'Did not meet study requirements',
         };
       case 'hasConsent':
         return {
           passed: !!state.stageData[ParticipantFlowStage.CONSENT]?.consented,
-          message: 'Must provide consent to participate'
+          message: 'Must provide consent to participate',
         };
       case 'hasCompletedSort':
         return {
           passed: !!state.stageData[ParticipantFlowStage.Q_SORT]?.completed,
-          message: 'Complete the Q-sort activity'
+          message: 'Complete the Q-sort activity',
         };
       case 'hasPostSurveyResponses':
         return {
           passed: !!state.stageData[ParticipantFlowStage.POST_SURVEY],
-          message: 'Complete post-survey questions'
+          message: 'Complete post-survey questions',
         };
       default:
         return { passed: true, message: '' };
@@ -671,11 +731,12 @@ export class ParticipantFlowService {
     const totalStages = 5; // Pre-screening, Consent, Instructions, Q-sort, Post-survey
     const completed = state.completedStages.length;
     const percentage = Math.round((completed / totalStages) * 100);
-    
+
     let estimatedTime = 0;
-    Object.keys(this.stageConfig).forEach(stage => {
+    Object.keys(this.stageConfig).forEach((stage) => {
       if (!state.completedStages.includes(stage as ParticipantFlowStage)) {
-        estimatedTime += this.stageConfig[stage as ParticipantFlowStage].estimatedTime;
+        estimatedTime +=
+          this.stageConfig[stage as ParticipantFlowStage].estimatedTime;
       }
     });
 
@@ -683,30 +744,31 @@ export class ParticipantFlowService {
       percentage,
       stagesCompleted: completed,
       totalStages,
-      estimatedTimeRemaining: estimatedTime
+      estimatedTimeRemaining: estimatedTime,
     };
   }
 
   private calculateNavigation(state: FlowState): FlowState['navigation'] {
     const config = this.stageConfig[state.currentStage];
     const nextStage = config?.nextStages[0] || null;
-    
+
     const stageOrder = [
       ParticipantFlowStage.PRE_SCREENING,
       ParticipantFlowStage.CONSENT,
       ParticipantFlowStage.INSTRUCTIONS,
       ParticipantFlowStage.Q_SORT,
-      ParticipantFlowStage.POST_SURVEY
+      ParticipantFlowStage.POST_SURVEY,
     ];
-    
+
     const currentIndex = stageOrder.indexOf(state.currentStage);
-    const previousStage = currentIndex > 0 ? stageOrder[currentIndex - 1] : null;
+    const previousStage =
+      currentIndex > 0 ? stageOrder[currentIndex - 1] : null;
 
     return {
       nextStage: nextStage as ParticipantFlowStage | null,
       previousStage: previousStage,
       canGoBack: config?.canRevisit || false,
-      canSkip: config?.canSkip || false
+      canSkip: config?.canSkip || false,
     };
   }
 
@@ -770,10 +832,12 @@ export class ParticipantFlowService {
   private async triggerRecoveryProcess(
     surveyId: string,
     participantId: string,
-    state: FlowState
+    state: FlowState,
   ): Promise<void> {
     // Implementation for recovery email/notification
     // This would integrate with email service
-    this.logger.log(`Recovery process triggered for participant ${participantId}`);
+    this.logger.log(
+      `Recovery process triggered for participant ${participantId}`,
+    );
   }
 }

@@ -1,12 +1,18 @@
-'use client'
+'use client';
 
-import React from 'react'
-import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import React from 'react';
+import Link from 'next/link';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Inbox,
   Activity,
@@ -20,18 +26,18 @@ import {
   Timer,
   Play,
   Pause,
-  RefreshCw
-} from 'lucide-react'
+  RefreshCw,
+} from 'lucide-react';
 
 interface CollectionStats {
-  totalStarted: number
-  totalCompleted: number
-  inProgress: number
-  averageTime: string
-  completionRate: number
-  lastActivity: string
-  todayCompleted: number
-  weeklyTrend: 'up' | 'down' | 'stable'
+  totalStarted: number;
+  totalCompleted: number;
+  inProgress: number;
+  averageTime: string;
+  completionRate: number;
+  lastActivity: string;
+  todayCompleted: number;
+  weeklyTrend: 'up' | 'down' | 'stable';
 }
 
 export default function CollectPhasePage() {
@@ -43,39 +49,63 @@ export default function CollectPhasePage() {
     completionRate: 80,
     lastActivity: '2 hours ago',
     todayCompleted: 4,
-    weeklyTrend: 'up'
-  }
+    weeklyTrend: 'up',
+  };
 
   const activeParticipants = [
     { id: 'P017', status: 'sorting', progress: 65, startTime: '10 min ago' },
     { id: 'P018', status: 'pre-survey', progress: 20, startTime: '5 min ago' },
-    { id: 'P019', status: 'post-survey', progress: 90, startTime: '25 min ago' }
-  ]
+    {
+      id: 'P019',
+      status: 'post-survey',
+      progress: 90,
+      startTime: '25 min ago',
+    },
+  ];
 
   const recentCompletions = [
     { id: 'P016', completedAt: '2 hours ago', time: '17:32', quality: 'high' },
     { id: 'P015', completedAt: '3 hours ago', time: '19:21', quality: 'high' },
-    { id: 'P014', completedAt: '5 hours ago', time: '16:45', quality: 'medium' },
-    { id: 'P013', completedAt: '6 hours ago', time: '22:10', quality: 'high' }
-  ]
+    {
+      id: 'P014',
+      completedAt: '5 hours ago',
+      time: '16:45',
+      quality: 'medium',
+    },
+    { id: 'P013', completedAt: '6 hours ago', time: '22:10', quality: 'high' },
+  ];
 
   const getStatusColor = (status: string) => {
-    switch(status) {
-      case 'sorting': return 'bg-blue-100 text-blue-700'
-      case 'pre-survey': return 'bg-yellow-100 text-yellow-700'
-      case 'post-survey': return 'bg-green-100 text-green-700'
-      default: return 'bg-gray-100 text-gray-700'
+    switch (status) {
+      case 'sorting':
+        return 'bg-blue-100 text-blue-700';
+      case 'pre-survey':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'post-survey':
+        return 'bg-green-100 text-green-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
     }
-  }
+  };
 
   const getQualityBadge = (quality: string) => {
-    switch(quality) {
-      case 'high': return <Badge className="bg-green-100 text-green-700">High Quality</Badge>
-      case 'medium': return <Badge className="bg-yellow-100 text-yellow-700">Medium Quality</Badge>
-      case 'low': return <Badge className="bg-red-100 text-red-700">Low Quality</Badge>
-      default: return null
+    switch (quality) {
+      case 'high':
+        return (
+          <Badge className="bg-green-100 text-green-700">High Quality</Badge>
+        );
+      case 'medium':
+        return (
+          <Badge className="bg-yellow-100 text-yellow-700">
+            Medium Quality
+          </Badge>
+        );
+      case 'low':
+        return <Badge className="bg-red-100 text-red-700">Low Quality</Badge>;
+      default:
+        return null;
     }
-  }
+  };
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -98,7 +128,8 @@ export default function CollectPhasePage() {
         <Activity className="h-4 w-4 text-green-600" />
         <AlertTitle className="text-green-800">Study Active</AlertTitle>
         <AlertDescription className="text-green-700">
-          Your study is live and accepting responses. {stats.inProgress} participants currently active.
+          Your study is live and accepting responses. {stats.inProgress}{' '}
+          participants currently active.
         </AlertDescription>
       </Alert>
 
@@ -110,14 +141,13 @@ export default function CollectPhasePage() {
               <div>
                 <p className="text-sm text-muted-foreground">Completed</p>
                 <p className="text-2xl font-bold">{stats.totalCompleted}</p>
-                <p className="text-xs text-muted-foreground mt-1">of {stats.totalStarted} started</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  of {stats.totalStarted} started
+                </p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
-            <Progress 
-              value={stats.completionRate} 
-              className="mt-3 h-2" 
-            />
+            <Progress value={stats.completionRate} className="mt-3 h-2" />
           </CardContent>
         </Card>
 
@@ -127,7 +157,9 @@ export default function CollectPhasePage() {
               <div>
                 <p className="text-sm text-muted-foreground">Active Now</p>
                 <p className="text-2xl font-bold">{stats.inProgress}</p>
-                <p className="text-xs text-muted-foreground mt-1">{stats.lastActivity}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.lastActivity}
+                </p>
               </div>
               <Users className="h-8 w-8 text-blue-500" />
             </div>
@@ -140,7 +172,9 @@ export default function CollectPhasePage() {
               <div>
                 <p className="text-sm text-muted-foreground">Avg. Time</p>
                 <p className="text-2xl font-bold">{stats.averageTime}</p>
-                <p className="text-xs text-muted-foreground mt-1">per completion</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  per completion
+                </p>
               </div>
               <Clock className="h-8 w-8 text-purple-500" />
             </div>
@@ -182,10 +216,15 @@ export default function CollectPhasePage() {
         <CardContent>
           {activeParticipants.length > 0 ? (
             <div className="space-y-4">
-              {activeParticipants.map((participant) => (
-                <div key={participant.id} className="flex items-center justify-between">
+              {activeParticipants.map(participant => (
+                <div
+                  key={participant.id}
+                  className="flex items-center justify-between"
+                >
                   <div className="flex items-center gap-4">
-                    <div className="font-mono text-sm font-medium">{participant.id}</div>
+                    <div className="font-mono text-sm font-medium">
+                      {participant.id}
+                    </div>
                     <Badge className={getStatusColor(participant.status)}>
                       {participant.status}
                     </Badge>
@@ -197,7 +236,9 @@ export default function CollectPhasePage() {
                     <div className="w-32">
                       <Progress value={participant.progress} className="h-2" />
                     </div>
-                    <span className="text-sm font-medium">{participant.progress}%</span>
+                    <span className="text-sm font-medium">
+                      {participant.progress}%
+                    </span>
                   </div>
                 </div>
               ))}
@@ -215,18 +256,21 @@ export default function CollectPhasePage() {
       <Card>
         <CardHeader>
           <CardTitle>Recent Completions</CardTitle>
-          <CardDescription>
-            Latest completed Q-sorts
-          </CardDescription>
+          <CardDescription>Latest completed Q-sorts</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {recentCompletions.map((completion) => (
-              <div key={completion.id} className="flex items-center justify-between py-2 border-b last:border-0">
+            {recentCompletions.map(completion => (
+              <div
+                key={completion.id}
+                className="flex items-center justify-between py-2 border-b last:border-0"
+              >
                 <div className="flex items-center gap-4">
                   <CheckCircle className="h-5 w-5 text-green-500" />
                   <div>
-                    <span className="font-mono text-sm font-medium">{completion.id}</span>
+                    <span className="font-mono text-sm font-medium">
+                      {completion.id}
+                    </span>
                     <p className="text-sm text-muted-foreground">
                       {completion.completedAt} • {completion.time}
                     </p>
@@ -243,9 +287,7 @@ export default function CollectPhasePage() {
       <Card>
         <CardHeader>
           <CardTitle>Collection Controls</CardTitle>
-          <CardDescription>
-            Manage data collection settings
-          </CardDescription>
+          <CardDescription>Manage data collection settings</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -313,9 +355,14 @@ export default function CollectPhasePage() {
         <AlertTitle>Collection Best Practices</AlertTitle>
         <AlertDescription>
           <ul className="mt-2 space-y-1 text-sm">
-            <li>• Monitor for incomplete sorts and follow up with participants</li>
+            <li>
+              • Monitor for incomplete sorts and follow up with participants
+            </li>
             <li>• Check data quality indicators for suspicious patterns</li>
-            <li>• Consider sending reminders to participants who started but didn't complete</li>
+            <li>
+              • Consider sending reminders to participants who started but
+              didn't complete
+            </li>
             <li>• Export data regularly as backup during collection</li>
           </ul>
         </AlertDescription>
@@ -337,5 +384,5 @@ export default function CollectPhasePage() {
         </Link>
       </div>
     </div>
-  )
+  );
 }

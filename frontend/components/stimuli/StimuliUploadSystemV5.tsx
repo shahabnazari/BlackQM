@@ -1,9 +1,6 @@
 'use client';
 
-import React, {
-  useState,
-  useRef,
-} from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload,
@@ -224,15 +221,15 @@ export function StimuliUploadSystemV5({ grid }: StimuliUploadSystemV5Props) {
         content: url,
         title: file.name,
       };
-      
+
       if (uploadMode === 'image') {
         stimulus.preview = url;
       }
-      
+
       if (uploadMode === 'video' || uploadMode === 'audio') {
         stimulus.duration = '0:00';
       }
-      
+
       newStimuli.push(stimulus);
     }
 

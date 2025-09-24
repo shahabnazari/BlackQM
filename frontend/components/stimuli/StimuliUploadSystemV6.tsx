@@ -141,7 +141,7 @@ export function StimuliUploadSystemV6({
     showSuccess,
     showError,
     showConfirm,
-    showWarning
+    showWarning,
   } = usePopup();
 
   // Initialize locked type if we have initial stimuli
@@ -254,15 +254,15 @@ export function StimuliUploadSystemV6({
           uploadedAt: new Date(),
         },
       };
-      
+
       if (uploadMode === 'image') {
         stimulus.preview = url;
       }
-      
+
       if (uploadMode === 'video' || uploadMode === 'audio') {
         stimulus.duration = '0:00';
       }
-      
+
       newStimuli.push(stimulus);
     }
 

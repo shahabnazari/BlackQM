@@ -6,12 +6,9 @@ export async function POST(request: NextRequest) {
   try {
     // Check authentication
     const session = await getServerSession(authOptions);
-    
+
     if (!session || !session.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -27,14 +24,17 @@ export async function POST(request: NextRequest) {
     // If we have a backend available, forward the request
     if (process.env.BACKEND_URL) {
       try {
-        const response = await fetch(`${process.env.BACKEND_URL}/api/navigation/track`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': request.headers.get('Authorization') || '',
-          },
-          body: JSON.stringify({ studyId, phase, action }),
-        });
+        const response = await fetch(
+          `${process.env.BACKEND_URL}/api/navigation/track`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: request.headers.get('Authorization') || '',
+            },
+            body: JSON.stringify({ studyId, phase, action }),
+          }
+        );
 
         if (response.ok) {
           const data = await response.json();
@@ -48,7 +48,9 @@ export async function POST(request: NextRequest) {
 
     // For now, just log and return success
     // In production, this would be stored in analytics/database
-    console.log(`[Navigation Track] Study: ${studyId}, Phase: ${phase}, Action: ${action}`);
+    console.log(
+      `[Navigation Track] Study: ${studyId}, Phase: ${phase}, Action: ${action}`
+    );
 
     return NextResponse.json({
       success: true,

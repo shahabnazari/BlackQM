@@ -13,12 +13,13 @@ interface PhaseProgressIndicatorProps {
   orientation?: 'horizontal' | 'vertical';
 }
 
-export function PhaseProgressIndicator({ 
+export function PhaseProgressIndicator({
   studyId: _studyId, // TODO: Use for study-specific progress
   compact = false,
-  orientation = 'horizontal' 
+  orientation = 'horizontal',
 }: PhaseProgressIndicatorProps) {
-  const { phaseProgress, completedPhases, currentPhase, availablePhases } = useNavigationState();
+  const { phaseProgress, completedPhases, currentPhase, availablePhases } =
+    useNavigationState();
 
   const phases: Array<{
     id: ResearchPhase;
@@ -66,14 +67,15 @@ export function PhaseProgressIndicator({
     compact ? 'p-2' : 'p-4'
   );
 
-  const phaseClass = (status: string) => cn(
-    'relative flex items-center justify-center rounded-full transition-all duration-300',
-    compact ? 'w-8 h-8' : 'w-12 h-12',
-    status === 'completed' && 'bg-green-500 text-white',
-    status === 'current' && 'ring-4 ring-blue-400 ring-offset-2',
-    status === 'available' && 'bg-gray-200 hover:bg-gray-300',
-    status === 'locked' && 'bg-gray-100 opacity-50'
-  );
+  const phaseClass = (status: string) =>
+    cn(
+      'relative flex items-center justify-center rounded-full transition-all duration-300',
+      compact ? 'w-8 h-8' : 'w-12 h-12',
+      status === 'completed' && 'bg-green-500 text-white',
+      status === 'current' && 'ring-4 ring-blue-400 ring-offset-2',
+      status === 'available' && 'bg-gray-200 hover:bg-gray-300',
+      status === 'locked' && 'bg-gray-100 opacity-50'
+    );
 
   return (
     <div className={containerClass}>
@@ -85,11 +87,16 @@ export function PhaseProgressIndicator({
           <React.Fragment key={phase.id}>
             {/* Connector Line */}
             {index > 0 && orientation === 'horizontal' && (
-              <div className={cn(
-                'h-0.5 bg-gray-300',
-                compact ? 'w-4' : 'w-8',
-                (index > 0 && phases[index - 1] && completedPhases.includes(phases[index - 1]!.id)) && 'bg-green-500'
-              )} />
+              <div
+                className={cn(
+                  'h-0.5 bg-gray-300',
+                  compact ? 'w-4' : 'w-8',
+                  index > 0 &&
+                    phases[index - 1] &&
+                    completedPhases.includes(phases[index - 1]!.id) &&
+                    'bg-green-500'
+                )}
+              />
             )}
 
             {/* Phase Circle */}
@@ -126,18 +133,22 @@ export function PhaseProgressIndicator({
                       strokeDashoffset={`${2 * Math.PI * (compact ? 14 : 20) * (1 - progress / 100)}`}
                       className={cn(
                         'transition-all duration-500',
-                        status === 'current' ? getPhaseColor(phase.id) : 'text-gray-400'
+                        status === 'current'
+                          ? getPhaseColor(phase.id)
+                          : 'text-gray-400'
                       )}
                     />
                   </svg>
 
                   {/* Phase Label */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={cn(
-                      'font-semibold',
-                      compact ? 'text-xs' : 'text-sm',
-                      status === 'locked' && 'text-gray-400'
-                    )}>
+                    <span
+                      className={cn(
+                        'font-semibold',
+                        compact ? 'text-xs' : 'text-sm',
+                        status === 'locked' && 'text-gray-400'
+                      )}
+                    >
                       {compact ? phase.shortLabel : (index + 1).toString()}
                     </span>
                   </div>
@@ -149,7 +160,9 @@ export function PhaseProgressIndicator({
                 <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
                   <span className="text-xs text-gray-600">{phase.label}</span>
                   {progress > 0 && progress < 100 && (
-                    <span className="block text-xs text-gray-400">{progress}%</span>
+                    <span className="block text-xs text-gray-400">
+                      {progress}%
+                    </span>
                   )}
                 </div>
               )}
@@ -165,9 +178,12 @@ export function PhaseProgressIndicator({
             {completedPhases.length} of {phases.length} phases complete
           </div>
           <div className="text-xs text-gray-400">
-            Overall: {Math.round(
-              Object.values(phaseProgress).reduce((a, b) => a + b, 0) / phases.length
-            )}%
+            Overall:{' '}
+            {Math.round(
+              Object.values(phaseProgress).reduce((a, b) => a + b, 0) /
+                phases.length
+            )}
+            %
           </div>
         </div>
       )}

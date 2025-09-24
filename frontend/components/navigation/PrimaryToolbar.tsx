@@ -19,16 +19,16 @@ import { useNavigationState } from '@/hooks/useNavigationState';
 import { SecondaryToolbar } from './SecondaryToolbar';
 import { cn } from '@/lib/utils';
 
-export type ResearchPhase = 
-  | 'discover' 
-  | 'design' 
-  | 'build' 
-  | 'recruit' 
-  | 'collect' 
-  | 'analyze' 
-  | 'visualize' 
-  | 'interpret' 
-  | 'report' 
+export type ResearchPhase =
+  | 'discover'
+  | 'design'
+  | 'build'
+  | 'recruit'
+  | 'collect'
+  | 'analyze'
+  | 'visualize'
+  | 'interpret'
+  | 'report'
   | 'archive';
 
 interface PhaseConfig {
@@ -124,15 +124,17 @@ const phaseConfigs: PhaseConfig[] = [
 ];
 
 export function PrimaryToolbar() {
-  const { 
-    currentPhase, 
-    setCurrentPhase, 
-    phaseProgress, 
+  const {
+    currentPhase,
+    setCurrentPhase,
+    phaseProgress,
     availablePhases,
-    completedPhases 
+    completedPhases,
   } = useNavigationState();
-  
-  const [expandedPhase, setExpandedPhase] = useState<ResearchPhase | null>(null);
+
+  const [expandedPhase, setExpandedPhase] = useState<ResearchPhase | null>(
+    null
+  );
   const [hoveredPhase, setHoveredPhase] = useState<ResearchPhase | null>(null);
 
   // Keyboard navigation
@@ -156,7 +158,7 @@ export function PrimaryToolbar() {
           }
         }
       }
-      
+
       // Escape key collapses secondary toolbar
       if (e.key === 'Escape') {
         setExpandedPhase(null);
@@ -169,7 +171,7 @@ export function PrimaryToolbar() {
 
   const handlePhaseClick = (phase: ResearchPhase) => {
     if (!availablePhases.includes(phase)) return;
-    
+
     setCurrentPhase(phase);
     if (expandedPhase === phase) {
       setExpandedPhase(null);
@@ -186,7 +188,7 @@ export function PrimaryToolbar() {
           <div className="flex items-center justify-between px-4 py-2">
             {/* Phase Navigation */}
             <div className="flex items-center space-x-1 overflow-x-auto">
-              {phaseConfigs.map((phase) => {
+              {phaseConfigs.map(phase => {
                 const Icon = phase.icon;
                 const progress = phaseProgress[phase.id] || 0;
                 const isAvailable = availablePhases.includes(phase.id);
@@ -206,18 +208,29 @@ export function PrimaryToolbar() {
                     whileTap={isAvailable ? { scale: 0.95 } : {}}
                     className={cn(
                       'relative group flex flex-col items-center px-3 py-2 rounded-lg transition-all duration-200',
-                      isAvailable ? 'cursor-pointer' : 'cursor-not-allowed opacity-40',
-                      isActive || isExpanded ? phase.bgColor : 'hover:bg-gray-50',
+                      isAvailable
+                        ? 'cursor-pointer'
+                        : 'cursor-not-allowed opacity-40',
+                      isActive || isExpanded
+                        ? phase.bgColor
+                        : 'hover:bg-gray-50',
                       isActive && 'ring-2 ring-offset-2 ring-blue-500'
                     )}
                   >
                     {/* Phase Icon & Label */}
                     <div className="flex items-center space-x-2">
-                      <Icon className={cn('w-5 h-5', isActive ? phase.color : 'text-gray-600')} />
-                      <span className={cn(
-                        'text-sm font-medium',
-                        isActive ? phase.color : 'text-gray-700'
-                      )}>
+                      <Icon
+                        className={cn(
+                          'w-5 h-5',
+                          isActive ? phase.color : 'text-gray-600'
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          'text-sm font-medium',
+                          isActive ? phase.color : 'text-gray-700'
+                        )}
+                      >
                         {phase.label}
                       </span>
                       {isCompleted && (
@@ -232,7 +245,10 @@ export function PrimaryToolbar() {
                           initial={{ width: 0 }}
                           animate={{ width: `${progress}%` }}
                           transition={{ duration: 0.5, ease: 'easeOut' }}
-                          className={cn('h-full', phase.bgColor.replace('50', '500'))}
+                          className={cn(
+                            'h-full',
+                            phase.bgColor.replace('50', '500')
+                          )}
                         />
                       </div>
                     )}
@@ -248,9 +264,13 @@ export function PrimaryToolbar() {
                         >
                           <div className="font-medium">{phase.description}</div>
                           {progress > 0 && (
-                            <div className="mt-1 text-gray-300">{progress}% complete</div>
+                            <div className="mt-1 text-gray-300">
+                              {progress}% complete
+                            </div>
                           )}
-                          <div className="mt-1 text-gray-400">⌘{phaseConfigs.indexOf(phase) + 1}</div>
+                          <div className="mt-1 text-gray-400">
+                            ⌘{phaseConfigs.indexOf(phase) + 1}
+                          </div>
                           <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
                             <div className="border-4 border-transparent border-t-gray-900" />
                           </div>
@@ -265,13 +285,33 @@ export function PrimaryToolbar() {
             {/* Quick Actions */}
             <div className="flex items-center space-x-2">
               <button className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
                 </svg>
               </button>
               <button className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </button>
             </div>
@@ -282,7 +322,7 @@ export function PrimaryToolbar() {
       {/* Secondary Toolbar */}
       <AnimatePresence>
         {expandedPhase && (
-          <SecondaryToolbar 
+          <SecondaryToolbar
             phase={expandedPhase}
             onClose={() => setExpandedPhase(null)}
           />

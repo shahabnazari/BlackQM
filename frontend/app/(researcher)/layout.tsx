@@ -20,7 +20,7 @@ export default function ResearcherLayout({
       <div className="min-h-screen bg-system-background">
         {/* Phase 8.5: Research Lifecycle Navigation */}
         <PrimaryToolbar />
-        
+
         {/* Legacy navigation - will be phased out */}
         <ResearcherNavigation />
         <KeyboardShortcutsHelp />

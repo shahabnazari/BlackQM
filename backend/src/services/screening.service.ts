@@ -1,11 +1,15 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { QuestionService } from './question.service';
-import { Question, QuestionType, Response as PrismaResponse } from '@prisma/client';
+import {
+  Question,
+  QuestionType,
+  Response as PrismaResponse,
+} from '@prisma/client';
 
 /**
  * Phase 8.2 Day 1: World-Class Screening Service
- * 
+ *
  * Advanced participant screening with:
  * - Dynamic qualification logic
  * - Conditional screening paths
@@ -17,7 +21,14 @@ import { Question, QuestionType, Response as PrismaResponse } from '@prisma/clie
 
 export interface ScreeningRule {
   questionId: string;
-  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'in' | 'not_in' | 'contains';
+  operator:
+    | 'equals'
+    | 'not_equals'
+    | 'greater_than'
+    | 'less_than'
+    | 'in'
+    | 'not_in'
+    | 'contains';
   value: any;
   action: 'qualify' | 'disqualify' | 'continue';
   message?: string;
@@ -61,23 +72,22 @@ export interface ScreeningConfiguration {
 export class ScreeningService {
   constructor(
     private prisma: PrismaService,
-    private questionService: QuestionService
+    private questionService: QuestionService,
   ) {}
 
   /**
    * Get screening questions for a survey
    */
   async getScreeningQuestions(surveyId: string): Promise<Question[]> {
-
     // Get questions marked as screening questions
     const questions = await this.prisma.question.findMany({
       where: {
         surveyId,
         // Assuming we add a 'screening' field to questions
         // For now, get first 5 questions as screening
-        order: { lt: 5 }
+        order: { lt: 5 },
       },
-      orderBy: { order: 'asc' }
+      orderBy: { order: 'asc' },
     });
 
     // Cache would be set here
@@ -90,11 +100,11 @@ export class ScreeningService {
   async evaluateScreening(
     surveyId: string,
     participantId: string,
-    responses: Record<string, any>
+    responses: Record<string, any>,
   ): Promise<ScreeningResult> {
     // Get screening configuration
     const config = await this.getScreeningConfiguration(surveyId);
-    
+
     // Check quotas first
     const quotaCheck = await this.checkQuotas(config, responses);
     if (!quotaCheck.qualified) {
@@ -103,42 +113,52 @@ export class ScreeningService {
 
     // Evaluate rules
     const ruleResults = await this.evaluateRules(config, responses);
-    
+
     // Calculate qualification
     const qualified = this.calculateQualification(config, ruleResults);
-    
+
     // Save screening response
-    await this.saveScreeningResponse(surveyId, participantId, responses, qualified);
-    
+    await this.saveScreeningResponse(
+      surveyId,
+      participantId,
+      responses,
+      qualified,
+    );
+
     // Get recommendations if not qualified
     let recommendations: string[] = [];
     let alternativeStudies: string[] = [];
-    
+
     if (!qualified.qualified) {
       recommendations = await this.getRecommendations(responses);
-      alternativeStudies = await this.findAlternativeStudies(surveyId, responses);
+      alternativeStudies = await this.findAlternativeStudies(
+        surveyId,
+        responses,
+      );
     }
 
     return {
       ...qualified,
       recommendations,
-      alternativeStudies
+      alternativeStudies,
     };
   }
 
   /**
    * Get or create screening configuration
    */
-  async getScreeningConfiguration(surveyId: string): Promise<ScreeningConfiguration> {
+  async getScreeningConfiguration(
+    surveyId: string,
+  ): Promise<ScreeningConfiguration> {
     // Check if custom configuration exists
     const survey = await this.prisma.survey.findUnique({
       where: { id: surveyId },
       include: {
         questions: {
           where: { order: { lt: 5 } },
-          orderBy: { order: 'asc' }
-        }
-      }
+          orderBy: { order: 'asc' },
+        },
+      },
     });
 
     if (!survey) {
@@ -158,17 +178,21 @@ export class ScreeningService {
   /**
    * Save screening configuration
    */
-  async saveScreeningConfiguration(config: ScreeningConfiguration): Promise<void> {
+  async saveScreeningConfiguration(
+    config: ScreeningConfiguration,
+  ): Promise<void> {
     await this.prisma.survey.update({
       where: { id: config.surveyId },
       data: {
         settings: {
-          ...(await this.prisma.survey.findUnique({ 
-            where: { id: config.surveyId } 
-          }))?.settings as any,
-          screeningConfig: config
-        }
-      }
+          ...((
+            await this.prisma.survey.findUnique({
+              where: { id: config.surveyId },
+            })
+          )?.settings as any),
+          screeningConfig: config,
+        },
+      },
     });
 
     // Cache invalidation would go here
@@ -179,24 +203,24 @@ export class ScreeningService {
    */
   async checkQuotas(
     config: ScreeningConfiguration,
-    responses: Record<string, any>
+    responses: Record<string, any>,
   ): Promise<ScreeningResult> {
     if (!config.quotas || config.quotas.length === 0) {
       return { qualified: true };
     }
 
     const quotaStatus: Record<string, string> = {};
-    
+
     for (const quota of config.quotas) {
       const value = responses[quota.field];
-      const quotaValue = quota.values.find(v => v.value === value);
-      
+      const quotaValue = quota.values.find((v) => v.value === value);
+
       if (quotaValue) {
         if (quotaValue.status === 'closed') {
           return {
             qualified: false,
             reason: `Quota full for ${quota.field}: ${value}`,
-            quotaStatus
+            quotaStatus,
           };
         }
         quotaStatus[quota.field] = quotaValue.status;
@@ -211,16 +235,16 @@ export class ScreeningService {
    */
   async updateQuotaCounts(
     surveyId: string,
-    responses: Record<string, any>
+    responses: Record<string, any>,
   ): Promise<void> {
     const config = await this.getScreeningConfiguration(surveyId);
-    
+
     if (!config.quotas) return;
 
     for (const quota of config.quotas) {
       const value = responses[quota.field];
-      const quotaValue = quota.values.find(v => v.value === value);
-      
+      const quotaValue = quota.values.find((v) => v.value === value);
+
       if (quotaValue) {
         quotaValue.current++;
         if (quotaValue.current >= quotaValue.target) {
@@ -239,7 +263,7 @@ export class ScreeningService {
    */
   private async evaluateRules(
     config: ScreeningConfiguration,
-    responses: Record<string, any>
+    responses: Record<string, any>,
   ): Promise<Array<{ rule: ScreeningRule; passed: boolean }>> {
     const results = [];
 
@@ -279,7 +303,9 @@ export class ScreeningService {
       case 'not_in':
         return Array.isArray(rule.value) && !rule.value.includes(value);
       case 'contains':
-        return String(value).toLowerCase().includes(String(rule.value).toLowerCase());
+        return String(value)
+          .toLowerCase()
+          .includes(String(rule.value).toLowerCase());
       default:
         return true;
     }
@@ -290,17 +316,18 @@ export class ScreeningService {
    */
   private calculateQualification(
     config: ScreeningConfiguration,
-    ruleResults: Array<{ rule: ScreeningRule; passed: boolean }>
+    ruleResults: Array<{ rule: ScreeningRule; passed: boolean }>,
   ): ScreeningResult {
     // Check for immediate disqualification
     const disqualified = ruleResults.find(
-      r => !r.passed && r.rule.action === 'disqualify'
+      (r) => !r.passed && r.rule.action === 'disqualify',
     );
-    
+
     if (disqualified) {
       return {
         qualified: false,
-        reason: disqualified.rule.message || 'Did not meet qualification criteria'
+        reason:
+          disqualified.rule.message || 'Did not meet qualification criteria',
       };
     }
 
@@ -322,7 +349,7 @@ export class ScreeningService {
         return {
           qualified: false,
           score,
-          reason: `Score ${score} below minimum ${config.minScore}`
+          reason: `Score ${score} below minimum ${config.minScore}`,
         };
       }
 
@@ -331,24 +358,24 @@ export class ScreeningService {
 
     // Check if all required rules passed
     if (config.requireAll) {
-      const allPassed = ruleResults.every(r => 
-        r.passed || r.rule.action !== 'qualify'
+      const allPassed = ruleResults.every(
+        (r) => r.passed || r.rule.action !== 'qualify',
       );
-      
+
       return {
         qualified: allPassed,
-        reason: allPassed ? undefined : 'Not all requirements met'
+        reason: allPassed ? undefined : 'Not all requirements met',
       };
     }
 
     // Default: qualified if any qualify rule passed
-    const qualified = ruleResults.some(r => 
-      r.passed && r.rule.action === 'qualify'
+    const qualified = ruleResults.some(
+      (r) => r.passed && r.rule.action === 'qualify',
     );
 
     return {
       qualified,
-      reason: qualified ? undefined : 'Did not meet qualification criteria'
+      reason: qualified ? undefined : 'Did not meet qualification criteria',
     };
   }
 
@@ -359,7 +386,7 @@ export class ScreeningService {
     surveyId: string,
     participantId: string,
     responses: Record<string, any>,
-    result: ScreeningResult
+    result: ScreeningResult,
   ): Promise<void> {
     // Create response record
     const response = await this.prisma.response.create({
@@ -372,10 +399,10 @@ export class ScreeningService {
             responses,
             result,
             qualified: result.qualified,
-            timestamp: new Date().toISOString()
-          }
-        } as any
-      }
+            timestamp: new Date().toISOString(),
+          },
+        } as any,
+      },
     });
 
     // Save individual answers
@@ -384,8 +411,8 @@ export class ScreeningService {
         data: {
           questionId,
           responseId: response.id,
-          value
-        }
+          value,
+        },
       });
     }
   }
@@ -393,27 +420,39 @@ export class ScreeningService {
   /**
    * Get recommendations for disqualified participants
    */
-  private async getRecommendations(responses: Record<string, any>): Promise<string[]> {
+  private async getRecommendations(
+    responses: Record<string, any>,
+  ): Promise<string[]> {
     const recommendations = [];
 
     // Age-based recommendations
     const age = responses.age;
     if (age === 'under18') {
-      recommendations.push('You must be 18 or older to participate in this study.');
-      recommendations.push('Consider looking for studies that accept younger participants.');
+      recommendations.push(
+        'You must be 18 or older to participate in this study.',
+      );
+      recommendations.push(
+        'Consider looking for studies that accept younger participants.',
+      );
     }
 
     // Time availability recommendations
     const timeAvailable = responses.timeAvailable;
     if (timeAvailable === 'no' || timeAvailable === '< 15 minutes') {
-      recommendations.push('This study requires approximately 20-30 minutes to complete.');
-      recommendations.push('Consider returning when you have more time available.');
+      recommendations.push(
+        'This study requires approximately 20-30 minutes to complete.',
+      );
+      recommendations.push(
+        'Consider returning when you have more time available.',
+      );
     }
 
     // Experience recommendations
     const experience = responses.experience;
     if (experience === 'none') {
-      recommendations.push('Consider reviewing our tutorial on Q-methodology before participating.');
+      recommendations.push(
+        'Consider reviewing our tutorial on Q-methodology before participating.',
+      );
     }
 
     return recommendations;
@@ -424,7 +463,7 @@ export class ScreeningService {
    */
   private async findAlternativeStudies(
     currentSurveyId: string,
-    responses: Record<string, any>
+    responses: Record<string, any>,
   ): Promise<string[]> {
     // Find other active surveys with compatible requirements
     const alternativeSurveys = await this.prisma.survey.findMany({
@@ -436,8 +475,8 @@ export class ScreeningService {
       take: 3,
       select: {
         id: true,
-        title: true
-      }
+        title: true,
+      },
     });
 
     return alternativeSurveys.map((s: any) => s.id);
@@ -448,7 +487,7 @@ export class ScreeningService {
    */
   private generateDefaultConfiguration(survey: any): ScreeningConfiguration {
     const rules: ScreeningRule[] = [];
-    
+
     // Add default rules based on question types
     for (const question of survey.questions) {
       // Age verification
@@ -458,19 +497,21 @@ export class ScreeningService {
           operator: 'not_equals',
           value: 'under18',
           action: 'disqualify',
-          message: 'Participants must be 18 or older'
+          message: 'Participants must be 18 or older',
         });
       }
 
       // Time availability
-      if (question.text.toLowerCase().includes('time') || 
-          question.text.toLowerCase().includes('available')) {
+      if (
+        question.text.toLowerCase().includes('time') ||
+        question.text.toLowerCase().includes('available')
+      ) {
         rules.push({
           questionId: question.id,
           operator: 'equals',
           value: 'yes',
           action: 'qualify',
-          weight: 1
+          weight: 1,
         });
       }
 
@@ -481,7 +522,7 @@ export class ScreeningService {
           operator: 'equals',
           value: 'no',
           action: 'continue', // No automatic qualification/disqualification
-          weight: 0.5
+          weight: 0.5,
         });
       }
     }
@@ -491,7 +532,7 @@ export class ScreeningService {
       rules,
       requireAll: false,
       minScore: undefined,
-      collectDataOnFail: true
+      collectDataOnFail: true,
     };
   }
 
@@ -500,22 +541,26 @@ export class ScreeningService {
    */
   async getScreeningStatistics(surveyId: string): Promise<any> {
     const responses = await this.prisma.response.findMany({
-      where: { 
+      where: {
         surveyId,
-        sessionCode: { startsWith: 'SCREEN-' }
+        sessionCode: { startsWith: 'SCREEN-' },
       },
       include: {
-        answers: true
-      }
+        answers: true,
+      },
     });
 
     const stats = {
       total: responses.length,
-      qualified: responses.filter(r => (r.demographics as any)?.screening?.qualified === true).length,
-      disqualified: responses.filter(r => (r.demographics as any)?.screening?.qualified === false).length,
+      qualified: responses.filter(
+        (r) => (r.demographics as any)?.screening?.qualified === true,
+      ).length,
+      disqualified: responses.filter(
+        (r) => (r.demographics as any)?.screening?.qualified === false,
+      ).length,
       qualificationRate: 0,
       disqualificationReasons: {} as Record<string, number>,
-      averageScreeningTime: 0
+      averageScreeningTime: 0,
     };
 
     if (stats.total > 0) {
@@ -523,10 +568,13 @@ export class ScreeningService {
     }
 
     // Analyze disqualification reasons
-    for (const response of responses.filter((r: any) => (r.demographics as any)?.screening?.qualified === false)) {
+    for (const response of responses.filter(
+      (r: any) => (r.demographics as any)?.screening?.qualified === false,
+    )) {
       const demographics = response.demographics as any;
       const reason = demographics?.screening?.result?.reason || 'Unknown';
-      stats.disqualificationReasons[reason] = (stats.disqualificationReasons[reason] || 0) + 1;
+      stats.disqualificationReasons[reason] =
+        (stats.disqualificationReasons[reason] || 0) + 1;
     }
 
     return stats;

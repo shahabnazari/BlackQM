@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  
+
   // Image optimization
   images: {
     domains: ['localhost', 'vqmethod.com'],
@@ -13,9 +13,12 @@ const nextConfig = {
 
   // Production optimizations
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error', 'warn'],
-    } : false,
+    removeConsole:
+      process.env.NODE_ENV === 'production'
+        ? {
+            exclude: ['error', 'warn'],
+          }
+        : false,
   },
 
   // Experimental features for better performance - Phase 8.5 Day 5 optimizations
@@ -35,7 +38,7 @@ const nextConfig = {
     ],
     webVitalsAttribution: ['CLS', 'LCP', 'FCP', 'FID', 'TTFB'],
   },
-  
+
   // Code splitting for phase-based routing
   modularizeImports: {
     '@mui/icons-material': {
@@ -126,7 +129,7 @@ const nextConfig = {
         ...config.output,
         chunkLoadTimeout: 120000, // 120 seconds timeout for development
       };
-      
+
       // Disable aggressive code splitting in development
       config.optimization = {
         ...config.optimization,
@@ -142,7 +145,7 @@ const nextConfig = {
         },
       };
     }
-    
+
     // Code splitting optimization
     if (!dev && !isServer) {
       config.optimization = {
@@ -235,7 +238,8 @@ const nextConfig = {
 
   // Environment variables
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+    NEXT_PUBLIC_API_URL:
+      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
     NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001',
   },
 };

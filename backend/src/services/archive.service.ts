@@ -51,7 +51,7 @@ export class ArchiveService {
   async createVersion(
     studyId: string,
     userId: string,
-    message?: string
+    message?: string,
   ): Promise<StudyVersion> {
     try {
       const study = await (this.prisma as any).study.findUnique({
@@ -82,7 +82,7 @@ export class ArchiveService {
       // Detect changes from previous version
       const changes = this.detectChanges(
         existingVersions[existingVersions.length - 1]?.snapshot,
-        snapshot
+        snapshot,
       );
 
       const version: StudyVersion = {
@@ -114,7 +114,7 @@ export class ArchiveService {
   async getVersionHistory(studyId: string): Promise<StudyVersion[]> {
     const versions = this.versions.get(studyId) || [];
     return versions.sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
     );
   }
 
@@ -124,7 +124,7 @@ export class ArchiveService {
   async restoreVersion(
     studyId: string,
     versionId: string,
-    userId: string
+    userId: string,
   ): Promise<any> {
     try {
       const versions = this.versions.get(studyId) || [];
@@ -132,7 +132,7 @@ export class ArchiveService {
 
       if (!targetVersion) {
         throw new NotFoundException(
-          `Version ${versionId} not found for study ${studyId}`
+          `Version ${versionId} not found for study ${studyId}`,
         );
       }
 
@@ -140,7 +140,7 @@ export class ArchiveService {
       await this.createVersion(
         studyId,
         userId,
-        `Backup before restoring to ${targetVersion.version}`
+        `Backup before restoring to ${targetVersion.version}`,
       );
 
       // Restore study state from snapshot
@@ -158,7 +158,7 @@ export class ArchiveService {
       });
 
       this.logger.log(
-        `Restored study ${studyId} to version ${targetVersion.version}`
+        `Restored study ${studyId} to version ${targetVersion.version}`,
       );
       return updated;
     } catch (error: any) {
@@ -177,7 +177,7 @@ export class ArchiveService {
       includeAnalysis: true,
       includeReports: true,
       compress: false,
-    }
+    },
   ): Promise<ArchivePackage> {
     try {
       // Fetch complete study data
@@ -248,7 +248,7 @@ export class ArchiveService {
    */
   async exportArchive(
     studyId: string,
-    format: 'json' | 'zip' | 'tar'
+    format: 'json' | 'zip' | 'tar',
   ): Promise<Buffer> {
     try {
       const archivePackage = await this.createArchivePackage(studyId);
@@ -290,7 +290,7 @@ export class ArchiveService {
         study: archivePackage.study,
         data: archivePackage.data,
       });
-      
+
       return calculatedChecksum === archivePackage.metadata.checksum;
     } catch (error: any) {
       this.logger.error(`Failed to verify integrity: ${error.message}`);
@@ -313,7 +313,7 @@ export class ArchiveService {
     }
 
     const changes = [];
-    
+
     // Simple change detection - in production, use a proper diff library
     if (previous.study?.title !== current.study?.title) {
       changes.push('Title updated');
@@ -321,7 +321,9 @@ export class ArchiveService {
     if (previous.study?.description !== current.study?.description) {
       changes.push('Description updated');
     }
-    if (previous.study?.statements?.length !== current.study?.statements?.length) {
+    if (
+      previous.study?.statements?.length !== current.study?.statements?.length
+    ) {
       changes.push('Statements modified');
     }
 
@@ -375,7 +377,7 @@ export class ArchiveService {
       totalSize: sizeInBytes,
       itemCount: Object.keys(archivePackage.data).reduce(
         (sum, key) => sum + (archivePackage.data as any)[key].length,
-        0
+        0,
       ),
       versions: archivePackage.versions.length,
       lastModified: archivePackage.study.updatedAt || new Date(),

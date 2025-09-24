@@ -1,13 +1,19 @@
-'use client'
+'use client';
 
-import React from 'react'
-import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import React from 'react';
+import Link from 'next/link';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Users,
   UserPlus,
@@ -21,16 +27,16 @@ import {
   Send,
   Link as LinkIcon,
   QrCode,
-  Target
-} from 'lucide-react'
+  Target,
+} from 'lucide-react';
 
 interface RecruitmentMetrics {
-  targetParticipants: number
-  currentParticipants: number
-  invitationsSent: number
-  responseRate: number
-  averageCompletionTime: string
-  activeRecruitmentDays: number
+  targetParticipants: number;
+  currentParticipants: number;
+  invitationsSent: number;
+  responseRate: number;
+  averageCompletionTime: string;
+  activeRecruitmentDays: number;
 }
 
 export default function RecruitPhasePage() {
@@ -40,8 +46,8 @@ export default function RecruitPhasePage() {
     invitationsSent: 35,
     responseRate: 34.3,
     averageCompletionTime: '18 min',
-    activeRecruitmentDays: 5
-  }
+    activeRecruitmentDays: 5,
+  };
 
   const recruitmentChannels = [
     {
@@ -49,30 +55,30 @@ export default function RecruitPhasePage() {
       icon: Mail,
       sent: 20,
       responded: 8,
-      completed: 6
+      completed: 6,
     },
     {
       name: 'Social Media',
       icon: Share2,
       sent: 10,
       responded: 4,
-      completed: 3
+      completed: 3,
     },
     {
       name: 'Direct Link',
       icon: LinkIcon,
       sent: 5,
       responded: 3,
-      completed: 3
-    }
-  ]
+      completed: 3,
+    },
+  ];
 
   const upcomingSchedule = [
     { date: 'Today, 2:00 PM', participant: 'P013', status: 'confirmed' },
     { date: 'Today, 3:30 PM', participant: 'P014', status: 'confirmed' },
     { date: 'Tomorrow, 10:00 AM', participant: 'P015', status: 'pending' },
-    { date: 'Tomorrow, 11:30 AM', participant: 'P016', status: 'confirmed' }
-  ]
+    { date: 'Tomorrow, 11:30 AM', participant: 'P016', status: 'confirmed' },
+  ];
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -103,9 +109,11 @@ export default function RecruitPhasePage() {
               </div>
               <Target className="h-8 w-8 text-primary" />
             </div>
-            <Progress 
-              value={(metrics.currentParticipants / metrics.targetParticipants) * 100} 
-              className="mt-3 h-2" 
+            <Progress
+              value={
+                (metrics.currentParticipants / metrics.targetParticipants) * 100
+              }
+              className="mt-3 h-2"
             />
           </CardContent>
         </Card>
@@ -127,7 +135,9 @@ export default function RecruitPhasePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Avg. Time</p>
-                <p className="text-2xl font-bold">{metrics.averageCompletionTime}</p>
+                <p className="text-2xl font-bold">
+                  {metrics.averageCompletionTime}
+                </p>
               </div>
               <Clock className="h-8 w-8 text-blue-500" />
             </div>
@@ -139,7 +149,9 @@ export default function RecruitPhasePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Active Days</p>
-                <p className="text-2xl font-bold">{metrics.activeRecruitmentDays}</p>
+                <p className="text-2xl font-bold">
+                  {metrics.activeRecruitmentDays}
+                </p>
               </div>
               <Calendar className="h-8 w-8 text-purple-500" />
             </div>
@@ -167,10 +179,13 @@ export default function RecruitPhasePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recruitmentChannels.map((channel) => {
-                  const Icon = channel.icon
+                {recruitmentChannels.map(channel => {
+                  const Icon = channel.icon;
                   return (
-                    <div key={channel.name} className="flex items-center justify-between">
+                    <div
+                      key={channel.name}
+                      className="flex items-center justify-between"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-muted">
                           <Icon className="h-5 w-5" />
@@ -178,18 +193,24 @@ export default function RecruitPhasePage() {
                         <div>
                           <p className="font-medium">{channel.name}</p>
                           <p className="text-sm text-muted-foreground">
-                            {channel.sent} sent • {channel.responded} responded • {channel.completed} completed
+                            {channel.sent} sent • {channel.responded} responded
+                            • {channel.completed} completed
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium">
-                          {((channel.completed / channel.sent) * 100).toFixed(0)}%
+                          {((channel.completed / channel.sent) * 100).toFixed(
+                            0
+                          )}
+                          %
                         </p>
-                        <p className="text-xs text-muted-foreground">conversion</p>
+                        <p className="text-xs text-muted-foreground">
+                          conversion
+                        </p>
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
             </CardContent>
@@ -199,24 +220,35 @@ export default function RecruitPhasePage() {
           <Card>
             <CardHeader>
               <CardTitle>Upcoming Sessions</CardTitle>
-              <CardDescription>
-                Scheduled participant sessions
-              </CardDescription>
+              <CardDescription>Scheduled participant sessions</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {upcomingSchedule.map((session, index) => (
-                  <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between py-2 border-b last:border-0"
+                  >
                     <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${
-                        session.status === 'confirmed' ? 'bg-green-500' : 'bg-yellow-500'
-                      }`} />
+                      <div
+                        className={`w-2 h-2 rounded-full ${
+                          session.status === 'confirmed'
+                            ? 'bg-green-500'
+                            : 'bg-yellow-500'
+                        }`}
+                      />
                       <div>
                         <p className="font-medium">{session.participant}</p>
-                        <p className="text-sm text-muted-foreground">{session.date}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {session.date}
+                        </p>
                       </div>
                     </div>
-                    <Badge variant={session.status === 'confirmed' ? 'default' : 'secondary'}>
+                    <Badge
+                      variant={
+                        session.status === 'confirmed' ? 'default' : 'secondary'
+                      }
+                    >
                       {session.status}
                     </Badge>
                   </div>
@@ -353,9 +385,13 @@ export default function RecruitPhasePage() {
         <AlertTitle>Recruitment Tips</AlertTitle>
         <AlertDescription>
           <ul className="mt-2 space-y-1 text-sm">
-            <li>• Aim for diversity in viewpoints rather than large sample size</li>
+            <li>
+              • Aim for diversity in viewpoints rather than large sample size
+            </li>
             <li>• Send reminders 24 hours before scheduled sessions</li>
-            <li>• Clearly communicate time commitment (typically 15-30 minutes)</li>
+            <li>
+              • Clearly communicate time commitment (typically 15-30 minutes)
+            </li>
             <li>• Consider offering compensation for participant time</li>
           </ul>
         </AlertDescription>
@@ -377,5 +413,5 @@ export default function RecruitPhasePage() {
         </Link>
       </div>
     </div>
-  )
+  );
 }

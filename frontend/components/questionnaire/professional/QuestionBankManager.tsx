@@ -78,7 +78,9 @@ export function QuestionBankManager() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(new Set());
+  const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(
+    new Set()
+  );
   const [filterDifficulty, setFilterDifficulty] = useState<string>('all');
   const [filterValidated, setFilterValidated] = useState(false);
 
@@ -195,18 +197,34 @@ export function QuestionBankManager() {
 
   const filteredQuestions = useMemo(() => {
     return questions.filter(q => {
-      const matchesSearch = q.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          q.tags.some(tag => tag.includes(searchQuery.toLowerCase()));
-      const matchesCategory = !selectedCategory || q.category === selectedCategory;
-      const matchesTags = selectedTags.length === 0 || 
-                          selectedTags.some(tag => q.tags.includes(tag));
-      const matchesDifficulty = filterDifficulty === 'all' || q.difficulty === filterDifficulty;
+      const matchesSearch =
+        q.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        q.tags.some(tag => tag.includes(searchQuery.toLowerCase()));
+      const matchesCategory =
+        !selectedCategory || q.category === selectedCategory;
+      const matchesTags =
+        selectedTags.length === 0 ||
+        selectedTags.some(tag => q.tags.includes(tag));
+      const matchesDifficulty =
+        filterDifficulty === 'all' || q.difficulty === filterDifficulty;
       const matchesValidated = !filterValidated || q.isValidated;
-      
-      return matchesSearch && matchesCategory && matchesTags && 
-             matchesDifficulty && matchesValidated;
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesTags &&
+        matchesDifficulty &&
+        matchesValidated
+      );
     });
-  }, [questions, searchQuery, selectedCategory, selectedTags, filterDifficulty, filterValidated]);
+  }, [
+    questions,
+    searchQuery,
+    selectedCategory,
+    selectedTags,
+    filterDifficulty,
+    filterValidated,
+  ]);
 
   const toggleQuestionSelection = (id: string) => {
     const newSelection = new Set(selectedQuestions);
@@ -224,15 +242,13 @@ export function QuestionBankManager() {
         <button
           onClick={() => setSelectedCategory(cat.id)}
           className={cn(
-            "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
+            'w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors',
             selectedCategory === cat.id
-              ? "bg-blue-50 text-blue-600"
-              : "hover:bg-gray-50 text-gray-700"
+              ? 'bg-blue-50 text-blue-600'
+              : 'hover:bg-gray-50 text-gray-700'
           )}
         >
-          {cat.subcategories && (
-            <ChevronRight className="w-4 h-4" />
-          )}
+          {cat.subcategories && <ChevronRight className="w-4 h-4" />}
           <cat.icon className="w-4 h-4" />
           <span className="flex-1 text-left">{cat.name}</span>
           <Badge variant="secondary" className="text-xs">
@@ -264,7 +280,7 @@ export function QuestionBankManager() {
             <Input
               placeholder="Search questions..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               className="pl-10"
             />
           </div>
@@ -275,7 +291,10 @@ export function QuestionBankManager() {
               <Label className="text-xs font-medium text-gray-600 mb-2">
                 Difficulty
               </Label>
-              <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
+              <Select
+                value={filterDifficulty}
+                onValueChange={setFilterDifficulty}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -291,7 +310,9 @@ export function QuestionBankManager() {
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={filterValidated}
-                onCheckedChange={(checked) => setFilterValidated(checked as boolean)}
+                onCheckedChange={checked =>
+                  setFilterValidated(checked as boolean)
+                }
               />
               <Label className="text-sm">Validated Only</Label>
             </div>
@@ -299,11 +320,11 @@ export function QuestionBankManager() {
 
           {/* Categories */}
           <div>
-            <h4 className="text-sm font-medium text-gray-600 mb-3">Categories</h4>
+            <h4 className="text-sm font-medium text-gray-600 mb-3">
+              Categories
+            </h4>
             <div className="h-96 overflow-y-auto">
-              <div className="space-y-1">
-                {renderCategoryTree(categories)}
-              </div>
+              <div className="space-y-1">{renderCategoryTree(categories)}</div>
             </div>
           </div>
 
@@ -333,7 +354,11 @@ export function QuestionBankManager() {
         <Card className="p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowImportDialog(true)}
+              >
                 <Upload className="w-4 h-4 mr-2" />
                 Import
               </Button>
@@ -341,7 +366,11 @@ export function QuestionBankManager() {
                 <Download className="w-4 h-4 mr-2" />
                 Export
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowShareDialog(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowShareDialog(true)}
+              >
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
               </Button>
@@ -363,7 +392,10 @@ export function QuestionBankManager() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}>
+              <Select
+                value={viewMode}
+                onValueChange={(v: any) => setViewMode(v)}
+              >
                 <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>
@@ -379,25 +411,28 @@ export function QuestionBankManager() {
         {/* Questions List/Grid */}
         <Card className="flex-1 p-4">
           <div className="h-full overflow-y-auto">
-            <div className={cn(
-              viewMode === 'grid' 
-                ? "grid grid-cols-2 gap-4"
-                : "space-y-3"
-            )}>
+            <div
+              className={cn(
+                viewMode === 'grid' ? 'grid grid-cols-2 gap-4' : 'space-y-3'
+              )}
+            >
               {filteredQuestions.map(question => (
                 <motion.div
                   key={question.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={cn(
-                    "p-4 border rounded-lg hover:shadow-md transition-all cursor-pointer",
-                    selectedQuestions.has(question.id) && "border-blue-500 bg-blue-50"
+                    'p-4 border rounded-lg hover:shadow-md transition-all cursor-pointer',
+                    selectedQuestions.has(question.id) &&
+                      'border-blue-500 bg-blue-50'
                   )}
                   onClick={() => toggleQuestionSelection(question.id)}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <h4 className="font-medium text-sm mb-1">{question.text}</h4>
+                      <h4 className="font-medium text-sm mb-1">
+                        {question.text}
+                      </h4>
                       <div className="flex items-center gap-4 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
                           <BarChart2 className="w-3 h-3" />
@@ -434,7 +469,9 @@ export function QuestionBankManager() {
                     ))}
                   </div>
                   <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
-                    <span>v{question.version} • {question.createdBy}</span>
+                    <span>
+                      v{question.version} • {question.createdBy}
+                    </span>
                     <span>{question.lastUsed?.toLocaleDateString()}</span>
                   </div>
                 </motion.div>
@@ -460,7 +497,9 @@ export function QuestionBankManager() {
                     <SelectItem value="csv">CSV File</SelectItem>
                     <SelectItem value="json">JSON File</SelectItem>
                     <SelectItem value="qualtrics">Qualtrics Export</SelectItem>
-                    <SelectItem value="surveymonkey">SurveyMonkey Export</SelectItem>
+                    <SelectItem value="surveymonkey">
+                      SurveyMonkey Export
+                    </SelectItem>
                     <SelectItem value="typeform">Typeform Export</SelectItem>
                   </SelectContent>
                 </Select>
@@ -473,7 +512,10 @@ export function QuestionBankManager() {
               </div>
             </div>
             <div className="flex gap-2 justify-end mt-6">
-              <Button variant="outline" onClick={() => setShowImportDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowImportDialog(false)}
+              >
                 Cancel
               </Button>
               <Button>Import</Button>
@@ -508,7 +550,10 @@ export function QuestionBankManager() {
               </div>
             </div>
             <div className="flex gap-2 justify-end mt-6">
-              <Button variant="outline" onClick={() => setShowShareDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowShareDialog(false)}
+              >
                 Cancel
               </Button>
               <Button>Share</Button>

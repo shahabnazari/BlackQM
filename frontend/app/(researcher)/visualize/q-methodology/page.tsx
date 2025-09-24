@@ -13,10 +13,10 @@ import { generateSampleQMethodologyData } from '@/lib/visualization/sample-data'
 export default function QMethodologyDemoPage() {
   const [show3D, setShow3D] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  
+
   // Generate sample data
   const sampleData = generateSampleQMethodologyData();
-  
+
   const handleRefreshData = () => {
     setRefreshKey(prev => prev + 1);
   };
@@ -35,10 +35,11 @@ export default function QMethodologyDemoPage() {
             Q-Methodology Visualization Suite
           </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Interactive visualizations for Q-methodology analysis including factor loadings, 
-            statement distributions, consensus analysis, and distinguishing statements.
+            Interactive visualizations for Q-methodology analysis including
+            factor loadings, statement distributions, consensus analysis, and
+            distinguishing statements.
           </p>
-          
+
           {/* Controls */}
           <div className="flex justify-center gap-4 mt-8">
             <button
@@ -50,8 +51,8 @@ export default function QMethodologyDemoPage() {
             <button
               onClick={() => setShow3D(!show3D)}
               className={`px-6 py-3 rounded-xl font-semibold transition-colors duration-200 ${
-                show3D 
-                  ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                show3D
+                  ? 'bg-purple-600 text-white hover:bg-purple-700'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
@@ -74,7 +75,8 @@ export default function QMethodologyDemoPage() {
                 Factor Loading Chart
               </h2>
               <p className="text-gray-600">
-                3D factor space visualization showing participant loadings with bubble sizes representing loading strength.
+                3D factor space visualization showing participant loadings with
+                bubble sizes representing loading strength.
                 {show3D && ' Currently showing 3D perspective view.'}
               </p>
             </div>
@@ -102,7 +104,8 @@ export default function QMethodologyDemoPage() {
                 Q-Sort Distribution
               </h2>
               <p className="text-gray-600">
-                Distribution chart showing the Q-sort bell curve with overlays comparing actual vs expected (quasi-normal) distributions.
+                Distribution chart showing the Q-sort bell curve with overlays
+                comparing actual vs expected (quasi-normal) distributions.
               </p>
             </div>
             <div className="flex justify-center">
@@ -129,7 +132,8 @@ export default function QMethodologyDemoPage() {
                   Distinguishing Statements
                 </h2>
                 <p className="text-gray-600">
-                  Chart highlighting statements that significantly distinguish between factors (p &lt; 0.05).
+                  Chart highlighting statements that significantly distinguish
+                  between factors (p &lt; 0.05).
                 </p>
               </div>
               <DistinguishingStatements
@@ -152,7 +156,8 @@ export default function QMethodologyDemoPage() {
                   Consensus Statements
                 </h2>
                 <p className="text-gray-600">
-                  Visualization showing statements with high agreement across all factors (low standard deviation).
+                  Visualization showing statements with high agreement across
+                  all factors (low standard deviation).
                 </p>
               </div>
               <ConsensusStatements
@@ -178,48 +183,70 @@ export default function QMethodologyDemoPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="text-center">
                   <div className="text-3xl mb-2">🎨</div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Apple Design</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    Apple Design
+                  </h3>
                   <p className="text-sm text-gray-600">
                     Glass morphism effects with Apple's design language
                   </p>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl mb-2">⚡</div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Animations</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    Animations
+                  </h3>
                   <p className="text-sm text-gray-600">
                     Smooth Framer Motion transitions and interactions
                   </p>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl mb-2">📊</div>
-                  <h3 className="font-semibold text-gray-900 mb-2">ViSX Charts</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    ViSX Charts
+                  </h3>
                   <p className="text-sm text-gray-600">
                     Professional data visualization with ViSX
                   </p>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl mb-2">🔍</div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Interactive</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    Interactive
+                  </h3>
                   <p className="text-sm text-gray-600">
                     Tooltips, selections, and dynamic filtering
                   </p>
                 </div>
               </div>
-              
+
               <div className="mt-8 p-6 bg-blue-50 rounded-xl">
-                <h3 className="font-semibold text-blue-900 mb-2">Sample Data Information</h3>
+                <h3 className="font-semibold text-blue-900 mb-2">
+                  Sample Data Information
+                </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-blue-800">
                   <div>
-                    <span className="font-semibold">{sampleData.factorLoadings.length}</span> participants
+                    <span className="font-semibold">
+                      {sampleData.factorLoadings.length}
+                    </span>{' '}
+                    participants
                   </div>
                   <div>
-                    <span className="font-semibold">{sampleData.factors.length}</span> factors
+                    <span className="font-semibold">
+                      {sampleData.factors.length}
+                    </span>{' '}
+                    factors
                   </div>
                   <div>
-                    <span className="font-semibold">{sampleData.distinguishingStatements.length}</span> distinguishing statements
+                    <span className="font-semibold">
+                      {sampleData.distinguishingStatements.length}
+                    </span>{' '}
+                    distinguishing statements
                   </div>
                   <div>
-                    <span className="font-semibold">{sampleData.consensusStatements.length}</span> consensus statements
+                    <span className="font-semibold">
+                      {sampleData.consensusStatements.length}
+                    </span>{' '}
+                    consensus statements
                   </div>
                 </div>
               </div>

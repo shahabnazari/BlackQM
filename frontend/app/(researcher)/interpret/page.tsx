@@ -1,13 +1,19 @@
-'use client'
+'use client';
 
-import React from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Progress } from '@/components/ui/progress'
+import React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
 import {
   Brain,
   Lightbulb,
@@ -19,62 +25,65 @@ import {
   Sparkles,
   BookOpen,
   Search,
-  AlertCircle
-} from 'lucide-react'
+  AlertCircle,
+} from 'lucide-react';
 
 interface InterpretationTool {
-  title: string
-  description: string
-  icon: React.ElementType
-  status: 'completed' | 'in-progress' | 'not-started'
-  aiPowered?: boolean
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  status: 'completed' | 'in-progress' | 'not-started';
+  aiPowered?: boolean;
 }
 
 export default function InterpretPhasePage() {
-  const router = useRouter()
+  const router = useRouter();
 
   const interpretationTools: InterpretationTool[] = [
     {
       title: 'Factor Narratives',
-      description: 'AI-generated narratives for each factor based on distinguishing statements',
+      description:
+        'AI-generated narratives for each factor based on distinguishing statements',
       icon: BookOpen,
       status: 'in-progress',
-      aiPowered: true
+      aiPowered: true,
     },
     {
       title: 'Theme Extraction',
-      description: 'Identify recurring themes across factors and participant comments',
+      description:
+        'Identify recurring themes across factors and participant comments',
       icon: Search,
       status: 'not-started',
-      aiPowered: true
+      aiPowered: true,
     },
     {
       title: 'Bias Analysis',
-      description: 'Multi-dimensional bias detection and perspective validation',
+      description:
+        'Multi-dimensional bias detection and perspective validation',
       icon: AlertCircle,
       status: 'not-started',
-      aiPowered: true
+      aiPowered: true,
     },
     {
       title: 'Consensus Analysis',
       description: 'Identify statements with agreement across all factors',
       icon: Users,
-      status: 'completed'
+      status: 'completed',
     },
     {
       title: 'Distinguishing Views',
       description: 'Analyze what makes each factor unique',
       icon: TrendingUp,
-      status: 'completed'
+      status: 'completed',
     },
     {
       title: 'Insight Synthesis',
       description: 'Synthesize findings into actionable insights',
       icon: Lightbulb,
       status: 'not-started',
-      aiPowered: true
-    }
-  ]
+      aiPowered: true,
+    },
+  ];
 
   const interpretationMetrics = {
     factorsInterpreted: 2,
@@ -82,11 +91,13 @@ export default function InterpretPhasePage() {
     themesIdentified: 8,
     narrativesGenerated: 2,
     consensusStatements: 5,
-    distinguishingStatements: 12
-  }
+    distinguishingStatements: 12,
+  };
 
-  const interpretationProgress = 
-    (interpretationMetrics.factorsInterpreted / interpretationMetrics.totalFactors) * 100
+  const interpretationProgress =
+    (interpretationMetrics.factorsInterpreted /
+      interpretationMetrics.totalFactors) *
+    100;
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -109,7 +120,8 @@ export default function InterpretPhasePage() {
         <CardHeader>
           <CardTitle>Interpretation Progress</CardTitle>
           <CardDescription>
-            {interpretationMetrics.factorsInterpreted} of {interpretationMetrics.totalFactors} factors fully interpreted
+            {interpretationMetrics.factorsInterpreted} of{' '}
+            {interpretationMetrics.totalFactors} factors fully interpreted
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -118,19 +130,27 @@ export default function InterpretPhasePage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Narratives</p>
-                <p className="text-xl font-semibold">{interpretationMetrics.narrativesGenerated}</p>
+                <p className="text-xl font-semibold">
+                  {interpretationMetrics.narrativesGenerated}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Themes</p>
-                <p className="text-xl font-semibold">{interpretationMetrics.themesIdentified}</p>
+                <p className="text-xl font-semibold">
+                  {interpretationMetrics.themesIdentified}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Consensus</p>
-                <p className="text-xl font-semibold">{interpretationMetrics.consensusStatements}</p>
+                <p className="text-xl font-semibold">
+                  {interpretationMetrics.consensusStatements}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Distinguishing</p>
-                <p className="text-xl font-semibold">{interpretationMetrics.distinguishingStatements}</p>
+                <p className="text-xl font-semibold">
+                  {interpretationMetrics.distinguishingStatements}
+                </p>
               </div>
             </div>
           </div>
@@ -142,8 +162,9 @@ export default function InterpretPhasePage() {
         <Sparkles className="h-4 w-4" />
         <AlertTitle>AI-Enhanced Interpretation</AlertTitle>
         <AlertDescription>
-          This phase leverages AI to help you create narratives, identify themes, and detect potential biases.
-          All AI-generated content should be reviewed and validated by the researcher.
+          This phase leverages AI to help you create narratives, identify
+          themes, and detect potential biases. All AI-generated content should
+          be reviewed and validated by the researcher.
         </AlertDescription>
       </Alert>
 
@@ -160,7 +181,7 @@ export default function InterpretPhasePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
+            <Button
               className="w-full"
               onClick={() => router.push('/interpretation/current')}
             >
@@ -191,23 +212,34 @@ export default function InterpretPhasePage() {
 
       {/* Interpretation Tools Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {interpretationTools.map((tool) => {
-          const Icon = tool.icon
+        {interpretationTools.map(tool => {
+          const Icon = tool.icon;
           return (
-            <Card key={tool.title} className="hover:shadow-lg transition-shadow">
+            <Card
+              key={tool.title}
+              className="hover:shadow-lg transition-shadow"
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      tool.status === 'completed' ? 'bg-green-100' : 
-                      tool.status === 'in-progress' ? 'bg-primary/10' : 
-                      'bg-muted'
-                    }`}>
-                      <Icon className={`h-6 w-6 ${
-                        tool.status === 'completed' ? 'text-green-600' : 
-                        tool.status === 'in-progress' ? 'text-primary' : 
-                        'text-muted-foreground'
-                      }`} />
+                    <div
+                      className={`p-2 rounded-lg ${
+                        tool.status === 'completed'
+                          ? 'bg-green-100'
+                          : tool.status === 'in-progress'
+                            ? 'bg-primary/10'
+                            : 'bg-muted'
+                      }`}
+                    >
+                      <Icon
+                        className={`h-6 w-6 ${
+                          tool.status === 'completed'
+                            ? 'text-green-600'
+                            : tool.status === 'in-progress'
+                              ? 'text-primary'
+                              : 'text-muted-foreground'
+                        }`}
+                      />
                     </div>
                     <div className="flex-1">
                       <CardTitle className="text-lg">{tool.title}</CardTitle>
@@ -222,18 +254,23 @@ export default function InterpretPhasePage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <CardDescription className="mb-4">{tool.description}</CardDescription>
-                <Button 
+                <CardDescription className="mb-4">
+                  {tool.description}
+                </CardDescription>
+                <Button
                   variant={tool.status === 'completed' ? 'outline' : 'default'}
                   className="w-full"
                   onClick={() => router.push('/interpretation/current')}
                 >
-                  {tool.status === 'completed' ? 'Review' : 
-                   tool.status === 'in-progress' ? 'Continue' : 'Start'}
+                  {tool.status === 'completed'
+                    ? 'Review'
+                    : tool.status === 'in-progress'
+                      ? 'Continue'
+                      : 'Start'}
                 </Button>
               </CardContent>
             </Card>
-          )
+          );
         })}
       </div>
 
@@ -252,9 +289,12 @@ export default function InterpretPhasePage() {
                 <span className="text-xs font-semibold">1</span>
               </div>
               <div>
-                <h3 className="font-medium">Start with distinguishing statements</h3>
+                <h3 className="font-medium">
+                  Start with distinguishing statements
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Focus on what makes each factor unique before looking at commonalities
+                  Focus on what makes each factor unique before looking at
+                  commonalities
                 </p>
               </div>
             </div>
@@ -276,7 +316,8 @@ export default function InterpretPhasePage() {
               <div>
                 <h3 className="font-medium">Validate AI interpretations</h3>
                 <p className="text-sm text-muted-foreground">
-                  AI-generated narratives should be reviewed and adjusted based on your expertise
+                  AI-generated narratives should be reviewed and adjusted based
+                  on your expertise
                 </p>
               </div>
             </div>
@@ -285,7 +326,9 @@ export default function InterpretPhasePage() {
                 <span className="text-xs font-semibold">4</span>
               </div>
               <div>
-                <h3 className="font-medium">Look for patterns across factors</h3>
+                <h3 className="font-medium">
+                  Look for patterns across factors
+                </h3>
                 <p className="text-sm text-muted-foreground">
                   Identify themes that emerge across multiple viewpoints
                 </p>
@@ -307,13 +350,18 @@ export default function InterpretPhasePage() {
           <Card className="border-2">
             <CardContent className="pt-6">
               <div className="flex items-start justify-between mb-3">
-                <h3 className="font-semibold">Factor 1: Environmental Pragmatists</h3>
-                <Badge className="bg-green-100 text-green-700">Interpreted</Badge>
+                <h3 className="font-semibold">
+                  Factor 1: Environmental Pragmatists
+                </h3>
+                <Badge className="bg-green-100 text-green-700">
+                  Interpreted
+                </Badge>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                This viewpoint represents individuals who balance environmental concerns with practical
-                considerations. They strongly agree with technological solutions (+4) and renewable energy
-                investments (+3), but are skeptical of immediate economic sacrifices (-3)...
+                This viewpoint represents individuals who balance environmental
+                concerns with practical considerations. They strongly agree with
+                technological solutions (+4) and renewable energy investments
+                (+3), but are skeptical of immediate economic sacrifices (-3)...
               </p>
               <Button variant="outline" size="sm" className="mt-3">
                 <FileText className="h-4 w-4 mr-2" />
@@ -326,12 +374,15 @@ export default function InterpretPhasePage() {
             <CardContent className="pt-6">
               <div className="flex items-start justify-between mb-3">
                 <h3 className="font-semibold">Factor 2: Deep Ecologists</h3>
-                <Badge className="bg-yellow-100 text-yellow-700">In Progress</Badge>
+                <Badge className="bg-yellow-100 text-yellow-700">
+                  In Progress
+                </Badge>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Participants loading on this factor prioritize environmental preservation above economic
-                considerations. They show strong agreement with statements about biodiversity (+5) and
-                climate urgency (+4)...
+                Participants loading on this factor prioritize environmental
+                preservation above economic considerations. They show strong
+                agreement with statements about biodiversity (+5) and climate
+                urgency (+4)...
               </p>
               <Button variant="outline" size="sm" className="mt-3">
                 <FileText className="h-4 w-4 mr-2" />
@@ -358,5 +409,5 @@ export default function InterpretPhasePage() {
         </Link>
       </div>
     </div>
-  )
+  );
 }

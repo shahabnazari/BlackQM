@@ -1,13 +1,19 @@
-'use client'
+'use client';
 
-import React from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Progress } from '@/components/ui/progress'
+import React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
 import {
   FileText,
   Download,
@@ -19,52 +25,141 @@ import {
   CheckCircle,
   Circle,
   Sparkles,
-  Mail
-} from 'lucide-react'
+  Mail,
+} from 'lucide-react';
 
 interface ReportSection {
-  title: string
-  status: 'completed' | 'in-progress' | 'not-started'
-  wordCount?: number
-  required: boolean
+  title: string;
+  status: 'completed' | 'in-progress' | 'not-started';
+  wordCount?: number;
+  required: boolean;
 }
 
 export default function ReportPhasePage() {
-  const router = useRouter()
+  const router = useRouter();
 
   const reportSections: ReportSection[] = [
-    { title: 'Executive Summary', status: 'completed', wordCount: 250, required: true },
-    { title: 'Introduction', status: 'completed', wordCount: 500, required: true },
-    { title: 'Literature Review', status: 'in-progress', wordCount: 1200, required: true },
-    { title: 'Methodology', status: 'completed', wordCount: 800, required: true },
+    {
+      title: 'Executive Summary',
+      status: 'completed',
+      wordCount: 250,
+      required: true,
+    },
+    {
+      title: 'Introduction',
+      status: 'completed',
+      wordCount: 500,
+      required: true,
+    },
+    {
+      title: 'Literature Review',
+      status: 'in-progress',
+      wordCount: 1200,
+      required: true,
+    },
+    {
+      title: 'Methodology',
+      status: 'completed',
+      wordCount: 800,
+      required: true,
+    },
     { title: 'Results', status: 'not-started', wordCount: 0, required: true },
-    { title: 'Factor Interpretations', status: 'not-started', wordCount: 0, required: true },
-    { title: 'Discussion', status: 'not-started', wordCount: 0, required: true },
-    { title: 'Conclusion', status: 'not-started', wordCount: 0, required: false },
-    { title: 'References', status: 'in-progress', wordCount: 0, required: true },
-    { title: 'Appendices', status: 'not-started', wordCount: 0, required: false }
-  ]
+    {
+      title: 'Factor Interpretations',
+      status: 'not-started',
+      wordCount: 0,
+      required: true,
+    },
+    {
+      title: 'Discussion',
+      status: 'not-started',
+      wordCount: 0,
+      required: true,
+    },
+    {
+      title: 'Conclusion',
+      status: 'not-started',
+      wordCount: 0,
+      required: false,
+    },
+    {
+      title: 'References',
+      status: 'in-progress',
+      wordCount: 0,
+      required: true,
+    },
+    {
+      title: 'Appendices',
+      status: 'not-started',
+      wordCount: 0,
+      required: false,
+    },
+  ];
 
-  const completedSections = reportSections.filter(s => s.status === 'completed').length
-  const requiredCompleted = reportSections.filter(s => s.required && s.status === 'completed').length
-  const requiredTotal = reportSections.filter(s => s.required).length
-  const totalWordCount = reportSections.reduce((acc, s) => acc + (s.wordCount || 0), 0)
-  const reportProgress = (completedSections / reportSections.length) * 100
+  const completedSections = reportSections.filter(
+    s => s.status === 'completed'
+  ).length;
+  const requiredCompleted = reportSections.filter(
+    s => s.required && s.status === 'completed'
+  ).length;
+  const requiredTotal = reportSections.filter(s => s.required).length;
+  const totalWordCount = reportSections.reduce(
+    (acc, s) => acc + (s.wordCount || 0),
+    0
+  );
+  const reportProgress = (completedSections / reportSections.length) * 100;
 
   const exportFormats = [
-    { format: 'PDF', icon: FileText, description: 'Publication-ready PDF', popular: true },
-    { format: 'Word', icon: FileEdit, description: 'Editable document', popular: true },
-    { format: 'LaTeX', icon: BookOpen, description: 'Academic formatting', popular: false },
-    { format: 'Markdown', icon: FileText, description: 'Plain text format', popular: false },
-    { format: 'HTML', icon: FileText, description: 'Web-ready format', popular: false }
-  ]
+    {
+      format: 'PDF',
+      icon: FileText,
+      description: 'Publication-ready PDF',
+      popular: true,
+    },
+    {
+      format: 'Word',
+      icon: FileEdit,
+      description: 'Editable document',
+      popular: true,
+    },
+    {
+      format: 'LaTeX',
+      icon: BookOpen,
+      description: 'Academic formatting',
+      popular: false,
+    },
+    {
+      format: 'Markdown',
+      icon: FileText,
+      description: 'Plain text format',
+      popular: false,
+    },
+    {
+      format: 'HTML',
+      icon: FileText,
+      description: 'Web-ready format',
+      popular: false,
+    },
+  ];
 
   const templates = [
-    { name: 'APA 7th Edition', description: 'American Psychological Association', selected: true },
-    { name: 'MLA 9th Edition', description: 'Modern Language Association', selected: false },
-    { name: 'Chicago 17th Edition', description: 'Chicago Manual of Style', selected: false },
-    { name: 'Harvard', description: 'Harvard Referencing', selected: false }
-  ]
+    {
+      name: 'APA 7th Edition',
+      description: 'American Psychological Association',
+      selected: true,
+    },
+    {
+      name: 'MLA 9th Edition',
+      description: 'Modern Language Association',
+      selected: false,
+    },
+    {
+      name: 'Chicago 17th Edition',
+      description: 'Chicago Manual of Style',
+      selected: false,
+    },
+    { name: 'Harvard', description: 'Harvard Referencing', selected: false },
+  ];
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -89,7 +184,9 @@ export default function ReportPhasePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Progress</p>
-                <p className="text-2xl font-bold">{Math.round(reportProgress)}%</p>
+                <p className="text-2xl font-bold">
+                  {Math.round(reportProgress)}%
+                </p>
                 <Progress value={reportProgress} className="mt-2 h-2" />
               </div>
               <FileText className="h-8 w-8 text-primary" />
@@ -101,8 +198,12 @@ export default function ReportPhasePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Word Count</p>
-                <p className="text-2xl font-bold">{totalWordCount.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Estimated 10-12 pages</p>
+                <p className="text-2xl font-bold">
+                  {totalWordCount.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Estimated 10-12 pages
+                </p>
               </div>
               <BookOpen className="h-8 w-8 text-blue-500" />
             </div>
@@ -113,8 +214,12 @@ export default function ReportPhasePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Sections</p>
-                <p className="text-2xl font-bold">{completedSections}/{reportSections.length}</p>
-                <p className="text-xs text-muted-foreground">{requiredCompleted}/{requiredTotal} required</p>
+                <p className="text-2xl font-bold">
+                  {completedSections}/{reportSections.length}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {requiredCompleted}/{requiredTotal} required
+                </p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
@@ -127,8 +232,9 @@ export default function ReportPhasePage() {
         <Sparkles className="h-4 w-4" />
         <AlertTitle>AI-Assisted Writing Available</AlertTitle>
         <AlertDescription>
-          Use AI to generate report sections based on your analysis. The AI will create academic-quality
-          content that you can review and edit. Literature review sections will incorporate your Phase 9 discoveries.
+          Use AI to generate report sections based on your analysis. The AI will
+          create academic-quality content that you can review and edit.
+          Literature review sections will incorporate your Phase 9 discoveries.
         </AlertDescription>
       </Alert>
 
@@ -144,7 +250,7 @@ export default function ReportPhasePage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {reportSections.map((section) => (
+              {reportSections.map(section => (
                 <div
                   key={section.title}
                   className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
@@ -161,15 +267,21 @@ export default function ReportPhasePage() {
                     <div>
                       <p className="font-medium">{section.title}</p>
                       {section.wordCount ? (
-                        <p className="text-sm text-muted-foreground">{section.wordCount} words</p>
+                        <p className="text-sm text-muted-foreground">
+                          {section.wordCount} words
+                        </p>
                       ) : (
-                        <p className="text-sm text-muted-foreground">Not started</p>
+                        <p className="text-sm text-muted-foreground">
+                          Not started
+                        </p>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {section.required && (
-                      <Badge variant="outline" className="text-xs">Required</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Required
+                      </Badge>
                     )}
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
                   </div>
@@ -188,15 +300,19 @@ export default function ReportPhasePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {templates.map((template) => (
+                {templates.map(template => (
                   <div
                     key={template.name}
                     className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                      template.selected ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+                      template.selected
+                        ? 'border-primary bg-primary/5'
+                        : 'hover:bg-muted/50'
                     }`}
                   >
                     <p className="font-medium text-sm">{template.name}</p>
-                    <p className="text-xs text-muted-foreground">{template.description}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {template.description}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -236,25 +352,32 @@ export default function ReportPhasePage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {exportFormats.map((format) => {
-              const Icon = format.icon
+            {exportFormats.map(format => {
+              const Icon = format.icon;
               return (
-                <Card key={format.format} className={`border-2 ${format.popular ? 'border-primary' : ''}`}>
+                <Card
+                  key={format.format}
+                  className={`border-2 ${format.popular ? 'border-primary' : ''}`}
+                >
                   <CardContent className="pt-6 text-center">
                     <div className="p-3 rounded-lg bg-muted inline-block mb-3">
                       <Icon className="h-6 w-6" />
                     </div>
                     <h3 className="font-semibold mb-1">{format.format}</h3>
-                    <p className="text-xs text-muted-foreground mb-3">{format.description}</p>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      {format.description}
+                    </p>
                     {format.popular && (
-                      <Badge variant="secondary" className="mb-2">Popular</Badge>
+                      <Badge variant="secondary" className="mb-2">
+                        Popular
+                      </Badge>
                     )}
                     <Button variant="outline" size="sm" className="w-full">
                       Export
                     </Button>
                   </CardContent>
                 </Card>
-              )
+              );
             })}
           </div>
         </CardContent>
@@ -332,5 +455,5 @@ export default function ReportPhasePage() {
         </Link>
       </div>
     </div>
-  )
+  );
 }

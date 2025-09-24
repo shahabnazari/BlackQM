@@ -1,12 +1,18 @@
-'use client'
+'use client';
 
-import React, { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Checkbox } from '@/components/ui/checkbox'
+import React, { useState } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   FileText,
   Download,
@@ -16,15 +22,15 @@ import {
   Shield,
   Database,
   BookOpen,
-  FileCheck
-} from 'lucide-react'
+  FileCheck,
+} from 'lucide-react';
 
 interface ProtocolSection {
-  id: string
-  title: string
-  content: string
-  completed: boolean
-  required: boolean
+  id: string;
+  title: string;
+  content: string;
+  completed: boolean;
+  required: boolean;
 }
 
 export default function StudyProtocolPage() {
@@ -34,86 +40,88 @@ export default function StudyProtocolPage() {
       title: 'Background and Rationale',
       content: '',
       completed: false,
-      required: true
+      required: true,
     },
     {
       id: 'objectives',
       title: 'Research Objectives',
       content: '',
       completed: false,
-      required: true
+      required: true,
     },
     {
       id: 'methodology',
       title: 'Methodology',
       content: '',
       completed: false,
-      required: true
+      required: true,
     },
     {
       id: 'participants',
       title: 'Participant Selection',
       content: '',
       completed: false,
-      required: true
+      required: true,
     },
     {
       id: 'procedures',
       title: 'Study Procedures',
       content: '',
       completed: false,
-      required: true
+      required: true,
     },
     {
       id: 'ethics',
       title: 'Ethical Considerations',
       content: '',
       completed: false,
-      required: true
+      required: true,
     },
     {
       id: 'data',
       title: 'Data Management',
       content: '',
       completed: false,
-      required: true
+      required: true,
     },
     {
       id: 'analysis',
       title: 'Analysis Plan',
       content: '',
       completed: false,
-      required: true
+      required: true,
     },
     {
       id: 'timeline',
       title: 'Timeline',
       content: '',
       completed: false,
-      required: false
+      required: false,
     },
     {
       id: 'dissemination',
       title: 'Dissemination Plan',
       content: '',
       completed: false,
-      required: false
-    }
-  ])
+      required: false,
+    },
+  ]);
 
-  const [activeSection, setActiveSection] = useState('background')
+  const [activeSection, setActiveSection] = useState('background');
 
   const updateSection = (id: string, content: string) => {
-    setSections(prev => prev.map(section => 
-      section.id === id 
-        ? { ...section, content, completed: content.length > 50 }
-        : section
-    ))
-  }
+    setSections(prev =>
+      prev.map(section =>
+        section.id === id
+          ? { ...section, content, completed: content.length > 50 }
+          : section
+      )
+    );
+  };
 
-  const completedSections = sections.filter(s => s.completed).length
-  const requiredSections = sections.filter(s => s.required).length
-  const completionPercentage = (completedSections / sections.length) * 100
+  const completedSections = sections.filter(s => s.completed).length;
+  const requiredSections = sections.filter(s => s.required).length;
+  const completionPercentage = (completedSections / sections.length) * 100;
 
   const protocolTemplates = {
     background: `## Background
@@ -129,7 +137,7 @@ export default function StudyProtocolPage() {
 
 ### Q-Methodology Justification
 [Explain why Q-methodology is appropriate]`,
-    
+
     objectives: `## Research Objectives
 
 ### Primary Objective
@@ -142,7 +150,7 @@ export default function StudyProtocolPage() {
 
 ### Hypotheses (if applicable)
 [State research hypotheses]`,
-    
+
     methodology: `## Methodology
 
 ### Study Design
@@ -157,7 +165,7 @@ Q-methodology study with [design details]
 - Distribution: [Forced/Free]
 - Range: [-X to +X]
 - Shape: [Normal/Flat]`,
-    
+
     participants: `## Participant Selection
 
 ### Inclusion Criteria
@@ -174,7 +182,7 @@ Justification: [Viewpoint saturation/diversity]
 
 ### Recruitment Strategy
 [Describe recruitment methods]`,
-    
+
     procedures: `## Study Procedures
 
 ### Pre-Q-Sort
@@ -190,7 +198,7 @@ Justification: [Viewpoint saturation/diversity]
 
 ### Data Collection Timeline
 [Specify duration and phases]`,
-    
+
     ethics: `## Ethical Considerations
 
 ### IRB Approval
@@ -206,7 +214,7 @@ Protocol #: [Number]
 ### Risks and Benefits
 Risks: [Minimal/describe]
 Benefits: [Describe]`,
-    
+
     data: `## Data Management
 
 ### Data Collection
@@ -221,7 +229,7 @@ Benefits: [Describe]`,
 
 ### Data Retention
 [Duration and disposal method]`,
-    
+
     analysis: `## Analysis Plan
 
 ### Factor Extraction
@@ -236,7 +244,7 @@ Benefits: [Describe]`,
 
 ### Additional Analyses
 [Qualitative analysis of comments]`,
-    
+
     timeline: `## Project Timeline
 
 ### Phase 1: Preparation (Months 1-2)
@@ -255,7 +263,7 @@ Benefits: [Describe]`,
 ### Phase 4: Dissemination (Month 6)
 - Manuscript preparation
 - Conference presentation`,
-    
+
     dissemination: `## Dissemination Plan
 
 ### Publications
@@ -269,25 +277,28 @@ Benefits: [Describe]`,
 ### Other Outputs
 - Policy brief
 - Public report
-- Dataset publication`
-  }
+- Dataset publication`,
+  };
 
   const applyTemplate = (sectionId: string) => {
-    const template = protocolTemplates[sectionId as keyof typeof protocolTemplates]
+    const template =
+      protocolTemplates[sectionId as keyof typeof protocolTemplates];
     if (template) {
-      updateSection(sectionId, template)
+      updateSection(sectionId, template);
     }
-  }
+  };
 
   const exportProtocol = () => {
-    const protocol = sections.map(s => `# ${s.title}\n\n${s.content}`).join('\n\n---\n\n')
-    const blob = new Blob([protocol], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'study-protocol.md'
-    a.click()
-  }
+    const protocol = sections
+      .map(s => `# ${s.title}\n\n${s.content}`)
+      .join('\n\n---\n\n');
+    const blob = new Blob([protocol], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'study-protocol.md';
+    a.click();
+  };
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -296,7 +307,8 @@ Benefits: [Describe]`,
         <div>
           <h1 className="text-3xl font-bold">Study Protocol Builder</h1>
           <p className="text-muted-foreground mt-2">
-            Create a comprehensive protocol document for your Q-methodology study
+            Create a comprehensive protocol document for your Q-methodology
+            study
           </p>
         </div>
         <div className="flex gap-2">
@@ -304,7 +316,9 @@ Benefits: [Describe]`,
             <FileText className="h-4 w-4" />
             DESIGN Phase
           </Badge>
-          <Badge variant={completionPercentage === 100 ? 'default' : 'secondary'}>
+          <Badge
+            variant={completionPercentage === 100 ? 'default' : 'secondary'}
+          >
             {Math.round(completionPercentage)}% Complete
           </Badge>
         </div>
@@ -325,7 +339,9 @@ Benefits: [Describe]`,
               </span>
             </div>
             <div className="text-sm text-muted-foreground">
-              {requiredSections - sections.filter(s => s.required && s.completed).length} required sections remaining
+              {requiredSections -
+                sections.filter(s => s.required && s.completed).length}{' '}
+              required sections remaining
             </div>
           </div>
           <div className="grid grid-cols-5 gap-1">
@@ -333,7 +349,11 @@ Benefits: [Describe]`,
               <div
                 key={section.id}
                 className={`h-2 rounded-full ${
-                  section.completed ? 'bg-green-500' : section.required ? 'bg-yellow-200' : 'bg-gray-200'
+                  section.completed
+                    ? 'bg-green-500'
+                    : section.required
+                      ? 'bg-yellow-200'
+                      : 'bg-gray-200'
                 }`}
                 title={section.title}
               />
@@ -363,11 +383,11 @@ Benefits: [Describe]`,
                 <span className="text-sm">{section.title}</span>
                 <div className="flex items-center gap-1">
                   {section.required && (
-                    <Badge variant="outline" className="text-xs px-1 py-0">REQ</Badge>
+                    <Badge variant="outline" className="text-xs px-1 py-0">
+                      REQ
+                    </Badge>
                   )}
-                  {section.completed && (
-                    <CheckCircle className="h-3 w-3" />
-                  )}
+                  {section.completed && <CheckCircle className="h-3 w-3" />}
                 </div>
               </button>
             ))}
@@ -379,9 +399,13 @@ Benefits: [Describe]`,
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>{sections.find(s => s.id === activeSection)?.title}</CardTitle>
+                <CardTitle>
+                  {sections.find(s => s.id === activeSection)?.title}
+                </CardTitle>
                 <CardDescription>
-                  {sections.find(s => s.id === activeSection)?.required ? 'Required section' : 'Optional section'}
+                  {sections.find(s => s.id === activeSection)?.required
+                    ? 'Required section'
+                    : 'Optional section'}
                 </CardDescription>
               </div>
               <Button
@@ -397,17 +421,18 @@ Benefits: [Describe]`,
           <CardContent>
             <Textarea
               value={sections.find(s => s.id === activeSection)?.content || ''}
-              onChange={(e) => updateSection(activeSection, e.target.value)}
+              onChange={e => updateSection(activeSection, e.target.value)}
               placeholder="Enter content for this section..."
               className="min-h-[400px] font-mono text-sm"
             />
-            
+
             {activeSection === 'ethics' && (
               <Alert className="mt-4">
                 <Shield className="h-4 w-4" />
                 <AlertTitle>Ethics Reminder</AlertTitle>
                 <AlertDescription>
-                  Ensure your protocol meets institutional IRB requirements before data collection.
+                  Ensure your protocol meets institutional IRB requirements
+                  before data collection.
                 </AlertDescription>
               </Alert>
             )}
@@ -417,7 +442,8 @@ Benefits: [Describe]`,
                 <Database className="h-4 w-4" />
                 <AlertTitle>Data Management</AlertTitle>
                 <AlertDescription>
-                  Follow GDPR and local data protection regulations for participant data.
+                  Follow GDPR and local data protection regulations for
+                  participant data.
                 </AlertDescription>
               </Alert>
             )}
@@ -445,7 +471,7 @@ Benefits: [Describe]`,
               'Ethical approval obtained/pending',
               'Data protection measures described',
               'Timeline established',
-              'Dissemination plan created'
+              'Dissemination plan created',
             ].map(item => (
               <div key={item} className="flex items-center gap-2">
                 <Checkbox />
@@ -468,7 +494,7 @@ Benefits: [Describe]`,
             Export Protocol
           </Button>
         </div>
-        <Button 
+        <Button
           disabled={sections.filter(s => s.required && !s.completed).length > 0}
         >
           <FileCheck className="h-4 w-4 mr-2" />
@@ -476,5 +502,5 @@ Benefits: [Describe]`,
         </Button>
       </div>
     </div>
-  )
+  );
 }

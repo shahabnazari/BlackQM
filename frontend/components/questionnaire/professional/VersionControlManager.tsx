@@ -22,12 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 // Select components removed as unused
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 interface Version {
@@ -186,11 +181,16 @@ export function VersionControlManager() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'published': return 'bg-green-100 text-green-700';
-      case 'approved': return 'bg-blue-100 text-blue-700';
-      case 'review': return 'bg-yellow-100 text-yellow-700';
-      case 'draft': return 'bg-gray-100 text-gray-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'published':
+        return 'bg-green-100 text-green-700';
+      case 'approved':
+        return 'bg-blue-100 text-blue-700';
+      case 'review':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'draft':
+        return 'bg-gray-100 text-gray-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
     }
   };
 
@@ -199,8 +199,8 @@ export function VersionControlManager() {
       <div
         key={version.id}
         className={cn(
-          "relative pl-8 pb-4",
-          index < versions.length - 1 && "border-l-2 border-gray-200 ml-3"
+          'relative pl-8 pb-4',
+          index < versions.length - 1 && 'border-l-2 border-gray-200 ml-3'
         )}
       >
         <div className="absolute -left-[9px] top-0 w-5 h-5 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center">
@@ -210,43 +210,47 @@ export function VersionControlManager() {
         <div onClick={() => setSelectedVersion(version)}>
           <Card
             className={cn(
-              "p-4 cursor-pointer hover:shadow-md transition-all",
-              selectedVersion?.id === version.id && "ring-2 ring-blue-500"
+              'p-4 cursor-pointer hover:shadow-md transition-all',
+              selectedVersion?.id === version.id && 'ring-2 ring-blue-500'
             )}
           >
-          <div className="flex items-start justify-between mb-2">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-semibold">{version.version}</span>
-                <Badge variant="outline" className="text-xs">
-                  {version.branch}
-                </Badge>
-                <Badge className={cn("text-xs", getStatusColor(version.status))}>
-                  {version.status}
-                </Badge>
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-semibold">{version.version}</span>
+                  <Badge variant="outline" className="text-xs">
+                    {version.branch}
+                  </Badge>
+                  <Badge
+                    className={cn('text-xs', getStatusColor(version.status))}
+                  >
+                    {version.status}
+                  </Badge>
+                </div>
+                <p className="text-sm text-gray-600">{version.message}</p>
               </div>
-              <p className="text-sm text-gray-600">{version.message}</p>
+              <div className="text-right text-xs text-gray-500">
+                <div>{version.author}</div>
+                <div>{version.timestamp.toLocaleString()}</div>
+              </div>
             </div>
-            <div className="text-right text-xs text-gray-500">
-              <div>{version.author}</div>
-              <div>{version.timestamp.toLocaleString()}</div>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-4 mt-3">
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-green-600">+{version.changes.added}</span>
-              <span className="text-yellow-600">~{version.changes.modified}</span>
-              <span className="text-red-600">-{version.changes.deleted}</span>
+            <div className="flex items-center gap-4 mt-3">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-green-600">+{version.changes.added}</span>
+                <span className="text-yellow-600">
+                  ~{version.changes.modified}
+                </span>
+                <span className="text-red-600">-{version.changes.deleted}</span>
+              </div>
+              <div className="flex gap-1">
+                {version.tags.map(tag => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
-            <div className="flex gap-1">
-              {version.tags.map(tag => (
-                <Badge key={tag} variant="secondary" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </div>
           </Card>
         </div>
       </div>
@@ -299,9 +303,7 @@ export function VersionControlManager() {
             </div>
 
             <div className="h-[500px] overflow-y-auto">
-              <div className="pr-4">
-                {renderVersionTree()}
-              </div>
+              <div className="pr-4">{renderVersionTree()}</div>
             </div>
           </Card>
         </div>
@@ -321,8 +323,9 @@ export function VersionControlManager() {
                 <div
                   key={branch.id}
                   className={cn(
-                    "p-3 rounded-lg border cursor-pointer hover:bg-gray-50",
-                    selectedBranch?.id === branch.id && "border-blue-500 bg-blue-50"
+                    'p-3 rounded-lg border cursor-pointer hover:bg-gray-50',
+                    selectedBranch?.id === branch.id &&
+                      'border-blue-500 bg-blue-50'
                   )}
                   onClick={() => setSelectedBranch(branch)}
                 >
@@ -340,7 +343,9 @@ export function VersionControlManager() {
                       )}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-600 mb-2">{branch.description}</p>
+                  <p className="text-xs text-gray-600 mb-2">
+                    {branch.description}
+                  </p>
                   {!branch.isMain && (
                     <div className="flex items-center gap-3 text-xs text-gray-500">
                       <span className="text-green-600">↑{branch.ahead}</span>
@@ -387,11 +392,15 @@ export function VersionControlManager() {
               <div className="space-y-3 text-sm">
                 <div>
                   <span className="text-gray-600">Version:</span>
-                  <span className="ml-2 font-medium">{selectedVersion.version}</span>
+                  <span className="ml-2 font-medium">
+                    {selectedVersion.version}
+                  </span>
                 </div>
                 <div>
                   <span className="text-gray-600">Author:</span>
-                  <span className="ml-2 font-medium">{selectedVersion.author}</span>
+                  <span className="ml-2 font-medium">
+                    {selectedVersion.author}
+                  </span>
                 </div>
                 <div>
                   <span className="text-gray-600">Date:</span>
@@ -428,46 +437,55 @@ export function VersionControlManager() {
       {/* Commit Modal */}
       {showCommitDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setShowCommitDialog(false)} />
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setShowCommitDialog(false)}
+          />
           <div className="relative bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h2 className="text-lg font-semibold mb-4">Commit Changes</h2>
-          <div className="space-y-4">
-            <div>
-              <Label>Commit Message</Label>
-              <Textarea
-                placeholder="Describe your changes..."
-                value={commitMessage}
-                onChange={(e) => setCommitMessage(e.target.value)}
-                className="min-h-[100px] mt-2"
-              />
-            </div>
-            
-            <div>
-              <Label>Changed Files</Label>
-              <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
-                <div className="flex items-center gap-2 p-2 bg-green-50 rounded text-sm">
-                  <Badge className="bg-green-600 text-white">A</Badge>
-                  <span>questions/demographic.json</span>
+              <div className="space-y-4">
+                <div>
+                  <Label>Commit Message</Label>
+                  <Textarea
+                    placeholder="Describe your changes..."
+                    value={commitMessage}
+                    onChange={e => setCommitMessage(e.target.value)}
+                    className="min-h-[100px] mt-2"
+                  />
                 </div>
-                <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded text-sm">
-                  <Badge className="bg-yellow-600 text-white">M</Badge>
-                  <span>questions/satisfaction.json</span>
+
+                <div>
+                  <Label>Changed Files</Label>
+                  <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                    <div className="flex items-center gap-2 p-2 bg-green-50 rounded text-sm">
+                      <Badge className="bg-green-600 text-white">A</Badge>
+                      <span>questions/demographic.json</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded text-sm">
+                      <Badge className="bg-yellow-600 text-white">M</Badge>
+                      <span>questions/satisfaction.json</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 bg-red-50 rounded text-sm">
+                      <Badge className="bg-red-600 text-white">D</Badge>
+                      <span>questions/deprecated.json</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 p-2 bg-red-50 rounded text-sm">
-                  <Badge className="bg-red-600 text-white">D</Badge>
-                  <span>questions/deprecated.json</span>
+
+                <div>
+                  <Label>Tags (Optional)</Label>
+                  <Input
+                    placeholder="e.g., release, hotfix, feature"
+                    className="mt-2"
+                  />
                 </div>
               </div>
-            </div>
-
-            <div>
-              <Label>Tags (Optional)</Label>
-              <Input placeholder="e.g., release, hotfix, feature" className="mt-2" />
-            </div>
-          </div>
               <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setShowCommitDialog(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCommitDialog(false)}
+                >
                   Cancel
                 </Button>
                 <Button>
@@ -483,58 +501,72 @@ export function VersionControlManager() {
       {/* Diff View Modal */}
       {showDiffView && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setShowDiffView(false)} />
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setShowDiffView(false)}
+          />
           <div className="relative bg-white rounded-lg shadow-lg max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
             <div className="p-6">
               <h2 className="text-lg font-semibold mb-4">Compare Versions</h2>
-          <Tabs defaultValue="changes">
-            <TabsList>
-              <TabsTrigger value="changes">Changes</TabsTrigger>
-              <TabsTrigger value="diff">Diff View</TabsTrigger>
-              <TabsTrigger value="preview">Preview</TabsTrigger>
-            </TabsList>
+              <Tabs defaultValue="changes">
+                <TabsList>
+                  <TabsTrigger value="changes">Changes</TabsTrigger>
+                  <TabsTrigger value="diff">Diff View</TabsTrigger>
+                  <TabsTrigger value="preview">Preview</TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="changes" className="space-y-2 max-h-96 overflow-y-auto">
-              {diffChanges.map((change, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "p-3 rounded-lg border",
-                    change.type === 'added' && "bg-green-50 border-green-200",
-                    change.type === 'modified' && "bg-yellow-50 border-yellow-200",
-                    change.type === 'deleted' && "bg-red-50 border-red-200"
-                  )}
+                <TabsContent
+                  value="changes"
+                  className="space-y-2 max-h-96 overflow-y-auto"
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge
+                  {diffChanges.map((change, index) => (
+                    <div
+                      key={index}
                       className={cn(
-                        "text-xs",
-                        change.type === 'added' && "bg-green-600 text-white",
-                        change.type === 'modified' && "bg-yellow-600 text-white",
-                        change.type === 'deleted' && "bg-red-600 text-white"
+                        'p-3 rounded-lg border',
+                        change.type === 'added' &&
+                          'bg-green-50 border-green-200',
+                        change.type === 'modified' &&
+                          'bg-yellow-50 border-yellow-200',
+                        change.type === 'deleted' && 'bg-red-50 border-red-200'
                       )}
                     >
-                      {change.type}
-                    </Badge>
-                    <span className="font-medium text-sm">{change.field}</span>
-                  </div>
-                  {change.oldValue && (
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">Old:</span> {JSON.stringify(change.oldValue)}
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge
+                          className={cn(
+                            'text-xs',
+                            change.type === 'added' &&
+                              'bg-green-600 text-white',
+                            change.type === 'modified' &&
+                              'bg-yellow-600 text-white',
+                            change.type === 'deleted' && 'bg-red-600 text-white'
+                          )}
+                        >
+                          {change.type}
+                        </Badge>
+                        <span className="font-medium text-sm">
+                          {change.field}
+                        </span>
+                      </div>
+                      {change.oldValue && (
+                        <div className="text-sm text-gray-600">
+                          <span className="font-medium">Old:</span>{' '}
+                          {JSON.stringify(change.oldValue)}
+                        </div>
+                      )}
+                      {change.newValue && (
+                        <div className="text-sm text-gray-600">
+                          <span className="font-medium">New:</span>{' '}
+                          {JSON.stringify(change.newValue)}
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {change.newValue && (
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">New:</span> {JSON.stringify(change.newValue)}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </TabsContent>
+                  ))}
+                </TabsContent>
 
-            <TabsContent value="diff">
-              <div className="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm">
-                <pre>{`--- a/questionnaire.json
+                <TabsContent value="diff">
+                  <div className="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm">
+                    <pre>{`--- a/questionnaire.json
 +++ b/questionnaire.json
 @@ -10,7 +10,7 @@
    "questions": [
@@ -554,23 +586,27 @@ export function VersionControlManager() {
 +    }
    ]
 }`}</pre>
-              </div>
-            </TabsContent>
+                  </div>
+                </TabsContent>
 
-            <TabsContent value="preview">
-              <div className="space-y-4">
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Preview of changes</h4>
-                  <p className="text-sm text-gray-600">
-                    The questionnaire will include the new demographic section with improved
-                    question flow and additional validation rules.
-                  </p>
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+                <TabsContent value="preview">
+                  <div className="space-y-4">
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-medium mb-2">Preview of changes</h4>
+                      <p className="text-sm text-gray-600">
+                        The questionnaire will include the new demographic
+                        section with improved question flow and additional
+                        validation rules.
+                      </p>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
               <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setShowDiffView(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDiffView(false)}
+                >
                   Close
                 </Button>
               </div>

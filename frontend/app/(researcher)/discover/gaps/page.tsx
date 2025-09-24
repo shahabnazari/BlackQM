@@ -25,14 +25,20 @@ import {
   ArrowDownRight,
   Microscope,
   Telescope,
-  Zap
+  Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 interface ResearchGap {
@@ -86,7 +92,7 @@ const GAP_CATEGORIES: GapCategory[] = [
     gapCount: 0,
     avgImportance: 0,
     color: 'purple',
-    icon: Microscope
+    icon: Microscope,
   },
   {
     id: 'theoretical',
@@ -95,7 +101,7 @@ const GAP_CATEGORIES: GapCategory[] = [
     gapCount: 0,
     avgImportance: 0,
     color: 'blue',
-    icon: Brain
+    icon: Brain,
   },
   {
     id: 'empirical',
@@ -104,7 +110,7 @@ const GAP_CATEGORIES: GapCategory[] = [
     gapCount: 0,
     avgImportance: 0,
     color: 'green',
-    icon: BarChart3
+    icon: BarChart3,
   },
   {
     id: 'technological',
@@ -113,8 +119,8 @@ const GAP_CATEGORIES: GapCategory[] = [
     gapCount: 0,
     avgImportance: 0,
     color: 'orange',
-    icon: Zap
-  }
+    icon: Zap,
+  },
 ];
 
 export default function ResearchGapsPage() {
@@ -123,10 +129,14 @@ export default function ResearchGapsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterField, setFilterField] = useState<string>('all');
   const [filterImportance, setFilterImportance] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'opportunity' | 'impact' | 'novelty' | 'recent'>('opportunity');
+  const [sortBy, setSortBy] = useState<
+    'opportunity' | 'impact' | 'novelty' | 'recent'
+  >('opportunity');
   const [aiAnalysisActive, setAiAnalysisActive] = useState(false);
   const [showQMethodOnly, setShowQMethodOnly] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set()
+  );
 
   // Generate mock data
   useEffect(() => {
@@ -134,32 +144,50 @@ export default function ResearchGapsPage() {
       {
         id: '1',
         title: 'Q Methodology in Climate Change Communication',
-        description: 'Limited application of Q methodology to understand stakeholder perspectives on climate change communication strategies. Current research lacks systematic exploration of subjective viewpoints across different demographic groups.',
+        description:
+          'Limited application of Q methodology to understand stakeholder perspectives on climate change communication strategies. Current research lacks systematic exploration of subjective viewpoints across different demographic groups.',
         field: 'Environmental Science',
-        subfield: ['Climate Communication', 'Q Methodology', 'Stakeholder Analysis'],
+        subfield: [
+          'Climate Communication',
+          'Q Methodology',
+          'Stakeholder Analysis',
+        ],
         importance: 'critical',
         feasibility: 'high',
         novelty: 85,
         impact: 90,
         relatedPapers: 12,
-        suggestedMethods: ['Q-sort', 'Factor analysis', 'Semi-structured interviews'],
+        suggestedMethods: [
+          'Q-sort',
+          'Factor analysis',
+          'Semi-structured interviews',
+        ],
         estimatedDuration: '12-18 months',
-        requiredExpertise: ['Q methodology', 'Environmental psychology', 'Statistical analysis'],
-        potentialChallenges: ['Participant recruitment', 'Cross-cultural validation', 'Large sample size needed'],
+        requiredExpertise: [
+          'Q methodology',
+          'Environmental psychology',
+          'Statistical analysis',
+        ],
+        potentialChallenges: [
+          'Participant recruitment',
+          'Cross-cultural validation',
+          'Large sample size needed',
+        ],
         opportunityScore: 88,
         trend: 'emerging',
         lastUpdated: new Date('2024-02-15'),
         citations: {
           supporting: 45,
           contradicting: 3,
-          neutral: 18
+          neutral: 18,
         },
-        qMethodologyRelevance: true
+        qMethodologyRelevance: true,
       },
       {
         id: '2',
         title: 'Digital Q-Sort Validation Studies',
-        description: 'Insufficient empirical validation of digital Q-sort platforms compared to traditional paper-based methods. Need for systematic comparison studies across different populations and research contexts.',
+        description:
+          'Insufficient empirical validation of digital Q-sort platforms compared to traditional paper-based methods. Need for systematic comparison studies across different populations and research contexts.',
         field: 'Research Methods',
         subfield: ['Digital Methods', 'Q Methodology', 'Validation Studies'],
         importance: 'high',
@@ -167,24 +195,37 @@ export default function ResearchGapsPage() {
         novelty: 75,
         impact: 80,
         relatedPapers: 8,
-        suggestedMethods: ['Comparative study', 'Test-retest reliability', 'Cross-validation'],
+        suggestedMethods: [
+          'Comparative study',
+          'Test-retest reliability',
+          'Cross-validation',
+        ],
         estimatedDuration: '6-9 months',
-        requiredExpertise: ['Q methodology', 'Digital research methods', 'Psychometrics'],
-        potentialChallenges: ['Platform development', 'Participant technology access', 'Standardization'],
+        requiredExpertise: [
+          'Q methodology',
+          'Digital research methods',
+          'Psychometrics',
+        ],
+        potentialChallenges: [
+          'Platform development',
+          'Participant technology access',
+          'Standardization',
+        ],
         opportunityScore: 78,
         trend: 'emerging',
         lastUpdated: new Date('2024-02-10'),
         citations: {
           supporting: 32,
           contradicting: 5,
-          neutral: 12
+          neutral: 12,
         },
-        qMethodologyRelevance: true
+        qMethodologyRelevance: true,
       },
       {
         id: '3',
         title: 'AI-Assisted Factor Interpretation in Q Studies',
-        description: 'Lack of research on using artificial intelligence to assist in factor interpretation and pattern recognition in Q methodology studies. Potential for improving efficiency and uncovering hidden patterns.',
+        description:
+          'Lack of research on using artificial intelligence to assist in factor interpretation and pattern recognition in Q methodology studies. Potential for improving efficiency and uncovering hidden patterns.',
         field: 'Computational Social Science',
         subfield: ['AI/ML', 'Q Methodology', 'Pattern Recognition'],
         importance: 'high',
@@ -192,45 +233,74 @@ export default function ResearchGapsPage() {
         novelty: 92,
         impact: 85,
         relatedPapers: 3,
-        suggestedMethods: ['Machine learning', 'Natural language processing', 'Pattern recognition'],
+        suggestedMethods: [
+          'Machine learning',
+          'Natural language processing',
+          'Pattern recognition',
+        ],
         estimatedDuration: '18-24 months',
-        requiredExpertise: ['Q methodology', 'Machine learning', 'Software development'],
-        potentialChallenges: ['Algorithm development', 'Validation', 'Interpretability'],
+        requiredExpertise: [
+          'Q methodology',
+          'Machine learning',
+          'Software development',
+        ],
+        potentialChallenges: [
+          'Algorithm development',
+          'Validation',
+          'Interpretability',
+        ],
         opportunityScore: 85,
         trend: 'emerging',
         lastUpdated: new Date('2024-02-20'),
         citations: {
           supporting: 15,
           contradicting: 2,
-          neutral: 8
+          neutral: 8,
         },
-        qMethodologyRelevance: true
+        qMethodologyRelevance: true,
       },
       {
         id: '4',
         title: 'Cross-Cultural Subjective Well-being Assessment',
-        description: 'Gap in understanding subjective well-being perspectives across different cultural contexts using systematic approaches. Limited cross-cultural validation of well-being constructs.',
+        description:
+          'Gap in understanding subjective well-being perspectives across different cultural contexts using systematic approaches. Limited cross-cultural validation of well-being constructs.',
         field: 'Psychology',
-        subfield: ['Cross-cultural Psychology', 'Well-being', 'Subjective Assessment'],
+        subfield: [
+          'Cross-cultural Psychology',
+          'Well-being',
+          'Subjective Assessment',
+        ],
         importance: 'medium',
         feasibility: 'medium',
         novelty: 70,
         impact: 75,
         relatedPapers: 25,
-        suggestedMethods: ['Cross-cultural surveys', 'Mixed methods', 'Meta-analysis'],
+        suggestedMethods: [
+          'Cross-cultural surveys',
+          'Mixed methods',
+          'Meta-analysis',
+        ],
         estimatedDuration: '24-36 months',
-        requiredExpertise: ['Cross-cultural psychology', 'Research methods', 'Multiple languages'],
-        potentialChallenges: ['Cultural sensitivity', 'Translation issues', 'Sample diversity'],
+        requiredExpertise: [
+          'Cross-cultural psychology',
+          'Research methods',
+          'Multiple languages',
+        ],
+        potentialChallenges: [
+          'Cultural sensitivity',
+          'Translation issues',
+          'Sample diversity',
+        ],
         opportunityScore: 72,
         trend: 'stable',
         lastUpdated: new Date('2024-02-05'),
         citations: {
           supporting: 68,
           contradicting: 12,
-          neutral: 35
+          neutral: 35,
         },
-        qMethodologyRelevance: false
-      }
+        qMethodologyRelevance: false,
+      },
     ];
 
     setGaps(mockGaps);
@@ -243,11 +313,12 @@ export default function ResearchGapsPage() {
     // Apply search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(gap =>
-        gap.title.toLowerCase().includes(query) ||
-        gap.description.toLowerCase().includes(query) ||
-        gap.field.toLowerCase().includes(query) ||
-        gap.subfield.some(sf => sf.toLowerCase().includes(query))
+      filtered = filtered.filter(
+        gap =>
+          gap.title.toLowerCase().includes(query) ||
+          gap.description.toLowerCase().includes(query) ||
+          gap.field.toLowerCase().includes(query) ||
+          gap.subfield.some(sf => sf.toLowerCase().includes(query))
       );
     }
 
@@ -283,7 +354,14 @@ export default function ResearchGapsPage() {
     });
 
     return filtered;
-  }, [gaps, searchQuery, filterField, filterImportance, showQMethodOnly, sortBy]);
+  }, [
+    gaps,
+    searchQuery,
+    filterField,
+    filterImportance,
+    showQMethodOnly,
+    sortBy,
+  ]);
 
   // Calculate category stats
   const categoryStats = useMemo(() => {
@@ -291,21 +369,29 @@ export default function ResearchGapsPage() {
       const categoryGaps = gaps.filter(gap => {
         // Simple categorization based on keywords
         if (category.id === 'methodological') {
-          return gap.title.toLowerCase().includes('method') || 
-                 gap.subfield.some(sf => sf.toLowerCase().includes('method'));
+          return (
+            gap.title.toLowerCase().includes('method') ||
+            gap.subfield.some(sf => sf.toLowerCase().includes('method'))
+          );
         }
         if (category.id === 'theoretical') {
-          return gap.title.toLowerCase().includes('theor') || 
-                 gap.subfield.some(sf => sf.toLowerCase().includes('theor'));
+          return (
+            gap.title.toLowerCase().includes('theor') ||
+            gap.subfield.some(sf => sf.toLowerCase().includes('theor'))
+          );
         }
         if (category.id === 'empirical') {
-          return gap.description.toLowerCase().includes('empirical') || 
-                 gap.subfield.some(sf => sf.toLowerCase().includes('data'));
+          return (
+            gap.description.toLowerCase().includes('empirical') ||
+            gap.subfield.some(sf => sf.toLowerCase().includes('data'))
+          );
         }
         if (category.id === 'technological') {
-          return gap.title.toLowerCase().includes('tech') || 
-                 gap.title.toLowerCase().includes('digital') ||
-                 gap.subfield.some(sf => sf.toLowerCase().includes('tech'));
+          return (
+            gap.title.toLowerCase().includes('tech') ||
+            gap.title.toLowerCase().includes('digital') ||
+            gap.subfield.some(sf => sf.toLowerCase().includes('tech'))
+          );
         }
         return false;
       });
@@ -314,17 +400,21 @@ export default function ResearchGapsPage() {
         critical: 4,
         high: 3,
         medium: 2,
-        low: 1
+        low: 1,
       };
 
-      const avgImportance = categoryGaps.length > 0
-        ? categoryGaps.reduce((sum, gap) => sum + importanceScore[gap.importance], 0) / categoryGaps.length
-        : 0;
+      const avgImportance =
+        categoryGaps.length > 0
+          ? categoryGaps.reduce(
+              (sum, gap) => sum + importanceScore[gap.importance],
+              0
+            ) / categoryGaps.length
+          : 0;
 
       return {
         ...category,
         gapCount: categoryGaps.length,
-        avgImportance
+        avgImportance,
       };
     });
   }, [gaps]);
@@ -335,7 +425,7 @@ export default function ResearchGapsPage() {
     { period: '2021', publications: 145, citations: 3800, gaps: 18 },
     { period: '2022', publications: 178, citations: 4500, gaps: 22 },
     { period: '2023', publications: 210, citations: 5200, gaps: 28 },
-    { period: '2024', publications: 95, citations: 2100, gaps: 12 }
+    { period: '2024', publications: 95, citations: 2100, gaps: 12 },
   ];
 
   // Run AI analysis
@@ -343,13 +433,18 @@ export default function ResearchGapsPage() {
     setAiAnalysisActive(true);
     // Simulate AI processing
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     // Update gaps with AI insights
-    setGaps(prev => prev.map(gap => ({
-      ...gap,
-      opportunityScore: Math.min(100, gap.opportunityScore + Math.random() * 10)
-    })));
-    
+    setGaps(prev =>
+      prev.map(gap => ({
+        ...gap,
+        opportunityScore: Math.min(
+          100,
+          gap.opportunityScore + Math.random() * 10
+        ),
+      }))
+    );
+
     setAiAnalysisActive(false);
   };
 
@@ -358,11 +453,13 @@ export default function ResearchGapsPage() {
     const data = {
       gaps: filteredGaps,
       categories: categoryStats,
-      generated: new Date().toISOString()
+      generated: new Date().toISOString(),
     };
 
     if (format === 'json') {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: 'application/json',
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -400,7 +497,9 @@ export default function ResearchGapsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-purple-600">Total Gaps</p>
-                  <p className="text-2xl font-bold text-purple-900">{gaps.length}</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {gaps.length}
+                  </p>
                   <p className="text-xs text-purple-600 mt-1">Identified</p>
                 </div>
                 <Telescope className="w-8 h-8 text-purple-400" />
@@ -467,7 +566,7 @@ export default function ResearchGapsPage() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={e => setSearchQuery(e.target.value)}
                     placeholder="Search research gaps..."
                     className="pl-9"
                   />
@@ -479,14 +578,23 @@ export default function ResearchGapsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Fields</SelectItem>
-                    <SelectItem value="Environmental Science">Environmental Science</SelectItem>
-                    <SelectItem value="Research Methods">Research Methods</SelectItem>
+                    <SelectItem value="Environmental Science">
+                      Environmental Science
+                    </SelectItem>
+                    <SelectItem value="Research Methods">
+                      Research Methods
+                    </SelectItem>
                     <SelectItem value="Psychology">Psychology</SelectItem>
-                    <SelectItem value="Computational Social Science">Computational Social Science</SelectItem>
+                    <SelectItem value="Computational Social Science">
+                      Computational Social Science
+                    </SelectItem>
                   </SelectContent>
                 </Select>
 
-                <Select value={filterImportance} onValueChange={setFilterImportance}>
+                <Select
+                  value={filterImportance}
+                  onValueChange={setFilterImportance}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Importance" />
                   </SelectTrigger>
@@ -499,7 +607,10 @@ export default function ResearchGapsPage() {
                   </SelectContent>
                 </Select>
 
-                <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                <Select
+                  value={sortBy}
+                  onValueChange={(value: any) => setSortBy(value)}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -512,10 +623,11 @@ export default function ResearchGapsPage() {
                 </Select>
 
                 <Button
-                  variant={showQMethodOnly ? "default" : "outline"}
+                  variant={showQMethodOnly ? 'default' : 'outline'}
                   onClick={() => setShowQMethodOnly(!showQMethodOnly)}
                   className={cn(
-                    showQMethodOnly && "bg-gradient-to-r from-purple-600 to-blue-600"
+                    showQMethodOnly &&
+                      'bg-gradient-to-r from-purple-600 to-blue-600'
                   )}
                 >
                   Q-Method
@@ -539,10 +651,7 @@ export default function ResearchGapsPage() {
                   )}
                 </Button>
 
-                <Button
-                  variant="outline"
-                  onClick={() => exportReport('json')}
-                >
+                <Button variant="outline" onClick={() => exportReport('json')}>
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </Button>
@@ -560,7 +669,7 @@ export default function ResearchGapsPage() {
                 <CardTitle className="text-sm">Gap Categories</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 p-4">
-                {categoryStats.map((category) => {
+                {categoryStats.map(category => {
                   const Icon = category.icon;
                   return (
                     <button
@@ -580,15 +689,20 @@ export default function ResearchGapsPage() {
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <Icon className="w-4 h-4" style={{ color: `var(--${category.color}-500)` }} />
-                          <span className="text-sm font-medium">{category.name}</span>
+                          <Icon
+                            className="w-4 h-4"
+                            style={{ color: `var(--${category.color}-500)` }}
+                          />
+                          <span className="text-sm font-medium">
+                            {category.name}
+                          </span>
                         </div>
                         <Badge variant="secondary" className="text-xs">
                           {category.gapCount}
                         </Badge>
                       </div>
-                      <Progress 
-                        value={category.avgImportance * 25} 
+                      <Progress
+                        value={category.avgImportance * 25}
                         className="h-1"
                       />
                       {expandedCategories.has(category.id) && (
@@ -612,13 +726,16 @@ export default function ResearchGapsPage() {
               </CardHeader>
               <CardContent className="p-4">
                 <div className="space-y-3">
-                  {trendData.map((data) => (
+                  {trendData.map(data => (
                     <div key={data.period} className="space-y-1">
                       <div className="flex justify-between text-xs">
                         <span className="text-gray-600">{data.period}</span>
                         <span className="font-medium">{data.gaps} gaps</span>
                       </div>
-                      <Progress value={(data.gaps / 30) * 100} className="h-1" />
+                      <Progress
+                        value={(data.gaps / 30) * 100}
+                        className="h-1"
+                      />
                     </div>
                   ))}
                 </div>
@@ -635,10 +752,10 @@ export default function ResearchGapsPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Card 
+                <Card
                   className={cn(
-                    "hover:shadow-lg transition-all cursor-pointer",
-                    selectedGap?.id === gap.id && "ring-2 ring-purple-400"
+                    'hover:shadow-lg transition-all cursor-pointer',
+                    selectedGap?.id === gap.id && 'ring-2 ring-purple-400'
                   )}
                   onClick={() => setSelectedGap(gap)}
                 >
@@ -649,12 +766,15 @@ export default function ResearchGapsPage() {
                           <h3 className="text-lg font-semibold text-gray-900">
                             {gap.title}
                           </h3>
-                          <Badge 
+                          <Badge
                             className={cn(
-                              gap.importance === 'critical' ? "bg-red-100 text-red-700" :
-                              gap.importance === 'high' ? "bg-orange-100 text-orange-700" :
-                              gap.importance === 'medium' ? "bg-yellow-100 text-yellow-700" :
-                              "bg-gray-100 text-gray-700"
+                              gap.importance === 'critical'
+                                ? 'bg-red-100 text-red-700'
+                                : gap.importance === 'high'
+                                  ? 'bg-orange-100 text-orange-700'
+                                  : gap.importance === 'medium'
+                                    ? 'bg-yellow-100 text-yellow-700'
+                                    : 'bg-gray-100 text-gray-700'
                             )}
                           >
                             {gap.importance}
@@ -664,16 +784,21 @@ export default function ResearchGapsPage() {
                               Q-Method
                             </Badge>
                           )}
-                          <Badge 
+                          <Badge
                             variant="outline"
                             className={cn(
-                              gap.trend === 'emerging' ? "border-green-500 text-green-600" :
-                              gap.trend === 'stable' ? "border-blue-500 text-blue-600" :
-                              "border-red-500 text-red-600"
+                              gap.trend === 'emerging'
+                                ? 'border-green-500 text-green-600'
+                                : gap.trend === 'stable'
+                                  ? 'border-blue-500 text-blue-600'
+                                  : 'border-red-500 text-red-600'
                             )}
                           >
-                            {gap.trend === 'emerging' ? <ArrowUpRight className="w-3 h-3 mr-1" /> :
-                             gap.trend === 'declining' ? <ArrowDownRight className="w-3 h-3 mr-1" /> : null}
+                            {gap.trend === 'emerging' ? (
+                              <ArrowUpRight className="w-3 h-3 mr-1" />
+                            ) : gap.trend === 'declining' ? (
+                              <ArrowDownRight className="w-3 h-3 mr-1" />
+                            ) : null}
                             {gap.trend}
                           </Badge>
                         </div>
@@ -685,7 +810,9 @@ export default function ResearchGapsPage() {
                         <div className="text-2xl font-bold text-purple-600">
                           {gap.opportunityScore}
                         </div>
-                        <p className="text-xs text-gray-500">Opportunity Score</p>
+                        <p className="text-xs text-gray-500">
+                          Opportunity Score
+                        </p>
                       </div>
                     </div>
 
@@ -694,25 +821,34 @@ export default function ResearchGapsPage() {
                         <p className="text-xs text-gray-500">Impact</p>
                         <div className="flex items-center gap-2">
                           <Progress value={gap.impact} className="flex-1 h-2" />
-                          <span className="text-xs font-medium">{gap.impact}%</span>
+                          <span className="text-xs font-medium">
+                            {gap.impact}%
+                          </span>
                         </div>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">Novelty</p>
                         <div className="flex items-center gap-2">
-                          <Progress value={gap.novelty} className="flex-1 h-2" />
-                          <span className="text-xs font-medium">{gap.novelty}%</span>
+                          <Progress
+                            value={gap.novelty}
+                            className="flex-1 h-2"
+                          />
+                          <span className="text-xs font-medium">
+                            {gap.novelty}%
+                          </span>
                         </div>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">Feasibility</p>
-                        <Badge 
+                        <Badge
                           variant="outline"
                           className={cn(
-                            "text-xs",
-                            gap.feasibility === 'high' ? "border-green-500 text-green-600" :
-                            gap.feasibility === 'medium' ? "border-yellow-500 text-yellow-600" :
-                            "border-red-500 text-red-600"
+                            'text-xs',
+                            gap.feasibility === 'high'
+                              ? 'border-green-500 text-green-600'
+                              : gap.feasibility === 'medium'
+                                ? 'border-yellow-500 text-yellow-600'
+                                : 'border-red-500 text-red-600'
                           )}
                         >
                           {gap.feasibility}
@@ -720,7 +856,9 @@ export default function ResearchGapsPage() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">Duration</p>
-                        <p className="text-xs font-medium">{gap.estimatedDuration}</p>
+                        <p className="text-xs font-medium">
+                          {gap.estimatedDuration}
+                        </p>
                       </div>
                     </div>
 
@@ -739,10 +877,14 @@ export default function ResearchGapsPage() {
                           Updated {gap.lastUpdated.toLocaleDateString()}
                         </span>
                       </div>
-                      
+
                       <div className="flex gap-2">
                         {gap.subfield.slice(0, 2).map(field => (
-                          <Badge key={field} variant="secondary" className="text-xs">
+                          <Badge
+                            key={field}
+                            variant="secondary"
+                            className="text-xs"
+                          >
                             {field}
                           </Badge>
                         ))}
@@ -756,21 +898,33 @@ export default function ResearchGapsPage() {
                         className="mt-4 pt-4 border-t space-y-3"
                       >
                         <div>
-                          <p className="text-sm font-medium text-gray-700 mb-2">Suggested Methods:</p>
+                          <p className="text-sm font-medium text-gray-700 mb-2">
+                            Suggested Methods:
+                          </p>
                           <div className="flex flex-wrap gap-2">
                             {gap.suggestedMethods.map(method => (
-                              <Badge key={method} variant="outline" className="text-xs">
+                              <Badge
+                                key={method}
+                                variant="outline"
+                                className="text-xs"
+                              >
                                 {method}
                               </Badge>
                             ))}
                           </div>
                         </div>
-                        
+
                         <div>
-                          <p className="text-sm font-medium text-gray-700 mb-2">Required Expertise:</p>
+                          <p className="text-sm font-medium text-gray-700 mb-2">
+                            Required Expertise:
+                          </p>
                           <div className="flex flex-wrap gap-2">
                             {gap.requiredExpertise.map(skill => (
-                              <Badge key={skill} variant="secondary" className="text-xs">
+                              <Badge
+                                key={skill}
+                                variant="secondary"
+                                className="text-xs"
+                              >
                                 {skill}
                               </Badge>
                             ))}
@@ -778,10 +932,15 @@ export default function ResearchGapsPage() {
                         </div>
 
                         <div>
-                          <p className="text-sm font-medium text-gray-700 mb-2">Potential Challenges:</p>
+                          <p className="text-sm font-medium text-gray-700 mb-2">
+                            Potential Challenges:
+                          </p>
                           <ul className="space-y-1">
                             {gap.potentialChallenges.map(challenge => (
-                              <li key={challenge} className="text-xs text-gray-600 flex items-start">
+                              <li
+                                key={challenge}
+                                className="text-xs text-gray-600 flex items-start"
+                              >
                                 <AlertCircle className="w-3 h-3 mr-2 mt-0.5 text-yellow-500" />
                                 {challenge}
                               </li>
@@ -794,7 +953,10 @@ export default function ResearchGapsPage() {
                             <Share2 className="w-4 h-4 mr-2" />
                             Share
                           </Button>
-                          <Button size="sm" className="bg-gradient-to-r from-purple-600 to-blue-600">
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-r from-purple-600 to-blue-600"
+                          >
                             <Target className="w-4 h-4 mr-2" />
                             Start Research
                           </Button>

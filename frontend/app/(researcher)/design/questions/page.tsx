@@ -7,10 +7,9 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  
-  ChevronRight, 
-  ChevronLeft, 
+import {
+  ChevronRight,
+  ChevronLeft,
   Sparkles,
   Target,
   Users,
@@ -20,7 +19,7 @@ import {
   AlertCircle,
   CheckCircle,
   Book,
-  Beaker
+  Beaker,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,43 +43,49 @@ interface ResearchQuestion {
   };
 }
 
-type WizardStep = 'topic' | 'type' | 'components' | 'refinement' | 'validation' | 'summary';
+type WizardStep =
+  | 'topic'
+  | 'type'
+  | 'components'
+  | 'refinement'
+  | 'validation'
+  | 'summary';
 
 const QUESTION_TEMPLATES = {
   exploratory: [
-    "What are the key factors influencing [phenomenon] in [context]?",
-    "How do [stakeholders] perceive [topic] in [setting]?",
-    "What patterns emerge from [participants'] experiences of [phenomenon]?"
+    'What are the key factors influencing [phenomenon] in [context]?',
+    'How do [stakeholders] perceive [topic] in [setting]?',
+    "What patterns emerge from [participants'] experiences of [phenomenon]?",
   ],
   descriptive: [
-    "What is the current state of [phenomenon] in [population/context]?",
-    "How prevalent is [condition/behavior] among [group]?",
-    "What are the characteristics of [population] regarding [topic]?"
+    'What is the current state of [phenomenon] in [population/context]?',
+    'How prevalent is [condition/behavior] among [group]?',
+    'What are the characteristics of [population] regarding [topic]?',
   ],
   explanatory: [
-    "Why does [phenomenon] occur in [context]?",
-    "What causes [outcome] among [population]?",
-    "How does [variable A] influence [variable B] in [setting]?"
+    'Why does [phenomenon] occur in [context]?',
+    'What causes [outcome] among [population]?',
+    'How does [variable A] influence [variable B] in [setting]?',
   ],
   evaluative: [
-    "How effective is [intervention] in achieving [outcome]?",
-    "To what extent does [program] meet [objectives]?",
-    "What is the impact of [policy] on [stakeholders]?"
-  ]
+    'How effective is [intervention] in achieving [outcome]?',
+    'To what extent does [program] meet [objectives]?',
+    'What is the impact of [policy] on [stakeholders]?',
+  ],
 };
 
 const Q_METHOD_QUESTIONS = [
-  "What are the distinct viewpoints on [topic] among [stakeholders]?",
-  "How do [participants] subjectively understand [phenomenon]?",
-  "What are the shared and divergent perspectives on [issue] within [community]?",
-  "How do individuals prioritize [aspects] of [topic]?",
-  "What subjective meanings do [stakeholders] attach to [concept]?"
+  'What are the distinct viewpoints on [topic] among [stakeholders]?',
+  'How do [participants] subjectively understand [phenomenon]?',
+  'What are the shared and divergent perspectives on [issue] within [community]?',
+  'How do individuals prioritize [aspects] of [topic]?',
+  'What subjective meanings do [stakeholders] attach to [concept]?',
 ];
 
 export default function ResearchQuestionWizardPage() {
   const [currentStep, setCurrentStep] = useState<WizardStep>('topic');
   const [aiAssistEnabled, setAiAssistEnabled] = useState(true);
-  
+
   const [formData, setFormData] = useState<{
     topic: string;
     background: string;
@@ -102,7 +107,7 @@ export default function ResearchQuestionWizardPage() {
     variables: [],
     mainQuestion: '',
     subQuestions: [],
-    methodology: ''
+    methodology: '',
   });
 
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -115,10 +120,17 @@ export default function ResearchQuestionWizardPage() {
     clarity: false,
     feasibility: false,
     significance: false,
-    specificity: false
+    specificity: false,
   });
 
-  const steps: WizardStep[] = ['topic', 'type', 'components', 'refinement', 'validation', 'summary'];
+  const steps: WizardStep[] = [
+    'topic',
+    'type',
+    'components',
+    'refinement',
+    'validation',
+    'summary',
+  ];
   const currentStepIndex = steps.indexOf(currentStep);
 
   const handleNextStep = () => {
@@ -139,11 +151,14 @@ export default function ResearchQuestionWizardPage() {
   };
 
   const generateQuestionSuggestions = () => {
-    const templates = formData.methodology === 'q-methodology' 
-      ? Q_METHOD_QUESTIONS 
-      : QUESTION_TEMPLATES[formData.questionType as keyof typeof QUESTION_TEMPLATES] || [];
-    
-    const customized = templates.map(template => 
+    const templates =
+      formData.methodology === 'q-methodology'
+        ? Q_METHOD_QUESTIONS
+        : QUESTION_TEMPLATES[
+            formData.questionType as keyof typeof QUESTION_TEMPLATES
+          ] || [];
+
+    const customized = templates.map(template =>
       template
         .replace('[phenomenon]', formData.topic)
         .replace('[topic]', formData.topic)
@@ -155,17 +170,24 @@ export default function ResearchQuestionWizardPage() {
         .replace('[group]', formData.population)
         .replace('[community]', formData.setting)
     );
-    
+
     setSuggestions(customized);
   };
 
   const validateQuestion = () => {
     const question = formData.mainQuestion;
     setValidation({
-      clarity: question.split(' ').length > 5 && question.split(' ').length < 30,
+      clarity:
+        question.split(' ').length > 5 && question.split(' ').length < 30,
       feasibility: formData.timeframe !== '' && formData.population !== '',
-      significance: question.includes('how') || question.includes('what') || question.includes('why'),
-      specificity: formData.variables.length > 0 && formData.population !== '' && formData.setting !== ''
+      significance:
+        question.includes('how') ||
+        question.includes('what') ||
+        question.includes('why'),
+      specificity:
+        formData.variables.length > 0 &&
+        formData.population !== '' &&
+        formData.setting !== '',
     });
   };
 
@@ -179,30 +201,40 @@ export default function ResearchQuestionWizardPage() {
             className="space-y-6"
           >
             <div>
-              <h2 className="text-2xl font-bold mb-4">What's Your Research Topic?</h2>
+              <h2 className="text-2xl font-bold mb-4">
+                What's Your Research Topic?
+              </h2>
               <p className="text-gray-600 mb-6">
-                Start by describing the general area or phenomenon you want to investigate.
+                Start by describing the general area or phenomenon you want to
+                investigate.
               </p>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <Label htmlFor="topic">Research Topic</Label>
                 <Input
                   id="topic"
                   value={formData.topic}
-                  onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
+                  onChange={e =>
+                    setFormData(prev => ({ ...prev, topic: e.target.value }))
+                  }
                   placeholder="e.g., Climate change attitudes, Remote work productivity..."
                   className="mt-2"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="background">Background & Context</Label>
                 <Textarea
                   id="background"
                   value={formData.background}
-                  onChange={(e) => setFormData(prev => ({ ...prev, background: e.target.value }))}
+                  onChange={e =>
+                    setFormData(prev => ({
+                      ...prev,
+                      background: e.target.value,
+                    }))
+                  }
                   placeholder="Briefly describe what you already know about this topic and why it's important..."
                   className="mt-2 min-h-[120px]"
                 />
@@ -218,10 +250,13 @@ export default function ResearchQuestionWizardPage() {
                 <div className="flex items-start gap-2">
                   <Sparkles className="w-5 h-5 text-purple-600 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-purple-900">AI Insight</p>
+                    <p className="text-sm font-medium text-purple-900">
+                      AI Insight
+                    </p>
                     <p className="text-sm text-purple-700 mt-1">
-                      Consider exploring specific aspects like stakeholder perspectives, temporal changes, 
-                      or comparative analyses to narrow your focus.
+                      Consider exploring specific aspects like stakeholder
+                      perspectives, temporal changes, or comparative analyses to
+                      narrow your focus.
                     </p>
                   </div>
                 </div>
@@ -238,18 +273,23 @@ export default function ResearchQuestionWizardPage() {
             className="space-y-6"
           >
             <div>
-              <h2 className="text-2xl font-bold mb-4">What Type of Question?</h2>
+              <h2 className="text-2xl font-bold mb-4">
+                What Type of Question?
+              </h2>
               <p className="text-gray-600 mb-6">
-                Different question types serve different research purposes. Choose the one that best fits your goals.
+                Different question types serve different research purposes.
+                Choose the one that best fits your goals.
               </p>
             </div>
-            
+
             <RadioGroup
               value={formData.questionType}
-              onValueChange={(value) => setFormData(prev => ({ 
-                ...prev, 
-                questionType: value as ResearchQuestion['type']
-              }))}
+              onValueChange={value =>
+                setFormData(prev => ({
+                  ...prev,
+                  questionType: value as ResearchQuestion['type'],
+                }))
+              }
               className="space-y-4"
             >
               <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -258,37 +298,42 @@ export default function ResearchQuestionWizardPage() {
                   <div>
                     <p className="font-medium">Exploratory</p>
                     <p className="text-sm text-gray-600 mt-1">
-                      Investigate a new or poorly understood phenomenon. Perfect for generating insights and hypotheses.
+                      Investigate a new or poorly understood phenomenon. Perfect
+                      for generating insights and hypotheses.
                     </p>
                     <p className="text-xs text-blue-600 mt-2">
-                      Example: "What factors influence..." or "How do people experience..."
+                      Example: "What factors influence..." or "How do people
+                      experience..."
                     </p>
                   </div>
                 </Label>
               </div>
-              
+
               <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                 <RadioGroupItem value="descriptive" id="descriptive" />
                 <Label htmlFor="descriptive" className="cursor-pointer flex-1">
                   <div>
                     <p className="font-medium">Descriptive</p>
                     <p className="text-sm text-gray-600 mt-1">
-                      Document characteristics, frequencies, or patterns. Ideal for mapping current states.
+                      Document characteristics, frequencies, or patterns. Ideal
+                      for mapping current states.
                     </p>
                     <p className="text-xs text-blue-600 mt-2">
-                      Example: "What is the prevalence of..." or "What are the characteristics of..."
+                      Example: "What is the prevalence of..." or "What are the
+                      characteristics of..."
                     </p>
                   </div>
                 </Label>
               </div>
-              
+
               <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                 <RadioGroupItem value="explanatory" id="explanatory" />
                 <Label htmlFor="explanatory" className="cursor-pointer flex-1">
                   <div>
                     <p className="font-medium">Explanatory</p>
                     <p className="text-sm text-gray-600 mt-1">
-                      Understand causes, relationships, and mechanisms. Best for testing theories.
+                      Understand causes, relationships, and mechanisms. Best for
+                      testing theories.
                     </p>
                     <p className="text-xs text-blue-600 mt-2">
                       Example: "Why does..." or "How does X affect Y..."
@@ -296,17 +341,19 @@ export default function ResearchQuestionWizardPage() {
                   </div>
                 </Label>
               </div>
-              
+
               <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                 <RadioGroupItem value="evaluative" id="evaluative" />
                 <Label htmlFor="evaluative" className="cursor-pointer flex-1">
                   <div>
                     <p className="font-medium">Evaluative</p>
                     <p className="text-sm text-gray-600 mt-1">
-                      Assess effectiveness, impact, or outcomes. Perfect for program evaluation.
+                      Assess effectiveness, impact, or outcomes. Perfect for
+                      program evaluation.
                     </p>
                     <p className="text-xs text-blue-600 mt-2">
-                      Example: "How effective is..." or "What is the impact of..."
+                      Example: "How effective is..." or "What is the impact
+                      of..."
                     </p>
                   </div>
                 </Label>
@@ -317,10 +364,12 @@ export default function ResearchQuestionWizardPage() {
               <Label>Methodology Approach</Label>
               <RadioGroup
                 value={formData.methodology}
-                onValueChange={(value) => setFormData(prev => ({ 
-                  ...prev, 
-                  methodology: value as ResearchQuestion['methodology']
-                }))}
+                onValueChange={value =>
+                  setFormData(prev => ({
+                    ...prev,
+                    methodology: value as ResearchQuestion['methodology'],
+                  }))
+                }
                 className="grid grid-cols-2 gap-4 mt-2"
               >
                 <div className="flex items-center space-x-2 p-3 border rounded-lg">
@@ -354,10 +403,11 @@ export default function ResearchQuestionWizardPage() {
             <div>
               <h2 className="text-2xl font-bold mb-4">Define Key Components</h2>
               <p className="text-gray-600 mb-6">
-                A good research question clearly identifies who, what, where, and when.
+                A good research question clearly identifies who, what, where,
+                and when.
               </p>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <Label htmlFor="population">
@@ -367,12 +417,17 @@ export default function ResearchQuestionWizardPage() {
                 <Input
                   id="population"
                   value={formData.population}
-                  onChange={(e) => setFormData(prev => ({ ...prev, population: e.target.value }))}
+                  onChange={e =>
+                    setFormData(prev => ({
+                      ...prev,
+                      population: e.target.value,
+                    }))
+                  }
                   placeholder="e.g., Healthcare workers, University students, Small business owners..."
                   className="mt-2"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="setting">
                   <MapPin className="w-4 h-4 inline mr-1" />
@@ -381,12 +436,14 @@ export default function ResearchQuestionWizardPage() {
                 <Input
                   id="setting"
                   value={formData.setting}
-                  onChange={(e) => setFormData(prev => ({ ...prev, setting: e.target.value }))}
+                  onChange={e =>
+                    setFormData(prev => ({ ...prev, setting: e.target.value }))
+                  }
                   placeholder="e.g., Urban hospitals, Online learning environments, Tech startups..."
                   className="mt-2"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="timeframe">
                   <Calendar className="w-4 h-4 inline mr-1" />
@@ -395,12 +452,17 @@ export default function ResearchQuestionWizardPage() {
                 <Input
                   id="timeframe"
                   value={formData.timeframe}
-                  onChange={(e) => setFormData(prev => ({ ...prev, timeframe: e.target.value }))}
+                  onChange={e =>
+                    setFormData(prev => ({
+                      ...prev,
+                      timeframe: e.target.value,
+                    }))
+                  }
                   placeholder="e.g., During COVID-19, 2020-2024, Past 5 years..."
                   className="mt-2"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="variables">
                   <Target className="w-4 h-4 inline mr-1" />
@@ -409,15 +471,21 @@ export default function ResearchQuestionWizardPage() {
                 <Textarea
                   id="variables"
                   value={formData.variables.join(', ')}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    variables: e.target.value.split(',').map(v => v.trim()).filter(Boolean)
-                  }))}
+                  onChange={e =>
+                    setFormData(prev => ({
+                      ...prev,
+                      variables: e.target.value
+                        .split(',')
+                        .map(v => v.trim())
+                        .filter(Boolean),
+                    }))
+                  }
                   placeholder="Enter key concepts separated by commas..."
                   className="mt-2"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Examples: job satisfaction, productivity, well-being, attitudes, behaviors
+                  Examples: job satisfaction, productivity, well-being,
+                  attitudes, behaviors
                 </p>
               </div>
             </div>
@@ -431,10 +499,13 @@ export default function ResearchQuestionWizardPage() {
                 <div className="flex items-start gap-2">
                   <Beaker className="w-5 h-5 text-purple-600 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-purple-900">Q Methodology Tip</p>
+                    <p className="text-sm font-medium text-purple-900">
+                      Q Methodology Tip
+                    </p>
                     <p className="text-sm text-purple-700 mt-1">
-                      Focus on identifying different viewpoints or perspectives. Your question should explore 
-                      subjective opinions rather than objective facts.
+                      Focus on identifying different viewpoints or perspectives.
+                      Your question should explore subjective opinions rather
+                      than objective facts.
                     </p>
                   </div>
                 </div>
@@ -468,7 +539,12 @@ export default function ResearchQuestionWizardPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
                       className="p-3 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100"
-                      onClick={() => setFormData(prev => ({ ...prev, mainQuestion: suggestion }))}
+                      onClick={() =>
+                        setFormData(prev => ({
+                          ...prev,
+                          mainQuestion: suggestion,
+                        }))
+                      }
                     >
                       <div className="flex items-start gap-2">
                         <Sparkles className="w-4 h-4 text-blue-600 mt-0.5" />
@@ -479,28 +555,35 @@ export default function ResearchQuestionWizardPage() {
                 </div>
               </div>
             )}
-            
+
             <div className="space-y-4">
               <div>
                 <Label htmlFor="main-question">Main Research Question</Label>
                 <Textarea
                   id="main-question"
                   value={formData.mainQuestion}
-                  onChange={(e) => setFormData(prev => ({ ...prev, mainQuestion: e.target.value }))}
+                  onChange={e =>
+                    setFormData(prev => ({
+                      ...prev,
+                      mainQuestion: e.target.value,
+                    }))
+                  }
                   placeholder="Write your main research question here..."
                   className="mt-2 min-h-[100px]"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="sub-questions">Sub-Questions (Optional)</Label>
                 <Textarea
                   id="sub-questions"
                   value={formData.subQuestions.join('\n')}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    subQuestions: e.target.value.split('\n').filter(Boolean)
-                  }))}
+                  onChange={e =>
+                    setFormData(prev => ({
+                      ...prev,
+                      subQuestions: e.target.value.split('\n').filter(Boolean),
+                    }))
+                  }
                   placeholder="Enter each sub-question on a new line..."
                   className="mt-2 min-h-[120px]"
                 />
@@ -533,10 +616,14 @@ export default function ResearchQuestionWizardPage() {
             </div>
 
             <div className="space-y-4">
-              <Card className={cn(
-                "p-4 border-2",
-                validation.clarity ? "border-green-200 bg-green-50" : "border-gray-200"
-              )}>
+              <Card
+                className={cn(
+                  'p-4 border-2',
+                  validation.clarity
+                    ? 'border-green-200 bg-green-50'
+                    : 'border-gray-200'
+                )}
+              >
                 <div className="flex items-start gap-3">
                   {validation.clarity ? (
                     <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
@@ -550,17 +637,22 @@ export default function ResearchQuestionWizardPage() {
                     </p>
                     {!validation.clarity && (
                       <p className="text-sm text-orange-600 mt-2">
-                        Tip: Aim for 10-25 words. Avoid jargon and complex terminology.
+                        Tip: Aim for 10-25 words. Avoid jargon and complex
+                        terminology.
                       </p>
                     )}
                   </div>
                 </div>
               </Card>
 
-              <Card className={cn(
-                "p-4 border-2",
-                validation.feasibility ? "border-green-200 bg-green-50" : "border-gray-200"
-              )}>
+              <Card
+                className={cn(
+                  'p-4 border-2',
+                  validation.feasibility
+                    ? 'border-green-200 bg-green-50'
+                    : 'border-gray-200'
+                )}
+              >
                 <div className="flex items-start gap-3">
                   {validation.feasibility ? (
                     <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
@@ -574,17 +666,22 @@ export default function ResearchQuestionWizardPage() {
                     </p>
                     {!validation.feasibility && (
                       <p className="text-sm text-orange-600 mt-2">
-                        Tip: Ensure you've defined your population and timeframe clearly.
+                        Tip: Ensure you've defined your population and timeframe
+                        clearly.
                       </p>
                     )}
                   </div>
                 </div>
               </Card>
 
-              <Card className={cn(
-                "p-4 border-2",
-                validation.significance ? "border-green-200 bg-green-50" : "border-gray-200"
-              )}>
+              <Card
+                className={cn(
+                  'p-4 border-2',
+                  validation.significance
+                    ? 'border-green-200 bg-green-50'
+                    : 'border-gray-200'
+                )}
+              >
                 <div className="flex items-start gap-3">
                   {validation.significance ? (
                     <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
@@ -598,17 +695,22 @@ export default function ResearchQuestionWizardPage() {
                     </p>
                     {!validation.significance && (
                       <p className="text-sm text-orange-600 mt-2">
-                        Tip: Start with "How", "What", or "Why" to ensure analytical depth.
+                        Tip: Start with "How", "What", or "Why" to ensure
+                        analytical depth.
                       </p>
                     )}
                   </div>
                 </div>
               </Card>
 
-              <Card className={cn(
-                "p-4 border-2",
-                validation.specificity ? "border-green-200 bg-green-50" : "border-gray-200"
-              )}>
+              <Card
+                className={cn(
+                  'p-4 border-2',
+                  validation.specificity
+                    ? 'border-green-200 bg-green-50'
+                    : 'border-gray-200'
+                )}
+              >
                 <div className="flex items-start gap-3">
                   {validation.specificity ? (
                     <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
@@ -633,11 +735,13 @@ export default function ResearchQuestionWizardPage() {
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <Lightbulb className="w-5 h-5 text-blue-600" />
-                <h3 className="font-medium text-blue-900">Overall Assessment</h3>
+                <h3 className="font-medium text-blue-900">
+                  Overall Assessment
+                </h3>
               </div>
               <p className="text-sm text-blue-800">
                 {Object.values(validation).filter(v => v).length === 4
-                  ? "Excellent! Your research question is well-formulated and ready to guide your study."
+                  ? 'Excellent! Your research question is well-formulated and ready to guide your study.'
                   : `Your question needs some refinement. Focus on the areas marked above to strengthen it.`}
               </p>
             </div>
@@ -652,9 +756,12 @@ export default function ResearchQuestionWizardPage() {
             className="space-y-6"
           >
             <div>
-              <h2 className="text-2xl font-bold mb-4">Your Research Question Summary</h2>
+              <h2 className="text-2xl font-bold mb-4">
+                Your Research Question Summary
+              </h2>
               <p className="text-gray-600 mb-6">
-                Here's your complete research question framework. You can export or save this for your study.
+                Here's your complete research question framework. You can export
+                or save this for your study.
               </p>
             </div>
 
@@ -667,19 +774,30 @@ export default function ResearchQuestionWizardPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h3 className="font-medium text-gray-700 mb-2">Main Question</h3>
+                  <h3 className="font-medium text-gray-700 mb-2">
+                    Main Question
+                  </h3>
                   <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                    <p className="font-medium text-purple-900">{formData.mainQuestion}</p>
+                    <p className="font-medium text-purple-900">
+                      {formData.mainQuestion}
+                    </p>
                   </div>
                 </div>
 
                 {formData.subQuestions.length > 0 && (
                   <div>
-                    <h3 className="font-medium text-gray-700 mb-2">Sub-Questions</h3>
+                    <h3 className="font-medium text-gray-700 mb-2">
+                      Sub-Questions
+                    </h3>
                     <div className="space-y-2">
                       {formData.subQuestions.map((q, i) => (
-                        <div key={i} className="p-2 bg-gray-50 border border-gray-200 rounded">
-                          <p className="text-sm">{i + 1}. {q}</p>
+                        <div
+                          key={i}
+                          className="p-2 bg-gray-50 border border-gray-200 rounded"
+                        >
+                          <p className="text-sm">
+                            {i + 1}. {q}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -709,16 +827,16 @@ export default function ResearchQuestionWizardPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Key Variables</p>
-                    <p className="font-medium mt-1">{formData.variables.join(', ')}</p>
+                    <p className="font-medium mt-1">
+                      {formData.variables.join(', ')}
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <div className="flex gap-4">
-              <Button className="flex-1">
-                Save to Study
-              </Button>
+              <Button className="flex-1">Save to Study</Button>
               <Button variant="outline" className="flex-1">
                 Export as PDF
               </Button>
@@ -744,25 +862,27 @@ export default function ResearchQuestionWizardPage() {
               <div
                 key={step}
                 className={cn(
-                  "flex items-center",
-                  index < steps.length - 1 && "flex-1"
+                  'flex items-center',
+                  index < steps.length - 1 && 'flex-1'
                 )}
               >
-                <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center font-medium",
-                  index <= currentStepIndex
-                    ? "bg-purple-600 text-white"
-                    : "bg-gray-200 text-gray-600"
-                )}>
+                <div
+                  className={cn(
+                    'w-10 h-10 rounded-full flex items-center justify-center font-medium',
+                    index <= currentStepIndex
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-200 text-gray-600'
+                  )}
+                >
                   {index + 1}
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={cn(
-                    "flex-1 h-1 ml-2",
-                    index < currentStepIndex
-                      ? "bg-purple-600"
-                      : "bg-gray-200"
-                  )} />
+                  <div
+                    className={cn(
+                      'flex-1 h-1 ml-2',
+                      index < currentStepIndex ? 'bg-purple-600' : 'bg-gray-200'
+                    )}
+                  />
                 )}
               </div>
             ))}
@@ -798,10 +918,12 @@ export default function ResearchQuestionWizardPage() {
                 variant="ghost"
                 size="sm"
               >
-                <Sparkles className={cn(
-                  "w-4 h-4 mr-2",
-                  aiAssistEnabled && "text-purple-600"
-                )} />
+                <Sparkles
+                  className={cn(
+                    'w-4 h-4 mr-2',
+                    aiAssistEnabled && 'text-purple-600'
+                  )}
+                />
                 AI Assist {aiAssistEnabled ? 'On' : 'Off'}
               </Button>
 

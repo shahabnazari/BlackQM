@@ -30,12 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SurveySchedule {
   id: string;
@@ -131,11 +126,16 @@ export function SurveySchedulingManager() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-700';
-      case 'scheduled': return 'bg-blue-100 text-blue-700';
-      case 'paused': return 'bg-yellow-100 text-yellow-700';
-      case 'completed': return 'bg-gray-100 text-gray-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'active':
+        return 'bg-green-100 text-green-700';
+      case 'scheduled':
+        return 'bg-blue-100 text-blue-700';
+      case 'paused':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'completed':
+        return 'bg-gray-100 text-gray-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
     }
   };
 
@@ -146,7 +146,12 @@ export function SurveySchedulingManager() {
   };
 
   const calculateResponseRate = () => {
-    const daysSinceStart = Math.max(1, Math.ceil((Date.now() - mockSchedule.startDate.getTime()) / (1000 * 60 * 60 * 24)));
+    const daysSinceStart = Math.max(
+      1,
+      Math.ceil(
+        (Date.now() - mockSchedule.startDate.getTime()) / (1000 * 60 * 60 * 24)
+      )
+    );
     return Math.round(mockSchedule.responseQuota.current / daysSinceStart);
   };
 
@@ -159,7 +164,9 @@ export function SurveySchedulingManager() {
             <Calendar className="w-5 h-5 text-indigo-600" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">Survey Scheduling & Quotas</h2>
+            <h2 className="text-xl font-semibold">
+              Survey Scheduling & Quotas
+            </h2>
             <p className="text-sm text-gray-600">
               Control when and how your survey collects responses
             </p>
@@ -192,14 +199,16 @@ export function SurveySchedulingManager() {
             <div className="flex items-center gap-4 text-sm text-gray-600">
               <span className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                {mockSchedule.startDate.toLocaleDateString()} - {mockSchedule.endDate.toLocaleDateString()}
+                {mockSchedule.startDate.toLocaleDateString()} -{' '}
+                {mockSchedule.endDate.toLocaleDateString()}
               </span>
               <span className="flex items-center gap-1">
                 <Globe className="w-4 h-4" />
                 {mockSchedule.timezone}
               </span>
               <Badge className={getStatusColor(mockSchedule.status)}>
-                {mockSchedule.status.charAt(0).toUpperCase() + mockSchedule.status.slice(1)}
+                {mockSchedule.status.charAt(0).toUpperCase() +
+                  mockSchedule.status.slice(1)}
               </Badge>
             </div>
           </div>
@@ -217,11 +226,16 @@ export function SurveySchedulingManager() {
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Overall Progress</span>
               <span className="text-sm text-gray-600">
-                {mockSchedule.responseQuota.current} / {mockSchedule.responseQuota.target} responses
+                {mockSchedule.responseQuota.current} /{' '}
+                {mockSchedule.responseQuota.target} responses
               </span>
             </div>
-            <Progress 
-              value={(mockSchedule.responseQuota.current / mockSchedule.responseQuota.target) * 100}
+            <Progress
+              value={
+                (mockSchedule.responseQuota.current /
+                  mockSchedule.responseQuota.target) *
+                100
+              }
               className="h-3"
             />
           </div>
@@ -232,7 +246,9 @@ export function SurveySchedulingManager() {
                 <Target className="w-4 h-4 text-gray-600" />
                 <span className="text-xs text-gray-600">Target</span>
               </div>
-              <div className="text-xl font-bold">{mockSchedule.responseQuota.target}</div>
+              <div className="text-xl font-bold">
+                {mockSchedule.responseQuota.target}
+              </div>
             </Card>
             <Card className="p-3 bg-blue-50">
               <div className="flex items-center gap-2 mb-1">
@@ -258,7 +274,12 @@ export function SurveySchedulingManager() {
                 <span className="text-xs text-gray-600">Est. Completion</span>
               </div>
               <div className="text-xl font-bold text-purple-600">
-                {Math.ceil((mockSchedule.responseQuota.target - mockSchedule.responseQuota.current) / calculateResponseRate())}d
+                {Math.ceil(
+                  (mockSchedule.responseQuota.target -
+                    mockSchedule.responseQuota.current) /
+                    calculateResponseRate()
+                )}
+                d
               </div>
             </Card>
           </div>
@@ -283,7 +304,12 @@ export function SurveySchedulingManager() {
                 <Input
                   type="number"
                   value={quotaSettings.total}
-                  onChange={(e) => setQuotaSettings({...quotaSettings, total: parseInt(e.target.value)})}
+                  onChange={e =>
+                    setQuotaSettings({
+                      ...quotaSettings,
+                      total: parseInt(e.target.value),
+                    })
+                  }
                   className="mt-2"
                 />
                 <p className="text-xs text-gray-600 mt-1">
@@ -295,7 +321,12 @@ export function SurveySchedulingManager() {
                 <Input
                   type="number"
                   value={quotaSettings.daily}
-                  onChange={(e) => setQuotaSettings({...quotaSettings, daily: parseInt(e.target.value)})}
+                  onChange={e =>
+                    setQuotaSettings({
+                      ...quotaSettings,
+                      daily: parseInt(e.target.value),
+                    })
+                  }
                   className="mt-2"
                 />
                 <p className="text-xs text-gray-600 mt-1">
@@ -307,10 +338,13 @@ export function SurveySchedulingManager() {
             <div className="p-4 bg-blue-50 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <Zap className="w-4 h-4 text-blue-600" />
-                <span className="font-medium text-sm">Smart Quota Distribution</span>
+                <span className="font-medium text-sm">
+                  Smart Quota Distribution
+                </span>
               </div>
               <p className="text-sm text-gray-700 mb-3">
-                Automatically distribute responses across time periods to avoid clustering
+                Automatically distribute responses across time periods to avoid
+                clustering
               </p>
               <Switch />
             </div>
@@ -318,13 +352,16 @@ export function SurveySchedulingManager() {
 
           <TabsContent value="segments" className="mt-4">
             <div className="space-y-4">
-              {mockSchedule.segments.map((segment) => (
+              {mockSchedule.segments.map(segment => (
                 <Card key={segment.name} className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h4 className="font-medium">{segment.name}</h4>
                       <p className="text-sm text-gray-600">
-                        Criteria: {Object.entries(segment.criteria).map(([k, v]) => `${k}=${v}`).join(', ')}
+                        Criteria:{' '}
+                        {Object.entries(segment.criteria)
+                          .map(([k, v]) => `${k}=${v}`)
+                          .join(', ')}
                       </p>
                     </div>
                     <Badge variant="outline">
@@ -363,10 +400,18 @@ export function SurveySchedulingManager() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
-                  <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
-                  <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
-                  <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
+                  <SelectItem value="America/New_York">
+                    Eastern Time (ET)
+                  </SelectItem>
+                  <SelectItem value="America/Chicago">
+                    Central Time (CT)
+                  </SelectItem>
+                  <SelectItem value="America/Denver">
+                    Mountain Time (MT)
+                  </SelectItem>
+                  <SelectItem value="America/Los_Angeles">
+                    Pacific Time (PT)
+                  </SelectItem>
                   <SelectItem value="UTC">UTC</SelectItem>
                 </SelectContent>
               </Select>
@@ -397,12 +442,20 @@ export function SurveySchedulingManager() {
                 <Card key={index} className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      {reminder.type === 'email' && <Mail className="w-4 h-4" />}
-                      {reminder.type === 'sms' && <MessageSquare className="w-4 h-4" />}
+                      {reminder.type === 'email' && (
+                        <Mail className="w-4 h-4" />
+                      )}
+                      {reminder.type === 'sms' && (
+                        <MessageSquare className="w-4 h-4" />
+                      )}
                       {reminder.type === 'push' && <Bell className="w-4 h-4" />}
                       <div>
-                        <span className="font-medium capitalize">{reminder.type} Reminder</span>
-                        <p className="text-sm text-gray-600">{reminder.schedule}</p>
+                        <span className="font-medium capitalize">
+                          {reminder.type} Reminder
+                        </span>
+                        <p className="text-sm text-gray-600">
+                          {reminder.schedule}
+                        </p>
                       </div>
                     </div>
                     <Switch checked={reminder.enabled} />
@@ -414,9 +467,13 @@ export function SurveySchedulingManager() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="reminder_1">Friendly Reminder</SelectItem>
+                        <SelectItem value="reminder_1">
+                          Friendly Reminder
+                        </SelectItem>
                         <SelectItem value="reminder_2">Last Chance</SelectItem>
-                        <SelectItem value="reminder_3">Survey Closing Soon</SelectItem>
+                        <SelectItem value="reminder_3">
+                          Survey Closing Soon
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -435,19 +492,27 @@ export function SurveySchedulingManager() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Switch checked={mockSchedule.automation.autoClose} />
-                  <Label className="font-normal">Automatically close survey</Label>
+                  <Label className="font-normal">
+                    Automatically close survey
+                  </Label>
                 </div>
                 {mockSchedule.automation.autoClose && (
                   <div className="ml-6">
                     <Label className="text-sm">When to close</Label>
-                    <Select defaultValue={mockSchedule.automation.autoCloseCondition}>
+                    <Select
+                      defaultValue={mockSchedule.automation.autoCloseCondition}
+                    >
                       <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="quota">When quota is reached</SelectItem>
+                        <SelectItem value="quota">
+                          When quota is reached
+                        </SelectItem>
                         <SelectItem value="date">On end date</SelectItem>
-                        <SelectItem value="both">Whichever comes first</SelectItem>
+                        <SelectItem value="both">
+                          Whichever comes first
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -460,7 +525,9 @@ export function SurveySchedulingManager() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Switch checked={mockSchedule.automation.autoRemind} />
-                  <Label className="font-normal">Send automatic reminders</Label>
+                  <Label className="font-normal">
+                    Send automatic reminders
+                  </Label>
                 </div>
                 {mockSchedule.automation.autoRemind && (
                   <div className="ml-6">
@@ -479,7 +546,9 @@ export function SurveySchedulingManager() {
               <h4 className="font-medium mb-3">Thank You Messages</h4>
               <div className="flex items-center gap-2">
                 <Switch checked={mockSchedule.automation.autoThankYou} />
-                <Label className="font-normal">Send automatic thank you message</Label>
+                <Label className="font-normal">
+                  Send automatic thank you message
+                </Label>
               </div>
             </Card>
           </TabsContent>

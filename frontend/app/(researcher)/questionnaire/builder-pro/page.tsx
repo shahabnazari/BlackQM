@@ -10,30 +10,33 @@ import { toast } from 'sonner';
 export default function QuestionnaireBuilderProPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const studyId = searchParams.get('studyId');
   const type = searchParams.get('type') || 'pre-screening';
-  
+
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = useCallback(async (data: any) => {
-    setIsSaving(true);
-    try {
-      // Save questionnaire data
-      console.log('Saving questionnaire:', data);
-      
-      toast.success('Questionnaire saved successfully');
-      
-      // Navigate back to study creation
-      if (studyId) {
-        router.push(`/studies/${studyId}/edit#questionnaires`);
+  const handleSave = useCallback(
+    async (data: any) => {
+      setIsSaving(true);
+      try {
+        // Save questionnaire data
+        console.log('Saving questionnaire:', data);
+
+        toast.success('Questionnaire saved successfully');
+
+        // Navigate back to study creation
+        if (studyId) {
+          router.push(`/studies/${studyId}/edit#questionnaires`);
+        }
+      } catch (error) {
+        toast.error('Failed to save questionnaire');
+      } finally {
+        setIsSaving(false);
       }
-    } catch (error) {
-      toast.error('Failed to save questionnaire');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [studyId, router]);
+    },
+    [studyId, router]
+  );
 
   const handleCancel = useCallback(() => {
     if (studyId) {
@@ -59,37 +62,30 @@ export default function QuestionnaireBuilderProPage() {
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </Button>
-              
+
               <div className="flex flex-col">
                 <h1 className="text-xl font-semibold text-gray-900">
                   Professional Questionnaire Builder
                 </h1>
                 <p className="text-sm text-gray-500">
-                  {type === 'pre-screening' ? 'Pre-Screening' : 'Post-Survey'} Questionnaire
+                  {type === 'pre-screening' ? 'Pre-Screening' : 'Post-Survey'}{' '}
+                  Questionnaire
                   {studyId && ` • Study ID: ${studyId}`}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2"
-              >
+              <Button variant="ghost" size="sm" className="gap-2">
                 <HelpCircle className="w-4 h-4" />
                 Help
               </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2"
-              >
+
+              <Button variant="ghost" size="sm" className="gap-2">
                 <Settings className="w-4 h-4" />
                 Settings
               </Button>
-              
+
               <Button
                 variant="default"
                 size="sm"

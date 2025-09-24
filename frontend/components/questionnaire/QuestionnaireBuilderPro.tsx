@@ -48,7 +48,9 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/ui/badge';
 // import { ScrollArea } from '@/components/ui/scroll-area';
-const ScrollArea = ({ children, className }: any) => <div className={`overflow-auto ${className}`}>{children}</div>;
+const ScrollArea = ({ children, className }: any) => (
+  <div className={`overflow-auto ${className}`}>{children}</div>
+);
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -61,7 +63,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 // import { Slider } from '@/components/ui/slider';
-// import { 
+// import {
 //   Tooltip,
 //   TooltipContent,
 //   TooltipProvider,
@@ -180,8 +182,12 @@ const QuestionTypeItem: React.FC<{
           <Icon className="w-4 h-4 text-gray-600" />
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="font-medium text-sm text-gray-900 truncate">{label}</h4>
-          <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{description}</p>
+          <h4 className="font-medium text-sm text-gray-900 truncate">
+            {label}
+          </h4>
+          <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+            {description}
+          </p>
         </div>
       </div>
     </div>
@@ -194,7 +200,12 @@ export const QuestionnaireBuilderPro: React.FC<{
   initialData?: any;
   onSave?: (data: any) => void;
   onCancel?: () => void;
-}> = ({ studyId: _studyId, initialData, onSave: _onSave, onCancel: _onCancel }) => {
+}> = ({
+  studyId: _studyId,
+  initialData,
+  onSave: _onSave,
+  onCancel: _onCancel,
+}) => {
   // State management
   const [columns, setColumns] = useState<Column[]>([
     { id: 'library', width: 25, minWidth: 20, maxWidth: 35, collapsed: false },
@@ -207,16 +218,22 @@ export const QuestionnaireBuilderPro: React.FC<{
   const [fullscreen, setFullscreen] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('properties');
-  const [questions, setQuestions] = useState<any[]>(initialData?.questions || []);
+  const [questions, setQuestions] = useState<any[]>(
+    initialData?.questions || []
+  );
   const [undoStack, setUndoStack] = useState<any[][]>([]);
   const [redoStack, setRedoStack] = useState<any[][]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const resizingRef = useRef<{ columnId: string; startX: number; startWidth: number } | null>(null);
+  const resizingRef = useRef<{
+    columnId: string;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
 
   // Handle column resizing
   const handleResizeStart = (columnId: string, e: React.MouseEvent) => {
-    const column = columns.find((col) => col.id === columnId);
+    const column = columns.find(col => col.id === columnId);
     if (!column) return;
 
     resizingRef.current = {
@@ -232,15 +249,16 @@ export const QuestionnaireBuilderPro: React.FC<{
       const containerWidth = containerRef.current.offsetWidth;
       const deltaPercent = (deltaX / containerWidth) * 100;
       const newWidth = Math.max(
-        columns.find((col) => col.id === resizingRef.current!.columnId)!.minWidth,
+        columns.find(col => col.id === resizingRef.current!.columnId)!.minWidth,
         Math.min(
-          columns.find((col) => col.id === resizingRef.current!.columnId)!.maxWidth,
+          columns.find(col => col.id === resizingRef.current!.columnId)!
+            .maxWidth,
           resizingRef.current.startWidth + deltaPercent
         )
       );
 
-      setColumns((prev) =>
-        prev.map((col) =>
+      setColumns(prev =>
+        prev.map(col =>
           col.id === resizingRef.current!.columnId
             ? { ...col, width: newWidth }
             : col
@@ -260,11 +278,9 @@ export const QuestionnaireBuilderPro: React.FC<{
 
   // Toggle column collapse
   const toggleColumn = (columnId: string) => {
-    setColumns((prev) =>
-      prev.map((col) =>
-        col.id === columnId
-          ? { ...col, collapsed: !col.collapsed }
-          : col
+    setColumns(prev =>
+      prev.map(col =>
+        col.id === columnId ? { ...col, collapsed: !col.collapsed } : col
       )
     );
   };
@@ -281,13 +297,16 @@ export const QuestionnaireBuilderPro: React.FC<{
           title: `New ${item.type} question`,
           required: false,
           description: '',
-          options: item.type === 'radio' || item.type === 'checkbox' ? ['Option 1', 'Option 2'] : [],
+          options:
+            item.type === 'radio' || item.type === 'checkbox'
+              ? ['Option 1', 'Option 2']
+              : [],
           validation: {},
         };
-        
+
         // Save to undo stack
-        setUndoStack((prev) => [...prev, questions]);
-        setQuestions((prev) => [...prev, newQuestion]);
+        setUndoStack(prev => [...prev, questions]);
+        setQuestions(prev => [...prev, newQuestion]);
         setSelectedQuestion(newQuestion.id);
       }
     },
@@ -299,26 +318,26 @@ export const QuestionnaireBuilderPro: React.FC<{
   // Undo/Redo functionality
   const handleUndo = () => {
     if (undoStack.length === 0) return;
-    
+
     const previousState = undoStack[undoStack.length - 1];
-    setRedoStack((prev) => [...prev, questions]);
+    setRedoStack(prev => [...prev, questions]);
     setQuestions(previousState || []);
-    setUndoStack((prev) => prev.slice(0, -1));
+    setUndoStack(prev => prev.slice(0, -1));
   };
 
   const handleRedo = () => {
     if (redoStack.length === 0) return;
-    
+
     const nextState = redoStack[redoStack.length - 1];
-    setUndoStack((prev) => [...prev, questions]);
+    setUndoStack(prev => [...prev, questions]);
     setQuestions(nextState || []);
-    setRedoStack((prev) => prev.slice(0, -1));
+    setRedoStack(prev => prev.slice(0, -1));
   };
 
   // Filter question types based on search and category
   const filteredQuestionTypes = useMemo(() => {
-    let types = questionCategories.flatMap((cat) =>
-      cat.types.map((type) => ({
+    let types = questionCategories.flatMap(cat =>
+      cat.types.map(type => ({
         type,
         category: cat.id,
         label: type.charAt(0).toUpperCase() + type.slice(1),
@@ -327,12 +346,12 @@ export const QuestionnaireBuilderPro: React.FC<{
     );
 
     if (selectedCategory !== 'all') {
-      types = types.filter((t) => t.category === selectedCategory);
+      types = types.filter(t => t.category === selectedCategory);
     }
 
     if (searchQuery) {
       types = types.filter(
-        (t) =>
+        t =>
           t.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
           t.type.toLowerCase().includes(searchQuery.toLowerCase())
       );
@@ -376,7 +395,9 @@ export const QuestionnaireBuilderPro: React.FC<{
               {/* Header */}
               <div className="p-4 border-b border-gray-200">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-900">Question Library</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    Question Library
+                  </h3>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -393,22 +414,27 @@ export const QuestionnaireBuilderPro: React.FC<{
                     type="text"
                     placeholder="Search questions..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={e => setSearchQuery(e.target.value)}
                     className="pl-9 h-9"
                   />
                 </div>
 
                 {/* Category Filter */}
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <Select
+                  value={selectedCategory}
+                  onValueChange={setSelectedCategory}
+                >
                   <SelectTrigger className="w-full mt-2 h-9">
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    {questionCategories.map((cat) => (
+                    {questionCategories.map(cat => (
                       <SelectItem key={cat.id} value={cat.id}>
                         <div className="flex items-center gap-2">
-                          <div className={cn('w-2 h-2 rounded-full', cat.color)} />
+                          <div
+                            className={cn('w-2 h-2 rounded-full', cat.color)}
+                          />
                           {cat.label}
                         </div>
                       </SelectItem>
@@ -420,7 +446,7 @@ export const QuestionnaireBuilderPro: React.FC<{
               {/* Question Types */}
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-2">
-                  {filteredQuestionTypes.map((item) => (
+                  {filteredQuestionTypes.map(item => (
                     <QuestionTypeItem
                       key={item.type}
                       type={item.type}
@@ -434,7 +460,7 @@ export const QuestionnaireBuilderPro: React.FC<{
               {/* Resize Handle */}
               <div
                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors"
-                onMouseDown={(e) => handleResizeStart('library', e)}
+                onMouseDown={e => handleResizeStart('library', e)}
               />
             </>
           )}
@@ -533,7 +559,8 @@ export const QuestionnaireBuilderPro: React.FC<{
                       Start Building Your Questionnaire
                     </h3>
                     <p className="text-sm text-gray-500 text-center max-w-md">
-                      Drag questions from the library or click the + button to add your first question
+                      Drag questions from the library or click the + button to
+                      add your first question
                     </p>
                   </div>
                 ) : (
@@ -550,48 +577,56 @@ export const QuestionnaireBuilderPro: React.FC<{
                               'ring-2 ring-blue-500'
                           )}
                         >
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 rounded bg-gray-50">
-                            {React.createElement(
-                              questionTypeIcons[question.type] || FileText,
-                              { className: 'w-4 h-4 text-gray-600' }
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-medium text-gray-900">
-                                {question.title || `Question ${index + 1}`}
-                              </h4>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>Duplicate</DropdownMenuItem>
-                                  <DropdownMenuItem>Move Up</DropdownMenuItem>
-                                  <DropdownMenuItem>Move Down</DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem className="text-red-600">
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 rounded bg-gray-50">
+                              {React.createElement(
+                                questionTypeIcons[question.type] || FileText,
+                                { className: 'w-4 h-4 text-gray-600' }
+                              )}
                             </div>
-                            {question.description && (
-                              <p className="text-sm text-gray-500 mb-2">
-                                {question.description}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <Badge variant={question.required ? 'default' : 'secondary'}>
-                                {question.required ? 'Required' : 'Optional'}
-                              </Badge>
-                              <Badge variant="outline">{question.type}</Badge>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium text-gray-900">
+                                  {question.title || `Question ${index + 1}`}
+                                </h4>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm">
+                                      <MoreVertical className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem>
+                                      Duplicate
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>Move Up</DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                      Move Down
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-red-600">
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                              {question.description && (
+                                <p className="text-sm text-gray-500 mb-2">
+                                  {question.description}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant={
+                                    question.required ? 'default' : 'secondary'
+                                  }
+                                >
+                                  {question.required ? 'Required' : 'Optional'}
+                                </Badge>
+                                <Badge variant="outline">{question.type}</Badge>
+                              </div>
                             </div>
                           </div>
-                        </div>
                         </Card>
                       </div>
                     ))}
@@ -602,7 +637,7 @@ export const QuestionnaireBuilderPro: React.FC<{
               {/* Resize Handle */}
               <div
                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors"
-                onMouseDown={(e) => handleResizeStart('builder', e)}
+                onMouseDown={e => handleResizeStart('builder', e)}
               />
             </>
           )}
@@ -632,7 +667,11 @@ export const QuestionnaireBuilderPro: React.FC<{
           ) : (
             <>
               {/* Tabs */}
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="flex-1 flex flex-col"
+              >
                 <div className="p-4 border-b border-gray-200">
                   <div className="flex items-center justify-between mb-3">
                     <TabsList className="grid w-full grid-cols-2">
@@ -656,7 +695,10 @@ export const QuestionnaireBuilderPro: React.FC<{
                 </div>
 
                 {/* Preview Tab */}
-                <TabsContent value="preview" className="flex-1 p-4 overflow-auto">
+                <TabsContent
+                  value="preview"
+                  className="flex-1 p-4 overflow-auto"
+                >
                   <div className="max-w-md mx-auto">
                     <h3 className="text-lg font-semibold mb-4">Live Preview</h3>
                     {selectedQuestion ? (
@@ -677,7 +719,10 @@ export const QuestionnaireBuilderPro: React.FC<{
                 </TabsContent>
 
                 {/* Properties Tab */}
-                <TabsContent value="properties" className="flex-1 p-4 overflow-auto">
+                <TabsContent
+                  value="properties"
+                  className="flex-1 p-4 overflow-auto"
+                >
                   {selectedQuestion ? (
                     <div className="space-y-4">
                       <div>
@@ -690,7 +735,9 @@ export const QuestionnaireBuilderPro: React.FC<{
                       </div>
 
                       <div>
-                        <Label htmlFor="question-description">Description</Label>
+                        <Label htmlFor="question-description">
+                          Description
+                        </Label>
                         <Textarea
                           id="question-description"
                           placeholder="Optional description or help text"
@@ -707,7 +754,11 @@ export const QuestionnaireBuilderPro: React.FC<{
                       <div>
                         <Label>Validation Rules</Label>
                         <div className="mt-2 space-y-2">
-                          <Button variant="outline" size="sm" className="w-full">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                          >
                             <Plus className="w-4 h-4 mr-2" />
                             Add Validation Rule
                           </Button>
@@ -717,7 +768,11 @@ export const QuestionnaireBuilderPro: React.FC<{
                       <div>
                         <Label>Skip Logic</Label>
                         <div className="mt-2 space-y-2">
-                          <Button variant="outline" size="sm" className="w-full">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                          >
                             <Plus className="w-4 h-4 mr-2" />
                             Add Skip Logic
                           </Button>

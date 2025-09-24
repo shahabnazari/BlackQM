@@ -1,18 +1,22 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
-import { 
-  CreateQuestionDto, 
-  UpdateQuestionDto, 
+import {
+  CreateQuestionDto,
+  UpdateQuestionDto,
   QueryQuestionDto,
   ImportQuestionsDto,
   UpdateQuestionOrderDto,
-  SubmitAnswerDto
+  SubmitAnswerDto,
 } from '../dto/question.dto';
 import { Question, QuestionType, Prisma } from '@prisma/client';
 
 /**
  * Phase 8.2 Day 1: World-Class Question Service
- * 
+ *
  * Advanced features:
  * - Dynamic question management
  * - Skip logic processing
@@ -24,9 +28,7 @@ import { Question, QuestionType, Prisma } from '@prisma/client';
  */
 @Injectable()
 export class QuestionService {
-  constructor(
-    private prisma: PrismaService
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   /**
    * Create a new question with advanced validation
@@ -34,7 +36,7 @@ export class QuestionService {
   async create(data: CreateQuestionDto): Promise<Question> {
     // Validate survey exists
     const survey = await this.prisma.survey.findUnique({
-      where: { id: data.surveyId }
+      where: { id: data.surveyId },
     });
 
     if (!survey) {
@@ -45,13 +47,16 @@ export class QuestionService {
     if (data.order === undefined) {
       const lastQuestion = await this.prisma.question.findFirst({
         where: { surveyId: data.surveyId },
-        orderBy: { order: 'desc' }
+        orderBy: { order: 'desc' },
       });
       data.order = lastQuestion ? lastQuestion.order + 1 : 0;
     }
 
     // Process and validate options based on question type
-    const processedOptions = this.processOptionsForType(data.type, data.options);
+    const processedOptions = this.processOptionsForType(
+      data.type,
+      data.options,
+    );
 
     // Create question
     const question = await this.prisma.question.create({
@@ -62,13 +67,13 @@ export class QuestionService {
         description: data.description,
         required: data.required ?? true,
         order: data.order,
-        validation: data.validation as any || null,
-        options: processedOptions as any || null,
-        logic: data.logic as any || null
+        validation: (data.validation as any) || null,
+        options: (processedOptions as any) || null,
+        logic: (data.logic as any) || null,
       },
       include: {
-        survey: true
-      }
+        survey: true,
+      },
     });
 
     // Cache invalidation would go here
@@ -79,18 +84,21 @@ export class QuestionService {
   /**
    * Get all questions for a survey with intelligent sorting
    */
-  async findBySurvey(surveyId: string, query?: QueryQuestionDto): Promise<Question[]> {
+  async findBySurvey(
+    surveyId: string,
+    query?: QueryQuestionDto,
+  ): Promise<Question[]> {
     const questions = await this.prisma.question.findMany({
       where: {
         surveyId,
         ...(query?.type && { type: query.type }),
-        ...(query?.required !== undefined && { required: query.required })
+        ...(query?.required !== undefined && { required: query.required }),
       },
-      orderBy: query?.sortBy ? 
-        { [query.sortBy]: query.sortOrder || 'asc' } : 
-        { order: 'asc' },
+      orderBy: query?.sortBy
+        ? { [query.sortBy]: query.sortOrder || 'asc' }
+        : { order: 'asc' },
       skip: query?.page ? query.page * (query.limit || 50) : undefined,
-      take: query?.limit || 50
+      take: query?.limit || 50,
     });
 
     return questions;
@@ -106,9 +114,9 @@ export class QuestionService {
         survey: true,
         answers: {
           take: 5,
-          orderBy: { createdAt: 'desc' }
-        }
-      }
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     });
 
     if (!question) {
@@ -125,22 +133,24 @@ export class QuestionService {
     const existing = await this.findOne(id);
 
     // Process options if type changed or options updated
-    const processedOptions = data.options ? 
-      this.processOptionsForType(data.type || existing.type, data.options) : 
-      undefined;
+    const processedOptions = data.options
+      ? this.processOptionsForType(data.type || existing.type, data.options)
+      : undefined;
 
     const updated = await this.prisma.question.update({
       where: { id },
       data: {
         ...(data.type && { type: data.type }),
         ...(data.text && { text: data.text }),
-        ...(data.description !== undefined && { description: data.description }),
+        ...(data.description !== undefined && {
+          description: data.description,
+        }),
         ...(data.required !== undefined && { required: data.required }),
         ...(data.order !== undefined && { order: data.order }),
         ...(data.validation && { validation: JSON.stringify(data.validation) }),
         ...(processedOptions && { options: JSON.stringify(processedOptions) }),
-        ...(data.logic && { logic: JSON.stringify(data.logic) })
-      }
+        ...(data.logic && { logic: JSON.stringify(data.logic) }),
+      },
     });
 
     // Cache invalidation would go here
@@ -156,18 +166,18 @@ export class QuestionService {
 
     // Delete question
     await this.prisma.question.delete({
-      where: { id }
+      where: { id },
     });
 
     // Reorder remaining questions
     await this.prisma.question.updateMany({
       where: {
         surveyId: question.surveyId,
-        order: { gt: question.order }
+        order: { gt: question.order },
       },
       data: {
-        order: { decrement: 1 }
-      }
+        order: { decrement: 1 },
+      },
     });
 
     // Cache invalidation would go here
@@ -177,11 +187,11 @@ export class QuestionService {
    * Bulk update question order
    */
   async updateOrder(data: UpdateQuestionOrderDto): Promise<void> {
-    const updates = data.questions.map(q => 
+    const updates = data.questions.map((q) =>
       this.prisma.question.update({
         where: { id: q.id },
-        data: { order: q.order }
-      })
+        data: { order: q.order },
+      }),
     );
 
     await this.prisma.$transaction(updates);
@@ -196,20 +206,20 @@ export class QuestionService {
     // Clear existing if requested
     if (data.clearExisting) {
       await this.prisma.question.deleteMany({
-        where: { surveyId: data.surveyId }
+        where: { surveyId: data.surveyId },
       });
     }
 
     // Get starting order
     const lastQuestion = await this.prisma.question.findFirst({
       where: { surveyId: data.surveyId },
-      orderBy: { order: 'desc' }
+      orderBy: { order: 'desc' },
     });
     let currentOrder = lastQuestion ? lastQuestion.order + 1 : 0;
 
     // Create all questions in transaction
     const questions = await this.prisma.$transaction(
-      data.questions.map((q, index) => 
+      data.questions.map((q, index) =>
         this.prisma.question.create({
           data: {
             surveyId: data.surveyId,
@@ -217,13 +227,15 @@ export class QuestionService {
             text: q.text,
             description: q.description,
             required: q.required ?? true,
-            order: q.order ?? (currentOrder + index),
-            validation: q.validation as any || null,
-            options: q.options ? this.processOptionsForType(q.type, q.options) as any : null,
-            logic: q.logic as any || null
-          }
-        })
-      )
+            order: q.order ?? currentOrder + index,
+            validation: (q.validation as any) || null,
+            options: q.options
+              ? (this.processOptionsForType(q.type, q.options) as any)
+              : null,
+            logic: (q.logic as any) || null,
+          },
+        }),
+      ),
     );
 
     // Cache invalidation would go here
@@ -234,11 +246,14 @@ export class QuestionService {
   /**
    * Duplicate questions from one survey to another
    */
-  async duplicateQuestions(fromSurveyId: string, toSurveyId: string): Promise<Question[]> {
+  async duplicateQuestions(
+    fromSurveyId: string,
+    toSurveyId: string,
+  ): Promise<Question[]> {
     const sourceQuestions = await this.findBySurvey(fromSurveyId);
-    
+
     const duplicated = await this.prisma.$transaction(
-      sourceQuestions.map(q => 
+      sourceQuestions.map((q) =>
         this.prisma.question.create({
           data: {
             surveyId: toSurveyId,
@@ -249,10 +264,10 @@ export class QuestionService {
             order: q.order,
             validation: q.validation as any,
             options: q.options as any,
-            logic: q.logic as any
-          }
-        })
-      )
+            logic: q.logic as any,
+          },
+        }),
+      ),
     );
 
     return duplicated;
@@ -262,14 +277,14 @@ export class QuestionService {
    * Get questions that should be shown based on skip logic
    */
   async getVisibleQuestions(
-    surveyId: string, 
-    previousAnswers: Record<string, any>
+    surveyId: string,
+    previousAnswers: Record<string, any>,
   ): Promise<Question[]> {
     const allQuestions = await this.findBySurvey(surveyId);
-    
-    return allQuestions.filter(question => {
+
+    return allQuestions.filter((question) => {
       if (!question.logic) return true;
-      
+
       const logic = JSON.parse(question.logic as string);
       return this.evaluateSkipLogic(logic, previousAnswers);
     });
@@ -280,9 +295,9 @@ export class QuestionService {
    */
   async validateAnswer(questionId: string, value: any): Promise<boolean> {
     const question = await this.findOne(questionId);
-    
+
     if (!question.validation) return true;
-    
+
     const validation = JSON.parse(question.validation as string);
     return this.runValidation(question.type, value, validation);
   }
@@ -328,7 +343,7 @@ export class QuestionService {
           description: opt.description,
           imageUrl: opt.imageUrl,
           exclusive: opt.exclusive || false,
-          weight: opt.weight || 0
+          weight: opt.weight || 0,
         }));
 
       case QuestionType.RATING_SCALE:
@@ -338,7 +353,7 @@ export class QuestionService {
         const points = options.scalePoints || 5;
         return Array.from({ length: points }, (_, i) => ({
           value: i + 1,
-          label: `${i + 1}`
+          label: `${i + 1}`,
         }));
 
       case QuestionType.MATRIX_GRID:
@@ -346,7 +361,7 @@ export class QuestionService {
         return {
           rows: options.rows || [],
           columns: options.columns || [],
-          type: options.type || 'radio' // radio or checkbox
+          type: options.type || 'radio', // radio or checkbox
         };
 
       default:
@@ -376,9 +391,13 @@ export class QuestionService {
         case 'less_than':
           return Number(answer) < Number(condition.value);
         case 'in':
-          return Array.isArray(condition.value) && condition.value.includes(answer);
+          return (
+            Array.isArray(condition.value) && condition.value.includes(answer)
+          );
         case 'not_in':
-          return Array.isArray(condition.value) && !condition.value.includes(answer);
+          return (
+            Array.isArray(condition.value) && !condition.value.includes(answer)
+          );
         default:
           return true;
       }
@@ -404,7 +423,8 @@ export class QuestionService {
         const textLength = String(value).length;
         if (rules.minLength && textLength < rules.minLength) return false;
         if (rules.maxLength && textLength > rules.maxLength) return false;
-        if (rules.pattern && !new RegExp(rules.pattern).test(String(value))) return false;
+        if (rules.pattern && !new RegExp(rules.pattern).test(String(value)))
+          return false;
         break;
 
       case QuestionType.NUMERIC_ENTRY:
@@ -417,8 +437,10 @@ export class QuestionService {
 
       case QuestionType.MULTIPLE_CHOICE_MULTI:
         if (!Array.isArray(value)) return false;
-        if (rules.minSelections && value.length < rules.minSelections) return false;
-        if (rules.maxSelections && value.length > rules.maxSelections) return false;
+        if (rules.minSelections && value.length < rules.minSelections)
+          return false;
+        if (rules.maxSelections && value.length > rules.maxSelections)
+          return false;
         break;
     }
 
@@ -444,8 +466,8 @@ export class QuestionService {
               { value: '35-44', label: '35-44' },
               { value: '45-54', label: '45-54' },
               { value: '55-64', label: '55-64' },
-              { value: '65+', label: '65 or older' }
-            ]
+              { value: '65+', label: '65 or older' },
+            ],
           },
           {
             type: QuestionType.MULTIPLE_CHOICE_SINGLE,
@@ -455,10 +477,10 @@ export class QuestionService {
               { value: 'male', label: 'Male' },
               { value: 'female', label: 'Female' },
               { value: 'non-binary', label: 'Non-binary' },
-              { value: 'prefer-not', label: 'Prefer not to say' }
-            ]
-          }
-        ]
+              { value: 'prefer-not', label: 'Prefer not to say' },
+            ],
+          },
+        ],
       },
       {
         name: 'Q-Sort Pre-Screening',
@@ -470,7 +492,7 @@ export class QuestionService {
             required: true,
             scalePoints: 5,
             minLabel: 'Not at all familiar',
-            maxLabel: 'Extremely familiar'
+            maxLabel: 'Extremely familiar',
           },
           {
             type: QuestionType.MULTIPLE_CHOICE_SINGLE,
@@ -479,10 +501,10 @@ export class QuestionService {
             options: [
               { value: 'yes', label: 'Yes' },
               { value: 'no', label: 'No' },
-              { value: 'unsure', label: 'Not sure' }
-            ]
-          }
-        ]
+              { value: 'unsure', label: 'Not sure' },
+            ],
+          },
+        ],
       },
       {
         name: 'Post-Study Feedback',
@@ -491,22 +513,22 @@ export class QuestionService {
           {
             type: QuestionType.NET_PROMOTER_SCORE,
             text: 'How likely are you to recommend this study to a colleague?',
-            required: true
+            required: true,
           },
           {
             type: QuestionType.TEXT_ENTRY,
             text: 'What was the most challenging aspect of the Q-sort?',
             required: false,
             validation: {
-              maxLength: 500
-            }
-          }
-        ]
-      }
+              maxLength: 500,
+            },
+          },
+        ],
+      },
     ];
 
     if (category) {
-      return templates.filter(t => t.category === category);
+      return templates.filter((t) => t.category === category);
     }
     return templates;
   }
@@ -520,7 +542,9 @@ export class QuestionService {
     const suggestions: CreateQuestionDto[] = [];
 
     // Add screening questions if none exist
-    if (!context.existingQuestions.some((q: string) => q.includes('familiar'))) {
+    if (
+      !context.existingQuestions.some((q: string) => q.includes('familiar'))
+    ) {
       suggestions.push({
         surveyId: '',
         type: QuestionType.LIKERT_SCALE,
@@ -529,7 +553,7 @@ export class QuestionService {
         order: 0,
         scalePoints: 7,
         minLabel: 'Not at all familiar',
-        maxLabel: 'Extremely familiar'
+        maxLabel: 'Extremely familiar',
       } as CreateQuestionDto);
     }
 
@@ -543,8 +567,8 @@ export class QuestionService {
         order: 1,
         options: [
           { value: 'yes', label: 'Yes', weight: 1 },
-          { value: 'no', label: 'No', weight: 0 }
-        ]
+          { value: 'no', label: 'No', weight: 0 },
+        ],
       } as CreateQuestionDto);
     }
 

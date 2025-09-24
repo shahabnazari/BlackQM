@@ -8,7 +8,12 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NavigationStateService, ResearchPhase } from './navigation.service';
 
@@ -21,7 +26,10 @@ export class NavigationController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current navigation state for user' })
-  @ApiResponse({ status: 200, description: 'Navigation state retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Navigation state retrieved successfully',
+  })
   async getNavigationState(
     @Request() req: any,
     @Query('studyId') studyId?: string,
@@ -53,7 +61,8 @@ export class NavigationController {
   @ApiResponse({ status: 200, description: 'Action tracked successfully' })
   async trackAction(
     @Request() req: any,
-    @Body() body: {
+    @Body()
+    body: {
       studyId: string;
       phase: ResearchPhase;
       action: string;

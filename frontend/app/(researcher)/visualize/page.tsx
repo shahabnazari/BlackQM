@@ -1,12 +1,12 @@
 'use client';
 
 import {
-    CorrelationHeatmap,
-    DashboardBuilder,
-    DistinguishingStatements,
-    EigenvalueScreePlot,
-    FactorLoadingChart,
-    QSortDistribution
+  CorrelationHeatmap,
+  DashboardBuilder,
+  DistinguishingStatements,
+  EigenvalueScreePlot,
+  FactorLoadingChart,
+  QSortDistribution,
 } from '@/components/visualizations';
 import { ChartExporter } from '@/lib/visualization/export';
 import { motion } from 'framer-motion';
@@ -47,15 +47,19 @@ const generateDemoData = () => {
       { factor: 'Factor 2', value: factor2 },
       { factor: 'Factor 3', value: factor3 },
     ];
-    const loadingStrength = Math.sqrt(factor1 * factor1 + factor2 * factor2 + factor3 * factor3);
-    
+    const loadingStrength = Math.sqrt(
+      factor1 * factor1 + factor2 * factor2 + factor3 * factor3
+    );
+
     return {
       participant: p,
       x: factor1,
       y: factor2,
       z: factor3,
       loadingStrength,
-      definingFactor: ['Factor 1', 'Factor 2', 'Factor 3'][Math.floor(Math.random() * 3)] || 'Factor 1',
+      definingFactor:
+        ['Factor 1', 'Factor 2', 'Factor 3'][Math.floor(Math.random() * 3)] ||
+        'Factor 1',
       allLoadings,
     };
   });
@@ -72,9 +76,21 @@ const generateDemoData = () => {
     id: `S${i + 1}`,
     text: `This is statement ${i + 1} about the research topic that participants sorted.`,
     scores: [
-      { factor: 'Factor 1', zScore: (Math.random() * 8 - 4), rank: Math.floor(Math.random() * 40) + 1 },
-      { factor: 'Factor 2', zScore: (Math.random() * 8 - 4), rank: Math.floor(Math.random() * 40) + 1 },
-      { factor: 'Factor 3', zScore: (Math.random() * 8 - 4), rank: Math.floor(Math.random() * 40) + 1 },
+      {
+        factor: 'Factor 1',
+        zScore: Math.random() * 8 - 4,
+        rank: Math.floor(Math.random() * 40) + 1,
+      },
+      {
+        factor: 'Factor 2',
+        zScore: Math.random() * 8 - 4,
+        rank: Math.floor(Math.random() * 40) + 1,
+      },
+      {
+        factor: 'Factor 3',
+        zScore: Math.random() * 8 - 4,
+        rank: Math.floor(Math.random() * 40) + 1,
+      },
     ],
     pValue: Math.random() * 0.1,
     isConsensus: Math.random() > 0.9,
@@ -111,14 +127,17 @@ export default function VisualizationDemoPage() {
   };
 
   const handleExportData = () => {
-    ChartExporter.exportToExcel({
-      'Eigenvalues': data.eigenvalueData,
-      'Factor Loadings': data.factorLoadingData,
-      'Distribution': data.distributionData,
-      'Statements': data.statements,
-    }, {
-      filename: 'q-methodology-data',
-    });
+    ChartExporter.exportToExcel(
+      {
+        Eigenvalues: data.eigenvalueData,
+        'Factor Loadings': data.factorLoadingData,
+        Distribution: data.distributionData,
+        Statements: data.statements,
+      },
+      {
+        filename: 'q-methodology-data',
+      }
+    );
   };
 
   return (
@@ -135,15 +154,15 @@ export default function VisualizationDemoPage() {
                 Phase 4: Tableau-Quality Analytics with Q-Methodology
               </p>
             </div>
-            
+
             {/* View Toggle */}
             <div className="flex items-center space-x-4">
               <div className="flex rounded-lg overflow-hidden border border-gray-300">
                 <button
                   onClick={() => setView('charts')}
                   className={`px-4 py-2 text-sm font-medium ${
-                    view === 'charts' 
-                      ? 'bg-blue-600 text-white' 
+                    view === 'charts'
+                      ? 'bg-blue-600 text-white'
                       : 'bg-white text-gray-700 hover:bg-gray-50'
                   }`}
                 >
@@ -152,8 +171,8 @@ export default function VisualizationDemoPage() {
                 <button
                   onClick={() => setView('dashboard')}
                   className={`px-4 py-2 text-sm font-medium ${
-                    view === 'dashboard' 
-                      ? 'bg-blue-600 text-white' 
+                    view === 'dashboard'
+                      ? 'bg-blue-600 text-white'
                       : 'bg-white text-gray-700 hover:bg-gray-50'
                   }`}
                 >
@@ -195,7 +214,9 @@ export default function VisualizationDemoPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Eigenvalue Scree Plot</h2>
                 <button
-                  onClick={() => handleExportPNG('eigenvalue-chart', 'eigenvalue-scree-plot')}
+                  onClick={() =>
+                    handleExportPNG('eigenvalue-chart', 'eigenvalue-scree-plot')
+                  }
                   className="text-sm text-blue-600 hover:text-blue-700"
                 >
                   Export PNG
@@ -217,14 +238,16 @@ export default function VisualizationDemoPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Correlation Matrix</h2>
                 <button
-                  onClick={() => handleExportPNG('correlation-chart', 'correlation-matrix')}
+                  onClick={() =>
+                    handleExportPNG('correlation-chart', 'correlation-matrix')
+                  }
                   className="text-sm text-blue-600 hover:text-blue-700"
                 >
                   Export PNG
                 </button>
               </div>
-              <CorrelationHeatmap 
-                data={data.correlationData} 
+              <CorrelationHeatmap
+                data={data.correlationData}
                 participants={data.participants}
               />
             </div>
@@ -242,13 +265,15 @@ export default function VisualizationDemoPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Factor Loadings</h2>
                 <button
-                  onClick={() => handleExportPNG('factor-loading-chart', 'factor-loadings')}
+                  onClick={() =>
+                    handleExportPNG('factor-loading-chart', 'factor-loadings')
+                  }
                   className="text-sm text-blue-600 hover:text-blue-700"
                 >
                   Export PNG
                 </button>
               </div>
-              <FactorLoadingChart 
+              <FactorLoadingChart
                 data={data.factorLoadingData}
                 factors={['Factor 1', 'Factor 2', 'Factor 3']}
               />
@@ -267,7 +292,9 @@ export default function VisualizationDemoPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Q-Sort Distribution</h2>
                 <button
-                  onClick={() => handleExportPNG('distribution-chart', 'q-sort-distribution')}
+                  onClick={() =>
+                    handleExportPNG('distribution-chart', 'q-sort-distribution')
+                  }
                   className="text-sm text-blue-600 hover:text-blue-700"
                 >
                   Export PNG
@@ -287,15 +314,22 @@ export default function VisualizationDemoPage() {
           >
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Distinguishing Statements</h2>
+                <h2 className="text-lg font-semibold">
+                  Distinguishing Statements
+                </h2>
                 <button
-                  onClick={() => handleExportPNG('distinguishing-chart', 'distinguishing-statements')}
+                  onClick={() =>
+                    handleExportPNG(
+                      'distinguishing-chart',
+                      'distinguishing-statements'
+                    )
+                  }
                   className="text-sm text-blue-600 hover:text-blue-700"
                 >
                   Export PNG
                 </button>
               </div>
-              <DistinguishingStatements 
+              <DistinguishingStatements
                 data={data.statements}
                 factors={['Factor 1', 'Factor 2', 'Factor 3']}
               />
@@ -303,7 +337,7 @@ export default function VisualizationDemoPage() {
           </motion.div>
         </div>
       ) : (
-        <DashboardBuilder 
+        <DashboardBuilder
           onSave={(widgets, layout) => {
             console.log('Dashboard saved:', { widgets, layout });
           }}

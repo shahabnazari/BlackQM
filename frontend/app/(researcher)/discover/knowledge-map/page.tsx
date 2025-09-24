@@ -31,7 +31,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
@@ -96,7 +102,7 @@ const NODE_COLORS = {
   method: '#10B981',
   finding: '#F59E0B',
   author: '#EF4444',
-  paper: '#6B7280'
+  paper: '#6B7280',
 };
 
 const EDGE_COLORS = {
@@ -105,7 +111,7 @@ const EDGE_COLORS = {
   contradicts: '#EF4444',
   extends: '#3B82F6',
   uses: '#8B5CF6',
-  cites: '#F59E0B'
+  cites: '#F59E0B',
 };
 
 export default function KnowledgeMapPage() {
@@ -118,7 +124,9 @@ export default function KnowledgeMapPage() {
   // const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null); // Unused
   const [hoveredNode, setHoveredNode] = useState<Node | null>(null);
   // const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d'); // Unused
-  const [layoutMode, setLayoutMode] = useState<'force' | 'hierarchical' | 'circular' | 'grid'>('force');
+  const [layoutMode, setLayoutMode] = useState<
+    'force' | 'hierarchical' | 'circular' | 'grid'
+  >('force');
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -144,7 +152,7 @@ export default function KnowledgeMapPage() {
         description: 'A research method for studying subjectivity',
         tags: ['methodology', 'subjectivity', 'mixed-methods'],
         importance: 10,
-        connections: 5
+        connections: 5,
       },
       {
         id: '2',
@@ -157,7 +165,7 @@ export default function KnowledgeMapPage() {
         description: 'Statistical method for Q methodology',
         tags: ['statistics', 'analysis'],
         importance: 8,
-        connections: 3
+        connections: 3,
       },
       {
         id: '3',
@@ -170,7 +178,7 @@ export default function KnowledgeMapPage() {
         description: 'Founder of Q methodology',
         tags: ['founder', 'psychology'],
         importance: 9,
-        connections: 4
+        connections: 4,
       },
       {
         id: '4',
@@ -183,7 +191,7 @@ export default function KnowledgeMapPage() {
         description: 'Theoretical foundation of Q methodology',
         tags: ['theory', 'psychology'],
         importance: 9,
-        connections: 3
+        connections: 3,
       },
       {
         id: '5',
@@ -196,8 +204,8 @@ export default function KnowledgeMapPage() {
         description: 'Data collection method in Q studies',
         tags: ['data-collection', 'sorting'],
         importance: 8,
-        connections: 2
-      }
+        connections: 2,
+      },
     ];
 
     const sampleEdges: Edge[] = [
@@ -207,7 +215,7 @@ export default function KnowledgeMapPage() {
         target: '2',
         type: 'uses',
         strength: 0.9,
-        label: 'employs'
+        label: 'employs',
       },
       {
         id: 'e2',
@@ -215,7 +223,7 @@ export default function KnowledgeMapPage() {
         target: '1',
         type: 'relates',
         strength: 1.0,
-        label: 'invented'
+        label: 'invented',
       },
       {
         id: 'e3',
@@ -223,7 +231,7 @@ export default function KnowledgeMapPage() {
         target: '4',
         type: 'supports',
         strength: 0.8,
-        label: 'based on'
+        label: 'based on',
       },
       {
         id: 'e4',
@@ -231,7 +239,7 @@ export default function KnowledgeMapPage() {
         target: '5',
         type: 'uses',
         strength: 0.9,
-        label: 'utilizes'
+        label: 'utilizes',
       },
       {
         id: 'e5',
@@ -239,8 +247,8 @@ export default function KnowledgeMapPage() {
         target: '2',
         type: 'relates',
         strength: 0.7,
-        label: 'analyzed by'
-      }
+        label: 'analyzed by',
+      },
     ];
 
     setNodes(sampleNodes);
@@ -272,7 +280,11 @@ export default function KnowledgeMapPage() {
     const filteredNodes = nodes.filter(node => {
       if (node.hidden) return false;
       if (filterType !== 'all' && node.type !== filterType) return false;
-      if (searchQuery && !node.label.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (
+        searchQuery &&
+        !node.label.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+        return false;
       return true;
     });
 
@@ -291,28 +303,23 @@ export default function KnowledgeMapPage() {
 
         ctx.beginPath();
         ctx.moveTo(source.x, source.y);
-        
+
         // Draw curved edges for better visibility
         const midX = (source.x + target.x) / 2;
         const midY = (source.y + target.y) / 2;
         const curve = 20;
-        
-        ctx.quadraticCurveTo(
-          midX + curve,
-          midY - curve,
-          target.x,
-          target.y
-        );
+
+        ctx.quadraticCurveTo(midX + curve, midY - curve, target.x, target.y);
 
         ctx.strokeStyle = EDGE_COLORS[edge.type] + '80';
         ctx.lineWidth = edge.strength * 3;
-        
+
         if (edge.style === 'dashed') {
           ctx.setLineDash([5, 5]);
         } else if (edge.style === 'dotted') {
           ctx.setLineDash([2, 2]);
         }
-        
+
         ctx.stroke();
         ctx.setLineDash([]);
 
@@ -341,7 +348,7 @@ export default function KnowledgeMapPage() {
       ctx.arc(node.x, node.y, node.size, 0, 2 * Math.PI);
       ctx.fillStyle = node.color + (isSelected ? 'FF' : 'DD');
       ctx.fill();
-      
+
       if (isSelected) {
         ctx.strokeStyle = node.color;
         ctx.lineWidth = 3;
@@ -367,7 +374,18 @@ export default function KnowledgeMapPage() {
     });
 
     ctx.restore();
-  }, [nodes, edges, zoom, pan, selectedNode, hoveredNode, showLabels, showEdges, filterType, searchQuery]);
+  }, [
+    nodes,
+    edges,
+    zoom,
+    pan,
+    selectedNode,
+    hoveredNode,
+    showLabels,
+    showEdges,
+    filterType,
+    searchQuery,
+  ]);
 
   // Handle mouse events
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
@@ -411,7 +429,7 @@ export default function KnowledgeMapPage() {
     if (isDragging) {
       setPan({
         x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y
+        y: e.clientY - dragStart.y,
       });
     }
   };
@@ -425,51 +443,51 @@ export default function KnowledgeMapPage() {
     // Simple force-directed layout
     const iterations = 50;
     const k = 100; // Ideal distance between nodes
-    
+
     for (let iter = 0; iter < iterations; iter++) {
       const forces = new Map<string, { fx: number; fy: number }>();
-      
+
       // Initialize forces
       nodes.forEach(node => {
         forces.set(node.id, { fx: 0, fy: 0 });
       });
-      
+
       // Repulsive forces between all nodes
       nodes.forEach(node1 => {
         nodes.forEach(node2 => {
           if (node1.id === node2.id) return;
-          
+
           const dx = node2.x - node1.x;
           const dy = node2.y - node1.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
-          
+
           if (distance > 0) {
             const force = (k * k) / distance;
             const fx = (dx / distance) * force;
             const fy = (dy / distance) * force;
-            
+
             const f1 = forces.get(node1.id)!;
             f1.fx -= fx;
             f1.fy -= fy;
           }
         });
       });
-      
+
       // Attractive forces for connected nodes
       edges.forEach(edge => {
         const source = nodes.find(n => n.id === edge.source);
         const target = nodes.find(n => n.id === edge.target);
         if (!source || !target) return;
-        
+
         const dx = target.x - source.x;
         const dy = target.y - source.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (distance > 0) {
           const force = (distance * distance) / k;
           const fx = (dx / distance) * force * edge.strength;
           const fy = (dy / distance) * force * edge.strength;
-          
+
           const fs = forces.get(source.id)!;
           const ft = forces.get(target.id)!;
           fs.fx += fx * 0.1;
@@ -478,17 +496,17 @@ export default function KnowledgeMapPage() {
           ft.fy -= fy * 0.1;
         }
       });
-      
+
       // Apply forces
       nodes.forEach(node => {
         if (node.locked) return;
-        
+
         const force = forces.get(node.id)!;
         node.x += force.fx * 0.01;
         node.y += force.fy * 0.01;
       });
     }
-    
+
     setNodes([...nodes]);
   };
 
@@ -503,30 +521,30 @@ export default function KnowledgeMapPage() {
       size: 25,
       color: NODE_COLORS[type],
       importance: 5,
-      connections: 0
+      connections: 0,
     };
-    
+
     setNodes([...nodes, newNode]);
   };
 
   // Add edge between selected nodes
   const addEdge = (type: Edge['type']) => {
     if (!selectedNode) return;
-    
+
     // For demo, create edge to a random node
     const otherNodes = nodes.filter(n => n.id !== selectedNode.id);
     if (otherNodes.length === 0) return;
-    
+
     const target = otherNodes[Math.floor(Math.random() * otherNodes.length)];
-    
+
     const newEdge: Edge = {
       id: `edge-${Date.now()}`,
       source: selectedNode.id,
       target: target?.id || '',
       type,
-      strength: 0.5
+      strength: 0.5,
     };
-    
+
     setEdges([...edges, newEdge]);
   };
 
@@ -539,11 +557,13 @@ export default function KnowledgeMapPage() {
         clusters,
         metadata: {
           created: new Date().toISOString(),
-          version: '1.0'
-        }
+          version: '1.0',
+        },
       };
-      
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: 'application/json',
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -552,7 +572,7 @@ export default function KnowledgeMapPage() {
     } else if (format === 'png') {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      
+
       canvas.toBlob(blob => {
         if (!blob) return;
         const url = URL.createObjectURL(blob);
@@ -578,20 +598,23 @@ export default function KnowledgeMapPage() {
                 {nodes.length} nodes • {edges.length} edges
               </Badge>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <Button
-                variant={aiMode ? "default" : "outline"}
+                variant={aiMode ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setAiMode(!aiMode)}
                 className={cn(
-                  aiMode && "bg-gradient-to-r from-indigo-600 to-purple-600"
+                  aiMode && 'bg-gradient-to-r from-indigo-600 to-purple-600'
                 )}
               >
                 <Sparkles className="w-4 h-4 mr-2" />
                 AI Assist
               </Button>
-              <Select value={layoutMode} onValueChange={(value: any) => setLayoutMode(value)}>
+              <Select
+                value={layoutMode}
+                onValueChange={(value: any) => setLayoutMode(value)}
+              >
                 <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>
@@ -602,11 +625,7 @@ export default function KnowledgeMapPage() {
                   <SelectItem value="grid">Grid</SelectItem>
                 </SelectContent>
               </Select>
-              <Button
-                onClick={applyForceLayout}
-                variant="outline"
-                size="sm"
-              >
+              <Button onClick={applyForceLayout} variant="outline" size="sm">
                 <GitBranch className="w-4 h-4 mr-2" />
                 Auto Layout
               </Button>
@@ -638,11 +657,13 @@ export default function KnowledgeMapPage() {
                 <TabsTrigger value="edges">Edges</TabsTrigger>
                 <TabsTrigger value="filters">Filters</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="nodes" className="space-y-4">
                 {/* Add Node Buttons */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Add Node</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Add Node
+                  </label>
                   <div className="grid grid-cols-3 gap-2 mt-2">
                     {Object.entries(NODE_COLORS).map(([type, color]) => (
                       <Button
@@ -676,37 +697,56 @@ export default function KnowledgeMapPage() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div>
-                        <label className="text-xs font-medium text-gray-600">Label</label>
+                        <label className="text-xs font-medium text-gray-600">
+                          Label
+                        </label>
                         <Input
                           value={selectedNode.label}
-                          onChange={(e) => {
-                            setNodes(nodes.map(n =>
-                              n.id === selectedNode.id
-                                ? { ...n, label: e.target.value }
-                                : n
-                            ));
-                            setSelectedNode({ ...selectedNode, label: e.target.value });
+                          onChange={e => {
+                            setNodes(
+                              nodes.map(n =>
+                                n.id === selectedNode.id
+                                  ? { ...n, label: e.target.value }
+                                  : n
+                              )
+                            );
+                            setSelectedNode({
+                              ...selectedNode,
+                              label: e.target.value,
+                            });
                           }}
                           className="mt-1"
                         />
                       </div>
-                      
+
                       <div>
-                        <label className="text-xs font-medium text-gray-600">Type</label>
-                        <Badge className="mt-1" style={{ backgroundColor: selectedNode.color }}>
+                        <label className="text-xs font-medium text-gray-600">
+                          Type
+                        </label>
+                        <Badge
+                          className="mt-1"
+                          style={{ backgroundColor: selectedNode.color }}
+                        >
                           {selectedNode.type}
                         </Badge>
                       </div>
-                      
+
                       <div>
-                        <label className="text-xs font-medium text-gray-600">Size</label>
+                        <label className="text-xs font-medium text-gray-600">
+                          Size
+                        </label>
                         <Slider
                           value={[selectedNode.size || 20]}
                           onValueChange={([value]) => {
-                            setNodes(nodes.map(n => ({
-                              ...n,
-                              size: n.id === selectedNode.id ? value : (n.size || 25)
-                            })));
+                            setNodes(
+                              nodes.map(n => ({
+                                ...n,
+                                size:
+                                  n.id === selectedNode.id
+                                    ? value
+                                    : n.size || 25,
+                              }))
+                            );
                             setSelectedNode({ ...selectedNode, size: value });
                           }}
                           min={10}
@@ -714,31 +754,46 @@ export default function KnowledgeMapPage() {
                           className="mt-1"
                         />
                       </div>
-                      
+
                       <div className="flex gap-2">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            setNodes(nodes.map(n =>
-                              n.id === selectedNode.id
-                                ? { ...n, locked: !n.locked }
-                                : n
-                            ));
-                            setSelectedNode({ ...selectedNode, locked: !selectedNode.locked });
+                            setNodes(
+                              nodes.map(n =>
+                                n.id === selectedNode.id
+                                  ? { ...n, locked: !n.locked }
+                                  : n
+                              )
+                            );
+                            setSelectedNode({
+                              ...selectedNode,
+                              locked: !selectedNode.locked,
+                            });
                           }}
                         >
-                          {selectedNode.locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                          {selectedNode.locked ? (
+                            <Lock className="w-4 h-4" />
+                          ) : (
+                            <Unlock className="w-4 h-4" />
+                          )}
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           className="text-red-600"
                           onClick={() => {
-                            setNodes(nodes.filter(n => n.id !== selectedNode.id));
-                            setEdges(edges.filter(e => 
-                              e.source !== selectedNode.id && e.target !== selectedNode.id
-                            ));
+                            setNodes(
+                              nodes.filter(n => n.id !== selectedNode.id)
+                            );
+                            setEdges(
+                              edges.filter(
+                                e =>
+                                  e.source !== selectedNode.id &&
+                                  e.target !== selectedNode.id
+                              )
+                            );
                             setSelectedNode(null);
                           }}
                         >
@@ -749,11 +804,13 @@ export default function KnowledgeMapPage() {
                   </Card>
                 )}
               </TabsContent>
-              
+
               <TabsContent value="edges" className="space-y-4">
                 {/* Add Edge Buttons */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Add Edge</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Add Edge
+                  </label>
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     {Object.keys(EDGE_COLORS).map(type => (
                       <Button
@@ -769,27 +826,33 @@ export default function KnowledgeMapPage() {
                     ))}
                   </div>
                   {!selectedNode && (
-                    <p className="text-xs text-gray-500 mt-2">Select a node first</p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Select a node first
+                    </p>
                   )}
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="filters" className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Search</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Search
+                  </label>
                   <div className="relative mt-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={e => setSearchQuery(e.target.value)}
                       placeholder="Search nodes..."
                       className="pl-9"
                     />
                   </div>
                 </div>
-                
+
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Filter by Type</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Filter by Type
+                  </label>
                   <Select value={filterType} onValueChange={setFilterType}>
                     <SelectTrigger className="mt-1">
                       <SelectValue />
@@ -797,18 +860,20 @@ export default function KnowledgeMapPage() {
                     <SelectContent>
                       <SelectItem value="all">All Types</SelectItem>
                       {Object.keys(NODE_COLORS).map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
                       checked={showLabels}
-                      onChange={(e) => setShowLabels(e.target.checked)}
+                      onChange={e => setShowLabels(e.target.checked)}
                       className="rounded border-gray-300"
                     />
                     <span className="text-sm">Show Labels</span>
@@ -817,7 +882,7 @@ export default function KnowledgeMapPage() {
                     <input
                       type="checkbox"
                       checked={showEdges}
-                      onChange={(e) => setShowEdges(e.target.checked)}
+                      onChange={e => setShowEdges(e.target.checked)}
                       className="rounded border-gray-300"
                     />
                     <span className="text-sm">Show Edges</span>
@@ -826,7 +891,7 @@ export default function KnowledgeMapPage() {
                     <input
                       type="checkbox"
                       checked={autoLayout}
-                      onChange={(e) => setAutoLayout(e.target.checked)}
+                      onChange={e => setAutoLayout(e.target.checked)}
                       className="rounded border-gray-300"
                     />
                     <span className="text-sm">Auto Layout</span>
@@ -845,9 +910,15 @@ export default function KnowledgeMapPage() {
               onMouseMove={handleCanvasMouseMove}
               onMouseUp={handleCanvasMouseUp}
               onMouseLeave={handleCanvasMouseUp}
-              style={{ cursor: isDragging ? 'grabbing' : hoveredNode ? 'pointer' : 'grab' }}
+              style={{
+                cursor: isDragging
+                  ? 'grabbing'
+                  : hoveredNode
+                    ? 'pointer'
+                    : 'grab',
+              }}
             />
-            
+
             {/* Zoom Controls */}
             <div className="absolute bottom-4 right-4 flex flex-col gap-2">
               <Button
@@ -875,13 +946,15 @@ export default function KnowledgeMapPage() {
                 <Crosshair className="w-4 h-4" />
               </Button>
             </div>
-            
+
             {/* Status Bar */}
             <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur rounded-lg px-3 py-2">
               <div className="flex items-center gap-4 text-xs text-gray-600">
                 <span>Zoom: {Math.round(zoom * 100)}%</span>
                 <span>•</span>
-                <span>Pan: ({Math.round(pan.x)}, {Math.round(pan.y)})</span>
+                <span>
+                  Pan: ({Math.round(pan.x)}, {Math.round(pan.y)})
+                </span>
                 {hoveredNode && (
                   <>
                     <span>•</span>

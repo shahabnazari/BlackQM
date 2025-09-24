@@ -27,12 +27,14 @@ interface NavigationContextType extends NavigationState {
   isLoading: boolean;
 }
 
-const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
+const NavigationContext = createContext<NavigationContextType | undefined>(
+  undefined
+);
 
-export function NavigationProvider({ 
+export function NavigationProvider({
   children,
-  studyId 
-}: { 
+  studyId,
+}: {
   children: React.ReactNode;
   studyId?: string;
 }) {
@@ -61,7 +63,7 @@ export function NavigationProvider({
       theme: 'light',
     },
   });
-  
+
   const [isLoading, setIsLoading] = useState(true);
   // const [socket, setSocket] = useState<Socket | null>(null); // TODO: Implement WebSocket
 
@@ -74,10 +76,10 @@ export function NavigationProvider({
         const params = studyId ? `?studyId=${studyId}` : '';
         const response = await fetch(`/api/navigation/state${params}`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           setNavigationState({
@@ -150,7 +152,7 @@ export function NavigationProvider({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({ phase, studyId }),
       });
@@ -174,7 +176,7 @@ export function NavigationProvider({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({ studyId, phase, action }),
       });
@@ -189,10 +191,10 @@ export function NavigationProvider({
       const params = studyId ? `?studyId=${studyId}` : '';
       const response = await fetch(`/api/navigation/state${params}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setNavigationState({

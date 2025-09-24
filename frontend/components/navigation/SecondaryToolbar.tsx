@@ -19,334 +19,334 @@ interface ToolItem {
 // Phase tools using consolidated routes from Phase 8.5 Day 3
 const phaseTools: Record<ResearchPhase, ToolItem[]> = {
   discover: [
-    { 
-      id: 'literature-search', 
-      label: 'Literature Search', 
+    {
+      id: 'literature-search',
+      label: 'Literature Search',
       path: '/discover/literature',
       description: 'AI-powered paper search',
       aiEnabled: true,
-      badge: 'NEW'
+      badge: 'NEW',
     },
-    { 
-      id: 'reference-manager', 
-      label: 'Reference Manager', 
+    {
+      id: 'reference-manager',
+      label: 'Reference Manager',
       path: '/discover/references',
-      description: 'Import and organize citations'
+      description: 'Import and organize citations',
     },
-    { 
-      id: 'knowledge-map', 
-      label: 'Knowledge Map', 
+    {
+      id: 'knowledge-map',
+      label: 'Knowledge Map',
       path: '/discover/knowledge-map',
-      description: 'Visual concept mapping'
+      description: 'Visual concept mapping',
     },
-    { 
-      id: 'research-gaps', 
-      label: 'Research Gaps', 
+    {
+      id: 'research-gaps',
+      label: 'Research Gaps',
       path: '/discover/gaps',
       description: 'AI gap analysis',
-      aiEnabled: true
+      aiEnabled: true,
     },
-    { 
-      id: 'prior-studies', 
-      label: 'Prior Studies', 
+    {
+      id: 'prior-studies',
+      label: 'Prior Studies',
       path: '/discover/studies',
-      description: 'Browse existing Q-studies'
+      description: 'Browse existing Q-studies',
     },
   ],
   design: [
-    { 
-      id: 'research-questions', 
-      label: 'Research Questions', 
+    {
+      id: 'research-questions',
+      label: 'Research Questions',
       path: '/design/questions',
-      description: 'Question formulation wizard'
+      description: 'Question formulation wizard',
     },
-    { 
-      id: 'hypothesis', 
-      label: 'Hypothesis Builder', 
+    {
+      id: 'hypothesis',
+      label: 'Hypothesis Builder',
       path: '/design/hypothesis',
-      description: 'Interactive hypothesis tool'
+      description: 'Interactive hypothesis tool',
     },
-    { 
-      id: 'methodology', 
-      label: 'Methodology', 
+    {
+      id: 'methodology',
+      label: 'Methodology',
       path: '/design/methodology',
-      description: 'Q-method vs others'
+      description: 'Q-method vs others',
     },
-    { 
-      id: 'protocol', 
-      label: 'Study Protocol', 
+    {
+      id: 'protocol',
+      label: 'Study Protocol',
       path: '/design/protocol',
-      description: 'Protocol designer'
+      description: 'Protocol designer',
     },
-    { 
-      id: 'ethics', 
-      label: 'Ethics Review', 
+    {
+      id: 'ethics',
+      label: 'Ethics Review',
       path: '/design/ethics',
-      description: 'IRB checklist'
+      description: 'IRB checklist',
     },
   ],
   build: [
-    { 
-      id: 'study-setup', 
-      label: 'Study Setup', 
+    {
+      id: 'study-setup',
+      label: 'Study Setup',
       path: '/build/study',
-      description: 'Basic configuration'
+      description: 'Basic configuration',
     },
-    { 
-      id: 'grid-designer', 
-      label: 'Q-Grid Designer', 
+    {
+      id: 'grid-designer',
+      label: 'Q-Grid Designer',
       path: '/build/grid',
-      description: 'Grid configuration'
+      description: 'Grid configuration',
     },
-    { 
-      id: 'statement-generator', 
-      label: 'Statement Generator', 
+    {
+      id: 'statement-generator',
+      label: 'Statement Generator',
       path: '/build/ai-assistant',
       description: 'AI-powered stimuli',
-      aiEnabled: true
+      aiEnabled: true,
     },
-    { 
-      id: 'questionnaire-builder', 
-      label: 'Questionnaire Builder Pro', 
+    {
+      id: 'questionnaire-builder',
+      label: 'Questionnaire Builder Pro',
       path: '/build/questionnaire',
       description: 'Advanced 3-column builder',
-      badge: 'NEW'
+      badge: 'NEW',
     },
-    { 
-      id: 'consent-forms', 
-      label: 'Consent Forms', 
+    {
+      id: 'consent-forms',
+      label: 'Consent Forms',
       path: '/build/consent',
-      description: 'Digital consent'
+      description: 'Digital consent',
     },
   ],
   recruit: [
-    { 
-      id: 'participant-pool', 
-      label: 'Participant Pool', 
+    {
+      id: 'participant-pool',
+      label: 'Participant Pool',
       path: '/recruit/participants',
-      description: 'Manage participants'
+      description: 'Manage participants',
     },
-    { 
-      id: 'invitations', 
-      label: 'Invitations', 
+    {
+      id: 'invitations',
+      label: 'Invitations',
       path: '/recruit/invitations',
-      description: 'Send study invites'
+      description: 'Send study invites',
     },
-    { 
-      id: 'pre-screening', 
-      label: 'Pre-Screening', 
+    {
+      id: 'pre-screening',
+      label: 'Pre-Screening',
       path: '/recruit/screening',
-      description: 'Qualification screening'
+      description: 'Qualification screening',
     },
-    { 
-      id: 'scheduling', 
-      label: 'Scheduling', 
+    {
+      id: 'scheduling',
+      label: 'Scheduling',
       path: '/recruit/scheduling',
-      description: 'Session scheduling'
+      description: 'Session scheduling',
     },
-    { 
-      id: 'compensation', 
-      label: 'Compensation', 
+    {
+      id: 'compensation',
+      label: 'Compensation',
       path: '/recruit/compensation',
-      description: 'Payment tracking'
+      description: 'Payment tracking',
     },
   ],
   collect: [
-    { 
-      id: 'active-sessions', 
-      label: 'Active Sessions', 
+    {
+      id: 'active-sessions',
+      label: 'Active Sessions',
       path: '/collect/sessions',
-      description: 'Live monitoring'
+      description: 'Live monitoring',
     },
-    { 
-      id: 'q-sort', 
-      label: 'Q-Sort Interface', 
+    {
+      id: 'q-sort',
+      label: 'Q-Sort Interface',
       path: '/collect/qsort',
-      description: 'Participant view'
+      description: 'Participant view',
     },
-    { 
-      id: 'post-survey', 
-      label: 'Post-Survey', 
+    {
+      id: 'post-survey',
+      label: 'Post-Survey',
       path: '/collect/post-survey',
-      description: 'Supplementary data'
+      description: 'Supplementary data',
     },
-    { 
-      id: 'progress', 
-      label: 'Progress Tracker', 
+    {
+      id: 'progress',
+      label: 'Progress Tracker',
       path: '/collect/progress',
-      description: 'Completion stats'
+      description: 'Completion stats',
     },
-    { 
-      id: 'quality', 
-      label: 'Quality Control', 
+    {
+      id: 'quality',
+      label: 'Quality Control',
       path: '/collect/quality',
-      description: 'Data quality checks'
+      description: 'Data quality checks',
     },
   ],
   analyze: [
-    { 
-      id: 'analysis-hub', 
-      label: 'Analysis Hub', 
+    {
+      id: 'analysis-hub',
+      label: 'Analysis Hub',
       path: '/analyze/hub',
       description: 'Unified center',
-      badge: 'AI'
+      badge: 'AI',
     },
-    { 
-      id: 'q-analysis', 
-      label: 'Q-Analysis', 
+    {
+      id: 'q-analysis',
+      label: 'Q-Analysis',
       path: '/analyze/q-methodology',
-      description: 'Factor analysis'
+      description: 'Factor analysis',
     },
-    { 
-      id: 'statistics', 
-      label: 'Statistical Tests', 
+    {
+      id: 'statistics',
+      label: 'Statistical Tests',
       path: '/analyze/statistics',
-      description: 'Significance testing'
+      description: 'Significance testing',
     },
-    { 
-      id: 'rotation', 
-      label: 'Factor Rotation', 
+    {
+      id: 'rotation',
+      label: 'Factor Rotation',
       path: '/analyze/rotation',
-      description: 'Rotation tools'
+      description: 'Rotation tools',
     },
-    { 
-      id: 'ai-insights', 
-      label: 'AI Insights', 
+    {
+      id: 'ai-insights',
+      label: 'AI Insights',
       path: '/analyze/ai-insights',
       description: 'Pattern detection',
-      aiEnabled: true
+      aiEnabled: true,
     },
   ],
   visualize: [
-    { 
-      id: 'factor-arrays', 
-      label: 'Factor Arrays', 
+    {
+      id: 'factor-arrays',
+      label: 'Factor Arrays',
       path: '/visualize/arrays',
-      description: 'Array visualizations'
+      description: 'Array visualizations',
     },
-    { 
-      id: 'loading-plots', 
-      label: 'Loading Plots', 
+    {
+      id: 'loading-plots',
+      label: 'Loading Plots',
       path: '/visualize/loadings',
-      description: 'Factor loadings'
+      description: 'Factor loadings',
     },
-    { 
-      id: 'heat-maps', 
-      label: 'Heat Maps', 
+    {
+      id: 'heat-maps',
+      label: 'Heat Maps',
       path: '/visualize/heatmaps',
-      description: 'Correlation heat maps'
+      description: 'Correlation heat maps',
     },
-    { 
-      id: 'distributions', 
-      label: 'Distributions', 
+    {
+      id: 'distributions',
+      label: 'Distributions',
       path: '/visualize/distributions',
-      description: 'Response distributions'
+      description: 'Response distributions',
     },
-    { 
-      id: 'dashboards', 
-      label: 'Dashboards', 
+    {
+      id: 'dashboards',
+      label: 'Dashboards',
       path: '/visualize/dashboards',
-      description: 'Custom dashboards'
+      description: 'Custom dashboards',
     },
   ],
   interpret: [
-    { 
-      id: 'factor-interpretation', 
-      label: 'Factor Interpretation', 
+    {
+      id: 'factor-interpretation',
+      label: 'Factor Interpretation',
       path: '/interpret/narratives',
       description: 'AI narratives',
-      aiEnabled: true
+      aiEnabled: true,
     },
-    { 
-      id: 'consensus', 
-      label: 'Consensus Analysis', 
+    {
+      id: 'consensus',
+      label: 'Consensus Analysis',
       path: '/interpret/consensus',
-      description: 'Agreement patterns'
+      description: 'Agreement patterns',
     },
-    { 
-      id: 'themes', 
-      label: 'Theme Extraction', 
+    {
+      id: 'themes',
+      label: 'Theme Extraction',
       path: '/interpret/themes',
       description: 'Qualitative themes',
-      aiEnabled: true
+      aiEnabled: true,
     },
-    { 
-      id: 'quotes', 
-      label: 'Quote Mining', 
+    {
+      id: 'quotes',
+      label: 'Quote Mining',
       path: '/interpret/quotes',
-      description: 'Participant comments'
+      description: 'Participant comments',
     },
-    { 
-      id: 'synthesis', 
-      label: 'Synthesis', 
+    {
+      id: 'synthesis',
+      label: 'Synthesis',
       path: '/interpret/synthesis',
-      description: 'Cross-factor synthesis'
+      description: 'Cross-factor synthesis',
     },
   ],
   report: [
-    { 
-      id: 'report-generator', 
-      label: 'Report Generator', 
+    {
+      id: 'report-generator',
+      label: 'Report Generator',
       path: '/report/builder',
       description: 'Automated reports',
-      aiEnabled: true
+      aiEnabled: true,
     },
-    { 
-      id: 'summary', 
-      label: 'Executive Summary', 
+    {
+      id: 'summary',
+      label: 'Executive Summary',
       path: '/report/summary',
       description: 'AI-generated summary',
-      aiEnabled: true
+      aiEnabled: true,
     },
-    { 
-      id: 'publication', 
-      label: 'Publication Export', 
+    {
+      id: 'publication',
+      label: 'Publication Export',
       path: '/report/export',
-      description: 'Journal formats'
+      description: 'Journal formats',
     },
-    { 
-      id: 'presentation', 
-      label: 'Presentation Mode', 
+    {
+      id: 'presentation',
+      label: 'Presentation Mode',
       path: '/report/presentation',
-      description: 'Slide generator'
+      description: 'Slide generator',
     },
-    { 
-      id: 'collaboration', 
-      label: 'Collaboration', 
+    {
+      id: 'collaboration',
+      label: 'Collaboration',
       path: '/report/collaborate',
-      description: 'Co-author tools'
+      description: 'Co-author tools',
     },
   ],
   archive: [
-    { 
-      id: 'study-archive', 
-      label: 'Study Archive', 
+    {
+      id: 'study-archive',
+      label: 'Study Archive',
       path: '/archive/studies',
-      description: 'Completed studies'
+      description: 'Completed studies',
     },
-    { 
-      id: 'repository', 
-      label: 'Data Repository', 
+    {
+      id: 'repository',
+      label: 'Data Repository',
       path: '/archive/export',
-      description: 'Long-term storage'
+      description: 'Long-term storage',
     },
-    { 
-      id: 'doi', 
-      label: 'DOI Assignment', 
+    {
+      id: 'doi',
+      label: 'DOI Assignment',
       path: '/archive/doi',
-      description: 'Persistent IDs'
+      description: 'Persistent IDs',
     },
-    { 
-      id: 'sharing', 
-      label: 'Public Sharing', 
+    {
+      id: 'sharing',
+      label: 'Public Sharing',
       path: '/archive/share',
-      description: 'Open data options'
+      description: 'Open data options',
     },
-    { 
-      id: 'version', 
-      label: 'Version Control', 
+    {
+      id: 'version',
+      label: 'Version Control',
       path: '/archive/version-control',
-      description: 'Study versioning'
+      description: 'Study versioning',
     },
   ],
 };
@@ -386,16 +386,13 @@ export function SecondaryToolbar({ phase, onClose }: SecondaryToolbarProps) {
       animate={{ height: 'auto', opacity: 1 }}
       exit={{ height: 0, opacity: 0 }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className={cn(
-        'overflow-hidden border-b-2',
-        phaseColors[phase]
-      )}
+      className={cn('overflow-hidden border-b-2', phaseColors[phase])}
     >
       <div className="max-w-screen-2xl mx-auto">
         <div className="flex items-center justify-between px-4 py-3">
           {/* Tool Buttons */}
           <div className="flex items-center space-x-2 flex-wrap">
-            {tools.map((tool) => (
+            {tools.map(tool => (
               <motion.button
                 key={tool.id}
                 onClick={() => handleToolClick(tool)}
@@ -419,13 +416,16 @@ export function SecondaryToolbar({ phase, onClose }: SecondaryToolbarProps) {
 
                 {/* Badge */}
                 {tool.badge && (
-                  <span className={cn(
-                    'px-2 py-0.5 text-xs font-semibold rounded',
-                    tool.badge === 'NEW' && 'bg-green-100 text-green-700',
-                    tool.badge === 'BETA' && 'bg-yellow-100 text-yellow-700',
-                    tool.badge === 'AI' && 'bg-purple-100 text-purple-700',
-                    typeof tool.badge === 'number' && 'bg-blue-100 text-blue-700'
-                  )}>
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 text-xs font-semibold rounded',
+                      tool.badge === 'NEW' && 'bg-green-100 text-green-700',
+                      tool.badge === 'BETA' && 'bg-yellow-100 text-yellow-700',
+                      tool.badge === 'AI' && 'bg-purple-100 text-purple-700',
+                      typeof tool.badge === 'number' &&
+                        'bg-blue-100 text-blue-700'
+                    )}
+                  >
                     {tool.badge}
                   </span>
                 )}
@@ -449,8 +449,18 @@ export function SecondaryToolbar({ phase, onClose }: SecondaryToolbarProps) {
             className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
             aria-label="Close secondary toolbar"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>

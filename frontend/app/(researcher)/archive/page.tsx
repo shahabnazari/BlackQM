@@ -1,11 +1,17 @@
-'use client'
+'use client';
 
-import React from 'react'
-import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import React from 'react';
+import Link from 'next/link';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Archive,
   Download,
@@ -21,36 +27,81 @@ import {
   Package,
   FileArchive,
   History,
-  HardDrive
-} from 'lucide-react'
+  HardDrive,
+} from 'lucide-react';
 
 interface ArchiveItem {
-  type: string
-  count: number
-  size: string
-  lastUpdated: string
+  type: string;
+  count: number;
+  size: string;
+  lastUpdated: string;
 }
 
 export default function ArchivePhasePage() {
   const archiveItems: ArchiveItem[] = [
-    { type: 'Study Data', count: 1, size: '2.4 MB', lastUpdated: '2 hours ago' },
-    { type: 'Analysis Results', count: 4, size: '1.8 MB', lastUpdated: '1 day ago' },
-    { type: 'Visualizations', count: 12, size: '5.6 MB', lastUpdated: '1 day ago' },
+    {
+      type: 'Study Data',
+      count: 1,
+      size: '2.4 MB',
+      lastUpdated: '2 hours ago',
+    },
+    {
+      type: 'Analysis Results',
+      count: 4,
+      size: '1.8 MB',
+      lastUpdated: '1 day ago',
+    },
+    {
+      type: 'Visualizations',
+      count: 12,
+      size: '5.6 MB',
+      lastUpdated: '1 day ago',
+    },
     { type: 'Reports', count: 3, size: '3.2 MB', lastUpdated: '3 hours ago' },
-    { type: 'Participant Responses', count: 28, size: '4.1 MB', lastUpdated: '2 days ago' },
-    { type: 'Study Materials', count: 6, size: '1.3 MB', lastUpdated: '1 week ago' }
-  ]
+    {
+      type: 'Participant Responses',
+      count: 28,
+      size: '4.1 MB',
+      lastUpdated: '2 days ago',
+    },
+    {
+      type: 'Study Materials',
+      count: 6,
+      size: '1.3 MB',
+      lastUpdated: '1 week ago',
+    },
+  ];
 
   const totalSize = archiveItems.reduce((acc, item) => {
-    return acc + parseFloat(item.size)
-  }, 0)
+    return acc + parseFloat(item.size);
+  }, 0);
 
   const versionHistory = [
-    { version: 'v2.1', date: 'Today', changes: 'Added final report', author: 'You' },
-    { version: 'v2.0', date: '2 days ago', changes: 'Completed analysis', author: 'You' },
-    { version: 'v1.5', date: '1 week ago', changes: 'Data collection complete', author: 'You' },
-    { version: 'v1.0', date: '2 weeks ago', changes: 'Initial study creation', author: 'You' }
-  ]
+    {
+      version: 'v2.1',
+      date: 'Today',
+      changes: 'Added final report',
+      author: 'You',
+    },
+    {
+      version: 'v2.0',
+      date: '2 days ago',
+      changes: 'Completed analysis',
+      author: 'You',
+    },
+    {
+      version: 'v1.5',
+      date: '1 week ago',
+      changes: 'Data collection complete',
+      author: 'You',
+    },
+    {
+      version: 'v1.0',
+      date: '2 weeks ago',
+      changes: 'Initial study creation',
+      author: 'You',
+    },
+  ];
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -86,7 +137,9 @@ export default function ArchivePhasePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Items</p>
-                <p className="text-2xl font-bold">{archiveItems.reduce((acc, i) => acc + i.count, 0)}</p>
+                <p className="text-2xl font-bold">
+                  {archiveItems.reduce((acc, i) => acc + i.count, 0)}
+                </p>
               </div>
               <FileArchive className="h-8 w-8 text-blue-500" />
             </div>
@@ -126,8 +179,11 @@ export default function ArchivePhasePage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {archiveItems.map((item) => (
-              <div key={item.type} className="flex items-center justify-between py-3 border-b last:border-0">
+            {archiveItems.map(item => (
+              <div
+                key={item.type}
+                className="flex items-center justify-between py-3 border-b last:border-0"
+              >
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-muted">
                     <Database className="h-5 w-5 text-muted-foreground" />
@@ -135,7 +191,8 @@ export default function ArchivePhasePage() {
                   <div>
                     <p className="font-medium">{item.type}</p>
                     <p className="text-sm text-muted-foreground">
-                      {item.count} items • {item.size} • Updated {item.lastUpdated}
+                      {item.count} items • {item.size} • Updated{' '}
+                      {item.lastUpdated}
                     </p>
                   </div>
                 </div>
@@ -164,12 +221,19 @@ export default function ArchivePhasePage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {versionHistory.map((version) => (
-                <div key={version.version} className="flex items-center justify-between">
+              {versionHistory.map(version => (
+                <div
+                  key={version.version}
+                  className="flex items-center justify-between"
+                >
                   <div className="flex items-center gap-3">
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                      version.version === 'v2.1' ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                    }`}>
+                    <div
+                      className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                        version.version === 'v2.1'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                    >
                       <CheckCircle className="h-4 w-4" />
                     </div>
                     <div>
@@ -179,7 +243,9 @@ export default function ArchivePhasePage() {
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">Restore</Button>
+                  <Button variant="ghost" size="sm">
+                    Restore
+                  </Button>
                 </div>
               ))}
             </div>
@@ -293,9 +359,10 @@ export default function ArchivePhasePage() {
         <Shield className="h-4 w-4" />
         <AlertTitle>Long-term Preservation</AlertTitle>
         <AlertDescription>
-          Your study archive follows best practices for research data preservation, including:
-          metadata standards, file format sustainability, and version control. Consider depositing
-          in an institutional repository for long-term accessibility.
+          Your study archive follows best practices for research data
+          preservation, including: metadata standards, file format
+          sustainability, and version control. Consider depositing in an
+          institutional repository for long-term accessibility.
         </AlertDescription>
       </Alert>
 
@@ -303,9 +370,7 @@ export default function ArchivePhasePage() {
       <Card>
         <CardHeader>
           <CardTitle>Archive Actions</CardTitle>
-          <CardDescription>
-            Final steps for your archived study
-          </CardDescription>
+          <CardDescription>Final steps for your archived study</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -337,10 +402,13 @@ export default function ArchivePhasePage() {
               <CheckCircle className="h-8 w-8" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-green-900">Study Complete!</h3>
+              <h3 className="text-xl font-semibold text-green-900">
+                Study Complete!
+              </h3>
               <p className="text-green-700 mt-1">
-                Congratulations! Your Q-methodology study has been successfully completed and archived.
-                All data, analyses, and reports are preserved for future reference and reproducibility.
+                Congratulations! Your Q-methodology study has been successfully
+                completed and archived. All data, analyses, and reports are
+                preserved for future reference and reproducibility.
               </p>
             </div>
           </div>
@@ -363,5 +431,5 @@ export default function ArchivePhasePage() {
         </Link>
       </div>
     </div>
-  )
+  );
 }

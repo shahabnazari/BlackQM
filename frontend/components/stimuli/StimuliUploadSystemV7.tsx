@@ -29,10 +29,7 @@ import {
   Grid3X3Icon,
 } from 'lucide-react';
 import { Button } from '@/components/apple-ui/Button';
-import {
-  Card,
-  CardContent,
-} from '@/components/apple-ui/Card';
+import { Card, CardContent } from '@/components/apple-ui/Card';
 import { Badge } from '@/components/apple-ui/Badge/Badge';
 import PopupModal, { usePopup } from '@/components/ui/PopupModal';
 import { useToast, ToastContainer } from '@/components/ui/ToastNotification';
@@ -165,7 +162,7 @@ export function StimuliUploadSystemV7({
     popupState,
     closePopup,
     showConfirm,
-    showWarning: _showPopupWarning
+    showWarning: _showPopupWarning,
   } = usePopup();
 
   const { toasts, showSuccess, showError, showWarning, removeToast } =

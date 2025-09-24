@@ -1,13 +1,30 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import {
+  motion,
+  AnimatePresence,
+  useScroll,
+  useTransform,
+} from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { 
-  Search, BookOpen, Layers, Users, Database, 
-  BarChart3, Eye, Brain, FileText, Archive,
-  ChevronLeft, ChevronRight, Menu, X,
-  CheckCircle, Lock
+import {
+  Search,
+  BookOpen,
+  Layers,
+  Users,
+  Database,
+  BarChart3,
+  Eye,
+  Brain,
+  FileText,
+  Archive,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  X,
+  CheckCircle,
+  Lock,
 } from 'lucide-react';
 import { ResearchPhase } from './PrimaryToolbar';
 import { useNavigationState } from '@/hooks/useNavigationState';
@@ -23,16 +40,86 @@ interface PhaseInfo {
 }
 
 const PHASES: PhaseInfo[] = [
-  { id: 'discover', label: 'Discover', icon: Search, color: 'bg-purple-500', route: '/discover', description: 'Literature & research' },
-  { id: 'design', label: 'Design', icon: BookOpen, color: 'bg-indigo-500', route: '/design', description: 'Methodology design' },
-  { id: 'build', label: 'Build', icon: Layers, color: 'bg-blue-500', route: '/build', description: 'Create study' },
-  { id: 'recruit', label: 'Recruit', icon: Users, color: 'bg-cyan-500', route: '/recruit', description: 'Find participants' },
-  { id: 'collect', label: 'Collect', icon: Database, color: 'bg-teal-500', route: '/collect', description: 'Gather data' },
-  { id: 'analyze', label: 'Analyze', icon: BarChart3, color: 'bg-green-500', route: '/analyze', description: 'Statistical analysis' },
-  { id: 'visualize', label: 'Visualize', icon: Eye, color: 'bg-emerald-500', route: '/visualize', description: 'Create visualizations' },
-  { id: 'interpret', label: 'Interpret', icon: Brain, color: 'bg-orange-500', route: '/interpret', description: 'Extract insights' },
-  { id: 'report', label: 'Report', icon: FileText, color: 'bg-red-500', route: '/report', description: 'Generate reports' },
-  { id: 'archive', label: 'Archive', icon: Archive, color: 'bg-gray-500', route: '/archive', description: 'Preserve study' }
+  {
+    id: 'discover',
+    label: 'Discover',
+    icon: Search,
+    color: 'bg-purple-500',
+    route: '/discover',
+    description: 'Literature & research',
+  },
+  {
+    id: 'design',
+    label: 'Design',
+    icon: BookOpen,
+    color: 'bg-indigo-500',
+    route: '/design',
+    description: 'Methodology design',
+  },
+  {
+    id: 'build',
+    label: 'Build',
+    icon: Layers,
+    color: 'bg-blue-500',
+    route: '/build',
+    description: 'Create study',
+  },
+  {
+    id: 'recruit',
+    label: 'Recruit',
+    icon: Users,
+    color: 'bg-cyan-500',
+    route: '/recruit',
+    description: 'Find participants',
+  },
+  {
+    id: 'collect',
+    label: 'Collect',
+    icon: Database,
+    color: 'bg-teal-500',
+    route: '/collect',
+    description: 'Gather data',
+  },
+  {
+    id: 'analyze',
+    label: 'Analyze',
+    icon: BarChart3,
+    color: 'bg-green-500',
+    route: '/analyze',
+    description: 'Statistical analysis',
+  },
+  {
+    id: 'visualize',
+    label: 'Visualize',
+    icon: Eye,
+    color: 'bg-emerald-500',
+    route: '/visualize',
+    description: 'Create visualizations',
+  },
+  {
+    id: 'interpret',
+    label: 'Interpret',
+    icon: Brain,
+    color: 'bg-orange-500',
+    route: '/interpret',
+    description: 'Extract insights',
+  },
+  {
+    id: 'report',
+    label: 'Report',
+    icon: FileText,
+    color: 'bg-red-500',
+    route: '/report',
+    description: 'Generate reports',
+  },
+  {
+    id: 'archive',
+    label: 'Archive',
+    icon: Archive,
+    color: 'bg-gray-500',
+    route: '/archive',
+    description: 'Preserve study',
+  },
 ];
 
 interface MobilePhaseNavigatorProps {
@@ -41,13 +128,14 @@ interface MobilePhaseNavigatorProps {
   position?: 'top' | 'bottom';
 }
 
-export function MobilePhaseNavigator({ 
-  className = '', 
+export function MobilePhaseNavigator({
+  className = '',
   showLabels = false,
-  position = 'bottom' 
+  position = 'bottom',
 }: MobilePhaseNavigatorProps) {
   const router = useRouter();
-  const { currentPhase, availablePhases, completedPhases, phaseProgress } = useNavigationState();
+  const { currentPhase, availablePhases, completedPhases, phaseProgress } =
+    useNavigationState();
   const [activePhaseIndex, setActivePhaseIndex] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { scrollY } = useScroll();
@@ -62,17 +150,25 @@ export function MobilePhaseNavigator({
   }, [currentPhase]);
 
   // Check if phase is accessible
-  const isPhaseAccessible = useCallback((phaseId: ResearchPhase) => {
-    return availablePhases.includes(phaseId) || completedPhases.includes(phaseId);
-  }, [availablePhases, completedPhases]);
+  const isPhaseAccessible = useCallback(
+    (phaseId: ResearchPhase) => {
+      return (
+        availablePhases.includes(phaseId) || completedPhases.includes(phaseId)
+      );
+    },
+    [availablePhases, completedPhases]
+  );
 
   // Navigate to phase
-  const navigateToPhase = useCallback((phase: PhaseInfo) => {
-    if (isPhaseAccessible(phase.id)) {
-      router.push(phase.route);
-      setIsMenuOpen(false);
-    }
-  }, [router, isPhaseAccessible]);
+  const navigateToPhase = useCallback(
+    (phase: PhaseInfo) => {
+      if (isPhaseAccessible(phase.id)) {
+        router.push(phase.route);
+        setIsMenuOpen(false);
+      }
+    },
+    [router, isPhaseAccessible]
+  );
 
   // Handle swipe navigation
   const handlers = useSwipeable({
@@ -92,7 +188,7 @@ export function MobilePhaseNavigator({
         }
       }
     },
-    trackMouse: false
+    trackMouse: false,
   });
 
   // Get phase status
@@ -118,7 +214,10 @@ export function MobilePhaseNavigator({
     >
       <div className="flex justify-around items-center py-2 px-2">
         {/* Show 5 items: 2 before, current, 2 after */}
-        {PHASES.slice(Math.max(0, activePhaseIndex - 2), Math.min(PHASES.length, activePhaseIndex + 3)).map((phase) => {
+        {PHASES.slice(
+          Math.max(0, activePhaseIndex - 2),
+          Math.min(PHASES.length, activePhaseIndex + 3)
+        ).map(phase => {
           const Icon = phase.icon;
           const status = getPhaseStatus(phase.id);
           const progress = phaseProgress[phase.id] || 0;
@@ -137,11 +236,13 @@ export function MobilePhaseNavigator({
               whileTap={status !== 'locked' ? { scale: 0.95 } : {}}
             >
               <div className="relative">
-                <Icon className={`
+                <Icon
+                  className={`
                   w-6 h-6
                   ${isCurrent ? 'text-blue-600' : status === 'completed' ? 'text-green-600' : 'text-gray-600'}
-                `} />
-                
+                `}
+                />
+
                 {/* Progress indicator */}
                 {status === 'current' && progress > 0 && progress < 100 && (
                   <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gray-200 rounded-full">
@@ -152,30 +253,32 @@ export function MobilePhaseNavigator({
                     />
                   </div>
                 )}
-                
+
                 {/* Completed badge */}
                 {status === 'completed' && (
                   <CheckCircle className="absolute -top-1 -right-1 w-3 h-3 text-green-500" />
                 )}
-                
+
                 {/* Lock badge */}
                 {status === 'locked' && (
                   <Lock className="absolute -top-1 -right-1 w-3 h-3 text-gray-400" />
                 )}
               </div>
-              
+
               {showLabels && (
-                <span className={`
+                <span
+                  className={`
                   text-xs mt-1
                   ${isCurrent ? 'text-blue-600 font-medium' : 'text-gray-600'}
-                `}>
+                `}
+                >
                   {phase.label}
                 </span>
               )}
             </motion.button>
           );
         })}
-        
+
         {/* Menu button */}
         <motion.button
           className="p-2"
@@ -214,12 +317,12 @@ export function MobilePhaseNavigator({
               <ChevronLeft className="w-6 h-6 text-gray-600" />
             </motion.button>
           )}
-          
+
           <div className="flex items-center space-x-2">
             {PHASES[activePhaseIndex] && (
               <>
                 {React.createElement(PHASES[activePhaseIndex].icon, {
-                  className: 'w-6 h-6 text-blue-600'
+                  className: 'w-6 h-6 text-blue-600',
                 })}
                 <div>
                   <h2 className="font-semibold text-gray-900">
@@ -233,7 +336,7 @@ export function MobilePhaseNavigator({
             )}
           </div>
         </div>
-        
+
         {/* Navigation controls */}
         <div className="flex items-center space-x-2">
           {activePhaseIndex < PHASES.length - 1 && (
@@ -243,13 +346,25 @@ export function MobilePhaseNavigator({
                 if (nextPhase) navigateToPhase(nextPhase);
               }}
               whileTap={{ scale: 0.95 }}
-              disabled={!PHASES[activePhaseIndex + 1] || !isPhaseAccessible(PHASES[activePhaseIndex + 1]?.id || 'archive')}
-              className={(!PHASES[activePhaseIndex + 1] || !isPhaseAccessible(PHASES[activePhaseIndex + 1]?.id || 'archive')) ? 'opacity-40' : ''}
+              disabled={
+                !PHASES[activePhaseIndex + 1] ||
+                !isPhaseAccessible(
+                  PHASES[activePhaseIndex + 1]?.id || 'archive'
+                )
+              }
+              className={
+                !PHASES[activePhaseIndex + 1] ||
+                !isPhaseAccessible(
+                  PHASES[activePhaseIndex + 1]?.id || 'archive'
+                )
+                  ? 'opacity-40'
+                  : ''
+              }
             >
               <ChevronRight className="w-6 h-6 text-gray-600" />
             </motion.button>
           )}
-          
+
           <motion.button
             onClick={() => setIsMenuOpen(true)}
             whileTap={{ scale: 0.95 }}
@@ -258,7 +373,7 @@ export function MobilePhaseNavigator({
           </motion.button>
         </div>
       </div>
-      
+
       {/* Phase dots indicator */}
       <div className="flex justify-center items-center pb-2 space-x-1.5">
         {PHASES.map((phase, index) => {
@@ -305,15 +420,15 @@ export function MobilePhaseNavigator({
                 <X className="w-6 h-6 text-gray-600" />
               </motion.button>
             </div>
-            
+
             {/* Phase list */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {PHASES.map((phase) => {
+              {PHASES.map(phase => {
                 const Icon = phase.icon;
                 const status = getPhaseStatus(phase.id);
                 const progress = phaseProgress[phase.id] || 0;
                 const isCurrent = phase.id === currentPhase;
-                
+
                 return (
                   <motion.button
                     key={phase.id}
@@ -328,15 +443,23 @@ export function MobilePhaseNavigator({
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-lg ${phase.color} bg-opacity-10`}>
-                          <Icon className={`w-6 h-6 ${phase.color.replace('bg-', 'text-')}`} />
+                        <div
+                          className={`p-2 rounded-lg ${phase.color} bg-opacity-10`}
+                        >
+                          <Icon
+                            className={`w-6 h-6 ${phase.color.replace('bg-', 'text-')}`}
+                          />
                         </div>
                         <div className="text-left">
-                          <h3 className="font-semibold text-gray-900">{phase.label}</h3>
-                          <p className="text-sm text-gray-500">{phase.description}</p>
+                          <h3 className="font-semibold text-gray-900">
+                            {phase.label}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {phase.description}
+                          </p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         {status === 'completed' && (
                           <CheckCircle className="w-5 h-5 text-green-500" />
@@ -351,7 +474,7 @@ export function MobilePhaseNavigator({
                         )}
                       </div>
                     </div>
-                    
+
                     {/* Progress bar */}
                     {status === 'current' && progress > 0 && progress < 100 && (
                       <div className="mt-3 h-1.5 bg-gray-200 rounded-full overflow-hidden">
@@ -366,7 +489,7 @@ export function MobilePhaseNavigator({
                 );
               })}
             </div>
-            
+
             {/* Footer */}
             <div className="p-4 border-t border-gray-200">
               <div className="flex items-center justify-between text-sm text-gray-600">
@@ -405,27 +528,30 @@ export function MobilePhaseNavigator({
 export function useMobileNavigation() {
   const [isMobile, setIsMobile] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
-  
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
       setViewportHeight(window.innerHeight);
-      
+
       // Set CSS variable for safe areas
       const root = document.documentElement;
       root.style.setProperty('--safe-top', `env(safe-area-inset-top, 0px)`);
-      root.style.setProperty('--safe-bottom', `env(safe-area-inset-bottom, 0px)`);
+      root.style.setProperty(
+        '--safe-bottom',
+        `env(safe-area-inset-bottom, 0px)`
+      );
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
     window.addEventListener('orientationchange', checkMobile);
-    
+
     return () => {
       window.removeEventListener('resize', checkMobile);
       window.removeEventListener('orientationchange', checkMobile);
     };
   }, []);
-  
+
   return { isMobile, viewportHeight };
 }

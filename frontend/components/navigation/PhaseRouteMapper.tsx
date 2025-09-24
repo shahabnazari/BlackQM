@@ -7,7 +7,12 @@
 
 import React, { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getDestinationRoute, needsConsolidation, trackNavigation, getRoutePhase } from '@/lib/navigation/route-consolidation';
+import {
+  getDestinationRoute,
+  needsConsolidation,
+  trackNavigation,
+  getRoutePhase,
+} from '@/lib/navigation/route-consolidation';
 import { useNavigationState } from '@/hooks/useNavigationState';
 
 /**
@@ -18,7 +23,7 @@ export function PhaseRouteMapper({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { setCurrentPhase } = useNavigationState();
-  
+
   useEffect(() => {
     // Check if current route needs consolidation
     if (needsConsolidation(pathname)) {
@@ -26,19 +31,21 @@ export function PhaseRouteMapper({ children }: { children: React.ReactNode }) {
       if (destination && destination !== pathname) {
         // Perform client-side redirect
         router.replace(destination);
-        
+
         // Track navigation
         const phase = getRoutePhase(destination);
         trackNavigation(pathname, destination, phase);
-        
+
         // Update navigation state
         if (phase) {
           setCurrentPhase(phase);
         }
-        
+
         // Log in development
         if (process.env.NODE_ENV === 'development') {
-          console.log(`[PhaseRouteMapper] Redirecting: ${pathname} → ${destination}`);
+          console.log(
+            `[PhaseRouteMapper] Redirecting: ${pathname} → ${destination}`
+          );
         }
       }
     } else {
@@ -49,7 +56,7 @@ export function PhaseRouteMapper({ children }: { children: React.ReactNode }) {
       }
     }
   }, [pathname, router, setCurrentPhase]);
-  
+
   return <>{children}</>;
 }
 
@@ -66,14 +73,14 @@ export function useCurrentPhase() {
  */
 export function usePhaseAccess(_studyId?: string) {
   const { phaseProgress, completedPhases } = useNavigationState();
-  
+
   const checkPhaseAccess = (phase: string): boolean => {
     // Convert completed phases array to object
     const progress: Record<string, boolean> = {};
     completedPhases.forEach(p => {
       progress[p] = true;
     });
-    
+
     // Check dependencies
     const dependencies: Record<string, string[]> = {
       design: ['discover'],
@@ -84,12 +91,12 @@ export function usePhaseAccess(_studyId?: string) {
       visualize: ['analyze'],
       interpret: ['visualize'],
       report: ['interpret'],
-      archive: ['report']
+      archive: ['report'],
     };
-    
+
     const phaseDeps = dependencies[phase] || [];
     return phaseDeps.every(dep => progress[dep] === true);
   };
-  
+
   return { checkPhaseAccess, phaseProgress };
 }

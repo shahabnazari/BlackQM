@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { useParticipantFlow, ParticipantFlowStage } from '@/hooks/useParticipantFlow';
+import {
+  useParticipantFlow,
+  ParticipantFlowStage,
+} from '@/hooks/useParticipantFlow';
 import { FlowGuard } from '@/components/participant/FlowGuard';
 import { FlowProgressTracker } from '@/components/participant/FlowProgressTracker';
 import { toast } from 'sonner';
@@ -40,12 +43,12 @@ export default function StudyLayout({ children }: StudyLayoutProps) {
     canSkip,
     progress,
     currentStage,
-    completedStages
+    completedStages,
   } = useParticipantFlow({
     surveyId,
     autoSave: true,
     autoSaveInterval: 60000, // Auto-save every minute
-    onStageComplete: (stage) => {
+    onStageComplete: stage => {
       toast.success(`${getStageLabel(stage)} completed!`);
       trackMetrics({ interactions: 1 });
     },
@@ -55,7 +58,7 @@ export default function StudyLayout({ children }: StudyLayoutProps) {
     },
     onFlowAbandoned: () => {
       toast.info('You can resume your progress later.');
-    }
+    },
   });
 
   // Detect mobile device
@@ -63,7 +66,7 @@ export default function StudyLayout({ children }: StudyLayoutProps) {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
@@ -78,7 +81,8 @@ export default function StudyLayout({ children }: StudyLayoutProps) {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    return () =>
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [hasUnsavedChanges, flowState, saveProgress]);
 
   // Handle keyboard shortcuts
@@ -108,18 +112,18 @@ export default function StudyLayout({ children }: StudyLayoutProps) {
   // Handle save progress
   const handleSaveProgress = async () => {
     if (!flowState) return;
-    
+
     try {
       const savePoint = await saveProgress(flowState.stageData, false);
       setHasUnsavedChanges(false);
-      
+
       // Store save point reference in localStorage
       if (savePoint) {
         localStorage.setItem(
           `flow_savepoint_${surveyId}`,
           JSON.stringify({
             timestamp: savePoint.timestamp,
-            stage: savePoint.stageId
+            stage: savePoint.stageId,
           })
         );
       }
@@ -175,7 +179,9 @@ export default function StudyLayout({ children }: StudyLayoutProps) {
 
   // Error state
   if (error) {
-    return <ErrorScreen error={error} onRetry={() => window.location.reload()} />;
+    return (
+      <ErrorScreen error={error} onRetry={() => window.location.reload()} />
+    );
   }
 
   // No flow state
@@ -191,17 +197,25 @@ export default function StudyLayout({ children }: StudyLayoutProps) {
           <FlowProgressTracker
             currentStage={currentStage || ParticipantFlowStage.NOT_STARTED}
             completedStages={completedStages}
-            progress={progress || {
-              percentage: 0,
-              stagesCompleted: 0,
-              totalStages: 5,
-              estimatedTimeRemaining: 40
-            }}
+            progress={
+              progress || {
+                percentage: 0,
+                stagesCompleted: 0,
+                totalStages: 5,
+                estimatedTimeRemaining: 40,
+              }
+            }
             navigation={{
               canGoBack,
-              canSkip
+              canSkip,
             }}
-            onGoBack={canGoBack ? () => { handleGoBack() } : () => {}}
+            onGoBack={
+              canGoBack
+                ? () => {
+                    handleGoBack();
+                  }
+                : () => {}
+            }
             onSkip={canSkip ? handleSkip : () => {}}
             onSave={handleSaveProgress}
             isSaving={isSaving}
@@ -220,7 +234,7 @@ export default function StudyLayout({ children }: StudyLayoutProps) {
           flowState={{
             currentStage: currentStage || ParticipantFlowStage.NOT_STARTED,
             completedStages,
-            canProceed
+            canProceed,
           }}
           fallbackRoute={`/study/${surveyId}/welcome`}
         >
@@ -237,7 +251,7 @@ export default function StudyLayout({ children }: StudyLayoutProps) {
               saveProgress: handleSaveProgress,
               abandonFlow: handleAbandon,
               trackMetrics,
-              setHasUnsavedChanges
+              setHasUnsavedChanges,
             }}
           >
             {children}
@@ -302,23 +316,37 @@ function LoadingScreen() {
 /**
  * Error screen component
  */
-function ErrorScreen({ error, onRetry }: { error: string; onRetry?: () => void }) {
+function ErrorScreen({
+  error,
+  onRetry,
+}: {
+  error: string;
+  onRetry?: () => void;
+}) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
         <div className="mb-4">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-            <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="w-8 h-8 text-red-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           </div>
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
           Something went wrong
         </h2>
-        <p className="text-gray-600 mb-6">
-          {error}
-        </p>
+        <p className="text-gray-600 mb-6">{error}</p>
         {onRetry && (
           <button
             onClick={onRetry}
@@ -341,7 +369,7 @@ function MobileNavigationBar({
   onGoBack,
   onGoNext,
   onSave,
-  isSaving
+  isSaving,
 }: any) {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-between z-50">
@@ -356,17 +384,27 @@ function MobileNavigationBar({
       >
         Back
       </button>
-      
+
       <button
         onClick={onSave}
         disabled={isSaving}
         className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
       >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V2" />
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V2"
+          />
         </svg>
       </button>
-      
+
       <button
         onClick={onGoNext}
         disabled={!canProceed}
@@ -388,7 +426,7 @@ function MobileNavigationBar({
 function ExitConfirmationModal({
   isOpen,
   onSave: _onSave,
-  onAbandon: _onAbandon
+  onAbandon: _onAbandon,
 }: {
   isOpen: boolean;
   onSave: () => void;
@@ -412,7 +450,7 @@ function getStageLabel(stage: ParticipantFlowStage): string {
     [ParticipantFlowStage.Q_SORT]: 'Q-Sort',
     [ParticipantFlowStage.POST_SURVEY]: 'Survey',
     [ParticipantFlowStage.COMPLETED]: 'Complete',
-    [ParticipantFlowStage.ABANDONED]: 'Paused'
+    [ParticipantFlowStage.ABANDONED]: 'Paused',
   };
   return labels[stage] || stage;
 }
