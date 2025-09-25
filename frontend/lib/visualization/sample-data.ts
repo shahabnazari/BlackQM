@@ -1,7 +1,7 @@
 // Sample data generators for Q-methodology visualizations
 import type { 
   ParticipantLoading,
-  ParticipantLoadingMatrixData,
+  // ParticipantLoadingMatrixData, // Unused type
   DistributionData,
   DistinguishingStatement,
   ConsensusStatement,

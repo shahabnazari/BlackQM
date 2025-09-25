@@ -70,7 +70,7 @@ export default function ScreeningQuestionnaire({
       const data = await questionAPIService.getScreeningQuestions(surveyId);
       setQuestions(data);
       setVisibleQuestions(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load questions:', error);
       setErrors({ general: 'Failed to load screening questions. Please try again.' });
     } finally {
@@ -89,7 +89,7 @@ export default function ScreeningQuestionnaire({
     try {
       const visible = await questionAPIService.getVisibleQuestions(surveyId, responses);
       setVisibleQuestions(visible);
-    } catch (error) {
+    } catch (error: any) {
       // If API fails, show all questions
       setVisibleQuestions(questions);
     }
@@ -157,7 +157,7 @@ export default function ScreeningQuestionnaire({
             [currentQuestion.id]: validation.errors?.[0] || 'Invalid response'
           }));
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Validation error:', error);
       }
     }
@@ -175,7 +175,7 @@ export default function ScreeningQuestionnaire({
         value,
         timeSpent: Math.floor((Date.now() - questionStartTime) / 1000)
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save response:', error);
     }
   };
@@ -212,7 +212,7 @@ export default function ScreeningQuestionnaire({
         responses
       );
       onComplete(result);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to evaluate screening:', error);
       setErrors({ general: 'Failed to submit screening. Please try again.' });
     } finally {

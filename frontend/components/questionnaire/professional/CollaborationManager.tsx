@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Users,
   UserPlus,
@@ -21,6 +21,15 @@ import {
   Lock,
   Unlock,
   AlertCircle,
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  FastForward,
+  Rewind,
+  Download,
+  Film,
+  BarChart3,
 } from 'lucide-react';
 import { Card } from '@/components/apple-ui/Card';
 import { Button } from '@/components/ui/button';
@@ -97,6 +106,26 @@ interface Activity {
   target?: string;
   timestamp: Date;
   type: 'edit' | 'comment' | 'review' | 'share';
+  snapshot?: any; // Stores document state at this point
+  changes?: {
+    field: string;
+    oldValue: any;
+    newValue: any;
+  }[];
+}
+
+interface PlaybackSession {
+  id: string;
+  startTime: Date;
+  endTime: Date;
+  activities: Activity[];
+  participants: Collaborator[];
+  duration: number;
+  keyMoments: {
+    timestamp: Date;
+    description: string;
+    type: 'milestone' | 'conflict' | 'resolution' | 'review';
+  }[];
 }
 
 export function CollaborationManager() {
@@ -105,9 +134,19 @@ export function CollaborationManager() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
-  const [showCommentDialog, setShowCommentDialog] = useState(false);
+  // Removed unused showCommentDialog state
   const [showPresence, setShowPresence] = useState(true);
   const [lockMode, setLockMode] = useState<'none' | 'section' | 'full'>('none');
+  
+  // Activity Playback State
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [currentPlaybackTime, setCurrentPlaybackTime] = useState(0);
+  const [playbackSession, setPlaybackSession] = useState<PlaybackSession | null>(null);
+  const [showPlaybackPanel, setShowPlaybackPanel] = useState(false);
+  const playbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingStartTime = useRef<Date | null>(null);
 
   // Mock data
   useEffect(() => {
@@ -222,6 +261,202 @@ export function CollaborationManager() {
     }
   }, []);
 
+  // Playback Functions
+  const startRecording = () => {
+    setIsRecording(true);
+    recordingStartTime.current = new Date();
+    // Initialize new session
+    const newSession: PlaybackSession = {
+      id: Date.now().toString(),
+      startTime: new Date(),
+      endTime: new Date(),
+      activities: [],
+      participants: collaborators,
+      duration: 0,
+      keyMoments: [],
+    };
+    setPlaybackSession(newSession);
+  };
+
+  const stopRecording = () => {
+    setIsRecording(false);
+    if (playbackSession && recordingStartTime.current) {
+      const endTime = new Date();
+      const duration = endTime.getTime() - recordingStartTime.current.getTime();
+      
+      // Analyze session for key moments
+      const keyMoments = analyzeKeyMoments(activities);
+      
+      setPlaybackSession({
+        ...playbackSession,
+        endTime,
+        duration,
+        activities: [...activities],
+        keyMoments,
+      });
+    }
+  };
+
+  const startPlayback = () => {
+    if (!playbackSession) return;
+    
+    setIsPlaying(true);
+    setCurrentPlaybackTime(0);
+    
+    // Start playback interval
+    playbackIntervalRef.current = setInterval(() => {
+      setCurrentPlaybackTime(prev => {
+        const next = prev + (100 * playbackSpeed);
+        if (next >= playbackSession.duration) {
+          stopPlayback();
+          return playbackSession.duration;
+        }
+        return next;
+      });
+    }, 100);
+  };
+
+  const stopPlayback = () => {
+    setIsPlaying(false);
+    if (playbackIntervalRef.current) {
+      clearInterval(playbackIntervalRef.current);
+      playbackIntervalRef.current = null;
+    }
+  };
+
+  const seekPlayback = (time: number) => {
+    setCurrentPlaybackTime(time);
+    // Reconstruct document state at this time
+    if (playbackSession) {
+      const activitiesUpToTime = playbackSession.activities.filter(
+        a => new Date(a.timestamp).getTime() - playbackSession.startTime.getTime() <= time
+      );
+      // Apply activities to reconstruct state
+      reconstructState(activitiesUpToTime);
+    }
+  };
+
+  const changePlaybackSpeed = (speed: number) => {
+    setPlaybackSpeed(speed);
+    if (isPlaying) {
+      stopPlayback();
+      startPlayback();
+    }
+  };
+
+  const analyzeKeyMoments = (activities: Activity[]) => {
+    const keyMoments: PlaybackSession['keyMoments'] = [];
+    
+    // Detect rapid editing (potential conflict)
+    const editBursts = detectEditBursts(activities);
+    editBursts.forEach(burst => {
+      keyMoments.push({
+        timestamp: burst.timestamp,
+        description: `Rapid editing by ${burst.users.join(', ')}`,
+        type: 'conflict',
+      });
+    });
+    
+    // Detect review approvals
+    activities.filter(a => a.type === 'review').forEach(activity => {
+      keyMoments.push({
+        timestamp: activity.timestamp,
+        description: `${activity.user.name} ${activity.action}`,
+        type: 'review',
+      });
+    });
+    
+    // Detect milestones (e.g., section completions)
+    const milestones = detectMilestones(activities);
+    milestones.forEach(milestone => {
+      keyMoments.push({
+        timestamp: milestone.timestamp,
+        description: milestone.description,
+        type: 'milestone',
+      });
+    });
+    
+    return keyMoments.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  };
+
+  const detectEditBursts = (activities: Activity[]) => {
+    const bursts: { timestamp: Date; users: string[] }[] = [];
+    const timeWindow = 30000; // 30 seconds
+    
+    for (let i = 0; i < activities.length - 1; i++) {
+      const editsInWindow = activities.filter(
+        a => a.type === 'edit' &&
+        Math.abs(a.timestamp.getTime() - activities[i].timestamp.getTime()) < timeWindow
+      );
+      
+      if (editsInWindow.length >= 3) {
+        const uniqueUsers = [...new Set(editsInWindow.map(e => e.user.name))];
+        if (uniqueUsers.length > 1) {
+          bursts.push({
+            timestamp: activities[i].timestamp,
+            users: uniqueUsers,
+          });
+        }
+      }
+    }
+    
+    return bursts;
+  };
+
+  const detectMilestones = (activities: Activity[]) => {
+    const milestones: { timestamp: Date; description: string }[] = [];
+    
+    // Detect section completions
+    const sectionCompletions = activities.filter(
+      a => a.action.includes('completed') || a.action.includes('finished')
+    );
+    
+    sectionCompletions.forEach(completion => {
+      milestones.push({
+        timestamp: completion.timestamp,
+        description: `Section completed: ${completion.target || 'Unknown'}`,
+      });
+    });
+    
+    return milestones;
+  };
+
+  const reconstructState = (activities: Activity[]) => {
+    // This would reconstruct the document state at a specific point
+    // by applying all activities up to that point
+    console.log('Reconstructing state with', activities.length, 'activities');
+  };
+
+  const exportSession = () => {
+    if (!playbackSession) return;
+    
+    const exportData = {
+      session: playbackSession,
+      metadata: {
+        exportedAt: new Date().toISOString(),
+        version: '1.0',
+        totalActivities: playbackSession.activities.length,
+        duration: playbackSession.duration,
+        participants: playbackSession.participants.map(p => ({
+          name: p.name,
+          role: p.role,
+        })),
+      },
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `collaboration-session-${playbackSession.id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'owner':
@@ -266,6 +501,23 @@ export function CollaborationManager() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant={isRecording ? "destructive" : "outline"} 
+            size="sm"
+            onClick={isRecording ? stopRecording : startRecording}
+          >
+            <Film className="w-4 h-4 mr-2" />
+            {isRecording ? 'Stop Recording' : 'Record Session'}
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setShowPlaybackPanel(!showPlaybackPanel)}
+            disabled={!playbackSession}
+          >
+            <Play className="w-4 h-4 mr-2" />
+            Playback
+          </Button>
           <Button variant="outline" size="sm">
             <Video className="w-4 h-4 mr-2" />
             Start Call
@@ -280,6 +532,221 @@ export function CollaborationManager() {
           </Button>
         </div>
       </div>
+
+      {/* Activity Playback Panel */}
+      {showPlaybackPanel && playbackSession && (
+        <Card className="p-6 bg-gradient-to-r from-purple-50 to-blue-50">
+          <div className="space-y-4">
+            {/* Playback Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white rounded-lg shadow-sm">
+                  <Film className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Session Playback</h3>
+                  <p className="text-sm text-gray-600">
+                    Review collaboration history and key moments
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportSession}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPlaybackPanel(false)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Playback Controls */}
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="space-y-3">
+                {/* Timeline */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Timeline</span>
+                    <span className="font-mono text-xs">
+                      {Math.floor(currentPlaybackTime / 60000)}:
+                      {String(Math.floor((currentPlaybackTime % 60000) / 1000)).padStart(2, '0')} / 
+                      {Math.floor(playbackSession.duration / 60000)}:
+                      {String(Math.floor((playbackSession.duration % 60000) / 1000)).padStart(2, '0')}
+                    </span>
+                  </div>
+                  
+                  {/* Progress Bar with Activity Density */}
+                  <div className="relative">
+                    <input
+                      type="range"
+                      min="0"
+                      max={playbackSession.duration}
+                      value={currentPlaybackTime}
+                      onChange={(e) => seekPlayback(Number(e.target.value))}
+                      className="w-full"
+                    />
+                    
+                    {/* Activity Density Visualization */}
+                    <div className="absolute top-0 left-0 w-full h-1 pointer-events-none mt-2">
+                      {playbackSession.activities.map((activity, idx) => {
+                        const position = ((new Date(activity.timestamp).getTime() - 
+                          playbackSession.startTime.getTime()) / playbackSession.duration) * 100;
+                        return (
+                          <div
+                            key={idx}
+                            className="absolute w-1 h-full bg-blue-400 opacity-50"
+                            style={{ left: `${position}%` }}
+                            title={`${activity.user.name}: ${activity.action}`}
+                          />
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Key Moments Markers */}
+                    {playbackSession.keyMoments.map((moment, idx) => {
+                      const position = ((moment.timestamp.getTime() - 
+                        playbackSession.startTime.getTime()) / playbackSession.duration) * 100;
+                      const color = moment.type === 'milestone' ? 'bg-green-500' :
+                                   moment.type === 'conflict' ? 'bg-red-500' :
+                                   moment.type === 'review' ? 'bg-purple-500' : 'bg-yellow-500';
+                      return (
+                        <div
+                          key={idx}
+                          className={`absolute w-2 h-2 rounded-full ${color} -mt-0.5`}
+                          style={{ left: `${position}%` }}
+                          title={moment.description}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Control Buttons */}
+                <div className="flex items-center justify-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => seekPlayback(Math.max(0, currentPlaybackTime - 10000))}
+                  >
+                    <SkipBack className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => changePlaybackSpeed(0.5)}
+                    className={playbackSpeed === 0.5 ? 'bg-gray-100' : ''}
+                  >
+                    <Rewind className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    onClick={isPlaying ? stopPlayback : startPlayback}
+                  >
+                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => changePlaybackSpeed(2)}
+                    className={playbackSpeed === 2 ? 'bg-gray-100' : ''}
+                  >
+                    <FastForward className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => seekPlayback(Math.min(playbackSession.duration, currentPlaybackTime + 10000))}
+                  >
+                    <SkipForward className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* Speed Indicator */}
+                <div className="text-center text-sm text-gray-600">
+                  Playback Speed: {playbackSpeed}x
+                </div>
+              </div>
+            </div>
+
+            {/* Key Moments List */}
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart3 className="w-4 h-4 text-gray-600" />
+                <h4 className="font-medium">Key Moments</h4>
+                <Badge variant="secondary" className="text-xs">
+                  {playbackSession.keyMoments.length}
+                </Badge>
+              </div>
+              
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {playbackSession.keyMoments.map((moment, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-3 p-2 rounded hover:bg-gray-50 cursor-pointer"
+                    onClick={() => {
+                      const time = moment.timestamp.getTime() - playbackSession.startTime.getTime();
+                      seekPlayback(time);
+                    }}
+                  >
+                    <Badge
+                      variant={
+                        moment.type === 'milestone' ? 'default' :
+                        moment.type === 'conflict' ? 'destructive' :
+                        moment.type === 'review' ? 'secondary' : 'outline'
+                      }
+                      className="text-xs"
+                    >
+                      {moment.type}
+                    </Badge>
+                    <span className="text-sm flex-1">{moment.description}</span>
+                    <span className="text-xs text-gray-500 font-mono">
+                      {Math.floor((moment.timestamp.getTime() - playbackSession.startTime.getTime()) / 60000)}:
+                      {String(Math.floor(((moment.timestamp.getTime() - playbackSession.startTime.getTime()) % 60000) / 1000)).padStart(2, '0')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Session Stats */}
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-white rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-blue-600">
+                  {playbackSession.activities.length}
+                </p>
+                <p className="text-xs text-gray-600">Total Actions</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-green-600">
+                  {playbackSession.participants.length}
+                </p>
+                <p className="text-xs text-gray-600">Participants</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-purple-600">
+                  {Math.floor(playbackSession.duration / 60000)}m
+                </p>
+                <p className="text-xs text-gray-600">Duration</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-orange-600">
+                  {playbackSession.keyMoments.length}
+                </p>
+                <p className="text-xs text-gray-600">Key Moments</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-3 gap-6">
         {/* Active Collaborators */}

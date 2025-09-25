@@ -332,7 +332,7 @@ export const AIGridDesignAssistant: React.FC<{
           citation: serviceRecommendation.config.citation
         };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to get AI recommendation:', error);
       // Return null on error
       return null;

@@ -3,7 +3,7 @@
  * Enterprise-grade OpenAI integration with error handling, retry logic, and cost tracking
  */
 
-import OpenAI from 'openai';
+// import OpenAI from 'openai'; // Reserved for future OpenAI integration
 import { 
   AIRequest, 
   AIResponse, 
@@ -166,7 +166,7 @@ class CostTracker {
 // Main AI Service
 export class AIService {
   private static instance: AIService;
-  private _openai: OpenAI | null = null;
+  // private _openai: OpenAI | null = null; // Reserved for future OpenAI integration
   private cache = new SimpleCache();
   private rateLimiter = new RateLimiter(AI_CONFIG.limits.requestsPerMinute);
   private costTracker = new CostTracker();

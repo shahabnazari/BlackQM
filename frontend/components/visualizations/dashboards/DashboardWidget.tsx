@@ -67,7 +67,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
   children,
   onUpdate,
   onRemove,
-  onCrossFilter,
+  onCrossFilter: _onCrossFilter,
   onExport,
   isSelected = false,
   isReadOnly = false,
@@ -77,7 +77,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
   const [showConfig, setShowConfig] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [dragConstraints, setDragConstraints] = useState({ top: 0, left: 0, right: 0, bottom: 0 });
+  const [dragConstraints] = useState({ top: 0, left: 0, right: 0, bottom: 0 });
   
   const widgetRef = useRef<HTMLDivElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
@@ -142,12 +142,12 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
     }
   }, [widget, onExport]);
 
-  // Handle cross-filtering
-  const _handleCrossFilter = useCallback((filterData: any) => {
-    if (onCrossFilter) {
-      onCrossFilter(widget.id, filterData);
-    }
-  }, [widget.id, onCrossFilter]);
+  // Handle cross-filtering (Reserved for future use)
+  // const _handleCrossFilter = useCallback((filterData: any) => {
+  //   if (onCrossFilter) {
+  //     onCrossFilter(widget.id, filterData);
+  //   }
+  // }, [widget.id, onCrossFilter]);
 
   // Glass morphism style
   const glassStyle = {

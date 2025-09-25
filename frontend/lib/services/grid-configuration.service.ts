@@ -168,7 +168,7 @@ export class GridConfigurationService {
     const proportions = bellValues.map((v: any) => v / sum);
     
     // Distribute items
-    let _remaining = totalItems - (2 * 2); // Account for edge minimums
+    // let _remaining = totalItems - (2 * 2); // Account for edge minimums (not used in current calculation)
     
     for (let i = 1; i < columns - 1; i++) {
       const idealCount = Math.round(totalItems * proportions[i]);

@@ -43,7 +43,7 @@ export default function PostSurvey({
   });
   const [dynamicQuestions, setDynamicQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [qualityScore, setQualityScore] = useState(0);
+  const [qualityScore] = useState(0);
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({
@@ -69,7 +69,7 @@ export default function PostSurvey({
         const questions = await response.json();
         setDynamicQuestions(questions);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load dynamic questions:', error);
     } finally {
       setLoading(false);

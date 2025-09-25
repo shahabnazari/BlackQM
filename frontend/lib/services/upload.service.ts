@@ -229,7 +229,7 @@ class UploadService {
   private async fetchWithProgress(
     url: string,
     options: RequestInit,
-    onProgress?: (progress: number) => void
+    _onProgress?: (progress: number) => void
   ): Promise<Response> {
     // For now, just use regular fetch
     // In production, you might want to use XMLHttpRequest for progress tracking

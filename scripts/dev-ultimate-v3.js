@@ -101,7 +101,7 @@ class UltimateDevManagerV3Enhanced {
       if (!fs.existsSync(path.dirname(this.logFile))) {
         fs.mkdirSync(path.dirname(this.logFile), { recursive: true });
       }
-      fs.appendFileSync(this.logFile, `${logMessage} ${args.join(' ')}\n`);
+      fs.appendFileSync(this.logFile, `${logMessage} ${args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')}\n`);
     } catch (err) {
       // Ignore log file errors
     }

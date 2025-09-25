@@ -67,7 +67,7 @@ export function VersionControlManager() {
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [showCommitDialog, setShowCommitDialog] = useState(false);
   const [showDiffView, setShowDiffView] = useState(false);
-  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  // Removed unused showMergeDialog state
   const [commitMessage, setCommitMessage] = useState('');
 
   // Mock data

@@ -93,7 +93,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -134,7 +134,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -159,7 +159,7 @@ class HubAPIService {
       }
 
       return await response.blob();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -182,7 +182,7 @@ class HubAPIService {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch (error: any) {
       this.handleError(error);
     }
   }
@@ -229,7 +229,7 @@ class HubAPIService {
         this.wsCallbacks.forEach(callback => {
           callback(data);
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('WebSocket message error:', error);
       }
     };
@@ -292,7 +292,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -316,7 +316,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -335,7 +335,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -356,7 +356,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -377,7 +377,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -400,7 +400,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -421,7 +421,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -442,7 +442,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -476,7 +476,7 @@ class HubAPIService {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch (error: any) {
       this.handleError(error);
     }
   }
@@ -507,7 +507,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -539,7 +539,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -566,7 +566,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -594,7 +594,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }
@@ -615,7 +615,7 @@ class HubAPIService {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       return this.handleError(error);
     }
   }

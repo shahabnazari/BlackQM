@@ -277,7 +277,7 @@ export function QuestionnairesTab({
             } else {
               setPostSurveyQuestions(data.questions || []);
             }
-          } catch (error) {
+          } catch (error: any) {
             console.error('Failed to import questions:', error);
           }
         };
@@ -308,7 +308,7 @@ export function QuestionnairesTab({
       // This would call the AI service to generate question suggestions
       console.log('Generating AI suggestions...');
       // Placeholder for AI integration
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to generate suggestions:', error);
     } finally {
       setLoading(false);
@@ -336,7 +336,7 @@ export function QuestionnairesTab({
           postSurveyQuestions.map(q => ({ ...q, metadata: { ...q.metadata, type: 'post-survey' } }))
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save questionnaires:', error);
     } finally {
       setSaving(false);

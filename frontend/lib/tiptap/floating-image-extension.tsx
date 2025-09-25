@@ -132,13 +132,14 @@ const FloatingImageComponent = ({ node, updateAttributes, deleteNode, selected }
     updateAttributes({ wrapMode: mode });
   };
 
-  const _handleAlignmentChange = (align: string) => {
-    updateAttributes({ alignment: align });
-  };
+  // Reserved for future implementation
+  // const _handleAlignmentChange = (align: string) => {
+  //   updateAttributes({ alignment: align });
+  // };
 
-  const _handleMarginChange = (newMargin: number) => {
-    updateAttributes({ margin: newMargin });
-  };
+  // const _handleMarginChange = (newMargin: number) => {
+  //   updateAttributes({ margin: newMargin });
+  // };
 
   const handleRotate = () => {
     const newRotation = (rotation + 90) % 360;
