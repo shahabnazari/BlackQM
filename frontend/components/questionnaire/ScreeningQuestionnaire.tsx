@@ -4,23 +4,23 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card } from '@/components/apple-ui/Card';
 import { Button } from '@/components/apple-ui/Button';
 import { Alert } from '@/components/ui/alert';
-import { 
-  Question, 
-  QuestionType, 
+import {
+  Question,
+  QuestionType,
   ScreeningResult,
-  questionAPIService 
+  questionAPIService,
 } from '@/lib/services/question-api.service';
-import { 
-  ChevronLeftIcon, 
+import {
+  ChevronLeftIcon,
   ChevronRightIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 
 /**
  * Phase 8.2 Day 1: World-Class Screening Questionnaire Component
- * 
+ *
  * Features:
  * - Dynamic question loading from API
  * - All 15+ question types supported
@@ -47,7 +47,7 @@ export default function ScreeningQuestionnaire({
   onComplete,
   onExit,
   autoSave = true,
-  showProgress = true
+  showProgress = true,
 }: ScreeningQuestionnaireProps) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -57,7 +57,9 @@ export default function ScreeningQuestionnaire({
   const [evaluating, setEvaluating] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [_timeSpent, setTimeSpent] = useState<Record<string, number>>({}); // TODO: Implement
-  const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
+  const [questionStartTime, setQuestionStartTime] = useState<number>(
+    Date.now()
+  );
 
   // Load screening questions
   useEffect(() => {
@@ -72,7 +74,9 @@ export default function ScreeningQuestionnaire({
       setVisibleQuestions(data);
     } catch (error: any) {
       console.error('Failed to load questions:', error);
-      setErrors({ general: 'Failed to load screening questions. Please try again.' });
+      setErrors({
+        general: 'Failed to load screening questions. Please try again.',
+      });
     } finally {
       setLoading(false);
     }
@@ -87,7 +91,10 @@ export default function ScreeningQuestionnaire({
     if (questions.length === 0) return;
 
     try {
-      const visible = await questionAPIService.getVisibleQuestions(surveyId, responses);
+      const visible = await questionAPIService.getVisibleQuestions(
+        surveyId,
+        responses
+      );
       setVisibleQuestions(visible);
     } catch (error: any) {
       // If API fails, show all questions
@@ -100,80 +107,85 @@ export default function ScreeningQuestionnaire({
     setQuestionStartTime(Date.now());
   }, [currentQuestionIndex]);
 
-  const currentQuestion = useMemo(() => 
-    visibleQuestions[currentQuestionIndex],
+  const currentQuestion = useMemo(
+    () => visibleQuestions[currentQuestionIndex],
     [visibleQuestions, currentQuestionIndex]
   );
 
-  const progress = useMemo(() => 
-    visibleQuestions.length > 0 
-      ? ((currentQuestionIndex + 1) / visibleQuestions.length) * 100 
-      : 0,
+  const progress = useMemo(
+    () =>
+      visibleQuestions.length > 0
+        ? ((currentQuestionIndex + 1) / visibleQuestions.length) * 100
+        : 0,
     [currentQuestionIndex, visibleQuestions.length]
   );
 
-  const isLastQuestion = useMemo(() => 
-    currentQuestionIndex === visibleQuestions.length - 1,
+  const isLastQuestion = useMemo(
+    () => currentQuestionIndex === visibleQuestions.length - 1,
     [currentQuestionIndex, visibleQuestions.length]
   );
 
   const canProceed = useMemo(() => {
     if (!currentQuestion) return false;
     const response = responses[currentQuestion.id];
-    
+
     if (currentQuestion.required && !response) return false;
     if (errors[currentQuestion.id]) return false;
-    
+
     return true;
   }, [currentQuestion, responses, errors]);
 
   // Handle response changes
-  const handleResponseChange = useCallback(async (value: any) => {
-    if (!currentQuestion) return;
+  const handleResponseChange = useCallback(
+    async (value: any) => {
+      if (!currentQuestion) return;
 
-    // Update response
-    setResponses(prev => ({
-      ...prev,
-      [currentQuestion.id]: value
-    }));
+      // Update response
+      setResponses(prev => ({
+        ...prev,
+        [currentQuestion.id]: value,
+      }));
 
-    // Clear error
-    setErrors(prev => {
-      const newErrors = { ...prev };
-      delete newErrors[currentQuestion.id];
-      return newErrors;
-    });
+      // Clear error
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[currentQuestion.id];
+        return newErrors;
+      });
 
-    // Validate response
-    if (currentQuestion.validation) {
-      try {
-        const validation = await questionAPIService.validateAnswer(
-          currentQuestion.id,
-          value
-        );
-        if (!validation.valid) {
-          setErrors(prev => ({
-            ...prev,
-            [currentQuestion.id]: validation.errors?.[0] || 'Invalid response'
-          }));
+      // Validate response
+      if (currentQuestion.validation) {
+        try {
+          const validation = await questionAPIService.validateAnswer(
+            currentQuestion.id,
+            value
+          );
+          if (!validation.valid) {
+            setErrors(prev => ({
+              ...prev,
+              [currentQuestion.id]:
+                validation.errors?.[0] || 'Invalid response',
+            }));
+          }
+        } catch (error: any) {
+          console.error('Validation error:', error);
         }
-      } catch (error: any) {
-        console.error('Validation error:', error);
       }
-    }
 
-    // Auto-save if enabled
-    if (autoSave) {
-      saveResponse(currentQuestion.id, value);
-    }
-  }, [currentQuestion, autoSave]);
+      // Auto-save if enabled
+      if (autoSave) {
+        saveResponse(currentQuestion.id, value);
+      }
+    },
+    [currentQuestion, autoSave]
+  );
 
   const saveResponse = async (questionId: string, value: any) => {
     try {
       await questionAPIService.submitAnswer({
         questionId,
         value,
-        timeSpent: Math.floor((Date.now() - questionStartTime) / 1000)
+        timeSpent: Math.floor((Date.now() - questionStartTime) / 1000),
       });
     } catch (error: any) {
       console.error('Failed to save response:', error);
@@ -188,16 +200,26 @@ export default function ScreeningQuestionnaire({
     if (currentQuestion) {
       setTimeSpent((prev: Record<string, number>) => ({
         ...prev,
-        [currentQuestion.id]: Math.floor((Date.now() - questionStartTime) / 1000)
+        [currentQuestion.id]: Math.floor(
+          (Date.now() - questionStartTime) / 1000
+        ),
       }));
     }
 
     if (isLastQuestion) {
       handleSubmit();
     } else {
-      setCurrentQuestionIndex(prev => Math.min(prev + 1, visibleQuestions.length - 1));
+      setCurrentQuestionIndex(prev =>
+        Math.min(prev + 1, visibleQuestions.length - 1)
+      );
     }
-  }, [canProceed, isLastQuestion, currentQuestion, questionStartTime, visibleQuestions.length]);
+  }, [
+    canProceed,
+    isLastQuestion,
+    currentQuestion,
+    questionStartTime,
+    visibleQuestions.length,
+  ]);
 
   const handlePrevious = useCallback(() => {
     setCurrentQuestionIndex(prev => Math.max(prev - 1, 0));
@@ -298,7 +320,10 @@ export default function ScreeningQuestionnaire({
         <p className="text-center text-secondary-label">
           No screening questions available for this study.
         </p>
-        <Button onClick={() => onComplete({ qualified: true })} className="mt-4">
+        <Button
+          onClick={() => onComplete({ qualified: true })}
+          className="mt-4"
+        >
           Continue
         </Button>
       </Card>
@@ -319,7 +344,7 @@ export default function ScreeningQuestionnaire({
             </span>
           </div>
           <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-blue-500 transition-all duration-300 ease-out"
               style={{ width: `${progress}%` }}
             />
@@ -328,9 +353,7 @@ export default function ScreeningQuestionnaire({
       )}
 
       {/* Question Content */}
-      <div className="p-6">
-        {renderQuestion()}
-      </div>
+      <div className="p-6">{renderQuestion()}</div>
 
       {/* Navigation */}
       <div className="flex items-center justify-between p-6 border-t border-gray-200">
@@ -349,11 +372,8 @@ export default function ScreeningQuestionnaire({
               Save & Exit
             </Button>
           )}
-          
-          <Button
-            onClick={handleNext}
-            disabled={!canProceed || evaluating}
-          >
+
+          <Button onClick={handleNext} disabled={!canProceed || evaluating}>
             {evaluating ? (
               <>
                 <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
@@ -383,9 +403,11 @@ function renderQuestionInput(
   value: any,
   onChange: (value: any) => void
 ) {
-  const options = question.options ? 
-    (typeof question.options === 'string' ? JSON.parse(question.options) : question.options) : 
-    null;
+  const options = question.options
+    ? typeof question.options === 'string'
+      ? JSON.parse(question.options)
+      : question.options
+    : null;
 
   switch (question.type) {
     case QuestionType.MULTIPLE_CHOICE_SINGLE:
@@ -401,7 +423,7 @@ function renderQuestionInput(
                 name={question.id}
                 value={option.value}
                 checked={value === option.value}
-                onChange={(e) => onChange(e.target.value)}
+                onChange={e => onChange(e.target.value)}
                 className="mr-3"
               />
               <div>
@@ -429,7 +451,7 @@ function renderQuestionInput(
                 type="checkbox"
                 value={option.value}
                 checked={Array.isArray(value) && value.includes(option.value)}
-                onChange={(e) => {
+                onChange={e => {
                   const currentValues = Array.isArray(value) ? value : [];
                   if (e.target.checked) {
                     onChange([...currentValues, e.target.value]);
@@ -456,7 +478,7 @@ function renderQuestionInput(
       return (
         <textarea
           value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={e => onChange(e.target.value)}
           className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           rows={4}
           placeholder="Enter your response..."
@@ -468,7 +490,7 @@ function renderQuestionInput(
         <input
           type="number"
           value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={e => onChange(e.target.value)}
           className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Enter a number..."
         />
@@ -478,7 +500,7 @@ function renderQuestionInput(
       const scalePoints = options?.scalePoints || 5;
       const minLabel = options?.minLabel || 'Strongly Disagree';
       const maxLabel = options?.maxLabel || 'Strongly Agree';
-      
+
       return (
         <div>
           <div className="flex justify-between text-sm text-secondary-label mb-2">
@@ -496,7 +518,7 @@ function renderQuestionInput(
                   name={question.id}
                   value={point}
                   checked={Number(value) === point}
-                  onChange={(e) => onChange(Number(e.target.value))}
+                  onChange={e => onChange(Number(e.target.value))}
                   className="mb-2"
                 />
                 <span className="text-sm">{point}</span>
@@ -510,7 +532,7 @@ function renderQuestionInput(
       return (
         <select
           value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={e => onChange(e.target.value)}
           className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Select an option...</option>
@@ -525,7 +547,7 @@ function renderQuestionInput(
     case QuestionType.SLIDER:
       const min = question.validation?.minValue || 0;
       const max = question.validation?.maxValue || 100;
-      
+
       return (
         <div>
           <input
@@ -533,7 +555,7 @@ function renderQuestionInput(
             min={min}
             max={max}
             value={value || min}
-            onChange={(e) => onChange(Number(e.target.value))}
+            onChange={e => onChange(Number(e.target.value))}
             className="w-full"
           />
           <div className="flex justify-between text-sm text-secondary-label mt-2">
@@ -549,7 +571,7 @@ function renderQuestionInput(
         <input
           type="datetime-local"
           value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={e => onChange(e.target.value)}
           className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       );
@@ -569,9 +591,11 @@ function renderQuestionInput(
                 onClick={() => onChange(score)}
                 className={`
                   p-2 border rounded text-sm font-medium transition-colors
-                  ${value === score 
-                    ? 'bg-blue-500 text-white border-blue-500' 
-                    : 'hover:bg-gray-50 border-gray-300'}
+                  ${
+                    value === score
+                      ? 'bg-blue-500 text-white border-blue-500'
+                      : 'hover:bg-gray-50 border-gray-300'
+                  }
                 `}
               >
                 {score}

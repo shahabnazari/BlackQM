@@ -61,7 +61,8 @@ export function PhaseOnboarding({
       {
         id: 'discover-welcome',
         title: 'Welcome to the Discovery Phase! 🔍',
-        description: 'This is where your research journey begins. You\'ll explore existing literature, identify gaps, and build your theoretical foundation.',
+        description:
+          "This is where your research journey begins. You'll explore existing literature, identify gaps, and build your theoretical foundation.",
         tips: [
           'Start with broad searches and narrow down',
           'Keep track of search terms that work well',
@@ -71,7 +72,8 @@ export function PhaseOnboarding({
       {
         id: 'discover-search',
         title: 'Search Academic Databases',
-        description: 'Use our integrated search to find papers from multiple academic databases simultaneously.',
+        description:
+          'Use our integrated search to find papers from multiple academic databases simultaneously.',
         action: {
           label: 'Try Literature Search',
           onClick: () => console.log('Open literature search'),
@@ -81,7 +83,8 @@ export function PhaseOnboarding({
       {
         id: 'discover-organize',
         title: 'Organize Your References',
-        description: 'Import references and organize them into collections. Tag papers by theme, methodology, or relevance.',
+        description:
+          'Import references and organize them into collections. Tag papers by theme, methodology, or relevance.',
         tips: [
           'Use folders to group related papers',
           'Add notes to remember key insights',
@@ -91,7 +94,8 @@ export function PhaseOnboarding({
       {
         id: 'discover-map',
         title: 'Create a Knowledge Map',
-        description: 'Visualize connections between concepts, theories, and research gaps.',
+        description:
+          'Visualize connections between concepts, theories, and research gaps.',
         action: {
           label: 'Open Knowledge Mapper',
           onClick: () => console.log('Open knowledge mapper'),
@@ -102,7 +106,8 @@ export function PhaseOnboarding({
       {
         id: 'design-welcome',
         title: 'Design Your Study! 💡',
-        description: 'Transform your research ideas into a structured methodology. Define your questions, hypotheses, and approach.',
+        description:
+          'Transform your research ideas into a structured methodology. Define your questions, hypotheses, and approach.',
         tips: [
           'Keep research questions focused and specific',
           'Ensure your methodology aligns with your questions',
@@ -112,7 +117,8 @@ export function PhaseOnboarding({
       {
         id: 'design-questions',
         title: 'Formulate Research Questions',
-        description: 'Use our guided wizard to create SMART research questions that are testable with Q-methodology.',
+        description:
+          'Use our guided wizard to create SMART research questions that are testable with Q-methodology.',
         action: {
           label: 'Start Question Wizard',
           onClick: () => console.log('Open question wizard'),
@@ -121,7 +127,8 @@ export function PhaseOnboarding({
       {
         id: 'design-methodology',
         title: 'Select Your Methodology',
-        description: 'Choose between different Q-methodology approaches and configure your study parameters.',
+        description:
+          'Choose between different Q-methodology approaches and configure your study parameters.',
         tips: [
           'Consider your participant pool when choosing methods',
           'Think about online vs. in-person data collection',
@@ -133,7 +140,8 @@ export function PhaseOnboarding({
       {
         id: 'build-welcome',
         title: 'Build Your Study! 🛠️',
-        description: 'Create all the materials needed for your Q-study: statements, grid, questionnaires, and instructions.',
+        description:
+          'Create all the materials needed for your Q-study: statements, grid, questionnaires, and instructions.',
         tips: [
           'Aim for 40-80 diverse statements',
           'Test your materials with colleagues first',
@@ -143,7 +151,8 @@ export function PhaseOnboarding({
       {
         id: 'build-statements',
         title: 'Generate Q-Statements',
-        description: 'Use AI assistance or manual input to create statements that capture the full range of viewpoints.',
+        description:
+          'Use AI assistance or manual input to create statements that capture the full range of viewpoints.',
         action: {
           label: 'Open Statement Generator',
           onClick: () => console.log('Open statement generator'),
@@ -153,7 +162,8 @@ export function PhaseOnboarding({
       {
         id: 'build-grid',
         title: 'Design Your Q-Sort Grid',
-        description: 'Configure the sorting grid with the right distribution for your study.',
+        description:
+          'Configure the sorting grid with the right distribution for your study.',
         tips: [
           'Most studies use quasi-normal distributions',
           'Consider cognitive load when setting grid size',
@@ -163,7 +173,8 @@ export function PhaseOnboarding({
       {
         id: 'build-questionnaires',
         title: 'Add Questionnaires',
-        description: 'Create pre-screening, demographic, and post-sort questionnaires to enrich your data.',
+        description:
+          'Create pre-screening, demographic, and post-sort questionnaires to enrich your data.',
         action: {
           label: 'Questionnaire Builder',
           onClick: () => console.log('Open questionnaire builder'),
@@ -174,7 +185,8 @@ export function PhaseOnboarding({
       {
         id: 'recruit-welcome',
         title: 'Recruit Participants! 👥',
-        description: 'Find and invite the right participants for your study. Quality over quantity in Q-methodology!',
+        description:
+          'Find and invite the right participants for your study. Quality over quantity in Q-methodology!',
         tips: [
           'Aim for diversity of viewpoints, not statistical representation',
           '20-40 participants is usually sufficient',
@@ -184,7 +196,8 @@ export function PhaseOnboarding({
       {
         id: 'recruit-pool',
         title: 'Build Your Participant Pool',
-        description: 'Import contacts, create sign-up forms, or use our participant marketplace.',
+        description:
+          'Import contacts, create sign-up forms, or use our participant marketplace.',
         action: {
           label: 'Manage Participants',
           onClick: () => console.log('Open participant manager'),
@@ -193,7 +206,8 @@ export function PhaseOnboarding({
       {
         id: 'recruit-invite',
         title: 'Send Invitations',
-        description: 'Customize and send invitation emails with personalized study links.',
+        description:
+          'Customize and send invitation emails with personalized study links.',
         tips: [
           'Explain the study purpose clearly',
           'Mention estimated completion time',
@@ -205,7 +219,8 @@ export function PhaseOnboarding({
       {
         id: 'collect-welcome',
         title: 'Collect Data! 📊',
-        description: 'Launch your study and monitor participant responses in real-time.',
+        description:
+          'Launch your study and monitor participant responses in real-time.',
         tips: [
           'Send reminders to increase response rates',
           'Monitor for technical issues',
@@ -224,7 +239,8 @@ export function PhaseOnboarding({
       {
         id: 'collect-monitor',
         title: 'Monitor Progress',
-        description: 'Track completion rates, response quality, and participant feedback.',
+        description:
+          'Track completion rates, response quality, and participant feedback.',
         tips: [
           'Check for incomplete responses',
           'Look for patterns in completion times',
@@ -236,7 +252,8 @@ export function PhaseOnboarding({
       {
         id: 'analyze-welcome',
         title: 'Analyze Your Data! 🔬',
-        description: 'Uncover patterns and extract factors from your Q-sort data.',
+        description:
+          'Uncover patterns and extract factors from your Q-sort data.',
         tips: [
           'Start with PCA (Principal Component Analysis)',
           'Extract factors with eigenvalues > 1.0',
@@ -246,7 +263,8 @@ export function PhaseOnboarding({
       {
         id: 'analyze-extraction',
         title: 'Extract Factors',
-        description: 'Run factor analysis to identify distinct viewpoints in your data.',
+        description:
+          'Run factor analysis to identify distinct viewpoints in your data.',
         action: {
           label: 'Run Analysis',
           onClick: () => console.log('Run factor analysis'),
@@ -268,7 +286,8 @@ export function PhaseOnboarding({
       {
         id: 'visualize-welcome',
         title: 'Visualize Results! 📈',
-        description: 'Create compelling visualizations to communicate your findings.',
+        description:
+          'Create compelling visualizations to communicate your findings.',
         tips: [
           'Factor arrays show idealized perspectives',
           'Use color coding consistently',
@@ -278,7 +297,7 @@ export function PhaseOnboarding({
       {
         id: 'visualize-arrays',
         title: 'Generate Factor Arrays',
-        description: 'Create visual representations of each factor\'s Q-sort.',
+        description: "Create visual representations of each factor's Q-sort.",
         action: {
           label: 'Create Visualizations',
           onClick: () => console.log('Open visualization tools'),
@@ -289,7 +308,8 @@ export function PhaseOnboarding({
       {
         id: 'interpret-welcome',
         title: 'Interpret Your Findings! 📝',
-        description: 'Extract meaning from your factors and write compelling narratives.',
+        description:
+          'Extract meaning from your factors and write compelling narratives.',
         tips: [
           'Use distinguishing statements to characterize factors',
           'Look for consensus across factors',
@@ -299,7 +319,8 @@ export function PhaseOnboarding({
       {
         id: 'interpret-narratives',
         title: 'Write Factor Narratives',
-        description: 'Describe each factor as a coherent viewpoint or perspective.',
+        description:
+          'Describe each factor as a coherent viewpoint or perspective.',
         action: {
           label: 'Start Writing',
           onClick: () => console.log('Open interpretation workspace'),
@@ -310,7 +331,8 @@ export function PhaseOnboarding({
       {
         id: 'report-welcome',
         title: 'Create Your Report! 📄',
-        description: 'Document your research journey and findings in a professional report.',
+        description:
+          'Document your research journey and findings in a professional report.',
         tips: [
           'Follow academic writing standards',
           'Include all necessary sections',
@@ -320,7 +342,8 @@ export function PhaseOnboarding({
       {
         id: 'report-generate',
         title: 'Generate Report Sections',
-        description: 'Use templates and AI assistance to create report content.',
+        description:
+          'Use templates and AI assistance to create report content.',
         action: {
           label: 'Report Builder',
           onClick: () => console.log('Open report builder'),
@@ -331,7 +354,8 @@ export function PhaseOnboarding({
       {
         id: 'archive-welcome',
         title: 'Archive Your Research! 🗄️',
-        description: 'Preserve your study data and materials for future reference and replication.',
+        description:
+          'Preserve your study data and materials for future reference and replication.',
         tips: [
           'Include all raw data and analysis files',
           'Document your methodology thoroughly',
@@ -356,7 +380,7 @@ export function PhaseOnboarding({
   useEffect(() => {
     const storageKey = `onboarding_${phase}_${userId}`;
     const hasSeen = localStorage.getItem(storageKey);
-    
+
     if (!hasSeen && steps.length > 0) {
       setIsVisible(true);
     } else {
@@ -417,10 +441,10 @@ export function PhaseOnboarding({
       <button
         onClick={restartOnboarding}
         className={cn(
-          "inline-flex items-center gap-2 px-4 py-2",
-          "text-sm text-indigo-600 hover:text-indigo-700",
-          "bg-indigo-50 hover:bg-indigo-100 rounded-lg",
-          "transition-colors",
+          'inline-flex items-center gap-2 px-4 py-2',
+          'text-sm text-indigo-600 hover:text-indigo-700',
+          'bg-indigo-50 hover:bg-indigo-100 rounded-lg',
+          'transition-colors',
           className
         )}
       >
@@ -452,7 +476,7 @@ export function PhaseOnboarding({
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.9, y: 20 }}
           className={cn(
-            "w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden",
+            'w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden',
             className
           )}
         >
@@ -492,12 +516,12 @@ export function PhaseOnboarding({
                 <div
                   key={step.id}
                   className={cn(
-                    "w-2 h-2 rounded-full transition-all",
+                    'w-2 h-2 rounded-full transition-all',
                     index === currentStep
-                      ? "w-8 bg-indigo-600"
+                      ? 'w-8 bg-indigo-600'
                       : index < currentStep
-                      ? "bg-green-500"
-                      : "bg-gray-300 dark:bg-gray-600"
+                        ? 'bg-green-500'
+                        : 'bg-gray-300 dark:bg-gray-600'
                   )}
                 />
               ))}

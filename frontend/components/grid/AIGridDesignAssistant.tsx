@@ -2,24 +2,27 @@
 
 import { Button } from '@/components/apple-ui/Button';
 import { Card } from '@/components/apple-ui/Card';
-import { GridConfigurationService, StandardGridConfig } from '@/lib/services/grid-configuration.service';
+import {
+  GridConfigurationService,
+  StandardGridConfig,
+} from '@/lib/services/grid-configuration.service';
 import { useGridRecommendations } from '@/hooks/useAIBackend';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-    BarChart3,
-    BookOpen,
-    Brain,
-    CheckCircle,
-    ChevronLeft,
-    ChevronRight,
-    Info,
-    Lightbulb,
-    Settings,
-    Sparkles,
-    Target,
-    TrendingUp,
-    Users,
-    Zap
+  BarChart3,
+  BookOpen,
+  Brain,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  Lightbulb,
+  Settings,
+  Sparkles,
+  Target,
+  TrendingUp,
+  Users,
+  Zap,
 } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -70,9 +73,10 @@ export const AIGridDesignAssistant: React.FC<{
     timeConstraint: null,
     previousExperience: null,
   });
-  const [recommendation, setRecommendation] = useState<GridRecommendation | null>(null);
+  const [recommendation, setRecommendation] =
+    useState<GridRecommendation | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
+
   // Use the AI backend hook for recommendations
   const { getRecommendations } = useGridRecommendations();
 
@@ -84,22 +88,22 @@ export const AIGridDesignAssistant: React.FC<{
       type: 'single',
       icon: Target,
       options: [
-        { 
-          value: 'exploratory', 
+        {
+          value: 'exploratory',
           label: 'Exploratory Study',
-          description: 'Discovering new perspectives and patterns'
+          description: 'Discovering new perspectives and patterns',
         },
-        { 
-          value: 'confirmatory', 
+        {
+          value: 'confirmatory',
           label: 'Confirmatory Study',
-          description: 'Testing specific hypotheses or theories'
+          description: 'Testing specific hypotheses or theories',
         },
-        { 
-          value: 'mixed', 
+        {
+          value: 'mixed',
           label: 'Mixed Methods',
-          description: 'Combining exploration with confirmation'
-        }
-      ]
+          description: 'Combining exploration with confirmation',
+        },
+      ],
     },
     {
       id: 'participantCount',
@@ -108,31 +112,31 @@ export const AIGridDesignAssistant: React.FC<{
       type: 'number',
       min: 5,
       max: 100,
-      icon: Users
+      icon: Users,
     },
     {
       id: 'participantExpertise',
-      text: 'What is your participants\' familiarity with the topic?',
+      text: "What is your participants' familiarity with the topic?",
       subtext: 'Experts can handle more complex grids',
       type: 'single',
       icon: Brain,
       options: [
-        { 
-          value: 'expert', 
+        {
+          value: 'expert',
           label: 'Subject Matter Experts',
-          description: 'Deep knowledge of the topic'
+          description: 'Deep knowledge of the topic',
         },
-        { 
-          value: 'general', 
+        {
+          value: 'general',
           label: 'General Public',
-          description: 'Basic or no prior knowledge'
+          description: 'Basic or no prior knowledge',
         },
-        { 
-          value: 'mixed', 
+        {
+          value: 'mixed',
           label: 'Mixed Expertise',
-          description: 'Varied levels of knowledge'
-        }
-      ]
+          description: 'Varied levels of knowledge',
+        },
+      ],
     },
     {
       id: 'complexityLevel',
@@ -141,22 +145,22 @@ export const AIGridDesignAssistant: React.FC<{
       type: 'single',
       icon: BarChart3,
       options: [
-        { 
-          value: 'simple', 
+        {
+          value: 'simple',
           label: 'Simple/Straightforward',
-          description: 'Clear, well-defined concepts'
+          description: 'Clear, well-defined concepts',
         },
-        { 
-          value: 'moderate', 
+        {
+          value: 'moderate',
           label: 'Moderately Complex',
-          description: 'Some nuance and interpretation needed'
+          description: 'Some nuance and interpretation needed',
         },
-        { 
-          value: 'complex', 
+        {
+          value: 'complex',
           label: 'Highly Complex',
-          description: 'Abstract or multifaceted concepts'
-        }
-      ]
+          description: 'Abstract or multifaceted concepts',
+        },
+      ],
     },
     {
       id: 'stimuliType',
@@ -165,22 +169,22 @@ export const AIGridDesignAssistant: React.FC<{
       type: 'single',
       icon: Settings,
       options: [
-        { 
-          value: 'text', 
+        {
+          value: 'text',
           label: 'Text Statements',
-          description: 'Words, phrases, or sentences'
+          description: 'Words, phrases, or sentences',
         },
-        { 
-          value: 'image', 
+        {
+          value: 'image',
           label: 'Images/Visual',
-          description: 'Photos, graphics, or illustrations'
+          description: 'Photos, graphics, or illustrations',
         },
-        { 
-          value: 'mixed', 
+        {
+          value: 'mixed',
           label: 'Mixed Media',
-          description: 'Combination of text and images'
-        }
-      ]
+          description: 'Combination of text and images',
+        },
+      ],
     },
     {
       id: 'timeConstraint',
@@ -189,47 +193,47 @@ export const AIGridDesignAssistant: React.FC<{
       type: 'single',
       icon: TrendingUp,
       options: [
-        { 
-          value: 'short', 
+        {
+          value: 'short',
           label: '10-15 minutes',
-          description: 'Quick study, limited time'
+          description: 'Quick study, limited time',
         },
-        { 
-          value: 'medium', 
+        {
+          value: 'medium',
           label: '15-30 minutes',
-          description: 'Standard study duration'
+          description: 'Standard study duration',
         },
-        { 
-          value: 'long', 
+        {
+          value: 'long',
           label: '30+ minutes',
-          description: 'In-depth, thorough sorting'
-        }
-      ]
+          description: 'In-depth, thorough sorting',
+        },
+      ],
     },
     {
       id: 'previousExperience',
-      text: 'What\'s your experience with Q-methodology?',
-      subtext: 'We\'ll adjust our recommendations accordingly',
+      text: "What's your experience with Q-methodology?",
+      subtext: "We'll adjust our recommendations accordingly",
       type: 'single',
       icon: Lightbulb,
       options: [
-        { 
-          value: 'none', 
+        {
+          value: 'none',
           label: 'First Time',
-          description: 'New to Q-methodology'
+          description: 'New to Q-methodology',
         },
-        { 
-          value: 'some', 
+        {
+          value: 'some',
           label: 'Some Experience',
-          description: 'Conducted 1-3 studies'
+          description: 'Conducted 1-3 studies',
         },
-        { 
-          value: 'extensive', 
+        {
+          value: 'extensive',
           label: 'Experienced Researcher',
-          description: 'Multiple studies completed'
-        }
-      ]
-    }
+          description: 'Multiple studies completed',
+        },
+      ],
+    },
   ];
 
   const analyzeAndRecommend = async (): Promise<GridRecommendation | null> => {
@@ -238,29 +242,44 @@ export const AIGridDesignAssistant: React.FC<{
       const studyTopic = `${context.studyType || 'exploratory'} study with ${
         context.participantCount || 30
       } participants, ${context.participantExpertise || 'general'} expertise level`;
-      
+
       // Map context to backend parameters
-      const participantExperience = context.previousExperience === 'none' ? 'novice' :
-                                     context.previousExperience === 'some' ? 'intermediate' : 'expert';
-      
-      const researchType = context.studyType === 'exploratory' ? 'exploratory' :
-                           context.studyType === 'confirmatory' ? 'confirmatory' : 'comparative';
-      
+      const participantExperience =
+        context.previousExperience === 'none'
+          ? 'novice'
+          : context.previousExperience === 'some'
+            ? 'intermediate'
+            : 'expert';
+
+      const researchType =
+        context.studyType === 'exploratory'
+          ? 'exploratory'
+          : context.studyType === 'confirmatory'
+            ? 'confirmatory'
+            : 'comparative';
+
       // Call AI backend for recommendations
       const aiRecommendations = await getRecommendations({
         studyTopic,
         expectedStatements: context.participantCount || 30,
-        participantExperience: participantExperience as 'novice' | 'intermediate' | 'expert',
-        researchType: researchType as 'exploratory' | 'confirmatory' | 'comparative'
+        participantExperience: participantExperience as
+          | 'novice'
+          | 'intermediate'
+          | 'expert',
+        researchType: researchType as
+          | 'exploratory'
+          | 'confirmatory'
+          | 'comparative',
       });
-      
+
       if (aiRecommendations && aiRecommendations.length > 0) {
         // Use first recommendation from AI
         const aiRec = aiRecommendations[0];
-        
+
         // Get a fallback config from local service to ensure proper structure
-        const fallbackConfig = GridConfigurationService.getConfigById('optimal-36');
-        
+        const fallbackConfig =
+          GridConfigurationService.getConfigById('optimal-36');
+
         // Merge AI recommendation with local config structure
         const config: StandardGridConfig = fallbackConfig || {
           id: 'ai-recommended',
@@ -272,11 +291,11 @@ export const AIGridDesignAssistant: React.FC<{
           citation: 'AI Analysis',
           recommendedFor: ['general research'],
           timeEstimate: '15-20 minutes',
-          expertiseLevel: 'intermediate'
+          expertiseLevel: 'intermediate',
         };
-        
+
         const columns = config.range.max - config.range.min + 1;
-        
+
         return {
           config,
           columns,
@@ -286,39 +305,48 @@ export const AIGridDesignAssistant: React.FC<{
           reasoning: [aiRec?.reasoning || 'Optimized based on AI analysis'],
           confidence: (aiRec as any)?.confidence || 85,
           alternativeOptions: [],
-          citation: 'AI-Generated Recommendation'
+          citation: 'AI-Generated Recommendation',
         };
       } else {
         // Fallback to local service if AI fails
-        const serviceRecommendation = GridConfigurationService.getAIRecommendation({
-          studyType: context.studyType || 'exploratory',
-          participantCount: context.participantCount || 30,
-          participantExpertise: context.participantExpertise || 'general',
-          complexityLevel: context.complexityLevel || 'moderate',
-          timeConstraint: context.timeConstraint || 'medium',
-          previousExperience: context.previousExperience || 'none'
-        });
+        const serviceRecommendation =
+          GridConfigurationService.getAIRecommendation({
+            studyType: context.studyType || 'exploratory',
+            participantCount: context.participantCount || 30,
+            participantExpertise: context.participantExpertise || 'general',
+            complexityLevel: context.complexityLevel || 'moderate',
+            timeConstraint: context.timeConstraint || 'medium',
+            previousExperience: context.previousExperience || 'none',
+          });
 
         // Get additional rationale for the selected configuration
-        const additionalRationale = GridConfigurationService.getConfigurationRationale(serviceRecommendation.config);
+        const additionalRationale =
+          GridConfigurationService.getConfigurationRationale(
+            serviceRecommendation.config
+          );
 
         // Convert service recommendation to component format
-        const columns = serviceRecommendation.config.range.max - serviceRecommendation.config.range.min + 1;
-        
+        const columns =
+          serviceRecommendation.config.range.max -
+          serviceRecommendation.config.range.min +
+          1;
+
         // Generate alternatives with proper format
-        const alternatives: GridRecommendation[] = serviceRecommendation.alternatives.map((alt: any) => {
-          const altColumns = alt.range.max - alt.range.min + 1;
-          return {
-            config: alt,
-            columns: altColumns,
-            range: alt.range,
-            distribution: alt.distribution,
-            totalCells: alt.totalItems,
-            reasoning: GridConfigurationService.getConfigurationRationale(alt),
-            confidence: serviceRecommendation.confidence - 10,
-            citation: alt.citation
-          };
-        });
+        const alternatives: GridRecommendation[] =
+          serviceRecommendation.alternatives.map((alt: any) => {
+            const altColumns = alt.range.max - alt.range.min + 1;
+            return {
+              config: alt,
+              columns: altColumns,
+              range: alt.range,
+              distribution: alt.distribution,
+              totalCells: alt.totalItems,
+              reasoning:
+                GridConfigurationService.getConfigurationRationale(alt),
+              confidence: serviceRecommendation.confidence - 10,
+              citation: alt.citation,
+            };
+          });
 
         return {
           config: serviceRecommendation.config,
@@ -326,10 +354,13 @@ export const AIGridDesignAssistant: React.FC<{
           range: serviceRecommendation.config.range,
           distribution: serviceRecommendation.config.distribution,
           totalCells: serviceRecommendation.config.totalItems,
-          reasoning: [...serviceRecommendation.reasoning, ...additionalRationale],
+          reasoning: [
+            ...serviceRecommendation.reasoning,
+            ...additionalRationale,
+          ],
           confidence: serviceRecommendation.confidence,
           alternativeOptions: alternatives,
-          citation: serviceRecommendation.config.citation
+          citation: serviceRecommendation.config.citation,
         };
       }
     } catch (error: any) {
@@ -345,7 +376,7 @@ export const AIGridDesignAssistant: React.FC<{
     const questionId = question.id;
     setContext(prev => ({
       ...prev,
-      [questionId]: value
+      [questionId]: value,
     }));
 
     if (currentStep < questions.length - 1) {
@@ -380,7 +411,9 @@ export const AIGridDesignAssistant: React.FC<{
             <Sparkles className="w-6 h-6 text-yellow-500 absolute -top-2 -right-2 animate-spin" />
           </div>
           <h2 className="text-2xl font-bold">Analyzing Your Requirements</h2>
-          <p className="text-gray-600">Our AI is calculating the optimal grid configuration...</p>
+          <p className="text-gray-600">
+            Our AI is calculating the optimal grid configuration...
+          </p>
           <div className="flex justify-center gap-2 mt-4">
             {[0, 1, 2].map((i: any) => (
               <motion.div
@@ -405,14 +438,18 @@ export const AIGridDesignAssistant: React.FC<{
               <Zap className="w-5 h-5" />
               <span className="font-medium">AI Recommendation Ready</span>
             </div>
-            <h2 className="text-3xl font-bold mb-2">Your Optimal Grid Configuration</h2>
+            <h2 className="text-3xl font-bold mb-2">
+              Your Optimal Grid Configuration
+            </h2>
             <p className="text-gray-600">Based on your study requirements</p>
           </div>
 
           {/* Main Recommendation */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
             <div className="flex items-start justify-between mb-4">
-              <h3 className="text-xl font-semibold">Recommended Configuration</h3>
+              <h3 className="text-xl font-semibold">
+                Recommended Configuration
+              </h3>
               <div className="flex items-center gap-2">
                 <div className="text-sm text-gray-600">Confidence</div>
                 <div className="flex items-center gap-1">
@@ -424,14 +461,18 @@ export const AIGridDesignAssistant: React.FC<{
                       transition={{ duration: 1 }}
                     />
                   </div>
-                  <span className="text-sm font-medium">{recommendation.confidence}%</span>
+                  <span className="text-sm font-medium">
+                    {recommendation.confidence}%
+                  </span>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="bg-white rounded-lg p-4 text-center">
-                <div className="text-3xl font-bold text-blue-600">{recommendation.columns}</div>
+                <div className="text-3xl font-bold text-blue-600">
+                  {recommendation.columns}
+                </div>
                 <div className="text-sm text-gray-600">Columns</div>
               </div>
               <div className="bg-white rounded-lg p-4 text-center">
@@ -441,19 +482,26 @@ export const AIGridDesignAssistant: React.FC<{
                 <div className="text-sm text-gray-600">Range</div>
               </div>
               <div className="bg-white rounded-lg p-4 text-center">
-                <div className="text-3xl font-bold text-purple-600">{recommendation.totalCells}</div>
+                <div className="text-3xl font-bold text-purple-600">
+                  {recommendation.totalCells}
+                </div>
                 <div className="text-sm text-gray-600">Total Items</div>
               </div>
             </div>
 
             {/* Distribution Display */}
             <div className="bg-white rounded-lg p-4 mb-4">
-              <div className="text-sm text-gray-600 mb-2">Distribution Pattern</div>
+              <div className="text-sm text-gray-600 mb-2">
+                Distribution Pattern
+              </div>
               <div className="overflow-x-auto">
                 <div className="flex justify-center items-end gap-1 min-w-fit px-2">
                   {recommendation.distribution.map((height, index) => (
-                    <div key={index} className="flex flex-col items-center flex-shrink-0">
-                      <div 
+                    <div
+                      key={index}
+                      className="flex flex-col items-center flex-shrink-0"
+                    >
+                      <div
                         className="w-6 md:w-8 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t"
                         style={{ height: `${Math.min(height * 10, 120)}px` }}
                       />
@@ -462,7 +510,9 @@ export const AIGridDesignAssistant: React.FC<{
                   ))}
                 </div>
               </div>
-              <div className="text-xs text-gray-500 text-center mt-2">Bell curve distribution</div>
+              <div className="text-xs text-gray-500 text-center mt-2">
+                Bell curve distribution
+              </div>
             </div>
 
             {/* Scientific Backing */}
@@ -483,7 +533,10 @@ export const AIGridDesignAssistant: React.FC<{
               </h4>
               <ul className="space-y-1">
                 {recommendation.reasoning.map((reason, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm text-gray-600">
+                  <li
+                    key={index}
+                    className="flex items-start gap-2 text-sm text-gray-600"
+                  >
                     <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                     {reason}
                   </li>
@@ -493,33 +546,48 @@ export const AIGridDesignAssistant: React.FC<{
           </div>
 
           {/* Alternative Options */}
-          {recommendation.alternativeOptions && recommendation.alternativeOptions.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Alternative Options</h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {recommendation.alternativeOptions.slice(0, 4).map((alt, index) => (
-                  <div key={index} className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-medium">Option {index + 1}</h4>
-                      <span className="text-sm text-gray-500">{alt.confidence}% confidence</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs sm:text-sm">
-                      <div className="truncate">
-                        <span className="text-gray-500">Columns:</span> {alt.columns}
+          {recommendation.alternativeOptions &&
+            recommendation.alternativeOptions.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3">
+                  Alternative Options
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {recommendation.alternativeOptions
+                    .slice(0, 4)
+                    .map((alt, index) => (
+                      <div
+                        key={index}
+                        className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium">Option {index + 1}</h4>
+                          <span className="text-sm text-gray-500">
+                            {alt.confidence}% confidence
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-xs sm:text-sm">
+                          <div className="truncate">
+                            <span className="text-gray-500">Columns:</span>{' '}
+                            {alt.columns}
+                          </div>
+                          <div className="truncate">
+                            <span className="text-gray-500">Range:</span> ±
+                            {alt.range.max}
+                          </div>
+                          <div className="truncate">
+                            <span className="text-gray-500">Cells:</span>{' '}
+                            {alt.totalCells}
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2 line-clamp-2">
+                          {alt.reasoning[0]}
+                        </p>
                       </div>
-                      <div className="truncate">
-                        <span className="text-gray-500">Range:</span> ±{alt.range.max}
-                      </div>
-                      <div className="truncate">
-                        <span className="text-gray-500">Cells:</span> {alt.totalCells}
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-2 line-clamp-2">{alt.reasoning[0]}</p>
-                  </div>
-                ))}
+                    ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Actions */}
           <div className="flex justify-between pt-4">
@@ -597,9 +665,13 @@ export const AIGridDesignAssistant: React.FC<{
                 <Icon className="w-6 h-6 text-blue-600" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold mb-1">{currentQuestion.text}</h3>
+                <h3 className="text-lg font-semibold mb-1">
+                  {currentQuestion.text}
+                </h3>
                 {currentQuestion.subtext && (
-                  <p className="text-sm text-gray-600">{currentQuestion.subtext}</p>
+                  <p className="text-sm text-gray-600">
+                    {currentQuestion.subtext}
+                  </p>
                 )}
               </div>
             </div>
@@ -608,7 +680,7 @@ export const AIGridDesignAssistant: React.FC<{
             <div className="space-y-3 mt-6">
               {currentQuestion.type === 'single' && currentQuestion.options && (
                 <div className="grid gap-3">
-                  {currentQuestion.options.map((option) => (
+                  {currentQuestion.options.map(option => (
                     <button
                       key={option.value}
                       onClick={() => handleAnswer(option.value)}
@@ -616,7 +688,9 @@ export const AIGridDesignAssistant: React.FC<{
                     >
                       <div className="font-medium mb-1">{option.label}</div>
                       {option.description && (
-                        <div className="text-sm text-gray-600">{option.description}</div>
+                        <div className="text-sm text-gray-600">
+                          {option.description}
+                        </div>
                       )}
                     </button>
                   ))}
@@ -633,8 +707,13 @@ export const AIGridDesignAssistant: React.FC<{
                     className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     onKeyPress={(e: any) => {
                       if (e.key === 'Enter') {
-                        const value = parseInt((e.target as HTMLInputElement).value);
-                        if (value >= (currentQuestion.min || 0) && value <= (currentQuestion.max || 100)) {
+                        const value = parseInt(
+                          (e.target as HTMLInputElement).value
+                        );
+                        if (
+                          value >= (currentQuestion.min || 0) &&
+                          value <= (currentQuestion.max || 100)
+                        ) {
                           handleAnswer(value);
                         }
                       }
@@ -643,9 +722,14 @@ export const AIGridDesignAssistant: React.FC<{
                   <Button
                     variant="primary"
                     onClick={() => {
-                      const input = document.querySelector('input[type="number"]') as HTMLInputElement;
+                      const input = document.querySelector(
+                        'input[type="number"]'
+                      ) as HTMLInputElement;
                       const value = parseInt(input.value);
-                      if (value >= (currentQuestion.min || 0) && value <= (currentQuestion.max || 100)) {
+                      if (
+                        value >= (currentQuestion.min || 0) &&
+                        value <= (currentQuestion.max || 100)
+                      ) {
                         handleAnswer(value);
                       }
                     }}
@@ -668,12 +752,9 @@ export const AIGridDesignAssistant: React.FC<{
             <ChevronLeft className="w-4 h-4 mr-1" />
             Previous
           </Button>
-          
+
           {currentStep > 0 && (
-            <Button
-              variant="secondary"
-              onClick={() => handleAnswer(null)}
-            >
+            <Button variant="secondary" onClick={() => handleAnswer(null)}>
               Skip
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>

@@ -6,20 +6,26 @@
 
 // Get the auth token from local storage or session
 export async function getAuthToken(): Promise<string | null> {
-  // Check localStorage first
-  const token = localStorage.getItem('auth_token');
+  // Check localStorage first - looking for 'access_token' which is what auth service stores
+  const token = localStorage.getItem('access_token');
   if (token) {
     return token;
   }
 
+  // Also check for legacy 'auth_token' key
+  const legacyToken = localStorage.getItem('auth_token');
+  if (legacyToken) {
+    return legacyToken;
+  }
+
   // Check sessionStorage as fallback
-  const sessionToken = sessionStorage.getItem('auth_token');
+  const sessionToken = sessionStorage.getItem('access_token') || sessionStorage.getItem('auth_token');
   if (sessionToken) {
     return sessionToken;
   }
 
   // If no token found, try to get from cookie
-  const cookieToken = getCookie('auth_token');
+  const cookieToken = getCookie('access_token') || getCookie('auth_token');
   if (cookieToken) {
     return cookieToken;
   }
@@ -45,19 +51,25 @@ function getCookie(name: string): string | null {
 // Store auth token
 export function setAuthToken(token: string, persistent: boolean = true): void {
   if (persistent) {
+    localStorage.setItem('access_token', token);
+    // Also set legacy key for backward compatibility
     localStorage.setItem('auth_token', token);
   } else {
+    sessionStorage.setItem('access_token', token);
     sessionStorage.setItem('auth_token', token);
   }
 }
 
 // Clear auth token
 export function clearAuthToken(): void {
+  localStorage.removeItem('access_token');
   localStorage.removeItem('auth_token');
+  sessionStorage.removeItem('access_token');
   sessionStorage.removeItem('auth_token');
   
   // Clear cookie if exists
   if (typeof document !== 'undefined') {
+    document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
   }
 }

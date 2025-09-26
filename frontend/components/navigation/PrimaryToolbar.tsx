@@ -196,12 +196,13 @@ export function PrimaryToolbar() {
   } = useNavigationState();
 
   const [expandedPhase, setExpandedPhase] = useState<ResearchPhase | null>(
-    null
+    currentPhase || 'discover'
   );
   const [hoveredPhase, setHoveredPhase] = useState<ResearchPhase | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [userId] = useState<string>('user123'); // TODO: Get from auth context
-  const [navigationMode, setNavigationMode] = useState<NavigationMode>('expanded');
+  const [navigationMode, setNavigationMode] =
+    useState<NavigationMode>('expanded');
   const [showSearch, setShowSearch] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
 
@@ -212,6 +213,13 @@ export function PrimaryToolbar() {
       setNavigationMode(savedMode);
     }
   }, []);
+
+  // Keep secondary toolbar in sync with current phase
+  useEffect(() => {
+    if (currentPhase) {
+      setExpandedPhase(currentPhase);
+    }
+  }, [currentPhase]);
 
   // Save navigation mode preference
   const updateNavigationMode = (mode: NavigationMode) => {
@@ -250,7 +258,12 @@ export function PrimaryToolbar() {
         } else if (e.key === '\\') {
           e.preventDefault();
           // Cycle through navigation modes
-          const modes: NavigationMode[] = ['expanded', 'compact', 'minimal', 'icons'];
+          const modes: NavigationMode[] = [
+            'expanded',
+            'compact',
+            'minimal',
+            'icons',
+          ];
           const currentIndex = modes.indexOf(navigationMode);
           const nextMode = modes[(currentIndex + 1) % modes.length];
           updateNavigationMode(nextMode);
@@ -267,17 +280,20 @@ export function PrimaryToolbar() {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [availablePhases, setCurrentPhase, navigationMode, showSearch, showPreferences]);
+  }, [
+    availablePhases,
+    setCurrentPhase,
+    navigationMode,
+    showSearch,
+    showPreferences,
+  ]);
 
   const handlePhaseClick = (phase: ResearchPhase) => {
     if (!availablePhases.includes(phase)) return;
 
     setCurrentPhase(phase);
-    if (expandedPhase === phase) {
-      setExpandedPhase(null);
-    } else {
-      setExpandedPhase(phase);
-    }
+    // Always keep a phase expanded to show secondary toolbar
+    setExpandedPhase(phase);
   };
 
   return (
@@ -290,7 +306,12 @@ export function PrimaryToolbar() {
             <div className="flex items-center mr-4">
               <button
                 onClick={() => {
-                  const modes: NavigationMode[] = ['expanded', 'compact', 'minimal', 'icons'];
+                  const modes: NavigationMode[] = [
+                    'expanded',
+                    'compact',
+                    'minimal',
+                    'icons',
+                  ];
                   const currentIndex = modes.indexOf(navigationMode);
                   const nextMode = modes[(currentIndex + 1) % modes.length];
                   updateNavigationMode(nextMode);
@@ -298,24 +319,33 @@ export function PrimaryToolbar() {
                 className="p-1.5 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                 title={`Navigation: ${navigationMode} (⌘\\)`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                    d={navigationMode === 'expanded' 
-                      ? "M4 6h16M4 12h16M4 18h16" // Expanded
-                      : navigationMode === 'compact'
-                      ? "M4 6h16M4 12h8M4 18h16" // Compact
-                      : navigationMode === 'minimal'
-                      ? "M4 6h16M4 12h16" // Minimal
-                      : "M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" // Icons
-                    } 
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d={
+                      navigationMode === 'expanded'
+                        ? 'M4 6h16M4 12h16M4 18h16' // Expanded
+                        : navigationMode === 'compact'
+                          ? 'M4 6h16M4 12h8M4 18h16' // Compact
+                          : navigationMode === 'minimal'
+                            ? 'M4 6h16M4 12h16' // Minimal
+                            : 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z' // Icons
+                    }
                   />
                 </svg>
               </button>
             </div>
 
-            {/* Phase Navigation */}
-            <div className="flex items-center space-x-1 overflow-x-auto flex-1">
-              {phaseConfigs.map(phase => {
+            {/* Phase Navigation with Sequential Flow */}
+            <div className="flex items-center overflow-x-auto flex-1">
+              {phaseConfigs.map((phase, index) => {
                 const Icon = phase.icon;
                 const progress = phaseProgress[phase.id] || 0;
                 const isAvailable = availablePhases.includes(phase.id);
@@ -325,7 +355,8 @@ export function PrimaryToolbar() {
                 const isHovered = hoveredPhase === phase.id;
 
                 return (
-                  <motion.button
+                  <div key={phase.id} className="flex items-center">
+                    <motion.button
                     key={phase.id}
                     onClick={() => handlePhaseClick(phase.id)}
                     onMouseEnter={() => setHoveredPhase(phase.id)}
@@ -350,10 +381,13 @@ export function PrimaryToolbar() {
                       isActive && 'ring-2 ring-offset-1',
                       isActive && phase.borderColor.replace('border', 'ring'),
                       // Gradient background for completed phases
-                      isCompleted && `bg-gradient-to-r ${phase.gradientFrom} ${phase.gradientTo} text-white`
+                      isCompleted &&
+                        `bg-gradient-to-r ${phase.gradientFrom} ${phase.gradientTo} text-white`
                     )}
                     style={{
-                      background: isCompleted ? `linear-gradient(135deg, var(--tw-gradient-from), var(--tw-gradient-to))` : undefined
+                      background: isCompleted
+                        ? `linear-gradient(135deg, var(--tw-gradient-from), var(--tw-gradient-to))`
+                        : undefined,
                     }}
                   >
                     {/* Phase Icon & Label */}
@@ -361,7 +395,11 @@ export function PrimaryToolbar() {
                       <Icon
                         className={cn(
                           navigationMode === 'icons' ? 'w-6 h-6' : 'w-5 h-5',
-                          isCompleted ? 'text-white' : isActive ? phase.color : 'text-gray-600'
+                          isCompleted
+                            ? 'text-white'
+                            : isActive
+                              ? phase.color
+                              : 'text-gray-600'
                         )}
                       />
                       {navigationMode !== 'icons' && (
@@ -369,11 +407,19 @@ export function PrimaryToolbar() {
                           <span
                             className={cn(
                               'font-medium',
-                              navigationMode === 'expanded' ? 'text-sm' : 'text-xs',
-                              isCompleted ? 'text-white' : isActive ? phase.color : 'text-gray-700'
+                              navigationMode === 'expanded'
+                                ? 'text-sm'
+                                : 'text-xs',
+                              isCompleted
+                                ? 'text-white'
+                                : isActive
+                                  ? phase.color
+                                  : 'text-gray-700'
                             )}
                           >
-                            {navigationMode === 'minimal' ? phase.shortLabel : phase.label}
+                            {navigationMode === 'minimal'
+                              ? phase.shortLabel
+                              : phase.label}
                           </span>
                           {isCompleted && navigationMode === 'expanded' && (
                             <CheckCircleIcon className="w-4 h-4 text-white opacity-80" />
@@ -383,20 +429,22 @@ export function PrimaryToolbar() {
                     </div>
 
                     {/* Progress Bar */}
-                    {isAvailable && progress > 0 && navigationMode !== 'icons' && (
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-lg overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${progress}%` }}
-                          transition={{ duration: 0.5, ease: 'easeOut' }}
-                          className={cn(
-                            'h-full bg-gradient-to-r',
-                            phase.gradientFrom,
-                            phase.gradientTo
-                          )}
-                        />
-                      </div>
-                    )}
+                    {isAvailable &&
+                      progress > 0 &&
+                      navigationMode !== 'icons' && (
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-lg overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 0.5, ease: 'easeOut' }}
+                            className={cn(
+                              'h-full bg-gradient-to-r',
+                              phase.gradientFrom,
+                              phase.gradientTo
+                            )}
+                          />
+                        </div>
+                      )}
 
                     {/* Tooltip */}
                     <AnimatePresence>
@@ -423,9 +471,32 @@ export function PrimaryToolbar() {
                       )}
                     </AnimatePresence>
                   </motion.button>
-                );
-              })}
-            </div>
+                  
+                  {/* Sequential Arrow Indicator */}
+                  {index < phaseConfigs.length - 1 && (
+                    <div className="mx-1 flex items-center">
+                      <svg 
+                        className={cn(
+                          "w-5 h-5 transition-colors",
+                          isCompleted ? "text-green-500" : "text-gray-300"
+                        )} 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M9 5l7 7-7 7" 
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
             {/* Quick Actions */}
             <div className="flex items-center space-x-1">
@@ -441,18 +512,28 @@ export function PrimaryToolbar() {
               )}
 
               {/* Phase Tutorial Button */}
-              <button 
+              <button
                 onClick={() => setShowOnboarding(true)}
                 className="p-2 text-indigo-500 hover:text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
                 title="View phase tutorial (⌘?)"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                  />
                 </svg>
               </button>
 
               {/* Search Button */}
-              <button 
+              <button
                 onClick={() => setShowSearch(!showSearch)}
                 className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                 title="Search (⌘K)"
@@ -473,25 +554,50 @@ export function PrimaryToolbar() {
               </button>
 
               {/* Preferences Button */}
-              <button 
+              <button
                 onClick={() => setShowPreferences(!showPreferences)}
                 className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                 title="Navigation preferences (⌘,)"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
                 </svg>
               </button>
 
               {/* Help Button */}
-              <button 
+              <button
                 onClick={() => {}}
                 className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                 title="Help"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </button>
             </div>
@@ -499,15 +605,16 @@ export function PrimaryToolbar() {
         </div>
       </div>
 
-      {/* Secondary Toolbar */}
-      <AnimatePresence>
-        {expandedPhase && (
-          <SecondaryToolbar
-            phase={expandedPhase}
-            onClose={() => setExpandedPhase(null)}
-          />
-        )}
-      </AnimatePresence>
+      {/* Secondary Toolbar - Always Visible */}
+      {expandedPhase && (
+        <SecondaryToolbar
+          phase={expandedPhase}
+          onClose={() => {
+            // Don't close, just keep the current phase
+            // Secondary toolbar should always be visible
+          }}
+        />
+      )}
 
       {/* Phase Onboarding */}
       {showOnboarding && studyId && (
@@ -543,8 +650,8 @@ export function PrimaryToolbar() {
       {/* Global Search */}
       {showSearch && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-20">
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50" 
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50"
             onClick={() => setShowSearch(false)}
           />
           <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl z-10">

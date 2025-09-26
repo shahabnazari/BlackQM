@@ -9,22 +9,25 @@ export function useLogin() {
 
   const handleLogin = useCallback(
     async (credentials: LoginCredentials) => {
+      console.log('useLogin: Starting login with:', credentials.email);
       setIsLoading(true);
       setLoginError(null);
 
       try {
-        await login(
+        const response = await login(
           credentials.email,
           credentials.password,
           credentials.rememberMe
         );
+        console.log('useLogin: Login successful, response:', response);
+        setIsLoading(false);
         return { success: true };
       } catch (err: any) {
+        console.error('useLogin: Login error:', err);
         const message = err.message || 'Login failed. Please try again.';
         setLoginError(message);
-        return { success: false, error: message };
-      } finally {
         setIsLoading(false);
+        return { success: false, error: message };
       }
     },
     [login]

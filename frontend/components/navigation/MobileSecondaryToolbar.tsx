@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   X,
   Filter,
   ArrowUpDown,
@@ -28,7 +28,7 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
-  Save
+  Save,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -65,8 +65,13 @@ const phaseTools: Record<string, ToolSection[]> = {
       actions: [
         { id: 'filter', label: 'Filter', icon: Filter, action: () => {} },
         { id: 'sort', label: 'Sort', icon: ArrowUpDown, action: () => {} },
-        { id: 'save-search', label: 'Save Search', icon: Bookmark, action: () => {} }
-      ]
+        {
+          id: 'save-search',
+          label: 'Save Search',
+          icon: Bookmark,
+          action: () => {},
+        },
+      ],
     },
     {
       id: 'manage',
@@ -74,20 +79,32 @@ const phaseTools: Record<string, ToolSection[]> = {
       actions: [
         { id: 'export', label: 'Export', icon: Download, action: () => {} },
         { id: 'import', label: 'Import', icon: Upload, action: () => {} },
-        { id: 'share', label: 'Share', icon: Share2, action: () => {} }
-      ]
-    }
+        { id: 'share', label: 'Share', icon: Share2, action: () => {} },
+      ],
+    },
   ],
   BUILD: [
     {
       id: 'statements',
       title: 'Statement Tools',
       actions: [
-        { id: 'add', label: 'Add Statement', icon: Plus, action: () => {}, variant: 'primary' },
+        {
+          id: 'add',
+          label: 'Add Statement',
+          icon: Plus,
+          action: () => {},
+          variant: 'primary',
+        },
         { id: 'edit', label: 'Edit', icon: Edit, action: () => {} },
         { id: 'duplicate', label: 'Duplicate', icon: Copy, action: () => {} },
-        { id: 'delete', label: 'Delete', icon: Trash2, action: () => {}, variant: 'danger' }
-      ]
+        {
+          id: 'delete',
+          label: 'Delete',
+          icon: Trash2,
+          action: () => {},
+          variant: 'danger',
+        },
+      ],
     },
     {
       id: 'organize',
@@ -95,9 +112,9 @@ const phaseTools: Record<string, ToolSection[]> = {
       actions: [
         { id: 'grid', label: 'Grid View', icon: Grid, action: () => {} },
         { id: 'list', label: 'List View', icon: List, action: () => {} },
-        { id: 'tag', label: 'Add Tags', icon: Tag, action: () => {} }
-      ]
-    }
+        { id: 'tag', label: 'Add Tags', icon: Tag, action: () => {} },
+      ],
+    },
   ],
   ANALYZE: [
     {
@@ -105,9 +122,15 @@ const phaseTools: Record<string, ToolSection[]> = {
       title: 'Analysis Tools',
       actions: [
         { id: 'refresh', label: 'Refresh', icon: RefreshCw, action: () => {} },
-        { id: 'save', label: 'Save', icon: Save, action: () => {}, variant: 'primary' },
-        { id: 'export', label: 'Export', icon: Download, action: () => {} }
-      ]
+        {
+          id: 'save',
+          label: 'Save',
+          icon: Save,
+          action: () => {},
+          variant: 'primary',
+        },
+        { id: 'export', label: 'Export', icon: Download, action: () => {} },
+      ],
     },
     {
       id: 'view',
@@ -115,10 +138,10 @@ const phaseTools: Record<string, ToolSection[]> = {
       actions: [
         { id: 'show', label: 'Show All', icon: Eye, action: () => {} },
         { id: 'hide', label: 'Hide Details', icon: EyeOff, action: () => {} },
-        { id: 'lock', label: 'Lock View', icon: Lock, action: () => {} }
-      ]
-    }
-  ]
+        { id: 'lock', label: 'Lock View', icon: Lock, action: () => {} },
+      ],
+    },
+  ],
 };
 
 export function MobileSecondaryToolbar({
@@ -127,7 +150,7 @@ export function MobileSecondaryToolbar({
   phase = 'DISCOVER',
   title = 'Tools',
   sections,
-  className
+  className,
 }: MobileSecondaryToolbarProps) {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const toolSections = sections || phaseTools[phase] || [];
@@ -162,12 +185,12 @@ export function MobileSecondaryToolbar({
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            transition={{ type: "spring", damping: 25 }}
+            transition={{ type: 'spring', damping: 25 }}
             className={cn(
-              "fixed bottom-0 left-0 right-0 z-50",
-              "bg-background rounded-t-2xl shadow-xl",
-              "max-h-[70vh] flex flex-col",
-              "md:hidden",
+              'fixed bottom-0 left-0 right-0 z-50',
+              'bg-background rounded-t-2xl shadow-xl',
+              'max-h-[70vh] flex flex-col',
+              'md:hidden',
               className
             )}
           >
@@ -176,14 +199,16 @@ export function MobileSecondaryToolbar({
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">{title}</h3>
-                  <p className="text-sm text-muted-foreground">{phase} Phase Tools</p>
+                  <p className="text-sm text-muted-foreground">
+                    {phase} Phase Tools
+                  </p>
                 </div>
                 <button
                   onClick={onClose}
                   className={cn(
-                    "p-2 rounded-full",
-                    "hover:bg-accent transition-colors",
-                    "touch-manipulation"
+                    'p-2 rounded-full',
+                    'hover:bg-accent transition-colors',
+                    'touch-manipulation'
                   )}
                   aria-label="Close toolbar"
                 >
@@ -194,27 +219,29 @@ export function MobileSecondaryToolbar({
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4">
-              {toolSections.map((section) => (
+              {toolSections.map(section => (
                 <div key={section.id} className="mb-6">
                   {/* Section Header */}
                   <button
-                    onClick={() => setActiveSection(
-                      activeSection === section.id ? null : section.id
-                    )}
+                    onClick={() =>
+                      setActiveSection(
+                        activeSection === section.id ? null : section.id
+                      )
+                    }
                     className={cn(
-                      "w-full flex items-center justify-between",
-                      "p-2 mb-3 rounded-lg",
-                      "hover:bg-accent transition-colors",
-                      "touch-manipulation"
+                      'w-full flex items-center justify-between',
+                      'p-2 mb-3 rounded-lg',
+                      'hover:bg-accent transition-colors',
+                      'touch-manipulation'
                     )}
                   >
                     <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                       {section.title}
                     </h4>
-                    <ChevronDown 
+                    <ChevronDown
                       className={cn(
-                        "h-4 w-4 transition-transform",
-                        activeSection === section.id && "rotate-180"
+                        'h-4 w-4 transition-transform',
+                        activeSection === section.id && 'rotate-180'
                       )}
                     />
                   </button>
@@ -222,15 +249,15 @@ export function MobileSecondaryToolbar({
                   {/* Section Actions */}
                   <motion.div
                     initial={false}
-                    animate={{ 
+                    animate={{
                       height: activeSection === section.id ? 'auto' : 'auto',
-                      opacity: activeSection === section.id ? 1 : 1
+                      opacity: activeSection === section.id ? 1 : 1,
                     }}
                     className="grid grid-cols-3 gap-3"
                   >
-                    {section.actions.map((action) => {
+                    {section.actions.map(action => {
                       const Icon = action.icon;
-                      
+
                       return (
                         <motion.button
                           key={action.id}
@@ -238,20 +265,24 @@ export function MobileSecondaryToolbar({
                           onClick={action.action}
                           disabled={action.disabled}
                           className={cn(
-                            "flex flex-col items-center justify-center",
-                            "p-4 rounded-xl space-y-2",
-                            "transition-all duration-200",
-                            "touch-manipulation",
-                            "focus:outline-none focus:ring-2 focus:ring-primary",
-                            action.disabled && "opacity-50 cursor-not-allowed",
-                            action.variant === 'primary' && "bg-primary text-primary-foreground",
-                            action.variant === 'danger' && "bg-destructive text-destructive-foreground",
-                            !action.variant && "bg-accent hover:bg-accent/80"
+                            'flex flex-col items-center justify-center',
+                            'p-4 rounded-xl space-y-2',
+                            'transition-all duration-200',
+                            'touch-manipulation',
+                            'focus:outline-none focus:ring-2 focus:ring-primary',
+                            action.disabled && 'opacity-50 cursor-not-allowed',
+                            action.variant === 'primary' &&
+                              'bg-primary text-primary-foreground',
+                            action.variant === 'danger' &&
+                              'bg-destructive text-destructive-foreground',
+                            !action.variant && 'bg-accent hover:bg-accent/80'
                           )}
                           aria-label={action.label}
                         >
                           <Icon className="h-5 w-5" />
-                          <span className="text-xs font-medium">{action.label}</span>
+                          <span className="text-xs font-medium">
+                            {action.label}
+                          </span>
                         </motion.button>
                       );
                     })}
@@ -271,7 +302,7 @@ export function MobileSecondaryToolbar({
                     { icon: Settings, label: 'Settings' },
                     { icon: Bell, label: 'Notify' },
                     { icon: Star, label: 'Favorite' },
-                    { icon: Flag, label: 'Flag' }
+                    { icon: Flag, label: 'Flag' },
                   ].map((item, index) => {
                     const Icon = item.icon;
                     return (
@@ -279,10 +310,10 @@ export function MobileSecondaryToolbar({
                         key={index}
                         whileTap={{ scale: 0.95 }}
                         className={cn(
-                          "flex items-center gap-2 px-3 py-2",
-                          "bg-accent rounded-lg",
-                          "hover:bg-accent/80 transition-colors",
-                          "touch-manipulation"
+                          'flex items-center gap-2 px-3 py-2',
+                          'bg-accent rounded-lg',
+                          'hover:bg-accent/80 transition-colors',
+                          'touch-manipulation'
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -300,10 +331,10 @@ export function MobileSecondaryToolbar({
                 <button
                   onClick={onClose}
                   className={cn(
-                    "flex-1 px-4 py-3 rounded-lg",
-                    "bg-accent hover:bg-accent/80",
-                    "font-medium transition-colors",
-                    "touch-manipulation"
+                    'flex-1 px-4 py-3 rounded-lg',
+                    'bg-accent hover:bg-accent/80',
+                    'font-medium transition-colors',
+                    'touch-manipulation'
                   )}
                 >
                   Cancel
@@ -314,10 +345,10 @@ export function MobileSecondaryToolbar({
                     onClose();
                   }}
                   className={cn(
-                    "flex-1 px-4 py-3 rounded-lg",
-                    "bg-primary text-primary-foreground",
-                    "font-medium transition-colors",
-                    "touch-manipulation"
+                    'flex-1 px-4 py-3 rounded-lg',
+                    'bg-primary text-primary-foreground',
+                    'font-medium transition-colors',
+                    'touch-manipulation'
                   )}
                 >
                   Apply

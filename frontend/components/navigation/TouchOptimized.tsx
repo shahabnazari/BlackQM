@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation } from 'framer-motion';
@@ -29,10 +29,12 @@ export function TouchOptimized({
   onSwipeDown,
   hapticFeedback = true,
   className,
-  disabled = false
+  disabled = false,
 }: TouchOptimizedProps) {
   const [isTouching, setIsTouching] = useState(false);
-  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(
+    null
+  );
   const [lastTap, setLastTap] = useState(0);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const controls = useAnimation();
@@ -47,21 +49,21 @@ export function TouchOptimized({
   // Touch start handler
   const handleTouchStart = (e: React.TouchEvent) => {
     if (disabled) return;
-    
+
     const touch = e.touches[0];
     setTouchStart({ x: touch?.clientX ?? 0, y: touch?.clientY ?? 0 });
     setIsTouching(true);
-    
+
     // Trigger press animation
     controls.start({ scale: 0.95 });
     triggerHaptic();
-    
+
     // Setup long press detection
     if (onLongPress) {
       longPressTimer.current = setTimeout(() => {
         onLongPress();
         triggerHaptic();
-        controls.start({ scale: 1.05, transition: { type: "spring" } });
+        controls.start({ scale: 1.05, transition: { type: 'spring' } });
       }, 500);
     }
   };
@@ -69,22 +71,22 @@ export function TouchOptimized({
   // Touch end handler
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (disabled || !touchStart) return;
-    
+
     const touch = e.changedTouches[0];
     const deltaX = (touch?.clientX ?? 0) - touchStart.x;
     const deltaY = (touch?.clientY ?? 0) - touchStart.y;
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    
+
     // Clear long press timer
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
-    
+
     // Reset animation
     controls.start({ scale: 1 });
     setIsTouching(false);
-    
+
     // Detect swipe gestures
     const swipeThreshold = 50;
     if (distance > swipeThreshold) {
@@ -111,7 +113,7 @@ export function TouchOptimized({
       // Detect tap or double tap
       const now = Date.now();
       const doubleTapDelay = 300;
-      
+
       if (onDoubleTap && now - lastTap < doubleTapDelay) {
         onDoubleTap();
         triggerHaptic();
@@ -124,7 +126,7 @@ export function TouchOptimized({
         }
       }
     }
-    
+
     setTouchStart(null);
   };
 
@@ -155,20 +157,20 @@ export function TouchOptimized({
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchCancel}
       className={cn(
-        "touch-manipulation select-none",
-        "cursor-pointer",
-        disabled && "opacity-50 cursor-not-allowed",
+        'touch-manipulation select-none',
+        'cursor-pointer',
+        disabled && 'opacity-50 cursor-not-allowed',
         className
       )}
       style={{
         WebkitTapHighlightColor: 'transparent',
         WebkitTouchCallout: 'none',
         WebkitUserSelect: 'none',
-        touchAction: 'manipulation'
+        touchAction: 'manipulation',
       }}
     >
       {children}
-      
+
       {/* Touch feedback overlay */}
       {isTouching && (
         <div className="absolute inset-0 bg-primary/10 rounded-inherit pointer-events-none" />
@@ -178,7 +180,8 @@ export function TouchOptimized({
 }
 
 // Touch-optimized button component
-interface TouchButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface TouchButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'primary' | 'secondary' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   haptic?: boolean;
@@ -197,14 +200,15 @@ export function TouchButton({
   const sizeClasses = {
     sm: 'px-3 py-2 text-sm min-h-[44px]',
     md: 'px-4 py-3 text-base min-h-[48px]',
-    lg: 'px-6 py-4 text-lg min-h-[56px]'
+    lg: 'px-6 py-4 text-lg min-h-[56px]',
   };
 
   const variantClasses = {
     default: 'bg-accent hover:bg-accent/80',
     primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
     secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/90',
-    danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+    danger:
+      'bg-destructive text-destructive-foreground hover:bg-destructive/90',
   };
 
   return (
@@ -216,14 +220,14 @@ export function TouchButton({
     >
       <button
         className={cn(
-          "flex items-center justify-center",
-          "rounded-lg font-medium",
-          "transition-colors duration-200",
-          "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
-          "touch-manipulation",
+          'flex items-center justify-center',
+          'rounded-lg font-medium',
+          'transition-colors duration-200',
+          'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+          'touch-manipulation',
           sizeClasses[size],
           variantClasses[variant],
-          disabled && "opacity-50 cursor-not-allowed",
+          disabled && 'opacity-50 cursor-not-allowed',
           className
         )}
         disabled={disabled}
@@ -247,17 +251,17 @@ export function TouchCard({
   children,
   onTap,
   onLongPress,
-  className
+  className,
 }: TouchCardProps) {
   return (
     <TouchOptimized
       onTap={onTap}
       onLongPress={onLongPress}
       className={cn(
-        "block bg-card rounded-xl p-4",
-        "border border-border",
-        "shadow-sm hover:shadow-md",
-        "transition-shadow duration-200",
+        'block bg-card rounded-xl p-4',
+        'border border-border',
+        'shadow-sm hover:shadow-md',
+        'transition-shadow duration-200',
         className
       )}
     >
@@ -280,7 +284,7 @@ export function TouchListItem({
   onTap,
   onSwipeLeft,
   onSwipeRight,
-  className
+  className,
 }: TouchListItemProps) {
   return (
     <TouchOptimized
@@ -288,17 +292,15 @@ export function TouchListItem({
       onSwipeLeft={onSwipeLeft}
       onSwipeRight={onSwipeRight}
       className={cn(
-        "block bg-background",
-        "border-b border-border",
-        "px-4 py-3",
-        "hover:bg-accent/50",
-        "transition-colors duration-200",
+        'block bg-background',
+        'border-b border-border',
+        'px-4 py-3',
+        'hover:bg-accent/50',
+        'transition-colors duration-200',
         className
       )}
     >
-      <div className="flex items-center justify-between">
-        {children}
-      </div>
+      <div className="flex items-center justify-between">{children}</div>
     </TouchOptimized>
   );
 }
@@ -313,7 +315,7 @@ interface PullToRefreshProps {
 export function PullToRefresh({
   children,
   onRefresh,
-  className
+  className,
 }: PullToRefreshProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
@@ -346,35 +348,35 @@ export function PullToRefresh({
 
   return (
     <div
-      className={cn("relative", className)}
+      className={cn('relative', className)}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
       {/* Pull indicator */}
       <motion.div
-        animate={{ 
+        animate={{
           height: pullDistance,
-          opacity: pullDistance / threshold
+          opacity: pullDistance / threshold,
         }}
         className="absolute top-0 left-0 right-0 flex items-center justify-center overflow-hidden"
       >
         <motion.div
-          animate={{ 
+          animate={{
             rotate: isRefreshing ? 360 : pullDistance * 3,
-            scale: Math.min(1, pullDistance / threshold)
+            scale: Math.min(1, pullDistance / threshold),
           }}
-          transition={{ 
-            rotate: { duration: 1, repeat: isRefreshing ? Infinity : 0 }
+          transition={{
+            rotate: { duration: 1, repeat: isRefreshing ? Infinity : 0 },
           }}
           className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
         />
       </motion.div>
-      
+
       {/* Content */}
       <motion.div
         animate={{ y: pullDistance / 2 }}
-        transition={{ type: "spring", stiffness: 300 }}
+        transition={{ type: 'spring', stiffness: 300 }}
       >
         {children}
       </motion.div>

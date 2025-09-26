@@ -46,7 +46,7 @@ export class TrackMetricsDto {
 }
 
 @ApiTags('Participant Flow')
-@Controller('api/participant-flow')
+@Controller('participant-flow')
 export class ParticipantFlowController {
   constructor(private readonly flowService: ParticipantFlowService) {}
 

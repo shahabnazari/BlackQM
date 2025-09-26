@@ -16,7 +16,7 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { InterpretationService } from '../services/interpretation.service';
 
 class GenerateNarrativesDto {
@@ -47,8 +47,8 @@ class ExtractThemesDto {
  * Exposes AI-powered interpretation endpoints for the Analysis Hub
  */
 @ApiTags('interpretation')
-@Controller('api/interpretation')
-@UseGuards(AuthGuard('jwt'))
+@Controller('interpretation')
+@UseGuards(JwtAuthGuard)
 export class InterpretationController {
   constructor(private readonly interpretationService: InterpretationService) {}
 

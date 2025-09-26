@@ -20,7 +20,7 @@ import { HubService } from '../services/hub.service';
  * Enterprise-grade API endpoints for the Analysis Hub
  * Provides unified access to all analysis data and features
  */
-@Controller('api/analysis/hub')
+@Controller('analysis/hub')
 @UseGuards(JwtAuthGuard)
 export class HubController {
   constructor(private readonly hubService: HubService) {}

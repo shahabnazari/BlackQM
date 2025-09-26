@@ -55,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string, rememberMe: boolean = true) => {
+      console.log('AuthProvider: Starting login...');
       setIsLoading(true);
       try {
         const response = await authService.login({
@@ -63,15 +64,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           rememberMe,
         });
 
+        console.log('AuthProvider: Login response received:', response);
+        
+        if (!response || !response.user) {
+          throw new Error('Invalid response from authentication service');
+        }
+        
         setUser(response.user);
         toast.success('Welcome back!');
+        console.log('AuthProvider: User state updated, user:', response.user);
+        
+        // Return success to indicate login completed
+        return response;
       } catch (error: any) {
-        console.error('Login failed:', error);
-        throw new Error(
-          error.response?.data?.message || 'Invalid email or password'
-        );
+        console.error('AuthProvider: Login failed:', error);
+        const errorMessage = error.response?.data?.message || error.message || 'Invalid email or password';
+        throw new Error(errorMessage);
       } finally {
         setIsLoading(false);
+        console.log('AuthProvider: Loading state cleared');
       }
     },
     []

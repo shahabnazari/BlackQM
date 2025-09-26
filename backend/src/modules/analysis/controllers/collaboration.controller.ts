@@ -30,7 +30,7 @@ import {
 } from '../dto/collaboration.dto';
 
 @ApiTags('Collaboration')
-@Controller('api/collaboration')
+@Controller('collaboration')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class CollaborationController {

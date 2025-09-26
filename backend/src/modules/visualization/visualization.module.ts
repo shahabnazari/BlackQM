@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { VisualizationController } from './visualization.controller';
 import { VisualizationService } from './visualization.service';
-import { PrismaService } from '../../common/prisma.service';
 import { CacheService } from '../../common/cache.service';
 // import { WebSocketService } from '../../services/websocket.service'; // WebSocket is singleton, not provider
 
@@ -17,7 +16,7 @@ import { CacheService } from '../../common/cache.service';
  */
 @Module({
   controllers: [VisualizationController],
-  providers: [VisualizationService, PrismaService, CacheService],
+  providers: [VisualizationService, CacheService],
   exports: [VisualizationService],
 })
 export class VisualizationModule {}

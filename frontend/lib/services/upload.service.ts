@@ -30,7 +30,7 @@ class UploadService {
     'image/jpeg',
     'image/jpg',
     'image/gif',
-    'image/webp'
+    'image/webp',
   ];
 
   /**
@@ -151,7 +151,10 @@ class UploadService {
   /**
    * Upload edited image (base64) from image editor
    */
-  async uploadEditedImage(base64Data: string, type: string = 'edited'): Promise<UploadResult> {
+  async uploadEditedImage(
+    base64Data: string,
+    type: string = 'edited'
+  ): Promise<UploadResult> {
     try {
       const response = await this.fetchWithTimeout('/api/upload/image', {
         method: 'PUT',
@@ -179,7 +182,11 @@ class UploadService {
   /**
    * Validate file before upload
    */
-  private validateFile(file: File, maxSizeMB: number, acceptedTypes: string[]): void {
+  private validateFile(
+    file: File,
+    maxSizeMB: number,
+    acceptedTypes: string[]
+  ): void {
     // Check file type
     if (!acceptedTypes.includes(file.type)) {
       throw new Error(
@@ -190,9 +197,7 @@ class UploadService {
     // Check file size
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      throw new Error(
-        `File size too large. Maximum size is ${maxSizeMB}MB`
-      );
+      throw new Error(`File size too large. Maximum size is ${maxSizeMB}MB`);
     }
   }
 
@@ -281,7 +286,7 @@ class UploadService {
           ctx.drawImage(img, 0, 0, width, height);
 
           canvas.toBlob(
-            (blob) => {
+            blob => {
               if (!blob) {
                 reject(new Error('Failed to compress image'));
                 return;
@@ -335,7 +340,9 @@ export const uploadService = new UploadService();
 
 // Export convenience functions
 export const uploadLogo = uploadService.uploadLogo.bind(uploadService);
-export const uploadSignature = uploadService.uploadSignature.bind(uploadService);
+export const uploadSignature =
+  uploadService.uploadSignature.bind(uploadService);
 export const uploadImage = uploadService.uploadImage.bind(uploadService);
-export const uploadEditedImage = uploadService.uploadEditedImage.bind(uploadService);
+export const uploadEditedImage =
+  uploadService.uploadEditedImage.bind(uploadService);
 export const compressImage = uploadService.compressImage.bind(uploadService);

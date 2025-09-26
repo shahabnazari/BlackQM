@@ -4,8 +4,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Command } from 'cmdk';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  MagnifyingGlassIcon, 
+import {
+  MagnifyingGlassIcon,
   DocumentPlusIcon,
   UserGroupIcon,
   ChartBarIcon,
@@ -14,7 +14,7 @@ import {
   BookOpenIcon,
   ClipboardDocumentCheckIcon,
   ArchiveBoxIcon,
-  PhotoIcon
+  PhotoIcon,
 } from '@heroicons/react/24/outline';
 import { ResearchPhase } from './PrimaryToolbar';
 import { AccessibleTooltip } from '../ui/accessible-tooltip';
@@ -65,7 +65,13 @@ export function QuickActions() {
       shortcut: 'Cmd+R',
       phase: 'recruit',
       action: () => router.push('/recruit'),
-      keywords: ['recruit', 'participants', 'people', 'subjects', 'recruitment'],
+      keywords: [
+        'recruit',
+        'participants',
+        'people',
+        'subjects',
+        'recruitment',
+      ],
     },
     {
       id: 'analyze-data',
@@ -294,8 +300,15 @@ export function QuickActions() {
 
                 <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700">
                   <p className="text-xs text-gray-500">
-                    Use <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">↑↓</kbd> to navigate,
-                    {' '}<kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">Enter</kbd> to select
+                    Use{' '}
+                    <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">
+                      ↑↓
+                    </kbd>{' '}
+                    to navigate,{' '}
+                    <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">
+                      Enter
+                    </kbd>{' '}
+                    to select
                   </p>
                 </div>
               </Command>

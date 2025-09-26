@@ -10,7 +10,7 @@ export function useMediaQuery(query: string): boolean {
     }
 
     const media = window.matchMedia(query);
-    
+
     // Set initial value
     setMatches(media.matches);
 
@@ -43,7 +43,8 @@ export function useMediaQuery(query: string): boolean {
 
 // Preset media queries for common breakpoints
 export const useIsMobile = () => useMediaQuery('(max-width: 639px)');
-export const useIsTablet = () => useMediaQuery('(min-width: 640px) and (max-width: 1023px)');
+export const useIsTablet = () =>
+  useMediaQuery('(min-width: 640px) and (max-width: 1023px)');
 export const useIsDesktop = () => useMediaQuery('(min-width: 1024px)');
 export const useIsLargeDesktop = () => useMediaQuery('(min-width: 1280px)');
 
@@ -52,8 +53,10 @@ export const useIsPortrait = () => useMediaQuery('(orientation: portrait)');
 export const useIsLandscape = () => useMediaQuery('(orientation: landscape)');
 
 // Preference queries
-export const usePrefersDarkMode = () => useMediaQuery('(prefers-color-scheme: dark)');
-export const usePrefersReducedMotion = () => useMediaQuery('(prefers-reduced-motion: reduce)');
+export const usePrefersDarkMode = () =>
+  useMediaQuery('(prefers-color-scheme: dark)');
+export const usePrefersReducedMotion = () =>
+  useMediaQuery('(prefers-reduced-motion: reduce)');
 
 // High DPI screens
 export const useIsRetina = () => useMediaQuery('(min-resolution: 2dppx)');

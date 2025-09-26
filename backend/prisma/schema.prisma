@@ -42,6 +42,12 @@ model User {
   studyActivityLogs     StudyActivityLog[]        @relation("StudyActivityLogUser")
   studyCollaborations   StudyCollaborator[]       @relation("StudyCollaboratorUser")
   studyComments         StudyComment[]            @relation("StudyCommentUser")
+  
+  // Literature models (Phase 9)
+  papers                Paper[]
+  paperCollections      PaperCollection[]
+  researchGaps          ResearchGap[]
+  searchLogs            SearchLog[]
 
   @@index([email])
   @@index([tenantId])
@@ -731,4 +737,113 @@ enum CollaborationRole {
   OWNER
   COLLABORATOR
   VIEWER
+}
+
+// Literature Review Models (Phase 9)
+model Paper {
+  id            String   @id @default(cuid())
+  title         String
+  authors       Json     // JSON array of author names
+  year          Int
+  abstract      String?
+  journal       String?  // Journal name
+  volume        String?  // Volume number
+  issue         String?  // Issue/Number
+  pages         String?  // Page range (e.g., "123-145")
+  doi           String?  
+  url           String?
+  venue         String?
+  citationCount Int?
+  keywords      Json?    // JSON array of keywords
+  fieldsOfStudy Json?    // JSON array of fields
+  references    Json?    // JSON array of reference IDs
+  citations     Json?    // JSON array of citation IDs
+  source        String   // LiteratureSource enum as string
+  
+  // User library fields
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags          Json?    // User-defined tags
+  notes         String?
+  collectionId  String?
+  collection    PaperCollection? @relation(fields: [collectionId], references: [id])
+  
+  // PDF support
+  pdfPath       String?
+  hasFullText   Boolean  @default(false)
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  themes        PaperTheme[]
+  gaps          ResearchGap[]
+  
+  @@index([userId])
+  @@index([doi])
+  @@index([collectionId])
+  @@map("papers")
+}
+
+model PaperCollection {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  papers      Paper[]
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+  @@map("paper_collections")
+}
+
+model PaperTheme {
+  id              String   @id @default(cuid())
+  name            String
+  keywords        Json     // JSON array
+  relevanceScore  Float
+  emergenceYear   Int?
+  trendDirection  String?  // 'rising' | 'stable' | 'declining'
+  papers          Paper[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("paper_themes")
+}
+
+model ResearchGap {
+  id                   String   @id @default(cuid())
+  title                String
+  description          String
+  field                String
+  opportunityScore     Float
+  suggestedMethods     Json     // JSON array
+  potentialImpact      String
+  fundingOpportunities Json?    // JSON array
+  collaborators        Json?    // JSON array
+  relatedPapers        Paper[]
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  @@index([userId])
+  @@map("research_gaps")
+}
+
+model SearchLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query     String
+  filters   Json     // Store search filters as JSON
+  timestamp DateTime @default(now())
+  
+  @@index([userId])
+  @@index([timestamp])
+  @@map("search_logs")
 }

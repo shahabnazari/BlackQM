@@ -12,7 +12,7 @@ const ROUTE_MIGRATIONS: Record<string, string> = {
   '/participants': '/recruitment',
   '/study/new': '/studies/create',
   '/study/edit': '/studies/create',
-  
+
   // Consolidation of duplicate features
   '/export': '/report/export',
   '/results': '/analysis/hub',
@@ -23,7 +23,13 @@ const ROUTE_MIGRATIONS: Record<string, string> = {
 
 // Phase-based route groupings
 const PHASE_ROUTES = {
-  discover: ['/discover', '/literature', '/references', '/knowledge-map', '/gaps'],
+  discover: [
+    '/discover',
+    '/literature',
+    '/references',
+    '/knowledge-map',
+    '/gaps',
+  ],
   design: ['/design', '/questions', '/hypothesis', '/methodology'],
   build: ['/studies/create', '/statements', '/stimuli', '/questionnaire'],
   recruit: ['/recruitment', '/participants', '/scheduling', '/invitations'],
@@ -32,7 +38,7 @@ const PHASE_ROUTES = {
   visualize: ['/visualize', '/charts', '/graphs', '/heatmaps'],
   interpret: ['/interpret', '/insights', '/ai-interpretation', '/narratives'],
   report: ['/report', '/export', '/publish', '/manuscript'],
-  archive: ['/archive', '/versions', '/doi', '/repository']
+  archive: ['/archive', '/versions', '/doi', '/repository'],
 };
 
 // Navigation preferences migration
@@ -60,8 +66,10 @@ interface NewNavigationPrefs {
 // Migrate user preferences from old navigation to new
 export function migrateNavigationPreferences(): NewNavigationPrefs {
   const oldPrefsRaw = localStorage.getItem('navigation-preferences');
-  const oldPrefs: OldNavigationPrefs = oldPrefsRaw ? JSON.parse(oldPrefsRaw) : {};
-  
+  const oldPrefs: OldNavigationPrefs = oldPrefsRaw
+    ? JSON.parse(oldPrefsRaw)
+    : {};
+
   // Map old preferences to new structure
   const newPrefs: NewNavigationPrefs = {
     primaryToolbarMode: 'phases',
@@ -74,22 +82,22 @@ export function migrateNavigationPreferences(): NewNavigationPrefs {
     recentPhases: mapRoutesToPhases(oldPrefs.recentRoutes || []),
     phaseColors: true,
     tooltipsEnabled: true,
-    onboardingCompleted: false // Force onboarding for new navigation
+    onboardingCompleted: false, // Force onboarding for new navigation
   };
-  
+
   // Save new preferences
   localStorage.setItem('new-navigation-preferences', JSON.stringify(newPrefs));
-  
+
   // Mark migration as complete
   localStorage.setItem('navigation-migrated', 'true');
-  
+
   return newPrefs;
 }
 
 // Map old routes to research phases
 function mapRoutesToPhases(routes: string[]): string[] {
   const phases = new Set<string>();
-  
+
   routes.forEach(route => {
     // Check each phase's routes
     Object.entries(PHASE_ROUTES).forEach(([phase, phaseRoutes]) => {
@@ -98,7 +106,7 @@ function mapRoutesToPhases(routes: string[]): string[] {
       }
     });
   });
-  
+
   return Array.from(phases);
 }
 
@@ -107,10 +115,10 @@ export function useRouteMigration() {
   const router = useRouter();
   const pathname = usePathname();
   const isNewNavEnabled = useFeatureFlag(FEATURE_FLAGS.NEW_NAVIGATION_SYSTEM);
-  
+
   useEffect(() => {
     if (!isNewNavEnabled) return;
-    
+
     // Check if current route needs migration
     const migrationTarget = ROUTE_MIGRATIONS[pathname];
     if (migrationTarget) {
@@ -123,16 +131,16 @@ export function useRouteMigration() {
 // Hook to migrate user data on first load
 export function useNavigationMigration() {
   const isNewNavEnabled = useFeatureFlag(FEATURE_FLAGS.NEW_NAVIGATION_SYSTEM);
-  
+
   useEffect(() => {
     if (!isNewNavEnabled) return;
-    
+
     const migrated = localStorage.getItem('navigation-migrated');
     if (!migrated) {
       console.log('Migrating navigation preferences...');
       const newPrefs = migrateNavigationPreferences();
       console.log('Migration complete:', newPrefs);
-      
+
       // Trigger onboarding if not completed
       if (!newPrefs.onboardingCompleted) {
         window.dispatchEvent(new CustomEvent('start-navigation-onboarding'));
@@ -154,16 +162,23 @@ export function getCurrentPhase(pathname: string): string | null {
 // Utility to get recommended next phase
 export function getNextPhase(currentPhase: string): string | null {
   const phaseOrder = [
-    'discover', 'design', 'build', 'recruit', 
-    'collect', 'analyze', 'visualize', 'interpret', 
-    'report', 'archive'
+    'discover',
+    'design',
+    'build',
+    'recruit',
+    'collect',
+    'analyze',
+    'visualize',
+    'interpret',
+    'report',
+    'archive',
   ];
-  
+
   const currentIndex = phaseOrder.indexOf(currentPhase);
   if (currentIndex === -1 || currentIndex === phaseOrder.length - 1) {
     return null;
   }
-  
+
   return phaseOrder[currentIndex + 1];
 }
 
@@ -175,47 +190,45 @@ export interface Breadcrumb {
 }
 
 export function generateBreadcrumbs(pathname: string): Breadcrumb[] {
-  const breadcrumbs: Breadcrumb[] = [
-    { label: 'Home', href: '/dashboard' }
-  ];
-  
+  const breadcrumbs: Breadcrumb[] = [{ label: 'Home', href: '/dashboard' }];
+
   // Get current phase
   const phase = getCurrentPhase(pathname);
   if (phase) {
     breadcrumbs.push({
       label: phase.charAt(0).toUpperCase() + phase.slice(1),
       href: `/${phase}`,
-      isPhase: true
+      isPhase: true,
     });
   }
-  
+
   // Parse additional path segments
   const segments = pathname.split('/').filter(Boolean);
   let currentPath = '';
-  
+
   segments.forEach((segment, index) => {
     currentPath += `/${segment}`;
-    
+
     // Skip if this is the phase segment
     if (index === 0 && phase && segment === phase) {
       return;
     }
-    
+
     // Format segment label
     const label = segment
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
-    
+
     // Don't duplicate if it's already in breadcrumbs
     if (!breadcrumbs.some(bc => bc.href === currentPath)) {
       breadcrumbs.push({
         label,
-        href: currentPath
+        href: currentPath,
       });
     }
   });
-  
+
   return breadcrumbs;
 }
 
@@ -232,25 +245,32 @@ export function checkMigrationStatus(): MigrationStatus {
   const migrated = localStorage.getItem('navigation-migrated') === 'true';
   // const oldPrefs = localStorage.getItem('navigation-preferences'); // Not used yet
   const newPrefs = localStorage.getItem('new-navigation-preferences');
-  
+
   // Check for old routes in history
-  const recentRoutes = JSON.parse(localStorage.getItem('recent-routes') || '[]');
-  const oldRoutesFound = recentRoutes.filter((route: string) => route in ROUTE_MIGRATIONS);
-  const newRoutesAvailable = oldRoutesFound.map((route: string) => ROUTE_MIGRATIONS[route]);
-  
+  const recentRoutes = JSON.parse(
+    localStorage.getItem('recent-routes') || '[]'
+  );
+  const oldRoutesFound = recentRoutes.filter(
+    (route: string) => route in ROUTE_MIGRATIONS
+  );
+  const newRoutesAvailable = oldRoutesFound.map(
+    (route: string) => ROUTE_MIGRATIONS[route]
+  );
+
   return {
     isComplete: migrated,
     oldRoutesFound,
     newRoutesAvailable,
     preferencesMigrated: !!newPrefs,
-    onboardingNeeded: !migrated || !JSON.parse(newPrefs || '{}').onboardingCompleted
+    onboardingNeeded:
+      !migrated || !JSON.parse(newPrefs || '{}').onboardingCompleted,
   };
 }
 
 // Hook for showing migration notifications
 export function useMigrationNotifications() {
   const status = checkMigrationStatus();
-  
+
   const showNotification = useCallback(() => {
     if (!status.isComplete && status.oldRoutesFound.length > 0) {
       // In production, use your notification system
@@ -259,11 +279,11 @@ export function useMigrationNotifications() {
         action: 'View Changes',
         onAction: () => {
           window.dispatchEvent(new CustomEvent('show-migration-guide'));
-        }
+        },
       });
     }
   }, [status]);
-  
+
   useEffect(() => {
     // Show notification after a short delay
     const timer = setTimeout(showNotification, 2000);
@@ -279,5 +299,5 @@ export const NavigationMigration = {
   getNextPhase,
   generateBreadcrumbs,
   ROUTE_MIGRATIONS,
-  PHASE_ROUTES
+  PHASE_ROUTES,
 };

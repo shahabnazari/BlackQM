@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   Search,
   PenTool,
   Hammer,
@@ -15,22 +15,82 @@ import {
   Archive,
   Menu,
   X,
-  ChevronUp
+  ChevronUp,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 const mobilePhases = [
-  { id: 1, name: 'DISCOVER', icon: Search, path: '/discover', color: 'bg-purple-500' },
-  { id: 2, name: 'DESIGN', icon: PenTool, path: '/design', color: 'bg-indigo-500' },
-  { id: 3, name: 'BUILD', icon: Hammer, path: '/studies/create', color: 'bg-blue-500' },
-  { id: 4, name: 'RECRUIT', icon: Users, path: '/recruitment', color: 'bg-cyan-500' },
-  { id: 5, name: 'COLLECT', icon: ClipboardList, path: '/collect', color: 'bg-teal-500' },
-  { id: 6, name: 'ANALYZE', icon: BarChart3, path: '/analysis', color: 'bg-green-500' },
-  { id: 7, name: 'VISUALIZE', icon: Eye, path: '/visualize', color: 'bg-lime-500' },
-  { id: 8, name: 'INTERPRET', icon: Brain, path: '/interpret', color: 'bg-yellow-500' },
-  { id: 9, name: 'REPORT', icon: FileText, path: '/report', color: 'bg-orange-500' },
-  { id: 10, name: 'ARCHIVE', icon: Archive, path: '/archive', color: 'bg-red-500' }
+  {
+    id: 1,
+    name: 'DISCOVER',
+    icon: Search,
+    path: '/discover',
+    color: 'bg-purple-500',
+  },
+  {
+    id: 2,
+    name: 'DESIGN',
+    icon: PenTool,
+    path: '/design',
+    color: 'bg-indigo-500',
+  },
+  {
+    id: 3,
+    name: 'BUILD',
+    icon: Hammer,
+    path: '/studies/create',
+    color: 'bg-blue-500',
+  },
+  {
+    id: 4,
+    name: 'RECRUIT',
+    icon: Users,
+    path: '/recruitment',
+    color: 'bg-cyan-500',
+  },
+  {
+    id: 5,
+    name: 'COLLECT',
+    icon: ClipboardList,
+    path: '/collect',
+    color: 'bg-teal-500',
+  },
+  {
+    id: 6,
+    name: 'ANALYZE',
+    icon: BarChart3,
+    path: '/analysis',
+    color: 'bg-green-500',
+  },
+  {
+    id: 7,
+    name: 'VISUALIZE',
+    icon: Eye,
+    path: '/visualize',
+    color: 'bg-lime-500',
+  },
+  {
+    id: 8,
+    name: 'INTERPRET',
+    icon: Brain,
+    path: '/interpret',
+    color: 'bg-yellow-500',
+  },
+  {
+    id: 9,
+    name: 'REPORT',
+    icon: FileText,
+    path: '/report',
+    color: 'bg-orange-500',
+  },
+  {
+    id: 10,
+    name: 'ARCHIVE',
+    icon: Archive,
+    path: '/archive',
+    color: 'bg-red-500',
+  },
 ];
 
 interface MobileNavigationProps {
@@ -46,7 +106,7 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
 
   // Update active phase based on current path
   useEffect(() => {
-    const currentPhase = mobilePhases.find(phase => 
+    const currentPhase = mobilePhases.find(phase =>
       pathname.startsWith(phase.path)
     );
     if (currentPhase) {
@@ -63,7 +123,7 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handlePhaseClick = (phase: typeof mobilePhases[0]) => {
+  const handlePhaseClick = (phase: (typeof mobilePhases)[0]) => {
     setActivePhase(phase.id);
     router.push(phase.path);
     setIsExpanded(false);
@@ -79,22 +139,22 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
     mobilePhases[2], // BUILD
     mobilePhases[5], // ANALYZE
     mobilePhases[8], // REPORT
-    { id: 0, name: 'More', icon: Menu, path: '#', color: 'bg-gray-500' }
+    { id: 0, name: 'More', icon: Menu, path: '#', color: 'bg-gray-500' },
   ];
 
   return (
     <>
       {/* Bottom Navigation Bar - Mobile Only */}
-      <nav 
+      <nav
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-50 md:hidden",
-          "bg-background border-t border-border",
-          "safe-area-bottom", // iOS safe area
+          'fixed bottom-0 left-0 right-0 z-50 md:hidden',
+          'bg-background border-t border-border',
+          'safe-area-bottom', // iOS safe area
           className
         )}
       >
         <div className="flex items-center justify-around h-16">
-          {primaryPhases.map((phase) => {
+          {primaryPhases.map(phase => {
             const Icon = phase?.icon;
             const isActive = activePhase === phase?.id;
             const isMore = phase?.id === 0;
@@ -102,16 +162,18 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
             return (
               <button
                 key={phase?.id}
-                onClick={() => isMore ? setIsExpanded(!isExpanded) : handlePhaseClick(phase)}
+                onClick={() =>
+                  isMore ? setIsExpanded(!isExpanded) : handlePhaseClick(phase)
+                }
                 className={cn(
-                  "flex flex-col items-center justify-center",
-                  "w-full h-full px-2 py-1",
-                  "transition-all duration-200",
-                  "touch-manipulation", // Optimize for touch
-                  isActive && !isMore && "text-primary",
-                  !isActive && !isMore && "text-muted-foreground",
-                  "active:scale-95",
-                  "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  'flex flex-col items-center justify-center',
+                  'w-full h-full px-2 py-1',
+                  'transition-all duration-200',
+                  'touch-manipulation', // Optimize for touch
+                  isActive && !isMore && 'text-primary',
+                  !isActive && !isMore && 'text-muted-foreground',
+                  'active:scale-95',
+                  'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
                 )}
                 aria-label={phase.name}
                 aria-current={isActive ? 'page' : undefined}
@@ -119,19 +181,24 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
                 <motion.div
                   initial={false}
                   animate={{ scale: isActive && !isMore ? 1.1 : 1 }}
-                  transition={{ type: "spring", stiffness: 300 }}
+                  transition={{ type: 'spring', stiffness: 300 }}
                 >
-                  <Icon className={cn(
-                    "h-5 w-5 mb-1",
-                    isMore && isExpanded && "rotate-180 transition-transform"
-                  )} />
+                  <Icon
+                    className={cn(
+                      'h-5 w-5 mb-1',
+                      isMore && isExpanded && 'rotate-180 transition-transform'
+                    )}
+                  />
                 </motion.div>
                 <span className="text-xs font-medium">{phase.name}</span>
                 {isActive && !isMore && (
                   <motion.div
                     layoutId="activeIndicator"
-                    className={cn("absolute top-0 left-0 right-0 h-0.5", phase.color)}
-                    transition={{ type: "spring", stiffness: 300 }}
+                    className={cn(
+                      'absolute top-0 left-0 right-0 h-0.5',
+                      phase.color
+                    )}
+                    transition={{ type: 'spring', stiffness: 300 }}
                   />
                 )}
               </button>
@@ -152,18 +219,18 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
               onClick={() => setIsExpanded(false)}
               className="fixed inset-0 bg-black/50 z-40 md:hidden"
             />
-            
+
             {/* Sheet */}
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: "spring", damping: 25 }}
+              transition={{ type: 'spring', damping: 25 }}
               className={cn(
-                "fixed bottom-16 left-0 right-0 z-40",
-                "bg-background rounded-t-2xl shadow-xl",
-                "max-h-[60vh] overflow-y-auto",
-                "md:hidden"
+                'fixed bottom-16 left-0 right-0 z-40',
+                'bg-background rounded-t-2xl shadow-xl',
+                'max-h-[60vh] overflow-y-auto',
+                'md:hidden'
               )}
             >
               <div className="sticky top-0 bg-background/95 backdrop-blur-sm p-4 border-b">
@@ -178,26 +245,26 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
                   </button>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-3 p-4">
-                {mobilePhases.map((phase) => {
+                {mobilePhases.map(phase => {
                   const Icon = phase?.icon;
                   const isActive = activePhase === phase?.id;
-                  
+
                   return (
                     <motion.button
                       key={phase?.id}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => handlePhaseClick(phase)}
                       className={cn(
-                        "flex flex-col items-center justify-center",
-                        "p-4 rounded-xl",
-                        "transition-all duration-200",
-                        "touch-manipulation",
-                        isActive ? phase.color : "bg-accent",
-                        isActive && "text-white",
-                        "active:scale-95",
-                        "focus:outline-none focus:ring-2 focus:ring-primary"
+                        'flex flex-col items-center justify-center',
+                        'p-4 rounded-xl',
+                        'transition-all duration-200',
+                        'touch-manipulation',
+                        isActive ? phase.color : 'bg-accent',
+                        isActive && 'text-white',
+                        'active:scale-95',
+                        'focus:outline-none focus:ring-2 focus:ring-primary'
                       )}
                     >
                       <Icon className="h-6 w-6 mb-2" />
@@ -221,11 +288,11 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
             whileTap={{ scale: 0.9 }}
             onClick={scrollToTop}
             className={cn(
-              "fixed bottom-20 right-4 z-30",
-              "bg-primary text-primary-foreground",
-              "rounded-full p-3 shadow-lg",
-              "md:hidden",
-              "touch-manipulation"
+              'fixed bottom-20 right-4 z-30',
+              'bg-primary text-primary-foreground',
+              'rounded-full p-3 shadow-lg',
+              'md:hidden',
+              'touch-manipulation'
             )}
             aria-label="Scroll to top"
           >

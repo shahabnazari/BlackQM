@@ -744,10 +744,10 @@ export default function KnowledgeMapPage() {
                                 size:
                                   n.id === selectedNode.id
                                     ? value
-                                    : n.size || 25,
+                                    : n.size,
                               }))
                             );
-                            setSelectedNode({ ...selectedNode, size: value });
+                            setSelectedNode({ ...selectedNode, size: value as number });
                           }}
                           min={10}
                           max={50}

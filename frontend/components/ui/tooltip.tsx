@@ -58,7 +58,7 @@ export function Tooltip({
         <div
           ref={tooltipRef}
           className={cn(
-            "fixed z-50 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg pointer-events-none",
+            'fixed z-50 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg pointer-events-none',
             className
           )}
           style={{

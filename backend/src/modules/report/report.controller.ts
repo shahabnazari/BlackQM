@@ -21,7 +21,7 @@ import { Response } from 'express';
  * RESTful endpoints for report generation and export
  * Foundation for Phase 10 complete implementation
  */
-@Controller('api/reports')
+@Controller('reports')
 @UseGuards(JwtAuthGuard)
 export class ReportController {
   constructor(private readonly reportService: ReportService) {}

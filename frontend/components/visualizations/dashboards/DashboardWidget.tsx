@@ -1,18 +1,18 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  CogIcon, 
-  TrashIcon, 
+import {
+  CogIcon,
+  TrashIcon,
   ArrowsPointingOutIcon,
   _EyeIcon,
   DocumentArrowDownIcon,
   ChartBarIcon,
-  FunnelIcon
+  FunnelIcon,
 } from '@heroicons/react/24/outline';
 import { ChartExporter } from '../../../lib/visualization/export';
 
 // Widget types and interfaces
-export type WidgetType = 
+export type WidgetType =
   | 'eigenvalue-scree'
   | 'correlation-heatmap'
   | 'factor-loading'
@@ -48,7 +48,10 @@ interface DashboardWidgetProps {
   onUpdate?: (widget: Widget) => void;
   onRemove?: (widgetId: string) => void;
   onCrossFilter?: (filterId: string, filterData: any) => void;
-  onExport?: (widget: Widget, format: 'png' | 'pdf' | 'svg' | 'csv' | 'excel') => void;
+  onExport?: (
+    widget: Widget,
+    format: 'png' | 'pdf' | 'svg' | 'csv' | 'excel'
+  ) => void;
   isSelected?: boolean;
   isReadOnly?: boolean;
   className?: string;
@@ -56,10 +59,10 @@ interface DashboardWidgetProps {
 
 // Apple spring physics configuration
 const springConfig = {
-  type: "spring" as const,
+  type: 'spring' as const,
   stiffness: 300,
   damping: 30,
-  mass: 1
+  mass: 1,
 };
 
 export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
@@ -71,14 +74,14 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
   onExport,
   isSelected = false,
   isReadOnly = false,
-  className = ""
+  className = '',
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [dragConstraints] = useState({ top: 0, left: 0, right: 0, bottom: 0 });
-  
+
   const widgetRef = useRef<HTMLDivElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
@@ -93,54 +96,60 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
   );
 
   // Handle widget configuration updates
-  const handleConfigUpdate = useCallback((newConfig: Partial<WidgetConfig>) => {
-    const updatedConfig = { ...localConfig, ...newConfig };
-    setLocalConfig(updatedConfig);
-    
-    if (onUpdate) {
-      onUpdate({
-        ...widget,
-        config: updatedConfig
-      });
-    }
-  }, [localConfig, widget, onUpdate]);
+  const handleConfigUpdate = useCallback(
+    (newConfig: Partial<WidgetConfig>) => {
+      const updatedConfig = { ...localConfig, ...newConfig };
+      setLocalConfig(updatedConfig);
+
+      if (onUpdate) {
+        onUpdate({
+          ...widget,
+          config: updatedConfig,
+        });
+      }
+    },
+    [localConfig, widget, onUpdate]
+  );
 
   // Handle export functionality
-  const handleExport = useCallback(async (format: 'png' | 'pdf' | 'svg' | 'csv' | 'excel') => {
-    if (onExport) {
-      onExport(widget, format);
-      return;
-    }
-
-    // Default export handling
-    if (widgetRef.current) {
-      try {
-        switch (format) {
-          case 'png':
-            await ChartExporter.exportToPNG(widgetRef.current, {
-              filename: `${widget.title.replace(/\s+/g, '_').toLowerCase()}_widget`
-            });
-            break;
-          case 'pdf':
-            await ChartExporter.exportToPDF([widgetRef.current], {
-              filename: `${widget.title.replace(/\s+/g, '_').toLowerCase()}_widget`
-            });
-            break;
-          case 'svg':
-            const svgElement = widgetRef.current.querySelector('svg');
-            if (svgElement) {
-              ChartExporter.exportToSVG(svgElement, {
-                filename: `${widget.title.replace(/\s+/g, '_').toLowerCase()}_widget`
-              });
-            }
-            break;
-        }
-        setShowExportMenu(false);
-      } catch (error: any) {
-        console.error('Export failed:', error);
+  const handleExport = useCallback(
+    async (format: 'png' | 'pdf' | 'svg' | 'csv' | 'excel') => {
+      if (onExport) {
+        onExport(widget, format);
+        return;
       }
-    }
-  }, [widget, onExport]);
+
+      // Default export handling
+      if (widgetRef.current) {
+        try {
+          switch (format) {
+            case 'png':
+              await ChartExporter.exportToPNG(widgetRef.current, {
+                filename: `${widget.title.replace(/\s+/g, '_').toLowerCase()}_widget`,
+              });
+              break;
+            case 'pdf':
+              await ChartExporter.exportToPDF([widgetRef.current], {
+                filename: `${widget.title.replace(/\s+/g, '_').toLowerCase()}_widget`,
+              });
+              break;
+            case 'svg':
+              const svgElement = widgetRef.current.querySelector('svg');
+              if (svgElement) {
+                ChartExporter.exportToSVG(svgElement, {
+                  filename: `${widget.title.replace(/\s+/g, '_').toLowerCase()}_widget`,
+                });
+              }
+              break;
+          }
+          setShowExportMenu(false);
+        } catch (error: any) {
+          console.error('Export failed:', error);
+        }
+      }
+    },
+    [widget, onExport]
+  );
 
   // Handle cross-filtering (Reserved for future use)
   // const _handleCrossFilter = useCallback((filterData: any) => {
@@ -163,15 +172,17 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
         ref={widgetRef}
         layout
         initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ 
-          opacity: 1, 
+        animate={{
+          opacity: 1,
           scale: 1,
-          borderColor: isSelected ? '#3b82f6' : (localConfig.borderColor || '#e5e7eb'),
-          boxShadow: isSelected 
-            ? '0 0 0 2px rgb(59 130 246 / 0.5)' 
-            : isHovered 
+          borderColor: isSelected
+            ? '#3b82f6'
+            : localConfig.borderColor || '#e5e7eb',
+          boxShadow: isSelected
+            ? '0 0 0 2px rgb(59 130 246 / 0.5)'
+            : isHovered
               ? '0 10px 25px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05)'
-              : '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px 0 rgb(0 0 0 / 0.06)'
+              : '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px 0 rgb(0 0 0 / 0.06)',
         }}
         exit={{ opacity: 0, scale: 0.8 }}
         whileHover={{ y: -2 }}
@@ -205,9 +216,13 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
                 <h4 className="font-medium text-sm text-gray-900 truncate">
                   {localConfig.title || widget.title}
                 </h4>
-                {widget.crossFilterDependencies && widget.crossFilterDependencies.length > 0 && (
-                  <FunnelIcon className="w-3 h-3 text-orange-500" title="Cross-filtering enabled" />
-                )}
+                {widget.crossFilterDependencies &&
+                  widget.crossFilterDependencies.length > 0 && (
+                    <FunnelIcon
+                      className="w-3 h-3 text-orange-500"
+                      title="Cross-filtering enabled"
+                    />
+                  )}
               </div>
 
               {/* Action Buttons */}
@@ -359,7 +374,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
               className="bg-white rounded-xl p-6 w-96 max-h-[80vh] overflow-y-auto shadow-xl"
             >
               <h3 className="text-lg font-semibold mb-4">Configure Widget</h3>
-              
+
               <div className="space-y-4">
                 {/* Title */}
                 <div>
@@ -369,7 +384,9 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
                   <input
                     type="text"
                     value={localConfig.title || widget.title}
-                    onChange={(e: any) => handleConfigUpdate({ title: e.target.value })}
+                    onChange={(e: any) =>
+                      handleConfigUpdate({ title: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -380,10 +397,15 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
                     type="checkbox"
                     id="showTitle"
                     checked={localConfig.showTitle}
-                    onChange={(e: any) => handleConfigUpdate({ showTitle: e.target.checked })}
+                    onChange={(e: any) =>
+                      handleConfigUpdate({ showTitle: e.target.checked })
+                    }
                     className="mr-2"
                   />
-                  <label htmlFor="showTitle" className="text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="showTitle"
+                    className="text-sm font-medium text-gray-700"
+                  >
                     Show title
                   </label>
                 </div>
@@ -396,7 +418,9 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
                   <input
                     type="color"
                     value={localConfig.backgroundColor || '#ffffff'}
-                    onChange={(e: any) => handleConfigUpdate({ backgroundColor: e.target.value })}
+                    onChange={(e: any) =>
+                      handleConfigUpdate({ backgroundColor: e.target.value })
+                    }
                     className="w-full h-10 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -409,7 +433,9 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
                   <input
                     type="color"
                     value={localConfig.borderColor || '#e5e7eb'}
-                    onChange={(e: any) => handleConfigUpdate({ borderColor: e.target.value })}
+                    onChange={(e: any) =>
+                      handleConfigUpdate({ borderColor: e.target.value })
+                    }
                     className="w-full h-10 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -453,7 +479,9 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
               style={glassStyle}
             >
               <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-lg font-semibold">{localConfig.title || widget.title}</h3>
+                <h3 className="text-lg font-semibold">
+                  {localConfig.title || widget.title}
+                </h3>
                 <button
                   onClick={() => setIsExpanded(false)}
                   className="p-2 hover:bg-gray-100 rounded-md"

@@ -5,6 +5,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PrismaModule } from './common/prisma.module';
 import { PrismaService } from './common/prisma.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { RateLimitingModule } from './modules/rate-limiting/rate-limiting.module';
@@ -20,6 +21,7 @@ import { QuestionModule } from './modules/question.module';
 import { PostSurveyModule } from './modules/post-survey.module';
 import { ParticipantFlowModule } from './modules/participant-flow.module';
 import { NavigationModule } from './modules/navigation/navigation.module';
+import { LiteratureModule } from './modules/literature/literature.module';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { ArchiveService } from './services/archive.service';
 
@@ -29,6 +31,7 @@ import { ArchiveService } from './services/archive.service';
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
     }),
+    PrismaModule, // Global database service
     // Global rate limiting configuration
     ThrottlerModule.forRoot([
       {
@@ -60,12 +63,12 @@ import { ArchiveService } from './services/archive.service';
     VisualizationModule,
     ReportModule,
     NavigationModule, // Phase 8.5: Research Lifecycle Navigation
+    LiteratureModule, // Phase 9: Literature Review & Discovery System
     HealthModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    PrismaService,
     ArchiveService, // Phase 8.5 Day 4: Archive service for version control
     // Apply throttler guard globally
     {

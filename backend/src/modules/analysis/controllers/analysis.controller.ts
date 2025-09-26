@@ -53,7 +53,7 @@ import { v4 as uuidv4 } from 'uuid';
 @ApiTags('Q-Analytics Engine')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('api/analysis')
+@Controller('analysis')
 export class AnalysisController {
   constructor(private readonly analysisService: QAnalysisService) {}
 

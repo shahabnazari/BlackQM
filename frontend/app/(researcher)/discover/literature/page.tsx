@@ -1,11 +1,12 @@
 /**
  * Literature Search Interface - DISCOVER Phase
- * World-class implementation for research discovery
+ * Phase 9 Day 0-1: Complete Literature Review System
+ * World-class implementation integrated with backend API
  */
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -21,508 +22,704 @@ import {
   Sparkles,
   Database,
   TrendingUp,
+  GitBranch,
+  Loader2,
+  Check,
+  X,
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-
-interface Paper {
-  id: string;
-  title: string;
-  authors: string[];
-  year: number;
-  journal: string;
-  abstract: string;
-  citations: number;
-  doi: string;
-  keywords: string[];
-  relevanceScore?: number;
-  qMethodology?: boolean;
-}
-
-interface SearchFilters {
-  yearRange: [number, number];
-  journals: string[];
-  authors: string[];
-  keywords: string[];
-  citationMin: number;
-  qMethodologyOnly: boolean;
-}
+import { toast } from 'sonner';
+import { literatureAPI, Paper, Theme, ResearchGap } from '@/lib/services/literature-api.service';
+import DatabaseSourcesInfo from '@/components/literature/DatabaseSourcesInfo';
 
 export default function LiteratureSearchPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<Paper[]>([]);
-  const [selectedPapers, setSelectedPapers] = useState<Set<string>>(new Set());
+  // Search state
+  const [query, setQuery] = useState('');
+  const [papers, setPapers] = useState<Paper[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalResults, setTotalResults] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
-  const [aiMode, setAiMode] = useState(false);
-
-  const [filters, setFilters] = useState<SearchFilters>({
-    yearRange: [2010, 2024],
-    journals: [],
-    authors: [],
-    keywords: [],
+  const [selectedView, setSelectedView] = useState<'list' | 'grid'>('list');
+  
+  // Advanced filters
+  const [filters, setFilters] = useState({
+    yearFrom: 2020,
+    yearTo: new Date().getFullYear(),
+    sources: ['semantic_scholar', 'crossref'],
+    sortBy: 'relevance' as 'relevance' | 'date' | 'citations',
     citationMin: 0,
-    qMethodologyOnly: false,
+    includeAIMode: true,
   });
+  
+  // Analysis state
+  const [selectedPapers, setSelectedPapers] = useState<Set<string>>(new Set());
+  const [themes, setThemes] = useState<Theme[]>([]);
+  const [gaps, setGaps] = useState<ResearchGap[]>([]);
+  const [analyzingThemes, setAnalyzingThemes] = useState(false);
+  const [analyzingGaps, setAnalyzingGaps] = useState(false);
+  
+  // Library state
+  const [savedPapers, setSavedPapers] = useState<Paper[]>([]);
+  const [activeTab, setActiveTab] = useState('search');
 
-  // Mock search function - would connect to backend
-  const performSearch = useCallback(async () => {
-    setIsSearching(true);
+  // Load saved papers on mount
+  useEffect(() => {
+    loadUserLibrary();
+  }, []);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Mock results
-    const mockResults: Paper[] = [
-      {
-        id: '1',
-        title:
-          'Q Methodology in Environmental Policy Research: A Systematic Review',
-        authors: ['Smith, J.', 'Johnson, K.', 'Williams, R.'],
-        year: 2023,
-        journal: 'Journal of Environmental Psychology',
-        abstract:
-          'This systematic review examines the application of Q methodology in environmental policy research over the past decade. We analyze 127 studies that employed Q methodology to understand stakeholder perspectives on environmental issues...',
-        citations: 45,
-        doi: '10.1016/j.envpsych.2023.01.001',
-        keywords: [
-          'Q methodology',
-          'environmental policy',
-          'stakeholder analysis',
-          'systematic review',
-        ],
-        relevanceScore: 0.95,
-        qMethodology: true,
-      },
-      {
-        id: '2',
-        title:
-          'Digital Transformation in Q-Sort Studies: Web-Based Applications and Remote Data Collection',
-        authors: ['Chen, L.', 'Davis, M.'],
-        year: 2024,
-        journal: 'Computers in Human Behavior',
-        abstract:
-          'The COVID-19 pandemic accelerated the adoption of digital tools in Q methodology research. This paper presents a comprehensive framework for conducting Q-sort studies using web-based platforms...',
-        citations: 12,
-        doi: '10.1016/j.chb.2024.02.015',
-        keywords: [
-          'Q-sort',
-          'digital methods',
-          'web-based research',
-          'remote data collection',
-        ],
-        relevanceScore: 0.88,
-        qMethodology: true,
-      },
-      {
-        id: '3',
-        title:
-          'Mixed Methods Research: Combining Q Methodology with Qualitative Interviews',
-        authors: ['Brown, A.', 'Taylor, S.', 'Martinez, C.'],
-        year: 2022,
-        journal: 'Qualitative Research',
-        abstract:
-          'This methodological paper explores the integration of Q methodology with in-depth qualitative interviews. We present three case studies demonstrating how this mixed-methods approach can provide richer insights...',
-        citations: 78,
-        doi: '10.1177/1468794122001234',
-        keywords: [
-          'mixed methods',
-          'Q methodology',
-          'qualitative research',
-          'triangulation',
-        ],
-        relevanceScore: 0.82,
-        qMethodology: true,
-      },
-    ];
-
-    setSearchResults(mockResults);
-    setIsSearching(false);
-  }, [searchQuery, filters]);
-
-  const handlePaperSelect = (paperId: string) => {
-    setSelectedPapers(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(paperId)) {
-        newSet.delete(paperId);
-      } else {
-        newSet.add(paperId);
-      }
-      return newSet;
-    });
+  const loadUserLibrary = async () => {
+    try {
+      const { papers } = await literatureAPI.getUserLibrary();
+      setSavedPapers(papers);
+    } catch (error) {
+      console.error('Failed to load library:', error);
+    }
   };
 
-  const handleExportSelected = () => {
-    // Export functionality
-    console.log('Exporting', selectedPapers.size, 'papers');
+  const handleSearch = useCallback(async () => {
+    if (!query.trim()) {
+      toast.error('Please enter a search query');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await literatureAPI.searchLiterature({
+        query,
+        sources: filters.sources,
+        yearFrom: filters.yearFrom,
+        yearTo: filters.yearTo,
+        sortBy: filters.sortBy,
+        page: currentPage,
+        limit: 20,
+        includeCitations: true,
+      });
+
+      setPapers(result.papers);
+      setTotalResults(result.total);
+      toast.success(`Found ${result.total} papers across ${filters.sources.length} databases`);
+    } catch (error) {
+      toast.error('Search failed. Please try again.');
+      console.error('Search error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [query, filters, currentPage]);
+
+  const handleSavePaper = async (paper: Paper) => {
+    try {
+      await literatureAPI.savePaper(paper);
+      setSavedPapers([...savedPapers, paper]);
+      toast.success('Paper saved to library');
+    } catch (error) {
+      toast.error('Failed to save paper');
+    }
+  };
+
+  const handleRemovePaper = async (paperId: string) => {
+    try {
+      await literatureAPI.removePaper(paperId);
+      setSavedPapers(savedPapers.filter(p => p.id !== paperId));
+      toast.success('Paper removed from library');
+    } catch (error) {
+      toast.error('Failed to remove paper');
+    }
+  };
+
+  const handleExtractThemes = async () => {
+    if (selectedPapers.size === 0) {
+      toast.error('Please select papers to analyze');
+      return;
+    }
+
+    setAnalyzingThemes(true);
+    try {
+      const paperIds = Array.from(selectedPapers);
+      const extractedThemes = await literatureAPI.extractThemes(paperIds, 5);
+      setThemes(extractedThemes);
+      setActiveTab('themes');
+      toast.success(`Extracted ${extractedThemes.length} themes from ${paperIds.length} papers`);
+    } catch (error) {
+      toast.error('Theme extraction failed');
+    } finally {
+      setAnalyzingThemes(false);
+    }
+  };
+
+  const handleAnalyzeGaps = async () => {
+    if (!query) {
+      toast.error('Please enter a research field');
+      return;
+    }
+
+    setAnalyzingGaps(true);
+    try {
+      const researchGaps = await literatureAPI.analyzeGaps(query, {
+        timeRange: 5,
+        includeFunding: true,
+        includeCollaborations: true,
+      });
+      setGaps(researchGaps);
+      setActiveTab('gaps');
+      toast.success(`Identified ${researchGaps.length} research opportunities`);
+    } catch (error) {
+      toast.error('Gap analysis failed');
+    } finally {
+      setAnalyzingGaps(false);
+    }
+  };
+
+  const handleExportCitations = async (format: 'bibtex' | 'ris' | 'apa') => {
+    if (selectedPapers.size === 0) {
+      toast.error('Please select papers to export');
+      return;
+    }
+
+    try {
+      const paperIds = Array.from(selectedPapers);
+      const { content, filename } = await literatureAPI.exportCitations(paperIds, format);
+      
+      // Create download link
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      toast.success(`Exported ${paperIds.length} citations as ${format.toUpperCase()}`);
+    } catch (error) {
+      toast.error('Export failed');
+    }
+  };
+
+  const handleGenerateStatements = async () => {
+    if (themes.length === 0) {
+      toast.error('Please extract themes first');
+      return;
+    }
+
+    try {
+      const themeNames = themes.map(t => t.name);
+      const statements = await literatureAPI.generateStatementsFromThemes(
+        themeNames,
+        { topic: query }
+      );
+      toast.success(`Generated ${statements.length} Q-statements from themes`);
+      // TODO: Navigate to statement builder with generated statements
+    } catch (error) {
+      toast.error('Statement generation failed');
+    }
+  };
+
+  const togglePaperSelection = (paperId: string) => {
+    const newSelected = new Set(selectedPapers);
+    if (newSelected.has(paperId)) {
+      newSelected.delete(paperId);
+    } else {
+      newSelected.add(paperId);
+    }
+    setSelectedPapers(newSelected);
+  };
+
+  const PaperCard = ({ paper }: { paper: Paper }) => {
+    const isSelected = selectedPapers.has(paper.id);
+    const isSaved = savedPapers.some(p => p.id === paper.id);
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={cn(
+          "border rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer",
+          isSelected && "border-blue-500 bg-blue-50/50"
+        )}
+        onClick={() => togglePaperSelection(paper.id)}
+      >
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <div className="flex items-start gap-3">
+              <div className={cn(
+                "w-5 h-5 rounded border-2 flex items-center justify-center mt-1",
+                isSelected ? "bg-blue-500 border-blue-500" : "border-gray-300"
+              )}>
+                {isSelected && <Check className="w-3 h-3 text-white" />}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg leading-tight">
+                  {paper.title}
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {paper.authors?.slice(0, 3).join(', ')}
+                  {paper.authors?.length > 3 && ` +${paper.authors.length - 3} more`}
+                </p>
+                <div className="flex gap-4 mt-2 text-sm text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {paper.year}
+                  </span>
+                  {paper.venue && (
+                    <span className="flex items-center gap-1">
+                      <BookOpen className="w-3 h-3" />
+                      {paper.venue}
+                    </span>
+                  )}
+                  {paper.citationCount !== undefined && (
+                    <span className="flex items-center gap-1">
+                      <GitBranch className="w-3 h-3" />
+                      {paper.citationCount} citations
+                    </span>
+                  )}
+                </div>
+                {paper.abstract && (
+                  <p className="mt-3 text-sm text-gray-700 line-clamp-3">
+                    {paper.abstract}
+                  </p>
+                )}
+                {paper.keywords && paper.keywords.length > 0 && (
+                  <div className="flex gap-2 mt-3 flex-wrap">
+                    {paper.keywords.slice(0, 5).map((keyword) => (
+                      <Badge key={keyword} variant="secondary" className="text-xs">
+                        {keyword}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
+                  {paper.doi && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(`https://doi.org/${paper.doi}`, '_blank')}
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      View Paper
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant={isSaved ? "secondary" : "outline"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      isSaved ? handleRemovePaper(paper.id) : handleSavePaper(paper);
+                    }}
+                  >
+                    <Star className={cn("w-3 h-3 mr-1", isSaved && "fill-current")} />
+                    {isSaved ? 'Saved' : 'Save'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center space-y-2"
-        >
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-            Literature Discovery
-          </h1>
-          <p className="text-gray-600">
-            AI-powered search across millions of academic papers
+    <div className="container mx-auto py-8 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Literature Discovery</h1>
+          <p className="text-gray-600 mt-1">
+            Search and analyze academic literature to build your research foundation
           </p>
-        </motion.div>
+        </div>
+        <div className="flex gap-3">
+          <Badge variant="outline" className="py-2 px-4">
+            <Database className="w-4 h-4 mr-2" />
+            {totalResults} papers found
+          </Badge>
+          <Badge variant="outline" className="py-2 px-4">
+            <Check className="w-4 h-4 mr-2" />
+            {selectedPapers.size} selected
+          </Badge>
+          <Badge variant="outline" className="py-2 px-4">
+            <Star className="w-4 h-4 mr-2" />
+            {savedPapers.length} saved
+          </Badge>
+        </div>
+      </div>
 
-        {/* Search Bar */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="border-2 hover:border-purple-200 transition-colors">
-            <CardContent className="p-6">
-              <div className="flex gap-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <Input
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search for papers, authors, keywords..."
-                    className="pl-10 pr-4 py-6 text-lg border-gray-200 focus:border-purple-400"
-                    onKeyPress={e => e.key === 'Enter' && performSearch()}
-                  />
-                  {aiMode && (
-                    <Sparkles className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-500 animate-pulse" />
-                  )}
-                </div>
-
-                <Button
-                  onClick={() => setShowFilters(!showFilters)}
-                  variant="outline"
-                  className="px-6"
-                >
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filters
-                </Button>
-
-                <Button
-                  onClick={() => setAiMode(!aiMode)}
-                  variant={aiMode ? 'default' : 'outline'}
-                  className={cn(
-                    'px-6',
-                    aiMode && 'bg-gradient-to-r from-purple-600 to-blue-600'
-                  )}
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  AI Mode
-                </Button>
-
-                <Button
-                  onClick={performSearch}
-                  disabled={isSearching}
-                  className="px-8 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                >
-                  {isSearching ? (
-                    <span className="animate-pulse">Searching...</span>
-                  ) : (
-                    <>
-                      Search
-                      <ChevronRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* Filters Panel */}
-              <AnimatePresence>
-                {showFilters && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="mt-4 pt-4 border-t"
-                  >
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-700">
-                          Year Range
-                        </label>
-                        <div className="flex gap-2 mt-1">
-                          <Input
-                            type="number"
-                            value={filters.yearRange[0]}
-                            onChange={e =>
-                              setFilters(prev => ({
-                                ...prev,
-                                yearRange: [
-                                  parseInt(e.target.value),
-                                  prev.yearRange[1],
-                                ],
-                              }))
-                            }
-                            className="w-24"
-                          />
-                          <span className="self-center">to</span>
-                          <Input
-                            type="number"
-                            value={filters.yearRange[1]}
-                            onChange={e =>
-                              setFilters(prev => ({
-                                ...prev,
-                                yearRange: [
-                                  prev.yearRange[0],
-                                  parseInt(e.target.value),
-                                ],
-                              }))
-                            }
-                            className="w-24"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium text-gray-700">
-                          Min Citations
-                        </label>
-                        <Input
-                          type="number"
-                          value={filters.citationMin}
-                          onChange={e =>
-                            setFilters(prev => ({
-                              ...prev,
-                              citationMin: parseInt(e.target.value),
-                            }))
-                          }
-                          className="mt-1"
-                        />
-                      </div>
-
-                      <div className="flex items-end">
-                        <label className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={filters.qMethodologyOnly}
-                            onChange={e =>
-                              setFilters(prev => ({
-                                ...prev,
-                                qMethodologyOnly: e.target.checked,
-                              }))
-                            }
-                            className="rounded border-gray-300"
-                          />
-                          <span className="text-sm font-medium text-gray-700">
-                            Q Methodology papers only
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Quick Stats */}
-        {searchResults.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="grid grid-cols-4 gap-4"
-          >
-            <Card className="border-purple-200 bg-purple-50/50">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-purple-600">Total Results</p>
-                  <p className="text-2xl font-bold text-purple-900">
-                    {searchResults.length}
-                  </p>
-                </div>
-                <Database className="w-8 h-8 text-purple-400" />
-              </CardContent>
-            </Card>
-
-            <Card className="border-blue-200 bg-blue-50/50">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-blue-600">Q-Method Papers</p>
-                  <p className="text-2xl font-bold text-blue-900">
-                    {searchResults.filter(p => p.qMethodology).length}
-                  </p>
-                </div>
-                <BookOpen className="w-8 h-8 text-blue-400" />
-              </CardContent>
-            </Card>
-
-            <Card className="border-green-200 bg-green-50/50">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-green-600">Avg Citations</p>
-                  <p className="text-2xl font-bold text-green-900">
-                    {Math.round(
-                      searchResults.reduce((acc, p) => acc + p.citations, 0) /
-                        searchResults.length
-                    )}
-                  </p>
-                </div>
-                <TrendingUp className="w-8 h-8 text-green-400" />
-              </CardContent>
-            </Card>
-
-            <Card className="border-orange-200 bg-orange-50/50">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-orange-600">Selected</p>
-                  <p className="text-2xl font-bold text-orange-900">
-                    {selectedPapers.size}
-                  </p>
-                </div>
-                <Star className="w-8 h-8 text-orange-400" />
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
-        {/* Search Results */}
-        <div className="space-y-4">
-          {searchResults.map((paper, index) => (
-            <motion.div
-              key={paper.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
+      {/* Search Section */}
+      <Card className="border-2">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Multi-Database Literature Search</span>
+            <div className="flex gap-2">
+              <Badge variant={filters.includeAIMode ? "default" : "secondary"}>
+                <Sparkles className="w-3 h-3 mr-1" />
+                AI Mode {filters.includeAIMode ? 'ON' : 'OFF'}
+              </Badge>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Input
+                placeholder="Enter keywords, research questions, or topics..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="pl-10 pr-4 h-12 text-lg"
+              />
+            </div>
+            <Button
+              onClick={handleSearch}
+              disabled={loading}
+              className="h-12 px-6"
+              size="lg"
             >
-              <Card
-                className={cn(
-                  'hover:shadow-lg transition-all cursor-pointer',
-                  selectedPapers.has(paper.id) &&
-                    'ring-2 ring-purple-400 bg-purple-50/30'
-                )}
-                onClick={() => handlePaperSelect(paper.id)}
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  <Search className="w-5 h-5 mr-2" />
+                  Search
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="h-12"
+            >
+              <Filter className="w-5 h-5 mr-2" />
+              Filters
+              {showFilters ? <X className="w-4 h-4 ml-1" /> : <ChevronRight className="w-4 h-4 ml-1" />}
+            </Button>
+          </div>
+
+          {/* Advanced Filters */}
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="space-y-4 pt-4 border-t"
               >
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900 flex-1 pr-4">
-                      {paper.title}
-                    </h3>
-                    {paper.relevanceScore && (
-                      <Badge
-                        className={cn(
-                          'ml-2',
-                          paper.relevanceScore > 0.9
-                            ? 'bg-green-100 text-green-700'
-                            : paper.relevanceScore > 0.7
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-gray-100 text-gray-700'
-                        )}
-                      >
-                        {Math.round(paper.relevanceScore * 100)}% match
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                    <span className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      {paper.authors.slice(0, 3).join(', ')}
-                      {paper.authors.length > 3 &&
-                        ` +${paper.authors.length - 3}`}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {paper.year}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <BookOpen className="w-4 h-4" />
-                      {paper.journal}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <TrendingUp className="w-4 h-4" />
-                      {paper.citations} citations
-                    </span>
-                  </div>
-
-                  <p className="text-gray-700 mb-3 line-clamp-2">
-                    {paper.abstract}
-                  </p>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-2">
-                      {paper.keywords.slice(0, 3).map(keyword => (
-                        <Badge
-                          key={keyword}
-                          variant="outline"
-                          className="text-xs"
-                        >
-                          <Tag className="w-3 h-3 mr-1" />
-                          {keyword}
-                        </Badge>
-                      ))}
-                      {paper.qMethodology && (
-                        <Badge className="bg-purple-100 text-purple-700 text-xs">
-                          Q-Method
-                        </Badge>
-                      )}
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Year Range</label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        type="number"
+                        value={filters.yearFrom}
+                        onChange={(e) => setFilters({ ...filters, yearFrom: parseInt(e.target.value) })}
+                        className="w-24"
+                      />
+                      <span className="self-center">to</span>
+                      <Input
+                        type="number"
+                        value={filters.yearTo}
+                        onChange={(e) => setFilters({ ...filters, yearTo: parseInt(e.target.value) })}
+                        className="w-24"
+                      />
                     </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Min Citations</label>
+                    <Input
+                      type="number"
+                      value={filters.citationMin}
+                      onChange={(e) => setFilters({ ...filters, citationMin: parseInt(e.target.value) })}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Sort By</label>
+                    <select
+                      value={filters.sortBy}
+                      onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
+                      className="w-full mt-1 px-3 py-2 border rounded-md"
+                    >
+                      <option value="relevance">Relevance</option>
+                      <option value="date">Date (Newest)</option>
+                      <option value="citations">Citations</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Databases</label>
+                    <div className="flex gap-2 mt-1">
+                      <Badge 
+                        variant={filters.sources.includes('semantic_scholar') ? 'default' : 'outline'}
+                        className="cursor-pointer"
+                        onClick={() => {
+                          const sources = filters.sources.includes('semantic_scholar')
+                            ? filters.sources.filter(s => s !== 'semantic_scholar')
+                            : [...filters.sources, 'semantic_scholar'];
+                          setFilters({ ...filters, sources });
+                        }}
+                      >
+                        Semantic Scholar
+                      </Badge>
+                      <Badge
+                        variant={filters.sources.includes('crossref') ? 'default' : 'outline'}
+                        className="cursor-pointer"
+                        onClick={() => {
+                          const sources = filters.sources.includes('crossref')
+                            ? filters.sources.filter(s => s !== 'crossref')
+                            : [...filters.sources, 'crossref'];
+                          setFilters({ ...filters, sources });
+                        }}
+                      >
+                        CrossRef
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={e => {
-                          e.stopPropagation();
-                          window.open(`https://doi.org/${paper.doi}`, '_blank');
-                        }}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={e => {
-                          e.stopPropagation();
-                          // Download functionality
-                        }}
-                      >
-                        <Download className="w-4 h-4" />
-                      </Button>
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={handleExtractThemes}
+              disabled={selectedPapers.size === 0 || analyzingThemes}
+            >
+              {analyzingThemes ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4 mr-2" />
+              )}
+              Extract Themes ({selectedPapers.size})
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleAnalyzeGaps}
+              disabled={!query || analyzingGaps}
+            >
+              {analyzingGaps ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <TrendingUp className="w-4 h-4 mr-2" />
+              )}
+              Find Research Gaps
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleExportCitations('bibtex')}
+              disabled={selectedPapers.size === 0}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export BibTeX
+            </Button>
+            {themes.length > 0 && (
+              <Button
+                onClick={handleGenerateStatements}
+                className="ml-auto"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate Q-Statements from Themes
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Database Sources Transparency */}
+      <DatabaseSourcesInfo />
+
+      {/* Results Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="search">
+            Search Results
+            {papers.length > 0 && <Badge className="ml-2" variant="secondary">{papers.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="library">
+            My Library
+            <Badge className="ml-2" variant="secondary">{savedPapers.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="themes">
+            Themes
+            {themes.length > 0 && <Badge className="ml-2" variant="secondary">{themes.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="gaps">
+            Research Gaps
+            {gaps.length > 0 && <Badge className="ml-2" variant="secondary">{gaps.length}</Badge>}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="search" className="space-y-4">
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            </div>
+          ) : papers.length > 0 ? (
+            <div className="space-y-4">
+              {papers.map((paper) => (
+                <PaperCard key={paper.id} paper={paper} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p>No papers found. Try adjusting your search query or filters.</p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="library" className="space-y-4">
+          {savedPapers.length > 0 ? (
+            savedPapers.map((paper) => (
+              <PaperCard key={paper.id} paper={paper} />
+            ))
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <Star className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p>No saved papers yet. Star papers from search results to add them here.</p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="themes" className="space-y-4">
+          {themes.length > 0 ? (
+            themes.map((theme) => (
+              <Card key={theme.id}>
+                <CardContent className="pt-6">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg">{theme.name}</h3>
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {theme.keywords.map((keyword) => (
+                          <Badge key={keyword} variant="secondary">
+                            {keyword}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex gap-4 mt-4 text-sm text-gray-600">
+                        <span>Relevance: {Math.round(theme.relevanceScore * 100)}%</span>
+                        {theme.emergenceYear && (
+                          <span>Emerged: {theme.emergenceYear}</span>
+                        )}
+                        {theme.trendDirection && (
+                          <Badge
+                            variant={theme.trendDirection === 'rising' ? 'default' : 'secondary'}
+                          >
+                            <TrendingUp className="w-3 h-3 mr-1" />
+                            {theme.trendDirection}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
-          ))}
-        </div>
+            ))
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <Sparkles className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p>Select papers and click "Extract Themes" to identify research themes.</p>
+            </div>
+          )}
+        </TabsContent>
 
-        {/* Export Actions */}
-        {selectedPapers.size > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="fixed bottom-6 right-6 z-50"
+        <TabsContent value="gaps" className="space-y-4">
+          {gaps.length > 0 ? (
+            gaps.map((gap) => (
+              <Card key={gap.id} className="border-l-4 border-l-orange-500">
+                <CardContent className="pt-6">
+                  <h3 className="font-semibold text-lg">{gap.title}</h3>
+                  <p className="text-gray-700 mt-2">{gap.description}</p>
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">Opportunity Score</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-gradient-to-r from-orange-400 to-orange-600 h-2 rounded-full"
+                            style={{ width: `${gap.opportunityScore * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-semibold">
+                          {Math.round(gap.opportunityScore * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">Impact</span>
+                      <p className="text-sm mt-1">{gap.potentialImpact}</p>
+                    </div>
+                  </div>
+                  {gap.suggestedMethods && gap.suggestedMethods.length > 0 && (
+                    <div className="mt-4">
+                      <span className="text-sm font-medium text-gray-500">Suggested Methods</span>
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {gap.suggestedMethods.map((method) => (
+                          <Badge key={method} variant="outline">
+                            {method}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {gap.fundingOpportunities && gap.fundingOpportunities.length > 0 && (
+                    <div className="mt-4">
+                      <span className="text-sm font-medium text-gray-500">Funding Opportunities</span>
+                      <ul className="list-disc list-inside text-sm mt-2 text-gray-700">
+                        {gap.fundingOpportunities.map((funding) => (
+                          <li key={funding}>{funding}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p>Click "Find Research Gaps" to identify opportunities in your field.</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Pagination */}
+      {totalResults > 20 && activeTab === 'search' && (
+        <div className="flex justify-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentPage(currentPage - 1)}
+            disabled={currentPage === 1}
           >
-            <Card className="shadow-xl border-2 border-purple-200">
-              <CardContent className="p-4 flex items-center gap-4">
-                <span className="text-sm font-medium">
-                  {selectedPapers.size} papers selected
-                </span>
-                <Button
-                  onClick={handleExportSelected}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600"
-                >
-                  Export to Reference Manager
-                  <Download className="w-4 h-4 ml-2" />
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </div>
+            Previous
+          </Button>
+          <div className="flex items-center gap-2">
+            {Array.from({ length: Math.min(5, Math.ceil(totalResults / 20)) }, (_, i) => i + 1).map((page) => (
+              <Button
+                key={page}
+                variant={currentPage === page ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </Button>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setCurrentPage(currentPage + 1)}
+            disabled={currentPage >= Math.ceil(totalResults / 20)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -137,9 +137,8 @@ export default function ReferenceManagerPage() {
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'author' | 'year'>(
     'date'
   );
-  const [citationStyle] =
-    useState<keyof typeof CITATION_STYLES>('apa');
-  // Removed unused state variables for add/edit reference
+  const [citationStyle] = useState<keyof typeof CITATION_STYLES>('apa');
+  const [showAddReference, setShowAddReference] = useState(false);
   const [syncStatus, setSyncStatus] = useState<
     'idle' | 'syncing' | 'success' | 'error'
   >('idle');

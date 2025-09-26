@@ -22,7 +22,9 @@ interface SearchableItem {
 export function PhaseSearch() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPhase, setSelectedPhase] = useState<ResearchPhase | 'all'>('all');
+  const [selectedPhase, setSelectedPhase] = useState<ResearchPhase | 'all'>(
+    'all'
+  );
   const router = useRouter();
 
   // Define all searchable items across phases
@@ -249,7 +251,7 @@ export function PhaseSearch() {
   // Filter items based on search and phase
   const filteredItems = useMemo(() => {
     const query = searchQuery.toLowerCase();
-    
+
     return searchableItems.filter(item => {
       // Filter by phase
       if (selectedPhase !== 'all' && item.phase !== selectedPhase) {
@@ -292,12 +294,15 @@ export function PhaseSearch() {
     return groups;
   }, [filteredItems]);
 
-  const handleSelect = useCallback((item: SearchableItem) => {
-    router.push(item.path);
-    setIsOpen(false);
-    setSearchQuery('');
-    setSelectedPhase('all');
-  }, [router]);
+  const handleSelect = useCallback(
+    (item: SearchableItem) => {
+      router.push(item.path);
+      setIsOpen(false);
+      setSearchQuery('');
+      setSelectedPhase('all');
+    },
+    [router]
+  );
 
   const phaseColors: Record<ResearchPhase, string> = {
     discover: 'bg-purple-100 text-purple-700 border-purple-300',
@@ -359,7 +364,7 @@ export function PhaseSearch() {
                   <input
                     type="text"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={e => setSearchQuery(e.target.value)}
                     placeholder="Search features, tools, and settings..."
                     className="flex-1 bg-transparent outline-none text-gray-900 dark:text-gray-100"
                     autoFocus
@@ -385,7 +390,7 @@ export function PhaseSearch() {
                   >
                     All Phases
                   </button>
-                  {Object.keys(phaseColors).map((phase) => (
+                  {Object.keys(phaseColors).map(phase => (
                     <button
                       key={phase}
                       onClick={() => setSelectedPhase(phase as ResearchPhase)}
@@ -414,10 +419,12 @@ export function PhaseSearch() {
                       return (
                         <div key={phase}>
                           <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800">
-                            <span className={cn(
-                              'inline-block px-2 py-1 rounded text-xs font-medium capitalize',
-                              phaseColors[phase as ResearchPhase]
-                            )}>
+                            <span
+                              className={cn(
+                                'inline-block px-2 py-1 rounded text-xs font-medium capitalize',
+                                phaseColors[phase as ResearchPhase]
+                              )}
+                            >
                               {phase}
                             </span>
                           </div>
@@ -435,13 +442,19 @@ export function PhaseSearch() {
                                   {item.description}
                                 </p>
                               </div>
-                              <span className={cn(
-                                'px-2 py-0.5 text-xs rounded capitalize',
-                                item.category === 'page' && 'bg-blue-100 text-blue-700',
-                                item.category === 'feature' && 'bg-green-100 text-green-700',
-                                item.category === 'tool' && 'bg-purple-100 text-purple-700',
-                                item.category === 'setting' && 'bg-gray-100 text-gray-700'
-                              )}>
+                              <span
+                                className={cn(
+                                  'px-2 py-0.5 text-xs rounded capitalize',
+                                  item.category === 'page' &&
+                                    'bg-blue-100 text-blue-700',
+                                  item.category === 'feature' &&
+                                    'bg-green-100 text-green-700',
+                                  item.category === 'tool' &&
+                                    'bg-purple-100 text-purple-700',
+                                  item.category === 'setting' &&
+                                    'bg-gray-100 text-gray-700'
+                                )}
+                              >
                                 {item.category}
                               </span>
                             </button>
@@ -455,11 +468,19 @@ export function PhaseSearch() {
                 {/* Footer */}
                 <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 flex justify-between">
                   <span>
-                    {filteredItems.length} result{filteredItems.length !== 1 ? 's' : ''}
+                    {filteredItems.length} result
+                    {filteredItems.length !== 1 ? 's' : ''}
                   </span>
                   <span>
-                    Press <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">Enter</kbd> to select,
-                    {' '}<kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">Esc</kbd> to close
+                    Press{' '}
+                    <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">
+                      Enter
+                    </kbd>{' '}
+                    to select,{' '}
+                    <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">
+                      Esc
+                    </kbd>{' '}
+                    to close
                   </span>
                 </div>
               </div>

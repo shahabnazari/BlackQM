@@ -1,19 +1,29 @@
-import { Node, _mergeAttributes, NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react';
+import {
+  Node,
+  _mergeAttributes,
+  NodeViewWrapper,
+  ReactNodeViewRenderer,
+} from '@tiptap/react';
 import React, { useState, useRef, _useEffect, useCallback } from 'react';
-import { 
-  Move, 
-  X, 
-  RotateCw, 
-  AlignLeft, 
-  AlignCenter, 
+import {
+  Move,
+  X,
+  RotateCw,
+  AlignLeft,
+  AlignCenter,
   AlignRight,
   _Maximize2,
   Square,
-  Image as ImageIcon
+  Image as ImageIcon,
 } from 'lucide-react';
 
 // Floating Image Component with text wrapping and drag-and-drop
-const FloatingImageComponent = ({ node, updateAttributes, deleteNode, selected }: any) => {
+const FloatingImageComponent = ({
+  node,
+  updateAttributes,
+  deleteNode,
+  selected,
+}: any) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -21,66 +31,69 @@ const FloatingImageComponent = ({ node, updateAttributes, deleteNode, selected }
   const imageRef = useRef<HTMLImageElement>(null);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
 
-  const { 
-    src, 
-    alt, 
-    width = 300, 
-    height = 200, 
+  const {
+    src,
+    alt,
+    width = 300,
+    height = 200,
     wrapMode = 'inline',
     margin = 10,
     rotation = 0,
     alignment = 'left',
-    hasBorder = false
+    hasBorder = false,
   } = node.attrs;
-  
+
   const [showBorder, setShowBorder] = useState(hasBorder);
 
   // Handle resize with mouse
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsResizing(true);
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsResizing(true);
 
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startWidth = width;
-    const startHeight = height;
-    const aspectRatio = startWidth / startHeight;
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startWidth = width;
+      const startHeight = height;
+      const aspectRatio = startWidth / startHeight;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - startX;
-      const deltaY = e.clientY - startY;
-      
-      // Calculate new dimensions maintaining aspect ratio
-      let newWidth = startWidth + deltaX;
-      let newHeight = startHeight + deltaY;
-      
-      // Maintain aspect ratio
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        newHeight = newWidth / aspectRatio;
-      } else {
-        newWidth = newHeight * aspectRatio;
-      }
-      
-      // Apply minimum constraints
-      newWidth = Math.max(50, Math.min(800, newWidth));
-      newHeight = Math.max(50, Math.min(600, newHeight));
-      
-      updateAttributes({
-        width: Math.round(newWidth),
-        height: Math.round(newHeight),
-      });
-    };
+      const handleMouseMove = (e: MouseEvent) => {
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
 
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
+        // Calculate new dimensions maintaining aspect ratio
+        let newWidth = startWidth + deltaX;
+        let newHeight = startHeight + deltaY;
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [width, height, updateAttributes]);
+        // Maintain aspect ratio
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+          newHeight = newWidth / aspectRatio;
+        } else {
+          newWidth = newHeight * aspectRatio;
+        }
+
+        // Apply minimum constraints
+        newWidth = Math.max(50, Math.min(800, newWidth));
+        newHeight = Math.max(50, Math.min(600, newHeight));
+
+        updateAttributes({
+          width: Math.round(newWidth),
+          height: Math.round(newHeight),
+        });
+      };
+
+      const handleMouseUp = () => {
+        setIsResizing(false);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    },
+    [width, height, updateAttributes]
+  );
 
   // Calculate wrapper styles based on wrap mode
   const getWrapperStyles = (): React.CSSProperties => {
@@ -151,7 +164,7 @@ const FloatingImageComponent = ({ node, updateAttributes, deleteNode, selected }
   };
 
   return (
-    <NodeViewWrapper 
+    <NodeViewWrapper
       className="floating-image-wrapper"
       style={getWrapperStyles()}
       contentEditable={false}
@@ -184,7 +197,9 @@ const FloatingImageComponent = ({ node, updateAttributes, deleteNode, selected }
             transition: isResizing ? 'none' : 'transform 0.2s ease',
             borderRadius: '8px',
             border: showBorder ? '2px solid rgba(0, 0, 0, 0.15)' : 'none',
-            boxShadow: showBorder ? '0 2px 12px rgba(0, 0, 0, 0.08)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+            boxShadow: showBorder
+              ? '0 2px 12px rgba(0, 0, 0, 0.08)'
+              : '0 2px 8px rgba(0, 0, 0, 0.1)',
           }}
         />
 
@@ -195,15 +210,18 @@ const FloatingImageComponent = ({ node, updateAttributes, deleteNode, selected }
             <div className="absolute -top-10 left-0 right-0 flex items-center justify-between pointer-events-auto">
               <div className="flex gap-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-1">
                 {/* Drag Indicator */}
-                <div className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded cursor-move" title="Drag to reposition">
+                <div
+                  className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded cursor-move"
+                  title="Drag to reposition"
+                >
                   <Move className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 </div>
                 {/* Wrap Mode Controls */}
                 <button
                   onClick={() => handleWrapModeChange('inline')}
                   className={`p-1.5 rounded transition-colors ${
-                    wrapMode === 'inline' 
-                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400' 
+                    wrapMode === 'inline'
+                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                   title="Inline with text"
@@ -213,8 +231,8 @@ const FloatingImageComponent = ({ node, updateAttributes, deleteNode, selected }
                 <button
                   onClick={() => handleWrapModeChange('left')}
                   className={`p-1.5 rounded transition-colors ${
-                    wrapMode === 'left' 
-                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400' 
+                    wrapMode === 'left'
+                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                   title="Float left"
@@ -224,8 +242,8 @@ const FloatingImageComponent = ({ node, updateAttributes, deleteNode, selected }
                 <button
                   onClick={() => handleWrapModeChange('center')}
                   className={`p-1.5 rounded transition-colors ${
-                    wrapMode === 'center' 
-                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400' 
+                    wrapMode === 'center'
+                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                   title="Center"
@@ -235,8 +253,8 @@ const FloatingImageComponent = ({ node, updateAttributes, deleteNode, selected }
                 <button
                   onClick={() => handleWrapModeChange('right')}
                   className={`p-1.5 rounded transition-colors ${
-                    wrapMode === 'right' 
-                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400' 
+                    wrapMode === 'right'
+                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                   title="Float right"
@@ -260,8 +278,8 @@ const FloatingImageComponent = ({ node, updateAttributes, deleteNode, selected }
                     updateAttributes({ hasBorder: newBorder });
                   }}
                   className={`p-1.5 rounded transition-colors ${
-                    showBorder 
-                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400' 
+                    showBorder
+                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                   title="Toggle border"
@@ -323,7 +341,6 @@ const FloatingImageComponent = ({ node, updateAttributes, deleteNode, selected }
             )}
           </div>
         )}
-
       </div>
     </NodeViewWrapper>
   );
@@ -332,7 +349,7 @@ const FloatingImageComponent = ({ node, updateAttributes, deleteNode, selected }
 // Floating Image Extension
 export const FloatingImageExtension = Node.create({
   name: 'floatingImage',
-  
+
   group: 'block',
   inline: false,
   atom: true,
@@ -395,8 +412,19 @@ export const FloatingImageExtension = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    const { src, alt, title, width, height, wrapMode, alignment, margin, rotation, hasBorder } = HTMLAttributes;
-    
+    const {
+      src,
+      alt,
+      title,
+      width,
+      height,
+      wrapMode,
+      alignment,
+      margin,
+      rotation,
+      hasBorder,
+    } = HTMLAttributes;
+
     return [
       'figure',
       {
@@ -435,32 +463,34 @@ export const FloatingImageExtension = Node.create({
 
   addCommands() {
     return {
-      setFloatingImage: (options: { 
-        src: string; 
-        alt?: string; 
-        title?: string; 
-        width?: number; 
-        height?: number;
-        wrapMode?: string;
-        alignment?: string;
-        margin?: number;
-        rotation?: number;
-        hasBorder?: boolean;
-      }) => ({ commands }: any) => {
-        return commands.insertContent({
-          type: this.name,
-          attrs: {
-            ...options,
-            width: options.width || 300,
-            height: options.height || 200,
-            wrapMode: options.wrapMode || 'inline',
-            alignment: options.alignment || 'left',
-            margin: options.margin || 10,
-            rotation: options.rotation || 0,
-            hasBorder: options.hasBorder || false,
-          },
-        });
-      },
+      setFloatingImage:
+        (options: {
+          src: string;
+          alt?: string;
+          title?: string;
+          width?: number;
+          height?: number;
+          wrapMode?: string;
+          alignment?: string;
+          margin?: number;
+          rotation?: number;
+          hasBorder?: boolean;
+        }) =>
+        ({ commands }: any) => {
+          return commands.insertContent({
+            type: this.name,
+            attrs: {
+              ...options,
+              width: options.width || 300,
+              height: options.height || 200,
+              wrapMode: options.wrapMode || 'inline',
+              alignment: options.alignment || 'left',
+              margin: options.margin || 10,
+              rotation: options.rotation || 0,
+              hasBorder: options.hasBorder || false,
+            },
+          });
+        },
     } as any;
   },
 });

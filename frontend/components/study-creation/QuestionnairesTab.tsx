@@ -16,7 +16,7 @@ import {
   ClipboardDocumentCheckIcon,
   ClipboardDocumentListIcon,
   ChevronUpIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
 import { questionApiService } from '@/lib/services/question-api.service';
@@ -51,10 +51,10 @@ interface QuestionnairesTabProps {
 
 /**
  * QuestionnairesTab Component - Phase 8.2 Day 2
- * 
+ *
  * World-class questionnaire management for study creation
  * Integrates pre-screening and post-survey configuration
- * 
+ *
  * @world-class Features:
  * - Dual-tab interface for pre/post questionnaires
  * - Question library with templates
@@ -66,19 +66,21 @@ interface QuestionnairesTabProps {
 export function QuestionnairesTab({
   studyId,
   onUpdate,
-  initialData
+  initialData,
 }: QuestionnairesTabProps) {
   // State management
-  const [activeTab, setActiveTab] = useState<'pre-screening' | 'post-survey'>('pre-screening');
+  const [activeTab, setActiveTab] = useState<'pre-screening' | 'post-survey'>(
+    'pre-screening'
+  );
   const [preScreeningEnabled, setPreScreeningEnabled] = useState(
     initialData?.preScreening?.enabled || false
   );
   const [postSurveyEnabled, setPostSurveyEnabled] = useState(
     initialData?.postSurvey?.enabled || false
   );
-  const [preScreeningQuestions, setPreScreeningQuestions] = useState<Question[]>(
-    initialData?.preScreening?.questions || []
-  );
+  const [preScreeningQuestions, setPreScreeningQuestions] = useState<
+    Question[]
+  >(initialData?.preScreening?.questions || []);
   const [postSurveyQuestions, setPostSurveyQuestions] = useState<Question[]>(
     initialData?.postSurvey?.questions || []
   );
@@ -101,7 +103,7 @@ export function QuestionnairesTab({
         text: 'What is your age?',
         type: 'NUMBER',
         required: true,
-        validation: { min: 18, max: 100 }
+        validation: { min: 18, max: 100 },
       },
       {
         id: 'experience',
@@ -113,8 +115,8 @@ export function QuestionnairesTab({
           { value: 2, label: 'Slightly familiar' },
           { value: 3, label: 'Moderately familiar' },
           { value: 4, label: 'Very familiar' },
-          { value: 5, label: 'Extremely familiar' }
-        ]
+          { value: 5, label: 'Extremely familiar' },
+        ],
       },
       {
         id: 'consent-check',
@@ -123,9 +125,9 @@ export function QuestionnairesTab({
         required: true,
         options: [
           { value: 'yes', label: 'Yes, I consent' },
-          { value: 'no', label: 'No, I do not consent' }
-        ]
-      }
+          { value: 'no', label: 'No, I do not consent' },
+        ],
+      },
     ],
     postSurvey: [
       {
@@ -133,7 +135,7 @@ export function QuestionnairesTab({
         text: 'How would you rate your overall experience with this study?',
         type: 'RATING',
         required: true,
-        validation: { min: 1, max: 5 }
+        validation: { min: 1, max: 5 },
       },
       {
         id: 'difficulty',
@@ -145,17 +147,17 @@ export function QuestionnairesTab({
           { value: 2, label: 'Easy' },
           { value: 3, label: 'Neutral' },
           { value: 4, label: 'Difficult' },
-          { value: 5, label: 'Very difficult' }
-        ]
+          { value: 5, label: 'Very difficult' },
+        ],
       },
       {
         id: 'feedback',
         text: 'Do you have any feedback or suggestions for improving this study?',
         type: 'TEXTAREA',
         required: false,
-        validation: { maxLength: 500 }
-      }
-    ]
+        validation: { maxLength: 500 },
+      },
+    ],
   };
 
   // Update parent component
@@ -164,13 +166,13 @@ export function QuestionnairesTab({
       preScreening: {
         enabled: preScreeningEnabled,
         questions: preScreeningQuestions,
-        qualificationRules
+        qualificationRules,
       },
       postSurvey: {
         enabled: postSurveyEnabled,
         questions: postSurveyQuestions,
-        contextAware: contextAwareEnabled
-      }
+        contextAware: contextAwareEnabled,
+      },
     });
   }, [
     preScreeningEnabled,
@@ -178,14 +180,14 @@ export function QuestionnairesTab({
     preScreeningQuestions,
     postSurveyQuestions,
     qualificationRules,
-    contextAwareEnabled
+    contextAwareEnabled,
   ]);
 
   // Add question from template
   const addQuestionFromTemplate = (template: any) => {
     const newQuestion = {
       ...template,
-      id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     };
 
     if (activeTab === 'pre-screening') {
@@ -212,7 +214,9 @@ export function QuestionnairesTab({
     if (activeTab === 'pre-screening') {
       if (editingQuestion) {
         setPreScreeningQuestions(
-          preScreeningQuestions.map(q => q.id === editingQuestion.id ? question : q)
+          preScreeningQuestions.map(q =>
+            q.id === editingQuestion.id ? question : q
+          )
         );
       } else {
         setPreScreeningQuestions([...preScreeningQuestions, question]);
@@ -220,7 +224,9 @@ export function QuestionnairesTab({
     } else {
       if (editingQuestion) {
         setPostSurveyQuestions(
-          postSurveyQuestions.map(q => q.id === editingQuestion.id ? question : q)
+          postSurveyQuestions.map(q =>
+            q.id === editingQuestion.id ? question : q
+          )
         );
       } else {
         setPostSurveyQuestions([...postSurveyQuestions, question]);
@@ -245,13 +251,19 @@ export function QuestionnairesTab({
 
   // Move question up/down
   const moveQuestion = (index: number, direction: 'up' | 'down') => {
-    const questions = activeTab === 'pre-screening' ? preScreeningQuestions : postSurveyQuestions;
+    const questions =
+      activeTab === 'pre-screening'
+        ? preScreeningQuestions
+        : postSurveyQuestions;
     const newQuestions = [...questions];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    
+
     if (newIndex >= 0 && newIndex < questions.length) {
-      [newQuestions[index], newQuestions[newIndex]] = [newQuestions[newIndex], newQuestions[index]];
-      
+      [newQuestions[index], newQuestions[newIndex]] = [
+        newQuestions[newIndex],
+        newQuestions[index],
+      ];
+
       if (activeTab === 'pre-screening') {
         setPreScreeningQuestions(newQuestions);
       } else {
@@ -269,7 +281,7 @@ export function QuestionnairesTab({
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = e => {
           try {
             const data = JSON.parse(e.target?.result as string);
             if (activeTab === 'pre-screening') {
@@ -289,12 +301,16 @@ export function QuestionnairesTab({
 
   // Export questions
   const exportQuestions = () => {
-    const questions = activeTab === 'pre-screening' ? preScreeningQuestions : postSurveyQuestions;
+    const questions =
+      activeTab === 'pre-screening'
+        ? preScreeningQuestions
+        : postSurveyQuestions;
     const dataStr = JSON.stringify({ questions }, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-    
+    const dataUri =
+      'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
     const exportFileDefaultName = `${activeTab}-questions.json`;
-    
+
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
@@ -318,22 +334,28 @@ export function QuestionnairesTab({
   // Save to backend
   const saveQuestionnaires = async () => {
     if (!studyId) return;
-    
+
     setSaving(true);
     try {
       // Save pre-screening questions
       if (preScreeningEnabled) {
         await questionApiService.bulkCreateQuestions(
           studyId,
-          preScreeningQuestions.map(q => ({ ...q, metadata: { ...q.metadata, type: 'pre-screening' } }))
+          preScreeningQuestions.map(q => ({
+            ...q,
+            metadata: { ...q.metadata, type: 'pre-screening' },
+          }))
         );
       }
-      
+
       // Save post-survey questions
       if (postSurveyEnabled) {
         await questionApiService.bulkCreateQuestions(
           studyId,
-          postSurveyQuestions.map(q => ({ ...q, metadata: { ...q.metadata, type: 'post-survey' } }))
+          postSurveyQuestions.map(q => ({
+            ...q,
+            metadata: { ...q.metadata, type: 'post-survey' },
+          }))
         );
       }
     } catch (error: any) {
@@ -343,8 +365,10 @@ export function QuestionnairesTab({
     }
   };
 
-  const currentQuestions = activeTab === 'pre-screening' ? preScreeningQuestions : postSurveyQuestions;
-  const isEnabled = activeTab === 'pre-screening' ? preScreeningEnabled : postSurveyEnabled;
+  const currentQuestions =
+    activeTab === 'pre-screening' ? preScreeningQuestions : postSurveyQuestions;
+  const isEnabled =
+    activeTab === 'pre-screening' ? preScreeningEnabled : postSurveyEnabled;
 
   return (
     <div className="space-y-6">
@@ -405,7 +429,9 @@ export function QuestionnairesTab({
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <h3 className="text-base font-semibold text-label">
-                {activeTab === 'pre-screening' ? 'Pre-Screening Questions' : 'Post-Survey Questions'}
+                {activeTab === 'pre-screening'
+                  ? 'Pre-Screening Questions'
+                  : 'Post-Survey Questions'}
               </h3>
               <p className="text-sm text-secondary-label mt-1">
                 {activeTab === 'pre-screening'
@@ -430,7 +456,7 @@ export function QuestionnairesTab({
               <input
                 type="checkbox"
                 checked={isEnabled}
-                onChange={(e) => {
+                onChange={e => {
                   const checked = e.target.checked;
                   if (activeTab === 'pre-screening') {
                     setPreScreeningEnabled(checked);
@@ -467,11 +493,7 @@ export function QuestionnairesTab({
                 >
                   AI Suggestions
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={importQuestions}
-                >
+                <Button variant="secondary" size="sm" onClick={importQuestions}>
                   Import
                 </Button>
                 {currentQuestions.length > 0 && (
@@ -484,7 +506,7 @@ export function QuestionnairesTab({
                   </Button>
                 )}
               </div>
-              
+
               {studyId && (
                 <Button
                   variant="secondary"
@@ -505,8 +527,8 @@ export function QuestionnairesTab({
                     Quick Start Templates
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {(activeTab === 'pre-screening' 
-                      ? questionTemplates.preScreening 
+                    {(activeTab === 'pre-screening'
+                      ? questionTemplates.preScreening
                       : questionTemplates.postSurvey
                     ).map(template => (
                       <Button
@@ -527,7 +549,10 @@ export function QuestionnairesTab({
             {currentQuestions.length > 0 ? (
               <div className="space-y-2">
                 {currentQuestions.map((question, index) => (
-                  <Card key={question.id} className="hover:shadow-md transition-shadow">
+                  <Card
+                    key={question.id}
+                    className="hover:shadow-md transition-shadow"
+                  >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-start gap-3">
@@ -596,33 +621,36 @@ export function QuestionnairesTab({
                 <div>
                   <h3 className="font-semibold">No questions added yet</h3>
                   <p className="text-sm mt-1">
-                    Add questions using the templates above or create custom questions.
+                    Add questions using the templates above or create custom
+                    questions.
                   </p>
                 </div>
               </Alert>
             )}
 
             {/* Qualification Rules (Pre-screening only) */}
-            {activeTab === 'pre-screening' && preScreeningQuestions.length > 0 && (
-              <Card className="mt-6">
-                <div>
-                  <h4 className="text-base font-semibold text-label mb-2">
-                    Qualification Rules
-                  </h4>
-                  <p className="text-sm text-secondary-label mb-4">
-                    Define criteria for participant qualification
-                  </p>
-                  <Alert variant="default">
-                    <ExclamationTriangleIcon className="h-5 w-5" />
-                    <div>
-                      <p className="text-sm">
-                        Qualification rules can be configured after saving the questions.
-                      </p>
-                    </div>
-                  </Alert>
-                </div>
-              </Card>
-            )}
+            {activeTab === 'pre-screening' &&
+              preScreeningQuestions.length > 0 && (
+                <Card className="mt-6">
+                  <div>
+                    <h4 className="text-base font-semibold text-label mb-2">
+                      Qualification Rules
+                    </h4>
+                    <p className="text-sm text-secondary-label mb-4">
+                      Define criteria for participant qualification
+                    </p>
+                    <Alert variant="default">
+                      <ExclamationTriangleIcon className="h-5 w-5" />
+                      <div>
+                        <p className="text-sm">
+                          Qualification rules can be configured after saving the
+                          questions.
+                        </p>
+                      </div>
+                    </Alert>
+                  </div>
+                </Card>
+              )}
           </>
         )}
       </div>

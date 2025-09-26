@@ -72,29 +72,41 @@ export function AccessibleTooltip({
 
       // Keep tooltip in viewport
       const padding = 16;
-      x = Math.max(padding, Math.min(x, window.innerWidth - tooltipRect.width - padding));
-      y = Math.max(padding, Math.min(y, window.innerHeight - tooltipRect.height - padding));
+      x = Math.max(
+        padding,
+        Math.min(x, window.innerWidth - tooltipRect.width - padding)
+      );
+      y = Math.max(
+        padding,
+        Math.min(y, window.innerHeight - tooltipRect.height - padding)
+      );
 
       setCoords({ x, y });
     }
   }, [isVisible, position]);
 
-  const showTooltip = useCallback((isKeyboard = false) => {
-    if (!tooltipPrefs.enabled && !isKeyboard) return;
-    
-    if (persistent && id) {
-      const dismissedTooltips = JSON.parse(
-        localStorage.getItem('dismissedTooltips') || '[]'
-      );
-      if (dismissedTooltips.includes(id)) return;
-    }
+  const showTooltip = useCallback(
+    (isKeyboard = false) => {
+      if (!tooltipPrefs.enabled && !isKeyboard) return;
 
-    clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      setIsVisible(true);
-      setIsKeyboardActivated(isKeyboard);
-    }, isKeyboard ? 0 : delay);
-  }, [tooltipPrefs.enabled, persistent, id, delay]);
+      if (persistent && id) {
+        const dismissedTooltips = JSON.parse(
+          localStorage.getItem('dismissedTooltips') || '[]'
+        );
+        if (dismissedTooltips.includes(id)) return;
+      }
+
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(
+        () => {
+          setIsVisible(true);
+          setIsKeyboardActivated(isKeyboard);
+        },
+        isKeyboard ? 0 : delay
+      );
+    },
+    [tooltipPrefs.enabled, persistent, id, delay]
+  );
 
   const hideTooltip = useCallback(() => {
     clearTimeout(timeoutRef.current);
@@ -108,24 +120,30 @@ export function AccessibleTooltip({
         localStorage.getItem('dismissedTooltips') || '[]'
       );
       dismissedTooltips.push(id);
-      localStorage.setItem('dismissedTooltips', JSON.stringify(dismissedTooltips));
+      localStorage.setItem(
+        'dismissedTooltips',
+        JSON.stringify(dismissedTooltips)
+      );
       hideTooltip();
     }
   }, [persistent, id, hideTooltip]);
 
   // Keyboard event handlers
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape' && isVisible) {
-      hideTooltip();
-      e.preventDefault();
-    }
-    
-    // Show tooltip with F1 or ?
-    if ((e.key === 'F1' || (e.key === '?' && e.shiftKey)) && !isVisible) {
-      showTooltip(true);
-      e.preventDefault();
-    }
-  }, [isVisible, showTooltip, hideTooltip]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape' && isVisible) {
+        hideTooltip();
+        e.preventDefault();
+      }
+
+      // Show tooltip with F1 or ?
+      if ((e.key === 'F1' || (e.key === '?' && e.shiftKey)) && !isVisible) {
+        showTooltip(true);
+        e.preventDefault();
+      }
+    },
+    [isVisible, showTooltip, hideTooltip]
+  );
 
   const handleFocus = useCallback(() => {
     if (tooltipPrefs.showKeyboardHints) {
@@ -178,24 +196,29 @@ export function AccessibleTooltip({
           >
             <div className="relative">
               {richContent ? (
-                <div className="space-y-2">
-                  {content}
-                </div>
+                <div className="space-y-2">{content}</div>
               ) : (
                 content
               )}
-              
+
               {/* Keyboard hints */}
               {isKeyboardActivated && (
                 <div className="mt-2 pt-2 border-t border-gray-700 dark:border-gray-300 text-xs opacity-75">
-                  Press <kbd className="px-1 py-0.5 bg-gray-800 dark:bg-gray-200 rounded">Esc</kbd> to close
+                  Press{' '}
+                  <kbd className="px-1 py-0.5 bg-gray-800 dark:bg-gray-200 rounded">
+                    Esc
+                  </kbd>{' '}
+                  to close
                 </div>
               )}
 
               {/* Shortcut hint */}
               {shortcut && (
                 <div className="mt-2 text-xs opacity-75">
-                  Shortcut: <kbd className="px-1 py-0.5 bg-gray-800 dark:bg-gray-200 rounded">{shortcut}</kbd>
+                  Shortcut:{' '}
+                  <kbd className="px-1 py-0.5 bg-gray-800 dark:bg-gray-200 rounded">
+                    {shortcut}
+                  </kbd>
                 </div>
               )}
 
@@ -208,7 +231,9 @@ export function AccessibleTooltip({
                              hover:bg-gray-600 dark:hover:bg-gray-400 transition-colors"
                   aria-label="Dismiss tooltip"
                 >
-                  <span className="text-white dark:text-gray-900 text-xs">×</span>
+                  <span className="text-white dark:text-gray-900 text-xs">
+                    ×
+                  </span>
                 </button>
               )}
             </div>
@@ -217,10 +242,14 @@ export function AccessibleTooltip({
             <div
               className={cn(
                 'absolute w-0 h-0 border-transparent',
-                position === 'top' && 'bottom-[-8px] left-1/2 -translate-x-1/2 border-t-8 border-l-8 border-r-8 border-t-gray-900 dark:border-t-gray-100',
-                position === 'bottom' && 'top-[-8px] left-1/2 -translate-x-1/2 border-b-8 border-l-8 border-r-8 border-b-gray-900 dark:border-b-gray-100',
-                position === 'left' && 'right-[-8px] top-1/2 -translate-y-1/2 border-l-8 border-t-8 border-b-8 border-l-gray-900 dark:border-l-gray-100',
-                position === 'right' && 'left-[-8px] top-1/2 -translate-y-1/2 border-r-8 border-t-8 border-b-8 border-r-gray-900 dark:border-r-gray-100'
+                position === 'top' &&
+                  'bottom-[-8px] left-1/2 -translate-x-1/2 border-t-8 border-l-8 border-r-8 border-t-gray-900 dark:border-t-gray-100',
+                position === 'bottom' &&
+                  'top-[-8px] left-1/2 -translate-x-1/2 border-b-8 border-l-8 border-r-8 border-b-gray-900 dark:border-b-gray-100',
+                position === 'left' &&
+                  'right-[-8px] top-1/2 -translate-y-1/2 border-l-8 border-t-8 border-b-8 border-l-gray-900 dark:border-l-gray-100',
+                position === 'right' &&
+                  'left-[-8px] top-1/2 -translate-y-1/2 border-r-8 border-t-8 border-b-8 border-r-gray-900 dark:border-r-gray-100'
               )}
             />
           </motion.div>
@@ -235,18 +264,16 @@ export function TooltipTitle({ children }: { children: React.ReactNode }) {
   return <h4 className="font-semibold text-base mb-1">{children}</h4>;
 }
 
-export function TooltipDescription({ children }: { children: React.ReactNode }) {
+export function TooltipDescription({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return <p className="text-sm opacity-90">{children}</p>;
 }
 
 export function TooltipImage({ src, alt }: { src: string; alt: string }) {
-  return (
-    <img 
-      src={src} 
-      alt={alt} 
-      className="w-full h-auto rounded-lg mt-2"
-    />
-  );
+  return <img src={src} alt={alt} className="w-full h-auto rounded-lg mt-2" />;
 }
 
 export function TooltipChart({ children }: { children: React.ReactNode }) {

@@ -118,14 +118,26 @@ export default function LoginPage() {
     if (hasErrors) return;
 
     // Submit
-    const result = await login({
-      email: formData.email,
-      password: formData.password,
-      rememberMe: formData.rememberMe,
-    });
+    try {
+      const result = await login({
+        email: formData.email,
+        password: formData.password,
+        rememberMe: formData.rememberMe,
+      });
 
-    if (result.success) {
-      router.push(redirectUrl);
+      console.log('Login result:', result);
+      console.log('Redirect URL:', redirectUrl);
+
+      if (result.success) {
+        console.log('Login successful, redirecting to:', redirectUrl);
+        // Use replace to prevent back button issues
+        router.replace(redirectUrl);
+      } else {
+        console.log('Login failed:', result.error);
+      }
+    } catch (error: any) {
+      console.error('Login submission error:', error);
+      setErrors({ email: '', password: 'Login failed. Please check your credentials.' });
     }
   };
 

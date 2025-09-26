@@ -47,10 +47,14 @@ export function ContextualHelp({
   position = 'floating',
 }: ContextualHelpProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedContent, setSelectedContent] = useState<HelpContent | null>(null);
+  const [selectedContent, setSelectedContent] = useState<HelpContent | null>(
+    null
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [, setHelpHistory] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<'list' | 'search' | 'detail'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'search' | 'detail'>(
+    'list'
+  );
 
   // Phase-specific help content
   const helpDatabase: HelpContent[] = [
@@ -59,7 +63,8 @@ export function ContextualHelp({
       id: 'discover-start',
       type: 'guide',
       title: 'Getting Started with Literature Review',
-      content: 'Begin your research journey by searching for relevant academic papers. Use keywords related to your research topic and explore different databases.',
+      content:
+        'Begin your research journey by searching for relevant academic papers. Use keywords related to your research topic and explore different databases.',
       relatedPhases: ['discover'],
       tags: ['beginner', 'literature', 'search'],
       priority: 5,
@@ -68,7 +73,8 @@ export function ContextualHelp({
       id: 'discover-tips',
       type: 'tip',
       title: 'Pro Tips for Literature Search',
-      content: 'Use Boolean operators (AND, OR, NOT) to refine your searches. Save search queries for later use. Set up alerts for new papers in your field.',
+      content:
+        'Use Boolean operators (AND, OR, NOT) to refine your searches. Save search queries for later use. Set up alerts for new papers in your field.',
       relatedPhases: ['discover'],
       tags: ['advanced', 'search', 'tips'],
       priority: 3,
@@ -77,7 +83,8 @@ export function ContextualHelp({
       id: 'discover-video',
       type: 'video',
       title: 'Video: Systematic Literature Review',
-      content: 'Learn how to conduct a systematic literature review in 10 minutes.',
+      content:
+        'Learn how to conduct a systematic literature review in 10 minutes.',
       videoUrl: 'https://youtube.com/watch?v=example',
       relatedPhases: ['discover'],
       tags: ['video', 'tutorial', 'systematic'],
@@ -89,7 +96,8 @@ export function ContextualHelp({
       id: 'design-questions',
       type: 'guide',
       title: 'Formulating Research Questions',
-      content: 'A good research question is specific, measurable, achievable, relevant, and time-bound (SMART). Start broad and narrow down based on your literature review.',
+      content:
+        'A good research question is specific, measurable, achievable, relevant, and time-bound (SMART). Start broad and narrow down based on your literature review.',
       relatedPhases: ['design'],
       tags: ['research questions', 'methodology'],
       priority: 5,
@@ -98,7 +106,8 @@ export function ContextualHelp({
       id: 'design-hypothesis',
       type: 'article',
       title: 'Building Testable Hypotheses',
-      content: 'Learn how to construct hypotheses that can be tested with Q-methodology.',
+      content:
+        'Learn how to construct hypotheses that can be tested with Q-methodology.',
       articleUrl: '/docs/hypothesis-building',
       relatedPhases: ['design'],
       tags: ['hypothesis', 'methodology'],
@@ -110,7 +119,8 @@ export function ContextualHelp({
       id: 'build-statements',
       type: 'guide',
       title: 'Creating Q-Statements',
-      content: 'Q-statements should represent the full range of opinions on your topic. Aim for 40-80 statements that are clear, concise, and provocative.',
+      content:
+        'Q-statements should represent the full range of opinions on your topic. Aim for 40-80 statements that are clear, concise, and provocative.',
       relatedPhases: ['build'],
       tags: ['statements', 'q-methodology'],
       priority: 5,
@@ -119,7 +129,8 @@ export function ContextualHelp({
       id: 'build-grid',
       type: 'tip',
       title: 'Designing Your Q-Sort Grid',
-      content: 'Most Q-studies use a quasi-normal distribution. The grid should force participants to make choices while allowing flexibility.',
+      content:
+        'Most Q-studies use a quasi-normal distribution. The grid should force participants to make choices while allowing flexibility.',
       relatedPhases: ['build'],
       tags: ['grid', 'distribution'],
       priority: 4,
@@ -128,7 +139,8 @@ export function ContextualHelp({
       id: 'build-ai',
       type: 'guide',
       title: 'Using AI for Statement Generation',
-      content: 'Our AI can help generate diverse statements. Review and refine AI suggestions to ensure they capture your research dimensions.',
+      content:
+        'Our AI can help generate diverse statements. Review and refine AI suggestions to ensure they capture your research dimensions.',
       relatedPhases: ['build'],
       tags: ['ai', 'statements', 'automation'],
       priority: 3,
@@ -139,7 +151,8 @@ export function ContextualHelp({
       id: 'recruit-sampling',
       type: 'guide',
       title: 'Participant Sampling Strategies',
-      content: 'Q-methodology uses purposive sampling. Aim for diversity of viewpoints rather than statistical representation. 20-40 participants is typically sufficient.',
+      content:
+        'Q-methodology uses purposive sampling. Aim for diversity of viewpoints rather than statistical representation. 20-40 participants is typically sufficient.',
       relatedPhases: ['recruit'],
       tags: ['sampling', 'participants'],
       priority: 5,
@@ -148,7 +161,8 @@ export function ContextualHelp({
       id: 'recruit-screening',
       type: 'tip',
       title: 'Effective Screening Questions',
-      content: 'Use screening questions to ensure participants have relevant experience or opinions on your topic.',
+      content:
+        'Use screening questions to ensure participants have relevant experience or opinions on your topic.',
       relatedPhases: ['recruit'],
       tags: ['screening', 'qualification'],
       priority: 3,
@@ -159,7 +173,8 @@ export function ContextualHelp({
       id: 'collect-monitor',
       type: 'guide',
       title: 'Monitoring Data Collection',
-      content: 'Track response rates, completion times, and data quality in real-time. Send reminders to participants who haven\'t completed the study.',
+      content:
+        "Track response rates, completion times, and data quality in real-time. Send reminders to participants who haven't completed the study.",
       relatedPhases: ['collect'],
       tags: ['monitoring', 'data collection'],
       priority: 4,
@@ -168,7 +183,8 @@ export function ContextualHelp({
       id: 'collect-quality',
       type: 'tip',
       title: 'Ensuring Data Quality',
-      content: 'Look for patterns indicating careless responding: very short completion times, identical rankings, or missing post-sort explanations.',
+      content:
+        'Look for patterns indicating careless responding: very short completion times, identical rankings, or missing post-sort explanations.',
       relatedPhases: ['collect'],
       tags: ['quality', 'validation'],
       priority: 5,
@@ -179,7 +195,8 @@ export function ContextualHelp({
       id: 'analyze-factors',
       type: 'guide',
       title: 'Understanding Factor Analysis',
-      content: 'Factor analysis identifies groups of participants with similar sorting patterns. Start with PCA, then rotate factors for interpretation.',
+      content:
+        'Factor analysis identifies groups of participants with similar sorting patterns. Start with PCA, then rotate factors for interpretation.',
       relatedPhases: ['analyze'],
       tags: ['analysis', 'statistics', 'factors'],
       priority: 5,
@@ -188,7 +205,8 @@ export function ContextualHelp({
       id: 'analyze-rotation',
       type: 'video',
       title: 'Video: Factor Rotation Explained',
-      content: 'Visual guide to understanding varimax and manual rotation methods.',
+      content:
+        'Visual guide to understanding varimax and manual rotation methods.',
       videoUrl: 'https://youtube.com/watch?v=rotation',
       relatedPhases: ['analyze'],
       tags: ['rotation', 'video', 'tutorial'],
@@ -200,7 +218,8 @@ export function ContextualHelp({
       id: 'visualize-charts',
       type: 'guide',
       title: 'Choosing the Right Visualizations',
-      content: 'Factor arrays show idealized Q-sorts. Loading plots show participant-factor relationships. Use heat maps for correlation matrices.',
+      content:
+        'Factor arrays show idealized Q-sorts. Loading plots show participant-factor relationships. Use heat maps for correlation matrices.',
       relatedPhases: ['visualize'],
       tags: ['visualization', 'charts'],
       priority: 4,
@@ -211,7 +230,8 @@ export function ContextualHelp({
       id: 'interpret-narrative',
       type: 'guide',
       title: 'Writing Factor Narratives',
-      content: 'Describe each factor as a coherent viewpoint. Use distinguishing statements to highlight what makes each perspective unique.',
+      content:
+        'Describe each factor as a coherent viewpoint. Use distinguishing statements to highlight what makes each perspective unique.',
       relatedPhases: ['interpret'],
       tags: ['interpretation', 'narrative'],
       priority: 5,
@@ -220,7 +240,8 @@ export function ContextualHelp({
       id: 'interpret-consensus',
       type: 'tip',
       title: 'Finding Consensus Statements',
-      content: 'Consensus statements are ranked similarly across all factors. They represent shared understanding or agreement.',
+      content:
+        'Consensus statements are ranked similarly across all factors. They represent shared understanding or agreement.',
       relatedPhases: ['interpret'],
       tags: ['consensus', 'analysis'],
       priority: 3,
@@ -231,7 +252,8 @@ export function ContextualHelp({
       id: 'report-structure',
       type: 'guide',
       title: 'Structuring Your Report',
-      content: 'Include: Introduction, Literature Review, Methodology, Results (factors), Discussion, and Conclusions. Use APA format for academic papers.',
+      content:
+        'Include: Introduction, Literature Review, Methodology, Results (factors), Discussion, and Conclusions. Use APA format for academic papers.',
       relatedPhases: ['report'],
       tags: ['report', 'writing', 'structure'],
       priority: 5,
@@ -242,7 +264,8 @@ export function ContextualHelp({
       id: 'archive-data',
       type: 'guide',
       title: 'Preparing Data for Archive',
-      content: 'Include raw Q-sorts, analysis outputs, study materials, and documentation. Consider obtaining a DOI for your dataset.',
+      content:
+        'Include raw Q-sorts, analysis outputs, study materials, and documentation. Consider obtaining a DOI for your dataset.',
       relatedPhases: ['archive'],
       tags: ['archive', 'data', 'preservation'],
       priority: 4,
@@ -253,7 +276,8 @@ export function ContextualHelp({
       id: 'faq-participants',
       type: 'faq',
       title: 'How many participants do I need?',
-      content: 'Q-methodology typically requires 20-40 participants. The goal is viewpoint diversity, not statistical generalization.',
+      content:
+        'Q-methodology typically requires 20-40 participants. The goal is viewpoint diversity, not statistical generalization.',
       relatedPhases: ['design', 'recruit'],
       tags: ['faq', 'participants', 'sample size'],
       priority: 5,
@@ -262,7 +286,8 @@ export function ContextualHelp({
       id: 'faq-statements',
       type: 'faq',
       title: 'How many statements should I use?',
-      content: 'Most Q-studies use 40-80 statements. Too few limits expression; too many causes fatigue.',
+      content:
+        'Most Q-studies use 40-80 statements. Too few limits expression; too many causes fatigue.',
       relatedPhases: ['build'],
       tags: ['faq', 'statements', 'q-set'],
       priority: 5,
@@ -271,7 +296,8 @@ export function ContextualHelp({
       id: 'faq-factors',
       type: 'faq',
       title: 'How many factors should I extract?',
-      content: 'Extract factors with eigenvalues >1.0 and at least 2 significantly loading participants. Usually 2-5 factors emerge.',
+      content:
+        'Extract factors with eigenvalues >1.0 and at least 2 significantly loading participants. Usually 2-5 factors emerge.',
       relatedPhases: ['analyze'],
       tags: ['faq', 'factors', 'extraction'],
       priority: 4,
@@ -293,17 +319,20 @@ export function ContextualHelp({
     }
 
     // Remove duplicates and sort by priority
-    const uniqueHelp = Array.from(new Map(relevant.map(h => [h.id, h])).values());
+    const uniqueHelp = Array.from(
+      new Map(relevant.map(h => [h.id, h])).values()
+    );
     return uniqueHelp.sort((a, b) => b.priority - a.priority).slice(0, 10);
   };
 
   // Search help content
   const searchHelp = (query: string): HelpContent[] => {
     const lowerQuery = query.toLowerCase();
-    return helpDatabase.filter(help =>
-      help.title.toLowerCase().includes(lowerQuery) ||
-      help.content.toLowerCase().includes(lowerQuery) ||
-      help.tags.some(tag => tag.includes(lowerQuery))
+    return helpDatabase.filter(
+      help =>
+        help.title.toLowerCase().includes(lowerQuery) ||
+        help.content.toLowerCase().includes(lowerQuery) ||
+        help.tags.some(tag => tag.includes(lowerQuery))
     );
   };
 
@@ -359,11 +388,11 @@ export function ContextualHelp({
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            "fixed bottom-6 right-6 z-50",
-            "w-14 h-14 rounded-full",
-            "bg-indigo-600 text-white shadow-lg",
-            "flex items-center justify-center",
-            "hover:bg-indigo-700 transition-colors",
+            'fixed bottom-6 right-6 z-50',
+            'w-14 h-14 rounded-full',
+            'bg-indigo-600 text-white shadow-lg',
+            'flex items-center justify-center',
+            'hover:bg-indigo-700 transition-colors',
             className
           )}
         >
@@ -391,8 +420,8 @@ export function ContextualHelp({
                     <button
                       onClick={() => setViewMode('list')}
                       className={cn(
-                        "p-1 rounded",
-                        viewMode === 'list' && "bg-gray-100 dark:bg-gray-700"
+                        'p-1 rounded',
+                        viewMode === 'list' && 'bg-gray-100 dark:bg-gray-700'
                       )}
                     >
                       <BookOpenIcon className="w-5 h-5" />
@@ -400,8 +429,8 @@ export function ContextualHelp({
                     <button
                       onClick={() => setViewMode('search')}
                       className={cn(
-                        "p-1 rounded",
-                        viewMode === 'search' && "bg-gray-100 dark:bg-gray-700"
+                        'p-1 rounded',
+                        viewMode === 'search' && 'bg-gray-100 dark:bg-gray-700'
                       )}
                     >
                       <QuestionMarkCircleIcon className="w-5 h-5" />
@@ -415,7 +444,7 @@ export function ContextualHelp({
                     type="text"
                     placeholder="Search for help..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={e => setSearchQuery(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                   />
                 )}
@@ -423,7 +452,10 @@ export function ContextualHelp({
                 {/* Current context */}
                 {viewMode === 'list' && (
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Current phase: <span className="font-medium capitalize">{currentPhase}</span>
+                    Current phase:{' '}
+                    <span className="font-medium capitalize">
+                      {currentPhase}
+                    </span>
                   </div>
                 )}
               </div>
@@ -446,13 +478,22 @@ export function ContextualHelp({
 
                     <div className="space-y-3">
                       <div className="flex items-start gap-3">
-                        <div className={cn("p-2 rounded-lg", getTypeColor(selectedContent.type))}>
+                        <div
+                          className={cn(
+                            'p-2 rounded-lg',
+                            getTypeColor(selectedContent.type)
+                          )}
+                        >
                           {getIcon(selectedContent.type)}
                         </div>
-                        <h4 className="font-semibold flex-1">{selectedContent.title}</h4>
+                        <h4 className="font-semibold flex-1">
+                          {selectedContent.title}
+                        </h4>
                       </div>
 
-                      <p className="text-gray-600 dark:text-gray-300">{selectedContent.content}</p>
+                      <p className="text-gray-600 dark:text-gray-300">
+                        {selectedContent.content}
+                      </p>
 
                       {selectedContent.videoUrl && (
                         <a
@@ -495,7 +536,10 @@ export function ContextualHelp({
                 ) : (
                   // List view
                   <div className="space-y-2">
-                    {(viewMode === 'search' ? searchHelp(searchQuery) : getRelevantHelp()).map((help) => (
+                    {(viewMode === 'search'
+                      ? searchHelp(searchQuery)
+                      : getRelevantHelp()
+                    ).map(help => (
                       <button
                         key={help.id}
                         onClick={() => {
@@ -506,11 +550,18 @@ export function ContextualHelp({
                         className="w-full p-3 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
                       >
                         <div className="flex items-start gap-3">
-                          <div className={cn("p-1.5 rounded", getTypeColor(help.type))}>
+                          <div
+                            className={cn(
+                              'p-1.5 rounded',
+                              getTypeColor(help.type)
+                            )}
+                          >
                             {getIcon(help.type)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-sm mb-1">{help.title}</h4>
+                            <h4 className="font-medium text-sm mb-1">
+                              {help.title}
+                            </h4>
                             <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
                               {help.content}
                             </p>
@@ -519,11 +570,13 @@ export function ContextualHelp({
                       </button>
                     ))}
 
-                    {(viewMode === 'search' && searchQuery && searchHelp(searchQuery).length === 0) && (
-                      <div className="text-center py-8 text-gray-500">
-                        No help articles found for "{searchQuery}"
-                      </div>
-                    )}
+                    {viewMode === 'search' &&
+                      searchQuery &&
+                      searchHelp(searchQuery).length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          No help articles found for "{searchQuery}"
+                        </div>
+                      )}
                   </div>
                 )}
               </div>
@@ -546,7 +599,7 @@ export function ContextualHelp({
 
   // Embedded or sidebar view
   return (
-    <div className={cn("bg-white dark:bg-gray-800 rounded-lg", className)}>
+    <div className={cn('bg-white dark:bg-gray-800 rounded-lg', className)}>
       {/* Implementation for embedded/sidebar view would go here */}
       {/* Similar to the floating panel but without the absolute positioning */}
     </div>

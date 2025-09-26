@@ -22,7 +22,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { SchedulingService } from '../services/scheduling.service';
 
 @ApiTags('Scheduling')
-@Controller('api/scheduling')
+@Controller('scheduling')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class SchedulingController {

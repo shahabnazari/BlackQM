@@ -15,7 +15,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { NavigationStateService, ResearchPhase } from './navigation.service';
+import { NavigationStateService, ResearchPhase } from './navigation-state.service';
 
 @ApiTags('Navigation')
 @Controller('navigation')

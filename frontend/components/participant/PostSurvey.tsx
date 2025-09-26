@@ -15,22 +15,22 @@ interface PostSurveyProps {
 
 /**
  * PostSurvey Component - Phase 8.2 Day 2 Refactored
- * 
+ *
  * Enhanced to support both:
  * - Dynamic questions from API (when available)
  * - Static fallback questions (original behavior)
- * 
+ *
  * @world-class Features:
  * - Seamless fallback to static questions
  * - Progressive enhancement with dynamic questions
  * - Backward compatibility maintained
  */
-export default function PostSurvey({ 
-  onComplete, 
+export default function PostSurvey({
+  onComplete,
   onBack,
   studyId,
   participantId: _participantId,
-  useDynamicQuestions = false
+  useDynamicQuestions = false,
 }: PostSurveyProps) {
   const [formData, setFormData] = useState({
     age: '',
@@ -46,7 +46,7 @@ export default function PostSurvey({
   const [qualityScore] = useState(0);
 
   const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       [field]: value,
     }));
@@ -61,10 +61,12 @@ export default function PostSurvey({
 
   const loadDynamicQuestions = async () => {
     if (!studyId) return;
-    
+
     setLoading(true);
     try {
-      const response = await fetch(`/api/questions/survey/${studyId}?type=post-survey`);
+      const response = await fetch(
+        `/api/questions/survey/${studyId}?type=post-survey`
+      );
       if (response.ok) {
         const questions = await response.json();
         setDynamicQuestions(questions);
@@ -79,12 +81,15 @@ export default function PostSurvey({
   // Calculate quality score based on completeness
   const calculateQualityScore = () => {
     const fields = Object.values(formData).filter(v => v !== '');
-    const score = Math.round((fields.length / Object.keys(formData).length) * 100);
+    const score = Math.round(
+      (fields.length / Object.keys(formData).length) * 100
+    );
     setQualityScore(score);
     return score;
   };
 
-  const isComplete = formData.age && formData.gender && formData.education && formData.country;
+  const isComplete =
+    formData.age && formData.gender && formData.education && formData.country;
 
   return (
     <Card className="max-w-3xl mx-auto">
@@ -94,29 +99,35 @@ export default function PostSurvey({
             Post-Study Survey
           </h1>
           <p className="text-secondary-label">
-            Please answer a few demographic questions to help us analyze the results.
-            All information will be kept confidential.
+            Please answer a few demographic questions to help us analyze the
+            results. All information will be kept confidential.
           </p>
         </div>
 
         {/* Show loading or dynamic questions alert */}
         {loading && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-800">Loading additional questions...</p>
+            <p className="text-sm text-blue-800">
+              Loading additional questions...
+            </p>
           </div>
         )}
-        
+
         {dynamicQuestions.length > 0 && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
             <p className="text-sm text-green-800">
-              {dynamicQuestions.length} additional questions loaded based on your study.
+              {dynamicQuestions.length} additional questions loaded based on
+              your study.
             </p>
           </div>
         )}
 
         <div className="space-y-4">
           <div>
-            <label htmlFor="age-select" className="block text-sm font-medium text-label mb-2">
+            <label
+              htmlFor="age-select"
+              className="block text-sm font-medium text-label mb-2"
+            >
               Age
             </label>
             <select
@@ -137,7 +148,10 @@ export default function PostSurvey({
           </div>
 
           <div>
-            <label htmlFor="gender-select" className="block text-sm font-medium text-label mb-2">
+            <label
+              htmlFor="gender-select"
+              className="block text-sm font-medium text-label mb-2"
+            >
               Gender
             </label>
             <select
@@ -156,7 +170,10 @@ export default function PostSurvey({
           </div>
 
           <div>
-            <label htmlFor="education-select" className="block text-sm font-medium text-label mb-2">
+            <label
+              htmlFor="education-select"
+              className="block text-sm font-medium text-label mb-2"
+            >
               Education
             </label>
             <select
@@ -184,7 +201,10 @@ export default function PostSurvey({
           />
 
           <div>
-            <label htmlFor="country-select" className="block text-sm font-medium text-label mb-2">
+            <label
+              htmlFor="country-select"
+              className="block text-sm font-medium text-label mb-2"
+            >
               Country
             </label>
             <select
@@ -209,7 +229,7 @@ export default function PostSurvey({
               How would you rate your experience with this study?
             </label>
             <div className="flex space-x-2">
-              {[1, 2, 3, 4, 5].map((rating) => (
+              {[1, 2, 3, 4, 5].map(rating => (
                 <button
                   key={rating}
                   className={`px-4 py-2 rounded-lg border ${
@@ -245,8 +265,9 @@ export default function PostSurvey({
 
         <div className="bg-quaternary-fill/30 p-4 rounded-lg">
           <p className="text-sm text-secondary-label">
-            <strong>Privacy:</strong> Your responses will be kept confidential and used only
-            for research purposes. No personally identifiable information will be shared.
+            <strong>Privacy:</strong> Your responses will be kept confidential
+            and used only for research purposes. No personally identifiable
+            information will be shared.
           </p>
         </div>
 
@@ -263,7 +284,7 @@ export default function PostSurvey({
                 ...formData,
                 dynamicResponses: dynamicQuestions,
                 qualityScore: score,
-                completedAt: new Date().toISOString()
+                completedAt: new Date().toISOString(),
               });
             }}
             disabled={!isComplete}

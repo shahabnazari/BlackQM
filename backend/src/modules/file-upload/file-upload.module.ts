@@ -4,7 +4,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { FileUploadController } from './controllers/file-upload.controller';
 import { FileUploadService } from './services/file-upload.service';
 import { VirusScanService } from './services/virus-scan.service';
-import { PrismaService } from '../../common/prisma.service';
 import { AuditService } from '../auth/services/audit.service';
 
 @Module({
@@ -23,7 +22,7 @@ import { AuditService } from '../auth/services/audit.service';
     }),
   ],
   controllers: [FileUploadController],
-  providers: [FileUploadService, VirusScanService, PrismaService, AuditService],
+  providers: [FileUploadService, VirusScanService, AuditService],
   exports: [FileUploadService, VirusScanService],
 })
 export class FileUploadModule {}

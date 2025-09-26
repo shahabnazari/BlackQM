@@ -49,7 +49,7 @@ import { Question } from '@prisma/client';
  * - Screening evaluation
  */
 @ApiTags('questions')
-@Controller('api/questions')
+@Controller('questions')
 // @UseGuards(JwtAuthGuard) // TODO: Enable auth when guard is implemented
 @ApiBearerAuth()
 // @UseInterceptors(CacheInterceptor) // TODO: Add caching when available

@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PostSurveyController } from '../controllers/post-survey.controller';
 import { PostSurveyService } from '../services/post-survey.service';
-import { PrismaService } from '../common/prisma.service';
 import { QuestionModule } from './question.module';
 
 /**
@@ -15,7 +14,7 @@ import { QuestionModule } from './question.module';
     QuestionModule
   ],
   controllers: [PostSurveyController],
-  providers: [PostSurveyService, PrismaService],
+  providers: [PostSurveyService],
   exports: [PostSurveyService]
 })
 export class PostSurveyModule {}

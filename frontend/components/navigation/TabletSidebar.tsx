@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
+import {
   Search,
   PenTool,
   Hammer,
@@ -20,23 +20,93 @@ import {
   User,
   Moon,
   Sun,
-  Bell
+  Bell,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 // import { useTheme } from 'next-themes'; // TODO: Install next-themes package
 
 const tabletPhases = [
-  { id: 1, name: 'DISCOVER', icon: Search, path: '/discover', color: 'bg-purple-500', description: 'Literature & Research' },
-  { id: 2, name: 'DESIGN', icon: PenTool, path: '/design', color: 'bg-indigo-500', description: 'Methodology Design' },
-  { id: 3, name: 'BUILD', icon: Hammer, path: '/studies/create', color: 'bg-blue-500', description: 'Create Study' },
-  { id: 4, name: 'RECRUIT', icon: Users, path: '/recruitment', color: 'bg-cyan-500', description: 'Find Participants' },
-  { id: 5, name: 'COLLECT', icon: ClipboardList, path: '/collect', color: 'bg-teal-500', description: 'Gather Data' },
-  { id: 6, name: 'ANALYZE', icon: BarChart3, path: '/analysis', color: 'bg-green-500', description: 'Process Results' },
-  { id: 7, name: 'VISUALIZE', icon: Eye, path: '/visualize', color: 'bg-lime-500', description: 'Create Charts' },
-  { id: 8, name: 'INTERPRET', icon: Brain, path: '/interpret', color: 'bg-yellow-500', description: 'AI Insights' },
-  { id: 9, name: 'REPORT', icon: FileText, path: '/report', color: 'bg-orange-500', description: 'Generate Reports' },
-  { id: 10, name: 'ARCHIVE', icon: Archive, path: '/archive', color: 'bg-red-500', description: 'Store & Share' }
+  {
+    id: 1,
+    name: 'DISCOVER',
+    icon: Search,
+    path: '/discover',
+    color: 'bg-purple-500',
+    description: 'Literature & Research',
+  },
+  {
+    id: 2,
+    name: 'DESIGN',
+    icon: PenTool,
+    path: '/design',
+    color: 'bg-indigo-500',
+    description: 'Methodology Design',
+  },
+  {
+    id: 3,
+    name: 'BUILD',
+    icon: Hammer,
+    path: '/studies/create',
+    color: 'bg-blue-500',
+    description: 'Create Study',
+  },
+  {
+    id: 4,
+    name: 'RECRUIT',
+    icon: Users,
+    path: '/recruitment',
+    color: 'bg-cyan-500',
+    description: 'Find Participants',
+  },
+  {
+    id: 5,
+    name: 'COLLECT',
+    icon: ClipboardList,
+    path: '/collect',
+    color: 'bg-teal-500',
+    description: 'Gather Data',
+  },
+  {
+    id: 6,
+    name: 'ANALYZE',
+    icon: BarChart3,
+    path: '/analysis',
+    color: 'bg-green-500',
+    description: 'Process Results',
+  },
+  {
+    id: 7,
+    name: 'VISUALIZE',
+    icon: Eye,
+    path: '/visualize',
+    color: 'bg-lime-500',
+    description: 'Create Charts',
+  },
+  {
+    id: 8,
+    name: 'INTERPRET',
+    icon: Brain,
+    path: '/interpret',
+    color: 'bg-yellow-500',
+    description: 'AI Insights',
+  },
+  {
+    id: 9,
+    name: 'REPORT',
+    icon: FileText,
+    path: '/report',
+    color: 'bg-orange-500',
+    description: 'Generate Reports',
+  },
+  {
+    id: 10,
+    name: 'ARCHIVE',
+    icon: Archive,
+    path: '/archive',
+    color: 'bg-red-500',
+    description: 'Store & Share',
+  },
 ];
 
 interface TabletSidebarProps {
@@ -62,7 +132,7 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
 
   // Update active phase based on current path
   useEffect(() => {
-    const currentPhase = tabletPhases.find(phase => 
+    const currentPhase = tabletPhases.find(phase =>
       pathname.startsWith(phase.path)
     );
     if (currentPhase) {
@@ -76,7 +146,7 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
     localStorage.setItem('tablet-sidebar-collapsed', JSON.stringify(newState));
   };
 
-  const handlePhaseClick = (phase: typeof tabletPhases[0]) => {
+  const handlePhaseClick = (phase: (typeof tabletPhases)[0]) => {
     setActivePhase(phase.id);
     router.push(phase.path);
   };
@@ -86,15 +156,15 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
       {/* Tablet Sidebar - Hidden on mobile and desktop */}
       <motion.aside
         initial={false}
-        animate={{ 
+        animate={{
           width: isCollapsed ? 80 : 280,
-          transition: { type: "spring", damping: 20 }
+          transition: { type: 'spring', damping: 20 },
         }}
         className={cn(
-          "hidden sm:flex lg:hidden", // Only visible on tablet
-          "fixed left-0 top-0 h-full z-40",
-          "flex-col bg-background border-r border-border",
-          "shadow-lg",
+          'hidden sm:flex lg:hidden', // Only visible on tablet
+          'fixed left-0 top-0 h-full z-40',
+          'flex-col bg-background border-r border-border',
+          'shadow-lg',
           className
         )}
       >
@@ -114,13 +184,17 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
             <button
               onClick={toggleCollapse}
               className={cn(
-                "p-2 rounded-lg hover:bg-accent transition-colors",
-                "focus:outline-none focus:ring-2 focus:ring-primary",
-                isCollapsed && "mx-auto"
+                'p-2 rounded-lg hover:bg-accent transition-colors',
+                'focus:outline-none focus:ring-2 focus:ring-primary',
+                isCollapsed && 'mx-auto'
               )}
-              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+              {isCollapsed ? (
+                <ChevronRight className="h-5 w-5" />
+              ) : (
+                <ChevronLeft className="h-5 w-5" />
+              )}
             </button>
           </div>
         </div>
@@ -132,11 +206,11 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
             <button
               onClick={() => router.push('/dashboard')}
               className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-lg",
-                "transition-all duration-200",
-                "hover:bg-accent",
-                "focus:outline-none focus:ring-2 focus:ring-primary",
-                pathname === '/dashboard' && "bg-accent"
+                'w-full flex items-center gap-3 p-3 rounded-lg',
+                'transition-all duration-200',
+                'hover:bg-accent',
+                'focus:outline-none focus:ring-2 focus:ring-primary',
+                pathname === '/dashboard' && 'bg-accent'
               )}
             >
               <Home className="h-5 w-5 flex-shrink-0" />
@@ -152,12 +226,12 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
                 Research Phases
               </h3>
             )}
-            
-            {tabletPhases.map((phase) => {
+
+            {tabletPhases.map(phase => {
               const Icon = phase.icon;
               const isActive = activePhase === phase.id;
               const isHovered = hoveredPhase === phase.id;
-              
+
               return (
                 <motion.button
                   key={phase.id}
@@ -166,11 +240,11 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
                   onMouseEnter={() => setHoveredPhase(phase.id)}
                   onMouseLeave={() => setHoveredPhase(null)}
                   className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-lg",
-                    "transition-all duration-200 relative",
-                    "hover:bg-accent",
-                    "focus:outline-none focus:ring-2 focus:ring-primary",
-                    isActive && "bg-accent"
+                    'w-full flex items-center gap-3 p-3 rounded-lg',
+                    'transition-all duration-200 relative',
+                    'hover:bg-accent',
+                    'focus:outline-none focus:ring-2 focus:ring-primary',
+                    isActive && 'bg-accent'
                   )}
                 >
                   {/* Active indicator */}
@@ -178,23 +252,25 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
                     <motion.div
                       layoutId="activeTabletPhase"
                       className={cn(
-                        "absolute left-0 top-1/2 -translate-y-1/2",
-                        "w-1 h-8 rounded-r-full",
+                        'absolute left-0 top-1/2 -translate-y-1/2',
+                        'w-1 h-8 rounded-r-full',
                         phase.color
                       )}
-                      transition={{ type: "spring", stiffness: 300 }}
+                      transition={{ type: 'spring', stiffness: 300 }}
                     />
                   )}
-                  
-                  <div className={cn(
-                    "flex items-center justify-center",
-                    "w-10 h-10 rounded-lg flex-shrink-0",
-                    isActive ? phase.color : "bg-accent",
-                    isActive && "text-white"
-                  )}>
+
+                  <div
+                    className={cn(
+                      'flex items-center justify-center',
+                      'w-10 h-10 rounded-lg flex-shrink-0',
+                      isActive ? phase.color : 'bg-accent',
+                      isActive && 'text-white'
+                    )}
+                  >
                     <Icon className="h-5 w-5" />
                   </div>
-                  
+
                   {!isCollapsed && (
                     <div className="flex-1 text-left">
                       <div className="font-medium">{phase.name}</div>
@@ -211,10 +287,10 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
                       className={cn(
-                        "absolute left-full ml-2 z-50",
-                        "bg-popover text-popover-foreground",
-                        "rounded-lg shadow-lg p-3",
-                        "whitespace-nowrap"
+                        'absolute left-full ml-2 z-50',
+                        'bg-popover text-popover-foreground',
+                        'rounded-lg shadow-lg p-3',
+                        'whitespace-nowrap'
                       )}
                     >
                       <div className="font-medium">{phase.name}</div>
@@ -234,10 +310,10 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
           {/* Notifications */}
           <button
             className={cn(
-              "w-full flex items-center gap-3 p-3 rounded-lg",
-              "transition-all duration-200",
-              "hover:bg-accent",
-              "focus:outline-none focus:ring-2 focus:ring-primary"
+              'w-full flex items-center gap-3 p-3 rounded-lg',
+              'transition-all duration-200',
+              'hover:bg-accent',
+              'focus:outline-none focus:ring-2 focus:ring-primary'
             )}
           >
             <Bell className="h-5 w-5 flex-shrink-0" />
@@ -248,10 +324,10 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className={cn(
-              "w-full flex items-center gap-3 p-3 rounded-lg",
-              "transition-all duration-200",
-              "hover:bg-accent",
-              "focus:outline-none focus:ring-2 focus:ring-primary"
+              'w-full flex items-center gap-3 p-3 rounded-lg',
+              'transition-all duration-200',
+              'hover:bg-accent',
+              'focus:outline-none focus:ring-2 focus:ring-primary'
             )}
           >
             {theme === 'dark' ? (
@@ -266,10 +342,10 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
           <button
             onClick={() => router.push('/settings')}
             className={cn(
-              "w-full flex items-center gap-3 p-3 rounded-lg",
-              "transition-all duration-200",
-              "hover:bg-accent",
-              "focus:outline-none focus:ring-2 focus:ring-primary"
+              'w-full flex items-center gap-3 p-3 rounded-lg',
+              'transition-all duration-200',
+              'hover:bg-accent',
+              'focus:outline-none focus:ring-2 focus:ring-primary'
             )}
           >
             <Settings className="h-5 w-5 flex-shrink-0" />
@@ -279,10 +355,10 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
           {/* Profile */}
           <button
             className={cn(
-              "w-full flex items-center gap-3 p-3 rounded-lg",
-              "transition-all duration-200",
-              "hover:bg-accent",
-              "focus:outline-none focus:ring-2 focus:ring-primary"
+              'w-full flex items-center gap-3 p-3 rounded-lg',
+              'transition-all duration-200',
+              'hover:bg-accent',
+              'focus:outline-none focus:ring-2 focus:ring-primary'
             )}
           >
             <User className="h-5 w-5 flex-shrink-0" />
@@ -292,11 +368,11 @@ export function TabletSidebar({ className }: TabletSidebarProps) {
       </motion.aside>
 
       {/* Content Offset for Tablet */}
-      <div 
+      <div
         className={cn(
-          "hidden sm:block lg:hidden", // Only on tablet
-          isCollapsed ? "ml-20" : "ml-[280px]",
-          "transition-all duration-300"
+          'hidden sm:block lg:hidden', // Only on tablet
+          isCollapsed ? 'ml-20' : 'ml-[280px]',
+          'transition-all duration-300'
         )}
       />
     </>

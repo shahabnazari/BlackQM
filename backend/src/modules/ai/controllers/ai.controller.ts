@@ -63,7 +63,7 @@ class CulturalSensitivityDto {
   targetRegions?: string[];
 }
 
-@Controller('api/ai')
+@Controller('ai')
 @UseGuards(JwtAuthGuard)
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class AIController {

@@ -39,7 +39,7 @@ import { ExportVisualizationDto } from './dto/export-visualization.dto';
 @ApiTags('visualization')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RateLimitGuard)
-@Controller('api/visualization')
+@Controller('visualization')
 export class VisualizationController {
   constructor(private readonly visualizationService: VisualizationService) {}
 

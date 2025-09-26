@@ -50,7 +50,10 @@ export function PhaseAvailability({
   const [hoveredPhase, setHoveredPhase] = useState<ResearchPhase | null>(null);
 
   // Phase metadata
-  const phaseMetadata: Record<ResearchPhase, { label: string; color: string; icon: string }> = {
+  const phaseMetadata: Record<
+    ResearchPhase,
+    { label: string; color: string; icon: string }
+  > = {
     discover: { label: 'Discover', color: 'purple', icon: '📚' },
     design: { label: 'Design', color: 'yellow', icon: '💡' },
     build: { label: 'Build', color: 'blue', icon: '🛠️' },
@@ -65,7 +68,7 @@ export function PhaseAvailability({
 
   useEffect(() => {
     loadPhaseStatuses();
-    
+
     // Set up polling for real-time updates
     const interval = setInterval(loadPhaseStatuses, 30000); // Update every 30 seconds
     return () => clearInterval(interval);
@@ -79,12 +82,13 @@ export function PhaseAvailability({
       const nextPhase = studyProgress.nextRecommendedPhase;
 
       const statuses: PhaseStatus[] = [];
-      
+
       studyProgress.phases.forEach((phaseProgress, phase) => {
         const blockers = phaseProgressService.getPhaseBlockers(studyId, phase);
         const isAvailable = availablePhases.includes(phase);
         const isCompleted = phaseProgress.progress >= 80;
-        const isInProgress = phaseProgress.progress > 0 && phaseProgress.progress < 80;
+        const isInProgress =
+          phaseProgress.progress > 0 && phaseProgress.progress < 80;
         const isLocked = !isAvailable && !isCompleted;
         const isNext = phase === nextPhase;
 
@@ -110,7 +114,7 @@ export function PhaseAvailability({
 
   const getPhaseStyle = (status: PhaseStatus) => {
     const meta = phaseMetadata[status.phase];
-    
+
     if (status.completed) {
       return `bg-${meta.color}-100 dark:bg-${meta.color}-900/20 border-${meta.color}-300 dark:border-${meta.color}-700`;
     }
@@ -137,14 +141,16 @@ export function PhaseAvailability({
       return <LockClosedIcon className="w-5 h-5 text-gray-400" />;
     }
     if (status.nextUp) {
-      return <ArrowRightIcon className="w-5 h-5 text-indigo-600 animate-bounce-x" />;
+      return (
+        <ArrowRightIcon className="w-5 h-5 text-indigo-600 animate-bounce-x" />
+      );
     }
     return null;
   };
 
   if (loading) {
     return (
-      <div className={cn("flex items-center justify-center p-4", className)}>
+      <div className={cn('flex items-center justify-center p-4', className)}>
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
       </div>
     );
@@ -153,28 +159,33 @@ export function PhaseAvailability({
   if (compact) {
     // Compact view for toolbar
     return (
-      <div className={cn("flex items-center gap-1", className)}>
-        {phaseStatuses.map((status) => {
+      <div className={cn('flex items-center gap-1', className)}>
+        {phaseStatuses.map(status => {
           const meta = phaseMetadata[status.phase];
           return (
-            <Tooltip key={status.phase} content={
-              <div className="p-2">
-                <div className="font-semibold">{meta.label}</div>
-                <div className="text-sm text-gray-500">Progress: {status.progress}%</div>
-                {status.blockers.length > 0 && (
-                  <div className="text-xs text-red-500 mt-1">
-                    {status.blockers[0]}
+            <Tooltip
+              key={status.phase}
+              content={
+                <div className="p-2">
+                  <div className="font-semibold">{meta.label}</div>
+                  <div className="text-sm text-gray-500">
+                    Progress: {status.progress}%
                   </div>
-                )}
-              </div>
-            }>
+                  {status.blockers.length > 0 && (
+                    <div className="text-xs text-red-500 mt-1">
+                      {status.blockers[0]}
+                    </div>
+                  )}
+                </div>
+              }
+            >
               <button
                 onClick={() => !status.locked && onPhaseSelect(status.phase)}
                 disabled={status.locked}
                 className={cn(
-                  "relative w-10 h-10 rounded-lg border-2 transition-all",
-                  "flex items-center justify-center",
-                  status.phase === currentPhase && "ring-2 ring-offset-2",
+                  'relative w-10 h-10 rounded-lg border-2 transition-all',
+                  'flex items-center justify-center',
+                  status.phase === currentPhase && 'ring-2 ring-offset-2',
                   getPhaseStyle(status)
                 )}
               >
@@ -186,7 +197,7 @@ export function PhaseAvailability({
                 )}
                 {status.inProgress && (
                   <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-md">
-                    <div 
+                    <div
                       className={`h-full bg-${meta.color}-500 rounded-b-md transition-all`}
                       style={{ width: `${status.progress}%` }}
                     />
@@ -202,7 +213,7 @@ export function PhaseAvailability({
 
   // Full view for dashboard
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn('space-y-3', className)}>
       <AnimatePresence>
         {phaseStatuses.map((status, index) => {
           const meta = phaseMetadata[status.phase];
@@ -220,9 +231,9 @@ export function PhaseAvailability({
                 onClick={() => !status.locked && onPhaseSelect(status.phase)}
                 disabled={status.locked}
                 className={cn(
-                  "w-full p-4 rounded-xl border-2 transition-all",
-                  "flex items-center justify-between group",
-                  status.phase === currentPhase && "ring-2 ring-offset-2",
+                  'w-full p-4 rounded-xl border-2 transition-all',
+                  'flex items-center justify-between group',
+                  status.phase === currentPhase && 'ring-2 ring-offset-2',
                   getPhaseStyle(status)
                 )}
               >
@@ -241,7 +252,10 @@ export function PhaseAvailability({
                       {status.completed && 'Completed'}
                       {status.inProgress && `${status.progress}% Complete`}
                       {status.locked && 'Locked'}
-                      {!status.completed && !status.inProgress && !status.locked && 'Ready to start'}
+                      {!status.completed &&
+                        !status.inProgress &&
+                        !status.locked &&
+                        'Ready to start'}
                     </div>
                   </div>
                 </div>
@@ -254,11 +268,11 @@ export function PhaseAvailability({
                         className={`h-full bg-${meta.color}-500`}
                         initial={{ width: 0 }}
                         animate={{ width: `${status.progress}%` }}
-                        transition={{ duration: 0.5, ease: "easeOut" }}
+                        transition={{ duration: 0.5, ease: 'easeOut' }}
                       />
                     </div>
                   )}
-                  
+
                   {/* Status icon */}
                   {getStatusIcon(status)}
                 </div>
@@ -274,7 +288,9 @@ export function PhaseAvailability({
                   <div className="flex items-start gap-2">
                     <ExclamationTriangleIcon className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-red-700 dark:text-red-300">
-                      <div className="font-semibold mb-1">Requirements not met:</div>
+                      <div className="font-semibold mb-1">
+                        Requirements not met:
+                      </div>
                       <ul className="list-disc list-inside space-y-0.5">
                         {status.blockers.map((blocker, i) => (
                           <li key={i}>{blocker}</li>

@@ -137,13 +137,14 @@ export function CollaborationManager() {
   // Removed unused showCommentDialog state
   const [showPresence, setShowPresence] = useState(true);
   const [lockMode, setLockMode] = useState<'none' | 'section' | 'full'>('none');
-  
+
   // Activity Playback State
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(0);
-  const [playbackSession, setPlaybackSession] = useState<PlaybackSession | null>(null);
+  const [playbackSession, setPlaybackSession] =
+    useState<PlaybackSession | null>(null);
   const [showPlaybackPanel, setShowPlaybackPanel] = useState(false);
   const playbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recordingStartTime = useRef<Date | null>(null);
@@ -283,10 +284,10 @@ export function CollaborationManager() {
     if (playbackSession && recordingStartTime.current) {
       const endTime = new Date();
       const duration = endTime.getTime() - recordingStartTime.current.getTime();
-      
+
       // Analyze session for key moments
       const keyMoments = analyzeKeyMoments(activities);
-      
+
       setPlaybackSession({
         ...playbackSession,
         endTime,
@@ -299,14 +300,14 @@ export function CollaborationManager() {
 
   const startPlayback = () => {
     if (!playbackSession) return;
-    
+
     setIsPlaying(true);
     setCurrentPlaybackTime(0);
-    
+
     // Start playback interval
     playbackIntervalRef.current = setInterval(() => {
       setCurrentPlaybackTime(prev => {
-        const next = prev + (100 * playbackSpeed);
+        const next = prev + 100 * playbackSpeed;
         if (next >= playbackSession.duration) {
           stopPlayback();
           return playbackSession.duration;
@@ -329,7 +330,10 @@ export function CollaborationManager() {
     // Reconstruct document state at this time
     if (playbackSession) {
       const activitiesUpToTime = playbackSession.activities.filter(
-        a => new Date(a.timestamp).getTime() - playbackSession.startTime.getTime() <= time
+        a =>
+          new Date(a.timestamp).getTime() -
+            playbackSession.startTime.getTime() <=
+          time
       );
       // Apply activities to reconstruct state
       reconstructState(activitiesUpToTime);
@@ -346,7 +350,7 @@ export function CollaborationManager() {
 
   const analyzeKeyMoments = (activities: Activity[]) => {
     const keyMoments: PlaybackSession['keyMoments'] = [];
-    
+
     // Detect rapid editing (potential conflict)
     const editBursts = detectEditBursts(activities);
     editBursts.forEach(burst => {
@@ -356,16 +360,18 @@ export function CollaborationManager() {
         type: 'conflict',
       });
     });
-    
+
     // Detect review approvals
-    activities.filter(a => a.type === 'review').forEach(activity => {
-      keyMoments.push({
-        timestamp: activity.timestamp,
-        description: `${activity.user.name} ${activity.action}`,
-        type: 'review',
+    activities
+      .filter(a => a.type === 'review')
+      .forEach(activity => {
+        keyMoments.push({
+          timestamp: activity.timestamp,
+          description: `${activity.user.name} ${activity.action}`,
+          type: 'review',
+        });
       });
-    });
-    
+
     // Detect milestones (e.g., section completions)
     const milestones = detectMilestones(activities);
     milestones.forEach(milestone => {
@@ -375,20 +381,24 @@ export function CollaborationManager() {
         type: 'milestone',
       });
     });
-    
-    return keyMoments.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+    return keyMoments.sort(
+      (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+    );
   };
 
   const detectEditBursts = (activities: Activity[]) => {
     const bursts: { timestamp: Date; users: string[] }[] = [];
     const timeWindow = 30000; // 30 seconds
-    
+
     for (let i = 0; i < activities.length - 1; i++) {
       const editsInWindow = activities.filter(
-        a => a.type === 'edit' &&
-        Math.abs(a.timestamp.getTime() - activities[i].timestamp.getTime()) < timeWindow
+        a =>
+          a.type === 'edit' &&
+          Math.abs(a.timestamp.getTime() - activities[i].timestamp.getTime()) <
+            timeWindow
       );
-      
+
       if (editsInWindow.length >= 3) {
         const uniqueUsers = [...new Set(editsInWindow.map(e => e.user.name))];
         if (uniqueUsers.length > 1) {
@@ -399,25 +409,25 @@ export function CollaborationManager() {
         }
       }
     }
-    
+
     return bursts;
   };
 
   const detectMilestones = (activities: Activity[]) => {
     const milestones: { timestamp: Date; description: string }[] = [];
-    
+
     // Detect section completions
     const sectionCompletions = activities.filter(
       a => a.action.includes('completed') || a.action.includes('finished')
     );
-    
+
     sectionCompletions.forEach(completion => {
       milestones.push({
         timestamp: completion.timestamp,
         description: `Section completed: ${completion.target || 'Unknown'}`,
       });
     });
-    
+
     return milestones;
   };
 
@@ -429,7 +439,7 @@ export function CollaborationManager() {
 
   const exportSession = () => {
     if (!playbackSession) return;
-    
+
     const exportData = {
       session: playbackSession,
       metadata: {
@@ -443,7 +453,7 @@ export function CollaborationManager() {
         })),
       },
     };
-    
+
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
       type: 'application/json',
     });
@@ -501,16 +511,16 @@ export function CollaborationManager() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant={isRecording ? "destructive" : "outline"} 
+          <Button
+            variant={isRecording ? 'destructive' : 'outline'}
             size="sm"
             onClick={isRecording ? stopRecording : startRecording}
           >
             <Film className="w-4 h-4 mr-2" />
             {isRecording ? 'Stop Recording' : 'Record Session'}
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => setShowPlaybackPanel(!showPlaybackPanel)}
             disabled={!playbackSession}
@@ -551,11 +561,7 @@ export function CollaborationManager() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={exportSession}
-                >
+                <Button variant="outline" size="sm" onClick={exportSession}>
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </Button>
@@ -578,12 +584,16 @@ export function CollaborationManager() {
                     <span className="text-gray-600">Timeline</span>
                     <span className="font-mono text-xs">
                       {Math.floor(currentPlaybackTime / 60000)}:
-                      {String(Math.floor((currentPlaybackTime % 60000) / 1000)).padStart(2, '0')} / 
-                      {Math.floor(playbackSession.duration / 60000)}:
-                      {String(Math.floor((playbackSession.duration % 60000) / 1000)).padStart(2, '0')}
+                      {String(
+                        Math.floor((currentPlaybackTime % 60000) / 1000)
+                      ).padStart(2, '0')}{' '}
+                      /{Math.floor(playbackSession.duration / 60000)}:
+                      {String(
+                        Math.floor((playbackSession.duration % 60000) / 1000)
+                      ).padStart(2, '0')}
                     </span>
                   </div>
-                  
+
                   {/* Progress Bar with Activity Density */}
                   <div className="relative">
                     <input
@@ -591,15 +601,18 @@ export function CollaborationManager() {
                       min="0"
                       max={playbackSession.duration}
                       value={currentPlaybackTime}
-                      onChange={(e) => seekPlayback(Number(e.target.value))}
+                      onChange={e => seekPlayback(Number(e.target.value))}
                       className="w-full"
                     />
-                    
+
                     {/* Activity Density Visualization */}
                     <div className="absolute top-0 left-0 w-full h-1 pointer-events-none mt-2">
                       {playbackSession.activities.map((activity, idx) => {
-                        const position = ((new Date(activity.timestamp).getTime() - 
-                          playbackSession.startTime.getTime()) / playbackSession.duration) * 100;
+                        const position =
+                          ((new Date(activity.timestamp).getTime() -
+                            playbackSession.startTime.getTime()) /
+                            playbackSession.duration) *
+                          100;
                         return (
                           <div
                             key={idx}
@@ -610,14 +623,22 @@ export function CollaborationManager() {
                         );
                       })}
                     </div>
-                    
+
                     {/* Key Moments Markers */}
                     {playbackSession.keyMoments.map((moment, idx) => {
-                      const position = ((moment.timestamp.getTime() - 
-                        playbackSession.startTime.getTime()) / playbackSession.duration) * 100;
-                      const color = moment.type === 'milestone' ? 'bg-green-500' :
-                                   moment.type === 'conflict' ? 'bg-red-500' :
-                                   moment.type === 'review' ? 'bg-purple-500' : 'bg-yellow-500';
+                      const position =
+                        ((moment.timestamp.getTime() -
+                          playbackSession.startTime.getTime()) /
+                          playbackSession.duration) *
+                        100;
+                      const color =
+                        moment.type === 'milestone'
+                          ? 'bg-green-500'
+                          : moment.type === 'conflict'
+                            ? 'bg-red-500'
+                            : moment.type === 'review'
+                              ? 'bg-purple-500'
+                              : 'bg-yellow-500';
                       return (
                         <div
                           key={idx}
@@ -635,7 +656,9 @@ export function CollaborationManager() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => seekPlayback(Math.max(0, currentPlaybackTime - 10000))}
+                    onClick={() =>
+                      seekPlayback(Math.max(0, currentPlaybackTime - 10000))
+                    }
                   >
                     <SkipBack className="w-4 h-4" />
                   </Button>
@@ -651,7 +674,11 @@ export function CollaborationManager() {
                     size="icon"
                     onClick={isPlaying ? stopPlayback : startPlayback}
                   >
-                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    {isPlaying ? (
+                      <Pause className="w-4 h-4" />
+                    ) : (
+                      <Play className="w-4 h-4" />
+                    )}
                   </Button>
                   <Button
                     variant="outline"
@@ -664,7 +691,14 @@ export function CollaborationManager() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => seekPlayback(Math.min(playbackSession.duration, currentPlaybackTime + 10000))}
+                    onClick={() =>
+                      seekPlayback(
+                        Math.min(
+                          playbackSession.duration,
+                          currentPlaybackTime + 10000
+                        )
+                      )
+                    }
                   >
                     <SkipForward className="w-4 h-4" />
                   </Button>
@@ -686,22 +720,28 @@ export function CollaborationManager() {
                   {playbackSession.keyMoments.length}
                 </Badge>
               </div>
-              
+
               <div className="space-y-2 max-h-32 overflow-y-auto">
                 {playbackSession.keyMoments.map((moment, idx) => (
                   <div
                     key={idx}
                     className="flex items-center gap-3 p-2 rounded hover:bg-gray-50 cursor-pointer"
                     onClick={() => {
-                      const time = moment.timestamp.getTime() - playbackSession.startTime.getTime();
+                      const time =
+                        moment.timestamp.getTime() -
+                        playbackSession.startTime.getTime();
                       seekPlayback(time);
                     }}
                   >
                     <Badge
                       variant={
-                        moment.type === 'milestone' ? 'default' :
-                        moment.type === 'conflict' ? 'destructive' :
-                        moment.type === 'review' ? 'secondary' : 'outline'
+                        moment.type === 'milestone'
+                          ? 'default'
+                          : moment.type === 'conflict'
+                            ? 'destructive'
+                            : moment.type === 'review'
+                              ? 'secondary'
+                              : 'outline'
                       }
                       className="text-xs"
                     >
@@ -709,8 +749,20 @@ export function CollaborationManager() {
                     </Badge>
                     <span className="text-sm flex-1">{moment.description}</span>
                     <span className="text-xs text-gray-500 font-mono">
-                      {Math.floor((moment.timestamp.getTime() - playbackSession.startTime.getTime()) / 60000)}:
-                      {String(Math.floor(((moment.timestamp.getTime() - playbackSession.startTime.getTime()) % 60000) / 1000)).padStart(2, '0')}
+                      {Math.floor(
+                        (moment.timestamp.getTime() -
+                          playbackSession.startTime.getTime()) /
+                          60000
+                      )}
+                      :
+                      {String(
+                        Math.floor(
+                          ((moment.timestamp.getTime() -
+                            playbackSession.startTime.getTime()) %
+                            60000) /
+                            1000
+                        )
+                      ).padStart(2, '0')}
                     </span>
                   </div>
                 ))}

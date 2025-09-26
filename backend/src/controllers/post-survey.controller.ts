@@ -46,7 +46,7 @@ import { Question } from '@prisma/client';
  * - Experience feedback aggregation
  */
 @ApiTags('Post-Survey')
-@Controller('api/post-survey')
+@Controller('post-survey')
 // @UseGuards(JwtAuthGuard)
 // @ApiBearerAuth()
 export class PostSurveyController {

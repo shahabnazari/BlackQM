@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { MobileNavigation } from './MobileNavigation';
@@ -16,13 +16,16 @@ interface ResponsiveLayoutProps {
   className?: string;
 }
 
-export function ResponsiveLayout({ children, className }: ResponsiveLayoutProps) {
+export function ResponsiveLayout({
+  children,
+  className,
+}: ResponsiveLayoutProps) {
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
   const [currentPhase] = useState<any>('discover'); // TODO: Get from context
   const isMobile = useMediaQuery('(max-width: 639px)');
   const isTablet = useMediaQuery('(min-width: 640px) and (max-width: 1023px)');
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-  
+
   // Detect iOS for safe area handling
   const [isIOS, setIsIOS] = useState(false);
   useEffect(() => {
@@ -31,7 +34,7 @@ export function ResponsiveLayout({ children, className }: ResponsiveLayoutProps)
   }, []);
 
   return (
-    <div className={cn("min-h-screen bg-background", className)}>
+    <div className={cn('min-h-screen bg-background', className)}>
       {/* Desktop Layout */}
       {isDesktop && (
         <>
@@ -39,16 +42,14 @@ export function ResponsiveLayout({ children, className }: ResponsiveLayoutProps)
           <div className="fixed top-0 left-0 right-0 z-30">
             <PrimaryToolbar />
           </div>
-          
+
           {/* Secondary toolbar below primary */}
           <div className="fixed top-16 left-0 right-0 z-20">
             <SecondaryToolbar phase={currentPhase} onClose={() => {}} />
           </div>
-          
+
           {/* Main content with padding for toolbars */}
-          <main className="pt-32 px-4 pb-8 max-w-7xl mx-auto">
-            {children}
-          </main>
+          <main className="pt-32 px-4 pb-8 max-w-7xl mx-auto">{children}</main>
         </>
       )}
 
@@ -56,12 +57,10 @@ export function ResponsiveLayout({ children, className }: ResponsiveLayoutProps)
       {isTablet && (
         <>
           <TabletSidebar />
-          
+
           {/* Main content with sidebar offset */}
           <main className="min-h-screen">
-            <div className="p-4">
-              {children}
-            </div>
+            <div className="p-4">{children}</div>
           </main>
         </>
       )}
@@ -70,22 +69,24 @@ export function ResponsiveLayout({ children, className }: ResponsiveLayoutProps)
       {isMobile && (
         <>
           {/* Mobile header */}
-          <header className={cn(
-            "fixed top-0 left-0 right-0 z-30",
-            "bg-background/95 backdrop-blur-sm",
-            "border-b border-border",
-            "px-4 py-3",
-            isIOS && "pt-safe-area-top"
-          )}>
+          <header
+            className={cn(
+              'fixed top-0 left-0 right-0 z-30',
+              'bg-background/95 backdrop-blur-sm',
+              'border-b border-border',
+              'px-4 py-3',
+              isIOS && 'pt-safe-area-top'
+            )}
+          >
             <div className="flex items-center justify-between">
               <h1 className="text-lg font-semibold">VQMethod</h1>
               <button
                 onClick={() => setMobileToolsOpen(true)}
                 className={cn(
-                  "p-2 rounded-lg",
-                  "bg-accent hover:bg-accent/80",
-                  "transition-colors",
-                  "touch-manipulation"
+                  'p-2 rounded-lg',
+                  'bg-accent hover:bg-accent/80',
+                  'transition-colors',
+                  'touch-manipulation'
                 )}
                 aria-label="Open tools"
               >
@@ -95,15 +96,16 @@ export function ResponsiveLayout({ children, className }: ResponsiveLayoutProps)
           </header>
 
           {/* Swipeable main content */}
-          <SwipeNavigation enabled className={cn(
-            "min-h-screen",
-            "pt-16", // Header height
-            "pb-20", // Bottom nav height
-            isIOS && "pt-safe-area-top pb-safe-area-bottom"
-          )}>
-            <main className="p-4">
-              {children}
-            </main>
+          <SwipeNavigation
+            enabled
+            className={cn(
+              'min-h-screen',
+              'pt-16', // Header height
+              'pb-20', // Bottom nav height
+              isIOS && 'pt-safe-area-top pb-safe-area-bottom'
+            )}
+          >
+            <main className="p-4">{children}</main>
           </SwipeNavigation>
 
           {/* Mobile bottom navigation */}
@@ -119,9 +121,7 @@ export function ResponsiveLayout({ children, className }: ResponsiveLayoutProps)
 
       {/* Fallback for SSR */}
       {!isMobile && !isTablet && !isDesktop && (
-        <main className="p-4">
-          {children}
-        </main>
+        <main className="p-4">{children}</main>
       )}
     </div>
   );
@@ -135,14 +135,16 @@ interface ResponsiveGridProps {
 
 export function ResponsiveGrid({ children, className }: ResponsiveGridProps) {
   return (
-    <div className={cn(
-      "grid gap-4",
-      "grid-cols-1", // Mobile: 1 column
-      "sm:grid-cols-2", // Tablet: 2 columns
-      "lg:grid-cols-3", // Desktop: 3 columns
-      "xl:grid-cols-4", // Large desktop: 4 columns
-      className
-    )}>
+    <div
+      className={cn(
+        'grid gap-4',
+        'grid-cols-1', // Mobile: 1 column
+        'sm:grid-cols-2', // Tablet: 2 columns
+        'lg:grid-cols-3', // Desktop: 3 columns
+        'xl:grid-cols-4', // Large desktop: 4 columns
+        className
+      )}
+    >
       {children}
     </div>
   );
@@ -155,26 +157,28 @@ interface ResponsiveContainerProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
 }
 
-export function ResponsiveContainer({ 
-  children, 
+export function ResponsiveContainer({
+  children,
   className,
-  size = 'lg'
+  size = 'lg',
 }: ResponsiveContainerProps) {
   const sizeClasses = {
     sm: 'max-w-2xl',
     md: 'max-w-4xl',
     lg: 'max-w-6xl',
     xl: 'max-w-7xl',
-    full: 'max-w-full'
+    full: 'max-w-full',
   };
 
   return (
-    <div className={cn(
-      "w-full mx-auto",
-      "px-4 sm:px-6 lg:px-8",
-      sizeClasses[size],
-      className
-    )}>
+    <div
+      className={cn(
+        'w-full mx-auto',
+        'px-4 sm:px-6 lg:px-8',
+        sizeClasses[size],
+        className
+      )}
+    >
       {children}
     </div>
   );
@@ -187,23 +191,21 @@ interface ResponsiveTextProps {
   variant?: 'h1' | 'h2' | 'h3' | 'body' | 'small';
 }
 
-export function ResponsiveText({ 
-  children, 
+export function ResponsiveText({
+  children,
   className,
-  variant = 'body'
+  variant = 'body',
 }: ResponsiveTextProps) {
   const variantClasses = {
     h1: 'text-2xl sm:text-3xl lg:text-4xl font-bold',
     h2: 'text-xl sm:text-2xl lg:text-3xl font-semibold',
     h3: 'text-lg sm:text-xl lg:text-2xl font-medium',
     body: 'text-base sm:text-lg',
-    small: 'text-sm sm:text-base'
+    small: 'text-sm sm:text-base',
   };
 
   return (
-    <div className={cn(variantClasses[variant], className)}>
-      {children}
-    </div>
+    <div className={cn(variantClasses[variant], className)}>{children}</div>
   );
 }
 

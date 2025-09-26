@@ -43,7 +43,8 @@ export function NavigationPreferences({
   onClose,
   onPreferencesChange,
 }: NavigationPreferencesProps) {
-  const [preferences, setPreferences] = useState<NavigationPreferences>(DEFAULT_PREFERENCES);
+  const [preferences, setPreferences] =
+    useState<NavigationPreferences>(DEFAULT_PREFERENCES);
 
   // Load preferences from localStorage
   useEffect(() => {
@@ -71,7 +72,10 @@ export function NavigationPreferences({
 
   const resetToDefaults = () => {
     setPreferences(DEFAULT_PREFERENCES);
-    localStorage.setItem('navigationPreferences', JSON.stringify(DEFAULT_PREFERENCES));
+    localStorage.setItem(
+      'navigationPreferences',
+      JSON.stringify(DEFAULT_PREFERENCES)
+    );
     onPreferencesChange?.(DEFAULT_PREFERENCES);
   };
 
@@ -119,7 +123,14 @@ export function NavigationPreferences({
                   Navigation Mode
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {(['expanded', 'compact', 'minimal', 'icons'] as NavigationMode[]).map(mode => (
+                  {(
+                    [
+                      'expanded',
+                      'compact',
+                      'minimal',
+                      'icons',
+                    ] as NavigationMode[]
+                  ).map(mode => (
                     <button
                       key={mode}
                       onClick={() => updatePreference('mode', mode)}
@@ -143,7 +154,9 @@ export function NavigationPreferences({
                 </label>
                 <select
                   value={preferences.density}
-                  onChange={(e) => updatePreference('density', e.target.value as any)}
+                  onChange={e =>
+                    updatePreference('density', e.target.value as any)
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="comfortable">Comfortable</option>
@@ -161,7 +174,9 @@ export function NavigationPreferences({
                   {['default', 'muted', 'vibrant', 'monochrome'].map(scheme => (
                     <button
                       key={scheme}
-                      onClick={() => updatePreference('phaseColors', scheme as any)}
+                      onClick={() =>
+                        updatePreference('phaseColors', scheme as any)
+                      }
                       className={cn(
                         'px-3 py-2 rounded-lg border text-sm font-medium transition-all',
                         preferences.phaseColors === scheme
@@ -182,7 +197,9 @@ export function NavigationPreferences({
                 </label>
                 <select
                   value={preferences.animationSpeed}
-                  onChange={(e) => updatePreference('animationSpeed', e.target.value as any)}
+                  onChange={e =>
+                    updatePreference('animationSpeed', e.target.value as any)
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="slow">Slow</option>
@@ -197,19 +214,36 @@ export function NavigationPreferences({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Display Options
                 </label>
-                
+
                 {[
                   { key: 'showTooltips', label: 'Show tooltips on hover' },
                   { key: 'showProgress', label: 'Show phase progress bars' },
-                  { key: 'showKeyboardHints', label: 'Show keyboard shortcuts' },
+                  {
+                    key: 'showKeyboardHints',
+                    label: 'Show keyboard shortcuts',
+                  },
                   { key: 'showPhaseNumbers', label: 'Show phase numbers' },
-                  { key: 'showPhaseDescriptions', label: 'Show phase descriptions' },
-                  { key: 'autoCollapse', label: 'Auto-collapse inactive panels' },
+                  {
+                    key: 'showPhaseDescriptions',
+                    label: 'Show phase descriptions',
+                  },
+                  {
+                    key: 'autoCollapse',
+                    label: 'Auto-collapse inactive panels',
+                  },
                 ].map(({ key, label }) => (
-                  <label key={key} className="flex items-center justify-between cursor-pointer">
+                  <label
+                    key={key}
+                    className="flex items-center justify-between cursor-pointer"
+                  >
                     <span className="text-sm text-gray-700">{label}</span>
                     <button
-                      onClick={() => updatePreference(key as any, !preferences[key as keyof NavigationPreferences])}
+                      onClick={() =>
+                        updatePreference(
+                          key as any,
+                          !preferences[key as keyof NavigationPreferences]
+                        )
+                      }
                       className={cn(
                         'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
                         preferences[key as keyof NavigationPreferences]
@@ -272,7 +306,8 @@ export function NavigationPreferences({
 }
 
 export function useNavigationPreferences() {
-  const [preferences, setPreferences] = useState<NavigationPreferences>(DEFAULT_PREFERENCES);
+  const [preferences, setPreferences] =
+    useState<NavigationPreferences>(DEFAULT_PREFERENCES);
 
   useEffect(() => {
     const saved = localStorage.getItem('navigationPreferences');

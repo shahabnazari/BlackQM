@@ -10,9 +10,9 @@ interface HighContrastToggleProps {
   showLabel?: boolean;
 }
 
-export function HighContrastToggle({ 
-  className, 
-  showLabel = false 
+export function HighContrastToggle({
+  className,
+  showLabel = false,
 }: HighContrastToggleProps) {
   const [isHighContrast, setIsHighContrast] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -30,7 +30,7 @@ export function HighContrastToggle({
   const toggleHighContrast = () => {
     const newValue = !isHighContrast;
     setIsHighContrast(newValue);
-    
+
     if (newValue) {
       document.documentElement.classList.add('high-contrast');
       localStorage.setItem('highContrastMode', 'true');
@@ -62,7 +62,9 @@ export function HighContrastToggle({
       content={
         <div>
           <strong>High Contrast Mode</strong>
-          <p className="mt-1">Enhances visibility for users with visual impairments</p>
+          <p className="mt-1">
+            Enhances visibility for users with visual impairments
+          </p>
         </div>
       }
       richContent
@@ -134,7 +136,7 @@ export function HighContrastStyles() {
       }
 
       .high-contrast button,
-      .high-contrast [role="button"] {
+      .high-contrast [role='button'] {
         border: 2px solid currentColor !important;
         font-weight: 600 !important;
       }
@@ -170,45 +172,45 @@ export function HighContrastStyles() {
       }
 
       /* Phase-specific high contrast colors */
-      .high-contrast .phase-discover { 
-        background-color: #9400d3 !important; 
-        color: #ffffff !important; 
+      .high-contrast .phase-discover {
+        background-color: #9400d3 !important;
+        color: #ffffff !important;
       }
-      .high-contrast .phase-design { 
-        background-color: #ffff00 !important; 
-        color: #000000 !important; 
+      .high-contrast .phase-design {
+        background-color: #ffff00 !important;
+        color: #000000 !important;
       }
-      .high-contrast .phase-build { 
-        background-color: #0000ff !important; 
-        color: #ffffff !important; 
+      .high-contrast .phase-build {
+        background-color: #0000ff !important;
+        color: #ffffff !important;
       }
-      .high-contrast .phase-recruit { 
-        background-color: #00ff00 !important; 
-        color: #000000 !important; 
+      .high-contrast .phase-recruit {
+        background-color: #00ff00 !important;
+        color: #000000 !important;
       }
-      .high-contrast .phase-collect { 
-        background-color: #00ffff !important; 
-        color: #000000 !important; 
+      .high-contrast .phase-collect {
+        background-color: #00ffff !important;
+        color: #000000 !important;
       }
-      .high-contrast .phase-analyze { 
-        background-color: #4b0082 !important; 
-        color: #ffffff !important; 
+      .high-contrast .phase-analyze {
+        background-color: #4b0082 !important;
+        color: #ffffff !important;
       }
-      .high-contrast .phase-visualize { 
-        background-color: #ff1493 !important; 
-        color: #ffffff !important; 
+      .high-contrast .phase-visualize {
+        background-color: #ff1493 !important;
+        color: #ffffff !important;
       }
-      .high-contrast .phase-interpret { 
-        background-color: #ff8c00 !important; 
-        color: #000000 !important; 
+      .high-contrast .phase-interpret {
+        background-color: #ff8c00 !important;
+        color: #000000 !important;
       }
-      .high-contrast .phase-report { 
-        background-color: #ff0000 !important; 
-        color: #ffffff !important; 
+      .high-contrast .phase-report {
+        background-color: #ff0000 !important;
+        color: #ffffff !important;
       }
-      .high-contrast .phase-archive { 
-        background-color: #808080 !important; 
-        color: #ffffff !important; 
+      .high-contrast .phase-archive {
+        background-color: #808080 !important;
+        color: #ffffff !important;
       }
     `}</style>
   );

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
+import {
   Activity,
   Gauge,
   Package,
@@ -14,16 +14,40 @@ import {
   CheckCircle,
   Info,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { usePerformanceMonitor } from '@/hooks/use-performance-monitor';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  BarChart,
+  Bar,
+} from 'recharts';
 
 // Core Web Vitals thresholds
 // Removed unused WEB_VITALS_THRESHOLDS
@@ -42,36 +66,54 @@ export default function PerformanceDashboard() {
   const [timeRange, setTimeRange] = useState('24h');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
-  
+
   // Mock performance data - in production, this would come from monitoring service
   const [webVitals] = useState({
     LCP: { value: 2100, trend: -5, rating: 'good' as const },
     FID: { value: 85, trend: -10, rating: 'good' as const },
     CLS: { value: 0.08, trend: 2, rating: 'good' as const },
     FCP: { value: 1600, trend: -3, rating: 'good' as const },
-    TTFB: { value: 450, trend: -8, rating: 'good' as const }
+    TTFB: { value: 450, trend: -8, rating: 'good' as const },
   });
 
   const [performanceScore, setPerformanceScore] = useState(92);
-  
+
   // Mock bundle sizes
   const [bundleSizes] = useState<BundleSize[]>([
-    { name: 'Main Bundle', size: 245000, gzipped: 78000, percentage: 45, trend: -2 },
-    { name: 'Vendor Bundle', size: 189000, gzipped: 62000, percentage: 35, trend: 0 },
-    { name: 'Charts Library', size: 56000, gzipped: 18000, percentage: 10, trend: 1 },
+    {
+      name: 'Main Bundle',
+      size: 245000,
+      gzipped: 78000,
+      percentage: 45,
+      trend: -2,
+    },
+    {
+      name: 'Vendor Bundle',
+      size: 189000,
+      gzipped: 62000,
+      percentage: 35,
+      trend: 0,
+    },
+    {
+      name: 'Charts Library',
+      size: 56000,
+      gzipped: 18000,
+      percentage: 10,
+      trend: 1,
+    },
     { name: 'Icons', size: 34000, gzipped: 11000, percentage: 6, trend: 0 },
-    { name: 'Styles', size: 22000, gzipped: 7000, percentage: 4, trend: -1 }
+    { name: 'Styles', size: 22000, gzipped: 7000, percentage: 4, trend: -1 },
   ]);
 
   // Mock historical data
   const [historicalData] = useState([
     { time: '00:00', LCP: 2200, FID: 90, CLS: 0.09, users: 120 },
     { time: '04:00', LCP: 2100, FID: 85, CLS: 0.08, users: 80 },
-    { time: '08:00', LCP: 2300, FID: 95, CLS: 0.10, users: 200 },
+    { time: '08:00', LCP: 2300, FID: 95, CLS: 0.1, users: 200 },
     { time: '12:00', LCP: 2400, FID: 100, CLS: 0.11, users: 350 },
     { time: '16:00', LCP: 2200, FID: 88, CLS: 0.09, users: 300 },
     { time: '20:00', LCP: 2100, FID: 85, CLS: 0.08, users: 250 },
-    { time: 'Now', LCP: 2100, FID: 85, CLS: 0.08, users: 180 }
+    { time: 'Now', LCP: 2100, FID: 85, CLS: 0.08, users: 180 },
   ]);
 
   // Use performance monitor hook
@@ -100,11 +142,13 @@ export default function PerformanceDashboard() {
       performanceScore,
       webVitals,
       bundleSizes,
-      historicalData
+      historicalData,
     };
 
     if (exportFormat === 'json') {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: 'application/json',
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -114,7 +158,12 @@ export default function PerformanceDashboard() {
       // CSV export
       const csvRows = [
         ['Metric', 'Value', 'Trend', 'Rating'],
-        ...Object.entries(webVitals).map(([key, val]) => [key, val.value, val.trend, val.rating])
+        ...Object.entries(webVitals).map(([key, val]) => [
+          key,
+          val.value,
+          val.trend,
+          val.rating,
+        ]),
       ];
       const csvContent = csvRows.map(row => row.join(',')).join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -128,10 +177,14 @@ export default function PerformanceDashboard() {
 
   const getMetricColor = (rating: string) => {
     switch (rating) {
-      case 'good': return 'text-green-500';
-      case 'needs-improvement': return 'text-yellow-500';
-      case 'poor': return 'text-red-500';
-      default: return 'text-gray-500';
+      case 'good':
+        return 'text-green-500';
+      case 'needs-improvement':
+        return 'text-yellow-500';
+      case 'poor':
+        return 'text-red-500';
+      default:
+        return 'text-gray-500';
     }
   };
 
@@ -151,7 +204,9 @@ export default function PerformanceDashboard() {
       >
         <div>
           <h1 className="text-3xl font-bold">Performance Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Monitor Core Web Vitals and application performance</p>
+          <p className="text-muted-foreground mt-1">
+            Monitor Core Web Vitals and application performance
+          </p>
         </div>
         <div className="flex gap-2">
           <Select value={timeRange} onValueChange={setTimeRange}>
@@ -171,14 +226,12 @@ export default function PerformanceDashboard() {
             onClick={refreshMetrics}
             disabled={isRefreshing}
           >
-            <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
+            <RefreshCw
+              className={cn('h-4 w-4 mr-2', isRefreshing && 'animate-spin')}
+            />
             Refresh
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={exportMetrics}
-          >
+          <Button variant="outline" size="sm" onClick={exportMetrics}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -196,7 +249,9 @@ export default function PerformanceDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-2xl font-bold">Performance Score</h3>
-                <p className="text-muted-foreground">Overall application health</p>
+                <p className="text-muted-foreground">
+                  Overall application health
+                </p>
               </div>
               <div className="relative">
                 <svg className="w-32 h-32 transform -rotate-90">
@@ -247,20 +302,36 @@ export default function PerformanceDashboard() {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <Badge variant={metric.rating === 'good' ? 'default' : metric.rating === 'poor' ? 'destructive' : 'secondary'}>
+                    <Badge
+                      variant={
+                        metric.rating === 'good'
+                          ? 'default'
+                          : metric.rating === 'poor'
+                            ? 'destructive'
+                            : 'secondary'
+                      }
+                    >
                       {key}
                     </Badge>
                     {getMetricIcon(metric.trend)}
                   </div>
                   <div className="space-y-1">
-                    <p className={cn("text-2xl font-bold", getMetricColor(metric.rating))}>
-                      {typeof metric.value === 'number' && metric.value < 1 ? metric.value.toFixed(2) : metric.value}
+                    <p
+                      className={cn(
+                        'text-2xl font-bold',
+                        getMetricColor(metric.rating)
+                      )}
+                    >
+                      {typeof metric.value === 'number' && metric.value < 1
+                        ? metric.value.toFixed(2)
+                        : metric.value}
                       <span className="text-sm font-normal text-muted-foreground ml-1">
                         {key === 'CLS' ? '' : 'ms'}
                       </span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {metric.trend > 0 ? '↑' : '↓'} {Math.abs(metric.trend)}% from last period
+                      {metric.trend > 0 ? '↑' : '↓'} {Math.abs(metric.trend)}%
+                      from last period
                     </p>
                   </div>
                 </CardContent>
@@ -283,7 +354,9 @@ export default function PerformanceDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Performance Over Time</CardTitle>
-              <CardDescription>Track Core Web Vitals throughout the day</CardDescription>
+              <CardDescription>
+                Track Core Web Vitals throughout the day
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-80">
@@ -294,9 +367,27 @@ export default function PerformanceDashboard() {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Area type="monotone" dataKey="LCP" stackId="1" stroke="#8884d8" fill="#8884d8" />
-                    <Area type="monotone" dataKey="FID" stackId="1" stroke="#82ca9d" fill="#82ca9d" />
-                    <Area type="monotone" dataKey="users" stackId="2" stroke="#ffc658" fill="#ffc658" />
+                    <Area
+                      type="monotone"
+                      dataKey="LCP"
+                      stackId="1"
+                      stroke="#8884d8"
+                      fill="#8884d8"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="FID"
+                      stackId="1"
+                      stroke="#82ca9d"
+                      fill="#82ca9d"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="users"
+                      stackId="2"
+                      stroke="#ffc658"
+                      fill="#ffc658"
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -309,7 +400,9 @@ export default function PerformanceDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Bundle Size Analysis</CardTitle>
-              <CardDescription>Breakdown of JavaScript bundle sizes</CardDescription>
+              <CardDescription>
+                Breakdown of JavaScript bundle sizes
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
@@ -317,26 +410,52 @@ export default function PerformanceDashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={bundleSizes}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="size" fill="#8884d8" name="Original Size (bytes)" />
-                      <Bar dataKey="gzipped" fill="#82ca9d" name="Gzipped Size (bytes)" />
+                      <Bar
+                        dataKey="size"
+                        fill="#8884d8"
+                        name="Original Size (bytes)"
+                      />
+                      <Bar
+                        dataKey="gzipped"
+                        fill="#82ca9d"
+                        name="Gzipped Size (bytes)"
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {bundleSizes.map((bundle) => (
-                    <div key={bundle.name} className="flex items-center justify-between p-3 bg-accent rounded-lg">
+                  {bundleSizes.map(bundle => (
+                    <div
+                      key={bundle.name}
+                      className="flex items-center justify-between p-3 bg-accent rounded-lg"
+                    >
                       <div>
                         <p className="font-medium">{bundle.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {(bundle.size / 1000).toFixed(1)}KB ({bundle.percentage}%)
+                          {(bundle.size / 1000).toFixed(1)}KB (
+                          {bundle.percentage}%)
                         </p>
                       </div>
-                      <Badge variant={bundle.trend === 0 ? 'secondary' : bundle.trend > 0 ? 'destructive' : 'default'}>
-                        {bundle.trend > 0 ? '+' : ''}{bundle.trend}%
+                      <Badge
+                        variant={
+                          bundle.trend === 0
+                            ? 'secondary'
+                            : bundle.trend > 0
+                              ? 'destructive'
+                              : 'default'
+                        }
+                      >
+                        {bundle.trend > 0 ? '+' : ''}
+                        {bundle.trend}%
                       </Badge>
                     </div>
                   ))}
@@ -344,11 +463,15 @@ export default function PerformanceDashboard() {
                 <div className="flex items-center justify-between p-4 bg-accent rounded-lg">
                   <div>
                     <p className="font-semibold">Total Bundle Size</p>
-                    <p className="text-sm text-muted-foreground">All JavaScript assets</p>
+                    <p className="text-sm text-muted-foreground">
+                      All JavaScript assets
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold">546KB</p>
-                    <p className="text-sm text-green-500">↓ 2.3% from last build</p>
+                    <p className="text-sm text-green-500">
+                      ↓ 2.3% from last build
+                    </p>
                   </div>
                 </div>
               </div>
@@ -361,7 +484,9 @@ export default function PerformanceDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Detailed Performance Metrics</CardTitle>
-              <CardDescription>In-depth analysis of all performance indicators</CardDescription>
+              <CardDescription>
+                In-depth analysis of all performance indicators
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
@@ -371,10 +496,18 @@ export default function PerformanceDashboard() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {[
                       { name: 'Performance', value: 92, color: 'bg-green-500' },
-                      { name: 'Accessibility', value: 98, color: 'bg-green-500' },
-                      { name: 'Best Practices', value: 95, color: 'bg-green-500' },
-                      { name: 'SEO', value: 100, color: 'bg-green-500' }
-                    ].map((metric) => (
+                      {
+                        name: 'Accessibility',
+                        value: 98,
+                        color: 'bg-green-500',
+                      },
+                      {
+                        name: 'Best Practices',
+                        value: 95,
+                        color: 'bg-green-500',
+                      },
+                      { name: 'SEO', value: 100, color: 'bg-green-500' },
+                    ].map(metric => (
                       <div key={metric.name} className="text-center">
                         <div className="relative inline-flex">
                           <svg className="w-20 h-20 transform -rotate-90">
@@ -395,14 +528,16 @@ export default function PerformanceDashboard() {
                               strokeWidth="8"
                               fill="none"
                               strokeDasharray={`${metric.value * 2.26} 226`}
-                              className={cn(metric.color, "text-opacity-100")}
+                              className={cn(metric.color, 'text-opacity-100')}
                             />
                           </svg>
                           <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">
                             {metric.value}
                           </span>
                         </div>
-                        <p className="text-sm font-medium mt-2">{metric.name}</p>
+                        <p className="text-sm font-medium mt-2">
+                          {metric.name}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -415,25 +550,71 @@ export default function PerformanceDashboard() {
                   <h3 className="font-semibold mb-3">Runtime Metrics</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {[
-                      { name: 'Memory Usage', value: '42MB', trend: -3, icon: Package },
-                      { name: 'CPU Usage', value: '12%', trend: -1, icon: Gauge },
-                      { name: 'Network Requests', value: '24/min', trend: 0, icon: Activity },
-                      { name: 'Cache Hit Rate', value: '94%', trend: 2, icon: Zap },
-                      { name: 'Error Rate', value: '0.02%', trend: -1, icon: AlertTriangle },
-                      { name: 'Avg Response Time', value: '120ms', trend: -5, icon: Clock }
-                    ].map((metric) => {
+                      {
+                        name: 'Memory Usage',
+                        value: '42MB',
+                        trend: -3,
+                        icon: Package,
+                      },
+                      {
+                        name: 'CPU Usage',
+                        value: '12%',
+                        trend: -1,
+                        icon: Gauge,
+                      },
+                      {
+                        name: 'Network Requests',
+                        value: '24/min',
+                        trend: 0,
+                        icon: Activity,
+                      },
+                      {
+                        name: 'Cache Hit Rate',
+                        value: '94%',
+                        trend: 2,
+                        icon: Zap,
+                      },
+                      {
+                        name: 'Error Rate',
+                        value: '0.02%',
+                        trend: -1,
+                        icon: AlertTriangle,
+                      },
+                      {
+                        name: 'Avg Response Time',
+                        value: '120ms',
+                        trend: -5,
+                        icon: Clock,
+                      },
+                    ].map(metric => {
                       const Icon = metric.icon;
                       return (
-                        <div key={metric.name} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div
+                          key={metric.name}
+                          className="flex items-center justify-between p-3 border rounded-lg"
+                        >
                           <div className="flex items-center gap-3">
                             <Icon className="h-5 w-5 text-muted-foreground" />
                             <div>
-                              <p className="text-sm font-medium">{metric.name}</p>
-                              <p className="text-lg font-bold">{metric.value}</p>
+                              <p className="text-sm font-medium">
+                                {metric.name}
+                              </p>
+                              <p className="text-lg font-bold">
+                                {metric.value}
+                              </p>
                             </div>
                           </div>
-                          <Badge variant={metric.trend === 0 ? 'secondary' : metric.trend > 0 ? 'destructive' : 'default'}>
-                            {metric.trend > 0 ? '+' : ''}{metric.trend}%
+                          <Badge
+                            variant={
+                              metric.trend === 0
+                                ? 'secondary'
+                                : metric.trend > 0
+                                  ? 'destructive'
+                                  : 'default'
+                            }
+                          >
+                            {metric.trend > 0 ? '+' : ''}
+                            {metric.trend}%
                           </Badge>
                         </div>
                       );
@@ -447,10 +628,17 @@ export default function PerformanceDashboard() {
                 <div className="flex items-center justify-between p-4 bg-accent rounded-lg">
                   <div>
                     <p className="font-medium">Export Performance Report</p>
-                    <p className="text-sm text-muted-foreground">Download detailed metrics in your preferred format</p>
+                    <p className="text-sm text-muted-foreground">
+                      Download detailed metrics in your preferred format
+                    </p>
                   </div>
                   <div className="flex gap-2">
-                    <Select value={exportFormat} onValueChange={(value: 'csv' | 'json') => setExportFormat(value)}>
+                    <Select
+                      value={exportFormat}
+                      onValueChange={(value: 'csv' | 'json') =>
+                        setExportFormat(value)
+                      }
+                    >
                       <SelectTrigger className="w-24">
                         <SelectValue />
                       </SelectTrigger>
@@ -480,32 +668,37 @@ export default function PerformanceDashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Performance Recommendations</CardTitle>
-            <CardDescription>AI-powered suggestions to improve your metrics</CardDescription>
+            <CardDescription>
+              AI-powered suggestions to improve your metrics
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {[
                 {
                   title: 'Optimize Largest Contentful Paint',
-                  description: 'Consider lazy-loading images below the fold and preloading critical resources',
+                  description:
+                    'Consider lazy-loading images below the fold and preloading critical resources',
                   impact: 'High',
                   icon: CheckCircle,
-                  color: 'text-green-500'
+                  color: 'text-green-500',
                 },
                 {
                   title: 'Reduce JavaScript Bundle Size',
-                  description: 'Enable code splitting for the Charts Library to reduce initial load',
+                  description:
+                    'Enable code splitting for the Charts Library to reduce initial load',
                   impact: 'Medium',
                   icon: Info,
-                  color: 'text-blue-500'
+                  color: 'text-blue-500',
                 },
                 {
                   title: 'Implement Resource Hints',
-                  description: 'Add preconnect hints for third-party domains to improve connection speed',
+                  description:
+                    'Add preconnect hints for third-party domains to improve connection speed',
                   impact: 'Low',
                   icon: AlertTriangle,
-                  color: 'text-yellow-500'
-                }
+                  color: 'text-yellow-500',
+                },
               ].map((recommendation, index) => {
                 const Icon = recommendation.icon;
                 return (
@@ -516,10 +709,14 @@ export default function PerformanceDashboard() {
                     transition={{ delay: 0.5 + index * 0.1 }}
                     className="flex gap-4 p-4 border rounded-lg hover:bg-accent transition-colors"
                   >
-                    <Icon className={cn("h-5 w-5 mt-0.5", recommendation.color)} />
+                    <Icon
+                      className={cn('h-5 w-5 mt-0.5', recommendation.color)}
+                    />
                     <div className="flex-1">
                       <p className="font-medium">{recommendation.title}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{recommendation.description}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {recommendation.description}
+                      </p>
                     </div>
                     <Badge>{recommendation.impact} Impact</Badge>
                   </motion.div>

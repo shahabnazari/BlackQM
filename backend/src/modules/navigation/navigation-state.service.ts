@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
-import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
-import { Server } from 'socket.io';
 
 export enum ResearchPhase {
   DISCOVER = 'discover',
@@ -40,11 +38,7 @@ export interface NavigationState {
 }
 
 @Injectable()
-@WebSocketGateway({ namespace: 'navigation' })
 export class NavigationStateService {
-  @WebSocketServer()
-  server: Server = null as any;
-
   constructor(private prisma: PrismaService) {}
 
   /**
@@ -95,15 +89,16 @@ export class NavigationStateService {
     userId: string,
     phase: ResearchPhase,
     studyId?: string,
-  ): Promise<void> {
+  ): Promise<{ userId: string; studyId?: string; phase: ResearchPhase; timestamp: Date }> {
     // Store in database (extend User model with navigation state)
-    // For now, emit through WebSocket
-    this.server.emit('phaseChanged', {
+    // TODO: Persist to database when User model is extended
+    
+    return {
       userId,
       studyId,
       phase,
       timestamp: new Date(),
-    });
+    };
   }
 
   /**
@@ -314,19 +309,13 @@ export class NavigationStateService {
     studyId: string,
     phase: ResearchPhase,
     action: string,
-  ): Promise<void> {
+  ): Promise<NavigationState> {
     // Track user actions for progress calculation
-    this.server.emit('actionCompleted', {
-      userId,
-      studyId,
-      phase,
-      action,
-      timestamp: new Date(),
-    });
-
-    // Recalculate and broadcast updated state
+    // TODO: Store action in database for historical tracking
+    
+    // Return updated state
     const newState = await this.getNavigationState(userId, studyId);
-    this.server.emit('stateUpdated', newState);
+    return newState;
   }
 
   /**
