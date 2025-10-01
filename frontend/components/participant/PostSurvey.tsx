@@ -43,7 +43,7 @@ export default function PostSurvey({
   });
   const [dynamicQuestions, setDynamicQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [qualityScore] = useState(0);
+  const [qualityScore, setQualityScore] = useState(0);
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({

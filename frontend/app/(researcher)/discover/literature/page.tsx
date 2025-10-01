@@ -15,8 +15,6 @@ import {
   Star,
   Filter,
   Calendar,
-  Users,
-  Tag,
   ExternalLink,
   ChevronRight,
   Sparkles,
@@ -34,7 +32,12 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { literatureAPI, Paper, Theme, ResearchGap } from '@/lib/services/literature-api.service';
+import {
+  literatureAPI,
+  Paper,
+  Theme,
+  ResearchGap,
+} from '@/lib/services/literature-api.service';
 import DatabaseSourcesInfo from '@/components/literature/DatabaseSourcesInfo';
 
 export default function LiteratureSearchPage() {
@@ -45,8 +48,8 @@ export default function LiteratureSearchPage() {
   const [totalResults, setTotalResults] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedView, setSelectedView] = useState<'list' | 'grid'>('list');
-  
+  // const [selectedView, setSelectedView] = useState<'list' | 'grid'>('list');
+
   // Advanced filters
   const [filters, setFilters] = useState({
     yearFrom: 2020,
@@ -56,14 +59,14 @@ export default function LiteratureSearchPage() {
     citationMin: 0,
     includeAIMode: true,
   });
-  
+
   // Analysis state
   const [selectedPapers, setSelectedPapers] = useState<Set<string>>(new Set());
   const [themes, setThemes] = useState<Theme[]>([]);
   const [gaps, setGaps] = useState<ResearchGap[]>([]);
   const [analyzingThemes, setAnalyzingThemes] = useState(false);
   const [analyzingGaps, setAnalyzingGaps] = useState(false);
-  
+
   // Library state
   const [savedPapers, setSavedPapers] = useState<Paper[]>([]);
   const [activeTab, setActiveTab] = useState('search');
@@ -90,6 +93,9 @@ export default function LiteratureSearchPage() {
 
     setLoading(true);
     try {
+      console.log('🔍 Starting search with query:', query);
+      console.log('📊 Filters:', filters);
+      
       const result = await literatureAPI.searchLiterature({
         query,
         sources: filters.sources,
@@ -101,12 +107,29 @@ export default function LiteratureSearchPage() {
         includeCitations: true,
       });
 
-      setPapers(result.papers);
-      setTotalResults(result.total);
-      toast.success(`Found ${result.total} papers across ${filters.sources.length} databases`);
+      console.log('✅ Search result received:', result);
+      console.log('📚 Papers array:', result.papers);
+      console.log('📈 Total results:', result.total);
+      
+      if (result.papers && result.papers.length > 0) {
+        setPapers(result.papers);
+        setTotalResults(result.total);
+        setActiveTab('search'); // Make sure we're on the search tab to see results
+        console.log('✅ Papers state updated with', result.papers.length, 'papers');
+        console.log('📑 Active tab set to:', 'search');
+        toast.success(
+          `Found ${result.total} papers across ${filters.sources.length} databases`
+        );
+      } else {
+        console.warn('⚠️ No papers in result');
+        setPapers([]);
+        setTotalResults(0);
+        setActiveTab('search'); // Still switch to search tab
+        toast.info('No papers found. Try adjusting your search terms.');
+      }
     } catch (error) {
       toast.error('Search failed. Please try again.');
-      console.error('Search error:', error);
+      console.error('❌ Search error:', error);
     } finally {
       setLoading(false);
     }
@@ -114,20 +137,44 @@ export default function LiteratureSearchPage() {
 
   const handleSavePaper = async (paper: Paper) => {
     try {
-      await literatureAPI.savePaper(paper);
-      setSavedPapers([...savedPapers, paper]);
-      toast.success('Paper saved to library');
+      console.log('💾 Saving paper:', paper.title);
+      const result = await literatureAPI.savePaper(paper);
+      
+      if (result.success) {
+        // Add paper to saved list if not already there
+        setSavedPapers(prevPapers => {
+          const exists = prevPapers.some(p => p.id === paper.id);
+          if (!exists) {
+            return [...prevPapers, paper];
+          }
+          return prevPapers;
+        });
+        toast.success('Paper saved to library');
+        
+        // Refresh library to sync with backend/localStorage
+        setTimeout(() => loadUserLibrary(), 500);
+      }
     } catch (error) {
+      console.error('Save paper error:', error);
       toast.error('Failed to save paper');
     }
   };
 
   const handleRemovePaper = async (paperId: string) => {
     try {
-      await literatureAPI.removePaper(paperId);
-      setSavedPapers(savedPapers.filter(p => p.id !== paperId));
-      toast.success('Paper removed from library');
+      console.log('🗑️ Removing paper:', paperId);
+      const result = await literatureAPI.removePaper(paperId);
+      
+      if (result.success) {
+        // Remove paper from saved list
+        setSavedPapers(prevPapers => prevPapers.filter(p => p.id !== paperId));
+        toast.success('Paper removed from library');
+        
+        // Refresh library to sync with backend/localStorage
+        setTimeout(() => loadUserLibrary(), 500);
+      }
     } catch (error) {
+      console.error('Remove paper error:', error);
       toast.error('Failed to remove paper');
     }
   };
@@ -144,7 +191,9 @@ export default function LiteratureSearchPage() {
       const extractedThemes = await literatureAPI.extractThemes(paperIds, 5);
       setThemes(extractedThemes);
       setActiveTab('themes');
-      toast.success(`Extracted ${extractedThemes.length} themes from ${paperIds.length} papers`);
+      toast.success(
+        `Extracted ${extractedThemes.length} themes from ${paperIds.length} papers`
+      );
     } catch (error) {
       toast.error('Theme extraction failed');
     } finally {
@@ -183,8 +232,11 @@ export default function LiteratureSearchPage() {
 
     try {
       const paperIds = Array.from(selectedPapers);
-      const { content, filename } = await literatureAPI.exportCitations(paperIds, format);
-      
+      const { content, filename } = await literatureAPI.exportCitations(
+        paperIds,
+        format
+      );
+
       // Create download link
       const blob = new Blob([content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
@@ -193,8 +245,10 @@ export default function LiteratureSearchPage() {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      
-      toast.success(`Exported ${paperIds.length} citations as ${format.toUpperCase()}`);
+
+      toast.success(
+        `Exported ${paperIds.length} citations as ${format.toUpperCase()}`
+      );
     } catch (error) {
       toast.error('Export failed');
     }
@@ -238,18 +292,20 @@ export default function LiteratureSearchPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className={cn(
-          "border rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer",
-          isSelected && "border-blue-500 bg-blue-50/50"
+          'border rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer',
+          isSelected && 'border-blue-500 bg-blue-50/50'
         )}
         onClick={() => togglePaperSelection(paper.id)}
       >
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <div className="flex items-start gap-3">
-              <div className={cn(
-                "w-5 h-5 rounded border-2 flex items-center justify-center mt-1",
-                isSelected ? "bg-blue-500 border-blue-500" : "border-gray-300"
-              )}>
+              <div
+                className={cn(
+                  'w-5 h-5 rounded border-2 flex items-center justify-center mt-1',
+                  isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+                )}
+              >
                 {isSelected && <Check className="w-3 h-3 text-white" />}
               </div>
               <div className="flex-1">
@@ -258,7 +314,8 @@ export default function LiteratureSearchPage() {
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
                   {paper.authors?.slice(0, 3).join(', ')}
-                  {paper.authors?.length > 3 && ` +${paper.authors.length - 3} more`}
+                  {paper.authors?.length > 3 &&
+                    ` +${paper.authors.length - 3} more`}
                 </p>
                 <div className="flex gap-4 mt-2 text-sm text-gray-500">
                   <span className="flex items-center gap-1">
@@ -285,19 +342,28 @@ export default function LiteratureSearchPage() {
                 )}
                 {paper.keywords && paper.keywords.length > 0 && (
                   <div className="flex gap-2 mt-3 flex-wrap">
-                    {paper.keywords.slice(0, 5).map((keyword) => (
-                      <Badge key={keyword} variant="secondary" className="text-xs">
+                    {paper.keywords.slice(0, 5).map(keyword => (
+                      <Badge
+                        key={keyword}
+                        variant="secondary"
+                        className="text-xs"
+                      >
                         {keyword}
                       </Badge>
                     ))}
                   </div>
                 )}
-                <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
+                <div
+                  className="flex gap-2 mt-4"
+                  onClick={e => e.stopPropagation()}
+                >
                   {paper.doi && (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => window.open(`https://doi.org/${paper.doi}`, '_blank')}
+                      onClick={() =>
+                        window.open(`https://doi.org/${paper.doi}`, '_blank')
+                      }
                     >
                       <ExternalLink className="w-3 h-3 mr-1" />
                       View Paper
@@ -305,13 +371,17 @@ export default function LiteratureSearchPage() {
                   )}
                   <Button
                     size="sm"
-                    variant={isSaved ? "secondary" : "outline"}
-                    onClick={(e) => {
+                    variant={isSaved ? 'secondary' : 'outline'}
+                    onClick={e => {
                       e.stopPropagation();
-                      isSaved ? handleRemovePaper(paper.id) : handleSavePaper(paper);
+                      isSaved
+                        ? handleRemovePaper(paper.id)
+                        : handleSavePaper(paper);
                     }}
                   >
-                    <Star className={cn("w-3 h-3 mr-1", isSaved && "fill-current")} />
+                    <Star
+                      className={cn('w-3 h-3 mr-1', isSaved && 'fill-current')}
+                    />
                     {isSaved ? 'Saved' : 'Save'}
                   </Button>
                 </div>
@@ -330,7 +400,8 @@ export default function LiteratureSearchPage() {
         <div>
           <h1 className="text-3xl font-bold">Literature Discovery</h1>
           <p className="text-gray-600 mt-1">
-            Search and analyze academic literature to build your research foundation
+            Search and analyze academic literature to build your research
+            foundation
           </p>
         </div>
         <div className="flex gap-3">
@@ -355,7 +426,7 @@ export default function LiteratureSearchPage() {
           <CardTitle className="flex items-center justify-between">
             <span>Multi-Database Literature Search</span>
             <div className="flex gap-2">
-              <Badge variant={filters.includeAIMode ? "default" : "secondary"}>
+              <Badge variant={filters.includeAIMode ? 'default' : 'secondary'}>
                 <Sparkles className="w-3 h-3 mr-1" />
                 AI Mode {filters.includeAIMode ? 'ON' : 'OFF'}
               </Badge>
@@ -369,8 +440,8 @@ export default function LiteratureSearchPage() {
               <Input
                 placeholder="Enter keywords, research questions, or topics..."
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                onChange={e => setQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 className="pl-10 pr-4 h-12 text-lg"
               />
             </div>
@@ -396,7 +467,11 @@ export default function LiteratureSearchPage() {
             >
               <Filter className="w-5 h-5 mr-2" />
               Filters
-              {showFilters ? <X className="w-4 h-4 ml-1" /> : <ChevronRight className="w-4 h-4 ml-1" />}
+              {showFilters ? (
+                <X className="w-4 h-4 ml-1" />
+              ) : (
+                <ChevronRight className="w-4 h-4 ml-1" />
+              )}
             </Button>
           </div>
 
@@ -416,14 +491,24 @@ export default function LiteratureSearchPage() {
                       <Input
                         type="number"
                         value={filters.yearFrom}
-                        onChange={(e) => setFilters({ ...filters, yearFrom: parseInt(e.target.value) })}
+                        onChange={e =>
+                          setFilters({
+                            ...filters,
+                            yearFrom: parseInt(e.target.value),
+                          })
+                        }
                         className="w-24"
                       />
                       <span className="self-center">to</span>
                       <Input
                         type="number"
                         value={filters.yearTo}
-                        onChange={(e) => setFilters({ ...filters, yearTo: parseInt(e.target.value) })}
+                        onChange={e =>
+                          setFilters({
+                            ...filters,
+                            yearTo: parseInt(e.target.value),
+                          })
+                        }
                         className="w-24"
                       />
                     </div>
@@ -433,7 +518,12 @@ export default function LiteratureSearchPage() {
                     <Input
                       type="number"
                       value={filters.citationMin}
-                      onChange={(e) => setFilters({ ...filters, citationMin: parseInt(e.target.value) })}
+                      onChange={e =>
+                        setFilters({
+                          ...filters,
+                          citationMin: parseInt(e.target.value),
+                        })
+                      }
                       className="mt-1"
                     />
                   </div>
@@ -441,7 +531,12 @@ export default function LiteratureSearchPage() {
                     <label className="text-sm font-medium">Sort By</label>
                     <select
                       value={filters.sortBy}
-                      onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
+                      onChange={e =>
+                        setFilters({
+                          ...filters,
+                          sortBy: e.target.value as any,
+                        })
+                      }
                       className="w-full mt-1 px-3 py-2 border rounded-md"
                     >
                       <option value="relevance">Relevance</option>
@@ -452,12 +547,20 @@ export default function LiteratureSearchPage() {
                   <div>
                     <label className="text-sm font-medium">Databases</label>
                     <div className="flex gap-2 mt-1">
-                      <Badge 
-                        variant={filters.sources.includes('semantic_scholar') ? 'default' : 'outline'}
+                      <Badge
+                        variant={
+                          filters.sources.includes('semantic_scholar')
+                            ? 'default'
+                            : 'outline'
+                        }
                         className="cursor-pointer"
                         onClick={() => {
-                          const sources = filters.sources.includes('semantic_scholar')
-                            ? filters.sources.filter(s => s !== 'semantic_scholar')
+                          const sources = filters.sources.includes(
+                            'semantic_scholar'
+                          )
+                            ? filters.sources.filter(
+                                s => s !== 'semantic_scholar'
+                              )
                             : [...filters.sources, 'semantic_scholar'];
                           setFilters({ ...filters, sources });
                         }}
@@ -465,7 +568,11 @@ export default function LiteratureSearchPage() {
                         Semantic Scholar
                       </Badge>
                       <Badge
-                        variant={filters.sources.includes('crossref') ? 'default' : 'outline'}
+                        variant={
+                          filters.sources.includes('crossref')
+                            ? 'default'
+                            : 'outline'
+                        }
                         className="cursor-pointer"
                         onClick={() => {
                           const sources = filters.sources.includes('crossref')
@@ -518,10 +625,7 @@ export default function LiteratureSearchPage() {
               Export BibTeX
             </Button>
             {themes.length > 0 && (
-              <Button
-                onClick={handleGenerateStatements}
-                className="ml-auto"
-              >
+              <Button onClick={handleGenerateStatements} className="ml-auto">
                 <Sparkles className="w-4 h-4 mr-2" />
                 Generate Q-Statements from Themes
               </Button>
@@ -534,23 +638,41 @@ export default function LiteratureSearchPage() {
       <DatabaseSourcesInfo />
 
       {/* Results Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4"
+      >
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="search">
             Search Results
-            {papers.length > 0 && <Badge className="ml-2" variant="secondary">{papers.length}</Badge>}
+            {papers.length > 0 && (
+              <Badge className="ml-2" variant="secondary">
+                {papers.length}
+              </Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="library">
             My Library
-            <Badge className="ml-2" variant="secondary">{savedPapers.length}</Badge>
+            <Badge className="ml-2" variant="secondary">
+              {savedPapers.length}
+            </Badge>
           </TabsTrigger>
           <TabsTrigger value="themes">
             Themes
-            {themes.length > 0 && <Badge className="ml-2" variant="secondary">{themes.length}</Badge>}
+            {themes.length > 0 && (
+              <Badge className="ml-2" variant="secondary">
+                {themes.length}
+              </Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="gaps">
             Research Gaps
-            {gaps.length > 0 && <Badge className="ml-2" variant="secondary">{gaps.length}</Badge>}
+            {gaps.length > 0 && (
+              <Badge className="ml-2" variant="secondary">
+                {gaps.length}
+              </Badge>
+            )}
           </TabsTrigger>
         </TabsList>
 
@@ -561,54 +683,63 @@ export default function LiteratureSearchPage() {
             </div>
           ) : papers.length > 0 ? (
             <div className="space-y-4">
-              {papers.map((paper) => (
+              {papers.map(paper => (
                 <PaperCard key={paper.id} paper={paper} />
               ))}
             </div>
           ) : (
             <div className="text-center py-12 text-gray-500">
               <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>No papers found. Try adjusting your search query or filters.</p>
+              <p>
+                No papers found. Try adjusting your search query or filters.
+              </p>
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="library" className="space-y-4">
           {savedPapers.length > 0 ? (
-            savedPapers.map((paper) => (
-              <PaperCard key={paper.id} paper={paper} />
-            ))
+            savedPapers.map(paper => <PaperCard key={paper.id} paper={paper} />)
           ) : (
             <div className="text-center py-12 text-gray-500">
               <Star className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>No saved papers yet. Star papers from search results to add them here.</p>
+              <p>
+                No saved papers yet. Star papers from search results to add them
+                here.
+              </p>
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="themes" className="space-y-4">
           {themes.length > 0 ? (
-            themes.map((theme) => (
+            themes.map(theme => (
               <Card key={theme.id}>
                 <CardContent className="pt-6">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg">{theme.name}</h3>
                       <div className="flex gap-2 mt-2 flex-wrap">
-                        {theme.keywords.map((keyword) => (
+                        {theme.keywords.map(keyword => (
                           <Badge key={keyword} variant="secondary">
                             {keyword}
                           </Badge>
                         ))}
                       </div>
                       <div className="flex gap-4 mt-4 text-sm text-gray-600">
-                        <span>Relevance: {Math.round(theme.relevanceScore * 100)}%</span>
+                        <span>
+                          Relevance: {Math.round(theme.relevanceScore * 100)}%
+                        </span>
                         {theme.emergenceYear && (
                           <span>Emerged: {theme.emergenceYear}</span>
                         )}
                         {theme.trendDirection && (
                           <Badge
-                            variant={theme.trendDirection === 'rising' ? 'default' : 'secondary'}
+                            variant={
+                              theme.trendDirection === 'rising'
+                                ? 'default'
+                                : 'secondary'
+                            }
                           >
                             <TrendingUp className="w-3 h-3 mr-1" />
                             {theme.trendDirection}
@@ -623,21 +754,26 @@ export default function LiteratureSearchPage() {
           ) : (
             <div className="text-center py-12 text-gray-500">
               <Sparkles className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>Select papers and click "Extract Themes" to identify research themes.</p>
+              <p>
+                Select papers and click "Extract Themes" to identify research
+                themes.
+              </p>
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="gaps" className="space-y-4">
           {gaps.length > 0 ? (
-            gaps.map((gap) => (
+            gaps.map(gap => (
               <Card key={gap.id} className="border-l-4 border-l-orange-500">
                 <CardContent className="pt-6">
                   <h3 className="font-semibold text-lg">{gap.title}</h3>
                   <p className="text-gray-700 mt-2">{gap.description}</p>
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div>
-                      <span className="text-sm font-medium text-gray-500">Opportunity Score</span>
+                      <span className="text-sm font-medium text-gray-500">
+                        Opportunity Score
+                      </span>
                       <div className="flex items-center gap-2 mt-1">
                         <div className="flex-1 bg-gray-200 rounded-full h-2">
                           <div
@@ -651,15 +787,19 @@ export default function LiteratureSearchPage() {
                       </div>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-gray-500">Impact</span>
+                      <span className="text-sm font-medium text-gray-500">
+                        Impact
+                      </span>
                       <p className="text-sm mt-1">{gap.potentialImpact}</p>
                     </div>
                   </div>
                   {gap.suggestedMethods && gap.suggestedMethods.length > 0 && (
                     <div className="mt-4">
-                      <span className="text-sm font-medium text-gray-500">Suggested Methods</span>
+                      <span className="text-sm font-medium text-gray-500">
+                        Suggested Methods
+                      </span>
                       <div className="flex gap-2 mt-2 flex-wrap">
-                        {gap.suggestedMethods.map((method) => (
+                        {gap.suggestedMethods.map(method => (
                           <Badge key={method} variant="outline">
                             {method}
                           </Badge>
@@ -667,23 +807,29 @@ export default function LiteratureSearchPage() {
                       </div>
                     </div>
                   )}
-                  {gap.fundingOpportunities && gap.fundingOpportunities.length > 0 && (
-                    <div className="mt-4">
-                      <span className="text-sm font-medium text-gray-500">Funding Opportunities</span>
-                      <ul className="list-disc list-inside text-sm mt-2 text-gray-700">
-                        {gap.fundingOpportunities.map((funding) => (
-                          <li key={funding}>{funding}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  {gap.fundingOpportunities &&
+                    gap.fundingOpportunities.length > 0 && (
+                      <div className="mt-4">
+                        <span className="text-sm font-medium text-gray-500">
+                          Funding Opportunities
+                        </span>
+                        <ul className="list-disc list-inside text-sm mt-2 text-gray-700">
+                          {gap.fundingOpportunities.map(funding => (
+                            <li key={funding}>{funding}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                 </CardContent>
               </Card>
             ))
           ) : (
             <div className="text-center py-12 text-gray-500">
               <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>Click "Find Research Gaps" to identify opportunities in your field.</p>
+              <p>
+                Click "Find Research Gaps" to identify opportunities in your
+                field.
+              </p>
             </div>
           )}
         </TabsContent>
@@ -700,7 +846,10 @@ export default function LiteratureSearchPage() {
             Previous
           </Button>
           <div className="flex items-center gap-2">
-            {Array.from({ length: Math.min(5, Math.ceil(totalResults / 20)) }, (_, i) => i + 1).map((page) => (
+            {Array.from(
+              { length: Math.min(5, Math.ceil(totalResults / 20)) },
+              (_, i) => i + 1
+            ).map(page => (
               <Button
                 key={page}
                 variant={currentPage === page ? 'default' : 'outline'}

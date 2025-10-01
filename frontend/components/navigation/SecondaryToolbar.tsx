@@ -381,7 +381,12 @@ export function SecondaryToolbar({ phase, onClose }: SecondaryToolbarProps) {
   };
 
   return (
-    <div className={cn('border-b-2 sticky top-0 z-40 bg-white/95 backdrop-blur-sm', phaseColors[phase])}>
+    <div
+      className={cn(
+        'border-b-2 sticky top-0 z-40 bg-white/95 backdrop-blur-sm',
+        phaseColors[phase]
+      )}
+    >
       <div className="max-w-screen-2xl mx-auto">
         <div className="flex items-center justify-between px-4 py-3">
           {/* Sequential Tool Flow with Numbers and Arrows */}
@@ -402,7 +407,7 @@ export function SecondaryToolbar({ phase, onClose }: SecondaryToolbarProps) {
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-xs font-bold text-gray-600">
                     {index + 1}
                   </span>
-                  
+
                   {/* Tool Label */}
                   <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
                     {tool.label}
@@ -419,7 +424,8 @@ export function SecondaryToolbar({ phase, onClose }: SecondaryToolbarProps) {
                       className={cn(
                         'px-2 py-0.5 text-xs font-semibold rounded',
                         tool.badge === 'NEW' && 'bg-green-100 text-green-700',
-                        tool.badge === 'BETA' && 'bg-yellow-100 text-yellow-700',
+                        tool.badge === 'BETA' &&
+                          'bg-yellow-100 text-yellow-700',
                         tool.badge === 'AI' && 'bg-purple-100 text-purple-700',
                         typeof tool.badge === 'number' &&
                           'bg-blue-100 text-blue-700'
@@ -439,11 +445,21 @@ export function SecondaryToolbar({ phase, onClose }: SecondaryToolbarProps) {
                     </div>
                   )}
                 </motion.button>
-                
+
                 {/* Arrow between items */}
                 {index < tools.length - 1 && (
-                  <svg className="w-6 h-6 text-gray-400 mx-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  <svg
+                    className="w-6 h-6 text-gray-400 mx-1 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
                   </svg>
                 )}
               </div>

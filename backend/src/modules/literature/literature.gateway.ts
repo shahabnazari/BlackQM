@@ -51,12 +51,12 @@ export class LiteratureGateway
   ) {
     const { searchId } = data;
     client.join(`search-${searchId}`);
-    
+
     if (!this.activeSearches.has(searchId)) {
       this.activeSearches.set(searchId, new Set());
     }
     this.activeSearches.get(searchId)?.add(client.id);
-    
+
     this.logger.log(`Client ${client.id} joined search ${searchId}`);
   }
 
@@ -67,14 +67,14 @@ export class LiteratureGateway
   ) {
     const { searchId } = data;
     client.leave(`search-${searchId}`);
-    
+
     if (this.activeSearches.has(searchId)) {
       this.activeSearches.get(searchId)?.delete(client.id);
       if (this.activeSearches.get(searchId)?.size === 0) {
         this.activeSearches.delete(searchId);
       }
     }
-    
+
     this.logger.log(`Client ${client.id} left search ${searchId}`);
   }
 
@@ -88,7 +88,7 @@ export class LiteratureGateway
   }
 
   // Server-side methods to emit events
-  
+
   emitSearchProgress(searchId: string, progress: number, message: string) {
     this.server.to(`search-${searchId}`).emit('search-progress', {
       searchId,

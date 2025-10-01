@@ -395,7 +395,7 @@ export function CollaborationManager() {
       const editsInWindow = activities.filter(
         a =>
           a.type === 'edit' &&
-          Math.abs(a.timestamp.getTime() - activities[i].timestamp.getTime()) <
+          activities[i] && Math.abs(a.timestamp.getTime() - activities[i].timestamp.getTime()) <
             timeWindow
       );
 
@@ -403,7 +403,7 @@ export function CollaborationManager() {
         const uniqueUsers = [...new Set(editsInWindow.map(e => e.user.name))];
         if (uniqueUsers.length > 1) {
           bursts.push({
-            timestamp: activities[i].timestamp,
+            timestamp: activities[i]?.timestamp || new Date(),
             users: uniqueUsers,
           });
         }

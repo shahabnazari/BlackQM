@@ -450,4 +450,31 @@ export class StudyService {
     if (studyData.includeWelcomeVideo) minutes += 5;
     return minutes;
   }
+
+  /**
+   * Create a study from literature review
+   */
+  async createFromLiterature(dto: {
+    literatureReviewId: string;
+    basedOnPapers: string[];
+    researchGapId?: string;
+    autoGenerate: {
+      statements: boolean;
+      methodology: boolean;
+      gridConfig: boolean;
+    };
+    userId: string;
+  }): Promise<any> {
+    // For now, return a mock study to get the server running
+    return {
+      id: 'mock-study-id',
+      statements: dto.autoGenerate.statements ? ['Statement 1', 'Statement 2'] : [],
+      methodology: dto.autoGenerate.methodology ? 'Q-Methodology approach' : null,
+      gridConfig: dto.autoGenerate.gridConfig ? { columns: 9, rows: 5 } : null,
+      literatureReviewId: dto.literatureReviewId,
+      basedOnPapers: dto.basedOnPapers,
+      researchGapId: dto.researchGapId,
+      userId: dto.userId,
+    };
+  }
 }

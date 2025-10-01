@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ReferenceService, BibTeXType, CitationStyle } from './reference.service';
+import {
+  ReferenceService,
+  BibTeXType,
+  CitationStyle,
+} from './reference.service';
 import { PrismaService } from '../../../common/prisma.service';
 
 describe('ReferenceService', () => {
@@ -46,7 +50,7 @@ describe('ReferenceService', () => {
       }`;
 
       const result = service.parseBibTeX(bibtex);
-      
+
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe(BibTeXType.ARTICLE);
       expect(result[0].citationKey).toBe('Smith2023example');
@@ -71,7 +75,7 @@ describe('ReferenceService', () => {
       `;
 
       const result = service.parseBibTeX(bibtex);
-      
+
       expect(result).toHaveLength(2);
       expect(result[0].type).toBe(BibTeXType.ARTICLE);
       expect(result[1].type).toBe(BibTeXType.BOOK);
@@ -97,7 +101,7 @@ describe('ReferenceService', () => {
       };
 
       const result = service.generateBibTeX(paper);
-      
+
       expect(result).toContain('@article{');
       expect(result).toContain('title = {Test Article}');
       expect(result).toContain('author = {Smith, John and Doe, Jane}');
@@ -113,7 +117,7 @@ describe('ReferenceService', () => {
       };
 
       const result = service.generateBibTeX(paper);
-      
+
       expect(result).toContain('@misc{');
       expect(result).toContain('title = {Minimal Paper}');
       expect(result).not.toContain('journal =');
@@ -135,7 +139,7 @@ EP  - 110
 ER  - `;
 
       const result = service.parseRIS(ris);
-      
+
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe('JOUR');
       expect(result[0].fields.TI[0]).toBe('Test Article');
@@ -152,7 +156,7 @@ TI  - A Book
 ER  - `;
 
       const result = service.parseRIS(ris);
-      
+
       expect(result).toHaveLength(2);
       expect(result[0].type).toBe('JOUR');
       expect(result[1].type).toBe('BOOK');
@@ -172,7 +176,7 @@ ER  - `;
       };
 
       const result = service.generateRIS(paper);
-      
+
       expect(result).toContain('TY  - JOUR');
       expect(result).toContain('TI  - Test Article');
       expect(result).toContain('AU  - Smith, John');
@@ -196,7 +200,7 @@ ER  - `;
 
     it('should format APA citation', () => {
       const result = service.formatCitation(testPaper, CitationStyle.APA);
-      
+
       expect(result).toContain('Smith, John et al.');
       expect(result).toContain('(2023)');
       expect(result).toContain('Understanding Q-Methodology');
@@ -206,7 +210,7 @@ ER  - `;
 
     it('should format MLA citation', () => {
       const result = service.formatCitation(testPaper, CitationStyle.MLA);
-      
+
       expect(result).toContain('Smith, John, et al');
       expect(result).toContain('"Understanding Q-Methodology"');
       expect(result).toContain('Journal of Research Methods');
@@ -215,7 +219,7 @@ ER  - `;
 
     it('should format Chicago citation', () => {
       const result = service.formatCitation(testPaper, CitationStyle.CHICAGO);
-      
+
       expect(result).toContain('"Understanding Q-Methodology"');
       expect(result).toContain('Journal of Research Methods');
       expect(result).toContain('15, no. 3');
@@ -224,7 +228,7 @@ ER  - `;
 
     it('should format Harvard citation', () => {
       const result = service.formatCitation(testPaper, CitationStyle.HARVARD);
-      
+
       expect(result).toContain('Smith, John et al.');
       expect(result).toContain('2023');
       expect(result).toContain("'Understanding Q-Methodology'");
@@ -233,7 +237,7 @@ ER  - `;
 
     it('should format IEEE citation', () => {
       const result = service.formatCitation(testPaper, CitationStyle.IEEE);
-      
+
       expect(result).toContain('J. Smith et al.');
       expect(result).toContain('"Understanding Q-Methodology,"');
       expect(result).toContain('Journal of Research Methods');
@@ -242,7 +246,7 @@ ER  - `;
 
     it('should format Vancouver citation', () => {
       const result = service.formatCitation(testPaper, CitationStyle.VANCOUVER);
-      
+
       expect(result).toContain('Smith J');
       expect(result).toContain('Understanding Q-Methodology');
       expect(result).toContain('Journal of Research Methods');
@@ -254,7 +258,7 @@ ER  - `;
     it('should attach PDF to paper', async () => {
       const paperId = 'paper123';
       const pdfPath = '/path/to/paper.pdf';
-      
+
       mockPrismaService.paper.update.mockResolvedValue({
         id: paperId,
         pdfPath,
@@ -262,7 +266,7 @@ ER  - `;
       });
 
       await service.attachPDF(paperId, pdfPath);
-      
+
       expect(mockPrismaService.paper.update).toHaveBeenCalledWith({
         where: { id: paperId },
         data: {
@@ -282,7 +286,7 @@ ER  - `;
       };
 
       const bibtex = service.generateBibTeX(paper);
-      
+
       expect(bibtex).toContain('Smith2023understanding');
     });
 
@@ -293,7 +297,7 @@ ER  - `;
       };
 
       const bibtex = service.generateBibTeX(paper);
-      
+
       expect(bibtex).toContain('NameXXXXtest');
     });
   });

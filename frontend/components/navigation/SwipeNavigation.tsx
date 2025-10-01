@@ -302,12 +302,12 @@ export function SwipeNavigation({
                 <div
                   className={cn(
                     'bg-gradient-to-r p-4 rounded-r-xl shadow-lg',
-                    phases[currentPhaseIndex - 1].color
+                    phases[currentPhaseIndex - 1]?.color || ''
                   )}
                 >
                   <ChevronLeft className="h-6 w-6 text-white" />
                   <span className="text-white font-medium text-sm">
-                    {phases[currentPhaseIndex - 1].name}
+                    {phases[currentPhaseIndex - 1]?.name || ''}
                   </span>
                 </div>
               </motion.div>
@@ -324,11 +324,11 @@ export function SwipeNavigation({
                 <div
                   className={cn(
                     'bg-gradient-to-l p-4 rounded-l-xl shadow-lg',
-                    phases[currentPhaseIndex + 1].color
+                    phases[currentPhaseIndex + 1]?.color || ''
                   )}
                 >
                   <span className="text-white font-medium text-sm">
-                    {phases[currentPhaseIndex + 1].name}
+                    {phases[currentPhaseIndex + 1]?.name || ''}
                   </span>
                   <ChevronRight className="h-6 w-6 text-white" />
                 </div>

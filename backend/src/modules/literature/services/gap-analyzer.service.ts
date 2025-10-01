@@ -78,31 +78,33 @@ export class GapAnalyzerService {
 
     // Fetch papers with all metadata
     const papers = await this.fetchPapersWithMetadata(paperIds);
-    
+
     // Extract keywords from all papers
     const keywordAnalysis = await this.extractAndAnalyzeKeywords(papers);
-    
+
     // Perform topic modeling
     const topicModels = await this.performTopicModeling(papers);
-    
+
     // Detect trends
     const trends = await this.detectTrends(papers, keywordAnalysis);
-    
+
     // Identify gaps using AI
     const gaps = await this.identifyGapsWithAI(papers, topicModels, trends);
-    
+
     // Score and rank gaps
     const scoredGaps = await this.scoreGaps(gaps, trends);
-    
+
     this.logger.log(`Identified ${scoredGaps.length} research gaps`);
-    
+
     return scoredGaps;
   }
 
   /**
    * Generate research opportunities from identified gaps
    */
-  async generateOpportunities(gaps: ResearchGap[]): Promise<ResearchOpportunity[]> {
+  async generateOpportunities(
+    gaps: ResearchGap[],
+  ): Promise<ResearchOpportunity[]> {
     const opportunities: ResearchOpportunity[] = [];
 
     for (const gap of gaps) {
@@ -111,7 +113,9 @@ export class GapAnalyzerService {
     }
 
     // Sort by opportunity score
-    return opportunities.sort((a, b) => b.opportunityScore - a.opportunityScore);
+    return opportunities.sort(
+      (a, b) => b.opportunityScore - a.opportunityScore,
+    );
   }
 
   /**
@@ -119,12 +123,12 @@ export class GapAnalyzerService {
    */
   async extractAndAnalyzeKeywords(papers: any[]): Promise<KeywordAnalysis[]> {
     const keywordMap = new Map<string, KeywordAnalysis>();
-    
+
     for (const paper of papers) {
       const text = `${paper.title} ${paper.abstract || ''}`;
       const keywords = await this.extractKeywords(text);
       const year = paper.year || new Date().getFullYear();
-      
+
       for (const keyword of keywords) {
         if (!keywordMap.has(keyword)) {
           keywordMap.set(keyword, {
@@ -136,25 +140,30 @@ export class GapAnalyzerService {
             importance: 0,
           });
         }
-        
+
         const analysis = keywordMap.get(keyword)!;
         analysis.frequency++;
         analysis.contexts.push(paper.title);
-        
+
         // Track co-occurrences
         for (const otherKeyword of keywords) {
           if (otherKeyword !== keyword) {
-            const coOccurrence = analysis.coOccurrences.find(c => c.keyword === otherKeyword);
+            const coOccurrence = analysis.coOccurrences.find(
+              (c) => c.keyword === otherKeyword,
+            );
             if (coOccurrence) {
               coOccurrence.frequency++;
             } else {
-              analysis.coOccurrences.push({ keyword: otherKeyword, frequency: 1 });
+              analysis.coOccurrences.push({
+                keyword: otherKeyword,
+                frequency: 1,
+              });
             }
           }
         }
       }
     }
-    
+
     // Calculate importance scores
     const analyses = Array.from(keywordMap.values());
     for (const analysis of analyses) {
@@ -162,27 +171,32 @@ export class GapAnalyzerService {
       analysis.coOccurrences.sort((a, b) => b.frequency - a.frequency);
       analysis.coOccurrences = analysis.coOccurrences.slice(0, 10); // Top 10 co-occurrences
     }
-    
+
     return analyses.sort((a, b) => b.importance - a.importance);
   }
 
   /**
    * Perform topic modeling on papers using LDA-like approach
    */
-  async performTopicModeling(papers: any[], numTopics: number = 10): Promise<TopicModel[]> {
+  async performTopicModeling(
+    papers: any[],
+    numTopics: number = 10,
+  ): Promise<TopicModel[]> {
     const topics: TopicModel[] = [];
-    
+
     // Simple clustering-based topic modeling
     // In production, would use proper LDA or other topic modeling algorithms
-    const documents = papers.map(p => ({
+    const documents = papers.map((p) => ({
       id: p.id,
       text: `${p.title} ${p.abstract || ''}`,
       year: p.year || new Date().getFullYear(),
     }));
-    
+
     // Extract themes as proxy for topics
-    const themes = await this.themeExtractionService.extractThemes(papers.map(p => p.id));
-    
+    const themes = await this.themeExtractionService.extractThemes(
+      papers.map((p) => p.id),
+    );
+
     for (let i = 0; i < Math.min(numTopics, themes.length); i++) {
       const theme = themes[i];
       const topicModel: TopicModel = {
@@ -194,10 +208,10 @@ export class GapAnalyzerService {
         prevalence: theme.papers.length / papers.length,
         evolution: this.calculateTopicEvolution(theme.papers, papers),
       };
-      
+
       topics.push(topicModel);
     }
-    
+
     return topics;
   }
 
@@ -205,35 +219,35 @@ export class GapAnalyzerService {
    * Detect trends in research topics
    */
   async detectTrends(
-    papers: any[], 
-    keywordAnalysis: KeywordAnalysis[]
+    papers: any[],
+    keywordAnalysis: KeywordAnalysis[],
   ): Promise<TrendAnalysis[]> {
     const trends: TrendAnalysis[] = [];
-    
+
     // Group papers by year
     const papersByYear = this.groupPapersByYear(papers);
-    
+
     // Analyze top keywords for trends
     const topKeywords = keywordAnalysis.slice(0, 20);
-    
+
     for (const keyword of topKeywords) {
       const timeSeries = this.buildTimeSeries(keyword.keyword, papersByYear);
       const trendType = this.detectTrendType(timeSeries);
       const projectedGrowth = this.projectGrowth(timeSeries);
-      
+
       const trend: TrendAnalysis = {
         topic: keyword.keyword,
         trendType,
         timeSeriesData: timeSeries,
         projectedGrowth,
         inflectionPoints: this.detectInflectionPoints(timeSeries),
-        relatedTopics: keyword.coOccurrences.slice(0, 5).map(c => c.keyword),
+        relatedTopics: keyword.coOccurrences.slice(0, 5).map((c) => c.keyword),
         confidence: this.calculateTrendConfidence(timeSeries),
       };
-      
+
       trends.push(trend);
     }
-    
+
     return trends;
   }
 
@@ -243,19 +257,22 @@ export class GapAnalyzerService {
   async identifyGapsWithAI(
     papers: any[],
     topics: TopicModel[],
-    trends: TrendAnalysis[]
+    trends: TrendAnalysis[],
   ): Promise<ResearchGap[]> {
     const gaps: ResearchGap[] = [];
-    
+
     // Create context for AI analysis
     const context = this.createAnalysisContext(papers, topics, trends);
-    
+
     // Use AI to identify gaps
     const prompt = `
       Based on the following research landscape analysis:
       
-      Topics covered: ${topics.map(t => t.label).join(', ')}
-      Trending areas: ${trends.filter(t => t.trendType === 'emerging').map(t => t.topic).join(', ')}
+      Topics covered: ${topics.map((t) => t.label).join(', ')}
+      Trending areas: ${trends
+        .filter((t) => t.trendType === 'emerging')
+        .map((t) => t.topic)
+        .join(', ')}
       Number of papers analyzed: ${papers.length}
       
       Identify 5-10 significant research gaps. For each gap, provide:
@@ -267,17 +284,17 @@ export class GapAnalyzerService {
       
       Format as JSON array with fields: title, description, importance, methodology, impact
     `;
-    
+
     try {
       const response = await this.openAIService.generateCompletion(prompt, {
         model: 'smart',
         temperature: 0.7,
         maxTokens: 1500,
       });
-      
+
       // Parse AI response
       const aiGaps = this.parseAIGapsResponse(response.content);
-      
+
       // Enhance gaps with additional analysis
       for (const aiGap of aiGaps) {
         const gap: ResearchGap = {
@@ -286,7 +303,8 @@ export class GapAnalyzerService {
           description: aiGap.description,
           keywords: await this.extractKeywords(aiGap.description),
           relatedPapers: this.findRelatedPapers(aiGap, papers),
-          importance: aiGap.importance || this.estimateImportance(aiGap, trends),
+          importance:
+            aiGap.importance || this.estimateImportance(aiGap, trends),
           feasibility: this.estimateFeasibility(aiGap),
           marketPotential: this.estimateMarketPotential(aiGap, trends),
           suggestedMethodology: aiGap.methodology,
@@ -294,7 +312,7 @@ export class GapAnalyzerService {
           trendDirection: this.determineTrendDirection(aiGap, trends),
           confidenceScore: 0.75, // Default confidence for AI-identified gaps
         };
-        
+
         gaps.push(gap);
       }
     } catch (error) {
@@ -302,20 +320,26 @@ export class GapAnalyzerService {
       // Fall back to rule-based gap identification
       return this.identifyGapsRuleBased(papers, topics, trends);
     }
-    
+
     return gaps;
   }
 
   /**
    * Score gaps based on multiple factors
    */
-  async scoreGaps(gaps: ResearchGap[], trends: TrendAnalysis[]): Promise<ResearchGap[]> {
+  async scoreGaps(
+    gaps: ResearchGap[],
+    trends: TrendAnalysis[],
+  ): Promise<ResearchGap[]> {
     for (const gap of gaps) {
       // Calculate composite scores
       const trendScore = this.calculateTrendScore(gap, trends);
       const noveltyScore = await this.calculateNoveltyScore(gap);
-      const impactScore = gap.importance * 0.4 + gap.marketPotential * 0.3 + gap.feasibility * 0.3;
-      
+      const impactScore =
+        gap.importance * 0.4 +
+        gap.marketPotential * 0.3 +
+        gap.feasibility * 0.3;
+
       // Adjust scores based on trend analysis
       if (gap.trendDirection === 'emerging') {
         gap.importance *= 1.2;
@@ -324,11 +348,11 @@ export class GapAnalyzerService {
         gap.importance *= 0.8;
         gap.marketPotential *= 0.7;
       }
-      
+
       // Update confidence based on evidence
       gap.confidenceScore = this.calculateConfidence(gap, trends);
     }
-    
+
     // Sort by combined score (importance * feasibility * market potential)
     return gaps.sort((a, b) => {
       const scoreA = a.importance * a.feasibility * a.marketPotential;
@@ -340,7 +364,9 @@ export class GapAnalyzerService {
   /**
    * Create a research opportunity from a gap
    */
-  private async createOpportunity(gap: ResearchGap): Promise<ResearchOpportunity> {
+  private async createOpportunity(
+    gap: ResearchGap,
+  ): Promise<ResearchOpportunity> {
     // Generate detailed opportunity analysis using AI
     const prompt = `
       For the research gap: "${gap.title}"
@@ -355,17 +381,17 @@ export class GapAnalyzerService {
       6. Potential collaborators or expertise needed
       7. Funding opportunities that might support this research
     `;
-    
+
     const response = await this.openAIService.generateCompletion(prompt, {
       model: 'smart',
       temperature: 0.6,
       maxTokens: 800,
     });
-    
+
     const analysis = this.parseOpportunityAnalysis(response.content);
-    
+
     const opportunityScore = this.calculateOpportunityScore(gap);
-    
+
     return {
       gap,
       opportunityScore,
@@ -384,22 +410,46 @@ export class GapAnalyzerService {
    */
   private async extractKeywords(text: string): Promise<string[]> {
     // Simple keyword extraction - in production, use NLP libraries
-    const words = text.toLowerCase()
+    const words = text
+      .toLowerCase()
       .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
-      .filter(word => word.length > 4);
-    
+      .filter((word) => word.length > 4);
+
     // Remove common words
-    const stopWords = new Set(['about', 'above', 'after', 'again', 'against', 'being', 'below', 'between', 'through', 'during', 'before', 'under', 'while', 'where', 'which', 'these', 'those', 'their', 'there', 'would', 'could', 'should']);
-    
-    const keywords = words.filter(word => !stopWords.has(word));
-    
+    const stopWords = new Set([
+      'about',
+      'above',
+      'after',
+      'again',
+      'against',
+      'being',
+      'below',
+      'between',
+      'through',
+      'during',
+      'before',
+      'under',
+      'while',
+      'where',
+      'which',
+      'these',
+      'those',
+      'their',
+      'there',
+      'would',
+      'could',
+      'should',
+    ]);
+
+    const keywords = words.filter((word) => !stopWords.has(word));
+
     // Get unique keywords with frequency
     const frequency = new Map<string, number>();
     for (const keyword of keywords) {
       frequency.set(keyword, (frequency.get(keyword) || 0) + 1);
     }
-    
+
     // Return top keywords by frequency
     return Array.from(frequency.entries())
       .sort(([, a], [, b]) => b - a)
@@ -411,16 +461,20 @@ export class GapAnalyzerService {
    * Helper: Calculate keyword importance
    */
   private calculateKeywordImportance(
-    keyword: KeywordAnalysis, 
-    allKeywords: KeywordAnalysis[]
+    keyword: KeywordAnalysis,
+    allKeywords: KeywordAnalysis[],
   ): number {
-    const maxFrequency = Math.max(...allKeywords.map(k => k.frequency));
+    const maxFrequency = Math.max(...allKeywords.map((k) => k.frequency));
     const normalizedFrequency = keyword.frequency / maxFrequency;
-    
+
     const coOccurrenceScore = keyword.coOccurrences.length / 10;
     const contextDiversity = Math.min(keyword.contexts.length / 10, 1);
-    
-    return normalizedFrequency * 0.5 + coOccurrenceScore * 0.3 + contextDiversity * 0.2;
+
+    return (
+      normalizedFrequency * 0.5 +
+      coOccurrenceScore * 0.3 +
+      contextDiversity * 0.2
+    );
   }
 
   /**
@@ -431,36 +485,42 @@ export class GapAnalyzerService {
     // In production, use proper coherence metrics like C_v or UMass
     let coherence = 0;
     let pairs = 0;
-    
+
     for (let i = 0; i < keywords.length - 1; i++) {
       for (let j = i + 1; j < keywords.length; j++) {
-        const coOccurrences = documents.filter(doc => 
-          doc.text.includes(keywords[i]) && doc.text.includes(keywords[j])
+        const coOccurrences = documents.filter(
+          (doc) =>
+            doc.text.includes(keywords[i]) && doc.text.includes(keywords[j]),
         ).length;
-        
+
         coherence += coOccurrences / documents.length;
         pairs++;
       }
     }
-    
+
     return pairs > 0 ? coherence / pairs : 0;
   }
 
   /**
    * Helper: Calculate topic evolution over time
    */
-  private calculateTopicEvolution(topicPapers: string[], allPapers: any[]): any[] {
+  private calculateTopicEvolution(
+    topicPapers: string[],
+    allPapers: any[],
+  ): any[] {
     const evolution: any[] = [];
     const papersByYear = this.groupPapersByYear(allPapers);
-    
+
     for (const [year, yearPapers] of papersByYear) {
-      const topicPapersInYear = yearPapers.filter(p => topicPapers.includes(p.id));
+      const topicPapersInYear = yearPapers.filter((p) =>
+        topicPapers.includes(p.id),
+      );
       evolution.push({
         year,
         prevalence: topicPapersInYear.length / yearPapers.length,
       });
     }
-    
+
     return evolution.sort((a, b) => a.year - b.year);
   }
 
@@ -469,7 +529,7 @@ export class GapAnalyzerService {
    */
   private groupPapersByYear(papers: any[]): Map<number, any[]> {
     const grouped = new Map<number, any[]>();
-    
+
     for (const paper of papers) {
       const year = paper.year || new Date().getFullYear();
       if (!grouped.has(year)) {
@@ -477,24 +537,29 @@ export class GapAnalyzerService {
       }
       grouped.get(year)!.push(paper);
     }
-    
+
     return grouped;
   }
 
   /**
    * Helper: Build time series data for a keyword
    */
-  private buildTimeSeries(keyword: string, papersByYear: Map<number, any[]>): any[] {
+  private buildTimeSeries(
+    keyword: string,
+    papersByYear: Map<number, any[]>,
+  ): any[] {
     const timeSeries: any[] = [];
-    
+
     for (const [year, papers] of papersByYear) {
-      const frequency = papers.filter(p => 
-        (p.title + ' ' + (p.abstract || '')).toLowerCase().includes(keyword.toLowerCase())
+      const frequency = papers.filter((p) =>
+        (p.title + ' ' + (p.abstract || ''))
+          .toLowerCase()
+          .includes(keyword.toLowerCase()),
       ).length;
-      
+
       timeSeries.push({ year, frequency });
     }
-    
+
     return timeSeries.sort((a, b) => a.year - b.year);
   }
 
@@ -503,15 +568,15 @@ export class GapAnalyzerService {
    */
   private detectTrendType(timeSeries: any[]): TrendAnalysis['trendType'] {
     if (timeSeries.length < 3) return 'stable';
-    
+
     const recentGrowth = this.calculateRecentGrowth(timeSeries);
     const volatility = this.calculateVolatility(timeSeries);
-    
+
     if (recentGrowth > 0.5) return 'growing';
     if (recentGrowth > 0.2 && volatility < 0.3) return 'emerging';
     if (recentGrowth < -0.3) return 'declining';
     if (volatility > 0.5) return 'cyclical';
-    
+
     return 'stable';
   }
 
@@ -520,15 +585,18 @@ export class GapAnalyzerService {
    */
   private calculateRecentGrowth(timeSeries: any[]): number {
     if (timeSeries.length < 2) return 0;
-    
+
     const recent = timeSeries.slice(-3);
     const earlier = timeSeries.slice(-6, -3);
-    
-    const recentAvg = recent.reduce((sum, point) => sum + point.frequency, 0) / recent.length;
-    const earlierAvg = earlier.length > 0 
-      ? earlier.reduce((sum, point) => sum + point.frequency, 0) / earlier.length
-      : recent[0].frequency;
-    
+
+    const recentAvg =
+      recent.reduce((sum, point) => sum + point.frequency, 0) / recent.length;
+    const earlierAvg =
+      earlier.length > 0
+        ? earlier.reduce((sum, point) => sum + point.frequency, 0) /
+          earlier.length
+        : recent[0].frequency;
+
     return earlierAvg > 0 ? (recentAvg - earlierAvg) / earlierAvg : 0;
   }
 
@@ -537,12 +605,15 @@ export class GapAnalyzerService {
    */
   private calculateVolatility(timeSeries: any[]): number {
     if (timeSeries.length < 2) return 0;
-    
-    const frequencies = timeSeries.map(point => point.frequency);
-    const mean = frequencies.reduce((sum, freq) => sum + freq, 0) / frequencies.length;
-    const variance = frequencies.reduce((sum, freq) => sum + Math.pow(freq - mean, 2), 0) / frequencies.length;
+
+    const frequencies = timeSeries.map((point) => point.frequency);
+    const mean =
+      frequencies.reduce((sum, freq) => sum + freq, 0) / frequencies.length;
+    const variance =
+      frequencies.reduce((sum, freq) => sum + Math.pow(freq - mean, 2), 0) /
+      frequencies.length;
     const stdDev = Math.sqrt(variance);
-    
+
     return mean > 0 ? stdDev / mean : 0;
   }
 
@@ -551,21 +622,26 @@ export class GapAnalyzerService {
    */
   private projectGrowth(timeSeries: any[]): number {
     if (timeSeries.length < 3) return 0;
-    
+
     // Simple linear regression for projection
     const n = timeSeries.length;
     const sumX = timeSeries.reduce((sum, point, i) => sum + i, 0);
     const sumY = timeSeries.reduce((sum, point) => sum + point.frequency, 0);
-    const sumXY = timeSeries.reduce((sum, point, i) => sum + i * point.frequency, 0);
+    const sumXY = timeSeries.reduce(
+      (sum, point, i) => sum + i * point.frequency,
+      0,
+    );
     const sumX2 = timeSeries.reduce((sum, _, i) => sum + i * i, 0);
-    
+
     const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
     const intercept = (sumY - slope * sumX) / n;
-    
+
     const currentValue = slope * (n - 1) + intercept;
     const projectedValue = slope * n + intercept;
-    
-    return currentValue > 0 ? ((projectedValue - currentValue) / currentValue) * 100 : 0;
+
+    return currentValue > 0
+      ? ((projectedValue - currentValue) / currentValue) * 100
+      : 0;
   }
 
   /**
@@ -573,14 +649,14 @@ export class GapAnalyzerService {
    */
   private detectInflectionPoints(timeSeries: any[]): any[] {
     const inflectionPoints: any[] = [];
-    
+
     if (timeSeries.length < 3) return inflectionPoints;
-    
+
     for (let i = 1; i < timeSeries.length - 1; i++) {
       const prev = timeSeries[i - 1].frequency;
       const curr = timeSeries[i].frequency;
       const next = timeSeries[i + 1].frequency;
-      
+
       // Detect peaks and troughs
       if ((curr > prev && curr > next) || (curr < prev && curr < next)) {
         inflectionPoints.push({
@@ -589,7 +665,7 @@ export class GapAnalyzerService {
         });
       }
     }
-    
+
     return inflectionPoints;
   }
 
@@ -598,17 +674,19 @@ export class GapAnalyzerService {
    */
   private calculateTrendConfidence(timeSeries: any[]): number {
     if (timeSeries.length < 3) return 0.3;
-    
+
     // Factors affecting confidence:
     // 1. Length of time series
     // 2. Consistency of trend
     // 3. Data completeness
-    
+
     const lengthScore = Math.min(timeSeries.length / 10, 1);
     const volatility = this.calculateVolatility(timeSeries);
     const consistencyScore = Math.max(0, 1 - volatility);
-    const dataCompleteness = timeSeries.filter(point => point.frequency > 0).length / timeSeries.length;
-    
+    const dataCompleteness =
+      timeSeries.filter((point) => point.frequency > 0).length /
+      timeSeries.length;
+
     return lengthScore * 0.3 + consistencyScore * 0.4 + dataCompleteness * 0.3;
   }
 
@@ -616,18 +694,30 @@ export class GapAnalyzerService {
    * Helper: Create analysis context for AI
    */
   private createAnalysisContext(
-    papers: any[], 
-    topics: TopicModel[], 
-    trends: TrendAnalysis[]
+    papers: any[],
+    topics: TopicModel[],
+    trends: TrendAnalysis[],
   ): string {
     return `
       Research Landscape Analysis:
       - Total papers analyzed: ${papers.length}
       - Time range: ${this.getTimeRange(papers)}
-      - Main topics: ${topics.slice(0, 5).map(t => t.label).join(', ')}
-      - Emerging trends: ${trends.filter(t => t.trendType === 'emerging').map(t => t.topic).join(', ')}
-      - Growing areas: ${trends.filter(t => t.trendType === 'growing').map(t => t.topic).join(', ')}
-      - Declining topics: ${trends.filter(t => t.trendType === 'declining').map(t => t.topic).join(', ')}
+      - Main topics: ${topics
+        .slice(0, 5)
+        .map((t) => t.label)
+        .join(', ')}
+      - Emerging trends: ${trends
+        .filter((t) => t.trendType === 'emerging')
+        .map((t) => t.topic)
+        .join(', ')}
+      - Growing areas: ${trends
+        .filter((t) => t.trendType === 'growing')
+        .map((t) => t.topic)
+        .join(', ')}
+      - Declining topics: ${trends
+        .filter((t) => t.trendType === 'declining')
+        .map((t) => t.topic)
+        .join(', ')}
     `;
   }
 
@@ -635,7 +725,7 @@ export class GapAnalyzerService {
    * Helper: Get time range of papers
    */
   private getTimeRange(papers: any[]): string {
-    const years = papers.map(p => p.year || new Date().getFullYear());
+    const years = papers.map((p) => p.year || new Date().getFullYear());
     const minYear = Math.min(...years);
     const maxYear = Math.max(...years);
     return `${minYear}-${maxYear}`;
@@ -651,11 +741,11 @@ export class GapAnalyzerService {
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
       }
-      
+
       // Fall back to text parsing
       const gaps: any[] = [];
       const sections = content.split(/\d+\.\s+/);
-      
+
       for (const section of sections) {
         if (section.trim()) {
           const lines = section.split('\n');
@@ -663,13 +753,17 @@ export class GapAnalyzerService {
             title: lines[0]?.trim() || 'Untitled Gap',
             description: lines[1]?.trim() || '',
             importance: 7,
-            methodology: lines.find(l => l.toLowerCase().includes('method'))?.trim() || '',
-            impact: lines.find(l => l.toLowerCase().includes('impact'))?.trim() || '',
+            methodology:
+              lines.find((l) => l.toLowerCase().includes('method'))?.trim() ||
+              '',
+            impact:
+              lines.find((l) => l.toLowerCase().includes('impact'))?.trim() ||
+              '',
           };
           gaps.push(gap);
         }
       }
-      
+
       return gaps;
     } catch (error) {
       this.logger.error('Error parsing AI response:', error);
@@ -683,16 +777,18 @@ export class GapAnalyzerService {
   private findRelatedPapers(gap: any, papers: any[]): string[] {
     const relatedPapers: string[] = [];
     const gapKeywords = gap.title.toLowerCase().split(/\s+/);
-    
+
     for (const paper of papers) {
       const paperText = `${paper.title} ${paper.abstract || ''}`.toLowerCase();
-      const matchCount = gapKeywords.filter((keyword: string) => paperText.includes(keyword)).length;
-      
+      const matchCount = gapKeywords.filter((keyword: string) =>
+        paperText.includes(keyword),
+      ).length;
+
       if (matchCount >= gapKeywords.length * 0.3) {
         relatedPapers.push(paper.id);
       }
     }
-    
+
     return relatedPapers.slice(0, 10);
   }
 
@@ -701,7 +797,7 @@ export class GapAnalyzerService {
    */
   private estimateImportance(gap: any, trends: TrendAnalysis[]): number {
     let importance = 5; // Base importance
-    
+
     // Check if gap relates to trending topics
     const gapKeywords = gap.title.toLowerCase().split(/\s+/);
     for (const trend of trends) {
@@ -711,7 +807,7 @@ export class GapAnalyzerService {
         }
       }
     }
-    
+
     return Math.min(importance, 10);
   }
 
@@ -721,20 +817,26 @@ export class GapAnalyzerService {
   private estimateFeasibility(gap: any): number {
     // Simple heuristic - in production, use more sophisticated analysis
     let feasibility = 7;
-    
+
     const description = gap.description?.toLowerCase() || '';
-    
+
     // Adjust based on complexity indicators
     if (description.includes('complex') || description.includes('difficult')) {
       feasibility -= 2;
     }
-    if (description.includes('simple') || description.includes('straightforward')) {
+    if (
+      description.includes('simple') ||
+      description.includes('straightforward')
+    ) {
       feasibility += 1;
     }
-    if (description.includes('novel') || description.includes('unprecedented')) {
+    if (
+      description.includes('novel') ||
+      description.includes('unprecedented')
+    ) {
       feasibility -= 1;
     }
-    
+
     return Math.max(1, Math.min(feasibility, 10));
   }
 
@@ -743,7 +845,7 @@ export class GapAnalyzerService {
    */
   private estimateMarketPotential(gap: any, trends: TrendAnalysis[]): number {
     let potential = 5;
-    
+
     // Check trend alignment
     const gapKeywords = gap.title.toLowerCase().split(/\s+/);
     for (const trend of trends) {
@@ -755,16 +857,19 @@ export class GapAnalyzerService {
         }
       }
     }
-    
+
     return Math.min(potential, 10);
   }
 
   /**
    * Helper: Determine trend direction for a gap
    */
-  private determineTrendDirection(gap: any, trends: TrendAnalysis[]): ResearchGap['trendDirection'] {
+  private determineTrendDirection(
+    gap: any,
+    trends: TrendAnalysis[],
+  ): ResearchGap['trendDirection'] {
     const gapKeywords = gap.title.toLowerCase().split(/\s+/);
-    
+
     for (const trend of trends) {
       if (gapKeywords.includes(trend.topic.toLowerCase())) {
         if (trend.trendType === 'emerging' || trend.trendType === 'growing') {
@@ -775,7 +880,7 @@ export class GapAnalyzerService {
         }
       }
     }
-    
+
     return 'stable';
   }
 
@@ -783,22 +888,22 @@ export class GapAnalyzerService {
    * Helper: Rule-based gap identification fallback
    */
   private identifyGapsRuleBased(
-    papers: any[], 
-    topics: TopicModel[], 
-    trends: TrendAnalysis[]
+    papers: any[],
+    topics: TopicModel[],
+    trends: TrendAnalysis[],
   ): ResearchGap[] {
     const gaps: ResearchGap[] = [];
-    
+
     // Identify gaps based on topic coverage
-    const wellCoveredTopics = topics.filter(t => t.prevalence > 0.2);
-    const underCoveredTopics = topics.filter(t => t.prevalence < 0.05);
-    
+    const wellCoveredTopics = topics.filter((t) => t.prevalence > 0.2);
+    const underCoveredTopics = topics.filter((t) => t.prevalence < 0.05);
+
     // Gap 1: Under-researched emerging topics
-    for (const trend of trends.filter(t => t.trendType === 'emerging')) {
-      const isUnderCovered = !wellCoveredTopics.some(topic => 
-        topic.keywords.includes(trend.topic)
+    for (const trend of trends.filter((t) => t.trendType === 'emerging')) {
+      const isUnderCovered = !wellCoveredTopics.some((topic) =>
+        topic.keywords.includes(trend.topic),
       );
-      
+
       if (isUnderCovered) {
         gaps.push({
           id: `gap-${Date.now()}-${Math.random()}`,
@@ -815,26 +920,34 @@ export class GapAnalyzerService {
         });
       }
     }
-    
+
     // Gap 2: Intersection of topics
     for (let i = 0; i < topics.length - 1; i++) {
       for (let j = i + 1; j < topics.length; j++) {
-        const intersection = this.findTopicIntersection(topics[i], topics[j], papers);
+        const intersection = this.findTopicIntersection(
+          topics[i],
+          topics[j],
+          papers,
+        );
         if (intersection.gapIdentified) {
           gaps.push(intersection.gap);
         }
       }
     }
-    
+
     return gaps;
   }
 
   /**
    * Helper: Find intersection gaps between topics
    */
-  private findTopicIntersection(topic1: TopicModel, topic2: TopicModel, papers: any[]): any {
-    const intersection = topic1.papers.filter(p => topic2.papers.includes(p));
-    
+  private findTopicIntersection(
+    topic1: TopicModel,
+    topic2: TopicModel,
+    papers: any[],
+  ): any {
+    const intersection = topic1.papers.filter((p) => topic2.papers.includes(p));
+
     if (intersection.length === 0) {
       return {
         gapIdentified: true,
@@ -843,7 +956,10 @@ export class GapAnalyzerService {
           title: `Integration of ${topic1.label} and ${topic2.label}`,
           description: `No studies found combining ${topic1.label} with ${topic2.label}`,
           keywords: [...topic1.keywords, ...topic2.keywords],
-          relatedPapers: [...topic1.papers.slice(0, 3), ...topic2.papers.slice(0, 3)],
+          relatedPapers: [
+            ...topic1.papers.slice(0, 3),
+            ...topic2.papers.slice(0, 3),
+          ],
           importance: 6,
           feasibility: 6,
           marketPotential: 5,
@@ -853,25 +969,30 @@ export class GapAnalyzerService {
         },
       };
     }
-    
+
     return { gapIdentified: false };
   }
 
   /**
    * Helper: Calculate trend score
    */
-  private calculateTrendScore(gap: ResearchGap, trends: TrendAnalysis[]): number {
+  private calculateTrendScore(
+    gap: ResearchGap,
+    trends: TrendAnalysis[],
+  ): number {
     let score = 0;
-    
+
     for (const keyword of gap.keywords) {
-      const trend = trends.find(t => t.topic.toLowerCase() === keyword.toLowerCase());
+      const trend = trends.find(
+        (t) => t.topic.toLowerCase() === keyword.toLowerCase(),
+      );
       if (trend) {
         if (trend.trendType === 'emerging') score += 3;
         if (trend.trendType === 'growing') score += 2;
         if (trend.projectedGrowth > 20) score += 2;
       }
     }
-    
+
     return Math.min(score, 10);
   }
 
@@ -881,32 +1002,35 @@ export class GapAnalyzerService {
   private async calculateNoveltyScore(gap: ResearchGap): Promise<number> {
     // Simple novelty based on related papers
     const relatedPapersCount = gap.relatedPapers.length;
-    
+
     if (relatedPapersCount === 0) return 10;
     if (relatedPapersCount < 3) return 8;
     if (relatedPapersCount < 5) return 6;
     if (relatedPapersCount < 10) return 4;
-    
+
     return 2;
   }
 
   /**
    * Helper: Calculate confidence score
    */
-  private calculateConfidence(gap: ResearchGap, trends: TrendAnalysis[]): number {
+  private calculateConfidence(
+    gap: ResearchGap,
+    trends: TrendAnalysis[],
+  ): number {
     let confidence = 0.5; // Base confidence
-    
+
     // Increase confidence if gap aligns with trends
-    const alignedTrends = trends.filter(t => 
-      gap.keywords.some(k => k.toLowerCase() === t.topic.toLowerCase())
+    const alignedTrends = trends.filter((t) =>
+      gap.keywords.some((k) => k.toLowerCase() === t.topic.toLowerCase()),
     );
-    
+
     confidence += alignedTrends.length * 0.1;
-    
+
     // Increase confidence based on related papers
     if (gap.relatedPapers.length > 5) confidence += 0.1;
     if (gap.relatedPapers.length > 10) confidence += 0.1;
-    
+
     return Math.min(confidence, 1);
   }
 
@@ -914,12 +1038,12 @@ export class GapAnalyzerService {
    * Helper: Calculate opportunity score
    */
   private calculateOpportunityScore(gap: ResearchGap): number {
-    const weightedScore = 
+    const weightedScore =
       gap.importance * 0.35 +
       gap.feasibility * 0.25 +
       gap.marketPotential * 0.25 +
       gap.confidenceScore * 15;
-    
+
     return Math.round(weightedScore * 10) / 10;
   }
 
@@ -936,31 +1060,36 @@ export class GapAnalyzerService {
       collaborators: [],
       funding: [],
     };
-    
+
     const lines = content.split('\n');
     let currentSection = '';
-    
+
     for (const line of lines) {
       const lowerLine = line.toLowerCase();
-      
+
       if (lowerLine.includes('rationale')) currentSection = 'rationale';
       else if (lowerLine.includes('approach')) currentSection = 'approach';
       else if (lowerLine.includes('challenge')) currentSection = 'challenges';
       else if (lowerLine.includes('resource')) currentSection = 'resources';
       else if (lowerLine.includes('timeline')) currentSection = 'timeline';
-      else if (lowerLine.includes('collaborat')) currentSection = 'collaborators';
+      else if (lowerLine.includes('collaborat'))
+        currentSection = 'collaborators';
       else if (lowerLine.includes('funding')) currentSection = 'funding';
       else if (line.trim() && currentSection) {
         const cleanLine = line.replace(/^[-•*]\s*/, '').trim();
-        
-        if (['challenges', 'resources', 'collaborators', 'funding'].includes(currentSection)) {
+
+        if (
+          ['challenges', 'resources', 'collaborators', 'funding'].includes(
+            currentSection,
+          )
+        ) {
           if (cleanLine) analysis[currentSection].push(cleanLine);
         } else {
           analysis[currentSection] = cleanLine;
         }
       }
     }
-    
+
     return analysis;
   }
 

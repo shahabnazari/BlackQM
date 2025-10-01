@@ -1,5 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GapAnalyzerService, ResearchGap, ResearchOpportunity, TrendAnalysis, KeywordAnalysis, TopicModel } from './gap-analyzer.service';
+import {
+  GapAnalyzerService,
+  ResearchGap,
+  ResearchOpportunity,
+  TrendAnalysis,
+  KeywordAnalysis,
+  TopicModel,
+} from './gap-analyzer.service';
 import { PrismaService } from '../../../common/prisma.service';
 import { OpenAIService } from '../../ai/services/openai.service';
 import { ThemeExtractionService } from './theme-extraction.service';
@@ -28,7 +35,8 @@ describe('GapAnalyzerService', () => {
     {
       id: 'paper1',
       title: 'Machine Learning in Healthcare',
-      abstract: 'This study explores the application of machine learning algorithms in healthcare diagnostics',
+      abstract:
+        'This study explores the application of machine learning algorithms in healthcare diagnostics',
       keywords: ['machine learning', 'healthcare', 'diagnostics'],
       year: 2023,
       themes: [],
@@ -37,7 +45,8 @@ describe('GapAnalyzerService', () => {
     {
       id: 'paper2',
       title: 'Deep Learning for Medical Imaging',
-      abstract: 'A comprehensive review of deep learning techniques for medical image analysis',
+      abstract:
+        'A comprehensive review of deep learning techniques for medical image analysis',
       keywords: ['deep learning', 'medical imaging', 'computer vision'],
       year: 2023,
       themes: [],
@@ -46,7 +55,8 @@ describe('GapAnalyzerService', () => {
     {
       id: 'paper3',
       title: 'AI Ethics in Healthcare',
-      abstract: 'Examining ethical considerations of artificial intelligence in medical practice',
+      abstract:
+        'Examining ethical considerations of artificial intelligence in medical practice',
       keywords: ['AI ethics', 'healthcare', 'artificial intelligence'],
       year: 2022,
       themes: [],
@@ -60,14 +70,19 @@ describe('GapAnalyzerService', () => {
         GapAnalyzerService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: OpenAIService, useValue: mockOpenAIService },
-        { provide: ThemeExtractionService, useValue: mockThemeExtractionService },
+        {
+          provide: ThemeExtractionService,
+          useValue: mockThemeExtractionService,
+        },
       ],
     }).compile();
 
     service = module.get<GapAnalyzerService>(GapAnalyzerService);
     prismaService = module.get<PrismaService>(PrismaService);
     openAIService = module.get<OpenAIService>(OpenAIService);
-    themeExtractionService = module.get<ThemeExtractionService>(ThemeExtractionService);
+    themeExtractionService = module.get<ThemeExtractionService>(
+      ThemeExtractionService,
+    );
   });
 
   afterEach(() => {
@@ -98,7 +113,11 @@ describe('GapAnalyzerService', () => {
         ]),
       });
 
-      const gaps = await service.analyzeResearchGaps(['paper1', 'paper2', 'paper3']);
+      const gaps = await service.analyzeResearchGaps([
+        'paper1',
+        'paper2',
+        'paper3',
+      ]);
 
       expect(gaps).toBeDefined();
       expect(Array.isArray(gaps)).toBe(true);
@@ -127,7 +146,9 @@ describe('GapAnalyzerService', () => {
           prevalence: 0.03,
         },
       ]);
-      mockOpenAIService.generateCompletion.mockRejectedValue(new Error('AI service unavailable'));
+      mockOpenAIService.generateCompletion.mockRejectedValue(
+        new Error('AI service unavailable'),
+      );
 
       const gaps = await service.analyzeResearchGaps(['paper1', 'paper2']);
 
@@ -150,8 +171,10 @@ describe('GapAnalyzerService', () => {
 
     it('should calculate keyword importance correctly', async () => {
       const keywords = await service.extractAndAnalyzeKeywords(mockPapers);
-      
-      const healthcareKeyword = keywords.find(k => k.keyword === 'healthcare');
+
+      const healthcareKeyword = keywords.find(
+        (k) => k.keyword === 'healthcare',
+      );
       expect(healthcareKeyword).toBeDefined();
       expect(healthcareKeyword!.frequency).toBeGreaterThan(0);
       expect(healthcareKeyword!.importance).toBeGreaterThan(0);
@@ -160,8 +183,8 @@ describe('GapAnalyzerService', () => {
 
     it('should track keyword co-occurrences', async () => {
       const keywords = await service.extractAndAnalyzeKeywords(mockPapers);
-      
-      const mlKeyword = keywords.find(k => k.keyword.includes('learning'));
+
+      const mlKeyword = keywords.find((k) => k.keyword.includes('learning'));
       if (mlKeyword) {
         expect(mlKeyword.coOccurrences).toBeDefined();
         expect(Array.isArray(mlKeyword.coOccurrences)).toBe(true);
@@ -179,14 +202,16 @@ describe('GapAnalyzerService', () => {
         },
       ];
 
-      const keywords = await service.extractAndAnalyzeKeywords(papersWithoutAbstracts);
+      const keywords = await service.extractAndAnalyzeKeywords(
+        papersWithoutAbstracts,
+      );
       expect(keywords).toBeDefined();
       expect(() => keywords).not.toThrow();
     });
 
     it('should limit co-occurrences to top 10', async () => {
       const keywords = await service.extractAndAnalyzeKeywords(mockPapers);
-      
+
       for (const keyword of keywords) {
         expect(keyword.coOccurrences.length).toBeLessThanOrEqual(10);
       }
@@ -243,13 +268,15 @@ describe('GapAnalyzerService', () => {
 
     it('should respect numTopics parameter', async () => {
       mockThemeExtractionService.extractThemes.mockResolvedValue(
-        Array(20).fill(null).map((_, i) => ({
-          id: `theme${i}`,
-          label: `Topic ${i}`,
-          keywords: [`keyword${i}`],
-          papers: [`paper${i}`],
-          weight: Math.random() * 10,
-        }))
+        Array(20)
+          .fill(null)
+          .map((_, i) => ({
+            id: `theme${i}`,
+            label: `Topic ${i}`,
+            keywords: [`keyword${i}`],
+            papers: [`paper${i}`],
+            weight: Math.random() * 10,
+          })),
       );
 
       const topics = await service.performTopicModeling(mockPapers, 3);
@@ -310,7 +337,13 @@ describe('GapAnalyzerService', () => {
       const trends = await service.detectTrends(papersByYear, keywords);
 
       expect(trends[0].trendType).toBeDefined();
-      expect(['emerging', 'growing', 'stable', 'declining', 'cyclical']).toContain(trends[0].trendType);
+      expect([
+        'emerging',
+        'growing',
+        'stable',
+        'declining',
+        'cyclical',
+      ]).toContain(trends[0].trendType);
     });
 
     it('should detect inflection points', async () => {
@@ -368,7 +401,8 @@ describe('GapAnalyzerService', () => {
       ];
 
       mockOpenAIService.generateCompletion.mockResolvedValue({
-        content: 'Rationale: High impact opportunity\nApproach: Develop new methods\nChallenges: Technical complexity',
+        content:
+          'Rationale: High impact opportunity\nApproach: Develop new methods\nChallenges: Technical complexity',
       });
 
       const opportunities = await service.generateOpportunities(gaps);
@@ -414,7 +448,9 @@ describe('GapAnalyzerService', () => {
 
       const opportunities = await service.generateOpportunities(gaps);
 
-      expect(opportunities[0].opportunityScore).toBeGreaterThan(opportunities[1].opportunityScore);
+      expect(opportunities[0].opportunityScore).toBeGreaterThan(
+        opportunities[1].opportunityScore,
+      );
     });
 
     it('should handle AI errors gracefully', async () => {
@@ -432,7 +468,9 @@ describe('GapAnalyzerService', () => {
         },
       ];
 
-      mockOpenAIService.generateCompletion.mockRejectedValue(new Error('AI error'));
+      mockOpenAIService.generateCompletion.mockRejectedValue(
+        new Error('AI error'),
+      );
 
       // Should still generate opportunities with fallback values
       const opportunities = await service.generateOpportunities(gaps);
@@ -444,15 +482,17 @@ describe('GapAnalyzerService', () => {
 
   describe('Performance Tests', () => {
     it('should analyze 100 papers in under 5 seconds', async () => {
-      const largePaperSet = Array(100).fill(null).map((_, i) => ({
-        id: `paper${i}`,
-        title: `Research Paper ${i}`,
-        abstract: `Abstract for paper ${i} with various keywords and topics`,
-        keywords: [`keyword${i % 10}`, `topic${i % 5}`],
-        year: 2020 + (i % 4),
-        themes: [],
-        collection: null,
-      }));
+      const largePaperSet = Array(100)
+        .fill(null)
+        .map((_, i) => ({
+          id: `paper${i}`,
+          title: `Research Paper ${i}`,
+          abstract: `Abstract for paper ${i} with various keywords and topics`,
+          keywords: [`keyword${i % 10}`, `topic${i % 5}`],
+          year: 2020 + (i % 4),
+          themes: [],
+          collection: null,
+        }));
 
       mockPrismaService.paper.findMany.mockResolvedValue(largePaperSet);
       mockThemeExtractionService.extractThemes.mockResolvedValue([]);
@@ -461,7 +501,7 @@ describe('GapAnalyzerService', () => {
       });
 
       const startTime = Date.now();
-      await service.analyzeResearchGaps(largePaperSet.map(p => p.id));
+      await service.analyzeResearchGaps(largePaperSet.map((p) => p.id));
       const endTime = Date.now();
 
       expect(endTime - startTime).toBeLessThan(5000);
@@ -472,9 +512,9 @@ describe('GapAnalyzerService', () => {
       mockThemeExtractionService.extractThemes.mockResolvedValue([]);
       mockOpenAIService.generateCompletion.mockResolvedValue({ content: '[]' });
 
-      const promises = Array(5).fill(null).map(() => 
-        service.analyzeResearchGaps(['paper1', 'paper2'])
-      );
+      const promises = Array(5)
+        .fill(null)
+        .map(() => service.analyzeResearchGaps(['paper1', 'paper2']));
 
       const results = await Promise.all(promises);
 
@@ -485,9 +525,13 @@ describe('GapAnalyzerService', () => {
 
   describe('Edge Cases', () => {
     it('should handle papers with missing years', async () => {
-      const papersWithoutYears = mockPapers.map(p => ({ ...p, year: undefined }));
-      
-      const keywords = await service.extractAndAnalyzeKeywords(papersWithoutYears);
+      const papersWithoutYears = mockPapers.map((p) => ({
+        ...p,
+        year: undefined,
+      }));
+
+      const keywords =
+        await service.extractAndAnalyzeKeywords(papersWithoutYears);
 
       expect(keywords).toBeDefined();
       expect(() => keywords).not.toThrow();

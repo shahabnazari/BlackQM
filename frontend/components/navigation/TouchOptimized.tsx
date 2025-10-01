@@ -213,7 +213,7 @@ export function TouchButton({
 
   return (
     <TouchOptimized
-      onTap={onClick}
+      onTap={onClick ? () => onClick({} as any) : undefined}
       hapticFeedback={haptic}
       disabled={disabled}
       className="inline-block"
@@ -324,13 +324,13 @@ export function PullToRefresh({
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (window.scrollY === 0) {
-      startY.current = e.touches[0].clientY;
+      startY.current = e.touches[0]?.clientY || 0;
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (window.scrollY === 0 && startY.current) {
-      const currentY = e.touches[0].clientY;
+      const currentY = e.touches[0]?.clientY || 0;
       const distance = Math.max(0, currentY - startY.current);
       setPullDistance(Math.min(distance, threshold * 1.5));
     }

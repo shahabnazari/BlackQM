@@ -85,14 +85,20 @@ export class AIController {
   ) {
     try {
       this.logger.log(`Generating statements for topic: ${dto.topic}`);
-      
+
       // Validate input
       if (!dto.topic || dto.topic.trim().length < 3) {
-        throw new HttpException('Invalid topic provided', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Invalid topic provided',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       if (dto.count && (dto.count < 10 || dto.count > 100)) {
-        throw new HttpException('Statement count must be between 10 and 100', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Statement count must be between 10 and 100',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       const statements = await this.statementGenerator.generateStatements(
@@ -114,21 +120,21 @@ export class AIController {
       };
     } catch (error: any) {
       this.logger.error('Failed to generate statements:', error);
-      
+
       if (error.message?.includes('budget limit exceeded')) {
         throw new HttpException(
           'AI budget limit exceeded. Please contact support.',
           HttpStatus.PAYMENT_REQUIRED,
         );
       }
-      
+
       if (error.message?.includes('Rate limit exceeded')) {
         throw new HttpException(
           'Too many requests. Please try again later.',
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
-      
+
       throw new HttpException(
         'Failed to generate statements. Please try again.',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -164,10 +170,7 @@ export class AIController {
 
   @Post('analyze-text')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  async analyzeText(
-    @Body() dto: AnalyzeTextDto,
-    @Req() req: any,
-  ) {
+  async analyzeText(@Body() dto: AnalyzeTextDto, @Req() req: any) {
     try {
       const analysis = await this.openAIService.analyzeText(
         dto.text,
@@ -196,10 +199,11 @@ export class AIController {
     @Req() req: any,
   ) {
     try {
-      const neutralized = await this.statementGenerator.suggestNeutralAlternative(
-        dto.statement,
-        req.user.id,
-      );
+      const neutralized =
+        await this.statementGenerator.suggestNeutralAlternative(
+          dto.statement,
+          req.user.id,
+        );
 
       return {
         success: true,
@@ -222,11 +226,12 @@ export class AIController {
     @Req() req: any,
   ) {
     try {
-      const sensitivity = await this.statementGenerator.checkCulturalSensitivity(
-        dto.statements,
-        dto.targetRegions,
-        req.user.id,
-      );
+      const sensitivity =
+        await this.statementGenerator.checkCulturalSensitivity(
+          dto.statements,
+          dto.targetRegions,
+          req.user.id,
+        );
 
       return {
         success: true,
@@ -268,7 +273,9 @@ export class AIController {
     @Req() req: any,
   ) {
     try {
-      const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const start = startDate
+        ? new Date(startDate)
+        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const end = endDate ? new Date(endDate) : new Date();
 
       const report = await this.costService.generateUsageReport(
@@ -298,8 +305,10 @@ export class AIController {
     @Req() req: any,
   ) {
     try {
-      this.logger.log(`Generating grid recommendations for topic: ${dto.studyTopic}`);
-      
+      this.logger.log(
+        `Generating grid recommendations for topic: ${dto.studyTopic}`,
+      );
+
       const recommendations = await this.gridRecommendation.getRecommendations(
         dto.studyTopic,
         dto.expectedStatements,
@@ -331,7 +340,7 @@ export class AIController {
   ) {
     try {
       this.logger.log(`Generating questionnaire for topic: ${dto.studyTopic}`);
-      
+
       const questions = await this.questionnaireGenerator.generateQuestionnaire(
         dto.studyTopic,
         dto.questionCount,
@@ -363,13 +372,17 @@ export class AIController {
     @Req() req: any,
   ) {
     try {
-      this.logger.log(`Assisting participant ${dto.participantId} at stage: ${dto.stage}`);
-      
-      const prompt = this.buildParticipantAssistancePrompt(dto);
-      const response = await this.openAIService.generateCompletion(
-        prompt,
-        { model: 'fast', temperature: 0.7, maxTokens: 500, userId: req.user.id },
+      this.logger.log(
+        `Assisting participant ${dto.participantId} at stage: ${dto.stage}`,
       );
+
+      const prompt = this.buildParticipantAssistancePrompt(dto);
+      const response = await this.openAIService.generateCompletion(prompt, {
+        model: 'fast',
+        temperature: 0.7,
+        maxTokens: 500,
+        userId: req.user.id,
+      });
 
       return {
         success: true,
@@ -391,23 +404,26 @@ export class AIController {
   // Response Analysis Endpoint
   @Post('responses/analyze')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  async analyzeResponses(
-    @Body() dto: AnalyzeResponsesDto,
-    @Req() req: any,
-  ) {
+  async analyzeResponses(@Body() dto: AnalyzeResponsesDto, @Req() req: any) {
     try {
       this.logger.log(`Analyzing ${dto.responses.length} responses`);
-      
-      const analysisTypes = dto.analysisTypes || ['patterns', 'quality', 'insights'];
+
+      const analysisTypes = dto.analysisTypes || [
+        'patterns',
+        'quality',
+        'insights',
+      ];
       const analysis: any = {};
 
       for (const type of analysisTypes) {
         const prompt = this.buildAnalysisPrompt(type, dto.responses);
-        const result = await this.openAIService.generateCompletion(
-          prompt,
-          { model: 'smart', temperature: 0.5, maxTokens: 1000, userId: req.user.id },
-        );
-        
+        const result = await this.openAIService.generateCompletion(prompt, {
+          model: 'smart',
+          temperature: 0.5,
+          maxTokens: 1000,
+          userId: req.user.id,
+        });
+
         analysis[type] = this.parseAnalysisResult(result.content);
       }
 
@@ -425,34 +441,30 @@ export class AIController {
     }
   }
 
-  // Bias Detection Endpoint  
+  // Bias Detection Endpoint
   @Post('bias/detect')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
-  async detectBias(
-    @Body() dto: BiasDetectionDto,
-    @Req() req: any,
-  ) {
+  async detectBias(@Body() dto: BiasDetectionDto, @Req() req: any) {
     try {
       this.logger.log(`Detecting bias in ${dto.statements.length} statements`);
-      
+
       const depth = dto.analysisDepth || 'quick';
       const prompt = this.buildBiasDetectionPrompt(dto.statements, depth);
-      
-      const response = await this.openAIService.generateCompletion(
-        prompt,
-        { 
-          model: depth === 'comprehensive' ? 'smart' : 'fast', 
-          temperature: 0.3, 
-          maxTokens: depth === 'comprehensive' ? 2000 : 1000,
-          userId: req.user.id 
-        },
-      );
+
+      const response = await this.openAIService.generateCompletion(prompt, {
+        model: depth === 'comprehensive' ? 'smart' : 'fast',
+        temperature: 0.3,
+        maxTokens: depth === 'comprehensive' ? 2000 : 1000,
+        userId: req.user.id,
+      });
 
       const biasAnalysis = this.parseBiasAnalysis(response.content);
 
       if (dto.suggestAlternatives) {
         biasAnalysis.alternatives = await this.generateAlternatives(
-          dto.statements.filter(s => biasAnalysis.biasedStatements?.includes(s)),
+          dto.statements.filter((s) =>
+            biasAnalysis.biasedStatements?.includes(s),
+          ),
           req.user.id,
         );
       }
@@ -473,10 +485,7 @@ export class AIController {
 
   @Post('budget/update')
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // Strict rate limit for budget updates
-  async updateBudget(
-    @Body() dto: UpdateBudgetDto,
-    @Req() req: any,
-  ) {
+  async updateBudget(@Body() dto: UpdateBudgetDto, @Req() req: any) {
     try {
       // Only allow admins or the user themselves to update budget
       await this.costService.updateBudgetLimit(
@@ -511,10 +520,11 @@ export class AIController {
     @Req() req: any,
   ) {
     try {
-      const guidelines = await this.statementGenerator.generatePerspectiveGuidelines(
-        dto.topic,
-        req.user.id,
-      );
+      const guidelines =
+        await this.statementGenerator.generatePerspectiveGuidelines(
+          dto.topic,
+          req.user.id,
+        );
 
       return {
         success: true,
@@ -536,11 +546,12 @@ export class AIController {
     @Req() req: any,
   ) {
     try {
-      const variations = await this.statementGenerator.generateStatementVariations(
-        dto.statement,
-        dto.count || 3,
-        req.user.id,
-      );
+      const variations =
+        await this.statementGenerator.generateStatementVariations(
+          dto.statement,
+          dto.count || 3,
+          req.user.id,
+        );
 
       return {
         success: true,
@@ -557,12 +568,18 @@ export class AIController {
   }
 
   // Helper methods for prompts and parsing
-  private buildParticipantAssistancePrompt(dto: ParticipantAssistanceDto): string {
+  private buildParticipantAssistancePrompt(
+    dto: ParticipantAssistanceDto,
+  ): string {
     const stagePrompts = {
-      consent: 'Provide clear, friendly guidance about the study consent process.',
-      prescreening: 'Help the participant understand the pre-screening questions.',
-      presorting: 'Explain the Q-sort process and provide tips for getting started.',
-      qsort: 'Offer encouragement and tips for completing the Q-sort effectively.',
+      consent:
+        'Provide clear, friendly guidance about the study consent process.',
+      prescreening:
+        'Help the participant understand the pre-screening questions.',
+      presorting:
+        'Explain the Q-sort process and provide tips for getting started.',
+      qsort:
+        'Offer encouragement and tips for completing the Q-sort effectively.',
       postsurvey: 'Guide the participant through the final survey questions.',
     };
 
@@ -589,7 +606,10 @@ Return JSON with: keyInsights, trends, recommendations`,
     return prompts[type as keyof typeof prompts] || prompts.patterns;
   }
 
-  private buildBiasDetectionPrompt(statements: string[], depth: string): string {
+  private buildBiasDetectionPrompt(
+    statements: string[],
+    depth: string,
+  ): string {
     return `Analyze these statements for bias (${depth} analysis):
 
 ${statements.map((s, i) => `${i + 1}. ${s}`).join('\n')}
@@ -657,19 +677,21 @@ Return JSON with:
     userId: string,
   ): Promise<Record<string, string>> {
     const alternatives: Record<string, string> = {};
-    
+
     for (const statement of biasedStatements) {
       const prompt = `Rewrite this statement to be more neutral and unbiased: "${statement}"
 Return only the improved statement.`;
-      
-      const alternative = await this.openAIService.generateCompletion(
-        prompt,
-        { model: 'fast', temperature: 0.7, maxTokens: 100, userId },
-      );
-      
+
+      const alternative = await this.openAIService.generateCompletion(prompt, {
+        model: 'fast',
+        temperature: 0.7,
+        maxTokens: 100,
+        userId,
+      });
+
       alternatives[statement] = alternative.content.trim();
     }
-    
+
     return alternatives;
   }
 }

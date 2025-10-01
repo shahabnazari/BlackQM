@@ -229,10 +229,14 @@ const OptimizedInterpretationWorkspace = memo(
               {...commonProps}
               narrative={
                 narratives[selectedFactor - 1] || {
+                  factorNumber: selectedFactor,
                   title: '',
-                  content: '',
-                  keyThemes: [],
+                  mainTheme: '',
+                  narrative: '',
                   distinguishingStatements: [],
+                  consensusStatements: [],
+                  confidence: 0,
+                  participantCount: 0,
                 }
               }
               factor={analysisResults?.factors?.[selectedFactor - 1]}

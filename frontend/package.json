@@ -21,6 +21,7 @@
     "lighthouse:ci": "lighthouse http://localhost:3000 --output json --quiet --chrome-flags='--headless'",
     "a11y:check": "axe http://localhost:3000 --save a11y-report.json",
     "a11y:watch": "axe http://localhost:3000 --watch",
+    "a11y:test": "node ../test-accessibility.js",
     "test:all": "npm run typecheck && npm run test:coverage && npm run apple-design:validate",
     "setup:zero-errors": "node scripts/zero-error-setup.js",
     "fix:types": "echo '⚠️ Automatic type fixing is disabled to prevent React import issues'",

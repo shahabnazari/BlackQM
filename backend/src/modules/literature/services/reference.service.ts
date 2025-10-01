@@ -53,18 +53,18 @@ export class ReferenceService {
       const type = match[1].toLowerCase() as BibTeXType;
       const citationKey = match[2].trim();
       const fieldsStr = match[3];
-      
+
       const fields: Record<string, string> = {};
       const fieldRegex = /(\w+)\s*=\s*\{([^}]*)\}/g;
       let fieldMatch;
-      
+
       while ((fieldMatch = fieldRegex.exec(fieldsStr)) !== null) {
         fields[fieldMatch[1].toLowerCase()] = fieldMatch[2].trim();
       }
-      
+
       entries.push({ type, citationKey, fields });
     }
-    
+
     return entries;
   }
 
@@ -74,19 +74,19 @@ export class ReferenceService {
   generateBibTeX(paper: any): string {
     const citationKey = this.generateCitationKey(paper);
     const type = this.determineBibTeXType(paper);
-    
+
     let bibtex = `@${type}{${citationKey},\n`;
-    
+
     // Add required fields
     if (paper.title) bibtex += `  title = {${paper.title}},\n`;
     if (paper.authors) {
-      const authorStr = Array.isArray(paper.authors) 
+      const authorStr = Array.isArray(paper.authors)
         ? paper.authors.join(' and ')
         : paper.authors;
       bibtex += `  author = {${authorStr}},\n`;
     }
     if (paper.year) bibtex += `  year = {${paper.year}},\n`;
-    
+
     // Add optional fields
     if (paper.journal) bibtex += `  journal = {${paper.journal}},\n`;
     if (paper.volume) bibtex += `  volume = {${paper.volume}},\n`;
@@ -96,7 +96,7 @@ export class ReferenceService {
     if (paper.url) bibtex += `  url = {${paper.url}},\n`;
     if (paper.publisher) bibtex += `  publisher = {${paper.publisher}},\n`;
     if (paper.abstract) bibtex += `  abstract = {${paper.abstract}},\n`;
-    
+
     bibtex = bibtex.slice(0, -2) + '\n}';
     return bibtex;
   }
@@ -108,13 +108,13 @@ export class ReferenceService {
     const entries: RISEntry[] = [];
     const lines = ris.split('\n');
     let currentEntry: RISEntry | null = null;
-    
+
     for (const line of lines) {
       const match = line.match(/^([A-Z]{2})\s+-\s+(.*)$/);
       if (!match) continue;
-      
+
       const [, tag, value] = match;
-      
+
       if (tag === 'TY') {
         // Start new entry
         if (currentEntry) entries.push(currentEntry);
@@ -131,7 +131,7 @@ export class ReferenceService {
         currentEntry.fields[tag].push(value);
       }
     }
-    
+
     return entries;
   }
 
@@ -140,48 +140,50 @@ export class ReferenceService {
    */
   generateRIS(paper: any): string {
     let ris = '';
-    
+
     // Type
     ris += `TY  - ${this.determineRISType(paper)}\n`;
-    
+
     // Title
     if (paper.title) ris += `TI  - ${paper.title}\n`;
-    
+
     // Authors
     if (paper.authors) {
-      const authors = Array.isArray(paper.authors) ? paper.authors : [paper.authors];
+      const authors = Array.isArray(paper.authors)
+        ? paper.authors
+        : [paper.authors];
       for (const author of authors) {
         ris += `AU  - ${author}\n`;
       }
     }
-    
+
     // Year
     if (paper.year) ris += `PY  - ${paper.year}\n`;
-    
+
     // Journal
     if (paper.journal) ris += `JO  - ${paper.journal}\n`;
-    
+
     // Volume and Issue
     if (paper.volume) ris += `VL  - ${paper.volume}\n`;
     if (paper.number) ris += `IS  - ${paper.number}\n`;
-    
+
     // Pages
     if (paper.pages) {
       const pages = paper.pages.split('-');
       if (pages[0]) ris += `SP  - ${pages[0]}\n`;
       if (pages[1]) ris += `EP  - ${pages[1]}\n`;
     }
-    
+
     // DOI and URL
     if (paper.doi) ris += `DO  - ${paper.doi}\n`;
     if (paper.url) ris += `UR  - ${paper.url}\n`;
-    
+
     // Abstract
     if (paper.abstract) ris += `AB  - ${paper.abstract}\n`;
-    
+
     // End
     ris += 'ER  - \n';
-    
+
     return ris;
   }
 
@@ -219,7 +221,7 @@ export class ReferenceService {
     const issue = paper.number ? `(${paper.number})` : '';
     const pages = paper.pages ? `, ${paper.pages}` : '';
     const doi = paper.doi ? ` https://doi.org/${paper.doi}` : '';
-    
+
     return `${authors} (${year}). ${title}.${journal}${volume}${issue}${pages}.${doi}`;
   }
 
@@ -234,7 +236,7 @@ export class ReferenceService {
     const issue = paper.number ? `.${paper.number}` : '';
     const year = paper.year ? ` (${paper.year})` : '';
     const pages = paper.pages ? `: ${paper.pages}` : '';
-    
+
     return `${authors}. ${title}.${journal}${volume}${issue}${year}${pages}. Print.`;
   }
 
@@ -249,7 +251,7 @@ export class ReferenceService {
     const issue = paper.number ? `, no. ${paper.number}` : '';
     const year = paper.year ? ` (${paper.year})` : '';
     const pages = paper.pages ? `: ${paper.pages}` : '';
-    
+
     return `${authors}. ${title}. ${journal}${volume}${issue}${year}${pages}.`;
   }
 
@@ -264,7 +266,7 @@ export class ReferenceService {
     const volume = paper.volume ? `, vol. ${paper.volume}` : '';
     const issue = paper.number ? `, no. ${paper.number}` : '';
     const pages = paper.pages ? `, pp. ${paper.pages}` : '';
-    
+
     return `${authors} ${year}, ${title}${journal}${volume}${issue}${pages}.`;
   }
 
@@ -279,7 +281,7 @@ export class ReferenceService {
     const issue = paper.number ? ` no. ${paper.number},` : '';
     const pages = paper.pages ? ` pp. ${paper.pages},` : '';
     const year = paper.year ? ` ${paper.year}.` : '';
-    
+
     return `${authors}, ${title}${journal}${volume}${issue}${pages}${year}`;
   }
 
@@ -294,7 +296,7 @@ export class ReferenceService {
     const volume = paper.volume ? `;${paper.volume}` : '';
     const issue = paper.number ? `(${paper.number})` : '';
     const pages = paper.pages ? `:${paper.pages}` : '';
-    
+
     return `${authors}. ${title}.${journal}${year}${volume}${issue}${pages}.`;
   }
 
@@ -337,14 +339,17 @@ export class ReferenceService {
         // Format: "First Last" -> "F. Last"
         const nameParts = author.split(' ');
         if (nameParts.length >= 2) {
-          const initials = nameParts.slice(0, -1).map((p: string) => p[0] + '.').join(' ');
+          const initials = nameParts
+            .slice(0, -1)
+            .map((p: string) => p[0] + '.')
+            .join(' ');
           const lastName = nameParts[nameParts.length - 1];
           return `${initials} ${lastName}`;
         }
       }
       return author;
     });
-    
+
     if (formatted.length === 1) return formatted[0];
     if (formatted.length === 2) return `${formatted[0]} and ${formatted[1]}`;
     return `${formatted[0]} et al.`;
@@ -365,13 +370,16 @@ export class ReferenceService {
         const nameParts = author.split(' ');
         if (nameParts.length >= 2) {
           const lastName = nameParts[nameParts.length - 1];
-          const initials = nameParts.slice(0, -1).map((p: string) => p[0]).join('');
+          const initials = nameParts
+            .slice(0, -1)
+            .map((p: string) => p[0])
+            .join('');
           return `${lastName} ${initials}`;
         }
       }
       return author;
     });
-    
+
     const result = formatted.join(', ');
     return authList.length > 6 ? `${result}, et al` : result;
   }
@@ -381,15 +389,18 @@ export class ReferenceService {
     if (paper.type) {
       const type = paper.type.toLowerCase();
       if (type.includes('book')) return BibTeXType.BOOK;
-      if (type.includes('thesis') && type.includes('phd')) return BibTeXType.PHDTHESIS;
-      if (type.includes('thesis') && type.includes('master')) return BibTeXType.MASTERSTHESIS;
-      if (type.includes('proceedings') || type.includes('conference')) return BibTeXType.INPROCEEDINGS;
+      if (type.includes('thesis') && type.includes('phd'))
+        return BibTeXType.PHDTHESIS;
+      if (type.includes('thesis') && type.includes('master'))
+        return BibTeXType.MASTERSTHESIS;
+      if (type.includes('proceedings') || type.includes('conference'))
+        return BibTeXType.INPROCEEDINGS;
       if (type.includes('report')) return BibTeXType.TECHREPORT;
     }
-    
+
     if (paper.journal) return BibTeXType.ARTICLE;
     if (paper.booktitle || paper.conference) return BibTeXType.INPROCEEDINGS;
-    
+
     return BibTeXType.MISC;
   }
 
@@ -402,19 +413,21 @@ export class ReferenceService {
       if (type.includes('conference')) return 'CONF';
       if (type.includes('report')) return 'RPRT';
     }
-    
+
     if (paper.journal) return 'JOUR';
     if (paper.booktitle || paper.conference) return 'CONF';
-    
+
     return 'GEN';
   }
 
   private generateCitationKey(paper: any): string {
     const year = paper.year || 'XXXX';
-    const authors = Array.isArray(paper.authors) ? paper.authors : [paper.authors || 'Unknown'];
+    const authors = Array.isArray(paper.authors)
+      ? paper.authors
+      : [paper.authors || 'Unknown'];
     const firstAuthor = authors[0];
     let firstAuthorLastName = 'Unknown';
-    
+
     // Handle "Last, First" or "First Last" formats
     if (firstAuthor.includes(',')) {
       firstAuthorLastName = firstAuthor.split(',')[0].trim();
@@ -422,9 +435,9 @@ export class ReferenceService {
       const parts = firstAuthor.split(' ');
       firstAuthorLastName = parts[parts.length - 1] || 'Unknown';
     }
-    
+
     const titleWord = (paper.title || 'untitled').split(' ')[0].toLowerCase();
-    
+
     return `${firstAuthorLastName}${year}${titleWord}`;
   }
 
@@ -443,15 +456,15 @@ export class ReferenceService {
       // Fetch library items
       const response = await fetch(`${baseUrl}/items?limit=100`, { headers });
       const items = await response.json();
-      
+
       // Convert Zotero items to our paper format and save
       const papers = items.map((item: any) => this.convertZoteroItem(item));
-      
+
       // Save to database
       for (const paper of papers) {
         await this.savePaperToLibrary(paper, userId);
       }
-      
+
       return { synced: papers.length, papers };
     } catch (error: any) {
       this.logger.error(`Zotero sync failed: ${error.message}`);

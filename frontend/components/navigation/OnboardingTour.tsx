@@ -277,10 +277,10 @@ export function OnboardingTour({
                       ? highlightBox.bottom + 16
                       : currentTourStep?.position === 'top'
                         ? highlightBox.top - 16
-                        : undefined,
+                        : 0,
                   transform: 'translateX(-50%)',
                 }
-              : undefined
+              : {}
           }
         >
           <Card className="w-96 max-w-[90vw] p-6 shadow-xl">

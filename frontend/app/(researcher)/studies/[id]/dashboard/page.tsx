@@ -23,7 +23,7 @@ export default function StudyDashboard() {
   const params = useParams();
   const router = useRouter();
   const studyId = params.id as string;
-  
+
   const [study, setStudy] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [phaseProgress, setPhaseProgress] = useState<Record<string, number>>({
@@ -45,7 +45,7 @@ export default function StudyDashboard() {
         setLoading(true);
         const studyData = await studyApi.getStudy(studyId);
         setStudy(studyData);
-        
+
         // Calculate phase progress based on study data
         const progress = calculatePhaseProgress(studyData);
         setPhaseProgress(progress);
@@ -56,7 +56,7 @@ export default function StudyDashboard() {
         setLoading(false);
       }
     };
-    
+
     fetchStudyData();
   }, [studyId, router]);
 
@@ -64,8 +64,16 @@ export default function StudyDashboard() {
     const progress: Record<string, number> = {
       discover: studyData.literatureReviewed ? 100 : 0,
       design: studyData.researchQuestions?.length > 0 ? 100 : 0,
-      build: studyData.statements?.length >= 20 ? 100 : studyData.statements?.length * 5 || 0,
-      recruit: Math.min((studyData.participantCount || 0) / (studyData.targetParticipants || 30) * 100, 100),
+      build:
+        studyData.statements?.length >= 20
+          ? 100
+          : studyData.statements?.length * 5 || 0,
+      recruit: Math.min(
+        ((studyData.participantCount || 0) /
+          (studyData.targetParticipants || 30)) *
+          100,
+        100
+      ),
       collect: studyData.completedSorts || 0,
       analyze: studyData.analysisCompleted ? 100 : 0,
       visualize: studyData.chartsGenerated ? 100 : 0,
@@ -88,43 +96,107 @@ export default function StudyDashboard() {
     const currentPhase = getCurrentPhase();
     const actions = {
       discover: [
-        { label: 'Continue Literature Review', icon: DocumentTextIcon, href: `/discover/literature?studyId=${studyId}` },
-        { label: 'Map Knowledge Gaps', icon: ChartBarIcon, href: `/discover/knowledge-map?studyId=${studyId}` },
+        {
+          label: 'Continue Literature Review',
+          icon: DocumentTextIcon,
+          href: `/discover/literature?studyId=${studyId}`,
+        },
+        {
+          label: 'Map Knowledge Gaps',
+          icon: ChartBarIcon,
+          href: `/discover/knowledge-map?studyId=${studyId}`,
+        },
       ],
       design: [
-        { label: 'Formulate Research Questions', icon: DocumentTextIcon, href: `/design/questions?studyId=${studyId}` },
-        { label: 'Define Hypotheses', icon: BeakerIcon, href: `/design/hypothesis?studyId=${studyId}` },
+        {
+          label: 'Formulate Research Questions',
+          icon: DocumentTextIcon,
+          href: `/design/questions?studyId=${studyId}`,
+        },
+        {
+          label: 'Define Hypotheses',
+          icon: BeakerIcon,
+          href: `/design/hypothesis?studyId=${studyId}`,
+        },
       ],
       build: [
-        { label: 'Add Statements', icon: DocumentTextIcon, href: `/build/statements?studyId=${studyId}` },
-        { label: 'Configure Q-Grid', icon: ChartBarIcon, href: `/build/grid?studyId=${studyId}` },
+        {
+          label: 'Add Statements',
+          icon: DocumentTextIcon,
+          href: `/build/statements?studyId=${studyId}`,
+        },
+        {
+          label: 'Configure Q-Grid',
+          icon: ChartBarIcon,
+          href: `/build/grid?studyId=${studyId}`,
+        },
       ],
       recruit: [
-        { label: 'Invite Participants', icon: UserGroupIcon, href: `/recruit/invite?studyId=${studyId}` },
-        { label: 'Manage Schedule', icon: CalendarIcon, href: `/recruit/schedule?studyId=${studyId}` },
+        {
+          label: 'Invite Participants',
+          icon: UserGroupIcon,
+          href: `/recruit/invite?studyId=${studyId}`,
+        },
+        {
+          label: 'Manage Schedule',
+          icon: CalendarIcon,
+          href: `/recruit/schedule?studyId=${studyId}`,
+        },
       ],
       collect: [
-        { label: 'Monitor Progress', icon: ChartBarIcon, href: `/collect/monitor?studyId=${studyId}` },
-        { label: 'Send Reminders', icon: ClockIcon, href: `/collect/reminders?studyId=${studyId}` },
+        {
+          label: 'Monitor Progress',
+          icon: ChartBarIcon,
+          href: `/collect/monitor?studyId=${studyId}`,
+        },
+        {
+          label: 'Send Reminders',
+          icon: ClockIcon,
+          href: `/collect/reminders?studyId=${studyId}`,
+        },
       ],
       analyze: [
-        { label: 'Run Factor Analysis', icon: BeakerIcon, href: `/analysis/q-methodology?studyId=${studyId}` },
-        { label: 'View Results', icon: ChartBarIcon, href: `/analysis/hub?studyId=${studyId}` },
+        {
+          label: 'Run Factor Analysis',
+          icon: BeakerIcon,
+          href: `/analysis/q-methodology?studyId=${studyId}`,
+        },
+        {
+          label: 'View Results',
+          icon: ChartBarIcon,
+          href: `/analysis/hub?studyId=${studyId}`,
+        },
       ],
       visualize: [
-        { label: 'Generate Charts', icon: ChartBarIcon, href: `/visualize?studyId=${studyId}` },
+        {
+          label: 'Generate Charts',
+          icon: ChartBarIcon,
+          href: `/visualize?studyId=${studyId}`,
+        },
       ],
       interpret: [
-        { label: 'Extract Themes', icon: DocumentTextIcon, href: `/interpret/themes?studyId=${studyId}` },
+        {
+          label: 'Extract Themes',
+          icon: DocumentTextIcon,
+          href: `/interpret/themes?studyId=${studyId}`,
+        },
       ],
       report: [
-        { label: 'Generate Report', icon: DocumentTextIcon, href: `/report?studyId=${studyId}` },
+        {
+          label: 'Generate Report',
+          icon: DocumentTextIcon,
+          href: `/report?studyId=${studyId}`,
+        },
       ],
       archive: [
-        { label: 'Archive Study', icon: DocumentTextIcon, href: `/archive?studyId=${studyId}` },
+        {
+          label: 'Archive Study',
+          icon: DocumentTextIcon,
+          href: `/archive?studyId=${studyId}`,
+        },
       ],
     };
-    
+
     return actions[currentPhase as keyof typeof actions] || [];
   };
 
@@ -145,7 +217,8 @@ export default function StudyDashboard() {
 
   const currentPhase = getCurrentPhase();
   const nextActions = getNextActions();
-  const overallProgress = Object.values(phaseProgress).reduce((sum, val) => sum + val, 0) / 10;
+  const overallProgress =
+    Object.values(phaseProgress).reduce((sum, val) => sum + val, 0) / 10;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
@@ -156,21 +229,21 @@ export default function StudyDashboard() {
             <h1 className="text-3xl font-bold text-gray-900">{study.title}</h1>
             <p className="text-gray-600 mt-2">{study.description}</p>
             <div className="flex items-center gap-4 mt-4">
-              <Badge variant={study.status === 'active' ? 'success' : 'secondary'}>
+              <Badge
+                variant={study.status === 'active' ? 'success' : 'secondary'}
+              >
                 {study.status}
               </Badge>
               <span className="text-sm text-gray-500">
                 Created {new Date(study.createdAt).toLocaleDateString()}
               </span>
               <span className="text-sm text-gray-500">
-                Current Phase: <strong className="capitalize">{currentPhase}</strong>
+                Current Phase:{' '}
+                <strong className="capitalize">{currentPhase}</strong>
               </span>
             </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => router.push('/dashboard')}
-          >
+          <Button variant="outline" onClick={() => router.push('/dashboard')}>
             Back to All Studies
           </Button>
         </div>
@@ -186,11 +259,13 @@ export default function StudyDashboard() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Total Completion</span>
-                <span className="text-sm text-gray-600">{Math.round(overallProgress)}%</span>
+                <span className="text-sm text-gray-600">
+                  {Math.round(overallProgress)}%
+                </span>
               </div>
               <Progress value={overallProgress} className="h-2" />
             </div>
-            
+
             {/* Phase Progress Grid */}
             <div className="grid grid-cols-5 gap-4 mt-6">
               {Object.entries(phaseProgress).map(([phase, progress]) => (
@@ -215,7 +290,11 @@ export default function StudyDashboard() {
                           strokeWidth="4"
                           fill="none"
                           strokeDasharray={`${progress * 1.76} 176`}
-                          className={progress === 100 ? 'text-green-500' : 'text-purple-600'}
+                          className={
+                            progress === 100
+                              ? 'text-green-500'
+                              : 'text-purple-600'
+                          }
                         />
                       </svg>
                       {progress === 100 && (
@@ -224,7 +303,9 @@ export default function StudyDashboard() {
                     </div>
                   </div>
                   <p className="text-xs capitalize mt-2">{phase}</p>
-                  <p className="text-xs text-gray-500">{Math.round(progress)}%</p>
+                  <p className="text-xs text-gray-500">
+                    {Math.round(progress)}%
+                  </p>
                 </div>
               ))}
             </div>
@@ -266,15 +347,21 @@ export default function StudyDashboard() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold">{study.participantCount || 0}</p>
+                <p className="text-2xl font-bold">
+                  {study.participantCount || 0}
+                </p>
                 <p className="text-xs text-gray-500">
                   Target: {study.targetParticipants || 30}
                 </p>
               </div>
               <UserGroupIcon className="w-8 h-8 text-gray-400" />
             </div>
-            <Progress 
-              value={(study.participantCount || 0) / (study.targetParticipants || 30) * 100} 
+            <Progress
+              value={
+                ((study.participantCount || 0) /
+                  (study.targetParticipants || 30)) *
+                100
+              }
               className="mt-2 h-1"
             />
           </CardContent>
@@ -307,7 +394,9 @@ export default function StudyDashboard() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold">{study.dataQualityScore || 85}%</p>
+                <p className="text-2xl font-bold">
+                  {study.dataQualityScore || 85}%
+                </p>
                 <Badge variant="success" className="mt-1">
                   Excellent
                 </Badge>
@@ -326,28 +415,39 @@ export default function StudyDashboard() {
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-center justify-between text-sm">
-              <span>Started: {new Date(study.createdAt).toLocaleDateString()}</span>
               <span>
-                Estimated Completion: {
-                  new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()
-                }
+                Started: {new Date(study.createdAt).toLocaleDateString()}
+              </span>
+              <span>
+                Estimated Completion:{' '}
+                {new Date(
+                  Date.now() + 30 * 24 * 60 * 60 * 1000
+                ).toLocaleDateString()}
               </span>
             </div>
             <div className="relative">
               <div className="absolute left-0 top-0 h-full w-0.5 bg-gray-200"></div>
               {Object.entries(phaseProgress).map(([phase, progress]) => (
                 <div key={phase} className="relative flex items-center mb-4">
-                  <div className={`absolute left-0 w-4 h-4 rounded-full ${
-                    progress === 100 ? 'bg-green-500' : 
-                    progress > 0 ? 'bg-purple-600' : 'bg-gray-300'
-                  }`} style={{ left: '-7px' }}></div>
+                  <div
+                    className={`absolute left-0 w-4 h-4 rounded-full ${
+                      progress === 100
+                        ? 'bg-green-500'
+                        : progress > 0
+                          ? 'bg-purple-600'
+                          : 'bg-gray-300'
+                    }`}
+                    style={{ left: '-7px' }}
+                  ></div>
                   <div className="ml-8">
                     <p className="text-sm font-medium capitalize">{phase}</p>
                     {progress === 100 && (
                       <p className="text-xs text-gray-500">Completed</p>
                     )}
                     {progress > 0 && progress < 100 && (
-                      <p className="text-xs text-purple-600">In Progress ({progress}%)</p>
+                      <p className="text-xs text-purple-600">
+                        In Progress ({progress}%)
+                      </p>
                     )}
                   </div>
                 </div>

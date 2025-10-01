@@ -10,10 +10,15 @@ import {
   UseGuards,
   HttpStatus,
   HttpCode,
-  BadRequestException
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
-import { ParticipantFlowService, ParticipantFlowStage, FlowState, SavePointData } from '../services/participant-flow.service';
+import {
+  ParticipantFlowService,
+  ParticipantFlowStage,
+  FlowState,
+  SavePointData,
+} from '../services/participant-flow.service';
 
 export class InitializeFlowDto {
   surveyId!: string;
@@ -59,7 +64,7 @@ export class ParticipantFlowController {
       dto.surveyId,
       dto.participantId,
       dto.sessionId,
-      dto.metadata
+      dto.metadata,
     );
   }
 
@@ -68,11 +73,15 @@ export class ParticipantFlowController {
   @ApiResponse({ status: 200, description: 'Current flow state' })
   async getFlowState(
     @Param('surveyId') surveyId: string,
-    @Param('participantId') participantId: string
+    @Param('participantId') participantId: string,
   ): Promise<FlowState> {
     try {
       const sessionId = `session-${Date.now()}`; // Temporary session for retrieval
-      return await this.flowService.initializeFlow(surveyId, participantId, sessionId);
+      return await this.flowService.initializeFlow(
+        surveyId,
+        participantId,
+        sessionId,
+      );
     } catch (error) {
       throw new BadRequestException('Failed to retrieve flow state');
     }
@@ -85,13 +94,13 @@ export class ParticipantFlowController {
   async transitionStage(
     @Param('surveyId') surveyId: string,
     @Param('participantId') participantId: string,
-    @Body() dto: TransitionStageDto
+    @Body() dto: TransitionStageDto,
   ): Promise<FlowState> {
     return this.flowService.transitionToStage(
       surveyId,
       participantId,
       dto.targetStage,
-      dto.stageData
+      dto.stageData,
     );
   }
 
@@ -101,13 +110,13 @@ export class ParticipantFlowController {
   async saveProgress(
     @Param('surveyId') surveyId: string,
     @Param('participantId') participantId: string,
-    @Body() dto: SaveProgressDto
+    @Body() dto: SaveProgressDto,
   ): Promise<SavePointData> {
     return this.flowService.saveProgress(
       surveyId,
       participantId,
       dto.data,
-      dto.isPartial
+      dto.isPartial,
     );
   }
 
@@ -117,9 +126,13 @@ export class ParticipantFlowController {
   async resumeFromSavePoint(
     @Param('surveyId') surveyId: string,
     @Param('participantId') participantId: string,
-    @Body('sessionId') sessionId: string
+    @Body('sessionId') sessionId: string,
   ): Promise<FlowState> {
-    return this.flowService.resumeFromSavePoint(surveyId, participantId, sessionId);
+    return this.flowService.resumeFromSavePoint(
+      surveyId,
+      participantId,
+      sessionId,
+    );
   }
 
   @Get(':surveyId/:participantId/guards')
@@ -127,7 +140,7 @@ export class ParticipantFlowController {
   @ApiResponse({ status: 200, description: 'Navigation guards' })
   async getNavigationGuards(
     @Param('surveyId') surveyId: string,
-    @Param('participantId') participantId: string
+    @Param('participantId') participantId: string,
   ): Promise<{
     canProceed: boolean;
     canGoBack: boolean;
@@ -145,7 +158,7 @@ export class ParticipantFlowController {
   async trackMetrics(
     @Param('surveyId') surveyId: string,
     @Param('participantId') participantId: string,
-    @Body() dto: TrackMetricsDto
+    @Body() dto: TrackMetricsDto,
   ): Promise<void> {
     await this.flowService.trackStageMetrics(surveyId, participantId, dto);
   }
@@ -157,7 +170,7 @@ export class ParticipantFlowController {
   async abandonFlow(
     @Param('surveyId') surveyId: string,
     @Param('participantId') participantId: string,
-    @Body('reason') reason?: string
+    @Body('reason') reason?: string,
   ): Promise<void> {
     await this.flowService.handleAbandonedFlow(surveyId, participantId, reason);
   }

@@ -63,7 +63,12 @@ const databaseSources: DatabaseSource[] = [
     apiLimits: '100 requests/5 min',
     accessType: 'free',
     url: 'https://www.semanticscholar.org',
-    features: ['AI-extracted insights', 'Citation context', 'Author profiles', 'Paper recommendations'],
+    features: [
+      'AI-extracted insights',
+      'Citation context',
+      'Author profiles',
+      'Paper recommendations',
+    ],
   },
   {
     id: 'crossref',
@@ -77,7 +82,12 @@ const databaseSources: DatabaseSource[] = [
     apiLimits: 'Polite crawling expected',
     accessType: 'free',
     url: 'https://www.crossref.org',
-    features: ['DOI resolution', 'Metadata retrieval', 'Reference linking', 'Funding information'],
+    features: [
+      'DOI resolution',
+      'Metadata retrieval',
+      'Reference linking',
+      'Funding information',
+    ],
   },
   {
     id: 'pubmed',
@@ -91,7 +101,12 @@ const databaseSources: DatabaseSource[] = [
     apiLimits: '3 requests/second',
     accessType: 'free',
     url: 'https://pubmed.ncbi.nlm.nih.gov',
-    features: ['MeSH terms', 'Clinical trials', 'Full-text links', 'Related articles'],
+    features: [
+      'MeSH terms',
+      'Clinical trials',
+      'Full-text links',
+      'Related articles',
+    ],
   },
   {
     id: 'arxiv',
@@ -105,7 +120,12 @@ const databaseSources: DatabaseSource[] = [
     apiLimits: 'Bulk download available',
     accessType: 'free',
     url: 'https://arxiv.org',
-    features: ['Preprints', 'Version history', 'LaTeX source', 'Category classification'],
+    features: [
+      'Preprints',
+      'Version history',
+      'LaTeX source',
+      'Category classification',
+    ],
   },
 
   // Coming Soon - Free/Limited Access
@@ -120,7 +140,12 @@ const databaseSources: DatabaseSource[] = [
     updateFrequency: 'Daily',
     accessType: 'free',
     url: 'https://europepmc.org',
-    features: ['Full-text search', 'Data citations', 'Preprints', 'Text mining'],
+    features: [
+      'Full-text search',
+      'Data citations',
+      'Preprints',
+      'Text mining',
+    ],
   },
   {
     id: 'core',
@@ -132,7 +157,12 @@ const databaseSources: DatabaseSource[] = [
     recordCount: '250M+ open access papers',
     accessType: 'free-limited',
     url: 'https://core.ac.uk',
-    features: ['Full-text PDFs', 'Discovery API', 'Dataset links', 'Similar papers'],
+    features: [
+      'Full-text PDFs',
+      'Discovery API',
+      'Dataset links',
+      'Similar papers',
+    ],
   },
   {
     id: 'biorxiv',
@@ -157,7 +187,12 @@ const databaseSources: DatabaseSource[] = [
     coverage: 'Real-time academic discourse',
     apiLimits: 'Rate limited',
     accessType: 'free-limited',
-    features: ['Paper discussions', 'Thread analysis', 'Author engagement', 'Altmetrics'],
+    features: [
+      'Paper discussions',
+      'Thread analysis',
+      'Author engagement',
+      'Altmetrics',
+    ],
     limitations: ['API restrictions', 'Limited historical data'],
   },
   {
@@ -168,7 +203,12 @@ const databaseSources: DatabaseSource[] = [
     status: 'coming-soon',
     coverage: 'r/science, r/AskScience, discipline subreddits',
     accessType: 'free',
-    features: ['Community insights', 'Paper discussions', 'Q&A threads', 'Peer feedback'],
+    features: [
+      'Community insights',
+      'Paper discussions',
+      'Q&A threads',
+      'Peer feedback',
+    ],
   },
   {
     id: 'github-research',
@@ -178,7 +218,12 @@ const databaseSources: DatabaseSource[] = [
     status: 'coming-soon',
     coverage: 'Computational research',
     accessType: 'free',
-    features: ['Code repositories', 'Data sets', 'Notebooks', 'Reproducibility info'],
+    features: [
+      'Code repositories',
+      'Data sets',
+      'Notebooks',
+      'Reproducibility info',
+    ],
   },
 
   // Premium/Subscription Sources (Future)
@@ -192,20 +237,30 @@ const databaseSources: DatabaseSource[] = [
     recordCount: '90M+ records',
     accessType: 'subscription',
     url: 'https://www.webofscience.com',
-    features: ['Citation analysis', 'Journal metrics', 'Author profiles', 'Funding data'],
+    features: [
+      'Citation analysis',
+      'Journal metrics',
+      'Author profiles',
+      'Funding data',
+    ],
     limitations: ['Requires institutional access', 'Expensive licensing'],
   },
   {
     id: 'scopus',
     name: 'Scopus',
-    description: 'Elsevier\'s abstract and citation database',
+    description: "Elsevier's abstract and citation database",
     icon: Database,
     status: 'premium',
     coverage: 'Science, Technology, Medicine, Social Sciences',
     recordCount: '85M+ records',
     accessType: 'subscription',
     url: 'https://www.scopus.com',
-    features: ['Author profiles', 'Institution rankings', 'Journal metrics', 'Patent citations'],
+    features: [
+      'Author profiles',
+      'Institution rankings',
+      'Journal metrics',
+      'Patent citations',
+    ],
     limitations: ['Subscription required', 'Limited API access'],
   },
   {
@@ -218,7 +273,12 @@ const databaseSources: DatabaseSource[] = [
     recordCount: '6M+ documents',
     accessType: 'institutional',
     url: 'https://ieeexplore.ieee.org',
-    features: ['Standards', 'Conference proceedings', 'Technical reports', 'Early access'],
+    features: [
+      'Standards',
+      'Conference proceedings',
+      'Technical reports',
+      'Early access',
+    ],
     limitations: ['Institutional subscription needed'],
   },
   {
@@ -231,14 +291,21 @@ const databaseSources: DatabaseSource[] = [
     recordCount: '12M+ academic articles',
     accessType: 'institutional',
     url: 'https://www.jstor.org',
-    features: ['Historical archives', 'Primary sources', 'Books', 'Research reports'],
+    features: [
+      'Historical archives',
+      'Primary sources',
+      'Books',
+      'Research reports',
+    ],
     limitations: ['Limited free access', 'Moving wall for recent content'],
   },
 ];
 
 export default function DatabaseSourcesInfo() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'active' | 'coming-soon' | 'premium'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<
+    'all' | 'active' | 'coming-soon' | 'premium'
+  >('all');
 
   const filteredSources = databaseSources.filter(source => {
     if (selectedCategory === 'all') return true;
@@ -277,12 +344,12 @@ export default function DatabaseSourcesInfo() {
 
   const getAccessBadge = (accessType: DatabaseSource['accessType']) => {
     const colors = {
-      'free': 'bg-green-100 text-green-700',
+      free: 'bg-green-100 text-green-700',
       'free-limited': 'bg-blue-100 text-blue-700',
-      'subscription': 'bg-purple-100 text-purple-700',
-      'institutional': 'bg-orange-100 text-orange-700',
+      subscription: 'bg-purple-100 text-purple-700',
+      institutional: 'bg-orange-100 text-orange-700',
     };
-    
+
     return (
       <Badge variant="outline" className={cn('text-xs', colors[accessType])}>
         {accessType.replace('-', ' ')}
@@ -324,7 +391,7 @@ export default function DatabaseSourcesInfo() {
             )}
           </Button>
         </div>
-        
+
         {/* Quick Stats */}
         <div className="flex flex-wrap gap-4 mt-4">
           <div className="flex items-center gap-2">
@@ -358,25 +425,29 @@ export default function DatabaseSourcesInfo() {
           >
             <CardContent className="pt-0">
               <Separator className="mb-6" />
-              
+
               {/* Category Filter */}
               <div className="flex gap-2 mb-6">
-                {(['all', 'active', 'coming-soon', 'premium'] as const).map((category) => (
-                  <Button
-                    key={category}
-                    variant={selectedCategory === category ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedCategory(category)}
-                    className="capitalize"
-                  >
-                    {category.replace('-', ' ')}
-                  </Button>
-                ))}
+                {(['all', 'active', 'coming-soon', 'premium'] as const).map(
+                  category => (
+                    <Button
+                      key={category}
+                      variant={
+                        selectedCategory === category ? 'default' : 'outline'
+                      }
+                      size="sm"
+                      onClick={() => setSelectedCategory(category)}
+                      className="capitalize"
+                    >
+                      {category.replace('-', ' ')}
+                    </Button>
+                  )
+                )}
               </div>
 
               {/* Database Sources Grid */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredSources.map((source) => {
+                {filteredSources.map(source => {
                   const Icon = source.icon;
                   return (
                     <motion.div
@@ -390,66 +461,94 @@ export default function DatabaseSourcesInfo() {
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2">
                               <Icon className="h-5 w-5 text-primary" />
-                              <h4 className="font-semibold text-sm">{source.name}</h4>
+                              <h4 className="font-semibold text-sm">
+                                {source.name}
+                              </h4>
                             </div>
                             <div className="flex items-center gap-1">
                               {getAccessBadge(source.accessType)}
                             </div>
                           </div>
-                          <div className={cn(
-                            'inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full mt-2 w-fit',
-                            getStatusColor(source.status)
-                          )}>
+                          <div
+                            className={cn(
+                              'inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full mt-2 w-fit',
+                              getStatusColor(source.status)
+                            )}
+                          >
                             {getStatusIcon(source.status)}
-                            <span className="capitalize">{source.status.replace('-', ' ')}</span>
+                            <span className="capitalize">
+                              {source.status.replace('-', ' ')}
+                            </span>
                           </div>
                         </CardHeader>
                         <CardContent className="pt-0">
                           <p className="text-xs text-muted-foreground mb-3">
                             {source.description}
                           </p>
-                          
+
                           {/* Coverage & Stats */}
                           <div className="space-y-2 mb-3">
                             <div className="text-xs">
                               <span className="font-medium">Coverage:</span>{' '}
-                              <span className="text-muted-foreground">{source.coverage}</span>
+                              <span className="text-muted-foreground">
+                                {source.coverage}
+                              </span>
                             </div>
                             {source.recordCount && (
                               <div className="text-xs">
                                 <span className="font-medium">Records:</span>{' '}
-                                <span className="text-muted-foreground">{source.recordCount}</span>
+                                <span className="text-muted-foreground">
+                                  {source.recordCount}
+                                </span>
                               </div>
                             )}
                             {source.apiLimits && (
                               <div className="text-xs">
                                 <span className="font-medium">API Limits:</span>{' '}
-                                <span className="text-muted-foreground">{source.apiLimits}</span>
+                                <span className="text-muted-foreground">
+                                  {source.apiLimits}
+                                </span>
                               </div>
                             )}
                           </div>
 
                           {/* Features */}
                           <div className="space-y-1 mb-3">
-                            <span className="text-xs font-medium">Features:</span>
+                            <span className="text-xs font-medium">
+                              Features:
+                            </span>
                             <ul className="text-xs text-muted-foreground space-y-0.5">
-                              {source.features.slice(0, 3).map((feature, idx) => (
-                                <li key={idx} className="flex items-start gap-1">
-                                  <span className="text-green-600 mt-0.5">•</span>
-                                  {feature}
-                                </li>
-                              ))}
+                              {source.features
+                                .slice(0, 3)
+                                .map((feature, idx) => (
+                                  <li
+                                    key={idx}
+                                    className="flex items-start gap-1"
+                                  >
+                                    <span className="text-green-600 mt-0.5">
+                                      •
+                                    </span>
+                                    {feature}
+                                  </li>
+                                ))}
                             </ul>
                           </div>
 
                           {/* Limitations */}
                           {source.limitations && (
                             <div className="space-y-1">
-                              <span className="text-xs font-medium">Limitations:</span>
+                              <span className="text-xs font-medium">
+                                Limitations:
+                              </span>
                               <ul className="text-xs text-muted-foreground space-y-0.5">
                                 {source.limitations.map((limitation, idx) => (
-                                  <li key={idx} className="flex items-start gap-1">
-                                    <span className="text-orange-600 mt-0.5">•</span>
+                                  <li
+                                    key={idx}
+                                    className="flex items-start gap-1"
+                                  >
+                                    <span className="text-orange-600 mt-0.5">
+                                      •
+                                    </span>
                                     {limitation}
                                   </li>
                                 ))}
@@ -483,15 +582,22 @@ export default function DatabaseSourcesInfo() {
                 <div className="flex gap-2">
                   <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Data Usage & Privacy Notice</p>
-                    <p className="text-xs text-muted-foreground">
-                      VQMethod accesses publicly available academic databases and respects all API rate limits and terms of service. 
-                      We do not store full-text articles unless explicitly saved by users. All searches are logged for analytics and 
-                      service improvement. Premium database access requires separate institutional or personal subscriptions.
+                    <p className="text-sm font-medium">
+                      Data Usage & Privacy Notice
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      For social media sources (coming soon), we only analyze publicly available posts and respect user privacy settings. 
-                      No personal data is collected without explicit consent.
+                      VQMethod accesses publicly available academic databases
+                      and respects all API rate limits and terms of service. We
+                      do not store full-text articles unless explicitly saved by
+                      users. All searches are logged for analytics and service
+                      improvement. Premium database access requires separate
+                      institutional or personal subscriptions.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      For social media sources (coming soon), we only analyze
+                      publicly available posts and respect user privacy
+                      settings. No personal data is collected without explicit
+                      consent.
                     </p>
                   </div>
                 </div>

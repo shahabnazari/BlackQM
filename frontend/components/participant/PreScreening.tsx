@@ -87,7 +87,8 @@ export default function PreScreening({
   });
 
   // ML Matching State
-  // Removed unused state variables (participantProfile, isAnalyzing, showMLRecommendations)
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [participantProfile, setParticipantProfile] = useState<ParticipantProfile | null>(null);
   const [studyMatches, setStudyMatches] = useState<StudyMatch[]>([]);
   const [matchConfidence, setMatchConfidence] = useState(0);
 
@@ -165,7 +166,12 @@ export default function PreScreening({
         experience,
         availability,
         preferences,
-        historicalData: getHistoricalData(participantId),
+        historicalData: getHistoricalData(participantId) || {
+          completedStudies: [],
+          abandonedStudies: [],
+          averageCompletionTime: 0,
+          preferredTopics: [],
+        },
       };
     };
   }, [answers, participantId]);
@@ -468,14 +474,14 @@ export default function PreScreening({
     ];
   };
 
+  const isComplete = Object.values(answers).every(value => value !== '');
+  
   // Run ML matching when answers are complete
   useEffect(() => {
     if (enableMLMatching && isComplete && !screeningResult) {
       performMLMatching();
     }
   }, [isComplete, enableMLMatching, screeningResult]);
-
-  const isComplete = Object.values(answers).every(value => value !== '');
 
   // Handle submit for hardcoded questions
   const handleSubmit = () => {

@@ -18,7 +18,7 @@ export default function StudyLayout({
     if (studyId) {
       localStorage.setItem('currentStudyId', studyId);
     }
-    
+
     return () => {
       localStorage.removeItem('currentStudyId');
     };
@@ -29,7 +29,7 @@ export default function StudyLayout({
       <div className="min-h-screen bg-system-background">
         {/* Phase navigation toolbar - only shown in study context */}
         <PrimaryToolbar />
-        
+
         <main>{children}</main>
       </div>
     </NavigationProvider>

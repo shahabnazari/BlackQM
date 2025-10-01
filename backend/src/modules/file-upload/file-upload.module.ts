@@ -14,7 +14,10 @@ import { AuditService } from '../auth/services/audit.service';
       useFactory: async (configService: ConfigService) => ({
         dest: './uploads',
         limits: {
-          fileSize: configService.get<number>('MAX_FILE_SIZE', 10 * 1024 * 1024), // 10MB default
+          fileSize: configService.get<number>(
+            'MAX_FILE_SIZE',
+            10 * 1024 * 1024,
+          ), // 10MB default
           files: configService.get<number>('MAX_FILES', 5),
         },
       }),

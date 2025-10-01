@@ -121,6 +121,14 @@ model Survey {
   enablePostSurvey        Boolean            @default(true)
   enableVideoConferencing Boolean            @default(false)
   settings                Json?
+
+  // Literature Pipeline Fields
+  basedOnPapersIds        Json?              @default("[]") // Array of paper IDs stored as JSON
+  researchGapId           String?
+  extractedThemeIds       Json?              @default("[]") // Array of theme IDs stored as JSON
+  studyContext            Json?              // Stores context like academic level, target statements, etc.
+  literatureReviewId      String?
+
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
   analyses                Analysis[]
@@ -131,6 +139,9 @@ model Survey {
   responses               Response[]
   statements              Statement[]
   stimuli                 Stimulus[]
+  researchPipeline        ResearchPipeline?
+  analysisResults         AnalysisResult[]
+  researchGap             ResearchGap?       @relation(fields: [researchGapId], references: [id])
   creator                 User               @relation(fields: [createdBy], references: [id])
 
   @@index([createdBy])
@@ -143,8 +154,18 @@ model Statement {
   surveyId String
   text     String
   order    Int
-  sorts    QSort[]
-  survey   Survey  @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  // Provenance tracking
+  sourcePaperId   String?       // Which paper this statement originated from
+  sourceThemeId   String?       // Which theme this statement was derived from
+  perspective     String?       // Perspective: supportive, critical, neutral, balanced
+  generationMethod String?      // How it was generated: theme-based, ai-augmented, manual
+  confidence      Float?        // Confidence score 0-1
+  provenance      Json?         // Full provenance data including citation chain
+
+  sorts                 QSort[]
+  survey                Survey                @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  statementProvenance   StatementProvenance?
 
   @@index([surveyId])
 }
@@ -779,6 +800,7 @@ model Paper {
   // Relations
   themes        PaperTheme[]
   gaps          ResearchGap[]
+  statementProvenances StatementProvenance[]
   
   @@index([userId])
   @@index([doi])
@@ -809,9 +831,10 @@ model PaperTheme {
   emergenceYear   Int?
   trendDirection  String?  // 'rising' | 'stable' | 'declining'
   papers          Paper[]
+  statementProvenances StatementProvenance[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  
+
   @@map("paper_themes")
 }
 
@@ -826,11 +849,19 @@ model ResearchGap {
   fundingOpportunities Json?    // JSON array
   collaborators        Json?    // JSON array
   relatedPapers        Paper[]
+
+  // Phase 9 Day 10 additions
+  status               String?  @default("identified") // identified, partially_addressed, fully_addressed
+  addressingStudies    Survey[] // Studies that address this gap
+  completionPercentage Float?   @default(0.0)
+  findings             Json?    // Key findings that address the gap
+  lastUpdated          DateTime?
+
   userId               String
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
-  
+
   @@index([userId])
   @@map("research_gaps")
 }
@@ -842,8 +873,181 @@ model SearchLog {
   query     String
   filters   Json     // Store search filters as JSON
   timestamp DateTime @default(now())
-  
+
   @@index([userId])
   @@index([timestamp])
   @@map("search_logs")
+}
+
+model ResearchPipeline {
+  id                     String   @id @default(cuid())
+  surveyId               String   @unique
+  survey                 Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  // Literature Phase
+  literatureSearchIds    Json?               @default("[]") // IDs of literature searches performed
+  selectedPaperIds       Json?               @default("[]") // Papers selected for the study
+  extractedThemes        Json?               // Themes extracted from papers
+  researchGaps           Json?               // Identified research gaps
+
+  // Study Design Phase
+  generatedStatements    Json?               // Statements generated from themes
+  statementProvenance    Json?               // Provenance for each statement
+  methodSuggestions      Json?               // Suggested methods from similar studies
+
+  // Analysis Phase
+  analysisIds            Json?               @default("[]") // IDs of analyses performed
+  factorInterpretations  Json?               // AI-assisted factor interpretations
+
+  // Report Phase
+  reportIds              Json?               @default("[]") // Generated reports
+  narratives             Json?               // Generated narratives
+
+  // Archive Phase
+  doiIdentifier          String?             // DOI for archived study
+  archiveMetadata        Json?               // Metadata for archive systems
+
+  // Tracking
+  currentPhase           String              @default("literature")
+  completedPhases        Json?               @default("[]") // Completed phases as JSON array
+  pipelineMetadata       Json?               // Additional metadata
+
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([surveyId])
+  @@map("research_pipelines")
+}
+
+// Phase 9 Day 10: Knowledge Graph Models for Literature-Analysis Integration
+
+model KnowledgeNode {
+  id               String   @id @default(cuid())
+  type             String   // PAPER, FINDING, CONCEPT, THEORY, GAP, STATEMENT
+  label            String
+  description      String?
+  sourceStudyId    String?
+  sourcePaperId    String?
+  confidence       Float?   @default(0.5)
+  metadata         Json?
+
+  // Relationships
+  outgoingEdges    KnowledgeEdge[] @relation("FromNode")
+  incomingEdges    KnowledgeEdge[] @relation("ToNode")
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([type])
+  @@index([sourceStudyId])
+  @@index([sourcePaperId])
+  @@map("knowledge_nodes")
+}
+
+model KnowledgeEdge {
+  id               String   @id @default(cuid())
+  fromNodeId       String
+  fromNode         KnowledgeNode @relation("FromNode", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNodeId         String
+  toNode           KnowledgeNode @relation("ToNode", fields: [toNodeId], references: [id], onDelete: Cascade)
+
+  type             String   // SUPPORTS, CONTRADICTS, EXTENDS, RELATED, DERIVED_FROM
+  strength         Float    @default(0.5) // 0-1 strength of relationship
+  metadata         Json?
+
+  createdAt        DateTime @default(now())
+
+  @@unique([fromNodeId, toNodeId, type])
+  @@index([fromNodeId])
+  @@index([toNodeId])
+  @@index([type])
+  @@map("knowledge_edges")
+}
+
+model KnowledgeBase {
+  id               String   @id @default(cuid())
+  type             String   // EMPIRICAL_FINDING, THEORETICAL_CONCEPT, METHOD, GAP
+  category         String?
+  description      String
+  evidence         Json?    // Supporting evidence
+  confidence       Float    @default(0.5)
+  sourceStudyId    String?
+  citations        Json?    // Array of citations
+  tags             Json?    // Array of tags
+  isVerified       Boolean  @default(false)
+  needsReplication Boolean  @default(true)
+  supportingStudies Json?   @default("[]") // Array of study IDs
+
+  // Cross-references
+  crossReferences  KnowledgeCrossReference[] @relation("FromKnowledge")
+  referencedBy     KnowledgeCrossReference[] @relation("ToKnowledge")
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  lastVerified     DateTime?
+
+  @@index([type])
+  @@index([category])
+  @@index([sourceStudyId])
+  @@index([isVerified])
+  @@map("knowledge_base")
+}
+
+model KnowledgeCrossReference {
+  id               String   @id @default(cuid())
+  fromId           String
+  fromEntry        KnowledgeBase @relation("FromKnowledge", fields: [fromId], references: [id], onDelete: Cascade)
+  toId             String
+  toEntry          KnowledgeBase @relation("ToKnowledge", fields: [toId], references: [id], onDelete: Cascade)
+
+  type             String   // RELATED, PREREQUISITE, CONTRADICTION, EXTENSION
+  strength         Float    @default(0.5)
+
+  createdAt        DateTime @default(now())
+
+  @@unique([fromId, toId])
+  @@map("knowledge_cross_references")
+}
+
+model AnalysisResult {
+  id               String   @id @default(cuid())
+  surveyId         String
+  survey           Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  factors          Json?    // Factor analysis results
+  consensus        Json?    // Consensus statements
+  distinguishing   Json?    // Distinguishing statements
+  totalVariance    Float?   // Total variance explained
+  participantCount Int?
+
+  // Literature comparison results
+  comparisonId     String?
+  comparison       Json?    // Literature comparison data
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([surveyId])
+  @@map("analysis_results")
+}
+
+model StatementProvenance {
+  id               String   @id @default(cuid())
+  statementId      String   @unique
+  statement        Statement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+
+  sourcePaperId    String?
+  sourcePaper      Paper?   @relation(fields: [sourcePaperId], references: [id])
+  sourceThemeId    String?
+  sourceTheme      PaperTheme? @relation(fields: [sourceThemeId], references: [id])
+
+  generationMethod String?  // LITERATURE_EXTRACTION, AI_GENERATION, MANUAL, etc.
+  confidence       Float?   @default(0.5)
+  metadata         Json?
+
+  createdAt        DateTime @default(now())
+
+  @@index([sourcePaperId])
+  @@index([sourceThemeId])
+  @@map("statement_provenance")
 }

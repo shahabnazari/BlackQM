@@ -12,15 +12,15 @@ import {
   HttpStatus,
   HttpCode,
   BadRequestException,
-  UseInterceptors
+  UseInterceptors,
 } from '@nestjs/common';
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiResponse, 
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
   ApiBearerAuth,
   ApiQuery,
-  ApiParam
+  ApiParam,
 } from '@nestjs/swagger';
 // import { JwtAuthGuard } from '../guards/jwt-auth.guard'; // TODO: Implement auth guard
 import { QuestionService } from '../services/question.service';
@@ -32,13 +32,13 @@ import {
   ImportQuestionsDto,
   UpdateQuestionOrderDto,
   SubmitAnswerDto,
-  ExportQuestionsDto
+  ExportQuestionsDto,
 } from '../dto/question.dto';
 import { Question } from '@prisma/client';
 
 /**
  * Phase 8.2 Day 1: World-Class Question Controller
- * 
+ *
  * Comprehensive API for question management:
  * - CRUD operations with validation
  * - Bulk operations
@@ -56,7 +56,7 @@ import { Question } from '@prisma/client';
 export class QuestionController {
   constructor(
     private readonly questionService: QuestionService,
-    private readonly screeningService: ScreeningService
+    private readonly screeningService: ScreeningService,
   ) {}
 
   /**
@@ -64,15 +64,17 @@ export class QuestionController {
    */
   @Post()
   @ApiOperation({ summary: 'Create a new question' })
-  @ApiResponse({ 
-    status: HttpStatus.CREATED, 
-    description: 'Question created successfully' 
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Question created successfully',
   })
-  @ApiResponse({ 
-    status: HttpStatus.BAD_REQUEST, 
-    description: 'Invalid question data' 
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid question data',
   })
-  async create(@Body() createQuestionDto: CreateQuestionDto): Promise<Question> {
+  async create(
+    @Body() createQuestionDto: CreateQuestionDto,
+  ): Promise<Question> {
     return this.questionService.create(createQuestionDto);
   }
 
@@ -82,15 +84,31 @@ export class QuestionController {
   @Get('survey/:surveyId')
   @ApiOperation({ summary: 'Get all questions for a survey' })
   @ApiParam({ name: 'surveyId', description: 'Survey ID' })
-  @ApiQuery({ name: 'type', required: false, description: 'Filter by question type' })
-  @ApiQuery({ name: 'required', required: false, description: 'Filter by required status' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number (0-based)' })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    description: 'Filter by question type',
+  })
+  @ApiQuery({
+    name: 'required',
+    required: false,
+    description: 'Filter by required status',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (0-based)',
+  })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page' })
   @ApiQuery({ name: 'sortBy', required: false, description: 'Sort field' })
-  @ApiQuery({ name: 'sortOrder', required: false, description: 'Sort order (asc/desc)' })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    description: 'Sort order (asc/desc)',
+  })
   async findBySurvey(
     @Param('surveyId') surveyId: string,
-    @Query() query: QueryQuestionDto
+    @Query() query: QueryQuestionDto,
   ): Promise<Question[]> {
     return this.questionService.findBySurvey(surveyId, query);
   }
@@ -102,7 +120,7 @@ export class QuestionController {
   @ApiOperation({ summary: 'Get screening questions for a survey' })
   @ApiParam({ name: 'surveyId', description: 'Survey ID' })
   async getScreeningQuestions(
-    @Param('surveyId') surveyId: string
+    @Param('surveyId') surveyId: string,
   ): Promise<Question[]> {
     return this.screeningService.getScreeningQuestions(surveyId);
   }
@@ -125,7 +143,7 @@ export class QuestionController {
   @ApiParam({ name: 'id', description: 'Question ID' })
   async update(
     @Param('id') id: string,
-    @Body() updateQuestionDto: UpdateQuestionDto
+    @Body() updateQuestionDto: UpdateQuestionDto,
   ): Promise<Question> {
     return this.questionService.update(id, updateQuestionDto);
   }
@@ -149,7 +167,7 @@ export class QuestionController {
   @ApiParam({ name: 'surveyId', description: 'Survey ID' })
   async updateOrder(
     @Param('surveyId') surveyId: string,
-    @Body() updateOrderDto: UpdateQuestionOrderDto
+    @Body() updateOrderDto: UpdateQuestionOrderDto,
   ): Promise<void> {
     return this.questionService.updateOrder(updateOrderDto);
   }
@@ -159,12 +177,12 @@ export class QuestionController {
    */
   @Post('import')
   @ApiOperation({ summary: 'Import multiple questions' })
-  @ApiResponse({ 
-    status: HttpStatus.CREATED, 
-    description: 'Questions imported successfully' 
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Questions imported successfully',
   })
   async importQuestions(
-    @Body() importDto: ImportQuestionsDto
+    @Body() importDto: ImportQuestionsDto,
   ): Promise<Question[]> {
     return this.questionService.importQuestions(importDto);
   }
@@ -174,13 +192,13 @@ export class QuestionController {
    */
   @Post('export')
   @ApiOperation({ summary: 'Export questions in various formats' })
-  async exportQuestions(
-    @Body() exportDto: ExportQuestionsDto
-  ): Promise<any> {
+  async exportQuestions(@Body() exportDto: ExportQuestionsDto): Promise<any> {
     // This would typically return a file download
     // For now, return the questions in requested format
-    const questions = await this.questionService.findBySurvey(exportDto.surveyId);
-    
+    const questions = await this.questionService.findBySurvey(
+      exportDto.surveyId,
+    );
+
     switch (exportDto.format) {
       case 'json':
         return questions;
@@ -204,11 +222,11 @@ export class QuestionController {
   @Post('duplicate')
   @ApiOperation({ summary: 'Duplicate questions between surveys' })
   async duplicateQuestions(
-    @Body() body: { fromSurveyId: string; toSurveyId: string }
+    @Body() body: { fromSurveyId: string; toSurveyId: string },
   ): Promise<Question[]> {
     return this.questionService.duplicateQuestions(
-      body.fromSurveyId, 
-      body.toSurveyId
+      body.fromSurveyId,
+      body.toSurveyId,
     );
   }
 
@@ -217,10 +235,12 @@ export class QuestionController {
    */
   @Get('templates')
   @ApiOperation({ summary: 'Get question templates' })
-  @ApiQuery({ name: 'category', required: false, description: 'Template category' })
-  async getTemplates(
-    @Query('category') category?: string
-  ): Promise<any[]> {
+  @ApiQuery({
+    name: 'category',
+    required: false,
+    description: 'Template category',
+  })
+  async getTemplates(@Query('category') category?: string): Promise<any[]> {
     return this.questionService.getTemplates(category);
   }
 
@@ -230,11 +250,12 @@ export class QuestionController {
   @Post('ai/suggestions')
   @ApiOperation({ summary: 'Get AI-generated question suggestions' })
   async getAISuggestions(
-    @Body() context: {
+    @Body()
+    context: {
       surveyTitle: string;
       existingQuestions: string[];
       targetAudience?: string;
-    }
+    },
   ): Promise<CreateQuestionDto[]> {
     return this.questionService.getAISuggestions(context);
   }
@@ -245,16 +266,18 @@ export class QuestionController {
   @Post('validate')
   @ApiOperation({ summary: 'Validate an answer against question rules' })
   async validateAnswer(
-    @Body() body: { questionId: string; value: any }
+    @Body() body: { questionId: string; value: any },
   ): Promise<{ valid: boolean; errors?: string[] }> {
     const valid = await this.questionService.validateAnswer(
       body.questionId,
-      body.value
+      body.value,
     );
-    
+
     return {
       valid,
-      errors: valid ? undefined : ['Value does not meet validation requirements']
+      errors: valid
+        ? undefined
+        : ['Value does not meet validation requirements'],
     };
   }
 
@@ -266,11 +289,11 @@ export class QuestionController {
   @ApiParam({ name: 'surveyId', description: 'Survey ID' })
   async getVisibleQuestions(
     @Param('surveyId') surveyId: string,
-    @Body() body: { previousAnswers: Record<string, any> }
+    @Body() body: { previousAnswers: Record<string, any> },
   ): Promise<Question[]> {
     return this.questionService.getVisibleQuestions(
       surveyId,
-      body.previousAnswers
+      body.previousAnswers,
     );
   }
 
@@ -282,16 +305,17 @@ export class QuestionController {
   @ApiParam({ name: 'surveyId', description: 'Survey ID' })
   async evaluateScreening(
     @Param('surveyId') surveyId: string,
-    @Body() body: { 
-      participantId: string; 
-      responses: Record<string, any> 
+    @Body()
+    body: {
+      participantId: string;
+      responses: Record<string, any>;
     },
-    @Request() req: any
+    @Request() req: any,
   ): Promise<any> {
     const result = await this.screeningService.evaluateScreening(
       surveyId,
       body.participantId || req.user.id,
-      body.responses
+      body.responses,
     );
 
     // Update quotas if qualified
@@ -308,9 +332,7 @@ export class QuestionController {
   @Get('survey/:surveyId/screening/config')
   @ApiOperation({ summary: 'Get screening configuration for a survey' })
   @ApiParam({ name: 'surveyId', description: 'Survey ID' })
-  async getScreeningConfig(
-    @Param('surveyId') surveyId: string
-  ): Promise<any> {
+  async getScreeningConfig(@Param('surveyId') surveyId: string): Promise<any> {
     return this.screeningService.getScreeningConfiguration(surveyId);
   }
 
@@ -322,7 +344,7 @@ export class QuestionController {
   @ApiParam({ name: 'surveyId', description: 'Survey ID' })
   async updateScreeningConfig(
     @Param('surveyId') surveyId: string,
-    @Body() config: any
+    @Body() config: any,
   ): Promise<void> {
     config.surveyId = surveyId;
     return this.screeningService.saveScreeningConfiguration(config);
@@ -335,7 +357,7 @@ export class QuestionController {
   @ApiOperation({ summary: 'Get screening statistics' })
   @ApiParam({ name: 'surveyId', description: 'Survey ID' })
   async getScreeningStatistics(
-    @Param('surveyId') surveyId: string
+    @Param('surveyId') surveyId: string,
   ): Promise<any> {
     return this.screeningService.getScreeningStatistics(surveyId);
   }
@@ -347,16 +369,16 @@ export class QuestionController {
    */
   private convertToCSV(questions: Question[]): string {
     const headers = ['ID', 'Type', 'Text', 'Description', 'Required', 'Order'];
-    const rows = questions.map(q => [
+    const rows = questions.map((q) => [
       q.id,
       q.type,
       `"${q.text.replace(/"/g, '""')}"`,
       `"${(q.description || '').replace(/"/g, '""')}"`,
       q.required,
-      q.order
+      q.order,
     ]);
-    
-    return [headers, ...rows].map(row => row.join(',')).join('\n');
+
+    return [headers, ...rows].map((row) => row.join(',')).join('\n');
   }
 
   /**
@@ -378,10 +400,10 @@ export class QuestionController {
             QuestionType: this.mapToQualtricsType(q.type),
             Selector: this.getQualtricsSelector(q.type),
             Validation: q.validation ? JSON.parse(q.validation as string) : {},
-            Choices: q.options ? JSON.parse(q.options as string) : {}
-          }
-        }))
-      }
+            Choices: q.options ? JSON.parse(q.options as string) : {},
+          },
+        })),
+      },
     };
   }
 
@@ -390,12 +412,12 @@ export class QuestionController {
    */
   private mapToQualtricsType(type: string): string {
     const mapping: Record<string, string> = {
-      'MULTIPLE_CHOICE_SINGLE': 'MC',
-      'MULTIPLE_CHOICE_MULTI': 'MC',
-      'TEXT_ENTRY': 'TE',
-      'MATRIX_GRID': 'Matrix',
-      'SLIDER': 'Slider',
-      'RANK_ORDER': 'RO'
+      MULTIPLE_CHOICE_SINGLE: 'MC',
+      MULTIPLE_CHOICE_MULTI: 'MC',
+      TEXT_ENTRY: 'TE',
+      MATRIX_GRID: 'Matrix',
+      SLIDER: 'Slider',
+      RANK_ORDER: 'RO',
     };
     return mapping[type] || 'MC';
   }
@@ -405,12 +427,12 @@ export class QuestionController {
    */
   private getQualtricsSelector(type: string): string {
     const mapping: Record<string, string> = {
-      'MULTIPLE_CHOICE_SINGLE': 'SAVR',
-      'MULTIPLE_CHOICE_MULTI': 'MAVR',
-      'TEXT_ENTRY': 'SL',
-      'MATRIX_GRID': 'Likert',
-      'SLIDER': 'HSLIDER',
-      'RANK_ORDER': 'DND'
+      MULTIPLE_CHOICE_SINGLE: 'SAVR',
+      MULTIPLE_CHOICE_MULTI: 'MAVR',
+      TEXT_ENTRY: 'SL',
+      MATRIX_GRID: 'Likert',
+      SLIDER: 'HSLIDER',
+      RANK_ORDER: 'DND',
     };
     return mapping[type] || 'SAVR';
   }

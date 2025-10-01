@@ -163,7 +163,7 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
               <button
                 key={phase?.id}
                 onClick={() =>
-                  isMore ? setIsExpanded(!isExpanded) : handlePhaseClick(phase)
+                  isMore ? setIsExpanded(!isExpanded) : phase && handlePhaseClick(phase)
                 }
                 className={cn(
                   'flex flex-col items-center justify-center',
@@ -175,7 +175,7 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
                   'active:scale-95',
                   'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
                 )}
-                aria-label={phase.name}
+                aria-label={phase?.name || 'Menu item'}
                 aria-current={isActive ? 'page' : undefined}
               >
                 <motion.div
@@ -183,14 +183,16 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
                   animate={{ scale: isActive && !isMore ? 1.1 : 1 }}
                   transition={{ type: 'spring', stiffness: 300 }}
                 >
-                  <Icon
-                    className={cn(
-                      'h-5 w-5 mb-1',
-                      isMore && isExpanded && 'rotate-180 transition-transform'
-                    )}
-                  />
+                  {Icon && (
+                    <Icon
+                      className={cn(
+                        'h-5 w-5 mb-1',
+                        isMore && isExpanded && 'rotate-180 transition-transform'
+                      )}
+                    />
+                  )}
                 </motion.div>
-                <span className="text-xs font-medium">{phase.name}</span>
+                <span className="text-xs font-medium">{phase?.name || ''}</span>
                 {isActive && !isMore && (
                   <motion.div
                     layoutId="activeIndicator"

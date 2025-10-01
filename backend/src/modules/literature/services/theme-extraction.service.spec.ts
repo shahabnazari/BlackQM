@@ -30,14 +30,19 @@ describe('ThemeExtractionService', () => {
         ThemeExtractionService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: OpenAIService, useValue: mockOpenAIService },
-        { provide: StatementGeneratorService, useValue: mockStatementGeneratorService },
+        {
+          provide: StatementGeneratorService,
+          useValue: mockStatementGeneratorService,
+        },
       ],
     }).compile();
 
     service = module.get<ThemeExtractionService>(ThemeExtractionService);
     prismaService = module.get<PrismaService>(PrismaService);
     openAIService = module.get<OpenAIService>(OpenAIService);
-    statementGeneratorService = module.get<StatementGeneratorService>(StatementGeneratorService);
+    statementGeneratorService = module.get<StatementGeneratorService>(
+      StatementGeneratorService,
+    );
   });
 
   afterEach(() => {
@@ -50,13 +55,15 @@ describe('ThemeExtractionService', () => {
         {
           id: 'paper1',
           title: 'Climate Change and Public Opinion',
-          abstract: 'This study examines public attitudes toward climate change policies',
+          abstract:
+            'This study examines public attitudes toward climate change policies',
           keywords: ['climate', 'opinion', 'policy'],
         },
         {
           id: 'paper2',
           title: 'Renewable Energy Adoption',
-          abstract: 'Factors influencing renewable energy adoption in households',
+          abstract:
+            'Factors influencing renewable energy adoption in households',
           keywords: ['renewable', 'energy', 'adoption'],
         },
       ];
@@ -92,7 +99,7 @@ describe('ThemeExtractionService', () => {
       mockPrismaService.paper.findMany.mockResolvedValue(mockPapers);
 
       const themes = await service.extractThemes(['paper1', 'paper2']);
-      const controversialThemes = themes.filter(t => t.controversial);
+      const controversialThemes = themes.filter((t) => t.controversial);
 
       expect(controversialThemes.length).toBeGreaterThan(0);
     });
@@ -125,7 +132,10 @@ describe('ThemeExtractionService', () => {
 
       mockPrismaService.paper.findMany.mockResolvedValue(mockPapers);
 
-      const controversies = await service.detectControversies(['paper1', 'paper2']);
+      const controversies = await service.detectControversies([
+        'paper1',
+        'paper2',
+      ]);
 
       expect(controversies).toBeDefined();
       expect(Array.isArray(controversies)).toBe(true);
@@ -149,10 +159,15 @@ describe('ThemeExtractionService', () => {
 
       mockPrismaService.paper.findMany.mockResolvedValue(mockPapers);
 
-      const controversies = await service.detectControversies(['paper1', 'paper2']);
+      const controversies = await service.detectControversies([
+        'paper1',
+        'paper2',
+      ]);
 
       if (controversies.length > 0) {
-        expect(['polarized', 'mixed', 'emerging']).toContain(controversies[0].citationPattern);
+        expect(['polarized', 'mixed', 'emerging']).toContain(
+          controversies[0].citationPattern,
+        );
       }
     });
   });
@@ -166,15 +181,20 @@ describe('ThemeExtractionService', () => {
         papers: ['paper1', 'paper2'],
         weight: 8,
         controversial: true,
-        opposingViews: ['Support for immediate action', 'Skepticism about effectiveness'],
+        opposingViews: [
+          'Support for immediate action',
+          'Skepticism about effectiveness',
+        ],
       };
 
-      mockOpenAIService.generateText.mockResolvedValue('Climate policy effectiveness remains debated');
+      mockOpenAIService.generateText.mockResolvedValue(
+        'Climate policy effectiveness remains debated',
+      );
 
       const hints = await service.generateStatementHints([mockTheme]);
 
       expect(hints.length).toBeGreaterThan(0);
-      expect(hints.some(h => h.perspective === 'balanced')).toBe(true);
+      expect(hints.some((h) => h.perspective === 'balanced')).toBe(true);
       expect(mockOpenAIService.generateText).toHaveBeenCalled();
     });
 
@@ -188,12 +208,14 @@ describe('ThemeExtractionService', () => {
         controversial: false,
       };
 
-      mockOpenAIService.generateText.mockResolvedValue('Quantitative methods provide measurable insights');
+      mockOpenAIService.generateText.mockResolvedValue(
+        'Quantitative methods provide measurable insights',
+      );
 
       const hints = await service.generateStatementHints([mockTheme]);
 
       expect(hints.length).toBeGreaterThan(0);
-      expect(hints.some(h => h.perspective === 'neutral')).toBe(true);
+      expect(hints.some((h) => h.perspective === 'neutral')).toBe(true);
     });
 
     it('should generate multiple perspectives for controversial themes', async () => {
@@ -208,13 +230,15 @@ describe('ThemeExtractionService', () => {
       };
 
       mockOpenAIService.generateText
-        .mockResolvedValueOnce('AI development should prioritize ethical considerations')
+        .mockResolvedValueOnce(
+          'AI development should prioritize ethical considerations',
+        )
         .mockResolvedValueOnce('AI innovation drives economic growth')
         .mockResolvedValueOnce('AI regulation may stifle progress');
 
       const hints = await service.generateStatementHints([mockTheme]);
 
-      const perspectives = hints.map(h => h.perspective);
+      const perspectives = hints.map((h) => h.perspective);
       expect(perspectives).toContain('balanced');
       expect(perspectives).toContain('supportive');
       expect(perspectives).toContain('critical');
@@ -238,10 +262,17 @@ describe('ThemeExtractionService', () => {
         targetAudience: 'General public',
       };
 
-      mockOpenAIService.generateText.mockResolvedValue('Individuals have a responsibility to protect the environment');
-      mockStatementGeneratorService.refineStatement.mockResolvedValue('Personal actions can make a difference in environmental protection');
+      mockOpenAIService.generateText.mockResolvedValue(
+        'Individuals have a responsibility to protect the environment',
+      );
+      mockStatementGeneratorService.refineStatement.mockResolvedValue(
+        'Personal actions can make a difference in environmental protection',
+      );
 
-      const statements = await service.themeToStatements(mockThemes, studyContext);
+      const statements = await service.themeToStatements(
+        mockThemes,
+        studyContext,
+      );
 
       expect(statements).toBeDefined();
       expect(Array.isArray(statements)).toBe(true);
@@ -250,20 +281,27 @@ describe('ThemeExtractionService', () => {
     });
 
     it('should balance statements for diversity', async () => {
-      const mockThemes = Array(100).fill(null).map((_, i) => ({
-        id: `theme${i}`,
-        label: `Theme ${i}`,
-        keywords: [`keyword${i}`],
-        papers: [`paper${i}`],
-        weight: Math.random() * 10,
-      }));
+      const mockThemes = Array(100)
+        .fill(null)
+        .map((_, i) => ({
+          id: `theme${i}`,
+          label: `Theme ${i}`,
+          keywords: [`keyword${i}`],
+          papers: [`paper${i}`],
+          weight: Math.random() * 10,
+        }));
 
       const studyContext = { topic: 'Test study' };
 
       mockOpenAIService.generateText.mockResolvedValue('Test statement');
-      mockStatementGeneratorService.refineStatement.mockImplementation((input) => `Refined: ${input.statement}`);
+      mockStatementGeneratorService.refineStatement.mockImplementation(
+        (input) => `Refined: ${input.statement}`,
+      );
 
-      const statements = await service.themeToStatements(mockThemes, studyContext);
+      const statements = await service.themeToStatements(
+        mockThemes,
+        studyContext,
+      );
 
       expect(statements.length).toBeLessThanOrEqual(60); // Q-sort limit
     });
@@ -309,23 +347,33 @@ describe('ThemeExtractionService', () => {
       const themes = await service.extractThemes(['paper1', 'paper2']);
 
       // Should cluster similar terms together
-      expect(themes.some(t => t.keywords.includes('climate') || t.label.toLowerCase().includes('climate'))).toBe(true);
+      expect(
+        themes.some(
+          (t) =>
+            t.keywords.includes('climate') ||
+            t.label.toLowerCase().includes('climate'),
+        ),
+      ).toBe(true);
     });
   });
 
   describe('Performance tests', () => {
     it('should handle large number of papers efficiently', async () => {
-      const largePaperSet = Array(100).fill(null).map((_, i) => ({
-        id: `paper${i}`,
-        title: `Research Paper ${i}`,
-        abstract: `This is the abstract for paper ${i} with various keywords`,
-        keywords: [`keyword${i}`, `topic${i % 10}`],
-      }));
+      const largePaperSet = Array(100)
+        .fill(null)
+        .map((_, i) => ({
+          id: `paper${i}`,
+          title: `Research Paper ${i}`,
+          abstract: `This is the abstract for paper ${i} with various keywords`,
+          keywords: [`keyword${i}`, `topic${i % 10}`],
+        }));
 
       mockPrismaService.paper.findMany.mockResolvedValue(largePaperSet);
 
       const startTime = Date.now();
-      const themes = await service.extractThemes(largePaperSet.map(p => p.id));
+      const themes = await service.extractThemes(
+        largePaperSet.map((p) => p.id),
+      );
       const endTime = Date.now();
 
       expect(themes).toBeDefined();
@@ -382,7 +430,11 @@ describe('ThemeExtractionService', () => {
 
       mockPrismaService.paper.findMany.mockResolvedValue(mockPapers);
 
-      const themes = await service.extractThemes(['paper1', 'paper1', 'paper1']);
+      const themes = await service.extractThemes([
+        'paper1',
+        'paper1',
+        'paper1',
+      ]);
 
       expect(themes).toBeDefined();
       expect(mockPrismaService.paper.findMany).toHaveBeenCalledTimes(1);

@@ -264,7 +264,7 @@ export function PrimaryToolbar() {
             'minimal',
             'icons',
           ];
-          const currentIndex = modes.indexOf(navigationMode);
+          const currentIndex = modes.indexOf(navigationMode || 'expanded');
           const nextMode = modes[(currentIndex + 1) % modes.length];
           updateNavigationMode(nextMode);
         }
@@ -312,7 +312,7 @@ export function PrimaryToolbar() {
                     'minimal',
                     'icons',
                   ];
-                  const currentIndex = modes.indexOf(navigationMode);
+                  const currentIndex = modes.indexOf(navigationMode || 'expanded');
                   const nextMode = modes[(currentIndex + 1) % modes.length];
                   updateNavigationMode(nextMode);
                 }}
@@ -357,146 +357,148 @@ export function PrimaryToolbar() {
                 return (
                   <div key={phase.id} className="flex items-center">
                     <motion.button
-                    key={phase.id}
-                    onClick={() => handlePhaseClick(phase.id)}
-                    onMouseEnter={() => setHoveredPhase(phase.id)}
-                    onMouseLeave={() => setHoveredPhase(null)}
-                    disabled={!isAvailable}
-                    whileHover={isAvailable ? { scale: 1.05 } : {}}
-                    whileTap={isAvailable ? { scale: 0.95 } : {}}
-                    className={cn(
-                      'relative group flex items-center rounded-lg transition-all duration-200',
-                      // Size based on navigation mode
-                      navigationMode === 'expanded' && 'px-3 py-2',
-                      navigationMode === 'compact' && 'px-2 py-1.5',
-                      navigationMode === 'minimal' && 'px-2 py-1',
-                      navigationMode === 'icons' && 'p-2',
-                      // Colors and states
-                      isAvailable
-                        ? 'cursor-pointer'
-                        : 'cursor-not-allowed opacity-40',
-                      isActive || isExpanded
-                        ? `${phase.bgColor} ${phase.borderColor} border`
-                        : phase.hoverBg,
-                      isActive && 'ring-2 ring-offset-1',
-                      isActive && phase.borderColor.replace('border', 'ring'),
-                      // Gradient background for completed phases
-                      isCompleted &&
-                        `bg-gradient-to-r ${phase.gradientFrom} ${phase.gradientTo} text-white`
-                    )}
-                    style={{
-                      background: isCompleted
-                        ? `linear-gradient(135deg, var(--tw-gradient-from), var(--tw-gradient-to))`
-                        : undefined,
-                    }}
-                  >
-                    {/* Phase Icon & Label */}
-                    <div className="flex items-center space-x-2">
-                      <Icon
-                        className={cn(
-                          navigationMode === 'icons' ? 'w-6 h-6' : 'w-5 h-5',
-                          isCompleted
-                            ? 'text-white'
-                            : isActive
-                              ? phase.color
-                              : 'text-gray-600'
-                        )}
-                      />
-                      {navigationMode !== 'icons' && (
-                        <>
-                          <span
-                            className={cn(
-                              'font-medium',
-                              navigationMode === 'expanded'
-                                ? 'text-sm'
-                                : 'text-xs',
-                              isCompleted
-                                ? 'text-white'
-                                : isActive
-                                  ? phase.color
-                                  : 'text-gray-700'
-                            )}
-                          >
-                            {navigationMode === 'minimal'
-                              ? phase.shortLabel
-                              : phase.label}
-                          </span>
-                          {isCompleted && navigationMode === 'expanded' && (
-                            <CheckCircleIcon className="w-4 h-4 text-white opacity-80" />
+                      key={phase.id}
+                      onClick={() => handlePhaseClick(phase.id)}
+                      onMouseEnter={() => setHoveredPhase(phase.id)}
+                      onMouseLeave={() => setHoveredPhase(null)}
+                      disabled={!isAvailable}
+                      whileHover={isAvailable ? { scale: 1.05 } : {}}
+                      whileTap={isAvailable ? { scale: 0.95 } : {}}
+                      className={cn(
+                        'relative group flex items-center rounded-lg transition-all duration-200',
+                        // Size based on navigation mode
+                        navigationMode === 'expanded' && 'px-3 py-2',
+                        navigationMode === 'compact' && 'px-2 py-1.5',
+                        navigationMode === 'minimal' && 'px-2 py-1',
+                        navigationMode === 'icons' && 'p-2',
+                        // Colors and states
+                        isAvailable
+                          ? 'cursor-pointer'
+                          : 'cursor-not-allowed opacity-40',
+                        isActive || isExpanded
+                          ? `${phase.bgColor} ${phase.borderColor} border`
+                          : phase.hoverBg,
+                        isActive && 'ring-2 ring-offset-1',
+                        isActive && phase.borderColor.replace('border', 'ring'),
+                        // Gradient background for completed phases
+                        isCompleted &&
+                          `bg-gradient-to-r ${phase.gradientFrom} ${phase.gradientTo} text-white`
+                      )}
+                      style={{
+                        background: isCompleted
+                          ? `linear-gradient(135deg, var(--tw-gradient-from), var(--tw-gradient-to))`
+                          : undefined,
+                      }}
+                    >
+                      {/* Phase Icon & Label */}
+                      <div className="flex items-center space-x-2">
+                        <Icon
+                          className={cn(
+                            navigationMode === 'icons' ? 'w-6 h-6' : 'w-5 h-5',
+                            isCompleted
+                              ? 'text-white'
+                              : isActive
+                                ? phase.color
+                                : 'text-gray-600'
                           )}
-                        </>
-                      )}
-                    </div>
-
-                    {/* Progress Bar */}
-                    {isAvailable &&
-                      progress > 0 &&
-                      navigationMode !== 'icons' && (
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-lg overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress}%` }}
-                            transition={{ duration: 0.5, ease: 'easeOut' }}
-                            className={cn(
-                              'h-full bg-gradient-to-r',
-                              phase.gradientFrom,
-                              phase.gradientTo
-                            )}
-                          />
-                        </div>
-                      )}
-
-                    {/* Tooltip */}
-                    <AnimatePresence>
-                      {isHovered && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 5 }}
-                          className="absolute bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap z-50"
-                        >
-                          <div className="font-medium">{phase.description}</div>
-                          {progress > 0 && (
-                            <div className="mt-1 text-gray-300">
-                              {progress}% complete
-                            </div>
-                          )}
-                          <div className="mt-1 text-gray-400">
-                            ⌘{phaseConfigs.indexOf(phase) + 1}
-                          </div>
-                          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
-                            <div className="border-4 border-transparent border-t-gray-900" />
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.button>
-                  
-                  {/* Sequential Arrow Indicator */}
-                  {index < phaseConfigs.length - 1 && (
-                    <div className="mx-1 flex items-center">
-                      <svg 
-                        className={cn(
-                          "w-5 h-5 transition-colors",
-                          isCompleted ? "text-green-500" : "text-gray-300"
-                        )} 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={2} 
-                          d="M9 5l7 7-7 7" 
                         />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                        {navigationMode !== 'icons' && (
+                          <>
+                            <span
+                              className={cn(
+                                'font-medium',
+                                navigationMode === 'expanded'
+                                  ? 'text-sm'
+                                  : 'text-xs',
+                                isCompleted
+                                  ? 'text-white'
+                                  : isActive
+                                    ? phase.color
+                                    : 'text-gray-700'
+                              )}
+                            >
+                              {navigationMode === 'minimal'
+                                ? phase.shortLabel
+                                : phase.label}
+                            </span>
+                            {isCompleted && navigationMode === 'expanded' && (
+                              <CheckCircleIcon className="w-4 h-4 text-white opacity-80" />
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      {/* Progress Bar */}
+                      {isAvailable &&
+                        progress > 0 &&
+                        navigationMode !== 'icons' && (
+                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-lg overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${progress}%` }}
+                              transition={{ duration: 0.5, ease: 'easeOut' }}
+                              className={cn(
+                                'h-full bg-gradient-to-r',
+                                phase.gradientFrom,
+                                phase.gradientTo
+                              )}
+                            />
+                          </div>
+                        )}
+
+                      {/* Tooltip */}
+                      <AnimatePresence>
+                        {isHovered && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 5 }}
+                            className="absolute bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap z-50"
+                          >
+                            <div className="font-medium">
+                              {phase.description}
+                            </div>
+                            {progress > 0 && (
+                              <div className="mt-1 text-gray-300">
+                                {progress}% complete
+                              </div>
+                            )}
+                            <div className="mt-1 text-gray-400">
+                              ⌘{phaseConfigs.indexOf(phase) + 1}
+                            </div>
+                            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
+                              <div className="border-4 border-transparent border-t-gray-900" />
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.button>
+
+                    {/* Sequential Arrow Indicator */}
+                    {index < phaseConfigs.length - 1 && (
+                      <div className="mx-1 flex items-center">
+                        <svg
+                          className={cn(
+                            'w-5 h-5 transition-colors',
+                            isCompleted ? 'text-green-500' : 'text-gray-300'
+                          )}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
 
             {/* Quick Actions */}
             <div className="flex items-center space-x-1">

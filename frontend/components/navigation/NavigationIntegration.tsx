@@ -6,7 +6,7 @@ import { AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 // Import all navigation components from Phase 8.5
-import { PrimaryToolbar } from './PrimaryToolbar';
+import { PrimaryToolbar, type ResearchPhase } from './PrimaryToolbar';
 import { SecondaryToolbar } from './SecondaryToolbar';
 import { MobileNavigation } from './MobileNavigation';
 import { TabletSidebar } from './TabletSidebar';
@@ -23,7 +23,7 @@ import { ResponsiveLayout } from './ResponsiveLayout';
 
 // Import feature flags and migration helpers
 import {
-  useFeatureFlags as useMultipleFlags,
+  useMultipleFlags,
   FEATURE_FLAGS,
 } from '@/lib/feature-flags';
 import {
@@ -31,7 +31,7 @@ import {
   useRouteMigration,
   getCurrentPhase,
 } from '@/lib/navigation/migration-helpers';
-import { useNavigationState } from '@/lib/navigation/use-navigation-state';
+// import { useNavigationState } from '@/lib/navigation/use-navigation-state'; // TODO: Use when needed
 import {
   useIsMobile,
   useIsTablet,
@@ -64,7 +64,7 @@ export function NavigationIntegration({
     FEATURE_FLAGS.TABLET_SIDEBAR,
     FEATURE_FLAGS.COMMAND_PALETTE,
     FEATURE_FLAGS.PERFORMANCE_DASHBOARD,
-  ]);
+  ]) as Record<string, boolean>;
 
   // Device detection
   const isMobile = useIsMobile();
@@ -75,7 +75,7 @@ export function NavigationIntegration({
   const pathname = usePathname();
   const router = useRouter();
   const currentPhase = getCurrentPhase(pathname);
-  const { state: navState, updateState } = useNavigationState();
+  // const navState = useNavigationState(); // TODO: Use this when needed
 
   // Migration and onboarding
   useNavigationMigration();
@@ -89,6 +89,8 @@ export function NavigationIntegration({
   const [searchOpen, setSearchOpen] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  // const [mobileToolsOpen, setMobileToolsOpen] = useState(false); // TODO: Implement mobile tools panel
+  const [secondaryToolbarVisible, setSecondaryToolbarVisible] = useState(true);
 
   // Track navigation performance
   useEffect(() => {
@@ -172,11 +174,11 @@ export function NavigationIntegration({
           </div>
 
           {/* Secondary toolbar below primary */}
-          {navState?.secondaryToolbarVisible !== false && currentPhase && (
+          {secondaryToolbarVisible && currentPhase && (
             <div className="fixed top-16 left-0 right-0 z-30 bg-background/95 backdrop-blur-sm border-b">
               <SecondaryToolbar
                 phase={currentPhase as any}
-                onClose={() => updateState({ secondaryToolbarVisible: false })}
+                onClose={() => setSecondaryToolbarVisible(false)}
               />
             </div>
           )}
@@ -190,7 +192,7 @@ export function NavigationIntegration({
           <main
             className={cn(
               'transition-all duration-300',
-              navState?.secondaryToolbarVisible !== false && currentPhase
+              secondaryToolbarVisible && currentPhase
                 ? 'pt-32' // Both toolbars
                 : 'pt-16', // Only primary toolbar
               'px-4 pb-8 max-w-7xl mx-auto'
@@ -239,7 +241,7 @@ export function NavigationIntegration({
                   </svg>
                 </button>
                 <button
-                  onClick={() => setMobileToolsOpen(true)}
+                  onClick={() => {/* TODO: setMobileToolsOpen(true) */}}
                   className="p-2 rounded-lg hover:bg-accent transition-colors"
                   aria-label="Tools"
                 >
@@ -282,18 +284,12 @@ export function NavigationIntegration({
       <AnimatePresence>
         {/* Command Palette */}
         {flags[FEATURE_FLAGS.COMMAND_PALETTE] && quickActionsOpen && (
-          <QuickActions
-            isOpen={quickActionsOpen}
-            onClose={() => setQuickActionsOpen(false)}
-          />
+          <QuickActions />
         )}
 
         {/* Search Modal */}
         {searchOpen && (
-          <PhaseSearch
-            isOpen={searchOpen}
-            onClose={() => setSearchOpen(false)}
-          />
+          <PhaseSearch />
         )}
 
         {/* Preferences Modal */}
@@ -305,19 +301,19 @@ export function NavigationIntegration({
         )}
 
         {/* Contextual Help */}
-        <ContextualHelp currentPhase={currentPhase || 'discover'} />
+        <ContextualHelp currentPhase={(currentPhase || 'discover') as ResearchPhase} />
 
         {/* Phase Availability Checker */}
         <PhaseAvailability
           studyId="default"
-          currentPhase={currentPhase || 'discover'}
+          currentPhase={(currentPhase || 'discover') as ResearchPhase}
           onPhaseSelect={() => {}}
         />
 
         {/* Onboarding Components */}
         {showTour && <TourComponent />}
         <PhaseOnboarding
-          phase={currentPhase || 'discover'}
+          phase={(currentPhase || 'discover') as ResearchPhase}
           studyId="default"
           userId="default"
         />

@@ -1,10 +1,10 @@
 'use client';
 
 import {
-    CheckCircleIcon,
-    ExclamationCircleIcon,
-    EyeIcon,
-    EyeSlashIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  EyeIcon,
+  EyeSlashIcon,
 } from '@heroicons/react/24/outline';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -21,7 +21,7 @@ import { useLogin } from '@/hooks/auth/useLogin';
 // Lazy load social icons - they're not critical for initial render
 const SocialLoginButtons = dynamic(
   () => import('@/components/auth/SocialLoginButtons'),
-  { 
+  {
     loading: () => (
       <div className="mt-6 grid grid-cols-3 gap-3">
         <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse" />
@@ -29,7 +29,7 @@ const SocialLoginButtons = dynamic(
         <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse" />
       </div>
     ),
-    ssr: false 
+    ssr: false,
   }
 );
 
@@ -50,14 +50,14 @@ export default function LoginPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [suggestedSSO, setSuggestedSSO] = useState<string | null>(null);
-  
+
   // Form state without heavy libraries
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     rememberMe: true,
   });
-  
+
   const [errors, setErrors] = useState({
     email: '',
     password: '',
@@ -81,10 +81,10 @@ export default function LoginPage() {
       const domain = formData.email.split('@')[1];
       if (domain && domain.includes('.edu')) {
         setSuggestedSSO('institutional');
-      } else if (domain && (
-        domain.includes('microsoft.com') ||
-        domain.includes('outlook.com')
-      )) {
+      } else if (
+        domain &&
+        (domain.includes('microsoft.com') || domain.includes('outlook.com'))
+      ) {
         setSuggestedSSO('microsoft');
       } else if (domain && domain.includes('gmail.com')) {
         setSuggestedSSO('google');
@@ -97,24 +97,30 @@ export default function LoginPage() {
   // Handle form submission with native validation
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     // Reset errors
     setErrors({ email: '', password: '' });
     clearError();
-    
+
     // Validate
     let hasErrors = false;
-    
+
     if (!validateEmail(formData.email)) {
-      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
+      setErrors(prev => ({
+        ...prev,
+        email: 'Please enter a valid email address',
+      }));
       hasErrors = true;
     }
-    
+
     if (!validatePassword(formData.password)) {
-      setErrors(prev => ({ ...prev, password: 'Password must be at least 8 characters' }));
+      setErrors(prev => ({
+        ...prev,
+        password: 'Password must be at least 8 characters',
+      }));
       hasErrors = true;
     }
-    
+
     if (hasErrors) return;
 
     // Submit
@@ -137,7 +143,10 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error('Login submission error:', error);
-      setErrors({ email: '', password: 'Login failed. Please check your credentials.' });
+      setErrors({
+        email: '',
+        password: 'Login failed. Please check your credentials.',
+      });
     }
   };
 
@@ -230,7 +239,9 @@ export default function LoginPage() {
                   autoComplete="email"
                   required
                   value={formData.email}
-                  onChange={(e: any) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e: any) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   error={errors.email}
                 />
               </div>
@@ -245,14 +256,18 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     required
                     value={formData.password}
-                    onChange={(e: any) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e: any) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
                     error={errors.password}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-9 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-label={
+                      showPassword ? 'Hide password' : 'Show password'
+                    }
                   >
                     {showPassword ? (
                       <EyeSlashIcon className="h-5 w-5" />
@@ -270,7 +285,9 @@ export default function LoginPage() {
                     type="checkbox"
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     checked={formData.rememberMe}
-                    onChange={(e: any) => setFormData({ ...formData, rememberMe: e.target.checked })}
+                    onChange={(e: any) =>
+                      setFormData({ ...formData, rememberMe: e.target.checked })
+                    }
                   />
                   <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
                     Remember me

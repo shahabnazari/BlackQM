@@ -441,3 +441,208 @@
       0 10px 10px -5px rgba(0, 0, 0, 0.04);
   }
 }
+
+/* ===== ACCESSIBILITY STYLES ===== */
+@layer utilities {
+  /* Note: sr-only is provided by Tailwind CSS by default */
+  /* Additional utility to make sr-only content visible when focused */
+  .not-sr-only {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+
+  /* Enhanced focus indicator for keyboard navigation */
+  /* Using :focus-visible pseudo-class for better UX */
+  *:focus-visible {
+    outline: 2px solid var(--color-primary, #007AFF);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Skip link styles */
+  .skip-link:focus {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 9999;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--color-primary, #007AFF);
+    color: white;
+    text-decoration: none;
+    border-radius: 0.375rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    * {
+      border-width: 2px !important;
+    }
+
+    *:focus-visible {
+      outline-width: 3px !important;
+      outline-offset: 3px !important;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Color blind mode filters */
+  [data-colorblind="protanopia"] {
+    filter: url('#protanopia-filter');
+  }
+
+  [data-colorblind="deuteranopia"] {
+    filter: url('#deuteranopia-filter');
+  }
+
+  [data-colorblind="tritanopia"] {
+    filter: url('#tritanopia-filter');
+  }
+
+  [data-colorblind="monochrome"] {
+    filter: grayscale(100%);
+  }
+
+  /* High contrast modes */
+  [data-contrast="high"] {
+    filter: contrast(1.2);
+  }
+
+  [data-contrast="ultra"] {
+    filter: contrast(1.5);
+  }
+
+  /* Focus indicator styles */
+  [data-focus-indicator="enhanced"] *:focus-visible {
+    outline-width: 3px;
+    outline-offset: 3px;
+    outline-style: solid;
+  }
+
+  [data-focus-indicator="custom"] *:focus-visible {
+    outline-width: 4px;
+    outline-offset: 4px;
+    outline-style: double;
+    outline-color: var(--color-primary, #007AFF);
+    background-color: rgba(0, 122, 255, 0.1);
+  }
+
+  /* Text spacing adjustments */
+  [data-reduced-motion="true"] * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Minimum touch target size (44x44px) for mobile */
+  @media (pointer: coarse) {
+    button,
+    a,
+    input,
+    select,
+    textarea,
+    [role="button"],
+    [role="link"],
+    [tabindex]:not([tabindex="-1"]) {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+
+  /* Reading guide line */
+  .reading-guide::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(0, 122, 255, 0.5);
+    pointer-events: none;
+    z-index: 9998;
+    transition: transform 0.1s ease-out;
+  }
+
+  /* Dyslexia-friendly font */
+  .dyslexia-font {
+    font-family: 'OpenDyslexic', 'Comic Sans MS', sans-serif;
+    letter-spacing: 0.05em;
+    word-spacing: 0.1em;
+    line-height: 1.8;
+  }
+
+  /* Focus trap container */
+  .focus-trap {
+    position: relative;
+  }
+
+  .focus-trap[aria-modal="true"] {
+    z-index: 9999;
+  }
+
+  /* Accessible error messages */
+  [role="alert"],
+  [aria-live="assertive"] {
+    font-weight: 600;
+    padding: 0.5rem;
+    border-left: 4px solid currentColor;
+    margin: 0.5rem 0;
+  }
+
+  /* Accessible loading states */
+  [aria-busy="true"] {
+    cursor: wait;
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  /* Ensure interactive elements are distinguishable */
+  button:not(:disabled):hover,
+  a:hover,
+  [role="button"]:not([aria-disabled="true"]):hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+  }
+
+  /* Accessible form validation */
+  input[aria-invalid="true"],
+  select[aria-invalid="true"],
+  textarea[aria-invalid="true"] {
+    border-color: #ef4444;
+    border-width: 2px;
+  }
+
+  input[aria-invalid="false"],
+  select[aria-invalid="false"],
+  textarea[aria-invalid="false"] {
+    border-color: #10b981;
+    border-width: 2px;
+  }
+
+  /* Ensure sufficient color contrast */
+  .high-contrast {
+    background-color: white;
+    color: black;
+  }
+
+  .high-contrast-inverted {
+    background-color: black;
+    color: white;
+  }
+}

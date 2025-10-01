@@ -20,6 +20,24 @@ Based on academic research methodology, the complete research lifecycle consists
 11. **Report Writing & Dissemination**
 12. **Archive & Share**
 
+## ⚠️ CRITICAL SERVICE CONSOLIDATION RULES (Sept 26, 2025)
+
+### DO NOT DUPLICATE - Use These Existing Services:
+
+| Service | Location | Use For | DO NOT Create |
+|---------|----------|---------|---------------|
+| **StatementGeneratorService** | `backend/src/modules/ai/services/` | ALL statement generation | New statement services in Phase 9/10 |
+| **BiasDetectorService** | `backend/src/modules/ai/services/` | ALL bias detection | Duplicate bias analyzers |
+| **ThemeExtractionEngine** | `backend/src/modules/literature/services/` | ALL theme extraction | Separate theme extractors |
+| **collaboration.service.ts** | `backend/src/modules/collaboration/` | ALL collaboration features | New collaboration services |
+| **report.service.ts** | `backend/src/modules/report/` | Base report generation | Complete rebuild in Phase 10 |
+
+### Service Extension Strategy:
+1. **EXTEND** existing services with new methods
+2. **DON'T** create duplicate services with similar names
+3. **WIRE** services together through dependency injection
+4. **SHARE** common functionality through service composition
+
 ## 🏗️ Double Toolbar Architecture
 
 ### Primary Toolbar (Research Phases)
@@ -27,6 +45,42 @@ The main navigation bar shows umbrella research lifecycle phases. Each phase is 
 
 ### Secondary Toolbar (Phase-Specific Tools)
 When a primary phase is selected, a contextual secondary toolbar appears below with specific tools and actions for that phase.
+
+## 📊 Research Lifecycle Flow Analysis (Sept 26, 2025)
+
+### Phase Logic Assessment: 
+| Phase Flow | Logic | Data Dependency | Implementation | Issues |
+|------------|-------|-----------------|----------------|--------|
+| **1. DISCOVER → DESIGN** | ✅ Excellent | None (starts) → Research gaps | 70% | None |
+| **2. DESIGN → BUILD** | ✅ Excellent | Questions → Instruments | 90% | None |
+| **3. BUILD → RECRUIT** | ✅ Excellent | Study ready → Participants | 90% | None |
+| **4. RECRUIT → COLLECT** | ✅ Excellent | Participants → Data | 95% | None |
+| **5. COLLECT → ANALYZE** | ✅ Excellent | Raw data → Statistics | 95% | None |
+| **6. ANALYZE ↔ VISUALIZE** | ⚠️ Should be integrated | Statistics ↔ Charts | 98%/85% | Often iterative, not sequential |
+| **7. VISUALIZE → INTERPRET** | ✅ Excellent | Charts → Insights | 85% | None |
+| **8. INTERPRET → REPORT** | ✅ Excellent | Insights → Documents | 80% | None |
+| **9. REPORT → ARCHIVE** | ✅ Excellent | Final → Storage | 70% | None |
+
+### 🔴 CRITICAL DATA FLOW GAPS (Must Fix in Phase 9.5):
+1. **No Literature → Study Connection:** Papers don't inform statement generation
+2. **Lost Study Context:** Data doesn't persist between phase navigation
+3. **Missing Foreign Keys:** No database relationships between phases
+4. **No Phase Context Model:** Need to track phase inputs/outputs
+
+### Recommended Data Flow Model:
+```typescript
+interface PhaseContext {
+  studyId: string;
+  previousPhaseOutputs: {
+    discover?: { papers: Paper[], gaps: Gap[], themes: Theme[] };
+    design?: { questions: string[], hypotheses: string[] };
+    build?: { statements: Statement[], grid: GridConfig };
+    // ... etc for each phase
+  };
+  currentPhaseState: any;
+  nextPhaseRequirements: string[];
+}
+```
 
 ## 📱 Navigation Structure
 
@@ -307,6 +361,45 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 - `ArchiveManager` component with version timeline
 - `archive.store.ts` for state management
 - JSON diff viewer for study changes
+
+---
+
+## ⚠️ NAVIGATION FLOW IMPROVEMENTS NEEDED (Sept 26, 2025)
+
+### 1. ANALYZE + VISUALIZE Integration
+**Issue:** These phases are treated as sequential but are actually iterative
+**Solution:** 
+- Create unified "Analysis & Visualization" toolbar section
+- Allow simultaneous access to both toolsets
+- Show bidirectional data flow arrows
+
+### 2. Navigation Modes
+**Add Three Navigation Modes:**
+```typescript
+enum NavigationMode {
+  GUIDED = "guided",     // Strict sequential for beginners
+  STANDARD = "standard", // Some flexibility with warnings
+  EXPERT = "expert"      // Full parallel access for experts
+}
+```
+
+### 3. Phase Access Logic
+**Current:** Locked until previous phase complete
+**Improved:** Conditional access based on data availability
+```typescript
+interface PhaseAvailability {
+  isAccessible: boolean;
+  dataComplete: number; // 0-100%
+  missingRequirements: string[];
+  canProceedWithWarning: boolean;
+}
+```
+
+### 4. Data Flow Indicators
+**Add Visual Indicators:**
+- ✅ Green: Data flows properly to next phase
+- ⚠️ Yellow: Partial data available
+- 🔴 Red: No data connection (Phase 9.5 will fix)
 
 ---
 

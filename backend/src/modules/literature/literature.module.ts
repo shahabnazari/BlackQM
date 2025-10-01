@@ -4,6 +4,7 @@ import { LiteratureService } from './literature.service';
 import { ReferenceService } from './services/reference.service';
 import { ThemeExtractionService } from './services/theme-extraction.service';
 import { GapAnalyzerService } from './services/gap-analyzer.service';
+import { ThemeToStatementService } from './services/theme-to-statement.service';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
 import { HttpModule } from '@nestjs/axios';
@@ -23,7 +24,20 @@ import { AIModule } from '../ai/ai.module';
     }),
   ],
   controllers: [LiteratureController],
-  providers: [LiteratureService, LiteratureGateway, ReferenceService, ThemeExtractionService, GapAnalyzerService],
-  exports: [LiteratureService, ReferenceService, ThemeExtractionService, GapAnalyzerService],
+  providers: [
+    LiteratureService,
+    LiteratureGateway,
+    ReferenceService,
+    ThemeExtractionService,
+    GapAnalyzerService,
+    ThemeToStatementService,
+  ],
+  exports: [
+    LiteratureService,
+    ReferenceService,
+    ThemeExtractionService,
+    GapAnalyzerService,
+    ThemeToStatementService,
+  ],
 })
 export class LiteratureModule {}

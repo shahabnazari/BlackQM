@@ -89,10 +89,15 @@ export class NavigationStateService {
     userId: string,
     phase: ResearchPhase,
     studyId?: string,
-  ): Promise<{ userId: string; studyId?: string; phase: ResearchPhase; timestamp: Date }> {
+  ): Promise<{
+    userId: string;
+    studyId?: string;
+    phase: ResearchPhase;
+    timestamp: Date;
+  }> {
     // Store in database (extend User model with navigation state)
     // TODO: Persist to database when User model is extended
-    
+
     return {
       userId,
       studyId,
@@ -312,7 +317,7 @@ export class NavigationStateService {
   ): Promise<NavigationState> {
     // Track user actions for progress calculation
     // TODO: Store action in database for historical tracking
-    
+
     // Return updated state
     const newState = await this.getNavigationState(userId, studyId);
     return newState;

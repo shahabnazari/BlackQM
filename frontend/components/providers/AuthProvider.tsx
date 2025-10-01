@@ -65,20 +65,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         console.log('AuthProvider: Login response received:', response);
-        
+
         if (!response || !response.user) {
           throw new Error('Invalid response from authentication service');
         }
-        
+
         setUser(response.user);
         toast.success('Welcome back!');
         console.log('AuthProvider: User state updated, user:', response.user);
-        
-        // Return success to indicate login completed
-        return response;
+
+        // Don't return the response, just complete the promise
+        // The interface expects Promise<void>
       } catch (error: any) {
         console.error('AuthProvider: Login failed:', error);
-        const errorMessage = error.response?.data?.message || error.message || 'Invalid email or password';
+        const errorMessage =
+          error.response?.data?.message ||
+          error.message ||
+          'Invalid email or password';
         throw new Error(errorMessage);
       } finally {
         setIsLoading(false);

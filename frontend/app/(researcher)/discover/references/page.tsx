@@ -138,7 +138,7 @@ export default function ReferenceManagerPage() {
     'date'
   );
   const [citationStyle] = useState<keyof typeof CITATION_STYLES>('apa');
-  const [showAddReference, setShowAddReference] = useState(false);
+  // const [showAddReference, setShowAddReference] = useState(false);
   const [syncStatus, setSyncStatus] = useState<
     'idle' | 'syncing' | 'success' | 'error'
   >('idle');
@@ -450,7 +450,7 @@ ER  -`;
                   : 'Sync'}
             </Button>
             <Button
-              onClick={() => setShowAddReference(true)}
+              onClick={() => {/* setShowAddReference(true) */}}
               className="bg-gradient-to-r from-blue-600 to-indigo-600"
             >
               <Upload className="w-4 h-4 mr-2" />

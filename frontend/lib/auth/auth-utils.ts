@@ -1,6 +1,6 @@
 /**
  * Authentication Utilities
- * 
+ *
  * Helper functions for authentication-related operations
  */
 
@@ -19,7 +19,9 @@ export async function getAuthToken(): Promise<string | null> {
   }
 
   // Check sessionStorage as fallback
-  const sessionToken = sessionStorage.getItem('access_token') || sessionStorage.getItem('auth_token');
+  const sessionToken =
+    sessionStorage.getItem('access_token') ||
+    sessionStorage.getItem('auth_token');
   if (sessionToken) {
     return sessionToken;
   }
@@ -36,7 +38,7 @@ export async function getAuthToken(): Promise<string | null> {
 // Helper function to get cookie value
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
-  
+
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
   if (parts.length === 2) {
@@ -66,11 +68,13 @@ export function clearAuthToken(): void {
   localStorage.removeItem('auth_token');
   sessionStorage.removeItem('access_token');
   sessionStorage.removeItem('auth_token');
-  
+
   // Clear cookie if exists
   if (typeof document !== 'undefined') {
-    document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie =
+      'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie =
+      'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
   }
 }
 
@@ -87,7 +91,7 @@ export function decodeToken(token: string): any {
     const jsonPayload = decodeURIComponent(
       atob(base64)
         .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
         .join('')
     );
     return JSON.parse(jsonPayload);
@@ -103,7 +107,7 @@ export function isTokenExpired(token: string): boolean {
   if (!decoded || !decoded.exp) {
     return true;
   }
-  
+
   const expirationDate = new Date(decoded.exp * 1000);
   return expirationDate <= new Date();
 }

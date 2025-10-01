@@ -4,21 +4,21 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as d3 from 'd3';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  ZoomIn, 
-  ZoomOut, 
-  Maximize2, 
-  Download, 
+import {
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Download,
   RefreshCw,
-  Search
+  Search,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue 
+  SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
@@ -64,7 +64,7 @@ export function KnowledgeMapVisualization({
   onNodeClick,
   onThemeExtracted,
   onControversyDetected,
-  height = 600
+  height = 600,
 }: KnowledgeMapVisualizationProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -72,7 +72,9 @@ export function KnowledgeMapVisualization({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [minWeight, setMinWeight] = useState(0);
-  const [simulation, setSimulation] = useState<d3.Simulation<any, any> | null>(null);
+  const [simulation, setSimulation] = useState<d3.Simulation<any, any> | null>(
+    null
+  );
   const [selectedNode, setSelectedNode] = useState<KnowledgeNode | null>(null);
   const [zoom, setZoom] = useState(1);
   const [themes, setThemes] = useState<string[]>([]);
@@ -96,15 +98,15 @@ export function KnowledgeMapVisualization({
   const extractThemes = useCallback(() => {
     const themeNodes = nodes.filter(n => n.type === 'theme');
     const extractedThemes = themeNodes.map(n => n.label);
-    
+
     // Also extract themes from keywords using clustering
     const keywordNodes = nodes.filter(n => n.type === 'keyword');
     const clusters = performClustering(keywordNodes, links);
     const clusterThemes = clusters.map(c => c.theme);
-    
+
     const allThemes = [...new Set([...extractedThemes, ...clusterThemes])];
     setThemes(allThemes);
-    
+
     if (onThemeExtracted) {
       onThemeExtracted(allThemes);
     }
@@ -114,7 +116,7 @@ export function KnowledgeMapVisualization({
   const detectControversies = useCallback(() => {
     const opposingLinks = links.filter(l => l.type === 'opposes');
     const controversialNodes = new Set<string>();
-    
+
     opposingLinks.forEach(link => {
       controversialNodes.add(link.source);
       controversialNodes.add(link.target);
@@ -125,24 +127,27 @@ export function KnowledgeMapVisualization({
       const relatedOppositions = opposingLinks.filter(
         l => l.source === nodeId || l.target === nodeId
       );
-      
+
       return {
         nodeId,
         node,
         oppositions: relatedOppositions,
-        strength: relatedOppositions.reduce((sum, l) => sum + l.strength, 0)
+        strength: relatedOppositions.reduce((sum, l) => sum + l.strength, 0),
       };
     });
 
     setControversies(detectedControversies);
-    
+
     if (onControversyDetected) {
       detectedControversies.forEach(c => onControversyDetected(c));
     }
   }, [nodes, links, onControversyDetected]);
 
   // Perform clustering for theme extraction
-  const performClustering = (keywordNodes: KnowledgeNode[], links: KnowledgeLink[]) => {
+  const performClustering = (
+    keywordNodes: KnowledgeNode[],
+    links: KnowledgeLink[]
+  ) => {
     // Simple clustering based on connectivity
     const clusters: any[] = [];
     const visited = new Set<string>();
@@ -152,7 +157,7 @@ export function KnowledgeMapVisualization({
         const cluster = {
           nodes: [node],
           theme: node.label,
-          weight: node.weight
+          weight: node.weight,
         };
 
         // Find connected nodes
@@ -162,13 +167,15 @@ export function KnowledgeMapVisualization({
         while (queue.length > 0) {
           const currentId = queue.shift()!;
           const connectedLinks = links.filter(
-            l => (l.source === currentId || l.target === currentId) && 
-                 l.type === 'related' && 
-                 l.strength > 0.5
+            l =>
+              (l.source === currentId || l.target === currentId) &&
+              l.type === 'related' &&
+              l.strength > 0.5
           );
 
           connectedLinks.forEach(link => {
-            const otherId = link.source === currentId ? link.target : link.source;
+            const otherId =
+              link.source === currentId ? link.target : link.source;
             if (!visited.has(otherId)) {
               const otherNode = keywordNodes.find(n => n.id === otherId);
               if (otherNode) {
@@ -184,15 +191,19 @@ export function KnowledgeMapVisualization({
         if (cluster.nodes.length > 2) {
           // Generate theme name from most common words
           const words = cluster.nodes.flatMap(n => n.label.split(' '));
-          const wordCount = words.reduce((acc, word) => {
-            acc[word] = (acc[word] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>);
-          
-          const sortedWords = Object.entries(wordCount)
-            .sort(([, a], [, b]) => b - a);
-          
-          if (sortedWords.length > 0) {
+          const wordCount = words.reduce(
+            (acc, word) => {
+              acc[word] = (acc[word] || 0) + 1;
+              return acc;
+            },
+            {} as Record<string, number>
+          );
+
+          const sortedWords = Object.entries(wordCount).sort(
+            ([, a], [, b]) => b - a
+          );
+
+          if (sortedWords.length > 0 && sortedWords[0]) {
             const topWord = sortedWords[0][0];
             cluster.theme = `${topWord} Cluster`;
           } else {
@@ -215,26 +226,26 @@ export function KnowledgeMapVisualization({
     if (filterType !== 'all') {
       filteredNodes = nodes.filter(n => n.type === filterType);
       const nodeIds = new Set(filteredNodes.map(n => n.id));
-      filteredLinks = links.filter(l => 
-        nodeIds.has(l.source) && nodeIds.has(l.target)
+      filteredLinks = links.filter(
+        l => nodeIds.has(l.source) && nodeIds.has(l.target)
       );
     }
 
     // Filter by weight
     filteredNodes = filteredNodes.filter(n => n.weight >= minWeight);
     const nodeIds = new Set(filteredNodes.map(n => n.id));
-    filteredLinks = filteredLinks.filter(l => 
-      nodeIds.has(l.source) && nodeIds.has(l.target)
+    filteredLinks = filteredLinks.filter(
+      l => nodeIds.has(l.source) && nodeIds.has(l.target)
     );
 
     // Filter by search term
     if (searchTerm) {
-      filteredNodes = filteredNodes.filter(n => 
+      filteredNodes = filteredNodes.filter(n =>
         n.label.toLowerCase().includes(searchTerm.toLowerCase())
       );
       const searchNodeIds = new Set(filteredNodes.map(n => n.id));
-      filteredLinks = filteredLinks.filter(l => 
-        searchNodeIds.has(l.source) || searchNodeIds.has(l.target)
+      filteredLinks = filteredLinks.filter(
+        l => searchNodeIds.has(l.source) || searchNodeIds.has(l.target)
       );
     }
 
@@ -254,9 +265,10 @@ export function KnowledgeMapVisualization({
     const container = svg.append('g');
 
     // Setup zoom behavior
-    const zoomBehavior = d3.zoom<SVGSVGElement, unknown>()
+    const zoomBehavior = d3
+      .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
-      .on('zoom', (event) => {
+      .on('zoom', event => {
         container.attr('transform', event.transform);
         setZoom(event.transform.k);
       });
@@ -264,31 +276,53 @@ export function KnowledgeMapVisualization({
     svg.call(zoomBehavior);
 
     // Color scales
-    const colorScale = d3.scaleOrdinal<string>()
+    const colorScale = d3
+      .scaleOrdinal<string>()
       .domain(['paper', 'concept', 'author', 'keyword', 'theme', 'controversy'])
-      .range(['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#EF4444']);
+      .range([
+        '#3B82F6',
+        '#10B981',
+        '#F59E0B',
+        '#8B5CF6',
+        '#EC4899',
+        '#EF4444',
+      ]);
 
     // Size scale
-    const sizeScale = d3.scaleLinear()
+    const sizeScale = d3
+      .scaleLinear()
       .domain([0, d3.max(filteredNodes, d => d.weight) || 1])
       .range([5, 20]);
 
     // Create force simulation
-    const sim = d3.forceSimulation(filteredNodes as any)
-      .force('link', d3.forceLink(filteredLinks as any)
-        .id((d: any) => d.id)
-        .distance(d => 100 / (d as any).strength))
+    const sim = d3
+      .forceSimulation(filteredNodes as any)
+      .force(
+        'link',
+        d3
+          .forceLink(filteredLinks as any)
+          .id((d: any) => d.id)
+          .distance(d => 100 / (d as any).strength)
+      )
       .force('charge', d3.forceManyBody().strength(-300))
-      .force('center', d3.forceCenter(dimensions.width / 2, dimensions.height / 2))
-      .force('collision', d3.forceCollide().radius((d: any) => sizeScale(d.weight) + 5));
+      .force(
+        'center',
+        d3.forceCenter(dimensions.width / 2, dimensions.height / 2)
+      )
+      .force(
+        'collision',
+        d3.forceCollide().radius((d: any) => sizeScale(d.weight) + 5)
+      );
 
     setSimulation(sim);
 
     // Create links
-    const link = container.append('g')
+    const link = container
+      .append('g')
       .selectAll('line')
       .data(filteredLinks)
-      .enter().append('line')
+      .enter()
+      .append('line')
       .attr('stroke', d => {
         if (d.type === 'opposes') return '#EF4444';
         if (d.type === 'supports') return '#10B981';
@@ -297,20 +331,26 @@ export function KnowledgeMapVisualization({
       })
       .attr('stroke-width', d => Math.sqrt(d.strength * 3))
       .attr('stroke-opacity', 0.6)
-      .attr('stroke-dasharray', d => d.type === 'opposes' ? '5,5' : 'none');
+      .attr('stroke-dasharray', d => (d.type === 'opposes' ? '5,5' : 'none'));
 
     // Create nodes
-    const node = container.append('g')
+    const node = container
+      .append('g')
       .selectAll('g')
       .data(filteredNodes)
-      .enter().append('g')
-      .call(d3.drag<any, any>()
-        .on('start', dragstarted)
-        .on('drag', dragged)
-        .on('end', dragended) as any);
+      .enter()
+      .append('g')
+      .call(
+        d3
+          .drag<any, any>()
+          .on('start', dragstarted)
+          .on('drag', dragged)
+          .on('end', dragended) as any
+      );
 
     // Add circles to nodes
-    node.append('circle')
+    node
+      .append('circle')
       .attr('r', d => sizeScale(d.weight))
       .attr('fill', d => colorScale(d.type))
       .attr('stroke', '#fff')
@@ -318,7 +358,8 @@ export function KnowledgeMapVisualization({
       .style('cursor', 'pointer');
 
     // Add controversy indicator
-    node.filter(d => d.metadata?.controversial)
+    node
+      .filter(d => d.metadata?.controversial === true)
       .append('circle')
       .attr('r', d => sizeScale(d.weight) + 5)
       .attr('fill', 'none')
@@ -327,7 +368,8 @@ export function KnowledgeMapVisualization({
       .attr('stroke-dasharray', '3,3');
 
     // Add labels
-    node.append('text')
+    node
+      .append('text')
       .text(d => d.label)
       .attr('font-size', '10px')
       .attr('dx', d => sizeScale(d.weight) + 5)
@@ -343,7 +385,9 @@ export function KnowledgeMapVisualization({
     });
 
     // Tooltip
-    const tooltip = d3.select('body').append('div')
+    const tooltip = d3
+      .select('body')
+      .append('div')
       .attr('class', 'tooltip')
       .style('position', 'absolute')
       .style('visibility', 'hidden')
@@ -353,9 +397,9 @@ export function KnowledgeMapVisualization({
       .style('border-radius', '4px')
       .style('font-size', '12px');
 
-    node.on('mouseover', (_event, d) => {
-      tooltip.style('visibility', 'visible')
-        .html(`
+    node
+      .on('mouseover', (_event, d) => {
+        tooltip.style('visibility', 'visible').html(`
           <strong>${d.label}</strong><br/>
           Type: ${d.type}<br/>
           Weight: ${d.weight.toFixed(2)}<br/>
@@ -363,14 +407,15 @@ export function KnowledgeMapVisualization({
           ${d.metadata?.year ? `Year: ${d.metadata.year}<br/>` : ''}
           ${d.metadata?.controversial ? '<span style="color: #EF4444">⚠ Controversial</span>' : ''}
         `);
-    })
-    .on('mousemove', (event) => {
-      tooltip.style('top', (event.pageY - 10) + 'px')
-        .style('left', (event.pageX + 10) + 'px');
-    })
-    .on('mouseout', () => {
-      tooltip.style('visibility', 'hidden');
-    });
+      })
+      .on('mousemove', event => {
+        tooltip
+          .style('top', event.pageY - 10 + 'px')
+          .style('left', event.pageX + 10 + 'px');
+      })
+      .on('mouseout', () => {
+        tooltip.style('visibility', 'hidden');
+      });
 
     // Update positions on simulation tick
     sim.on('tick', () => {
@@ -416,37 +461,32 @@ export function KnowledgeMapVisualization({
   const handleZoomIn = () => {
     if (!svgRef.current) return;
     const svg = d3.select(svgRef.current);
-    svg.transition().call(
-      d3.zoom<SVGSVGElement, unknown>().scaleTo as any, 
-      zoom * 1.2
-    );
+    svg
+      .transition()
+      .call(d3.zoom<SVGSVGElement, unknown>().scaleTo as any, zoom * 1.2);
   };
 
   const handleZoomOut = () => {
     if (!svgRef.current) return;
     const svg = d3.select(svgRef.current);
-    svg.transition().call(
-      d3.zoom<SVGSVGElement, unknown>().scaleTo as any,
-      zoom * 0.8
-    );
+    svg
+      .transition()
+      .call(d3.zoom<SVGSVGElement, unknown>().scaleTo as any, zoom * 0.8);
   };
 
   const handleResetZoom = () => {
     if (!svgRef.current) return;
     const svg = d3.select(svgRef.current);
-    svg.transition().call(
-      d3.zoom<SVGSVGElement, unknown>().scaleTo as any,
-      1
-    );
+    svg.transition().call(d3.zoom<SVGSVGElement, unknown>().scaleTo as any, 1);
   };
 
   const handleExport = () => {
     if (!svgRef.current) return;
-    
+
     const svgData = new XMLSerializer().serializeToString(svgRef.current);
     const blob = new Blob([svgData], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
-    
+
     const link = document.createElement('a');
     link.href = url;
     link.download = 'knowledge-map.svg';
@@ -494,11 +534,11 @@ export function KnowledgeMapVisualization({
               <Input
                 placeholder="Search nodes..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={e => setSearchTerm(e.target.value)}
                 className="pl-8"
               />
             </div>
-            
+
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue />
@@ -606,8 +646,10 @@ export function KnowledgeMapVisualization({
                 <div>
                   <h4 className="font-medium">{selectedNode.label}</h4>
                   <p className="text-sm text-muted-foreground">
-                    Type: {selectedNode.type} | Weight: {selectedNode.weight.toFixed(2)}
-                    {selectedNode.metadata?.citations && ` | Citations: ${selectedNode.metadata.citations}`}
+                    Type: {selectedNode.type} | Weight:{' '}
+                    {selectedNode.weight.toFixed(2)}
+                    {selectedNode.metadata?.citations &&
+                      ` | Citations: ${selectedNode.metadata.citations}`}
                   </p>
                 </div>
                 <Button
@@ -623,8 +665,8 @@ export function KnowledgeMapVisualization({
         </div>
 
         {/* Visualization */}
-        <div 
-          ref={containerRef} 
+        <div
+          ref={containerRef}
           className="border rounded-lg bg-muted/10 overflow-hidden"
         >
           <svg
