@@ -163,7 +163,9 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
               <button
                 key={phase?.id}
                 onClick={() =>
-                  isMore ? setIsExpanded(!isExpanded) : phase && handlePhaseClick(phase)
+                  isMore
+                    ? setIsExpanded(!isExpanded)
+                    : phase && handlePhaseClick(phase)
                 }
                 className={cn(
                   'flex flex-col items-center justify-center',
@@ -187,7 +189,9 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
                     <Icon
                       className={cn(
                         'h-5 w-5 mb-1',
-                        isMore && isExpanded && 'rotate-180 transition-transform'
+                        isMore &&
+                          isExpanded &&
+                          'rotate-180 transition-transform'
                       )}
                     />
                   )}

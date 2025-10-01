@@ -79,48 +79,55 @@ async function testLiteratureSearch() {
     yearTo: 2025,
     limit: 5,
   });
-  
+
   if (!response.data || !response.data.papers) {
     throw new Error('Search did not return papers');
   }
-  
+
   if (!Array.isArray(response.data.papers)) {
     throw new Error('Papers is not an array');
   }
-  
+
   log(`Found ${response.data.papers.length} papers`, 'info');
   return response.data.papers;
 }
 
 async function testSavePaper() {
-  const response = await axios.post(`${API_BASE}/literature/save/public`, mockPaper);
-  
+  const response = await axios.post(
+    `${API_BASE}/literature/save/public`,
+    mockPaper
+  );
+
   if (!response.data.success && !response.data.paperId) {
     throw new Error('Save paper did not return success');
   }
-  
+
   log(`Paper saved with ID: ${response.data.paperId || mockPaperId}`, 'info');
   return response.data;
 }
 
 async function testGetUserLibrary() {
-  const response = await axios.get(`${API_BASE}/literature/library/public?page=1&limit=10`);
-  
+  const response = await axios.get(
+    `${API_BASE}/literature/library/public?page=1&limit=10`
+  );
+
   if (!response.data || typeof response.data.total !== 'number') {
     throw new Error('Library endpoint did not return expected format');
   }
-  
+
   log(`Library has ${response.data.total} papers`, 'info');
   return response.data;
 }
 
 async function testRemovePaper() {
-  const response = await axios.delete(`${API_BASE}/literature/library/public/${mockPaperId}`);
-  
+  const response = await axios.delete(
+    `${API_BASE}/literature/library/public/${mockPaperId}`
+  );
+
   if (!response.data.success) {
     throw new Error('Remove paper did not return success');
   }
-  
+
   log(`Paper removed successfully`, 'info');
   return response.data;
 }
@@ -130,11 +137,11 @@ async function testThemeExtraction() {
     paperIds: ['paper-1', 'paper-2', 'paper-3'],
     numThemes: 5,
   });
-  
+
   if (!Array.isArray(response.data)) {
     throw new Error('Theme extraction did not return an array');
   }
-  
+
   log(`Extracted ${response.data.length} themes`, 'info');
   return response.data;
 }
@@ -144,11 +151,11 @@ async function testGapAnalysis() {
     const response = await axios.post(`${API_BASE}/literature/gaps/analyze`, {
       paperIds: ['paper-1', 'paper-2'],
     });
-    
+
     if (!response.data || !response.data.gaps) {
       throw new Error('Gap analysis did not return expected format');
     }
-    
+
     log(`Found ${response.data.gaps.length} research gaps`, 'info');
     return response.data;
   } catch (error) {
@@ -162,40 +169,47 @@ async function testGapAnalysis() {
 }
 
 async function testCitationFormatting() {
-  const response = await axios.post(`${API_BASE}/literature/references/format`, {
-    paper: mockPaper,
-    style: 'apa',
-  });
-  
+  const response = await axios.post(
+    `${API_BASE}/literature/references/format`,
+    {
+      paper: mockPaper,
+      style: 'apa',
+    }
+  );
+
   if (!response.data.citation) {
     throw new Error('Citation formatting did not return citation');
   }
-  
+
   log(`APA Citation: ${response.data.citation.substring(0, 50)}...`, 'info');
   return response.data;
 }
 
 async function testBibTeXGeneration() {
-  const response = await axios.post(`${API_BASE}/literature/references/generate/bibtex`, mockPaper);
-  
+  const response = await axios.post(
+    `${API_BASE}/literature/references/generate/bibtex`,
+    mockPaper
+  );
+
   if (!response.data.bibtex) {
     throw new Error('BibTeX generation did not return bibtex');
   }
-  
+
   log(`BibTeX generated: ${response.data.bibtex.substring(0, 30)}...`, 'info');
   return response.data;
 }
 
 async function testKnowledgeGraph() {
   try {
-    const response = await axios.post(`${API_BASE}/literature/knowledge-graph`, 
+    const response = await axios.post(
+      `${API_BASE}/literature/knowledge-graph`,
       ['paper-1', 'paper-2', 'paper-3']
     );
-    
+
     if (!response.data) {
       throw new Error('Knowledge graph did not return data');
     }
-    
+
     log('Knowledge graph generated', 'info');
     return response.data;
   } catch (error) {
@@ -211,7 +225,7 @@ async function testKnowledgeGraph() {
 // === FRONTEND INTEGRATION TEST ===
 async function testFrontendIntegration() {
   log('Testing frontend integration...', 'test');
-  
+
   try {
     const frontendResponse = await axios.get('http://localhost:3000');
     if (frontendResponse.status === 200) {
@@ -253,17 +267,23 @@ ${colors.reset}`);
   const total = auditResults.passed.length + auditResults.failed.length;
   const passRate = ((auditResults.passed.length / total) * 100).toFixed(1);
 
-  console.log(`${colors.green}✅ Passed: ${auditResults.passed.length}/${total} (${passRate}%)${colors.reset}`);
-  
+  console.log(
+    `${colors.green}✅ Passed: ${auditResults.passed.length}/${total} (${passRate}%)${colors.reset}`
+  );
+
   if (auditResults.failed.length > 0) {
-    console.log(`${colors.red}❌ Failed: ${auditResults.failed.length}${colors.reset}`);
+    console.log(
+      `${colors.red}❌ Failed: ${auditResults.failed.length}${colors.reset}`
+    );
     auditResults.failed.forEach(f => {
       console.log(`   - ${f.name}: ${f.error}`);
     });
   }
-  
+
   if (auditResults.warnings.length > 0) {
-    console.log(`${colors.yellow}⚠️  Warnings: ${auditResults.warnings.length}${colors.reset}`);
+    console.log(
+      `${colors.yellow}⚠️  Warnings: ${auditResults.warnings.length}${colors.reset}`
+    );
     auditResults.warnings.forEach(w => {
       console.log(`   - ${w}`);
     });
@@ -278,7 +298,9 @@ ${colors.reset}`);
 
   const phase311Complete = auditResults.failed.length === 0;
   if (phase311Complete) {
-    console.log(`${colors.bright}${colors.green}🎉 PHASE 9 DAY 3.11 - COMPLETE!${colors.reset}`);
+    console.log(
+      `${colors.bright}${colors.green}🎉 PHASE 9 DAY 3.11 - COMPLETE!${colors.reset}`
+    );
     console.log(`
 Critical Systems Verified:
 ✅ Literature Search - Functional
@@ -290,7 +312,9 @@ Critical Systems Verified:
 ✅ Error Handling - Graceful fallbacks implemented
     `);
   } else {
-    console.log(`${colors.bright}${colors.red}⚠️  PHASE 9 DAY 3.11 - INCOMPLETE${colors.reset}`);
+    console.log(
+      `${colors.bright}${colors.red}⚠️  PHASE 9 DAY 3.11 - INCOMPLETE${colors.reset}`
+    );
     console.log('Please fix the failed tests before marking phase complete.');
   }
 

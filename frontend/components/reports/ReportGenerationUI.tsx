@@ -2,7 +2,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,11 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import PopupModal from '@/components/ui/PopupModal';
 import {
   Download,
@@ -195,7 +197,17 @@ const REPORT_TEMPLATES: ReportTemplate[] = [
     id: 'academic_journal',
     name: 'Academic Journal Article',
     description: 'Standard format for journal submission',
-    sections: ['abstract', 'keywords', 'introduction', 'literature_review', 'methodology', 'results', 'discussion', 'conclusion', 'references'],
+    sections: [
+      'abstract',
+      'keywords',
+      'introduction',
+      'literature_review',
+      'methodology',
+      'results',
+      'discussion',
+      'conclusion',
+      'references',
+    ],
     citationStyle: 'apa',
     formatting: {
       fontSize: 12,
@@ -208,7 +220,18 @@ const REPORT_TEMPLATES: ReportTemplate[] = [
     id: 'thesis_chapter',
     name: 'Thesis/Dissertation Chapter',
     description: 'Chapter format for thesis or dissertation',
-    sections: ['introduction', 'literature_review', 'theoretical_framework', 'methodology', 'results', 'discussion', 'limitations', 'implications', 'conclusion', 'references'],
+    sections: [
+      'introduction',
+      'literature_review',
+      'theoretical_framework',
+      'methodology',
+      'results',
+      'discussion',
+      'limitations',
+      'implications',
+      'conclusion',
+      'references',
+    ],
     citationStyle: 'apa',
     formatting: {
       fontSize: 12,
@@ -221,7 +244,16 @@ const REPORT_TEMPLATES: ReportTemplate[] = [
     id: 'conference_paper',
     name: 'Conference Paper',
     description: 'Format for conference proceedings',
-    sections: ['abstract', 'keywords', 'introduction', 'methodology', 'results', 'discussion', 'conclusion', 'references'],
+    sections: [
+      'abstract',
+      'keywords',
+      'introduction',
+      'methodology',
+      'results',
+      'discussion',
+      'conclusion',
+      'references',
+    ],
     citationStyle: 'ieee',
     formatting: {
       fontSize: 10,
@@ -234,7 +266,14 @@ const REPORT_TEMPLATES: ReportTemplate[] = [
     id: 'executive_summary',
     name: 'Executive Summary',
     description: 'Brief report for stakeholders',
-    sections: ['abstract', 'introduction', 'methodology', 'results', 'implications', 'conclusion'],
+    sections: [
+      'abstract',
+      'introduction',
+      'methodology',
+      'results',
+      'implications',
+      'conclusion',
+    ],
     citationStyle: 'harvard',
     formatting: {
       fontSize: 11,
@@ -252,7 +291,8 @@ export default function ReportGenerationUI({
 }: ReportGenerationUIProps) {
   // State
   const [sections, setSections] = useState<ReportSection[]>(AVAILABLE_SECTIONS);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('academic_journal');
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<string>('academic_journal');
   const [options, setOptions] = useState<GenerationOptions>({
     format: 'pdf',
     citationStyle: 'apa',
@@ -274,7 +314,10 @@ export default function ReportGenerationUI({
 
   // Calculate statistics
   const enabledSections = sections.filter(s => s.enabled);
-  const estimatedWordCount = enabledSections.reduce((sum, s) => sum + (s.wordCount || 1500), 0);
+  const estimatedWordCount = enabledSections.reduce(
+    (sum, s) => sum + (s.wordCount || 1500),
+    0
+  );
   const estimatedPages = Math.ceil(estimatedWordCount / 250);
   const estimatedTime = Math.ceil(enabledSections.length * 3); // 3 seconds per section
 
@@ -322,14 +365,14 @@ export default function ReportGenerationUI({
         // Update section status
         setSections(prev =>
           prev.map(s =>
-            s.id === section.id
-              ? { ...s, status: 'generating' }
-              : s
+            s.id === section.id ? { ...s, status: 'generating' } : s
           )
         );
 
         // Simulate generation delay
-        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1000));
+        await new Promise(resolve =>
+          setTimeout(resolve, 2000 + Math.random() * 1000)
+        );
 
         // Update section as complete
         setSections(prev =>
@@ -363,7 +406,6 @@ export default function ReportGenerationUI({
         options,
         url: '/api/reports/download/temp-report.pdf',
       });
-
     } catch (error) {
       console.error('Report generation failed:', error);
       setErrors(['Failed to generate report. Please try again.']);
@@ -455,7 +497,9 @@ export default function ReportGenerationUI({
               <p className="text-sm text-gray-600">Sections</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold">~{estimatedWordCount.toLocaleString()}</p>
+              <p className="text-2xl font-bold">
+                ~{estimatedWordCount.toLocaleString()}
+              </p>
               <p className="text-sm text-gray-600">Words</p>
             </div>
             <div className="text-center">
@@ -488,10 +532,15 @@ export default function ReportGenerationUI({
                 {REPORT_TEMPLATES.map(template => (
                   <div key={template.id} className="flex items-start space-x-3">
                     <RadioGroupItem value={template.id} id={template.id} />
-                    <Label htmlFor={template.id} className="flex-1 cursor-pointer">
+                    <Label
+                      htmlFor={template.id}
+                      className="flex-1 cursor-pointer"
+                    >
                       <div>
                         <p className="font-medium">{template.name}</p>
-                        <p className="text-sm text-gray-600">{template.description}</p>
+                        <p className="text-sm text-gray-600">
+                          {template.description}
+                        </p>
                       </div>
                     </Label>
                   </div>
@@ -519,7 +568,7 @@ export default function ReportGenerationUI({
                             checked={section.enabled}
                             disabled={section.required}
                             onCheckedChange={() => toggleSection(section.id)}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={e => e.stopPropagation()}
                           />
                           <div className="text-left">
                             <p className="font-medium">
@@ -538,15 +587,24 @@ export default function ReportGenerationUI({
                         {section.status && (
                           <Badge
                             variant={
-                              section.status === 'complete' ? 'default' :
-                              section.status === 'generating' ? 'secondary' :
-                              section.status === 'error' ? 'destructive' :
-                              'outline'
+                              section.status === 'complete'
+                                ? 'default'
+                                : section.status === 'generating'
+                                  ? 'secondary'
+                                  : section.status === 'error'
+                                    ? 'destructive'
+                                    : 'outline'
                             }
                           >
-                            {section.status === 'complete' && <CheckCircle2 className="w-3 h-3 mr-1" />}
-                            {section.status === 'generating' && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                            {section.status === 'error' && <AlertCircle className="w-3 h-3 mr-1" />}
+                            {section.status === 'complete' && (
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                            )}
+                            {section.status === 'generating' && (
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            )}
+                            {section.status === 'error' && (
+                              <AlertCircle className="w-3 h-3 mr-1" />
+                            )}
                             {section.status}
                           </Badge>
                         )}
@@ -555,19 +613,24 @@ export default function ReportGenerationUI({
                     <AccordionContent>
                       <div className="pl-9 space-y-3">
                         {/* AI Suggestions */}
-                        {section.aiSuggestions && section.aiSuggestions.length > 0 && (
-                          <Alert>
-                            <Lightbulb className="h-4 w-4" />
-                            <AlertTitle>AI Suggestions</AlertTitle>
-                            <AlertDescription>
-                              <ul className="list-disc list-inside mt-2 space-y-1">
-                                {section.aiSuggestions.map((suggestion, idx) => (
-                                  <li key={idx} className="text-sm">{suggestion}</li>
-                                ))}
-                              </ul>
-                            </AlertDescription>
-                          </Alert>
-                        )}
+                        {section.aiSuggestions &&
+                          section.aiSuggestions.length > 0 && (
+                            <Alert>
+                              <Lightbulb className="h-4 w-4" />
+                              <AlertTitle>AI Suggestions</AlertTitle>
+                              <AlertDescription>
+                                <ul className="list-disc list-inside mt-2 space-y-1">
+                                  {section.aiSuggestions.map(
+                                    (suggestion, idx) => (
+                                      <li key={idx} className="text-sm">
+                                        {suggestion}
+                                      </li>
+                                    )
+                                  )}
+                                </ul>
+                              </AlertDescription>
+                            </Alert>
+                          )}
 
                         {/* Custom Instructions */}
                         <div>
@@ -630,7 +693,9 @@ export default function ReportGenerationUI({
                   <Label>Output Format</Label>
                   <Select
                     value={options.format}
-                    onValueChange={(v) => setOptions({ ...options, format: v as any })}
+                    onValueChange={v =>
+                      setOptions({ ...options, format: v as any })
+                    }
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue />
@@ -649,7 +714,9 @@ export default function ReportGenerationUI({
                   <Label>Citation Style</Label>
                   <Select
                     value={options.citationStyle}
-                    onValueChange={(v) => setOptions({ ...options, citationStyle: v as any })}
+                    onValueChange={v =>
+                      setOptions({ ...options, citationStyle: v as any })
+                    }
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue />
@@ -672,13 +739,17 @@ export default function ReportGenerationUI({
                   <Label>Academic Level</Label>
                   <Select
                     value={options.academicLevel}
-                    onValueChange={(v) => setOptions({ ...options, academicLevel: v as any })}
+                    onValueChange={v =>
+                      setOptions({ ...options, academicLevel: v as any })
+                    }
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="undergraduate">Undergraduate</SelectItem>
+                      <SelectItem value="undergraduate">
+                        Undergraduate
+                      </SelectItem>
                       <SelectItem value="graduate">Graduate</SelectItem>
                       <SelectItem value="doctoral">Doctoral</SelectItem>
                       <SelectItem value="professional">Professional</SelectItem>
@@ -690,7 +761,9 @@ export default function ReportGenerationUI({
                   <Label>Writing Tone</Label>
                   <Select
                     value={options.tone}
-                    onValueChange={(v) => setOptions({ ...options, tone: v as any })}
+                    onValueChange={v =>
+                      setOptions({ ...options, tone: v as any })
+                    }
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue />
@@ -709,7 +782,9 @@ export default function ReportGenerationUI({
                 <Label>Report Length</Label>
                 <RadioGroup
                   value={options.length}
-                  onValueChange={(v) => setOptions({ ...options, length: v as any })}
+                  onValueChange={v =>
+                    setOptions({ ...options, length: v as any })
+                  }
                   className="flex gap-4 mt-1"
                 >
                   <div className="flex items-center space-x-2">
@@ -733,17 +808,22 @@ export default function ReportGenerationUI({
                   <Checkbox
                     id="visualizations"
                     checked={options.includeVisualizations}
-                    onCheckedChange={(checked) =>
-                      setOptions({ ...options, includeVisualizations: !!checked })
+                    onCheckedChange={checked =>
+                      setOptions({
+                        ...options,
+                        includeVisualizations: !!checked,
+                      })
                     }
                   />
-                  <Label htmlFor="visualizations">Include visualizations and charts</Label>
+                  <Label htmlFor="visualizations">
+                    Include visualizations and charts
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="raw-data"
                     checked={options.includeRawData}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={checked =>
                       setOptions({ ...options, includeRawData: !!checked })
                     }
                   />
@@ -753,7 +833,7 @@ export default function ReportGenerationUI({
                   <Checkbox
                     id="appendices"
                     checked={options.includeAppendices}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={checked =>
                       setOptions({ ...options, includeAppendices: !!checked })
                     }
                   />
@@ -770,7 +850,7 @@ export default function ReportGenerationUI({
                   id="custom-instructions"
                   placeholder="Add any specific requirements or preferences for the report generation..."
                   value={customInstructions}
-                  onChange={(e) => setCustomInstructions(e.target.value)}
+                  onChange={e => setCustomInstructions(e.target.value)}
                   rows={3}
                   className="mt-1"
                 />
@@ -801,7 +881,10 @@ export default function ReportGenerationUI({
                 </div>
                 <div className="space-y-1">
                   {enabledSections.map(section => (
-                    <div key={section.id} className="flex items-center gap-2 text-sm">
+                    <div
+                      key={section.id}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       {section.status === 'complete' && (
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                       )}
@@ -814,7 +897,11 @@ export default function ReportGenerationUI({
                       {!section.status && (
                         <Clock className="w-4 h-4 text-gray-400" />
                       )}
-                      <span className={section.status === 'complete' ? 'text-green-600' : ''}>
+                      <span
+                        className={
+                          section.status === 'complete' ? 'text-green-600' : ''
+                        }
+                      >
                         {section.title}
                       </span>
                     </div>
@@ -876,7 +963,9 @@ export default function ReportGenerationUI({
               <AlertDescription>
                 <ul className="list-disc list-inside mt-2 space-y-1">
                   {errors.map((error, idx) => (
-                    <li key={idx} className="text-sm">{error}</li>
+                    <li key={idx} className="text-sm">
+                      {error}
+                    </li>
                   ))}
                 </ul>
               </AlertDescription>
@@ -923,10 +1012,12 @@ export default function ReportGenerationUI({
                 variant="outline"
                 className="w-full justify-start"
                 onClick={() => {
-                  setSections(prev => prev.map(s => ({
-                    ...s,
-                    enabled: s.required,
-                  })));
+                  setSections(prev =>
+                    prev.map(s => ({
+                      ...s,
+                      enabled: s.required,
+                    }))
+                  );
                 }}
               >
                 <AlertCircle className="w-4 h-4 mr-2" />
@@ -944,20 +1035,23 @@ export default function ReportGenerationUI({
               <div className="flex gap-2">
                 <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <p>
-                  The AI will use your study data, analysis results, and literature
-                  connections to generate comprehensive report sections.
+                  The AI will use your study data, analysis results, and
+                  literature connections to generate comprehensive report
+                  sections.
                 </p>
               </div>
               <div className="flex gap-2">
                 <Lightbulb className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <p>
-                  Add custom instructions to each section for more tailored content.
+                  Add custom instructions to each section for more tailored
+                  content.
                 </p>
               </div>
               <div className="flex gap-2">
                 <Clock className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <p>
-                  Generation typically takes 2-5 seconds per section depending on length.
+                  Generation typically takes 2-5 seconds per section depending
+                  on length.
                 </p>
               </div>
             </CardContent>
@@ -966,14 +1060,15 @@ export default function ReportGenerationUI({
       </div>
 
       {/* Preview Dialog */}
-      <Dialog open={!!previewContent} onOpenChange={() => setPreviewContent(null)}>
+      <Dialog
+        open={!!previewContent}
+        onOpenChange={() => setPreviewContent(null)}
+      >
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Section Preview</DialogTitle>
           </DialogHeader>
-          <div className="prose prose-sm max-w-none">
-            {previewContent}
-          </div>
+          <div className="prose prose-sm max-w-none">{previewContent}</div>
         </DialogContent>
       </Dialog>
     </div>

@@ -741,7 +741,10 @@ export default function KnowledgeMapPage() {
                             setNodes(
                               nodes.map(n => ({
                                 ...n,
-                                size: n.id === selectedNode.id ? value : (n.size || 20),
+                                size:
+                                  n.id === selectedNode.id
+                                    ? value
+                                    : n.size || 20,
                               }))
                             );
                             setSelectedNode({

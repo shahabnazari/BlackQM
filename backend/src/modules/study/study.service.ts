@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
 import { CreateStudyDto } from './dto/create-study.dto';
 import { UpdateStudyDto } from './dto/update-study.dto';
@@ -10,11 +14,14 @@ export class StudyService {
 
   async create(data: CreateStudyDto & { createdBy: string }) {
     // Generate default grid configuration for Q-sort
-    const gridConfig = this.generateGridConfig(data.gridColumns || 9, data.gridShape || 'quasi-normal');
+    const gridConfig = this.generateGridConfig(
+      data.gridColumns || 9,
+      data.gridShape || 'quasi-normal',
+    );
 
     // Extract DTO fields and properly set creator
-    const { 
-      createdBy, 
+    const {
+      createdBy,
       consentForm,
       includeWelcomeVideo,
       welcomeVideoUrl,
@@ -22,7 +29,7 @@ export class StudyService {
       signatureType,
       organizationName,
       organizationLogoUrl,
-      ...studyData 
+      ...studyData
     } = data;
 
     // Build settings object for additional fields
@@ -43,7 +50,7 @@ export class StudyService {
         settings,
         status: SurveyStatus.DRAFT,
         creator: {
-          connect: { id: createdBy }
+          connect: { id: createdBy },
         },
       },
       include: {
@@ -132,11 +139,11 @@ export class StudyService {
         where: { id },
         select: { gridColumns: true, gridShape: true },
       });
-      
+
       if (!study) {
         throw new NotFoundException(`Study with ID ${id} not found`);
       }
-      
+
       gridConfig = this.generateGridConfig(
         updateData.gridColumns || study.gridColumns,
         updateData.gridShape || study.gridShape,
@@ -164,7 +171,7 @@ export class StudyService {
   async remove(id: string, userId: string) {
     // Verify ownership
     const study = await this.findOne(id, userId);
-    
+
     if (study.createdBy !== userId) {
       throw new ForbiddenException('Only the study owner can delete it');
     }
@@ -195,10 +202,10 @@ export class StudyService {
 
     return this.prisma.survey.update({
       where: { id },
-      data: { 
+      data: {
         status,
-        ...(status === SurveyStatus.ACTIVE && { 
-          scheduledStart: new Date() 
+        ...(status === SurveyStatus.ACTIVE && {
+          scheduledStart: new Date(),
         }),
       },
     });
@@ -214,14 +221,14 @@ export class StudyService {
       }),
       // Completed responses
       this.prisma.response.count({
-        where: { 
+        where: {
           surveyId: id,
           completedAt: { not: null },
         },
       }),
       // Average time spent
       this.prisma.response.aggregate({
-        where: { 
+        where: {
           surveyId: id,
           timeSpent: { not: null },
         },
@@ -231,9 +238,8 @@ export class StudyService {
       }),
     ]);
 
-    const completionRate = responses > 0 
-      ? Math.round((completedResponses / responses) * 100)
-      : 0;
+    const completionRate =
+      responses > 0 ? Math.round((completedResponses / responses) * 100) : 0;
 
     return {
       totalResponses: responses,
@@ -255,14 +261,14 @@ export class StudyService {
         11: [1, 2, 3, 4, 4, 5, 4, 4, 3, 2, 1],
         13: [1, 2, 3, 4, 5, 5, 6, 5, 5, 4, 3, 2, 1],
       },
-      'forced': {
+      forced: {
         5: [2, 3, 4, 3, 2],
         7: [2, 3, 4, 5, 4, 3, 2],
         9: [2, 3, 4, 5, 6, 5, 4, 3, 2],
         11: [2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2],
         13: [2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2],
       },
-      'free': {
+      free: {
         5: [10, 10, 10, 10, 10],
         7: [10, 10, 10, 10, 10, 10, 10],
         9: [10, 10, 10, 10, 10, 10, 10, 10, 10],
@@ -271,12 +277,13 @@ export class StudyService {
       },
     };
 
-    const distribution = (configs as any)[shape]?.[columns] || configs['quasi-normal'][9];
-    
+    const distribution =
+      (configs as any)[shape]?.[columns] || configs['quasi-normal'][9];
+
     // Create column configuration
     const gridColumns = [];
     const midPoint = Math.floor(columns / 2);
-    
+
     for (let i = 0; i < columns; i++) {
       gridColumns.push({
         position: i - midPoint,
@@ -307,7 +314,7 @@ export class StudyService {
     // Generate grid configuration for preview
     const gridConfig = this.generateGridConfig(
       studyData.gridColumns || 9,
-      studyData.gridShape || 'quasi-normal'
+      studyData.gridShape || 'quasi-normal',
     );
 
     // Create preview object that shows how the study will appear to participants
@@ -375,13 +382,19 @@ export class StudyService {
     }
 
     if (study.createdBy !== userId) {
-      throw new ForbiddenException('You do not have permission to preview this study');
+      throw new ForbiddenException(
+        'You do not have permission to preview this study',
+      );
     }
 
     // Parse settings for additional configuration
     const settings = (study.settings as any) || {};
-    const preScreeningQuestions = study.questions.filter((q: any) => q.type === 'PRE_SCREENING');
-    const postSurveyQuestions = study.questions.filter((q: any) => q.type === 'POST_SURVEY');
+    const preScreeningQuestions = study.questions.filter(
+      (q: any) => q.type === 'PRE_SCREENING',
+    );
+    const postSurveyQuestions = study.questions.filter(
+      (q: any) => q.type === 'POST_SURVEY',
+    );
 
     // Generate preview with actual data
     const preview = {
@@ -468,8 +481,12 @@ export class StudyService {
     // For now, return a mock study to get the server running
     return {
       id: 'mock-study-id',
-      statements: dto.autoGenerate.statements ? ['Statement 1', 'Statement 2'] : [],
-      methodology: dto.autoGenerate.methodology ? 'Q-Methodology approach' : null,
+      statements: dto.autoGenerate.statements
+        ? ['Statement 1', 'Statement 2']
+        : [],
+      methodology: dto.autoGenerate.methodology
+        ? 'Q-Methodology approach'
+        : null,
       gridConfig: dto.autoGenerate.gridConfig ? { columns: 9, rows: 5 } : null,
       literatureReviewId: dto.literatureReviewId,
       basedOnPapers: dto.basedOnPapers,

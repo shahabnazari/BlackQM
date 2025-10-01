@@ -70,7 +70,8 @@ class LiteratureAPIService {
   private baseURL: string;
 
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+    this.baseURL =
+      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
     this.api = axios.create({
       baseURL: this.baseURL,
       headers: {
@@ -114,14 +115,14 @@ class LiteratureAPIService {
       const response = await this.api.post('/literature/search/public', params);
       console.log('📥 API: Response received:', response.data);
       console.log('📚 API: Papers count:', response.data.papers?.length || 0);
-      
+
       // Ensure we have the expected structure
       const result = {
         papers: response.data.papers || [],
         total: response.data.total || 0,
-        page: response.data.page || params.page || 1
+        page: response.data.page || params.page || 1,
       };
-      
+
       console.log('✅ API: Returning result:', result);
       return result;
     } catch (error: any) {
@@ -183,21 +184,25 @@ class LiteratureAPIService {
         venue: paper.venue,
         citationCount: paper.citationCount,
         tags: paper.tags,
-        collectionId: paper.collectionId
+        collectionId: paper.collectionId,
       };
-      
+
       // Try public endpoint first for development
       const response = await this.api.post('/literature/save/public', saveData);
-      
+
       // Also save full paper to localStorage for persistence in development
       this.saveToLocalStorage(paper);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('Failed to save paper:', error);
-      
+
       // Fallback to localStorage for development
-      if (error.response?.status === 401 || error.response?.status === 404 || error.response?.status === 400) {
+      if (
+        error.response?.status === 401 ||
+        error.response?.status === 404 ||
+        error.response?.status === 400
+      ) {
         console.log('Using localStorage fallback for save');
         this.saveToLocalStorage(paper);
         return { success: true, paperId: paper.id || 'mock-id' };
@@ -212,7 +217,7 @@ class LiteratureAPIService {
       const stored = localStorage.getItem('savedPapers') || '[]';
       const papers = JSON.parse(stored);
       const exists = papers.some((p: any) => p.id === paper.id);
-      
+
       if (!exists) {
         papers.push({
           ...paper,
@@ -242,7 +247,7 @@ class LiteratureAPIService {
       return response.data;
     } catch (error: any) {
       console.error('Failed to get user library:', error);
-      
+
       // Fallback to localStorage for development
       if (error.response?.status === 401 || error.response?.status === 404) {
         console.log('Using localStorage fallback for library');
@@ -253,13 +258,16 @@ class LiteratureAPIService {
   }
 
   // Helper: Get from localStorage
-  private getFromLocalStorage(page = 1, limit = 20): { papers: Paper[]; total: number } {
+  private getFromLocalStorage(
+    page = 1,
+    limit = 20
+  ): { papers: Paper[]; total: number } {
     try {
       const stored = localStorage.getItem('savedPapers') || '[]';
       const papers = JSON.parse(stored);
       const start = (page - 1) * limit;
       const end = start + limit;
-      
+
       return {
         papers: papers.slice(start, end),
         total: papers.length,
@@ -277,16 +285,20 @@ class LiteratureAPIService {
       const response = await this.api.delete(
         `/literature/library/public/${paperId}`
       );
-      
+
       // Also remove from localStorage
       this.removeFromLocalStorage(paperId);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('Failed to remove paper:', error);
-      
+
       // Fallback to localStorage for development
-      if (error.response?.status === 401 || error.response?.status === 404 || error.response?.status === 500) {
+      if (
+        error.response?.status === 401 ||
+        error.response?.status === 404 ||
+        error.response?.status === 500
+      ) {
         console.log('Using localStorage fallback for remove');
         this.removeFromLocalStorage(paperId);
         return { success: true };
@@ -301,7 +313,7 @@ class LiteratureAPIService {
       const stored = localStorage.getItem('savedPapers') || '[]';
       const papers = JSON.parse(stored);
       const filtered = papers.filter((p: any) => p.id !== paperId);
-      
+
       localStorage.setItem('savedPapers', JSON.stringify(filtered));
       console.log('✅ Paper removed from localStorage:', paperId);
     } catch (e) {
@@ -377,12 +389,9 @@ class LiteratureAPIService {
     depth = 2
   ): Promise<KnowledgeGraphData> {
     try {
-      const response = await this.api.get(
-        `/literature/citations/${paperId}`,
-        {
-          params: { depth },
-        }
-      );
+      const response = await this.api.get(`/literature/citations/${paperId}`, {
+        params: { depth },
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to get citation network:', error);
@@ -409,13 +418,10 @@ class LiteratureAPIService {
     studyContext: any
   ): Promise<string[]> {
     try {
-      const response = await this.api.post(
-        '/literature/statements/generate',
-        {
-          themes,
-          studyContext,
-        }
-      );
+      const response = await this.api.post('/literature/statements/generate', {
+        themes,
+        studyContext,
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to generate statements:', error);

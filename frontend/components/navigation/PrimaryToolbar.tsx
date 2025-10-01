@@ -312,7 +312,9 @@ export function PrimaryToolbar() {
                     'minimal',
                     'icons',
                   ];
-                  const currentIndex = modes.indexOf(navigationMode || 'expanded');
+                  const currentIndex = modes.indexOf(
+                    navigationMode || 'expanded'
+                  );
                   const nextMode = modes[(currentIndex + 1) % modes.length];
                   updateNavigationMode(nextMode);
                 }}

@@ -87,13 +87,16 @@ class CacheService {
         this.db = request.result;
       };
 
-      request.onupgradeneeded = (event) => {
+      request.onupgradeneeded = event => {
         const db = (event.target as IDBOpenDBRequest).result;
 
         if (!db.objectStoreNames.contains('cache')) {
           const store = db.createObjectStore('cache', { keyPath: 'key' });
           store.createIndex('timestamp', 'timestamp', { unique: false });
-          store.createIndex('dependencies', 'dependencies', { unique: false, multiEntry: true });
+          store.createIndex('dependencies', 'dependencies', {
+            unique: false,
+            multiEntry: true,
+          });
         }
       };
     } catch (error) {
@@ -112,7 +115,7 @@ class CacheService {
     const startTime = performance.now();
     const {
       ttl = 5 * 60 * 1000, // 5 minutes default
-      layer = 'all'
+      layer = 'all',
     } = options;
 
     // Check for pending requests to prevent duplicate fetches
@@ -158,12 +161,12 @@ class CacheService {
 
       // Create pending request to prevent duplicate fetches
       const fetchPromise = fetcher().then(
-        async (data) => {
+        async data => {
           await this.set(key, data, options);
           this.pendingRequests.delete(key);
           return data;
         },
-        (error) => {
+        error => {
           this.pendingRequests.delete(key);
           throw error;
         }
@@ -185,11 +188,7 @@ class CacheService {
     data: T,
     options: CacheOptions = {}
   ): Promise<void> {
-    const {
-      ttl = 5 * 60 * 1000,
-      layer = 'all',
-      dependencies = [],
-    } = options;
+    const { ttl = 5 * 60 * 1000, layer = 'all', dependencies = [] } = options;
 
     const size = this.estimateSize(data);
 
@@ -259,7 +258,7 @@ class CacheService {
       const index = store.index('dependencies');
       const request = index.openCursor(IDBKeyRange.only(dependency));
 
-      request.onsuccess = (event) => {
+      request.onsuccess = event => {
         const cursor = (event.target as IDBRequest).result;
         if (cursor) {
           cursor.delete();
@@ -363,7 +362,7 @@ class CacheService {
   private async getFromIndexedDB<T>(key: string): Promise<T | null> {
     if (!this.db) return null;
 
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const transaction = this.db!.transaction(['cache'], 'readonly');
       const store = transaction.objectStore('cache');
       const request = store.get(key);
@@ -455,9 +454,11 @@ class CacheService {
   }
 
   private invalidateSession(pattern?: string | RegExp): void {
-    const regex = pattern ?
-      (typeof pattern === 'string' ? new RegExp(pattern) : pattern) :
-      null;
+    const regex = pattern
+      ? typeof pattern === 'string'
+        ? new RegExp(pattern)
+        : pattern
+      : null;
 
     const keysToRemove: string[] = [];
 
@@ -476,9 +477,11 @@ class CacheService {
   private async invalidateIndexedDB(pattern?: string | RegExp): Promise<void> {
     if (!this.db) return;
 
-    const regex = pattern ?
-      (typeof pattern === 'string' ? new RegExp(pattern) : pattern) :
-      null;
+    const regex = pattern
+      ? typeof pattern === 'string'
+        ? new RegExp(pattern)
+        : pattern
+      : null;
 
     const transaction = this.db.transaction(['cache'], 'readwrite');
     const store = transaction.objectStore('cache');
@@ -490,7 +493,7 @@ class CacheService {
 
     const request = store.openCursor();
 
-    request.onsuccess = (event) => {
+    request.onsuccess = event => {
       const cursor = (event.target as IDBRequest).result;
       if (cursor) {
         if (regex.test(cursor.key)) {
@@ -565,7 +568,7 @@ class CacheService {
       const range = IDBKeyRange.upperBound(Date.now() - 24 * 60 * 60 * 1000); // 24 hours old
 
       const request = index.openCursor(range);
-      request.onsuccess = (event) => {
+      request.onsuccess = event => {
         const cursor = (event.target as IDBRequest).result;
         if (cursor) {
           cursor.delete();
@@ -647,7 +650,11 @@ class CacheService {
    * Preload cache with data
    */
   async preload<T>(
-    items: Array<{ key: string; fetcher: () => Promise<T>; options?: CacheOptions }>
+    items: Array<{
+      key: string;
+      fetcher: () => Promise<T>;
+      options?: CacheOptions;
+    }>
   ): Promise<void> {
     const promises = items.map(({ key, fetcher, options }) =>
       this.get(key, fetcher, options)
@@ -660,9 +667,9 @@ class CacheService {
    * Create cache key from parameters
    */
   static createKey(namespace: string, ...params: any[]): string {
-    const paramStr = params.map(p =>
-      typeof p === 'object' ? JSON.stringify(p) : String(p)
-    ).join(':');
+    const paramStr = params
+      .map(p => (typeof p === 'object' ? JSON.stringify(p) : String(p)))
+      .join(':');
 
     return `${namespace}:${paramStr}`;
   }
@@ -783,7 +790,9 @@ export class PerformanceMonitor {
   }
 
   report(): {
-    measures: { [key: string]: { avg: number; p50: number; p95: number; p99: number } };
+    measures: {
+      [key: string]: { avg: number; p50: number; p95: number; p99: number };
+    };
   } {
     const report: any = { measures: {} };
 

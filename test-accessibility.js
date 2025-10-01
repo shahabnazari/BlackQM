@@ -18,7 +18,7 @@ const PAGES_TO_TEST = [
   { url: '/auth/register', name: 'Register Page' },
   { url: '/dashboard', name: 'Dashboard' },
   { url: '/studies', name: 'Studies List' },
-  { url: '/studies/create', name: 'Create Study' }
+  { url: '/studies/create', name: 'Create Study' },
 ];
 
 // Color coding for results
@@ -27,7 +27,7 @@ const colors = {
   fail: chalk.red,
   warning: chalk.yellow,
   info: chalk.cyan,
-  header: chalk.bold.blue
+  header: chalk.bold.blue,
 };
 
 // Test results storage
@@ -36,25 +36,32 @@ const results = {
   failed: [],
   warnings: [],
   totalViolations: 0,
-  totalPages: PAGES_TO_TEST.length
+  totalPages: PAGES_TO_TEST.length,
 };
 
 /**
  * Test keyboard navigation
  */
 async function testKeyboardNavigation(page, pageName) {
-  console.log(colors.info(`\n  Testing keyboard navigation for ${pageName}...`));
+  console.log(
+    colors.info(`\n  Testing keyboard navigation for ${pageName}...`)
+  );
 
   const keyboardTests = [];
 
   try {
     // Test Tab navigation
     await page.keyboard.press('Tab');
-    const firstFocused = await page.evaluate(() => document.activeElement?.tagName);
+    const firstFocused = await page.evaluate(
+      () => document.activeElement?.tagName
+    );
     keyboardTests.push({
       test: 'Tab navigation',
       passed: firstFocused !== 'BODY',
-      detail: firstFocused !== 'BODY' ? 'Focus moved from body' : 'Focus stuck on body'
+      detail:
+        firstFocused !== 'BODY'
+          ? 'Focus moved from body'
+          : 'Focus stuck on body',
     });
 
     // Test skip links (should be first focusable element)
@@ -68,7 +75,7 @@ async function testKeyboardNavigation(page, pageName) {
     keyboardTests.push({
       test: 'Skip links present',
       passed: skipLinkText.toLowerCase().includes('skip'),
-      detail: skipLinkText || 'No skip link found'
+      detail: skipLinkText || 'No skip link found',
     });
 
     // Test Escape key on modals/dropdowns
@@ -85,7 +92,7 @@ async function testKeyboardNavigation(page, pageName) {
       keyboardTests.push({
         test: 'Escape closes modals',
         passed: modalClosed,
-        detail: modalClosed ? 'Modal closed' : 'Modal still open'
+        detail: modalClosed ? 'Modal closed' : 'Modal still open',
       });
     }
 
@@ -98,14 +105,15 @@ async function testKeyboardNavigation(page, pageName) {
     keyboardTests.push({
       test: 'Focus indicators visible',
       passed: focusVisible,
-      detail: focusVisible ? 'Focus indicator present' : 'No visible focus indicator'
+      detail: focusVisible
+        ? 'Focus indicator present'
+        : 'No visible focus indicator',
     });
-
   } catch (error) {
     keyboardTests.push({
       test: 'Keyboard navigation',
       passed: false,
-      detail: `Error: ${error.message}`
+      detail: `Error: ${error.message}`,
     });
   }
 
@@ -116,7 +124,9 @@ async function testKeyboardNavigation(page, pageName) {
  * Test screen reader support
  */
 async function testScreenReaderSupport(page, pageName) {
-  console.log(colors.info(`\n  Testing screen reader support for ${pageName}...`));
+  console.log(
+    colors.info(`\n  Testing screen reader support for ${pageName}...`)
+  );
 
   const screenReaderTests = [];
 
@@ -132,19 +142,21 @@ async function testScreenReaderSupport(page, pageName) {
         hasMain: main !== null,
         hasNav: nav !== null,
         hasHeader: header !== null,
-        hasFooter: footer !== null
+        hasFooter: footer !== null,
       };
     });
 
     screenReaderTests.push({
       test: 'ARIA landmarks',
       passed: landmarks.hasMain && landmarks.hasNav,
-      detail: `Main: ${landmarks.hasMain}, Nav: ${landmarks.hasNav}, Header: ${landmarks.hasHeader}, Footer: ${landmarks.hasFooter}`
+      detail: `Main: ${landmarks.hasMain}, Nav: ${landmarks.hasNav}, Header: ${landmarks.hasHeader}, Footer: ${landmarks.hasFooter}`,
     });
 
     // Check for heading hierarchy
     const headingHierarchy = await page.evaluate(() => {
-      const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+      const headings = Array.from(
+        document.querySelectorAll('h1, h2, h3, h4, h5, h6')
+      );
       const h1Count = headings.filter(h => h.tagName === 'H1').length;
       const hasProperHierarchy = headings.every((h, i) => {
         if (i === 0) return true;
@@ -158,33 +170,38 @@ async function testScreenReaderSupport(page, pageName) {
 
     screenReaderTests.push({
       test: 'Heading hierarchy',
-      passed: headingHierarchy.h1Count === 1 && headingHierarchy.hasProperHierarchy,
-      detail: `${headingHierarchy.h1Count} H1 tags, ${headingHierarchy.totalHeadings} total headings`
+      passed:
+        headingHierarchy.h1Count === 1 && headingHierarchy.hasProperHierarchy,
+      detail: `${headingHierarchy.h1Count} H1 tags, ${headingHierarchy.totalHeadings} total headings`,
     });
 
     // Check for image alt text
     const imageAltText = await page.evaluate(() => {
       const images = Array.from(document.querySelectorAll('img'));
       const withAlt = images.filter(img => img.alt !== '');
-      const decorative = images.filter(img => img.alt === '' && img.getAttribute('role') === 'presentation');
+      const decorative = images.filter(
+        img => img.alt === '' && img.getAttribute('role') === 'presentation'
+      );
 
       return {
         total: images.length,
         withAlt: withAlt.length,
         decorative: decorative.length,
-        missing: images.length - withAlt.length - decorative.length
+        missing: images.length - withAlt.length - decorative.length,
       };
     });
 
     screenReaderTests.push({
       test: 'Image alt text',
       passed: imageAltText.missing === 0,
-      detail: `${imageAltText.withAlt} with alt text, ${imageAltText.decorative} decorative, ${imageAltText.missing} missing`
+      detail: `${imageAltText.withAlt} with alt text, ${imageAltText.decorative} decorative, ${imageAltText.missing} missing`,
     });
 
     // Check form labels
     const formLabels = await page.evaluate(() => {
-      const inputs = Array.from(document.querySelectorAll('input, select, textarea'));
+      const inputs = Array.from(
+        document.querySelectorAll('input, select, textarea')
+      );
       const labeled = inputs.filter(input => {
         const id = input.id;
         const hasLabel = id && document.querySelector(`label[for="${id}"]`);
@@ -196,21 +213,20 @@ async function testScreenReaderSupport(page, pageName) {
       return {
         total: inputs.length,
         labeled: labeled.length,
-        unlabeled: inputs.length - labeled.length
+        unlabeled: inputs.length - labeled.length,
       };
     });
 
     screenReaderTests.push({
       test: 'Form labels',
       passed: formLabels.unlabeled === 0,
-      detail: `${formLabels.labeled}/${formLabels.total} inputs labeled`
+      detail: `${formLabels.labeled}/${formLabels.total} inputs labeled`,
     });
-
   } catch (error) {
     screenReaderTests.push({
       test: 'Screen reader support',
       passed: false,
-      detail: `Error: ${error.message}`
+      detail: `Error: ${error.message}`,
     });
   }
 
@@ -229,21 +245,28 @@ async function testColorContrast(page, pageName) {
       .withRules(['color-contrast'])
       .analyze();
 
-    const contrastViolations = axeResults.violations.filter(v => v.id === 'color-contrast');
+    const contrastViolations = axeResults.violations.filter(
+      v => v.id === 'color-contrast'
+    );
 
-    return [{
-      test: 'Color contrast (WCAG AA)',
-      passed: contrastViolations.length === 0,
-      detail: contrastViolations.length === 0
-        ? 'All text meets contrast requirements'
-        : `${contrastViolations[0].nodes.length} elements with insufficient contrast`
-    }];
+    return [
+      {
+        test: 'Color contrast (WCAG AA)',
+        passed: contrastViolations.length === 0,
+        detail:
+          contrastViolations.length === 0
+            ? 'All text meets contrast requirements'
+            : `${contrastViolations[0].nodes.length} elements with insufficient contrast`,
+      },
+    ];
   } catch (error) {
-    return [{
-      test: 'Color contrast',
-      passed: false,
-      detail: `Error: ${error.message}`
-    }];
+    return [
+      {
+        test: 'Color contrast',
+        passed: false,
+        detail: `Error: ${error.message}`,
+      },
+    ];
   }
 }
 
@@ -273,7 +296,11 @@ async function runAxeTests(page, url, pageName) {
       url,
       violations: axeResults.violations,
       passes: axeResults.passes,
-      customTests: [...keyboardResults, ...screenReaderResults, ...contrastResults]
+      customTests: [
+        ...keyboardResults,
+        ...screenReaderResults,
+        ...contrastResults,
+      ],
     };
 
     // Display results
@@ -288,7 +315,9 @@ async function runAxeTests(page, url, pageName) {
       axeResults.violations.forEach(violation => {
         console.log(colors.fail(`    ❌ ${violation.description}`));
         console.log(colors.warning(`       Impact: ${violation.impact}`));
-        console.log(colors.info(`       Affected: ${violation.nodes.length} element(s)`));
+        console.log(
+          colors.info(`       Affected: ${violation.nodes.length} element(s)`)
+        );
         console.log(colors.info(`       Help: ${violation.helpUrl}`));
       });
     }
@@ -301,9 +330,10 @@ async function runAxeTests(page, url, pageName) {
     });
 
     return pageResults;
-
   } catch (error) {
-    console.log(colors.fail(`\n  ❌ Error testing ${pageName}: ${error.message}`));
+    console.log(
+      colors.fail(`\n  ❌ Error testing ${pageName}: ${error.message}`)
+    );
     results.failed.push(pageName);
     return null;
   }
@@ -317,8 +347,15 @@ function generateSummary() {
   console.log(colors.header('📊 ACCESSIBILITY TEST SUMMARY'));
   console.log(colors.header('='.repeat(60)));
 
-  const passRate = (results.passed.length / results.totalPages * 100).toFixed(1);
-  const status = passRate >= 90 ? colors.pass : passRate >= 70 ? colors.warning : colors.fail;
+  const passRate = ((results.passed.length / results.totalPages) * 100).toFixed(
+    1
+  );
+  const status =
+    passRate >= 90
+      ? colors.pass
+      : passRate >= 70
+        ? colors.warning
+        : colors.fail;
 
   console.log(colors.info(`\nPages Tested: ${results.totalPages}`));
   console.log(colors.pass(`Pages Passed: ${results.passed.length}`));
@@ -336,8 +373,12 @@ function generateSummary() {
   if (results.passed.length === results.totalPages) {
     console.log(colors.pass('\n🎉 All pages passed accessibility tests!'));
   } else {
-    console.log(colors.warning('\n⚠️  Some pages need accessibility improvements.'));
-    console.log(colors.info('   Run with --verbose for detailed violation information.'));
+    console.log(
+      colors.warning('\n⚠️  Some pages need accessibility improvements.')
+    );
+    console.log(
+      colors.info('   Run with --verbose for detailed violation information.')
+    );
   }
 
   console.log(colors.header('\n' + '='.repeat(60)));
@@ -356,7 +397,7 @@ async function runTests() {
 
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 
   try {
@@ -372,7 +413,6 @@ async function runTests() {
     // Generate and display summary
     const exitCode = generateSummary();
     process.exit(exitCode);
-
   } catch (error) {
     console.log(colors.fail(`\n❌ Test runner error: ${error.message}`));
     process.exit(1);
@@ -388,7 +428,9 @@ try {
   require.resolve('chalk');
 } catch (error) {
   console.log(colors.fail('\n❌ Missing required packages. Please install:'));
-  console.log(colors.info('   npm install --save-dev puppeteer @axe-core/puppeteer chalk'));
+  console.log(
+    colors.info('   npm install --save-dev puppeteer @axe-core/puppeteer chalk')
+  );
   process.exit(1);
 }
 

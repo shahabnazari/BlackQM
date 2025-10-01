@@ -69,23 +69,30 @@ export class LiteratureReportService {
       const analysisResults = await this.getAnalysisResults(studyId);
 
       // Get literature comparison
-      const literatureComparison = await this.literatureComparisonService.compareFindings(
-        studyId,
-        analysisResults,
-      );
+      const literatureComparison =
+        await this.literatureComparisonService.compareFindings(
+          studyId,
+          analysisResults,
+        );
 
       // Generate each section
       const sections = {
         title: await this.generateTitle(study),
         abstract: await this.generateAbstract(study, analysisResults),
         keywords: await this.generateKeywords(study),
-        introduction: await this.generateIntroduction(study, literatureComparison),
+        introduction: await this.generateIntroduction(
+          study,
+          literatureComparison,
+        ),
         literatureReview: await this.generateLiteratureReview(study),
         theoreticalFramework: await this.generateTheoreticalFramework(study),
         methodology: await this.generateMethodology(study),
         results: await this.generateResults(analysisResults),
         discussion: await this.generateDiscussion(study, literatureComparison),
-        conclusions: await this.generateConclusions(study, literatureComparison),
+        conclusions: await this.generateConclusions(
+          study,
+          literatureComparison,
+        ),
         limitations: await this.generateLimitations(study),
         futureResearch: await this.generateFutureResearch(literatureComparison),
         references: await this.generateBibliography(study, format),
@@ -132,7 +139,10 @@ export class LiteratureReportService {
     const synthesis = await this.generateSynthesis(papers, themes);
 
     // Identify gaps
-    const gapAnalysis = await this.generateGapAnalysis(papers, study.researchGap);
+    const gapAnalysis = await this.generateGapAnalysis(
+      papers,
+      study.researchGap,
+    );
 
     return `
 ## Literature Review
@@ -191,14 +201,16 @@ Based on the comprehensive review of the literature, this study addresses the id
 
     // Collect papers from various sources
     if (study.researchPipeline?.literaturePapers) {
-      study.researchPipeline.literaturePapers.forEach((p: any) => allPapers.add(p));
+      study.researchPipeline.literaturePapers.forEach((p: any) =>
+        allPapers.add(p),
+      );
     }
 
     if (study.basedOnPapersIds?.length) {
       const basedOnPapers = await this.prisma.paper.findMany({
         where: { id: { in: study.basedOnPapersIds } },
       });
-      basedOnPapers.forEach(p => allPapers.add(p));
+      basedOnPapers.forEach((p) => allPapers.add(p));
     }
 
     // Sort papers alphabetically by author
@@ -216,9 +228,12 @@ Based on the comprehensive review of the literature, this study addresses the id
       }),
     );
 
-    const header = format === 'apa' ? 'References' :
-                   format === 'mla' ? 'Works Cited' :
-                   'Bibliography';
+    const header =
+      format === 'apa'
+        ? 'References'
+        : format === 'mla'
+          ? 'Works Cited'
+          : 'Bibliography';
 
     return `
 ## ${header}
@@ -249,7 +264,8 @@ ${citations.join('\n\n')}
       4. Key concepts and definitions
     `;
 
-    const frameworkResponse = await this.openAIService.generateCompletion(prompt);
+    const frameworkResponse =
+      await this.openAIService.generateCompletion(prompt);
 
     return `
 ## Theoretical Framework
@@ -270,7 +286,8 @@ The theoretical lens guides both the statement generation process and the interp
    */
   async generateMethodology(study: any): Promise<string> {
     const statements = study.statements || [];
-    const statementsWithProvenance = await this.getStatementProvenance(statements);
+    const statementsWithProvenance =
+      await this.getStatementProvenance(statements);
 
     return `
 ## Methodology
@@ -335,7 +352,9 @@ Factor analysis was performed using centroid factor extraction followed by varim
     // Theoretical implications
     if (comparison.theoreticalAlignment) {
       discussion += `### Theoretical Implications\n\n`;
-      discussion += await this.generateTheoreticalImplications(comparison.theoreticalAlignment);
+      discussion += await this.generateTheoreticalImplications(
+        comparison.theoreticalAlignment,
+      );
       discussion += '\n\n';
     }
 
@@ -361,17 +380,20 @@ Factor analysis was performed using centroid factor extraction followed by varim
     }
   }
 
-  private groupPapersByTheme(papers: any[], themes: any[]): Record<string, any[]> {
+  private groupPapersByTheme(
+    papers: any[],
+    themes: any[],
+  ): Record<string, any[]> {
     const grouped: Record<string, any[]> = {};
 
     for (const theme of themes || []) {
-      grouped[theme.name] = papers.filter(p =>
-        p.themes?.some((t: any) => t.id === theme.id)
+      grouped[theme.name] = papers.filter((p) =>
+        p.themes?.some((t: any) => t.id === theme.id),
       );
     }
 
     // Add papers without themes
-    const unthemed = papers.filter(p => !p.themes || p.themes.length === 0);
+    const unthemed = papers.filter((p) => !p.themes || p.themes.length === 0);
     if (unthemed.length > 0) {
       grouped['General'] = unthemed;
     }
@@ -379,10 +401,13 @@ Factor analysis was performed using centroid factor extraction followed by varim
     return grouped;
   }
 
-  private async generateThematicReview(theme: string, papers: any[]): Promise<string> {
+  private async generateThematicReview(
+    theme: string,
+    papers: any[],
+  ): Promise<string> {
     if (papers.length === 0) return '';
 
-    const paperSummaries = papers.map(p => ({
+    const paperSummaries = papers.map((p) => ({
       authors: p.authors?.join(', '),
       year: p.year,
       key_finding: p.abstract?.substring(0, 200),
@@ -401,10 +426,13 @@ Factor analysis was performed using centroid factor extraction followed by varim
     return `### ${theme}\n\n${reviewResponse.content}`;
   }
 
-  private async generateSynthesis(papers: any[], themes: any[]): Promise<string> {
+  private async generateSynthesis(
+    papers: any[],
+    themes: any[],
+  ): Promise<string> {
     const prompt = `
       Synthesize the following research themes into a coherent narrative:
-      Themes: ${themes?.map(t => t.name).join(', ')}
+      Themes: ${themes?.map((t) => t.name).join(', ')}
       Number of papers reviewed: ${papers.length}
 
       Create a synthesis paragraph that:
@@ -449,8 +477,15 @@ Q-methodology is particularly suited for this investigation as it allows for the
 
     // Extract theory mentions from abstracts
     const theoryKeywords = [
-      'theory', 'framework', 'model', 'paradigm', 'approach',
-      'perspective', 'lens', 'construct', 'concept'
+      'theory',
+      'framework',
+      'model',
+      'paradigm',
+      'approach',
+      'perspective',
+      'lens',
+      'construct',
+      'concept',
     ];
 
     for (const paper of papers) {
@@ -484,7 +519,7 @@ Q-methodology is particularly suited for this investigation as it allows for the
           ...statement,
           provenance,
         };
-      })
+      }),
     );
   }
 
@@ -499,7 +534,10 @@ Q-methodology is particularly suited for this investigation as it allows for the
     for (const stmt of statements) {
       if (stmt.text?.includes('not') || stmt.text?.includes('disagree')) {
         categories.negative++;
-      } else if (stmt.text?.includes('agree') || stmt.text?.includes('support')) {
+      } else if (
+        stmt.text?.includes('agree') ||
+        stmt.text?.includes('support')
+      ) {
         categories.positive++;
       } else {
         categories.neutral++;
@@ -510,7 +548,8 @@ Q-methodology is particularly suited for this investigation as it allows for the
   }
 
   private generateProvenanceTable(statements: any[]): string {
-    let table = '\n| Statement | Source | Theme |\n|-----------|--------|-------|\n';
+    let table =
+      '\n| Statement | Source | Theme |\n|-----------|--------|-------|\n';
 
     for (const stmt of statements) {
       const text = stmt.text?.substring(0, 50) + '...';
@@ -544,13 +583,17 @@ Q-methodology is particularly suited for this investigation as it allows for the
     const keywords = [
       'Q-methodology',
       study.field || 'research',
-      ...study.researchPipeline?.extractedThemes?.map((t: any) => t.name) || [],
+      ...(study.researchPipeline?.extractedThemes?.map((t: any) => t.name) ||
+        []),
     ].slice(0, 6);
 
     return `**Keywords:** ${keywords.join(', ')}`;
   }
 
-  private async generateIntroduction(study: any, comparison: any): Promise<string> {
+  private async generateIntroduction(
+    study: any,
+    comparison: any,
+  ): Promise<string> {
     const prompt = `
       Generate an introduction section for this Q-methodology study:
       Topic: ${study.title}
@@ -594,7 +637,10 @@ Q-methodology is particularly suited for this investigation as it allows for the
     return resultsSection;
   }
 
-  private async generateConclusions(study: any, comparison: any): Promise<string> {
+  private async generateConclusions(
+    study: any,
+    comparison: any,
+  ): Promise<string> {
     const prompt = `
       Generate conclusions for this Q-methodology study:
       Main findings: ${comparison.summary?.novelFindings?.length || 0} novel, ${comparison.summary?.confirmatoryFindings?.length || 0} confirmatory
@@ -626,10 +672,12 @@ This study has several limitations that should be considered when interpreting t
   }
 
   private async generateFutureResearch(comparison: any): Promise<string> {
-    const suggestions = comparison.discussionPoints
-      ?.filter((p: any) => p.type === 'future_research')
-      .map((p: any) => p.content)
-      .join('\n\n') || 'Future research should explore the generalizability of these findings.';
+    const suggestions =
+      comparison.discussionPoints
+        ?.filter((p: any) => p.type === 'future_research')
+        .map((p: any) => p.content)
+        .join('\n\n') ||
+      'Future research should explore the generalizability of these findings.';
 
     return `
 ## Suggestions for Future Research
@@ -681,7 +729,7 @@ Additional avenues for investigation include:
       sections.appendices,
     ];
 
-    const fullReport = orderedSections.filter(s => s).join('\n\n---\n\n');
+    const fullReport = orderedSections.filter((s) => s).join('\n\n---\n\n');
 
     return {
       format,
@@ -695,25 +743,36 @@ Additional avenues for investigation include:
     };
   }
 
-  private async generateTheoreticalImplications(alignment: any): Promise<string> {
+  private async generateTheoreticalImplications(
+    alignment: any,
+  ): Promise<string> {
     const implications = [];
 
     if (alignment.aligned?.length) {
-      implications.push(`The findings align with ${alignment.aligned.length} theoretical frameworks, providing empirical support.`);
+      implications.push(
+        `The findings align with ${alignment.aligned.length} theoretical frameworks, providing empirical support.`,
+      );
     }
 
     if (alignment.contradictory?.length) {
-      implications.push(`Some findings challenge existing theory, suggesting the need for theoretical refinement.`);
+      implications.push(
+        `Some findings challenge existing theory, suggesting the need for theoretical refinement.`,
+      );
     }
 
     if (alignment.novel?.length) {
-      implications.push(`Novel findings suggest new theoretical directions not previously considered.`);
+      implications.push(
+        `Novel findings suggest new theoretical directions not previously considered.`,
+      );
     }
 
     return implications.join(' ');
   }
 
-  private async generatePracticalImplications(study: any, comparison: any): Promise<string> {
+  private async generatePracticalImplications(
+    study: any,
+    comparison: any,
+  ): Promise<string> {
     const prompt = `
       Generate practical implications based on:
       Study topic: ${study.title}

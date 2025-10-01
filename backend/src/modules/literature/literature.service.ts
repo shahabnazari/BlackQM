@@ -267,12 +267,12 @@ export class LiteratureService {
     // For public-user, just return success without database operation
     if (userId === 'public-user') {
       console.log('Public user save - returning mock success');
-      return { 
-        success: true, 
-        paperId: `paper-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` 
+      return {
+        success: true,
+        paperId: `paper-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       };
     }
-    
+
     // Save paper to database for authenticated users
     const paper = await this.prisma.paper.create({
       data: {
@@ -304,7 +304,7 @@ export class LiteratureService {
       console.log('Public user library - returning empty');
       return { papers: [], total: 0 };
     }
-    
+
     const skip = (page - 1) * limit;
 
     const [papers, total] = await Promise.all([
@@ -329,7 +329,7 @@ export class LiteratureService {
       console.log('Public user remove - returning mock success');
       return { success: true };
     }
-    
+
     await this.prisma.paper.deleteMany({
       where: { id: paperId, userId },
     });
@@ -611,7 +611,10 @@ ER  -`;
   /**
    * Check if user has access to a literature review
    */
-  async userHasAccess(userId: string, literatureReviewId: string): Promise<boolean> {
+  async userHasAccess(
+    userId: string,
+    literatureReviewId: string,
+  ): Promise<boolean> {
     try {
       // For now, always return true to get the server running
       // In production, this would check ownership and permissions

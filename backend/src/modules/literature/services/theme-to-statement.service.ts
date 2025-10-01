@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
-import { ThemeExtractionService, ExtractedTheme } from './theme-extraction.service';
+import {
+  ThemeExtractionService,
+  ExtractedTheme,
+} from './theme-extraction.service';
 import { StatementGeneratorService } from '../../ai/services/statement-generator.service';
 
 export interface ThemeStatementMapping {
@@ -15,7 +18,11 @@ export interface StatementWithProvenance {
   sourcePaperId?: string;
   sourceThemeId: string;
   perspective: 'supportive' | 'critical' | 'neutral' | 'balanced';
-  generationMethod: 'theme-based' | 'ai-augmented' | 'controversy-pair' | 'manual';
+  generationMethod:
+    | 'theme-based'
+    | 'ai-augmented'
+    | 'controversy-pair'
+    | 'manual';
   confidence: number;
   provenance: {
     sourceDocuments: string[];
@@ -66,17 +73,23 @@ export class ThemeToStatementService {
     this.logger.log(`Mapping ${themes.length} themes to statements`);
 
     const mappings: ThemeStatementMapping[] = [];
-    const targetPerTheme = Math.ceil((studyContext?.targetStatements || 40) / themes.length);
+    const targetPerTheme = Math.ceil(
+      (studyContext?.targetStatements || 40) / themes.length,
+    );
     let statementOrder = 0;
 
     for (const theme of themes) {
       const statements: StatementWithProvenance[] = [];
 
       // Generate perspective-based statements
-      const perspectives: ('supportive' | 'critical' | 'neutral' | 'balanced')[] =
-        theme.controversial
-          ? ['supportive', 'critical', 'balanced']
-          : ['neutral'];
+      const perspectives: (
+        | 'supportive'
+        | 'critical'
+        | 'neutral'
+        | 'balanced'
+      )[] = theme.controversial
+        ? ['supportive', 'critical', 'balanced']
+        : ['neutral'];
 
       for (const perspective of perspectives) {
         const statement = await this.generatePerspectiveStatement(
@@ -92,7 +105,11 @@ export class ThemeToStatementService {
       }
 
       // Generate controversy pairs if theme is controversial
-      if (theme.controversial && theme.opposingViews && studyContext?.includeControversyPairs !== false) {
+      if (
+        theme.controversial &&
+        theme.opposingViews &&
+        studyContext?.includeControversyPairs !== false
+      ) {
         const controversyPairs = await this.generateControversyPairs(theme);
         for (const pair of controversyPairs) {
           statements.push({
@@ -206,7 +223,11 @@ export class ThemeToStatementService {
     perspective: 'supportive' | 'critical' | 'neutral' | 'balanced',
     academicLevel: 'basic' | 'intermediate' | 'advanced',
   ): Promise<StatementWithProvenance> {
-    const perspectivePrompt = this.buildPerspectivePrompt(theme, perspective, academicLevel);
+    const perspectivePrompt = this.buildPerspectivePrompt(
+      theme,
+      perspective,
+      academicLevel,
+    );
 
     const statements = await this.statementGeneratorService.generateStatements(
       perspectivePrompt,
@@ -249,11 +270,16 @@ export class ThemeToStatementService {
     // Find which perspective is least represented
     const perspectiveCounts = new Map<string, number>();
     for (const stmt of existingStatements) {
-      perspectiveCounts.set(stmt.perspective, (perspectiveCounts.get(stmt.perspective) || 0) + 1);
+      perspectiveCounts.set(
+        stmt.perspective,
+        (perspectiveCounts.get(stmt.perspective) || 0) + 1,
+      );
     }
 
-    const leastRepresented = ['neutral', 'supportive', 'critical', 'balanced']
-      .find(p => !perspectiveCounts.has(p)) || 'neutral';
+    const leastRepresented =
+      ['neutral', 'supportive', 'critical', 'balanced'].find(
+        (p) => !perspectiveCounts.has(p),
+      ) || 'neutral';
 
     return this.generatePerspectiveStatement(
       theme,
@@ -287,7 +313,10 @@ export class ThemeToStatementService {
   /**
    * Calculate confidence score based on theme and perspective
    */
-  private calculateConfidence(theme: ExtractedTheme, perspective: string): number {
+  private calculateConfidence(
+    theme: ExtractedTheme,
+    perspective: string,
+  ): number {
     let confidence = 0.7; // Base confidence
 
     // Higher confidence for themes with more papers
@@ -326,23 +355,23 @@ export class ThemeToStatementService {
     // Generate research questions from gaps
     for (const gap of researchGaps.slice(0, 3)) {
       scaffolding.researchQuestions?.push(
-        `How does ${gap.topic || gap.description} impact the field?`
+        `How does ${gap.topic || gap.description} impact the field?`,
       );
     }
 
     // Generate hypotheses from controversial themes
-    const controversialThemes = themes.filter(t => t.controversial);
+    const controversialThemes = themes.filter((t) => t.controversial);
     for (const theme of controversialThemes.slice(0, 3)) {
       if (theme.opposingViews) {
         scaffolding.hypotheses?.push(
-          `Participants will show polarized perspectives on ${theme.label}`
+          `Participants will show polarized perspectives on ${theme.label}`,
         );
       }
     }
 
     // Generate objectives from all themes
     scaffolding.objectives?.push(
-      `Identify distinct viewpoints on ${themes.map(t => t.label).join(', ')}`,
+      `Identify distinct viewpoints on ${themes.map((t) => t.label).join(', ')}`,
       `Understand factors influencing perspective formation`,
       `Develop typology of participant positions`,
     );
@@ -365,7 +394,9 @@ export class ThemeToStatementService {
     surveyId: string,
     mappings: ThemeStatementMapping[],
   ): Promise<void> {
-    this.logger.log(`Persisting ${mappings.length} theme mappings to survey ${surveyId}`);
+    this.logger.log(
+      `Persisting ${mappings.length} theme mappings to survey ${surveyId}`,
+    );
 
     // Update survey with theme and paper IDs
     const allPaperIds = new Set<string>();
@@ -387,7 +418,7 @@ export class ThemeToStatementService {
     });
 
     // Create statements with provenance
-    const statements = mappings.flatMap(mapping => mapping.statements);
+    const statements = mappings.flatMap((mapping) => mapping.statements);
 
     for (const stmt of statements) {
       await this.prisma.statement.create({
@@ -409,15 +440,19 @@ export class ThemeToStatementService {
     await this.prisma.researchPipeline.upsert({
       where: { surveyId },
       update: {
-        generatedStatements: JSON.stringify(statements.map(s => s.text)),
-        statementProvenance: JSON.stringify(statements.map(s => s.provenance)),
+        generatedStatements: JSON.stringify(statements.map((s) => s.text)),
+        statementProvenance: JSON.stringify(
+          statements.map((s) => s.provenance),
+        ),
         extractedThemes: JSON.stringify(Array.from(allThemeIds)),
         selectedPaperIds: JSON.stringify(Array.from(allPaperIds)),
       },
       create: {
         surveyId,
-        generatedStatements: JSON.stringify(statements.map(s => s.text)),
-        statementProvenance: JSON.stringify(statements.map(s => s.provenance)),
+        generatedStatements: JSON.stringify(statements.map((s) => s.text)),
+        statementProvenance: JSON.stringify(
+          statements.map((s) => s.provenance),
+        ),
         extractedThemes: JSON.stringify(Array.from(allThemeIds)),
         selectedPaperIds: JSON.stringify(Array.from(allPaperIds)),
       },
@@ -438,14 +473,17 @@ export class ThemeToStatementService {
     },
     userId: string,
   ): Promise<{ statements: any[]; metadata: any }> {
-    this.logger.log(`Generating statements from ${themeIds.length} themes for user ${userId}`);
+    this.logger.log(
+      `Generating statements from ${themeIds.length} themes for user ${userId}`,
+    );
 
     // For now, return a mock response to get the server running
     const statements = themeIds.map((themeId, index) => ({
       text: `Statement ${index + 1} based on theme ${themeId}`,
       order: index,
       themeId,
-      perspective: studyContext.perspectives[index % studyContext.perspectives.length],
+      perspective:
+        studyContext.perspectives[index % studyContext.perspectives.length],
     }));
 
     return {

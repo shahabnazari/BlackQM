@@ -26,7 +26,7 @@ const ACCEPTANCE_CRITERIA = {
 
 async function runE2ETest() {
   console.log('🔬 Literature → Study Pipeline E2E Test');
-  console.log('=' . repeat(60));
+  console.log('='.repeat(60));
 
   const results = {
     passed: 0,
@@ -49,25 +49,35 @@ async function runE2ETest() {
 
     // Check acceptance criteria
     if (themes.length >= ACCEPTANCE_CRITERIA.minThemes) {
-      console.log(`✅ Extracted ${themes.length} themes (min: ${ACCEPTANCE_CRITERIA.minThemes})`);
+      console.log(
+        `✅ Extracted ${themes.length} themes (min: ${ACCEPTANCE_CRITERIA.minThemes})`
+      );
       results.passed++;
     } else {
-      console.log(`❌ Only ${themes.length} themes extracted (min: ${ACCEPTANCE_CRITERIA.minThemes})`);
+      console.log(
+        `❌ Only ${themes.length} themes extracted (min: ${ACCEPTANCE_CRITERIA.minThemes})`
+      );
       results.failed++;
     }
 
     if (themeLatency < ACCEPTANCE_CRITERIA.maxLatencyMs) {
-      console.log(`✅ Latency: ${themeLatency}ms (max: ${ACCEPTANCE_CRITERIA.maxLatencyMs}ms)`);
+      console.log(
+        `✅ Latency: ${themeLatency}ms (max: ${ACCEPTANCE_CRITERIA.maxLatencyMs}ms)`
+      );
       results.passed++;
     } else {
-      console.log(`❌ Latency: ${themeLatency}ms (max: ${ACCEPTANCE_CRITERIA.maxLatencyMs}ms)`);
+      console.log(
+        `❌ Latency: ${themeLatency}ms (max: ${ACCEPTANCE_CRITERIA.maxLatencyMs}ms)`
+      );
       results.failed++;
     }
 
     // Test for controversy detection
     const controversialThemes = themes.filter(t => t.controversial);
     if (controversialThemes.length > 0) {
-      console.log(`✅ Controversy detection working: ${controversialThemes.length} controversial themes`);
+      console.log(
+        `✅ Controversy detection working: ${controversialThemes.length} controversial themes`
+      );
       results.passed++;
     } else {
       console.log(`⚠️ No controversial themes detected`);
@@ -90,7 +100,9 @@ async function runE2ETest() {
 
     // Check research questions generation
     if (scaffolding?.researchQuestions?.length > 0) {
-      console.log(`✅ Generated ${scaffolding.researchQuestions.length} research questions`);
+      console.log(
+        `✅ Generated ${scaffolding.researchQuestions.length} research questions`
+      );
       results.passed++;
     } else {
       console.log('❌ No research questions generated');
@@ -102,7 +114,9 @@ async function runE2ETest() {
       console.log(`✅ Generated ${scaffolding.hypotheses.length} hypotheses`);
       results.passed++;
     } else {
-      console.log('⚠️ No hypotheses generated (may be normal if no controversial themes)');
+      console.log(
+        '⚠️ No hypotheses generated (may be normal if no controversial themes)'
+      );
     }
 
     // Test 3: Statement Generation with Provenance
@@ -130,10 +144,14 @@ async function runE2ETest() {
     }
 
     if (statementsWithProvenance === totalStatements && totalStatements > 0) {
-      console.log(`✅ All ${statementsWithProvenance} statements have provenance`);
+      console.log(
+        `✅ All ${statementsWithProvenance} statements have provenance`
+      );
       results.passed++;
     } else {
-      console.log(`⚠️ Only ${statementsWithProvenance}/${totalStatements} statements have provenance`);
+      console.log(
+        `⚠️ Only ${statementsWithProvenance}/${totalStatements} statements have provenance`
+      );
       if (statementsWithProvenance > totalStatements * 0.8) {
         results.passed++;
       } else {
@@ -154,7 +172,9 @@ async function runE2ETest() {
     }
 
     if (perspectives.size >= 2) {
-      console.log(`✅ Multiple perspectives covered: ${Array.from(perspectives).join(', ')}`);
+      console.log(
+        `✅ Multiple perspectives covered: ${Array.from(perspectives).join(', ')}`
+      );
       results.passed++;
     } else {
       console.log(`❌ Only ${perspectives.size} perspective(s) found`);
@@ -171,25 +191,33 @@ async function runE2ETest() {
         studyContext: {
           targetStatements: TEST_CONFIG.targetStatements,
           academicLevel: TEST_CONFIG.academicLevel,
-        }
+        },
       }
     );
 
-    if (pipelineResponse.data?.statements?.length > 0 && pipelineResponse.data?.provenance) {
+    if (
+      pipelineResponse.data?.statements?.length > 0 &&
+      pipelineResponse.data?.provenance
+    ) {
       console.log('✅ Full pipeline integration working');
-      console.log(`   - Statements: ${pipelineResponse.data.statements.length}`);
-      console.log(`   - Provenance entries: ${Object.keys(pipelineResponse.data.provenance).length}`);
+      console.log(
+        `   - Statements: ${pipelineResponse.data.statements.length}`
+      );
+      console.log(
+        `   - Provenance entries: ${Object.keys(pipelineResponse.data.provenance).length}`
+      );
       results.passed++;
     } else {
       console.log('❌ Pipeline integration incomplete');
       results.failed++;
     }
-
   } catch (error) {
     console.error('\n❌ Test failed with error:', error.message);
 
     if (error.response?.status === 404) {
-      console.log('💡 Endpoint not found. Make sure backend is running and routes are configured.');
+      console.log(
+        '💡 Endpoint not found. Make sure backend is running and routes are configured.'
+      );
     } else if (error.response?.data) {
       console.log('Error details:', error.response.data);
     }
@@ -198,12 +226,13 @@ async function runE2ETest() {
   }
 
   // Print summary
-  console.log('\n' + '=' . repeat(60));
+  console.log('\n' + '='.repeat(60));
   console.log('📊 E2E TEST SUMMARY');
-  console.log('=' . repeat(60));
+  console.log('='.repeat(60));
 
   const totalTests = results.passed + results.failed;
-  const passRate = totalTests > 0 ? (results.passed / totalTests * 100).toFixed(1) : 0;
+  const passRate =
+    totalTests > 0 ? ((results.passed / totalTests) * 100).toFixed(1) : 0;
 
   console.log(`Passed: ${results.passed}/${totalTests} tests (${passRate}%)`);
 
@@ -220,9 +249,11 @@ async function runE2ETest() {
 }
 
 // Helper function for string repeat (Node.js compatibility)
-String.prototype.repeat = String.prototype.repeat || function(count) {
-  return new Array(count + 1).join(this);
-};
+String.prototype.repeat =
+  String.prototype.repeat ||
+  function (count) {
+    return new Array(count + 1).join(this);
+  };
 
 // Run the test
 console.log('🚀 Starting Literature → Study E2E Test');

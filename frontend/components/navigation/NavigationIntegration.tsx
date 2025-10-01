@@ -22,10 +22,7 @@ import { OnboardingTour, useOnboardingTour } from './OnboardingTour';
 import { ResponsiveLayout } from './ResponsiveLayout';
 
 // Import feature flags and migration helpers
-import {
-  useMultipleFlags,
-  FEATURE_FLAGS,
-} from '@/lib/feature-flags';
+import { useMultipleFlags, FEATURE_FLAGS } from '@/lib/feature-flags';
 import {
   useNavigationMigration,
   useRouteMigration,
@@ -241,7 +238,9 @@ export function NavigationIntegration({
                   </svg>
                 </button>
                 <button
-                  onClick={() => {/* TODO: setMobileToolsOpen(true) */}}
+                  onClick={() => {
+                    /* TODO: setMobileToolsOpen(true) */
+                  }}
                   className="p-2 rounded-lg hover:bg-accent transition-colors"
                   aria-label="Tools"
                 >
@@ -288,9 +287,7 @@ export function NavigationIntegration({
         )}
 
         {/* Search Modal */}
-        {searchOpen && (
-          <PhaseSearch />
-        )}
+        {searchOpen && <PhaseSearch />}
 
         {/* Preferences Modal */}
         {preferencesOpen && (
@@ -301,7 +298,9 @@ export function NavigationIntegration({
         )}
 
         {/* Contextual Help */}
-        <ContextualHelp currentPhase={(currentPhase || 'discover') as ResearchPhase} />
+        <ContextualHelp
+          currentPhase={(currentPhase || 'discover') as ResearchPhase}
+        />
 
         {/* Phase Availability Checker */}
         <PhaseAvailability

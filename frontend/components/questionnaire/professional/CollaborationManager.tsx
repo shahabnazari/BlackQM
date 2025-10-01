@@ -395,7 +395,8 @@ export function CollaborationManager() {
       const editsInWindow = activities.filter(
         a =>
           a.type === 'edit' &&
-          activities[i] && Math.abs(a.timestamp.getTime() - activities[i].timestamp.getTime()) <
+          activities[i] &&
+          Math.abs(a.timestamp.getTime() - activities[i].timestamp.getTime()) <
             timeWindow
       );
 

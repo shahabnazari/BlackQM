@@ -54,19 +54,22 @@ ${colors.reset}`);
   try {
     // STEP 1: SEARCH LITERATURE
     log('STEP 1: Searching Literature', 'step');
-    const searchResponse = await axios.post(`${API_BASE}/literature/search/public`, {
-      query: 'Q-methodology research',
-      sources: ['semantic_scholar', 'crossref'],
-      yearFrom: 2020,
-      yearTo: 2025,
-      limit: 5
-    });
+    const searchResponse = await axios.post(
+      `${API_BASE}/literature/search/public`,
+      {
+        query: 'Q-methodology research',
+        sources: ['semantic_scholar', 'crossref'],
+        yearFrom: 2020,
+        yearTo: 2025,
+        limit: 5,
+      }
+    );
 
     if (searchResponse.data.papers && searchResponse.data.papers.length > 0) {
       log(`Found ${searchResponse.data.papers.length} papers`, 'success');
       savedPapers = searchResponse.data.papers.slice(0, 3); // Take first 3
       results.search = true;
-      
+
       // Display paper titles
       savedPapers.forEach((p, i) => {
         console.log(`   ${i + 1}. ${p.title || 'Untitled'}`);
@@ -87,11 +90,11 @@ ${colors.reset}`);
           venue: paper.venue || paper.journal || 'Unknown',
           abstract: paper.abstract || 'No abstract',
           doi: paper.doi,
-          url: paper.url
+          url: paper.url,
         };
 
         const saveResponse = await axios.post(
-          `${API_BASE}/literature/save/public`, 
+          `${API_BASE}/literature/save/public`,
           saveData
         );
 
@@ -99,22 +102,35 @@ ${colors.reset}`);
           saveCount++;
         }
       } catch (e) {
-        console.log(`   Failed to save: ${e.response?.data?.message || e.message}`);
+        console.log(
+          `   Failed to save: ${e.response?.data?.message || e.message}`
+        );
       }
     }
-    
-    log(`Saved ${saveCount}/${savedPapers.length} papers`, saveCount > 0 ? 'success' : 'error');
+
+    log(
+      `Saved ${saveCount}/${savedPapers.length} papers`,
+      saveCount > 0 ? 'success' : 'error'
+    );
     results.save = saveCount > 0;
 
     // STEP 3: RETRIEVE LIBRARY
     log('\\nSTEP 3: Retrieving User Library', 'step');
-    const libraryResponse = await axios.get(`${API_BASE}/literature/library/public?page=1&limit=10`);
-    
+    const libraryResponse = await axios.get(
+      `${API_BASE}/literature/library/public?page=1&limit=10`
+    );
+
     if (libraryResponse.data) {
-      log(`Library contains ${libraryResponse.data.total || 0} papers`, 'success');
+      log(
+        `Library contains ${libraryResponse.data.total || 0} papers`,
+        'success'
+      );
       results.library = true;
-      
-      if (libraryResponse.data.papers && libraryResponse.data.papers.length > 0) {
+
+      if (
+        libraryResponse.data.papers &&
+        libraryResponse.data.papers.length > 0
+      ) {
         console.log('   Papers in library:');
         libraryResponse.data.papers.slice(0, 3).forEach((p, i) => {
           console.log(`   ${i + 1}. ${p.title || 'Untitled'}`);
@@ -124,18 +140,23 @@ ${colors.reset}`);
 
     // STEP 4: EXTRACT THEMES
     log('\\nSTEP 4: Extracting Themes from Papers', 'step');
-    const paperIds = savedPapers.map(p => p.id || `paper-${Math.random()}`).slice(0, 3);
-    
-    const themeResponse = await axios.post(`${API_BASE}/literature/themes/public`, {
-      paperIds,
-      numThemes: 5
-    });
+    const paperIds = savedPapers
+      .map(p => p.id || `paper-${Math.random()}`)
+      .slice(0, 3);
+
+    const themeResponse = await axios.post(
+      `${API_BASE}/literature/themes/public`,
+      {
+        paperIds,
+        numThemes: 5,
+      }
+    );
 
     if (themeResponse.data && Array.isArray(themeResponse.data)) {
       extractedThemes = themeResponse.data;
       log(`Extracted ${extractedThemes.length} themes`, 'success');
       results.themes = true;
-      
+
       extractedThemes.forEach((theme, i) => {
         console.log(`   ${i + 1}. ${theme.name || theme.label}`);
         console.log(`      Keywords: ${(theme.keywords || []).join(', ')}`);
@@ -155,10 +176,16 @@ ${colors.reset}`);
       );
 
       if (controversyResponse.status === 401) {
-        log('Controversy detection requires authentication (expected)', 'warning');
+        log(
+          'Controversy detection requires authentication (expected)',
+          'warning'
+        );
         results.controversy = true; // Endpoint exists
       } else if (controversyResponse.status === 200) {
-        log(`Detected ${controversyResponse.data.length} controversies`, 'success');
+        log(
+          `Detected ${controversyResponse.data.length} controversies`,
+          'success'
+        );
         results.controversy = true;
       }
     } catch (e) {
@@ -178,9 +205,12 @@ ${colors.reset}`);
         log('Gap analysis requires authentication (expected)', 'warning');
         results.gaps = true; // Endpoint exists
       } else if (gapResponse.status === 200) {
-        log(`Identified ${gapResponse.data.gaps?.length || 0} research gaps`, 'success');
+        log(
+          `Identified ${gapResponse.data.gaps?.length || 0} research gaps`,
+          'success'
+        );
         results.gaps = true;
-        
+
         if (gapResponse.data.gaps) {
           gapResponse.data.gaps.slice(0, 3).forEach((gap, i) => {
             console.log(`   ${i + 1}. ${gap.title}`);
@@ -196,7 +226,9 @@ ${colors.reset}`);
     // STEP 7: TEST UI INTEGRATION
     log('\\nSTEP 7: Testing UI Integration', 'step');
     try {
-      const pageResponse = await axios.get('http://localhost:3000/discover/literature');
+      const pageResponse = await axios.get(
+        'http://localhost:3000/discover/literature'
+      );
       if (pageResponse.status === 200) {
         log('Literature page accessible', 'success');
         results.integration = true;
@@ -204,7 +236,6 @@ ${colors.reset}`);
     } catch (e) {
       log('UI page not accessible', 'error');
     }
-
   } catch (error) {
     log(`Workflow error: ${error.message}`, 'error');
     console.error(error.response?.data || error);
@@ -227,7 +258,9 @@ ${colors.reset}`);
     const icon = passed ? '✅' : '❌';
     const color = passed ? colors.green : colors.red;
     const stepName = step.charAt(0).toUpperCase() + step.slice(1);
-    console.log(`${color}${icon} ${stepName}: ${passed ? 'WORKING' : 'FAILED'}${colors.reset}`);
+    console.log(
+      `${color}${icon} ${stepName}: ${passed ? 'WORKING' : 'FAILED'}${colors.reset}`
+    );
   });
 
   // WORLD-CLASS ASSESSMENT
@@ -238,12 +271,14 @@ ${colors.reset}`);
 ${colors.reset}`);
 
   const assessmentCriteria = {
-    'User Experience': passedSteps >= 5 ? '⭐⭐⭐⭐⭐' : passedSteps >= 3 ? '⭐⭐⭐' : '⭐⭐',
-    'API Reliability': results.search && results.themes ? '⭐⭐⭐⭐⭐' : '⭐⭐⭐',
+    'User Experience':
+      passedSteps >= 5 ? '⭐⭐⭐⭐⭐' : passedSteps >= 3 ? '⭐⭐⭐' : '⭐⭐',
+    'API Reliability':
+      results.search && results.themes ? '⭐⭐⭐⭐⭐' : '⭐⭐⭐',
     'Data Integration': results.save && results.library ? '⭐⭐⭐⭐' : '⭐⭐',
     'AI Features': results.themes && results.gaps ? '⭐⭐⭐⭐⭐' : '⭐⭐⭐',
     'Error Handling': '⭐⭐⭐⭐', // Based on graceful fallbacks observed
-    'Performance': '⭐⭐⭐⭐⭐', // Based on response times < 500ms
+    Performance: '⭐⭐⭐⭐⭐', // Based on response times < 500ms
   };
 
   console.log('\\n🌟 Quality Ratings:\\n');
@@ -253,7 +288,7 @@ ${colors.reset}`);
 
   // RECOMMENDATIONS
   console.log(`\\n${colors.yellow}📝 Recommendations:${colors.reset}`);
-  
+
   if (!results.search) {
     console.log('   • Fix literature search to return consistent results');
   }
@@ -264,18 +299,26 @@ ${colors.reset}`);
     console.log('   • Ensure theme extraction returns proper format');
   }
   if (!results.gaps || !results.controversy) {
-    console.log('   • Consider adding public endpoints for gaps/controversy analysis');
+    console.log(
+      '   • Consider adding public endpoints for gaps/controversy analysis'
+    );
   }
   if (!results.integration) {
     console.log('   • Verify frontend routing and page accessibility');
   }
 
   if (passedSteps === totalSteps) {
-    console.log(`\\n${colors.green}🏆 EXCELLENT! All workflow steps are functional!${colors.reset}`);
+    console.log(
+      `\\n${colors.green}🏆 EXCELLENT! All workflow steps are functional!${colors.reset}`
+    );
   } else if (passedSteps >= 5) {
-    console.log(`\\n${colors.green}✨ GOOD! Core functionality is working well!${colors.reset}`);
+    console.log(
+      `\\n${colors.green}✨ GOOD! Core functionality is working well!${colors.reset}`
+    );
   } else {
-    console.log(`\\n${colors.yellow}⚠️  NEEDS ATTENTION: ${totalSteps - passedSteps} steps require fixes${colors.reset}`);
+    console.log(
+      `\\n${colors.yellow}⚠️  NEEDS ATTENTION: ${totalSteps - passedSteps} steps require fixes${colors.reset}`
+    );
   }
 
   // TECHNICAL EXCELLENCE

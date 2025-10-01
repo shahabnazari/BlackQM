@@ -61,11 +61,12 @@ export class LiteratureController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Public search for testing (dev only)' })
   @ApiResponse({ status: 200, description: 'Search results returned' })
-  async searchLiteraturePublic(
-    @Body() searchDto: SearchLiteratureDto,
-  ) {
+  async searchLiteraturePublic(@Body() searchDto: SearchLiteratureDto) {
     // Use a default user ID for public searches
-    return await this.literatureService.searchLiterature(searchDto, 'public-user');
+    return await this.literatureService.searchLiterature(
+      searchDto,
+      'public-user',
+    );
   }
 
   // Public save paper endpoint for development
@@ -82,9 +83,7 @@ export class LiteratureController {
   @Delete('library/public/:paperId')
   @ApiOperation({ summary: 'Public remove paper for testing (dev only)' })
   @ApiResponse({ status: 200, description: 'Paper removed' })
-  async removePaperPublic(
-    @Param('paperId') paperId: string,
-  ) {
+  async removePaperPublic(@Param('paperId') paperId: string) {
     // Use a default user ID for public removes
     return await this.literatureService.removePaper(paperId, 'public-user');
   }
@@ -97,7 +96,11 @@ export class LiteratureController {
     @Query('page') page = 1,
     @Query('limit') limit = 20,
   ) {
-    return await this.literatureService.getUserLibrary('public-user', page, limit);
+    return await this.literatureService.getUserLibrary(
+      'public-user',
+      page,
+      limit,
+    );
   }
 
   // Public theme extraction endpoint for development
@@ -105,9 +108,7 @@ export class LiteratureController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Public extract themes for testing (dev only)' })
   @ApiResponse({ status: 200, description: 'Themes extracted' })
-  async extractThemesPublic(
-    @Body() themesDto: ExtractThemesDto,
-  ) {
+  async extractThemesPublic(@Body() themesDto: ExtractThemesDto) {
     // Use a default user ID for public theme extraction
     return await this.literatureService.extractThemes(
       themesDto.paperIds,
@@ -198,12 +199,18 @@ export class LiteratureController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Full pipeline: Extract themes and generate statements with provenance',
-    description: 'Processes literature through complete pipeline with citation tracking'
+    summary:
+      'Full pipeline: Extract themes and generate statements with provenance',
+    description:
+      'Processes literature through complete pipeline with citation tracking',
   })
-  @ApiResponse({ status: 200, description: 'Statements generated with provenance' })
+  @ApiResponse({
+    status: 200,
+    description: 'Statements generated with provenance',
+  })
   async extractThemesAndGenerateStatements(
-    @Body() dto: {
+    @Body()
+    dto: {
       paperIds: string[];
       studyContext?: {
         targetStatements?: number;
@@ -214,7 +221,9 @@ export class LiteratureController {
     @CurrentUser() user: any,
   ) {
     // Extract themes with AI
-    const themes = await this.themeExtractionService.extractThemes(dto.paperIds);
+    const themes = await this.themeExtractionService.extractThemes(
+      dto.paperIds,
+    );
 
     // Generate statements with full provenance
     const result = await this.themeExtractionService.themeToStatements(
@@ -245,11 +254,15 @@ export class LiteratureController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Public pipeline for testing (dev only)',
-    description: 'Test the full pipeline without authentication'
+    description: 'Test the full pipeline without authentication',
   })
-  @ApiResponse({ status: 200, description: 'Statements generated with provenance' })
+  @ApiResponse({
+    status: 200,
+    description: 'Statements generated with provenance',
+  })
   async extractThemesAndGenerateStatementsPublic(
-    @Body() dto: {
+    @Body()
+    dto: {
       paperIds: string[];
       studyContext?: {
         targetStatements?: number;
@@ -259,7 +272,9 @@ export class LiteratureController {
     },
   ) {
     // Extract themes with AI
-    const themes = await this.themeExtractionService.extractThemes(dto.paperIds);
+    const themes = await this.themeExtractionService.extractThemes(
+      dto.paperIds,
+    );
 
     // Generate statements with full provenance
     const result = await this.themeExtractionService.themeToStatements(
@@ -292,11 +307,13 @@ export class LiteratureController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Create study scaffolding from gaps and themes',
-    description: 'Generates research questions, hypotheses, objectives, and method suggestions'
+    description:
+      'Generates research questions, hypotheses, objectives, and method suggestions',
   })
   @ApiResponse({ status: 200, description: 'Study scaffolding created' })
   async createStudyScaffolding(
-    @Body() dto: {
+    @Body()
+    dto: {
       paperIds: string[];
       includeGapAnalysis?: boolean;
       targetStatements?: number;
@@ -305,32 +322,34 @@ export class LiteratureController {
     @CurrentUser() user: any,
   ) {
     // Extract themes
-    const themes = await this.themeExtractionService.extractThemes(dto.paperIds, user.id);
+    const themes = await this.themeExtractionService.extractThemes(
+      dto.paperIds,
+      user.id,
+    );
 
     // Analyze gaps if requested
     let researchGaps: any[] = [];
     if (dto.includeGapAnalysis) {
       const gaps = await this.gapAnalyzerService.analyzeResearchGaps(
-        dto.paperIds
+        dto.paperIds,
       );
       researchGaps = gaps || [];
     }
 
     // Create study scaffolding
-    const scaffolding = await this.themeToStatementService.createStudyScaffolding(
-      researchGaps,
-      themes
-    );
+    const scaffolding =
+      await this.themeToStatementService.createStudyScaffolding(
+        researchGaps,
+        themes,
+      );
 
     // Map themes to statements
-    const statementMappings = await this.themeToStatementService.mapThemesToStatements(
-      themes,
-      {
+    const statementMappings =
+      await this.themeToStatementService.mapThemesToStatements(themes, {
         targetStatements: dto.targetStatements || 40,
         academicLevel: dto.academicLevel || 'intermediate',
         includeControversyPairs: true,
-      }
-    );
+      });
 
     return {
       themes,
@@ -339,8 +358,11 @@ export class LiteratureController {
       statementMappings,
       summary: {
         totalThemes: themes.length,
-        controversialThemes: themes.filter(t => t.controversial).length,
-        totalStatements: statementMappings.reduce((acc, m) => acc + m.statements.length, 0),
+        controversialThemes: themes.filter((t) => t.controversial).length,
+        totalStatements: statementMappings.reduce(
+          (acc, m) => acc + m.statements.length,
+          0,
+        ),
         researchQuestions: scaffolding.researchQuestions?.length || 0,
         hypotheses: scaffolding.hypotheses?.length || 0,
       },
@@ -351,11 +373,12 @@ export class LiteratureController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Public endpoint for study scaffolding (dev only)',
-    description: 'Test study scaffolding without authentication'
+    description: 'Test study scaffolding without authentication',
   })
   @ApiResponse({ status: 200, description: 'Study scaffolding created' })
   async createStudyScaffoldingPublic(
-    @Body() dto: {
+    @Body()
+    dto: {
       paperIds: string[];
       includeGapAnalysis?: boolean;
       targetStatements?: number;
@@ -363,32 +386,33 @@ export class LiteratureController {
     },
   ) {
     // Extract themes
-    const themes = await this.themeExtractionService.extractThemes(dto.paperIds);
+    const themes = await this.themeExtractionService.extractThemes(
+      dto.paperIds,
+    );
 
     // Analyze gaps if requested
     let researchGaps: any[] = [];
     if (dto.includeGapAnalysis) {
       const gaps = await this.gapAnalyzerService.analyzeResearchGaps(
-        dto.paperIds
+        dto.paperIds,
       );
       researchGaps = gaps || [];
     }
 
     // Create study scaffolding
-    const scaffolding = await this.themeToStatementService.createStudyScaffolding(
-      researchGaps,
-      themes
-    );
+    const scaffolding =
+      await this.themeToStatementService.createStudyScaffolding(
+        researchGaps,
+        themes,
+      );
 
     // Map themes to statements
-    const statementMappings = await this.themeToStatementService.mapThemesToStatements(
-      themes,
-      {
+    const statementMappings =
+      await this.themeToStatementService.mapThemesToStatements(themes, {
         targetStatements: dto.targetStatements || 40,
         academicLevel: dto.academicLevel || 'intermediate',
         includeControversyPairs: true,
-      }
-    );
+      });
 
     return {
       themes,
@@ -397,8 +421,11 @@ export class LiteratureController {
       statementMappings,
       summary: {
         totalThemes: themes.length,
-        controversialThemes: themes.filter(t => t.controversial).length,
-        totalStatements: statementMappings.reduce((acc, m) => acc + m.statements.length, 0),
+        controversialThemes: themes.filter((t) => t.controversial).length,
+        totalStatements: statementMappings.reduce(
+          (acc, m) => acc + m.statements.length,
+          0,
+        ),
         researchQuestions: scaffolding.researchQuestions?.length || 0,
         hypotheses: scaffolding.hypotheses?.length || 0,
       },

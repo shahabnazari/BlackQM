@@ -95,7 +95,7 @@ export default function LiteratureSearchPage() {
     try {
       console.log('🔍 Starting search with query:', query);
       console.log('📊 Filters:', filters);
-      
+
       const result = await literatureAPI.searchLiterature({
         query,
         sources: filters.sources,
@@ -110,12 +110,16 @@ export default function LiteratureSearchPage() {
       console.log('✅ Search result received:', result);
       console.log('📚 Papers array:', result.papers);
       console.log('📈 Total results:', result.total);
-      
+
       if (result.papers && result.papers.length > 0) {
         setPapers(result.papers);
         setTotalResults(result.total);
         setActiveTab('search'); // Make sure we're on the search tab to see results
-        console.log('✅ Papers state updated with', result.papers.length, 'papers');
+        console.log(
+          '✅ Papers state updated with',
+          result.papers.length,
+          'papers'
+        );
         console.log('📑 Active tab set to:', 'search');
         toast.success(
           `Found ${result.total} papers across ${filters.sources.length} databases`
@@ -139,7 +143,7 @@ export default function LiteratureSearchPage() {
     try {
       console.log('💾 Saving paper:', paper.title);
       const result = await literatureAPI.savePaper(paper);
-      
+
       if (result.success) {
         // Add paper to saved list if not already there
         setSavedPapers(prevPapers => {
@@ -150,7 +154,7 @@ export default function LiteratureSearchPage() {
           return prevPapers;
         });
         toast.success('Paper saved to library');
-        
+
         // Refresh library to sync with backend/localStorage
         setTimeout(() => loadUserLibrary(), 500);
       }
@@ -164,12 +168,12 @@ export default function LiteratureSearchPage() {
     try {
       console.log('🗑️ Removing paper:', paperId);
       const result = await literatureAPI.removePaper(paperId);
-      
+
       if (result.success) {
         // Remove paper from saved list
         setSavedPapers(prevPapers => prevPapers.filter(p => p.id !== paperId));
         toast.success('Paper removed from library');
-        
+
         // Refresh library to sync with backend/localStorage
         setTimeout(() => loadUserLibrary(), 500);
       }

@@ -88,7 +88,8 @@ export default function PreScreening({
 
   // ML Matching State
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [participantProfile, setParticipantProfile] = useState<ParticipantProfile | null>(null);
+  const [participantProfile, setParticipantProfile] =
+    useState<ParticipantProfile | null>(null);
   const [studyMatches, setStudyMatches] = useState<StudyMatch[]>([]);
   const [matchConfidence, setMatchConfidence] = useState(0);
 
@@ -475,7 +476,7 @@ export default function PreScreening({
   };
 
   const isComplete = Object.values(answers).every(value => value !== '');
-  
+
   // Run ML matching when answers are complete
   useEffect(() => {
     if (enableMLMatching && isComplete && !screeningResult) {

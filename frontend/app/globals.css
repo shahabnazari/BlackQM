@@ -460,7 +460,7 @@
   /* Enhanced focus indicator for keyboard navigation */
   /* Using :focus-visible pseudo-class for better UX */
   *:focus-visible {
-    outline: 2px solid var(--color-primary, #007AFF);
+    outline: 2px solid var(--color-primary, #007aff);
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -472,7 +472,7 @@
     left: 1rem;
     z-index: 9999;
     padding: 0.75rem 1.5rem;
-    background-color: var(--color-primary, #007AFF);
+    background-color: var(--color-primary, #007aff);
     color: white;
     text-decoration: none;
     border-radius: 0.375rem;
@@ -504,48 +504,48 @@
   }
 
   /* Color blind mode filters */
-  [data-colorblind="protanopia"] {
+  [data-colorblind='protanopia'] {
     filter: url('#protanopia-filter');
   }
 
-  [data-colorblind="deuteranopia"] {
+  [data-colorblind='deuteranopia'] {
     filter: url('#deuteranopia-filter');
   }
 
-  [data-colorblind="tritanopia"] {
+  [data-colorblind='tritanopia'] {
     filter: url('#tritanopia-filter');
   }
 
-  [data-colorblind="monochrome"] {
+  [data-colorblind='monochrome'] {
     filter: grayscale(100%);
   }
 
   /* High contrast modes */
-  [data-contrast="high"] {
+  [data-contrast='high'] {
     filter: contrast(1.2);
   }
 
-  [data-contrast="ultra"] {
+  [data-contrast='ultra'] {
     filter: contrast(1.5);
   }
 
   /* Focus indicator styles */
-  [data-focus-indicator="enhanced"] *:focus-visible {
+  [data-focus-indicator='enhanced'] *:focus-visible {
     outline-width: 3px;
     outline-offset: 3px;
     outline-style: solid;
   }
 
-  [data-focus-indicator="custom"] *:focus-visible {
+  [data-focus-indicator='custom'] *:focus-visible {
     outline-width: 4px;
     outline-offset: 4px;
     outline-style: double;
-    outline-color: var(--color-primary, #007AFF);
+    outline-color: var(--color-primary, #007aff);
     background-color: rgba(0, 122, 255, 0.1);
   }
 
   /* Text spacing adjustments */
-  [data-reduced-motion="true"] * {
+  [data-reduced-motion='true'] * {
     animation: none !important;
     transition: none !important;
   }
@@ -557,9 +557,9 @@
     input,
     select,
     textarea,
-    [role="button"],
-    [role="link"],
-    [tabindex]:not([tabindex="-1"]) {
+    [role='button'],
+    [role='link'],
+    [tabindex]:not([tabindex='-1']) {
       min-height: 44px;
       min-width: 44px;
     }
@@ -592,13 +592,13 @@
     position: relative;
   }
 
-  .focus-trap[aria-modal="true"] {
+  .focus-trap[aria-modal='true'] {
     z-index: 9999;
   }
 
   /* Accessible error messages */
-  [role="alert"],
-  [aria-live="assertive"] {
+  [role='alert'],
+  [aria-live='assertive'] {
     font-weight: 600;
     padding: 0.5rem;
     border-left: 4px solid currentColor;
@@ -606,7 +606,7 @@
   }
 
   /* Accessible loading states */
-  [aria-busy="true"] {
+  [aria-busy='true'] {
     cursor: wait;
     opacity: 0.7;
     pointer-events: none;
@@ -615,22 +615,22 @@
   /* Ensure interactive elements are distinguishable */
   button:not(:disabled):hover,
   a:hover,
-  [role="button"]:not([aria-disabled="true"]):hover {
+  [role='button']:not([aria-disabled='true']):hover {
     opacity: 0.8;
     transform: translateY(-1px);
   }
 
   /* Accessible form validation */
-  input[aria-invalid="true"],
-  select[aria-invalid="true"],
-  textarea[aria-invalid="true"] {
+  input[aria-invalid='true'],
+  select[aria-invalid='true'],
+  textarea[aria-invalid='true'] {
     border-color: #ef4444;
     border-width: 2px;
   }
 
-  input[aria-invalid="false"],
-  select[aria-invalid="false"],
-  textarea[aria-invalid="false"] {
+  input[aria-invalid='false'],
+  select[aria-invalid='false'],
+  textarea[aria-invalid='false'] {
     border-color: #10b981;
     border-width: 2px;
   }

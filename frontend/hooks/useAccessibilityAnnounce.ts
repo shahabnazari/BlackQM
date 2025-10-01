@@ -1,5 +1,8 @@
 import { useCallback, useRef, useEffect } from 'react';
-import { announceToScreenReader, debounce } from '@/lib/accessibility/accessibility-utils';
+import {
+  announceToScreenReader,
+  debounce,
+} from '@/lib/accessibility/accessibility-utils';
 
 /**
  * Hook for announcing messages to screen readers
@@ -44,9 +47,12 @@ export const useAccessibilityAnnounce = (debounceMs: number = 500) => {
   );
 
   // Immediate announce (no debounce)
-  const announceImmediately = useCallback((message: string, priority?: 'polite' | 'assertive') => {
-    announceToScreenReader(message, priority);
-  }, []);
+  const announceImmediately = useCallback(
+    (message: string, priority?: 'polite' | 'assertive') => {
+      announceToScreenReader(message, priority);
+    },
+    []
+  );
 
   // Clear announcement queue
   const clearQueue = useCallback(() => {
@@ -63,7 +69,7 @@ export const useAccessibilityAnnounce = (debounceMs: number = 500) => {
   return {
     announce: debouncedAnnounce.current,
     announceImmediately,
-    clearQueue
+    clearQueue,
   };
 };
 

@@ -25,17 +25,18 @@ const testPapers = [
     year: 2023,
     abstract: 'This study explores how AI transforms research practices...',
     doi: '10.1234/ai-research-2023',
-    themes: ['AI methodology', 'Research transformation', 'Digital innovation']
+    themes: ['AI methodology', 'Research transformation', 'Digital innovation'],
   },
   {
     id: 'paper-2',
     title: 'Q-Methodology in Modern Social Science',
     authors: ['Johnson, L.', 'Davis, M.'],
     year: 2024,
-    abstract: 'Q-methodology provides unique insights into subjective viewpoints...',
+    abstract:
+      'Q-methodology provides unique insights into subjective viewpoints...',
     doi: '10.5678/qmethod-2024',
-    themes: ['Q-methodology', 'Subjective research', 'Factor analysis']
-  }
+    themes: ['Q-methodology', 'Subjective research', 'Factor analysis'],
+  },
 ];
 
 const testAnalysisResults = {
@@ -45,10 +46,11 @@ const testAnalysisResults = {
       number: 1,
       label: 'Technology Optimists',
       variance: 32.5,
-      interpretation: 'This viewpoint embraces AI as a transformative research tool',
+      interpretation:
+        'This viewpoint embraces AI as a transformative research tool',
       loadings: [0.75, 0.68, 0.82],
       significance: 0.001,
-      participantCount: 12
+      participantCount: 12,
     },
     {
       id: 'factor-2',
@@ -58,18 +60,21 @@ const testAnalysisResults = {
       interpretation: 'This viewpoint values established research methods',
       loadings: [0.71, 0.65, 0.77],
       significance: 0.01,
-      participantCount: 8
-    }
+      participantCount: 8,
+    },
   ],
   consensus: {
     statements: ['Research requires systematic approach', 'Ethics matter'],
-    agreementLevel: 0.85
+    agreementLevel: 0.85,
   },
   distinguishing: {
-    statements: ['AI enhances research quality', 'Traditional methods are superior'],
-    divergenceLevel: 0.92
+    statements: [
+      'AI enhances research quality',
+      'Traditional methods are superior',
+    ],
+    divergenceLevel: 0.92,
   },
-  totalVariance: 56.8
+  totalVariance: 56.8,
 };
 
 const testResearchGap = {
@@ -77,7 +82,7 @@ const testResearchGap = {
   description: 'Limited understanding of AI integration in Q-methodology',
   keywords: 'AI, Q-methodology, integration',
   importance: 0.8,
-  feasibility: 0.7
+  feasibility: 0.7,
 };
 
 // Color codes for output
@@ -89,7 +94,7 @@ const colors = {
   yellow: '\x1b[33m',
   blue: '\x1b[34m',
   cyan: '\x1b[36m',
-  magenta: '\x1b[35m'
+  magenta: '\x1b[35m',
 };
 
 function log(message, type = 'info') {
@@ -100,7 +105,7 @@ function log(message, type = 'info') {
     error: colors.red,
     warning: colors.yellow,
     test: colors.cyan,
-    result: colors.magenta
+    result: colors.magenta,
   };
   console.log(`${typeColors[type]}[${timestamp}] ${message}${colors.reset}`);
 }
@@ -116,22 +121,34 @@ async function testLiteratureComparisonService() {
       {
         studyId: STUDY_ID,
         analysisResults: testAnalysisResults,
-        citedPapers: testPapers
+        citedPapers: testPapers,
       }
     );
 
     if (compareResponse.data.comparisons) {
-      log(`✅ Found ${compareResponse.data.comparisons.length} comparisons`, 'success');
+      log(
+        `✅ Found ${compareResponse.data.comparisons.length} comparisons`,
+        'success'
+      );
 
       // Verify comparison types
       const summary = compareResponse.data.summary;
-      log(`   - Confirmatory: ${summary.confirmatoryFindings?.length || 0}`, 'result');
+      log(
+        `   - Confirmatory: ${summary.confirmatoryFindings?.length || 0}`,
+        'result'
+      );
       log(`   - Novel: ${summary.novelFindings?.length || 0}`, 'result');
-      log(`   - Contradictory: ${summary.contradictoryFindings?.length || 0}`, 'result');
+      log(
+        `   - Contradictory: ${summary.contradictoryFindings?.length || 0}`,
+        'result'
+      );
 
       // Verify discussion points generated
       if (compareResponse.data.discussionPoints?.length > 0) {
-        log(`✅ Generated ${compareResponse.data.discussionPoints.length} discussion points`, 'success');
+        log(
+          `✅ Generated ${compareResponse.data.discussionPoints.length} discussion points`,
+          'success'
+        );
       }
     }
 
@@ -142,13 +159,19 @@ async function testLiteratureComparisonService() {
       {
         studyId: STUDY_ID,
         analysisResults: testAnalysisResults,
-        gapId: testResearchGap.id
+        gapId: testResearchGap.id,
       }
     );
 
     if (gapUpdateResponse.data.status) {
-      log(`✅ Gap status updated to: ${gapUpdateResponse.data.status}`, 'success');
-      log(`   - Completion: ${gapUpdateResponse.data.completionPercentage}%`, 'result');
+      log(
+        `✅ Gap status updated to: ${gapUpdateResponse.data.status}`,
+        'success'
+      );
+      log(
+        `   - Completion: ${gapUpdateResponse.data.completionPercentage}%`,
+        'result'
+      );
     }
 
     // Test 3: Create knowledge graph connections
@@ -157,13 +180,19 @@ async function testLiteratureComparisonService() {
       `${API_BASE}/analysis/literature-comparison/knowledge-graph`,
       {
         studyId: STUDY_ID,
-        analysisResults: testAnalysisResults
+        analysisResults: testAnalysisResults,
       }
     );
 
     if (knowledgeResponse.data.nodes) {
-      log(`✅ Created ${knowledgeResponse.data.nodes.length} knowledge nodes`, 'success');
-      log(`✅ Created ${knowledgeResponse.data.edges.length} knowledge edges`, 'success');
+      log(
+        `✅ Created ${knowledgeResponse.data.nodes.length} knowledge nodes`,
+        'success'
+      );
+      log(
+        `✅ Created ${knowledgeResponse.data.edges.length} knowledge edges`,
+        'success'
+      );
     }
 
     // Test 4: Feedback to knowledge base
@@ -178,14 +207,20 @@ async function testLiteratureComparisonService() {
           category: 'factor_interpretation',
           evidence: f,
           confidence: f.significance < 0.01 ? 0.9 : 0.7,
-          tags: ['AI', 'Q-methodology']
-        }))
+          tags: ['AI', 'Q-methodology'],
+        })),
       }
     );
 
     if (feedbackResponse.data.summary) {
-      log(`✅ Added ${feedbackResponse.data.summary.novelFindings} novel findings`, 'success');
-      log(`✅ Reinforced ${feedbackResponse.data.summary.reinforcedFindings} existing findings`, 'success');
+      log(
+        `✅ Added ${feedbackResponse.data.summary.novelFindings} novel findings`,
+        'success'
+      );
+      log(
+        `✅ Reinforced ${feedbackResponse.data.summary.reinforcedFindings} existing findings`,
+        'success'
+      );
     }
 
     return true;
@@ -203,14 +238,17 @@ async function testLiteratureReportService() {
 
   try {
     // Test 1: Generate comprehensive report
-    log('Test 1: Generating comprehensive report with literature integration', 'info');
+    log(
+      'Test 1: Generating comprehensive report with literature integration',
+      'info'
+    );
     const reportResponse = await axios.post(
       `${API_BASE}/report/comprehensive`,
       {
         studyId: STUDY_ID,
         userId: 'test-user',
         format: 'apa',
-        includeLiterature: true
+        includeLiterature: true,
       }
     );
 
@@ -223,7 +261,7 @@ async function testLiteratureReportService() {
         'Theoretical Framework',
         'Methodology',
         'Discussion',
-        'References'
+        'References',
       ];
 
       for (const section of requiredSections) {
@@ -240,46 +278,50 @@ async function testLiteratureReportService() {
     const formats = ['apa', 'mla', 'chicago', 'ieee', 'harvard'];
 
     for (const format of formats) {
-      const citationResponse = await axios.post(
-        `${API_BASE}/report/citation`,
-        {
-          paper: testPapers[0],
-          format: format
-        }
-      );
+      const citationResponse = await axios.post(`${API_BASE}/report/citation`, {
+        paper: testPapers[0],
+        format: format,
+      });
 
       if (citationResponse.data.citation) {
-        log(`   ✓ ${format.toUpperCase()} format: ${citationResponse.data.citation.substring(0, 50)}...`, 'result');
+        log(
+          `   ✓ ${format.toUpperCase()} format: ${citationResponse.data.citation.substring(0, 50)}...`,
+          'result'
+        );
       }
     }
 
     // Test 3: Generate bibliography
     log('Test 3: Generating bibliography from paper collection', 'info');
-    const biblioResponse = await axios.post(
-      `${API_BASE}/report/bibliography`,
-      {
-        studyId: STUDY_ID,
-        format: 'apa'
-      }
-    );
+    const biblioResponse = await axios.post(`${API_BASE}/report/bibliography`, {
+      studyId: STUDY_ID,
+      format: 'apa',
+    });
 
     if (biblioResponse.data.bibliography) {
-      const citationCount = (biblioResponse.data.bibliography.match(/\n\n/g) || []).length + 1;
-      log(`✅ Bibliography generated with ${citationCount} citations`, 'success');
+      const citationCount =
+        (biblioResponse.data.bibliography.match(/\n\n/g) || []).length + 1;
+      log(
+        `✅ Bibliography generated with ${citationCount} citations`,
+        'success'
+      );
     }
 
     // Test 4: Generate methodology with provenance
-    log('Test 4: Generating methodology section with statement provenance', 'info');
-    const methodResponse = await axios.post(
-      `${API_BASE}/report/methodology`,
-      {
-        studyId: STUDY_ID,
-        includeProvenance: true
-      }
+    log(
+      'Test 4: Generating methodology section with statement provenance',
+      'info'
     );
+    const methodResponse = await axios.post(`${API_BASE}/report/methodology`, {
+      studyId: STUDY_ID,
+      includeProvenance: true,
+    });
 
     if (methodResponse.data.methodology) {
-      log('✅ Methodology section generated with provenance tracking', 'success');
+      log(
+        '✅ Methodology section generated with provenance tracking',
+        'success'
+      );
       if (methodResponse.data.methodology.includes('Statement Provenance')) {
         log('   ✓ Statement provenance table included', 'result');
       }
@@ -310,20 +352,23 @@ async function testKnowledgeGraphIntegration() {
             label: 'AI enhances Q-methodology',
             description: 'Novel finding from factor analysis',
             sourceStudyId: STUDY_ID,
-            confidence: 0.85
+            confidence: 0.85,
           },
           {
             type: 'THEORY',
             label: 'Technology Acceptance Model',
             description: 'Theoretical framework for AI adoption',
-            confidence: 0.9
-          }
-        ]
+            confidence: 0.9,
+          },
+        ],
       }
     );
 
     if (nodesResponse.data.created) {
-      log(`✅ Created ${nodesResponse.data.created} knowledge nodes`, 'success');
+      log(
+        `✅ Created ${nodesResponse.data.created} knowledge nodes`,
+        'success'
+      );
     }
 
     // Test 2: Create knowledge edges
@@ -336,14 +381,17 @@ async function testKnowledgeGraphIntegration() {
             fromNodeId: 'node-1',
             toNodeId: 'node-2',
             type: 'SUPPORTS',
-            strength: 0.8
-          }
-        ]
+            strength: 0.8,
+          },
+        ],
       }
     );
 
     if (edgesResponse.data.created) {
-      log(`✅ Created ${edgesResponse.data.created} knowledge edges`, 'success');
+      log(
+        `✅ Created ${edgesResponse.data.created} knowledge edges`,
+        'success'
+      );
     }
 
     // Test 3: Query knowledge graph
@@ -353,8 +401,14 @@ async function testKnowledgeGraphIntegration() {
     );
 
     if (queryResponse.data.nodes) {
-      log(`✅ Found ${queryResponse.data.nodes.length} related concepts`, 'success');
-      log(`✅ Found ${queryResponse.data.edges.length} relationships`, 'success');
+      log(
+        `✅ Found ${queryResponse.data.nodes.length} related concepts`,
+        'success'
+      );
+      log(
+        `✅ Found ${queryResponse.data.edges.length} relationships`,
+        'success'
+      );
     }
 
     return true;
@@ -383,8 +437,8 @@ async function testEndToEndPipeline() {
         studyContext: {
           topic: 'AI and Q-methodology',
           researchQuestions: ['How does AI enhance Q-methodology?'],
-          targetAudience: 'Researchers and practitioners'
-        }
+          targetAudience: 'Researchers and practitioners',
+        },
       }
     );
 
@@ -393,10 +447,9 @@ async function testEndToEndPipeline() {
 
     // Step 2: Run analysis
     log('Step 2: Running analysis on collected data', 'info');
-    const analysisResponse = await axios.post(
-      `${API_BASE}/analysis/run`,
-      { studyId }
-    );
+    const analysisResponse = await axios.post(`${API_BASE}/analysis/run`, {
+      studyId,
+    });
 
     log('✅ Analysis completed', 'success');
 
@@ -407,29 +460,28 @@ async function testEndToEndPipeline() {
       { studyId }
     );
 
-    log(`✅ Comparison complete: ${comparisonResponse.data.summary.novelFindings?.length || 0} novel findings`, 'success');
+    log(
+      `✅ Comparison complete: ${comparisonResponse.data.summary.novelFindings?.length || 0} novel findings`,
+      'success'
+    );
 
     // Step 4: Generate report
     log('Step 4: Generating comprehensive report', 'info');
-    const reportResponse = await axios.post(
-      `${API_BASE}/report/generate`,
-      {
-        studyId,
-        format: 'apa',
-        includeLiterature: true,
-        includeComparison: true,
-        includeKnowledgeGraph: true
-      }
-    );
+    const reportResponse = await axios.post(`${API_BASE}/report/generate`, {
+      studyId,
+      format: 'apa',
+      includeLiterature: true,
+      includeComparison: true,
+      includeKnowledgeGraph: true,
+    });
 
     log('✅ Report generated successfully', 'success');
 
     // Step 5: Update knowledge base
     log('Step 5: Updating knowledge base with findings', 'info');
-    const knowledgeResponse = await axios.post(
-      `${API_BASE}/knowledge/update`,
-      { studyId }
-    );
+    const knowledgeResponse = await axios.post(`${API_BASE}/knowledge/update`, {
+      studyId,
+    });
 
     log('✅ Knowledge base updated', 'success');
 
@@ -453,14 +505,20 @@ async function testEndToEndPipeline() {
 
 async function runAllTests() {
   console.log('\n' + '='.repeat(70));
-  log(`${colors.bright}PHASE 9 DAY 10 - INTEGRATION TEST SUITE${colors.reset}`, 'info');
+  log(
+    `${colors.bright}PHASE 9 DAY 10 - INTEGRATION TEST SUITE${colors.reset}`,
+    'info'
+  );
   console.log('='.repeat(70) + '\n');
 
   const tests = [
-    { name: 'Literature Comparison Service', fn: testLiteratureComparisonService },
+    {
+      name: 'Literature Comparison Service',
+      fn: testLiteratureComparisonService,
+    },
     { name: 'Literature Report Service', fn: testLiteratureReportService },
     { name: 'Knowledge Graph Integration', fn: testKnowledgeGraphIntegration },
-    { name: 'End-to-End Pipeline', fn: testEndToEndPipeline }
+    { name: 'End-to-End Pipeline', fn: testEndToEndPipeline },
   ];
 
   const results = [];
@@ -498,10 +556,16 @@ async function runAllTests() {
   console.log('\n' + '-'.repeat(70));
 
   if (allPassed) {
-    log(`${colors.bright}✅ ALL TESTS PASSED (${passCount}/${results.length})${colors.reset}`, 'success');
+    log(
+      `${colors.bright}✅ ALL TESTS PASSED (${passCount}/${results.length})${colors.reset}`,
+      'success'
+    );
     log('🎉 Phase 9 Day 10 Pipeline Integration Complete!', 'success');
   } else {
-    log(`${colors.bright}❌ SOME TESTS FAILED (${passCount}/${results.length} passed)${colors.reset}`, 'error');
+    log(
+      `${colors.bright}❌ SOME TESTS FAILED (${passCount}/${results.length} passed)${colors.reset}`,
+      'error'
+    );
     log('Please review the failures above and fix the issues.', 'warning');
   }
 
@@ -511,7 +575,7 @@ async function runAllTests() {
 }
 
 // Add error handling for uncaught exceptions
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', error => {
   log(`Uncaught Exception: ${error.message}`, 'error');
   console.error(error.stack);
   process.exit(1);

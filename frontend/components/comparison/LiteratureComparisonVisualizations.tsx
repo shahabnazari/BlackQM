@@ -21,7 +21,13 @@ import {
   PieChart,
   Pie,
 } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -119,7 +125,8 @@ function generateMockData() {
       id: '1',
       category: 'confirmatory',
       title: 'Climate concern drives action',
-      description: 'Strong correlation between concern and behavioral change confirmed',
+      description:
+        'Strong correlation between concern and behavioral change confirmed',
       studyValue: 0.82,
       literatureValue: 0.79,
       confidence: 0.91,
@@ -132,7 +139,8 @@ function generateMockData() {
       id: '2',
       category: 'novel',
       title: 'Youth activism patterns',
-      description: 'Unique mobilization patterns among Gen Z not previously documented',
+      description:
+        'Unique mobilization patterns among Gen Z not previously documented',
       studyValue: 0.73,
       literatureValue: 0,
       confidence: 0.78,
@@ -145,7 +153,8 @@ function generateMockData() {
       id: '3',
       category: 'contradictory',
       title: 'Economic priorities',
-      description: 'Opposite relationship between income and environmental priority',
+      description:
+        'Opposite relationship between income and environmental priority',
       studyValue: -0.45,
       literatureValue: 0.31,
       confidence: 0.69,
@@ -291,7 +300,8 @@ export default function LiteratureComparisonVisualizations({
 }: LiteratureComparisonVisualizationsProps) {
   // State
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedSignificance, setSelectedSignificance] = useState<string>('all');
+  const [selectedSignificance, setSelectedSignificance] =
+    useState<string>('all');
   const [isLoading, setIsLoading] = useState(!propFindings);
 
   // Use mock data if not provided
@@ -336,21 +346,27 @@ export default function LiteratureComparisonVisualizations({
   // Calculate statistics
   const statistics = useMemo(() => {
     const total = data.findings.length;
-    const byCategory = data.findings.reduce((acc, f) => {
-      acc[f.category] = (acc[f.category] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const byCategory = data.findings.reduce(
+      (acc, f) => {
+        acc[f.category] = (acc[f.category] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
-    const avgConfidence = data.findings.reduce((sum, f) => sum + f.confidence, 0) / total;
-    const highSignificance = data.findings.filter(f => f.significance === 'high').length;
+    const avgConfidence =
+      data.findings.reduce((sum, f) => sum + f.confidence, 0) / total;
+    const highSignificance = data.findings.filter(
+      f => f.significance === 'high'
+    ).length;
 
     return {
       total,
       byCategory,
       avgConfidence,
       highSignificance,
-      confirmatoryRate: (byCategory.confirmatory || 0) / total * 100,
-      noveltyRate: (byCategory.novel || 0) / total * 100,
+      confirmatoryRate: ((byCategory.confirmatory || 0) / total) * 100,
+      noveltyRate: ((byCategory.novel || 0) / total) * 100,
     };
   }, [data.findings]);
 
@@ -359,7 +375,7 @@ export default function LiteratureComparisonVisualizations({
     return Object.entries(statistics.byCategory).map(([category, count]) => ({
       category: category.charAt(0).toUpperCase() + category.slice(1),
       count,
-      percentage: (count / statistics.total * 100).toFixed(1),
+      percentage: ((count / statistics.total) * 100).toFixed(1),
     }));
   }, [statistics]);
 
@@ -500,7 +516,10 @@ export default function LiteratureComparisonVisualizations({
         </CardHeader>
         <CardContent>
           <div className="flex gap-4">
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
@@ -513,7 +532,10 @@ export default function LiteratureComparisonVisualizations({
               </SelectContent>
             </Select>
 
-            <Select value={selectedSignificance} onValueChange={setSelectedSignificance}>
+            <Select
+              value={selectedSignificance}
+              onValueChange={setSelectedSignificance}
+            >
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Significance" />
               </SelectTrigger>
@@ -561,7 +583,11 @@ export default function LiteratureComparisonVisualizations({
                       {categoryDistribution.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={CATEGORY_COLORS[entry.category.toLowerCase() as keyof typeof CATEGORY_COLORS]}
+                          fill={
+                            CATEGORY_COLORS[
+                              entry.category.toLowerCase() as keyof typeof CATEGORY_COLORS
+                            ]
+                          }
                         />
                       ))}
                     </Pie>
@@ -621,14 +647,17 @@ export default function LiteratureComparisonVisualizations({
                         <Badge
                           variant="outline"
                           style={{
-                            borderColor: SIGNIFICANCE_COLORS[finding.significance],
+                            borderColor:
+                              SIGNIFICANCE_COLORS[finding.significance],
                             color: SIGNIFICANCE_COLORS[finding.significance],
                           }}
                         >
                           {finding.significance}
                         </Badge>
                       </div>
-                      <CardTitle className="text-base">{finding.title}</CardTitle>
+                      <CardTitle className="text-base">
+                        {finding.title}
+                      </CardTitle>
                       <CardDescription className="mt-1">
                         {finding.description}
                       </CardDescription>
@@ -645,12 +674,16 @@ export default function LiteratureComparisonVisualizations({
                   <div className="flex items-center justify-between text-sm">
                     <div>
                       <span className="text-gray-600">Study: </span>
-                      <span className="font-medium">{finding.studyValue.toFixed(2)}</span>
+                      <span className="font-medium">
+                        {finding.studyValue.toFixed(2)}
+                      </span>
                     </div>
                     <ChevronRight className="w-4 h-4 text-gray-400" />
                     <div>
                       <span className="text-gray-600">Literature: </span>
-                      <span className="font-medium">{finding.literatureValue.toFixed(2)}</span>
+                      <span className="font-medium">
+                        {finding.literatureValue.toFixed(2)}
+                      </span>
                     </div>
                   </div>
                   {finding.relatedPapers.length > 0 && (
@@ -671,13 +704,20 @@ export default function LiteratureComparisonVisualizations({
         <TabsContent value="comparison" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Study vs Literature Values</CardTitle>
+              <CardTitle className="text-base">
+                Study vs Literature Values
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
                 <BarChart data={comparisonData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="title" angle={-45} textAnchor="end" height={100} />
+                  <XAxis
+                    dataKey="title"
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                  />
                   <YAxis />
                   <Tooltip />
                   <Legend />
@@ -691,13 +731,20 @@ export default function LiteratureComparisonVisualizations({
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Difference from Literature</CardTitle>
+              <CardTitle className="text-base">
+                Difference from Literature
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={comparisonData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="title" angle={-45} textAnchor="end" height={100} />
+                  <XAxis
+                    dataKey="title"
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                  />
                   <YAxis />
                   <Tooltip />
                   <Bar dataKey="difference">
@@ -719,7 +766,9 @@ export default function LiteratureComparisonVisualizations({
         <TabsContent value="themes" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Theme Emphasis Comparison</CardTitle>
+              <CardTitle className="text-base">
+                Theme Emphasis Comparison
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
@@ -754,9 +803,7 @@ export default function LiteratureComparisonVisualizations({
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium">{theme.theme}</h4>
-                      <Badge variant="outline">
-                        {theme.papers} papers
-                      </Badge>
+                      <Badge variant="outline">{theme.papers} papers</Badge>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
@@ -768,10 +815,21 @@ export default function LiteratureComparisonVisualizations({
                         <span>Literature Emphasis</span>
                         <span>{theme.literatureEmphasis}%</span>
                       </div>
-                      <Progress value={theme.literatureEmphasis} className="h-2" />
+                      <Progress
+                        value={theme.literatureEmphasis}
+                        className="h-2"
+                      />
                       <div className="flex items-center justify-between text-sm font-medium">
                         <span>Alignment</span>
-                        <span className={theme.alignment > 70 ? 'text-green-600' : theme.alignment > 40 ? 'text-yellow-600' : 'text-red-600'}>
+                        <span
+                          className={
+                            theme.alignment > 70
+                              ? 'text-green-600'
+                              : theme.alignment > 40
+                                ? 'text-yellow-600'
+                                : 'text-red-600'
+                          }
+                        >
                           {theme.alignment}%
                         </span>
                       </div>
@@ -832,10 +890,18 @@ export default function LiteratureComparisonVisualizations({
                         <Badge
                           variant="outline"
                           style={{
-                            borderColor: gap.impact === 'high' ? '#DC2626' :
-                                       gap.impact === 'medium' ? '#F59E0B' : '#6B7280',
-                            color: gap.impact === 'high' ? '#DC2626' :
-                                  gap.impact === 'medium' ? '#F59E0B' : '#6B7280',
+                            borderColor:
+                              gap.impact === 'high'
+                                ? '#DC2626'
+                                : gap.impact === 'medium'
+                                  ? '#F59E0B'
+                                  : '#6B7280',
+                            color:
+                              gap.impact === 'high'
+                                ? '#DC2626'
+                                : gap.impact === 'medium'
+                                  ? '#F59E0B'
+                                  : '#6B7280',
                           }}
                         >
                           {gap.impact} impact
@@ -865,7 +931,9 @@ export default function LiteratureComparisonVisualizations({
         <TabsContent value="metrics" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Study Performance Metrics</CardTitle>
+              <CardTitle className="text-base">
+                Study Performance Metrics
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
@@ -909,11 +977,15 @@ export default function LiteratureComparisonVisualizations({
                       {metric.trend === 'aligned' && (
                         <Minus className="w-4 h-4 text-blue-600" />
                       )}
-                      <span className={
-                        metric.trend === 'above' ? 'text-green-600' :
-                        metric.trend === 'below' ? 'text-red-600' :
-                        'text-blue-600'
-                      }>
+                      <span
+                        className={
+                          metric.trend === 'above'
+                            ? 'text-green-600'
+                            : metric.trend === 'below'
+                              ? 'text-red-600'
+                              : 'text-blue-600'
+                        }
+                      >
                         {metric.trend}
                       </span>
                     </div>
@@ -923,7 +995,9 @@ export default function LiteratureComparisonVisualizations({
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Your Study</span>
-                      <span className="text-lg font-bold">{metric.studyScore}</span>
+                      <span className="text-lg font-bold">
+                        {metric.studyScore}
+                      </span>
                     </div>
                     <div className="relative">
                       <div className="h-8 bg-gray-100 rounded flex items-center">
@@ -936,15 +1010,21 @@ export default function LiteratureComparisonVisualizations({
                         <div
                           className="h-full bg-blue-200 rounded-l"
                           style={{
-                            width: `${((metric.literatureAvg - metric.literatureMin) /
-                                     (metric.literatureMax - metric.literatureMin)) * 100}%`
+                            width: `${
+                              ((metric.literatureAvg - metric.literatureMin) /
+                                (metric.literatureMax - metric.literatureMin)) *
+                              100
+                            }%`,
                           }}
                         />
                         <div
                           className="absolute h-full w-1 bg-blue-600"
                           style={{
-                            left: `${((metric.studyScore - metric.literatureMin) /
-                                    (metric.literatureMax - metric.literatureMin)) * 100}%`
+                            left: `${
+                              ((metric.studyScore - metric.literatureMin) /
+                                (metric.literatureMax - metric.literatureMin)) *
+                              100
+                            }%`,
                           }}
                         />
                       </div>
@@ -971,10 +1051,22 @@ export default function LiteratureComparisonVisualizations({
         <AlertTitle>Key Insights</AlertTitle>
         <AlertDescription>
           <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>Your study confirms {statistics.confirmatoryRate.toFixed(0)}% of literature findings</li>
-            <li>{statistics.byCategory.novel || 0} novel discoveries not previously documented</li>
-            <li>Average confidence level of {(statistics.avgConfidence * 100).toFixed(0)}% across all findings</li>
-            <li>{data.gaps.filter(g => g.addressed).length} of {data.gaps.length} identified research gaps addressed</li>
+            <li>
+              Your study confirms {statistics.confirmatoryRate.toFixed(0)}% of
+              literature findings
+            </li>
+            <li>
+              {statistics.byCategory.novel || 0} novel discoveries not
+              previously documented
+            </li>
+            <li>
+              Average confidence level of{' '}
+              {(statistics.avgConfidence * 100).toFixed(0)}% across all findings
+            </li>
+            <li>
+              {data.gaps.filter(g => g.addressed).length} of {data.gaps.length}{' '}
+              identified research gaps addressed
+            </li>
           </ul>
         </AlertDescription>
       </Alert>

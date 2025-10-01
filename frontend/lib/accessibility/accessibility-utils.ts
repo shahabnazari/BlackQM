@@ -112,7 +112,9 @@ export interface AriaAttributes {
   role?: string;
 }
 
-export const buildAriaAttributes = (attrs: AriaAttributes): Record<string, any> => {
+export const buildAriaAttributes = (
+  attrs: AriaAttributes
+): Record<string, any> => {
   const result: Record<string, any> = {};
 
   if (attrs.label) result['aria-label'] = attrs.label;
@@ -135,7 +137,9 @@ export const buildAriaAttributes = (attrs: AriaAttributes): Record<string, any> 
 /**
  * Get appropriate heading level based on context
  */
-export const getHeadingLevel = (depth: number): 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' => {
+export const getHeadingLevel = (
+  depth: number
+): 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' => {
   const level = Math.min(Math.max(1, depth), 6);
   return `h${level}` as any;
 };
@@ -176,9 +180,11 @@ export const meetsContrastRatio = (
     const [r, g, b] = [
       parseInt(rgb[1], 16) / 255,
       parseInt(rgb[2], 16) / 255,
-      parseInt(rgb[3], 16) / 255
+      parseInt(rgb[3], 16) / 255,
     ].map(val => {
-      return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+      return val <= 0.03928
+        ? val / 12.92
+        : Math.pow((val + 0.055) / 1.055, 2.4);
     });
 
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -223,7 +229,7 @@ export const KEYS = {
   HOME: 'Home',
   END: 'End',
   PAGE_UP: 'PageUp',
-  PAGE_DOWN: 'PageDown'
+  PAGE_DOWN: 'PageDown',
 } as const;
 
 /**
@@ -264,7 +270,7 @@ export const TIMING = {
   AUTO_SAVE: 30000, // 30 seconds
 
   // Debounce for live regions
-  LIVE_REGION_DEBOUNCE: 500
+  LIVE_REGION_DEBOUNCE: 500,
 } as const;
 
 /**
@@ -294,16 +300,16 @@ export const focus = {
     );
     const last = focusables[focusables.length - 1];
     last?.focus();
-  }
+  },
 };
 
 /**
  * Live region priorities
  */
 export const LIVE_REGION_PRIORITY = {
-  POLITE: 'polite',    // Wait for screen reader to finish
+  POLITE: 'polite', // Wait for screen reader to finish
   ASSERTIVE: 'assertive', // Interrupt immediately
-  OFF: 'off'          // Don't announce
+  OFF: 'off', // Don't announce
 } as const;
 
 /**
@@ -326,7 +332,7 @@ export const ROLES = {
   TAB: 'tab',
   TABLIST: 'tablist',
   TABPANEL: 'tabpanel',
-  TOOLTIP: 'tooltip'
+  TOOLTIP: 'tooltip',
 } as const;
 
 export default {
@@ -347,5 +353,5 @@ export default {
   TIMING,
   focus,
   LIVE_REGION_PRIORITY,
-  ROLES
+  ROLES,
 };

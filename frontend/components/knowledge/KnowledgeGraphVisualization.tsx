@@ -58,7 +58,13 @@ interface KnowledgeNode {
 interface KnowledgeEdge {
   source: string;
   target: string;
-  type: 'cites' | 'informs' | 'contradicts' | 'confirms' | 'extends' | 'addresses';
+  type:
+    | 'cites'
+    | 'informs'
+    | 'contradicts'
+    | 'confirms'
+    | 'extends'
+    | 'addresses';
   strength: number;
   label?: string;
 }
@@ -136,10 +142,15 @@ export default function KnowledgeGraphVisualization({
   // Refs
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const simulationRef = useRef<d3.Simulation<KnowledgeNode, KnowledgeEdge> | null>(null);
+  const simulationRef = useRef<d3.Simulation<
+    KnowledgeNode,
+    KnowledgeEdge
+  > | null>(null);
 
   // State
-  const [graphData, setGraphData] = useState<GraphData>(propData || { nodes: [], edges: [] });
+  const [graphData, setGraphData] = useState<GraphData>(
+    propData || { nodes: [], edges: [] }
+  );
   const [selectedNode, setSelectedNode] = useState<KnowledgeNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<KnowledgeEdge | null>(null);
   const [hoveredNode, setHoveredNode] = useState<KnowledgeNode | null>(null);
@@ -148,7 +159,9 @@ export default function KnowledgeGraphVisualization({
   const [linkStrength, setLinkStrength] = useState(50);
   const [nodeSize, setNodeSize] = useState(1);
   const [showLabels, setShowLabels] = useState(true);
-  const [layoutType, setLayoutType] = useState<'force' | 'hierarchical' | 'radial'>('force');
+  const [layoutType, setLayoutType] = useState<
+    'force' | 'hierarchical' | 'radial'
+  >('force');
   const [isLoading, setIsLoading] = useState(!propData);
   const [dimensions, setDimensions] = useState({ width: 0, height });
 
@@ -161,23 +174,34 @@ export default function KnowledgeGraphVisualization({
     if (filterType !== 'all') {
       nodes = nodes.filter(n => n.type === filterType);
       const nodeIds = new Set(nodes.map(n => n.id));
-      edges = edges.filter(e =>
-        nodeIds.has(typeof e.source === 'object' ? (e.source as any).id : e.source) &&
-        nodeIds.has(typeof e.target === 'object' ? (e.target as any).id : e.target)
+      edges = edges.filter(
+        e =>
+          nodeIds.has(
+            typeof e.source === 'object' ? (e.source as any).id : e.source
+          ) &&
+          nodeIds.has(
+            typeof e.target === 'object' ? (e.target as any).id : e.target
+          )
       );
     }
 
     // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      nodes = nodes.filter(n =>
-        n.label.toLowerCase().includes(query) ||
-        n.description?.toLowerCase().includes(query)
+      nodes = nodes.filter(
+        n =>
+          n.label.toLowerCase().includes(query) ||
+          n.description?.toLowerCase().includes(query)
       );
       const nodeIds = new Set(nodes.map(n => n.id));
-      edges = edges.filter(e =>
-        nodeIds.has(typeof e.source === 'object' ? (e.source as any).id : e.source) &&
-        nodeIds.has(typeof e.target === 'object' ? (e.target as any).id : e.target)
+      edges = edges.filter(
+        e =>
+          nodeIds.has(
+            typeof e.source === 'object' ? (e.source as any).id : e.source
+          ) &&
+          nodeIds.has(
+            typeof e.target === 'object' ? (e.target as any).id : e.target
+          )
       );
     }
 
@@ -186,19 +210,27 @@ export default function KnowledgeGraphVisualization({
 
   // Statistics
   const graphStats = useMemo(() => {
-    const nodesByType = filteredData.nodes.reduce((acc, node) => {
-      acc[node.type] = (acc[node.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const nodesByType = filteredData.nodes.reduce(
+      (acc, node) => {
+        acc[node.type] = (acc[node.type] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
-    const edgesByType = filteredData.edges.reduce((acc, edge) => {
-      acc[edge.type] = (acc[edge.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const edgesByType = filteredData.edges.reduce(
+      (acc, edge) => {
+        acc[edge.type] = (acc[edge.type] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
-    const avgDegree = filteredData.edges.length / Math.max(filteredData.nodes.length, 1) * 2;
-    const density = (2 * filteredData.edges.length) /
-                   (filteredData.nodes.length * (filteredData.nodes.length - 1));
+    const avgDegree =
+      (filteredData.edges.length / Math.max(filteredData.nodes.length, 1)) * 2;
+    const density =
+      (2 * filteredData.edges.length) /
+      (filteredData.nodes.length * (filteredData.nodes.length - 1));
 
     return { nodesByType, edgesByType, avgDegree, density };
   }, [filteredData]);
@@ -233,7 +265,12 @@ export default function KnowledgeGraphVisualization({
 
   // D3 Force Simulation
   useEffect(() => {
-    if (!svgRef.current || dimensions.width === 0 || filteredData.nodes.length === 0) return;
+    if (
+      !svgRef.current ||
+      dimensions.width === 0 ||
+      filteredData.nodes.length === 0
+    )
+      return;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
@@ -248,20 +285,26 @@ export default function KnowledgeGraphVisualization({
     const labelsGroup = g.append('g').attr('class', 'labels');
 
     // Setup zoom
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
+    const zoom = d3
+      .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
-      .on('zoom', (event) => {
+      .on('zoom', event => {
         g.attr('transform', event.transform);
       });
 
     svg.call(zoom);
 
     // Create force simulation
-    const simulation = d3.forceSimulation<KnowledgeNode>(filteredData.nodes)
-      .force('link', d3.forceLink<KnowledgeNode, KnowledgeEdge>(filteredData.edges)
-        .id((d: any) => d.id)
-        .distance(100)
-        .strength(linkStrength / 100))
+    const simulation = d3
+      .forceSimulation<KnowledgeNode>(filteredData.nodes)
+      .force(
+        'link',
+        d3
+          .forceLink<KnowledgeNode, KnowledgeEdge>(filteredData.edges)
+          .id((d: any) => d.id)
+          .distance(100)
+          .strength(linkStrength / 100)
+      )
       .force('charge', d3.forceManyBody().strength(-300))
       .force('center', d3.forceCenter(width / 2, height / 2))
       .force('collision', d3.forceCollide().radius(30));
@@ -269,7 +312,8 @@ export default function KnowledgeGraphVisualization({
     simulationRef.current = simulation;
 
     // Draw edges
-    const links = linksGroup.selectAll('line')
+    const links = linksGroup
+      .selectAll('line')
       .data(filteredData.edges)
       .enter()
       .append('line')
@@ -282,19 +326,20 @@ export default function KnowledgeGraphVisualization({
         setSelectedEdge(d);
         onEdgeClick?.(d);
       })
-      .on('mouseenter', function(_event, d) {
+      .on('mouseenter', function (_event, d) {
         d3.select(this)
           .attr('stroke-width', Math.sqrt(d.strength) * 3)
           .attr('opacity', 1);
       })
-      .on('mouseleave', function(_event, d) {
+      .on('mouseleave', function (_event, d) {
         d3.select(this)
           .attr('stroke-width', Math.sqrt(d.strength) * 2)
           .attr('opacity', 0.6);
       });
 
     // Draw nodes
-    const nodes = nodesGroup.selectAll('circle')
+    const nodes = nodesGroup
+      .selectAll('circle')
       .data(filteredData.nodes)
       .enter()
       .append('circle')
@@ -322,25 +367,29 @@ export default function KnowledgeGraphVisualization({
           .duration(200)
           .attr('r', NODE_CONFIGS[d.type].size * nodeSize);
       })
-      .call(d3.drag<SVGCircleElement, KnowledgeNode>()
-        .on('start', (event, d) => {
-          if (!event.active) simulation.alphaTarget(0.3).restart();
-          d.fx = d.x || 0;
-          d.fy = d.y || 0;
-        })
-        .on('drag', (event, d) => {
-          d.fx = event.x;
-          d.fy = event.y;
-        })
-        .on('end', (event, d) => {
-          if (!event.active) simulation.alphaTarget(0);
-          (d as any).fx = null;
-          (d as any).fy = null;
-        }) as any);
+      .call(
+        d3
+          .drag<SVGCircleElement, KnowledgeNode>()
+          .on('start', (event, d) => {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x || 0;
+            d.fy = d.y || 0;
+          })
+          .on('drag', (event, d) => {
+            d.fx = event.x;
+            d.fy = event.y;
+          })
+          .on('end', (event, d) => {
+            if (!event.active) simulation.alphaTarget(0);
+            (d as any).fx = null;
+            (d as any).fy = null;
+          }) as any
+      );
 
     // Draw labels
     if (showLabels) {
-      labelsGroup.selectAll('text')
+      labelsGroup
+        .selectAll('text')
         .data(filteredData.nodes)
         .enter()
         .append('text')
@@ -360,12 +409,11 @@ export default function KnowledgeGraphVisualization({
         .attr('x2', (d: any) => d.target.x)
         .attr('y2', (d: any) => d.target.y);
 
-      nodes
-        .attr('cx', (d: any) => d.x)
-        .attr('cy', (d: any) => d.y);
+      nodes.attr('cx', (d: any) => d.x).attr('cy', (d: any) => d.y);
 
       if (showLabels) {
-        labelsGroup.selectAll('text')
+        labelsGroup
+          .selectAll('text')
           .attr('x', (d: any) => d.x)
           .attr('y', (d: any) => d.y);
       }
@@ -377,7 +425,16 @@ export default function KnowledgeGraphVisualization({
     return () => {
       simulation.stop();
     };
-  }, [filteredData, dimensions, linkStrength, nodeSize, showLabels, layoutType, onNodeClick, onEdgeClick]);
+  }, [
+    filteredData,
+    dimensions,
+    linkStrength,
+    nodeSize,
+    showLabels,
+    layoutType,
+    onNodeClick,
+    onEdgeClick,
+  ]);
 
   // Layout functions
   const applyLayout = (
@@ -391,7 +448,14 @@ export default function KnowledgeGraphVisualization({
       case 'hierarchical':
         // Arrange nodes in hierarchical layout
         const nodesByType = d3.group(nodes, d => d.type);
-        const types = ['paper', 'theme', 'study', 'finding', 'gap', 'statement'];
+        const types = [
+          'paper',
+          'theme',
+          'study',
+          'finding',
+          'gap',
+          'statement',
+        ];
         let yPos = 50;
 
         types.forEach(type => {
@@ -435,28 +499,28 @@ export default function KnowledgeGraphVisualization({
   const handleZoomIn = () => {
     if (!svgRef.current) return;
     const svg = d3.select(svgRef.current);
-    svg.transition().call(
-      d3.zoom<SVGSVGElement, unknown>().scaleBy as any,
-      1.3
-    );
+    svg
+      .transition()
+      .call(d3.zoom<SVGSVGElement, unknown>().scaleBy as any, 1.3);
   };
 
   const handleZoomOut = () => {
     if (!svgRef.current) return;
     const svg = d3.select(svgRef.current);
-    svg.transition().call(
-      d3.zoom<SVGSVGElement, unknown>().scaleBy as any,
-      0.7
-    );
+    svg
+      .transition()
+      .call(d3.zoom<SVGSVGElement, unknown>().scaleBy as any, 0.7);
   };
 
   const handleZoomReset = () => {
     if (!svgRef.current) return;
     const svg = d3.select(svgRef.current);
-    svg.transition().call(
-      d3.zoom<SVGSVGElement, unknown>().transform as any,
-      d3.zoomIdentity
-    );
+    svg
+      .transition()
+      .call(
+        d3.zoom<SVGSVGElement, unknown>().transform as any,
+        d3.zoomIdentity
+      );
   };
 
   const handleExport = () => {
@@ -503,7 +567,8 @@ export default function KnowledgeGraphVisualization({
           <div>
             <h3 className="text-lg font-semibold">Knowledge Graph</h3>
             <p className="text-sm text-gray-600 mt-1">
-              {filteredData.nodes.length} nodes, {filteredData.edges.length} connections
+              {filteredData.nodes.length} nodes, {filteredData.edges.length}{' '}
+              connections
             </p>
           </div>
           <div className="flex gap-2">
@@ -535,7 +600,7 @@ export default function KnowledgeGraphVisualization({
             <Input
               placeholder="Search nodes..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               className="pl-10"
             />
           </div>
@@ -575,7 +640,11 @@ export default function KnowledgeGraphVisualization({
             variant={showLabels ? 'default' : 'outline'}
             onClick={() => setShowLabels(!showLabels)}
           >
-            {showLabels ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            {showLabels ? (
+              <Eye className="w-4 h-4" />
+            ) : (
+              <EyeOff className="w-4 h-4" />
+            )}
           </Button>
         </div>
 
@@ -604,7 +673,9 @@ export default function KnowledgeGraphVisualization({
               step={0.1}
               className="w-32"
             />
-            <span className="text-sm text-gray-600">{nodeSize.toFixed(1)}x</span>
+            <span className="text-sm text-gray-600">
+              {nodeSize.toFixed(1)}x
+            </span>
           </div>
         </div>
       </div>
@@ -627,23 +698,31 @@ export default function KnowledgeGraphVisualization({
                 <div className="flex items-start gap-2">
                   {React.createElement(NODE_CONFIGS[hoveredNode.type].icon, {
                     className: 'w-5 h-5 mt-0.5',
-                    style: { color: NODE_CONFIGS[hoveredNode.type].color }
+                    style: { color: NODE_CONFIGS[hoveredNode.type].color },
                   })}
                   <div className="flex-1">
                     <h4 className="font-medium">{hoveredNode.label}</h4>
                     <p className="text-sm text-gray-600 mt-1">
-                      {hoveredNode.description || `${NODE_CONFIGS[hoveredNode.type].label}`}
+                      {hoveredNode.description ||
+                        `${NODE_CONFIGS[hoveredNode.type].label}`}
                     </p>
                     {hoveredNode.metadata && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {hoveredNode.metadata.year && (
-                          <Badge variant="secondary">{hoveredNode.metadata.year}</Badge>
+                          <Badge variant="secondary">
+                            {hoveredNode.metadata.year}
+                          </Badge>
                         )}
                         {hoveredNode.metadata.citations && (
-                          <Badge variant="secondary">{hoveredNode.metadata.citations} citations</Badge>
+                          <Badge variant="secondary">
+                            {hoveredNode.metadata.citations} citations
+                          </Badge>
                         )}
                         {hoveredNode.metadata.confidence && (
-                          <Badge variant="secondary">{Math.round(hoveredNode.metadata.confidence * 100)}% confidence</Badge>
+                          <Badge variant="secondary">
+                            {Math.round(hoveredNode.metadata.confidence * 100)}%
+                            confidence
+                          </Badge>
                         )}
                       </div>
                     )}
@@ -669,11 +748,15 @@ export default function KnowledgeGraphVisualization({
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Average Degree</span>
-                    <span className="font-medium">{graphStats.avgDegree.toFixed(2)}</span>
+                    <span className="font-medium">
+                      {graphStats.avgDegree.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Density</span>
-                    <span className="font-medium">{(graphStats.density * 100).toFixed(1)}%</span>
+                    <span className="font-medium">
+                      {(graphStats.density * 100).toFixed(1)}%
+                    </span>
                   </div>
                 </div>
               </div>
@@ -681,30 +764,44 @@ export default function KnowledgeGraphVisualization({
               <div>
                 <h4 className="font-medium mb-2">Node Distribution</h4>
                 <div className="space-y-2">
-                  {Object.entries(graphStats.nodesByType).map(([type, count]) => (
-                    <div key={type} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: NODE_CONFIGS[type as keyof typeof NODE_CONFIGS].color }}
-                        />
-                        <span className="text-sm capitalize">{type}</span>
+                  {Object.entries(graphStats.nodesByType).map(
+                    ([type, count]) => (
+                      <div
+                        key={type}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{
+                              backgroundColor:
+                                NODE_CONFIGS[type as keyof typeof NODE_CONFIGS]
+                                  .color,
+                            }}
+                          />
+                          <span className="text-sm capitalize">{type}</span>
+                        </div>
+                        <span className="text-sm font-medium">{count}</span>
                       </div>
-                      <span className="text-sm font-medium">{count}</span>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </div>
 
               <div>
                 <h4 className="font-medium mb-2">Edge Types</h4>
                 <div className="space-y-2">
-                  {Object.entries(graphStats.edgesByType).map(([type, count]) => (
-                    <div key={type} className="flex items-center justify-between">
-                      <span className="text-sm capitalize">{type}</span>
-                      <span className="text-sm font-medium">{count}</span>
-                    </div>
-                  ))}
+                  {Object.entries(graphStats.edgesByType).map(
+                    ([type, count]) => (
+                      <div
+                        key={type}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="text-sm capitalize">{type}</span>
+                        <span className="text-sm font-medium">{count}</span>
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -735,7 +832,10 @@ export default function KnowledgeGraphVisualization({
                           className="w-8 h-0.5"
                           style={{
                             backgroundColor: config.color,
-                            borderTop: config.dasharray !== 'none' ? `2px dashed ${config.color}` : 'none'
+                            borderTop:
+                              config.dasharray !== 'none'
+                                ? `2px dashed ${config.color}`
+                                : 'none',
                           }}
                         />
                       </div>
@@ -753,7 +853,9 @@ export default function KnowledgeGraphVisualization({
                   <div className="space-y-2">
                     <div>
                       <span className="text-sm text-gray-600">Type</span>
-                      <p className="font-medium capitalize">{selectedNode.type}</p>
+                      <p className="font-medium capitalize">
+                        {selectedNode.type}
+                      </p>
                     </div>
                     <div>
                       <span className="text-sm text-gray-600">Label</span>
@@ -761,7 +863,9 @@ export default function KnowledgeGraphVisualization({
                     </div>
                     {selectedNode.description && (
                       <div>
-                        <span className="text-sm text-gray-600">Description</span>
+                        <span className="text-sm text-gray-600">
+                          Description
+                        </span>
                         <p className="text-sm">{selectedNode.description}</p>
                       </div>
                     )}
@@ -773,11 +877,15 @@ export default function KnowledgeGraphVisualization({
                   <div className="space-y-2">
                     <div>
                       <span className="text-sm text-gray-600">Type</span>
-                      <p className="font-medium capitalize">{selectedEdge.type}</p>
+                      <p className="font-medium capitalize">
+                        {selectedEdge.type}
+                      </p>
                     </div>
                     <div>
                       <span className="text-sm text-gray-600">Strength</span>
-                      <p className="font-medium">{selectedEdge.strength.toFixed(2)}</p>
+                      <p className="font-medium">
+                        {selectedEdge.strength.toFixed(2)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -798,14 +906,54 @@ export default function KnowledgeGraphVisualization({
 function generateMockData(): GraphData {
   const nodes: KnowledgeNode[] = [
     { id: 'study1', type: 'study', label: 'Climate Opinion Study 2024' },
-    { id: 'paper1', type: 'paper', label: 'Smith et al. (2023)', metadata: { year: 2023, citations: 45 } },
-    { id: 'paper2', type: 'paper', label: 'Johnson & Lee (2024)', metadata: { year: 2024, citations: 12 } },
-    { id: 'paper3', type: 'paper', label: 'Brown (2022)', metadata: { year: 2022, citations: 78 } },
-    { id: 'theme1', type: 'theme', label: 'Public Perception', metadata: { importance: 0.9 } },
-    { id: 'theme2', type: 'theme', label: 'Policy Support', metadata: { importance: 0.7 } },
-    { id: 'theme3', type: 'theme', label: 'Economic Concerns', metadata: { importance: 0.8 } },
-    { id: 'finding1', type: 'finding', label: 'Strong consensus on action', metadata: { confidence: 0.85, status: 'confirmed' } },
-    { id: 'finding2', type: 'finding', label: 'Divided on economic impact', metadata: { confidence: 0.6, status: 'novel' } },
+    {
+      id: 'paper1',
+      type: 'paper',
+      label: 'Smith et al. (2023)',
+      metadata: { year: 2023, citations: 45 },
+    },
+    {
+      id: 'paper2',
+      type: 'paper',
+      label: 'Johnson & Lee (2024)',
+      metadata: { year: 2024, citations: 12 },
+    },
+    {
+      id: 'paper3',
+      type: 'paper',
+      label: 'Brown (2022)',
+      metadata: { year: 2022, citations: 78 },
+    },
+    {
+      id: 'theme1',
+      type: 'theme',
+      label: 'Public Perception',
+      metadata: { importance: 0.9 },
+    },
+    {
+      id: 'theme2',
+      type: 'theme',
+      label: 'Policy Support',
+      metadata: { importance: 0.7 },
+    },
+    {
+      id: 'theme3',
+      type: 'theme',
+      label: 'Economic Concerns',
+      metadata: { importance: 0.8 },
+    },
+    {
+      id: 'finding1',
+      type: 'finding',
+      label: 'Strong consensus on action',
+      metadata: { confidence: 0.85, status: 'confirmed' },
+    },
+    {
+      id: 'finding2',
+      type: 'finding',
+      label: 'Divided on economic impact',
+      metadata: { confidence: 0.6, status: 'novel' },
+    },
     { id: 'gap1', type: 'gap', label: 'Youth perspectives understudied' },
     { id: 'gap2', type: 'gap', label: 'Rural-urban divide unexplored' },
     { id: 'stmt1', type: 'statement', label: 'Climate change is urgent' },
@@ -823,7 +971,12 @@ function generateMockData(): GraphData {
     { source: 'study1', target: 'finding1', type: 'confirms', strength: 0.9 },
     { source: 'study1', target: 'finding2', type: 'extends', strength: 0.7 },
     { source: 'finding1', target: 'paper1', type: 'confirms', strength: 0.8 },
-    { source: 'finding2', target: 'paper3', type: 'contradicts', strength: 0.5 },
+    {
+      source: 'finding2',
+      target: 'paper3',
+      type: 'contradicts',
+      strength: 0.5,
+    },
     { source: 'gap1', target: 'study1', type: 'addresses', strength: 0.6 },
     { source: 'gap2', target: 'theme3', type: 'addresses', strength: 0.4 },
     { source: 'theme1', target: 'stmt1', type: 'informs', strength: 0.9 },

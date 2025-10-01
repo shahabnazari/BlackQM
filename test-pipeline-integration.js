@@ -10,11 +10,7 @@ const axios = require('axios');
 const API_BASE = 'http://localhost:3001/api';
 
 // Test data with sample paper IDs
-const TEST_PAPERS = [
-  'paper-001',
-  'paper-002',
-  'paper-003'
-];
+const TEST_PAPERS = ['paper-001', 'paper-002', 'paper-003'];
 
 async function testPipelineIntegration() {
   console.log('🔧 Testing Literature → Theme → Statement Pipeline Integration');
@@ -23,14 +19,19 @@ async function testPipelineIntegration() {
   try {
     // Test 1: Extract themes from papers
     console.log('\n📚 Test 1: Extract Themes from Papers');
-    const themesResponse = await axios.post(`${API_BASE}/literature/themes/public`, {
-      paperIds: TEST_PAPERS
-    });
+    const themesResponse = await axios.post(
+      `${API_BASE}/literature/themes/public`,
+      {
+        paperIds: TEST_PAPERS,
+      }
+    );
 
     if (themesResponse.data && themesResponse.data.themes) {
       console.log(`✅ Extracted ${themesResponse.data.themes.length} themes`);
       themesResponse.data.themes.forEach((theme, i) => {
-        console.log(`   Theme ${i+1}: ${theme.label} (${theme.keywords.length} keywords)`);
+        console.log(
+          `   Theme ${i + 1}: ${theme.label} (${theme.keywords.length} keywords)`
+        );
       });
     } else {
       console.log('⚠️ No themes extracted');
@@ -38,22 +39,28 @@ async function testPipelineIntegration() {
 
     // Test 2: Full pipeline - themes to statements with provenance
     console.log('\n🔗 Test 2: Full Pipeline with Provenance Tracking');
-    const pipelineResponse = await axios.post(`${API_BASE}/literature/pipeline/themes-to-statements/public`, {
-      paperIds: TEST_PAPERS,
-      studyContext: {
-        targetStatements: 30,
-        academicLevel: 'intermediate'
+    const pipelineResponse = await axios.post(
+      `${API_BASE}/literature/pipeline/themes-to-statements/public`,
+      {
+        paperIds: TEST_PAPERS,
+        studyContext: {
+          targetStatements: 30,
+          academicLevel: 'intermediate',
+        },
       }
-    });
+    );
 
     if (pipelineResponse.data) {
-      const { themes, statements, provenance, metadata, pipeline } = pipelineResponse.data;
+      const { themes, statements, provenance, metadata, pipeline } =
+        pipelineResponse.data;
 
       console.log(`✅ Pipeline completed successfully`);
       console.log(`   - Themes extracted: ${themes.length}`);
       console.log(`   - Statements generated: ${statements.length}`);
       console.log(`   - Controversial themes: ${metadata.controversialThemes}`);
-      console.log(`   - Perspectives included: ${metadata.perspectivesIncluded.join(', ')}`);
+      console.log(
+        `   - Perspectives included: ${metadata.perspectivesIncluded.join(', ')}`
+      );
 
       // Check provenance tracking
       console.log('\n📊 Provenance Tracking:');
@@ -64,11 +71,17 @@ async function testPipelineIntegration() {
         console.log(`   - Source Theme: ${firstProvenance.sourceTheme}`);
         console.log(`   - Perspective: ${firstProvenance.perspective}`);
         console.log(`   - Confidence: ${firstProvenance.confidence}`);
-        console.log(`   - Generation Method: ${firstProvenance.generationMethod}`);
+        console.log(
+          `   - Generation Method: ${firstProvenance.generationMethod}`
+        );
 
         if (firstProvenance.provenance) {
-          console.log(`   - Source Documents: ${firstProvenance.provenance.sourceDocuments.length} papers`);
-          console.log(`   - Citation Chain: ${firstProvenance.provenance.citationChain.slice(0, 2).join(', ')}...`);
+          console.log(
+            `   - Source Documents: ${firstProvenance.provenance.sourceDocuments.length} papers`
+          );
+          console.log(
+            `   - Citation Chain: ${firstProvenance.provenance.citationChain.slice(0, 2).join(', ')}...`
+          );
         }
       }
 
@@ -84,7 +97,6 @@ async function testPipelineIntegration() {
           }
         });
       }
-
     } else {
       console.log('❌ Pipeline failed to return data');
     }
@@ -94,8 +106,8 @@ async function testPipelineIntegration() {
 
     // Check if themes have AI-generated labels and descriptions
     if (themesResponse.data && themesResponse.data.themes) {
-      const hasAIContent = themesResponse.data.themes.some(theme =>
-        theme.description && theme.description.length > 20
+      const hasAIContent = themesResponse.data.themes.some(
+        theme => theme.description && theme.description.length > 20
       );
 
       if (hasAIContent) {
@@ -111,10 +123,22 @@ async function testPipelineIntegration() {
     console.log('='.repeat(60));
 
     const tests = [
-      { name: 'Theme Extraction', passed: themesResponse.data && themesResponse.data.themes },
-      { name: 'Statement Generation', passed: pipelineResponse.data && pipelineResponse.data.statements },
-      { name: 'Provenance Tracking', passed: pipelineResponse.data && pipelineResponse.data.provenance },
-      { name: 'Metadata Generation', passed: pipelineResponse.data && pipelineResponse.data.metadata },
+      {
+        name: 'Theme Extraction',
+        passed: themesResponse.data && themesResponse.data.themes,
+      },
+      {
+        name: 'Statement Generation',
+        passed: pipelineResponse.data && pipelineResponse.data.statements,
+      },
+      {
+        name: 'Provenance Tracking',
+        passed: pipelineResponse.data && pipelineResponse.data.provenance,
+      },
+      {
+        name: 'Metadata Generation',
+        passed: pipelineResponse.data && pipelineResponse.data.metadata,
+      },
     ];
 
     const passed = tests.filter(t => t.passed).length;
@@ -129,11 +153,15 @@ async function testPipelineIntegration() {
     if (passed === total) {
       console.log('\n🎉 All pipeline integration tests passed!');
     } else {
-      console.log(`\n⚠️ ${total - passed} test(s) failed. Review the implementation.`);
+      console.log(
+        `\n⚠️ ${total - passed} test(s) failed. Review the implementation.`
+      );
     }
-
   } catch (error) {
-    console.error('\n❌ Pipeline test failed:', error.response?.data || error.message);
+    console.error(
+      '\n❌ Pipeline test failed:',
+      error.response?.data || error.message
+    );
 
     if (error.response?.status === 404) {
       console.log('\n💡 Make sure the backend server is running on port 3001');
@@ -148,9 +176,11 @@ console.log('🚀 Starting Pipeline Integration Test');
 console.log('   Target: ' + API_BASE);
 console.log('');
 
-testPipelineIntegration().then(() => {
-  console.log('\n✨ Test completed');
-}).catch(error => {
-  console.error('\n💥 Test failed:', error.message);
-  process.exit(1);
-});
+testPipelineIntegration()
+  .then(() => {
+    console.log('\n✨ Test completed');
+  })
+  .catch(error => {
+    console.error('\n💥 Test failed:', error.message);
+    process.exit(1);
+  });

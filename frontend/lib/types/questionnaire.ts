@@ -38,11 +38,21 @@ export enum QuestionType {
   VIDEO_RESPONSE = 'video_response',
   NET_PROMOTER_SCORE = 'net_promoter_score',
   SEMANTIC_DIFFERENTIAL = 'semantic_differential',
-  YES_NO = 'yes_no'
+  YES_NO = 'yes_no',
 }
 
 export interface ValidationRule {
-  type: 'required' | 'minLength' | 'maxLength' | 'min' | 'max' | 'regex' | 'email' | 'url' | 'phone' | 'custom';
+  type:
+    | 'required'
+    | 'minLength'
+    | 'maxLength'
+    | 'min'
+    | 'max'
+    | 'regex'
+    | 'email'
+    | 'url'
+    | 'phone'
+    | 'custom';
   value?: any;
   message?: string;
   errorMessage?: string;
@@ -124,14 +134,14 @@ export interface Question {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-  
+
   // Type-specific properties
   options?: QuestionOption[];
   validation?: ValidationRule[];
   skipLogic?: SkipLogic[];
   config?: QuestionConfig;
   helpText?: string;
-  
+
   // Additional metadata
   tags?: string[];
   category?: string;
@@ -233,13 +243,16 @@ export interface QuestionnaireAnalytics {
   totalResponses: number;
   completionRate: number;
   averageTimeToComplete: number;
-  questionAnalytics: Record<string, {
-    views: number;
-    completions: number;
-    averageTime: number;
-    dropOffRate: number;
-    commonAnswers: Array<{ value: any; count: number }>;
-  }>;
+  questionAnalytics: Record<
+    string,
+    {
+      views: number;
+      completions: number;
+      averageTime: number;
+      dropOffRate: number;
+      commonAnswers: Array<{ value: any; count: number }>;
+    }
+  >;
   demographicBreakdown?: {
     ageGroups: Record<string, number>;
     genders: Record<string, number>;
@@ -412,5 +425,3 @@ export interface QuestionSearchParams {
   page?: number;
   limit?: number;
 }
-
-

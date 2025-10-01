@@ -84,10 +84,14 @@ export class LiteratureComparisonService {
         comparisons,
         discussionPoints,
         summary: {
-          confirmatoryFindings: comparisons.filter(c => c.type === 'confirmatory'),
-          novelFindings: comparisons.filter(c => c.type === 'novel'),
-          contradictoryFindings: comparisons.filter(c => c.type === 'contradictory'),
-          gapAddressing: comparisons.filter(c => c.addressesGap),
+          confirmatoryFindings: comparisons.filter(
+            (c) => c.type === 'confirmatory',
+          ),
+          novelFindings: comparisons.filter((c) => c.type === 'novel'),
+          contradictoryFindings: comparisons.filter(
+            (c) => c.type === 'contradictory',
+          ),
+          gapAddressing: comparisons.filter((c) => c.addressesGap),
         },
         theoreticalAlignment: await this.assessTheoreticalAlignment(
           analysisResults,
@@ -130,7 +134,8 @@ export class LiteratureComparisonService {
       - Theoretical implications
     `;
 
-    const analysisResponse = await this.openAIService.generateCompletion(prompt);
+    const analysisResponse =
+      await this.openAIService.generateCompletion(prompt);
     const analysis = analysisResponse.content;
 
     return {
@@ -148,8 +153,10 @@ export class LiteratureComparisonService {
    * Creates intelligent discussion topics based on research gaps
    */
   async generateDiscussionPoints(comparisons: any[], researchGap: any) {
-    const novelFindings = comparisons.filter(c => c.type === 'novel');
-    const contradictions = comparisons.filter(c => c.type === 'contradictory');
+    const novelFindings = comparisons.filter((c) => c.type === 'novel');
+    const contradictions = comparisons.filter(
+      (c) => c.type === 'contradictory',
+    );
 
     const discussionPoints = [];
 
@@ -307,8 +314,16 @@ export class LiteratureComparisonService {
     if (study.researchPipeline) {
       // Knowledge graph data can be stored in analysis phase fields
       const knowledgeData = {
-        knowledgeNodes: nodes.map(n => ({ id: n.id, label: n.label, type: n.type })),
-        knowledgeEdges: edges.map(e => ({ from: e.fromNodeId, to: e.toNodeId, type: e.type })),
+        knowledgeNodes: nodes.map((n) => ({
+          id: n.id,
+          label: n.label,
+          type: n.type,
+        })),
+        knowledgeEdges: edges.map((e) => ({
+          from: e.fromNodeId,
+          to: e.toNodeId,
+          type: e.type,
+        })),
         lastAnalyzed: new Date().toISOString(),
       };
 
@@ -327,7 +342,7 @@ export class LiteratureComparisonService {
       summary: {
         totalNodes: nodes.length,
         totalEdges: edges.length,
-        conceptsCovered: concepts.map(c => c.label),
+        conceptsCovered: concepts.map((c) => c.label),
       },
     };
   }
@@ -386,8 +401,12 @@ export class LiteratureComparisonService {
       studyId,
       feedbackResults,
       summary: {
-        novelFindings: feedbackResults.filter(r => r.status === 'added_to_knowledge_base').length,
-        reinforcedFindings: feedbackResults.filter(r => r.status === 'reinforced_existing_knowledge').length,
+        novelFindings: feedbackResults.filter(
+          (r) => r.status === 'added_to_knowledge_base',
+        ).length,
+        reinforcedFindings: feedbackResults.filter(
+          (r) => r.status === 'reinforced_existing_knowledge',
+        ).length,
         timestamp: new Date().toISOString(),
       },
     };
@@ -488,7 +507,9 @@ export class LiteratureComparisonService {
     // Check for theme alignment
     if (paper.themes && finding.description) {
       for (const theme of paper.themes) {
-        if (finding.description.toLowerCase().includes(theme.name.toLowerCase())) {
+        if (
+          finding.description.toLowerCase().includes(theme.name.toLowerCase())
+        ) {
           relevance += 0.3;
         }
       }
@@ -502,7 +523,7 @@ export class LiteratureComparisonService {
     const stopWords = ['the', 'is', 'at', 'which', 'on', 'and', 'a', 'an'];
     return text
       .split(/\s+/)
-      .filter(word => word.length > 3 && !stopWords.includes(word))
+      .filter((word) => word.length > 3 && !stopWords.includes(word))
       .slice(0, 10);
   }
 
@@ -512,7 +533,10 @@ export class LiteratureComparisonService {
       return 'confirmatory';
     } else if (lower.includes('novel') || lower.includes('new')) {
       return 'novel';
-    } else if (lower.includes('contradictory') || lower.includes('challenges')) {
+    } else if (
+      lower.includes('contradictory') ||
+      lower.includes('challenges')
+    ) {
       return 'contradictory';
     } else if (lower.includes('extension') || lower.includes('builds')) {
       return 'extension';
@@ -544,9 +568,10 @@ export class LiteratureComparisonService {
   private checkIfAddressesGap(finding: any, literatureContext: any): boolean {
     // Check if finding addresses identified research gaps
     return literatureContext.some((ctx: any) =>
-      ctx.themes?.some((theme: any) =>
-        theme.type === 'gap' && finding.description.includes(theme.name)
-      )
+      ctx.themes?.some(
+        (theme: any) =>
+          theme.type === 'gap' && finding.description.includes(theme.name),
+      ),
     );
   }
 
@@ -607,27 +632,36 @@ export class LiteratureComparisonService {
     and provides new insights not previously documented in the literature.`;
   }
 
-  private async generateContradictionDiscussion(contradiction: any): Promise<string> {
+  private async generateContradictionDiscussion(
+    contradiction: any,
+  ): Promise<string> {
     return `This finding challenges existing research, specifically contradicting
     ${contradiction.citations.join(', ')}. This suggests the need for further
     investigation to understand the conditions under which different results emerge.`;
   }
 
-  private async generateGapDiscussion(comparisons: any[], gap: any): Promise<string> {
-    const addressingFindings = comparisons.filter(c => c.addressesGap);
+  private async generateGapDiscussion(
+    comparisons: any[],
+    gap: any,
+  ): Promise<string> {
+    const addressingFindings = comparisons.filter((c) => c.addressesGap);
     return `This study addresses the research gap "${gap?.description}" through
     ${addressingFindings.length} key findings. The gap is ${
       addressingFindings.length > 3 ? 'substantially' : 'partially'
     } addressed.`;
   }
 
-  private async generateTheoreticalDiscussion(comparisons: any[]): Promise<string> {
+  private async generateTheoreticalDiscussion(
+    comparisons: any[],
+  ): Promise<string> {
     return `The findings demonstrate alignment with established theoretical frameworks
     while also suggesting areas where current theory may need refinement or extension.`;
   }
 
-  private async generateFutureResearchDiscussion(comparisons: any[]): Promise<string> {
-    const novelCount = comparisons.filter(c => c.type === 'novel').length;
+  private async generateFutureResearchDiscussion(
+    comparisons: any[],
+  ): Promise<string> {
+    const novelCount = comparisons.filter((c) => c.type === 'novel').length;
     return `This study identifies ${novelCount} novel findings that warrant
     further investigation. Future research should explore the generalizability
     of these findings across different contexts and populations.`;
@@ -636,16 +670,24 @@ export class LiteratureComparisonService {
   private async assessGapAddressing(results: any, gap: any): Promise<any> {
     // Assess how well the study addresses the research gap
     const keyFindings = await this.extractKeyFindings(results);
-    const relevantFindings = keyFindings.filter(f =>
-      f.description.toLowerCase().includes(gap.keywords?.toLowerCase() || '')
+    const relevantFindings = keyFindings.filter((f) =>
+      f.description.toLowerCase().includes(gap.keywords?.toLowerCase() || ''),
     );
 
-    const percentage = Math.min((relevantFindings.length / keyFindings.length) * 100, 100);
+    const percentage = Math.min(
+      (relevantFindings.length / keyFindings.length) * 100,
+      100,
+    );
 
     return {
-      status: percentage > 80 ? 'fully_addressed' : percentage > 50 ? 'partially_addressed' : 'minimally_addressed',
+      status:
+        percentage > 80
+          ? 'fully_addressed'
+          : percentage > 50
+            ? 'partially_addressed'
+            : 'minimally_addressed',
       percentage,
-      keyFindings: relevantFindings.map(f => f.description),
+      keyFindings: relevantFindings.map((f) => f.description),
     };
   }
 
@@ -731,7 +773,9 @@ export class LiteratureComparisonService {
   private async recalculateKnowledgeGraph(studyId: string) {
     // Trigger knowledge graph recalculation
     // This would typically trigger a background job
-    console.log(`Triggering knowledge graph recalculation for study ${studyId}`);
+    console.log(
+      `Triggering knowledge graph recalculation for study ${studyId}`,
+    );
     // Implementation would depend on your knowledge graph infrastructure
   }
 }

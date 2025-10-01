@@ -70,8 +70,14 @@ const ENTERPRISE_CONFIG = {
 @Injectable()
 export class ThemeExtractionService {
   private readonly logger = new Logger(ThemeExtractionService.name);
-  private readonly themeCache = new Map<string, { data: any; timestamp: number }>();
-  private readonly requestCount = new Map<string, { count: number; resetTime: number }>();
+  private readonly themeCache = new Map<
+    string,
+    { data: any; timestamp: number }
+  >();
+  private readonly requestCount = new Map<
+    string,
+    { count: number; resetTime: number }
+  >();
 
   constructor(
     private prisma: PrismaService,
@@ -83,7 +89,10 @@ export class ThemeExtractionService {
    * Extract themes from a collection of papers with full provenance tracking
    * @enterprise Enhanced with validation, caching, and error handling
    */
-  async extractThemes(paperIds: string[], userId?: string): Promise<ExtractedTheme[]> {
+  async extractThemes(
+    paperIds: string[],
+    userId?: string,
+  ): Promise<ExtractedTheme[]> {
     const startTime = Date.now();
 
     // Enterprise validation
@@ -128,7 +137,9 @@ export class ThemeExtractionService {
     this.logger.debug(`Papers fetched in ${fetchTime}ms`);
 
     // Use AI for comprehensive theme extraction if we have abstracts
-    const papersWithContent = papers.filter(p => p.abstract && p.abstract.length > 50);
+    const papersWithContent = papers.filter(
+      (p) => p.abstract && p.abstract.length > 50,
+    );
 
     if (papersWithContent.length > 0) {
       // Use AI-powered extraction for papers with abstracts
@@ -156,7 +167,10 @@ export class ThemeExtractionService {
             citationPatterns: {
               supporting: controversy.viewpointA.papers.length,
               opposing: controversy.viewpointB.papers.length,
-              neutral: theme.papers.length - controversy.viewpointA.papers.length - controversy.viewpointB.papers.length,
+              neutral:
+                theme.papers.length -
+                controversy.viewpointA.papers.length -
+                controversy.viewpointB.papers.length,
             },
           };
         }
@@ -169,7 +183,9 @@ export class ThemeExtractionService {
 
       // Log performance metrics
       const totalTime = Date.now() - startTime;
-      this.logger.log(`Theme extraction completed in ${totalTime}ms for ${paperIds.length} papers`);
+      this.logger.log(
+        `Theme extraction completed in ${totalTime}ms for ${paperIds.length} papers`,
+      );
 
       return finalThemes;
     } else {
@@ -231,18 +247,22 @@ export class ThemeExtractionService {
       keywords: (p.keywords || [])
         .slice(0, 10)
         .map((k: any) => this.sanitizeForPrompt(k, 50))
-        .join(', ')
+        .join(', '),
     }));
 
     const prompt = `
       Extract major research themes from these papers. Identify ${Math.min(papers.length, ENTERPRISE_CONFIG.MAX_THEMES_TO_EXTRACT)} distinct themes.
 
       Papers:
-      ${sanitizedPapers.map(p => `
+      ${sanitizedPapers
+        .map(
+          (p) => `
         Paper ${p.index}: "${p.title}"
         Abstract: ${p.abstract}
         Keywords: ${p.keywords}
-      `).join('\n')}
+      `,
+        )
+        .join('\n')}
 
       For each theme return JSON array with:
       [{
@@ -257,9 +277,10 @@ export class ThemeExtractionService {
     `;
 
     // Ensure prompt doesn't exceed limits
-    const truncatedPrompt = prompt.length > ENTERPRISE_CONFIG.MAX_PROMPT_LENGTH
-      ? prompt.substring(0, ENTERPRISE_CONFIG.MAX_PROMPT_LENGTH) + '...\n]'
-      : prompt;
+    const truncatedPrompt =
+      prompt.length > ENTERPRISE_CONFIG.MAX_PROMPT_LENGTH
+        ? prompt.substring(0, ENTERPRISE_CONFIG.MAX_PROMPT_LENGTH) + '...\n]'
+        : prompt;
 
     try {
       const response = await this.retryWithBackoff(async () => {
@@ -296,15 +317,25 @@ export class ThemeExtractionService {
 
       const themes: ExtractedTheme[] = [];
 
-      for (const aiTheme of aiThemes.slice(0, ENTERPRISE_CONFIG.MAX_THEMES_TO_EXTRACT)) {
+      for (const aiTheme of aiThemes.slice(
+        0,
+        ENTERPRISE_CONFIG.MAX_THEMES_TO_EXTRACT,
+      )) {
         // Validate theme structure
-        if (!aiTheme.label || !aiTheme.paperIndices || !Array.isArray(aiTheme.paperIndices)) {
+        if (
+          !aiTheme.label ||
+          !aiTheme.paperIndices ||
+          !Array.isArray(aiTheme.paperIndices)
+        ) {
           this.logger.warn('Skipping invalid theme from AI response');
           continue;
         }
 
         const relevantPapers = aiTheme.paperIndices
-          .filter((idx: any) => typeof idx === 'number' && idx > 0 && idx <= papers.length)
+          .filter(
+            (idx: any) =>
+              typeof idx === 'number' && idx > 0 && idx <= papers.length,
+          )
           .map((idx: number) => papers[idx - 1])
           .filter(Boolean);
 
@@ -321,7 +352,9 @@ export class ThemeExtractionService {
             .map((k: string) => this.sanitizeForPrompt(k, 50)),
           papers: relevantPapers.map((p: any) => p.id),
           weight: Math.min(1, Math.max(0, aiTheme.strength || 0.5)),
-          description: aiTheme.description ? this.sanitizeForPrompt(aiTheme.description, 500) : undefined,
+          description: aiTheme.description
+            ? this.sanitizeForPrompt(aiTheme.description, 500)
+            : undefined,
           controversial: false, // Will be determined later
         });
       }
@@ -341,7 +374,9 @@ export class ThemeExtractionService {
   /**
    * Fallback theme extraction using simple keyword analysis
    */
-  private async extractThemesFallback(papers: any[]): Promise<ExtractedTheme[]> {
+  private async extractThemesFallback(
+    papers: any[],
+  ): Promise<ExtractedTheme[]> {
     const keywordFreq = new Map<string, number>();
     const keywordPapers = new Map<string, string[]>();
 
@@ -502,9 +537,10 @@ export class ThemeExtractionService {
    */
   private buildCitationChain(papers: any[], theme: ExtractedTheme): string[] {
     const chain: string[] = [];
-    const themePapers = papers.filter(p => theme.papers.includes(p.id));
+    const themePapers = papers.filter((p) => theme.papers.includes(p.id));
 
-    for (const paper of themePapers.slice(0, 5)) { // Limit to 5 citations for readability
+    for (const paper of themePapers.slice(0, 5)) {
+      // Limit to 5 citations for readability
       const citation = paper.doi
         ? `DOI:${paper.doi}`
         : `${paper.authors?.[0]?.split(' ').pop() || 'Unknown'} et al. - ${paper.title.substring(0, 50)}...`;
@@ -537,7 +573,7 @@ export class ThemeExtractionService {
     this.logger.log(`Converting ${themes.length} themes to statements`);
 
     // Generate statement hints with provenance
-    const paperIds = [...new Set(themes.flatMap(t => t.papers))];
+    const paperIds = [...new Set(themes.flatMap((t) => t.papers))];
     const hints = await this.generateStatementHints(themes, paperIds);
 
     // Use statement generator for additional diverse statements if needed
@@ -564,18 +600,19 @@ export class ThemeExtractionService {
     const targetStatementCount = studyContext?.targetStatements || 40;
     if (statements.length < targetStatementCount) {
       const additionalCount = targetStatementCount - statements.length;
-      const topicDescription = themes.map(t => t.label).join(', ');
+      const topicDescription = themes.map((t) => t.label).join(', ');
 
       try {
-        const additionalStatements = await this.statementGeneratorService.generateStatements(
-          topicDescription,
-          {
-            count: additionalCount,
-            perspectives: Array.from(perspectivesSet),
-            avoidBias: true,
-            academicLevel: studyContext?.academicLevel || 'intermediate',
-          },
-        );
+        const additionalStatements =
+          await this.statementGeneratorService.generateStatements(
+            topicDescription,
+            {
+              count: additionalCount,
+              perspectives: Array.from(perspectivesSet),
+              avoidBias: true,
+              academicLevel: studyContext?.academicLevel || 'intermediate',
+            },
+          );
 
         for (const stmt of additionalStatements) {
           statements.push(stmt.text);
@@ -588,7 +625,7 @@ export class ThemeExtractionService {
             polarity: stmt.polarity,
             provenance: {
               sourceDocuments: paperIds,
-              extractedThemes: themes.map(t => t.id),
+              extractedThemes: themes.map((t) => t.id),
               generationTimestamp: new Date(),
               aiModel: 'gpt-4-turbo-preview',
             },
@@ -606,7 +643,7 @@ export class ThemeExtractionService {
     // Create comprehensive metadata
     const metadata = {
       totalThemes: themes.length,
-      controversialThemes: themes.filter(t => t.controversial).length,
+      controversialThemes: themes.filter((t) => t.controversial).length,
       statementsGenerated: balancedStatements.length,
       perspectivesIncluded: Array.from(perspectivesSet),
     };
@@ -801,7 +838,7 @@ export class ThemeExtractionService {
           Analyze citation patterns and research positions for topic: "${topic}"
 
           Papers (${topicPapers.length} total):
-          ${topicPapers.map((p, i) => `${i+1}. "${p.title}" - ${(p.abstract || '').substring(0, 100)}...`).join('\n')}
+          ${topicPapers.map((p, i) => `${i + 1}. "${p.title}" - ${(p.abstract || '').substring(0, 100)}...`).join('\n')}
 
           Analyze if these papers show:
           1. Consensus (all agree)
@@ -824,7 +861,7 @@ export class ThemeExtractionService {
             polarization: analysis.polarization || 0.3,
             paperCount: topicPapers.length,
             pattern: analysis.pattern || 'mixed',
-            explanation: analysis.explanation
+            explanation: analysis.explanation,
           });
         } catch (error) {
           // Fallback for failed analysis
@@ -832,7 +869,7 @@ export class ThemeExtractionService {
             topic,
             polarization: 0.5,
             paperCount: topicPapers.length,
-            pattern: 'unknown'
+            pattern: 'unknown',
           });
         }
       }
@@ -892,8 +929,14 @@ export class ThemeExtractionService {
     theme: ExtractedTheme,
   ): Promise<StatementHint> {
     const sanitizedLabel = this.sanitizeForPrompt(theme.label, 100);
-    const sanitizedViewA = this.sanitizeForPrompt(theme.opposingViews?.[0] || '', 200);
-    const sanitizedViewB = this.sanitizeForPrompt(theme.opposingViews?.[1] || '', 200);
+    const sanitizedViewA = this.sanitizeForPrompt(
+      theme.opposingViews?.[0] || '',
+      200,
+    );
+    const sanitizedViewB = this.sanitizeForPrompt(
+      theme.opposingViews?.[1] || '',
+      200,
+    );
 
     const prompt = `
       Generate a balanced Q-methodology statement about "${sanitizedLabel}" that acknowledges both perspectives:
@@ -929,7 +972,9 @@ export class ThemeExtractionService {
         sourceEvidence: theme.papers,
       };
     } catch (error: any) {
-      this.logger.error(`Failed to generate balanced statement: ${error.message}`);
+      this.logger.error(
+        `Failed to generate balanced statement: ${error.message}`,
+      );
       // Fallback statement
       return {
         theme: theme.label,
@@ -1072,13 +1117,13 @@ export class ThemeExtractionService {
 
     if (paperIds.length > ENTERPRISE_CONFIG.MAX_PAPERS_PER_REQUEST) {
       throw new BadRequestException(
-        `Maximum ${ENTERPRISE_CONFIG.MAX_PAPERS_PER_REQUEST} papers allowed per request`
+        `Maximum ${ENTERPRISE_CONFIG.MAX_PAPERS_PER_REQUEST} papers allowed per request`,
       );
     }
 
     // Validate each paper ID format
-    const invalidIds = paperIds.filter(id =>
-      !id || typeof id !== 'string' || id.length > 100
+    const invalidIds = paperIds.filter(
+      (id) => !id || typeof id !== 'string' || id.length > 100,
     );
 
     if (invalidIds.length > 0) {
@@ -1104,7 +1149,7 @@ export class ThemeExtractionService {
         if (userLimit.count >= ENTERPRISE_CONFIG.RATE_LIMIT_PER_MINUTE) {
           const waitTime = Math.ceil((userLimit.resetTime - now) / 1000);
           throw new BadRequestException(
-            `Rate limit exceeded. Please wait ${waitTime} seconds`
+            `Rate limit exceeded. Please wait ${waitTime} seconds`,
           );
         }
         userLimit.count++;
@@ -1148,7 +1193,9 @@ export class ThemeExtractionService {
         this.logger.debug(`Cache hit (age: ${Math.round(age)}s): ${cacheKey}`);
         return cached.data;
       } else {
-        this.logger.debug(`Cache expired (age: ${Math.round(age)}s): ${cacheKey}`);
+        this.logger.debug(
+          `Cache expired (age: ${Math.round(age)}s): ${cacheKey}`,
+        );
         this.themeCache.delete(cacheKey);
       }
     }
@@ -1184,10 +1231,12 @@ export class ThemeExtractionService {
       }
     });
 
-    expiredKeys.forEach(key => this.themeCache.delete(key));
+    expiredKeys.forEach((key) => this.themeCache.delete(key));
 
     if (expiredKeys.length > 0) {
-      this.logger.debug(`Cleaned up ${expiredKeys.length} expired cache entries`);
+      this.logger.debug(
+        `Cleaned up ${expiredKeys.length} expired cache entries`,
+      );
     }
   }
 
@@ -1199,7 +1248,7 @@ export class ThemeExtractionService {
 
     // Remove potential injection attempts
     let sanitized = text
-      .replace(/```/g, '\'\'\'') // Prevent code block escapes
+      .replace(/```/g, "'''") // Prevent code block escapes
       .replace(/\n{3,}/g, '\n\n') // Limit newlines
       .replace(/[^\x20-\x7E\n\r\t]/g, '') // Remove non-printable chars
       .trim();
@@ -1217,7 +1266,7 @@ export class ThemeExtractionService {
    */
   private async retryWithBackoff<T>(
     operation: () => Promise<T>,
-    retries: number = ENTERPRISE_CONFIG.MAX_RETRY_ATTEMPTS
+    retries: number = ENTERPRISE_CONFIG.MAX_RETRY_ATTEMPTS,
   ): Promise<T> {
     let lastError: Error | null = null;
 
@@ -1227,12 +1276,13 @@ export class ThemeExtractionService {
       } catch (error: any) {
         lastError = error;
         this.logger.warn(
-          `Operation failed (attempt ${attempt}/${retries}): ${error.message}`
+          `Operation failed (attempt ${attempt}/${retries}): ${error.message}`,
         );
 
         if (attempt < retries) {
-          const delay = ENTERPRISE_CONFIG.RETRY_DELAY_MS * Math.pow(2, attempt - 1);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          const delay =
+            ENTERPRISE_CONFIG.RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
@@ -1258,7 +1308,10 @@ export class ThemeExtractionService {
         temperature: 0.3,
         maxTokens: 50,
       });
-      return response.content.trim() || terms[0].charAt(0).toUpperCase() + terms[0].slice(1);
+      return (
+        response.content.trim() ||
+        terms[0].charAt(0).toUpperCase() + terms[0].slice(1)
+      );
     } catch (error) {
       // Fallback to simple label generation
       return terms[0].charAt(0).toUpperCase() + terms[0].slice(1);
@@ -1272,7 +1325,10 @@ export class ThemeExtractionService {
     terms: string[],
     papers: any[],
   ): Promise<string> {
-    const titles = papers.slice(0, 3).map(p => p.title).join('; ');
+    const titles = papers
+      .slice(0, 3)
+      .map((p) => p.title)
+      .join('; ');
     const prompt = `
       Generate a one-sentence academic description for a research theme.
       Keywords: ${terms.slice(0, 5).join(', ')}
@@ -1287,7 +1343,10 @@ export class ThemeExtractionService {
         temperature: 0.5,
         maxTokens: 100,
       });
-      return response.content.trim() || `Theme encompassing ${terms.slice(0, 3).join(', ')} across ${papers.length} papers`;
+      return (
+        response.content.trim() ||
+        `Theme encompassing ${terms.slice(0, 3).join(', ')} across ${papers.length} papers`
+      );
     } catch (error) {
       // Fallback to simple description
       return `Theme encompassing ${terms.slice(0, 3).join(', ')} across ${papers.length} papers`;
@@ -1307,18 +1366,18 @@ export class ThemeExtractionService {
     }
 
     // Prepare and sanitize abstracts for analysis
-    const abstractsData = papers.slice(0, 15).map(p => ({
+    const abstractsData = papers.slice(0, 15).map((p) => ({
       id: p.id,
       title: this.sanitizeForPrompt(p.title, 150),
       abstract: this.sanitizeForPrompt(p.abstract || p.title, 200),
-      authors: (p.authors || []).slice(0, 3)
+      authors: (p.authors || []).slice(0, 3),
     }));
 
     const prompt = `
       Analyze the following research papers for stance polarization. Identify if there are opposing viewpoints.
 
       Papers:
-      ${abstractsData.map((p, i) => `${i+1}. "${p.title}": ${p.abstract}`).join('\n')}
+      ${abstractsData.map((p, i) => `${i + 1}. "${p.title}": ${p.abstract}`).join('\n')}
 
       Return a JSON object with:
       {
@@ -1352,14 +1411,19 @@ export class ThemeExtractionService {
       // Map paper indices back to paper IDs and authors
       const viewpoints = analysis.viewpoints.map((vp: any) => ({
         description: vp.description,
-        papers: vp.paperIndices.map((idx: number) => abstractsData[idx - 1]?.id).filter(Boolean),
-        authors: vp.paperIndices.map((idx: number) => abstractsData[idx - 1]?.authors).flat().filter(Boolean),
-        rationale: vp.rationale
+        papers: vp.paperIndices
+          .map((idx: number) => abstractsData[idx - 1]?.id)
+          .filter(Boolean),
+        authors: vp.paperIndices
+          .map((idx: number) => abstractsData[idx - 1]?.authors)
+          .flat()
+          .filter(Boolean),
+        rationale: vp.rationale,
       }));
 
       return {
         polarization: analysis.polarization || 0,
-        viewpoints
+        viewpoints,
       };
     } catch (error) {
       // Fallback to simple split if AI fails
@@ -1369,12 +1433,14 @@ export class ThemeExtractionService {
         viewpoints: [
           {
             description: 'Primary perspective',
-            papers: papers.slice(0, Math.ceil(papers.length / 2)).map(p => p.id),
+            papers: papers
+              .slice(0, Math.ceil(papers.length / 2))
+              .map((p) => p.id),
             authors: [],
           },
           {
             description: 'Alternative perspective',
-            papers: papers.slice(Math.ceil(papers.length / 2)).map(p => p.id),
+            papers: papers.slice(Math.ceil(papers.length / 2)).map((p) => p.id),
             authors: [],
           },
         ],

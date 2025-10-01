@@ -28,12 +28,14 @@ This document provides comprehensive documentation for the Literature → Study 
 The VQMethod Pipeline API provides a complete research workflow from literature discovery to report generation. All endpoints follow RESTful conventions and return JSON responses.
 
 ### Base URL
+
 ```
 Production: https://api.vqmethod.com/api
 Development: http://localhost:4000/api
 ```
 
 ### Response Format
+
 ```json
 {
   "success": true,
@@ -47,6 +49,7 @@ Development: http://localhost:4000/api
 ```
 
 ### Error Format
+
 ```json
 {
   "success": false,
@@ -69,17 +72,20 @@ Development: http://localhost:4000/api
 All API endpoints require JWT authentication except public search endpoints.
 
 ### Headers
+
 ```http
 Authorization: Bearer <jwt-token>
 Content-Type: application/json
 ```
 
 ### Get Token
+
 ```http
 POST /api/auth/login
 ```
 
 **Request:**
+
 ```json
 {
   "email": "user@example.com",
@@ -88,6 +94,7 @@ POST /api/auth/login
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -116,6 +123,7 @@ POST /api/literature/search
 ```
 
 **Request:**
+
 ```json
 {
   "query": "climate change public opinion",
@@ -135,6 +143,7 @@ POST /api/literature/search
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -177,6 +186,7 @@ POST /api/literature/save
 ```
 
 **Request:**
+
 ```json
 {
   "paperIds": ["paper-1", "paper-2"],
@@ -193,6 +203,7 @@ POST /api/literature/gaps
 ```
 
 **Request:**
+
 ```json
 {
   "paperIds": ["paper-1", "paper-2"],
@@ -202,6 +213,7 @@ POST /api/literature/gaps
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -241,6 +253,7 @@ POST /api/literature/extract-themes
 ```
 
 **Request:**
+
 ```json
 {
   "paperIds": ["paper-1", "paper-2"],
@@ -251,6 +264,7 @@ POST /api/literature/extract-themes
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -298,6 +312,7 @@ POST /api/ai/statements/generate
 ```
 
 **Request:**
+
 ```json
 {
   "themes": [
@@ -320,6 +335,7 @@ POST /api/ai/statements/generate
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -361,6 +377,7 @@ POST /api/studies/create
 ```
 
 **Request:**
+
 ```json
 {
   "title": "Climate Change Opinion Study",
@@ -393,6 +410,7 @@ POST /api/studies/create
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -421,6 +439,7 @@ POST /api/analysis/q-methodology
 ```
 
 **Request:**
+
 ```json
 {
   "studyId": "study-id",
@@ -439,6 +458,7 @@ POST /api/analysis/q-methodology
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -477,6 +497,7 @@ POST /api/analysis/compare-to-literature
 ```
 
 **Request:**
+
 ```json
 {
   "studyId": "study-id",
@@ -490,6 +511,7 @@ POST /api/analysis/compare-to-literature
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -545,6 +567,7 @@ POST /api/reports/generate
 ```
 
 **Request:**
+
 ```json
 {
   "studyId": "study-id",
@@ -572,6 +595,7 @@ POST /api/reports/generate
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -618,6 +642,7 @@ POST /api/knowledge/update-graph
 ```
 
 **Request:**
+
 ```json
 {
   "studyId": "study-id",
@@ -634,6 +659,7 @@ POST /api/knowledge/update-graph
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -685,6 +711,7 @@ POST /api/knowledge/query
 ```
 
 **Request:**
+
 ```json
 {
   "query": {
@@ -705,16 +732,16 @@ POST /api/knowledge/query
 
 ### Error Codes
 
-| Code | Description | HTTP Status |
-|------|-------------|------------|
-| `AUTH_REQUIRED` | Authentication required | 401 |
-| `AUTH_INVALID` | Invalid token | 401 |
-| `PERMISSION_DENIED` | Insufficient permissions | 403 |
-| `NOT_FOUND` | Resource not found | 404 |
-| `VALIDATION_ERROR` | Invalid request data | 400 |
-| `RATE_LIMIT_EXCEEDED` | Too many requests | 429 |
-| `INTERNAL_ERROR` | Server error | 500 |
-| `SERVICE_UNAVAILABLE` | External service down | 503 |
+| Code                  | Description              | HTTP Status |
+| --------------------- | ------------------------ | ----------- |
+| `AUTH_REQUIRED`       | Authentication required  | 401         |
+| `AUTH_INVALID`        | Invalid token            | 401         |
+| `PERMISSION_DENIED`   | Insufficient permissions | 403         |
+| `NOT_FOUND`           | Resource not found       | 404         |
+| `VALIDATION_ERROR`    | Invalid request data     | 400         |
+| `RATE_LIMIT_EXCEEDED` | Too many requests        | 429         |
+| `INTERNAL_ERROR`      | Server error             | 500         |
+| `SERVICE_UNAVAILABLE` | External service down    | 503         |
 
 ### Example Error Response
 
@@ -745,13 +772,13 @@ All API endpoints are rate-limited to prevent abuse.
 
 ### Limits
 
-| Endpoint Type | Authenticated | Anonymous |
-|--------------|---------------|-----------|
-| Literature Search | 100/minute | 10/minute |
-| AI Generation | 30/minute | N/A |
-| Analysis | 20/minute | N/A |
-| Report Generation | 5/minute | N/A |
-| General API | 1000/hour | 100/hour |
+| Endpoint Type     | Authenticated | Anonymous |
+| ----------------- | ------------- | --------- |
+| Literature Search | 100/minute    | 10/minute |
+| AI Generation     | 30/minute     | N/A       |
+| Analysis          | 20/minute     | N/A       |
+| Report Generation | 5/minute      | N/A       |
+| General API       | 1000/hour     | 100/hour  |
 
 ### Headers
 
@@ -793,14 +820,11 @@ POST /api/webhooks/register
 ```
 
 **Request:**
+
 ```json
 {
   "url": "https://your-app.com/webhook",
-  "events": [
-    "analysis.complete",
-    "report.ready",
-    "knowledge.updated"
-  ],
+  "events": ["analysis.complete", "report.ready", "knowledge.updated"],
   "secret": "webhook-secret"
 }
 ```
@@ -831,25 +855,25 @@ import { VQMethodClient } from '@vqmethod/sdk';
 
 const client = new VQMethodClient({
   apiKey: 'your-api-key',
-  environment: 'production'
+  environment: 'production',
 });
 
 // Search literature
 const papers = await client.literature.search({
   query: 'climate change',
-  limit: 50
+  limit: 50,
 });
 
 // Generate statements
 const statements = await client.ai.generateStatements({
   themes: papers.themes,
-  count: 40
+  count: 40,
 });
 
 // Create study
 const study = await client.studies.create({
   title: 'My Study',
-  statements: statements.data
+  statements: statements.data,
 });
 ```
 
@@ -881,6 +905,7 @@ statements = client.ai.generate_statements(
 ## Support
 
 For API support and questions:
+
 - Documentation: https://docs.vqmethod.com/api
 - Status: https://status.vqmethod.com
 - Support: api-support@vqmethod.com
