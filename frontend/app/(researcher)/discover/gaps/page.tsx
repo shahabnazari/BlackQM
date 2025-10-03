@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { literatureAPI } from '@/lib/services/literature-api.service';
 
 interface ResearchGap {
   id: string;
@@ -137,173 +138,96 @@ export default function ResearchGapsPage() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set()
   );
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Generate mock data
+  // Phase 9 Day 16: Advanced predictive features
+  const [fundingProbability, setFundingProbability] = useState<any>(null);
+  const [timelineOptimization, setTimelineOptimization] = useState<any>(null);
+  const [impactPrediction, setImpactPrediction] = useState<any>(null);
+  const [trendForecasts, setTrendForecasts] = useState<any[]>([]);
+  const [showAdvancedView, setShowAdvancedView] = useState(false);
+
+  // Fetch real research gaps from backend (Phase 9 Days 14-15)
   useEffect(() => {
-    const mockGaps: ResearchGap[] = [
-      {
-        id: '1',
-        title: 'Q Methodology in Climate Change Communication',
-        description:
-          'Limited application of Q methodology to understand stakeholder perspectives on climate change communication strategies. Current research lacks systematic exploration of subjective viewpoints across different demographic groups.',
-        field: 'Environmental Science',
-        subfield: [
-          'Climate Communication',
-          'Q Methodology',
-          'Stakeholder Analysis',
-        ],
-        importance: 'critical',
-        feasibility: 'high',
-        novelty: 85,
-        impact: 90,
-        relatedPapers: 12,
-        suggestedMethods: [
-          'Q-sort',
-          'Factor analysis',
-          'Semi-structured interviews',
-        ],
-        estimatedDuration: '12-18 months',
-        requiredExpertise: [
-          'Q methodology',
-          'Environmental psychology',
-          'Statistical analysis',
-        ],
-        potentialChallenges: [
-          'Participant recruitment',
-          'Cross-cultural validation',
-          'Large sample size needed',
-        ],
-        opportunityScore: 88,
-        trend: 'emerging',
-        lastUpdated: new Date('2024-02-15'),
-        citations: {
-          supporting: 45,
-          contradicting: 3,
-          neutral: 18,
-        },
-        qMethodologyRelevance: true,
-      },
-      {
-        id: '2',
-        title: 'Digital Q-Sort Validation Studies',
-        description:
-          'Insufficient empirical validation of digital Q-sort platforms compared to traditional paper-based methods. Need for systematic comparison studies across different populations and research contexts.',
-        field: 'Research Methods',
-        subfield: ['Digital Methods', 'Q Methodology', 'Validation Studies'],
-        importance: 'high',
-        feasibility: 'high',
-        novelty: 75,
-        impact: 80,
-        relatedPapers: 8,
-        suggestedMethods: [
-          'Comparative study',
-          'Test-retest reliability',
-          'Cross-validation',
-        ],
-        estimatedDuration: '6-9 months',
-        requiredExpertise: [
-          'Q methodology',
-          'Digital research methods',
-          'Psychometrics',
-        ],
-        potentialChallenges: [
-          'Platform development',
-          'Participant technology access',
-          'Standardization',
-        ],
-        opportunityScore: 78,
-        trend: 'emerging',
-        lastUpdated: new Date('2024-02-10'),
-        citations: {
-          supporting: 32,
-          contradicting: 5,
-          neutral: 12,
-        },
-        qMethodologyRelevance: true,
-      },
-      {
-        id: '3',
-        title: 'AI-Assisted Factor Interpretation in Q Studies',
-        description:
-          'Lack of research on using artificial intelligence to assist in factor interpretation and pattern recognition in Q methodology studies. Potential for improving efficiency and uncovering hidden patterns.',
-        field: 'Computational Social Science',
-        subfield: ['AI/ML', 'Q Methodology', 'Pattern Recognition'],
-        importance: 'high',
-        feasibility: 'medium',
-        novelty: 92,
-        impact: 85,
-        relatedPapers: 3,
-        suggestedMethods: [
-          'Machine learning',
-          'Natural language processing',
-          'Pattern recognition',
-        ],
-        estimatedDuration: '18-24 months',
-        requiredExpertise: [
-          'Q methodology',
-          'Machine learning',
-          'Software development',
-        ],
-        potentialChallenges: [
-          'Algorithm development',
-          'Validation',
-          'Interpretability',
-        ],
-        opportunityScore: 85,
-        trend: 'emerging',
-        lastUpdated: new Date('2024-02-20'),
-        citations: {
-          supporting: 15,
-          contradicting: 2,
-          neutral: 8,
-        },
-        qMethodologyRelevance: true,
-      },
-      {
-        id: '4',
-        title: 'Cross-Cultural Subjective Well-being Assessment',
-        description:
-          'Gap in understanding subjective well-being perspectives across different cultural contexts using systematic approaches. Limited cross-cultural validation of well-being constructs.',
-        field: 'Psychology',
-        subfield: [
-          'Cross-cultural Psychology',
-          'Well-being',
-          'Subjective Assessment',
-        ],
-        importance: 'medium',
-        feasibility: 'medium',
-        novelty: 70,
-        impact: 75,
-        relatedPapers: 25,
-        suggestedMethods: [
-          'Cross-cultural surveys',
-          'Mixed methods',
-          'Meta-analysis',
-        ],
-        estimatedDuration: '24-36 months',
-        requiredExpertise: [
-          'Cross-cultural psychology',
-          'Research methods',
-          'Multiple languages',
-        ],
-        potentialChallenges: [
-          'Cultural sensitivity',
-          'Translation issues',
-          'Sample diversity',
-        ],
-        opportunityScore: 72,
-        trend: 'stable',
-        lastUpdated: new Date('2024-02-05'),
-        citations: {
-          supporting: 68,
-          contradicting: 12,
-          neutral: 35,
-        },
-        qMethodologyRelevance: false,
-      },
-    ];
+    async function fetchResearchGaps() {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-    setGaps(mockGaps);
+        console.log('📊 Fetching research gaps from backend...');
+
+        // Step 1: Get user's saved papers
+        const library = await literatureAPI.getUserLibrary(1, 100);
+        const paperIds = library.papers.map(p => p.id);
+
+        if (paperIds.length === 0) {
+          console.log('⚠️ No papers in library - showing empty state');
+          setGaps([]);
+          setIsLoading(false);
+          return;
+        }
+
+        console.log(`📚 Found ${paperIds.length} papers in library`);
+
+        // Step 2: Analyze gaps from papers
+        const analyzedGaps = await literatureAPI.analyzeGapsFromPapers(paperIds);
+        console.log(`🔍 Analyzed ${analyzedGaps.length} research gaps`);
+
+        // Step 3: Score opportunities with predictive ML model (Phase 9 Day 15)
+        const gapIds = analyzedGaps.map((g: any) => g.id);
+        const scoredResult = await literatureAPI.scoreResearchOpportunities(gapIds);
+
+        console.log(`💎 Scored ${scoredResult.opportunities.length} opportunities`);
+
+        // Step 4: Transform backend data to frontend format
+        const transformedGaps: ResearchGap[] = scoredResult.opportunities.map((opp: any) => {
+          const originalGap = analyzedGaps.find((g: any) => g.id === opp.gapId);
+
+          return {
+            id: opp.gapId,
+            title: opp.topic,
+            description: opp.description,
+            field: originalGap?.field || 'General',
+            subfield: originalGap?.keywords || [],
+            importance: opp.opportunityScore > 0.8 ? 'critical' :
+                       opp.opportunityScore > 0.6 ? 'high' :
+                       opp.opportunityScore > 0.4 ? 'medium' : 'low',
+            feasibility: opp.scoringFactors.feasibility > 0.7 ? 'high' :
+                        opp.scoringFactors.feasibility > 0.5 ? 'medium' : 'low',
+            novelty: Math.round(opp.scoringFactors.novelty * 100),
+            impact: Math.round(opp.scoringFactors.impact * 100),
+            relatedPapers: originalGap?.relatedPapers || 0,
+            suggestedMethods: [opp.suggestedMethodology],
+            estimatedDuration: `${opp.optimalTimeline.totalMonths} months`,
+            requiredExpertise: opp.suggestedCollaborators.map((c: any) => c.expertise[0]),
+            potentialChallenges: [],
+            opportunityScore: Math.round(opp.opportunityScore * 100),
+            trend: opp.scoringFactors.timeliness > 0.7 ? 'emerging' :
+                   opp.scoringFactors.timeliness > 0.3 ? 'stable' : 'declining',
+            lastUpdated: new Date(),
+            citations: {
+              supporting: 0,
+              contradicting: 0,
+              neutral: 0,
+            },
+            qMethodologyRelevance: opp.qMethodologyFit > 0.5,
+          };
+        });
+
+        setGaps(transformedGaps);
+        console.log(`✅ Loaded ${transformedGaps.length} research gaps successfully`);
+      } catch (err: any) {
+        console.error('❌ Failed to fetch research gaps:', err);
+        setError(err.message || 'Failed to load research gaps');
+        // Keep empty gaps array on error
+        setGaps([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchResearchGaps();
   }, []);
 
   // Filter and sort gaps
@@ -468,6 +392,58 @@ export default function ResearchGapsPage() {
     }
   };
 
+  // Phase 9 Day 16: Load funding probability details
+  const loadFundingProbability = async (gapId: string) => {
+    try {
+      console.log(`💰 Loading funding probability for gap ${gapId}...`);
+      const result = await literatureAPI.predictFundingProbability([gapId]);
+      const opportunity = result.fundingOpportunities?.[0] || result.highProbability?.[0];
+      setFundingProbability(opportunity);
+      console.log(`✓ Loaded funding probability: ${opportunity ? (opportunity.probability * 100).toFixed(1) : 'N/A'}%`);
+    } catch (err: any) {
+      console.error('❌ Failed to load funding probability:', err);
+    }
+  };
+
+  // Phase 9 Day 16: Load timeline optimization
+  const loadTimelineOptimization = async (gapId: string) => {
+    try {
+      console.log(`⏱️ Loading timeline optimization for gap ${gapId}...`);
+      const result = await literatureAPI.getTimelineOptimizations([gapId]);
+      const timeline = result.timelines?.[0];
+      setTimelineOptimization(timeline);
+      console.log(`✓ Loaded timeline optimization`);
+    } catch (err: any) {
+      console.error('❌ Failed to load timeline optimization:', err);
+    }
+  };
+
+  // Phase 9 Day 16: Load impact prediction
+  const loadImpactPrediction = async (gapId: string) => {
+    try {
+      console.log(`📈 Loading impact prediction for gap ${gapId}...`);
+      const result = await literatureAPI.predictImpact([gapId]);
+      const prediction = result.predictions?.[0] || result.transformativeOpportunities?.[0];
+      setImpactPrediction(prediction);
+      console.log(`✓ Loaded impact prediction`);
+    } catch (err: any) {
+      console.error('❌ Failed to load impact prediction:', err);
+    }
+  };
+
+  // Phase 9 Day 16: Load trend forecasting
+  const loadTrendForecasts = async () => {
+    try {
+      console.log(`📊 Loading trend forecasts for gap topics...`);
+      const topics = gaps.slice(0, 5).map(g => g.title);
+      const result = await literatureAPI.forecastTrends(topics);
+      setTrendForecasts(result.forecasts || []);
+      console.log(`✓ Loaded ${result.forecasts?.length || 0} trend forecasts`);
+    } catch (err: any) {
+      console.error('❌ Failed to load trend forecasts:', err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
       <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -485,7 +461,66 @@ export default function ResearchGapsPage() {
           </p>
         </motion.div>
 
+        {/* Loading State */}
+        {isLoading && (
+          <Card className="border-blue-200">
+            <CardContent className="p-8 text-center">
+              <div className="flex flex-col items-center gap-4">
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"></div>
+                <div className="space-y-2">
+                  <p className="text-lg font-medium text-blue-900">Analyzing Research Gaps...</p>
+                  <p className="text-sm text-gray-600">Using AI to identify opportunities in your literature</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-red-900">Error Loading Research Gaps</h3>
+                  <p className="text-sm text-red-700 mt-1">{error}</p>
+                  <Button
+                    onClick={() => window.location.reload()}
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && !error && gaps.length === 0 && (
+          <Card className="border-gray-200">
+            <CardContent className="p-12 text-center">
+              <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Papers in Library</h3>
+              <p className="text-gray-600 mb-4">
+                Add papers to your library to analyze research gaps
+              </p>
+              <Button
+                onClick={() => window.location.href = '/discover/literature'}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Search Literature
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stats Overview */}
+        {!isLoading && !error && gaps.length > 0 && (
+        <>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -948,6 +983,193 @@ export default function ResearchGapsPage() {
                           </ul>
                         </div>
 
+                        {/* Phase 9 Day 16: Advanced Predictive Features */}
+                        <div className="space-y-3 pt-3 border-t">
+                          <p className="text-sm font-medium text-gray-700">
+                            Advanced Predictions:
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                loadFundingProbability(gap.id);
+                                setShowAdvancedView(true);
+                              }}
+                            >
+                              💰 Funding Probability
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                loadTimelineOptimization(gap.id);
+                                setShowAdvancedView(true);
+                              }}
+                            >
+                              ⏱️ Timeline Optimization
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                loadImpactPrediction(gap.id);
+                                setShowAdvancedView(true);
+                              }}
+                            >
+                              📈 Impact Forecast
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                loadTrendForecasts();
+                                setShowAdvancedView(true);
+                              }}
+                            >
+                              📊 Trend Analysis
+                            </Button>
+                          </div>
+
+                          {/* Show Advanced View Details */}
+                          {showAdvancedView && (
+                            <div className="mt-4 space-y-4">
+                              {/* Funding Probability Details */}
+                              {fundingProbability && (
+                                <Card className="border-green-200 bg-green-50">
+                                  <CardContent className="p-4">
+                                    <h4 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
+                                      <Activity className="w-4 h-4" />
+                                      Funding Probability: {(fundingProbability.probability * 100).toFixed(1)}%
+                                    </h4>
+                                    <div className="space-y-2 text-sm">
+                                      {fundingProbability.matchedGrants && fundingProbability.matchedGrants.length > 0 && (
+                                        <div>
+                                          <p className="font-medium text-gray-700">Matched Grant Types:</p>
+                                          <div className="flex flex-wrap gap-2 mt-1">
+                                            {fundingProbability.matchedGrants.map((grant: any, idx: number) => (
+                                              <Badge key={idx} variant="outline" className="text-xs">
+                                                {grant.type} ({Math.round(grant.match * 100)}%)
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {fundingProbability.reasoning && (
+                                        <p className="text-gray-600 text-xs mt-2">
+                                          {fundingProbability.reasoning}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              )}
+
+                              {/* Timeline Optimization */}
+                              {timelineOptimization && (
+                                <Card className="border-blue-200 bg-blue-50">
+                                  <CardContent className="p-4">
+                                    <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                                      <Calendar className="w-4 h-4" />
+                                      Optimized Timeline
+                                    </h4>
+                                    <div className="space-y-2 text-sm">
+                                      {timelineOptimization.estimatedDuration && (
+                                        <p className="text-gray-700">
+                                          <span className="font-medium">Duration:</span> {timelineOptimization.estimatedDuration} months
+                                        </p>
+                                      )}
+                                      {timelineOptimization.phases && (
+                                        <div>
+                                          <p className="font-medium text-gray-700">Phases:</p>
+                                          {timelineOptimization.phases.map((phase: any, idx: number) => (
+                                            <div key={idx} className="flex justify-between text-xs text-gray-600 mt-1">
+                                              <span>{phase.name}</span>
+                                              <span>{phase.duration} months</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              )}
+
+                              {/* Impact Prediction */}
+                              {impactPrediction && (
+                                <Card className="border-purple-200 bg-purple-50">
+                                  <CardContent className="p-4">
+                                    <h4 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
+                                      <TrendingUp className="w-4 h-4" />
+                                      Impact Forecast
+                                    </h4>
+                                    <div className="space-y-2 text-sm">
+                                      <p className="text-gray-700">
+                                        <span className="font-medium">Predicted Citations (Year 5):</span>{' '}
+                                        {impactPrediction.predictedCitations || 'N/A'}
+                                      </p>
+                                      <Progress
+                                        value={Math.min((impactPrediction.predictedCitations || 0) / 10, 100)}
+                                        className="h-2"
+                                      />
+                                      <p className="text-xs text-gray-600">
+                                        Based on novelty, trending, and feasibility factors
+                                      </p>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              )}
+
+                              {/* Trend Forecasts */}
+                              {trendForecasts.length > 0 && (
+                                <Card className="border-orange-200 bg-orange-50">
+                                  <CardContent className="p-4">
+                                    <h4 className="font-semibold text-orange-900 mb-2 flex items-center gap-2">
+                                      <BarChart3 className="w-4 h-4" />
+                                      Trend Analysis
+                                    </h4>
+                                    <div className="space-y-2">
+                                      {trendForecasts.map((forecast: any, idx: number) => (
+                                        <div key={idx} className="text-sm">
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-gray-700 font-medium text-xs">
+                                              {forecast.topic}
+                                            </span>
+                                            <Badge
+                                              variant="outline"
+                                              className={cn(
+                                                'text-xs',
+                                                forecast.trend === 'EXPONENTIAL'
+                                                  ? 'border-green-500 text-green-600'
+                                                  : forecast.trend === 'LINEAR'
+                                                    ? 'border-blue-500 text-blue-600'
+                                                    : forecast.trend === 'PLATEAU'
+                                                      ? 'border-yellow-500 text-yellow-600'
+                                                      : 'border-red-500 text-red-600'
+                                              )}
+                                            >
+                                              {forecast.trend}
+                                            </Badge>
+                                          </div>
+                                          {forecast.growthRate && (
+                                            <p className="text-xs text-gray-600 mt-1">
+                                              Growth: {forecast.growthRate}%/year
+                                            </p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
                         <div className="flex justify-end gap-2 pt-2">
                           <Button size="sm" variant="outline">
                             <Share2 className="w-4 h-4 mr-2" />
@@ -981,6 +1203,8 @@ export default function ResearchGapsPage() {
             )}
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

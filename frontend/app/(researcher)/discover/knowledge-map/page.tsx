@@ -25,6 +25,8 @@ import {
   ZoomIn,
   ZoomOut,
   Crosshair,
+  AlertCircle,
+  TrendingUp,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +42,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { literatureAPI } from '@/lib/services/literature-api.service';
 
 interface Node {
   id: string;
@@ -137,122 +140,117 @@ export default function KnowledgeMapPage() {
   const [showLabels, setShowLabels] = useState(true);
   const [showEdges, setShowEdges] = useState(true);
   const [autoLayout, setAutoLayout] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Initialize with sample data
+  // Phase 9 Day 16: Advanced visualization features
+  const [insights, setInsights] = useState<any>(null);
+  const [predictedLinks, setPredictedLinks] = useState<any[]>([]);
+  const [showPredictedLinks, setShowPredictedLinks] = useState(false);
+  const [influenceFlowData, setInfluenceFlowData] = useState<any>(null);
+  const [showInfluenceFlow, setShowInfluenceFlow] = useState(false);
+
+  // Fetch real knowledge graph from backend (Phase 9 Day 14)
   useEffect(() => {
-    const sampleNodes: Node[] = [
-      {
-        id: '1',
-        label: 'Q Methodology',
-        type: 'concept',
-        x: 400,
-        y: 300,
-        size: 40,
-        color: NODE_COLORS.concept,
-        description: 'A research method for studying subjectivity',
-        tags: ['methodology', 'subjectivity', 'mixed-methods'],
-        importance: 10,
-        connections: 5,
-      },
-      {
-        id: '2',
-        label: 'Factor Analysis',
-        type: 'method',
-        x: 300,
-        y: 200,
-        size: 30,
-        color: NODE_COLORS.method,
-        description: 'Statistical method for Q methodology',
-        tags: ['statistics', 'analysis'],
-        importance: 8,
-        connections: 3,
-      },
-      {
-        id: '3',
-        label: 'Stephenson, W.',
-        type: 'author',
-        x: 500,
-        y: 200,
-        size: 25,
-        color: NODE_COLORS.author,
-        description: 'Founder of Q methodology',
-        tags: ['founder', 'psychology'],
-        importance: 9,
-        connections: 4,
-      },
-      {
-        id: '4',
-        label: 'Subjectivity Theory',
-        type: 'theory',
-        x: 400,
-        y: 400,
-        size: 35,
-        color: NODE_COLORS.theory,
-        description: 'Theoretical foundation of Q methodology',
-        tags: ['theory', 'psychology'],
-        importance: 9,
-        connections: 3,
-      },
-      {
-        id: '5',
-        label: 'Q-Sort Technique',
-        type: 'method',
-        x: 250,
-        y: 350,
-        size: 30,
-        color: NODE_COLORS.method,
-        description: 'Data collection method in Q studies',
-        tags: ['data-collection', 'sorting'],
-        importance: 8,
-        connections: 2,
-      },
-    ];
+    async function fetchKnowledgeGraph() {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-    const sampleEdges: Edge[] = [
-      {
-        id: 'e1',
-        source: '1',
-        target: '2',
-        type: 'uses',
-        strength: 0.9,
-        label: 'employs',
-      },
-      {
-        id: 'e2',
-        source: '3',
-        target: '1',
-        type: 'relates',
-        strength: 1.0,
-        label: 'invented',
-      },
-      {
-        id: 'e3',
-        source: '1',
-        target: '4',
-        type: 'supports',
-        strength: 0.8,
-        label: 'based on',
-      },
-      {
-        id: 'e4',
-        source: '1',
-        target: '5',
-        type: 'uses',
-        strength: 0.9,
-        label: 'utilizes',
-      },
-      {
-        id: 'e5',
-        source: '5',
-        target: '2',
-        type: 'relates',
-        strength: 0.7,
-        label: 'analyzed by',
-      },
-    ];
+        console.log('🌉 Fetching knowledge graph from backend...');
 
-    setNodes(sampleNodes);
-    setEdges(sampleEdges);
+        // Step 1: Get user's saved papers
+        const library = await literatureAPI.getUserLibrary(1, 100);
+        const paperIds = library.papers.map(p => p.id);
+
+        if (paperIds.length === 0) {
+          console.log('⚠️ No papers in library - showing empty state');
+          setNodes([]);
+          setEdges([]);
+          setIsLoading(false);
+          return;
+        }
+
+        console.log(`📚 Found ${paperIds.length} papers in library`);
+
+        // Step 2: Build knowledge graph from papers
+        const buildResult = await literatureAPI.buildKnowledgeGraph(paperIds);
+        console.log('✓ Knowledge graph built successfully');
+
+        // Phase 9 Day 16: Extract insights from build result
+        if (buildResult.insights) {
+          setInsights({
+            bridgeConcepts: buildResult.insights.bridgeConcepts || [],
+            controversies: buildResult.insights.controversies || [],
+            emergingTopics: buildResult.insights.emergingTopics || [],
+          });
+          console.log(`💡 Extracted ${buildResult.insights.bridgeConcepts?.length || 0} bridge concepts, ${buildResult.insights.controversies?.length || 0} controversies, ${buildResult.insights.emergingTopics?.length || 0} emerging topics`);
+        }
+
+        // Step 3: Fetch graph data for visualization
+        const graphResult = await literatureAPI.getKnowledgeGraph({
+          types: ['CONCEPT', 'THEORY', 'METHOD', 'FINDING', 'PAPER', 'BRIDGE_CONCEPT'],
+          minConfidence: 0.5,
+          includePredicted: true,
+        });
+
+        console.log(`📊 Fetched graph with ${graphResult.graph.nodes.length} nodes and ${graphResult.graph.edges.length} edges`);
+
+        // Step 4: Transform backend data to frontend format
+        const canvasWidth = containerRef.current?.offsetWidth || 800;
+        const canvasHeight = containerRef.current?.offsetHeight || 600;
+
+        const transformedNodes: Node[] = graphResult.graph.nodes.map((node: any, index: number) => {
+          // Position nodes in a circle layout initially
+          const angle = (index / graphResult.graph.nodes.length) * 2 * Math.PI;
+          const radius = Math.min(canvasWidth, canvasHeight) * 0.3;
+
+          return {
+            id: node.id,
+            label: node.label,
+            type: node.type.toLowerCase() as any,
+            x: canvasWidth / 2 + radius * Math.cos(angle),
+            y: canvasHeight / 2 + radius * Math.sin(angle),
+            size: node.isBridgeConcept ? 40 : 20 + (node.influenceScore || 0) * 20,
+            color: NODE_COLORS[node.type.toLowerCase() as keyof typeof NODE_COLORS] || NODE_COLORS.concept,
+            description: node.description || '',
+            tags: node.keywords || [],
+            importance: Math.round((node.influenceScore || 0) * 10),
+            connections: 0, // Will be calculated
+            locked: false,
+          };
+        });
+
+        const transformedEdges: Edge[] = graphResult.graph.edges.map((edge: any) => ({
+          id: edge.id,
+          source: edge.fromNodeId,
+          target: edge.toNodeId,
+          type: edge.type.toLowerCase(),
+          strength: edge.strength || 0.5,
+          label: edge.type.toLowerCase().replace('_', ' '),
+        }));
+
+        // Calculate connections for each node
+        transformedNodes.forEach(node => {
+          node.connections = transformedEdges.filter(
+            e => e.source === node.id || e.target === node.id
+          ).length;
+        });
+
+        setNodes(transformedNodes);
+        setEdges(transformedEdges);
+        console.log(`✅ Loaded knowledge graph with ${transformedNodes.length} nodes and ${transformedEdges.length} edges`);
+      } catch (err: any) {
+        console.error('❌ Failed to fetch knowledge graph:', err);
+        setError(err.message || 'Failed to load knowledge graph');
+        setNodes([]);
+        setEdges([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchKnowledgeGraph();
   }, []);
 
   // Render the knowledge map on canvas
@@ -332,6 +330,75 @@ export default function KnowledgeMapPage() {
       });
     }
 
+    // Phase 9 Day 16: Draw predicted missing links
+    if (showPredictedLinks && predictedLinks.length > 0) {
+      predictedLinks.forEach((prediction: any) => {
+        const source = nodes.find((n: any) => n.id === prediction.source || n.label === prediction.source);
+        const target = nodes.find((n: any) => n.id === prediction.target || n.label === prediction.target);
+        if (!source || !target) return;
+
+        ctx.beginPath();
+        ctx.moveTo(source.x, source.y);
+        ctx.lineTo(target.x, target.y);
+        ctx.strokeStyle = '#10B981' + Math.round((prediction.confidence || 0.5) * 255).toString(16).padStart(2, '0');
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw confidence score
+        if (showLabels) {
+          const midX = (source.x + target.x) / 2;
+          const midY = (source.y + target.y) / 2;
+          ctx.fillStyle = '#10B981';
+          ctx.font = '9px sans-serif';
+          ctx.fillText(`${Math.round((prediction.confidence || 0) * 100)}%`, midX, midY);
+        }
+      });
+    }
+
+    // Phase 9 Day 16: Draw influence flow paths
+    if (showInfluenceFlow && influenceFlowData && influenceFlowData.influenceFlows) {
+      influenceFlowData.influenceFlows.forEach((path: any, idx: number) => {
+        const pathNodes = path.nodeIds?.map((id: string) => nodes.find((n: any) => n.id === id)).filter(Boolean);
+        if (!pathNodes || pathNodes.length < 2) return;
+
+        ctx.beginPath();
+        ctx.moveTo(pathNodes[0].x, pathNodes[0].y);
+        for (let i = 1; i < pathNodes.length; i++) {
+          ctx.lineTo(pathNodes[i].x, pathNodes[i].y);
+        }
+        const hue = (idx * 137.5) % 360;
+        ctx.strokeStyle = `hsl(${hue}, 70%, 50%)`;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Draw arrow heads
+        for (let i = 1; i < pathNodes.length; i++) {
+          const from = pathNodes[i - 1];
+          const to = pathNodes[i];
+          const angle = Math.atan2(to.y - from.y, to.x - from.x);
+          const arrowX = to.x - to.size * Math.cos(angle);
+          const arrowY = to.y - to.size * Math.sin(angle);
+
+          ctx.beginPath();
+          ctx.moveTo(arrowX, arrowY);
+          ctx.lineTo(
+            arrowX - 10 * Math.cos(angle - Math.PI / 6),
+            arrowY - 10 * Math.sin(angle - Math.PI / 6)
+          );
+          ctx.moveTo(arrowX, arrowY);
+          ctx.lineTo(
+            arrowX - 10 * Math.cos(angle + Math.PI / 6),
+            arrowY - 10 * Math.sin(angle + Math.PI / 6)
+          );
+          ctx.strokeStyle = `hsl(${hue}, 70%, 50%)`;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      });
+    }
+
     // Draw nodes
     filteredNodes.forEach(node => {
       const isSelected = selectedNode?.id === node.id;
@@ -385,6 +452,10 @@ export default function KnowledgeMapPage() {
     showEdges,
     filterType,
     searchQuery,
+    predictedLinks,
+    showPredictedLinks,
+    influenceFlowData,
+    showInfluenceFlow,
   ]);
 
   // Handle mouse events
@@ -548,8 +619,33 @@ export default function KnowledgeMapPage() {
     setEdges([...edges, newEdge]);
   };
 
-  // Export map
-  const exportMap = (format: 'json' | 'svg' | 'png') => {
+  // Phase 9 Day 16: Load predicted missing links
+  const loadPredictedLinks = async () => {
+    try {
+      console.log('🔮 Loading predicted missing links...');
+      const result = await literatureAPI.predictMissingLinks();
+      setPredictedLinks(result.predictedLinks || []);
+      console.log(`✓ Loaded ${result.predictedLinks?.length || 0} predicted links`);
+    } catch (err: any) {
+      console.error('❌ Failed to load predicted links:', err);
+    }
+  };
+
+  // Phase 9 Day 16: Load influence flow for selected node
+  const loadInfluenceFlow = async (nodeId: string) => {
+    try {
+      console.log(`🌊 Loading influence flow for node ${nodeId}...`);
+      const flowData = await literatureAPI.trackInfluenceFlow(nodeId);
+      setInfluenceFlowData(flowData);
+      setShowInfluenceFlow(true);
+      console.log(`✓ Loaded influence flow with ${flowData.influenceFlows?.length || 0} paths`);
+    } catch (err: any) {
+      console.error('❌ Failed to load influence flow:', err);
+    }
+  };
+
+  // Phase 9 Day 16: Enhanced export with backend API support
+  const exportMap = async (format: 'json' | 'svg' | 'png' | 'graphml' | 'cypher') => {
     if (format === 'json') {
       const data = {
         nodes,
@@ -581,6 +677,23 @@ export default function KnowledgeMapPage() {
         a.download = 'knowledge-map.png';
         a.click();
       });
+    } else if (format === 'graphml' || format === 'cypher') {
+      // Phase 9 Day 16: Use backend API for GraphML and Cypher export
+      try {
+        console.log(`📤 Exporting graph as ${format}...`);
+        const result = await literatureAPI.exportKnowledgeGraph(format);
+        const blob = new Blob([result.data], {
+          type: format === 'graphml' ? 'application/xml' : 'text/plain',
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `knowledge-graph.${format}`;
+        a.click();
+        console.log(`✓ Exported graph as ${format}`);
+      } catch (err: any) {
+        console.error(`❌ Failed to export graph as ${format}:`, err);
+      }
     }
   };
 
@@ -599,6 +712,7 @@ export default function KnowledgeMapPage() {
               </Badge>
             </div>
 
+            {!isLoading && !error && (
             <div className="flex items-center gap-3">
               <Button
                 variant={aiMode ? 'default' : 'outline'}
@@ -640,22 +754,85 @@ export default function KnowledgeMapPage() {
                 <SelectContent>
                   <SelectItem value="json">JSON</SelectItem>
                   <SelectItem value="png">PNG Image</SelectItem>
-                  <SelectItem value="svg">SVG Vector</SelectItem>
+                  <SelectItem value="graphml">GraphML</SelectItem>
+                  <SelectItem value="cypher">Cypher</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            )}
           </div>
         </div>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex-1 flex items-center justify-center bg-white">
+            <div className="text-center space-y-4">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600 mx-auto"></div>
+              <div>
+                <p className="text-lg font-medium text-indigo-900">Building Knowledge Graph...</p>
+                <p className="text-sm text-gray-600">Analyzing relationships between concepts</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <div className="flex-1 flex items-center justify-center bg-white p-6">
+            <Card className="border-red-200 bg-red-50 max-w-md">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-3">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-red-900">Error Loading Knowledge Graph</h3>
+                    <p className="text-sm text-red-700 mt-1">{error}</p>
+                    <Button
+                      onClick={() => window.location.reload()}
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && !error && nodes.length === 0 && (
+          <div className="flex-1 flex items-center justify-center bg-white p-6">
+            <Card className="max-w-md">
+              <CardContent className="p-12 text-center">
+                <GitBranch className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Papers in Library</h3>
+                <p className="text-gray-600 mb-4">
+                  Add papers to your library to build a knowledge graph
+                </p>
+                <Button
+                  onClick={() => window.location.href = '/discover/literature'}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  Search Literature
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Main Content */}
+        {!isLoading && !error && nodes.length > 0 && (
+        <>
         <div className="flex-1 flex">
           {/* Sidebar */}
           <div className="w-80 bg-white border-r p-4 overflow-y-auto">
             <Tabs defaultValue="nodes">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="nodes">Nodes</TabsTrigger>
                 <TabsTrigger value="edges">Edges</TabsTrigger>
                 <TabsTrigger value="filters">Filters</TabsTrigger>
+                <TabsTrigger value="insights">Insights</TabsTrigger>
               </TabsList>
 
               <TabsContent value="nodes" className="space-y-4">
@@ -743,13 +920,13 @@ export default function KnowledgeMapPage() {
                                 ...n,
                                 size:
                                   n.id === selectedNode.id
-                                    ? value
-                                    : n.size || 20,
+                                    ? (value ?? 20)
+                                    : (n.size ?? 20),
                               }))
                             );
                             setSelectedNode({
                               ...selectedNode,
-                              size: value as number,
+                              size: value ?? 20,
                             });
                           }}
                           min={10}
@@ -899,7 +1076,131 @@ export default function KnowledgeMapPage() {
                     />
                     <span className="text-sm">Auto Layout</span>
                   </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={showPredictedLinks}
+                      onChange={e => {
+                        setShowPredictedLinks(e.target.checked);
+                        if (e.target.checked && predictedLinks.length === 0) {
+                          loadPredictedLinks();
+                        }
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-sm">Show Predicted Links</span>
+                  </label>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="insights" className="space-y-4">
+                {/* Phase 9 Day 16: Insights Panel */}
+                {!insights && (
+                  <div className="text-center py-8 text-gray-500 text-sm">
+                    No insights available yet
+                  </div>
+                )}
+
+                {insights && (
+                  <>
+                    {/* Bridge Concepts */}
+                    {insights.bridgeConcepts && insights.bridgeConcepts.length > 0 && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                          <GitBranch className="w-4 h-4 text-purple-600" />
+                          Bridge Concepts
+                        </label>
+                        <div className="space-y-2">
+                          {insights.bridgeConcepts.slice(0, 5).map((bridge: any, idx: number) => (
+                            <Card key={idx} className="border-purple-200">
+                              <CardContent className="p-3">
+                                <div className="font-medium text-sm">{bridge.concept}</div>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  Betweenness: {bridge.betweenness.toFixed(3)}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Connects: {bridge.connects?.join(', ') || 'Multiple areas'}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Controversies */}
+                    {insights.controversies && insights.controversies.length > 0 && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                          <AlertCircle className="w-4 h-4 text-red-600" />
+                          Controversies
+                        </label>
+                        <div className="space-y-2">
+                          {insights.controversies.slice(0, 5).map((controversy: any, idx: number) => (
+                            <Card key={idx} className="border-red-200">
+                              <CardContent className="p-3">
+                                <div className="font-medium text-sm">{controversy.topic}</div>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  Intensity: {controversy.intensity}/10
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {controversy.clusters?.join(' vs ') || 'Opposing views detected'}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Emerging Topics */}
+                    {insights.emergingTopics && insights.emergingTopics.length > 0 && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                          <TrendingUp className="w-4 h-4 text-green-600" />
+                          Emerging Topics
+                        </label>
+                        <div className="space-y-2">
+                          {insights.emergingTopics.slice(0, 5).map((topic: any, idx: number) => (
+                            <Card key={idx} className="border-green-200">
+                              <CardContent className="p-3">
+                                <div className="font-medium text-sm">{topic.topic}</div>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  Growth: {topic.growthRate}%/year
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {topic.papers?.length || 0} recent papers
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Influence Flow Controls */}
+                    {selectedNode && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-2 block">
+                          Influence Flow
+                        </label>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => loadInfluenceFlow(selectedNode.id)}
+                          className="w-full"
+                        >
+                          Show Influence Flow for {selectedNode.label}
+                        </Button>
+                        {showInfluenceFlow && influenceFlowData && (
+                          <div className="mt-2 text-xs text-gray-600">
+                            {influenceFlowData.influenceFlows?.length || 0} influence paths found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
               </TabsContent>
             </Tabs>
           </div>
@@ -968,6 +1269,8 @@ export default function KnowledgeMapPage() {
             </div>
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

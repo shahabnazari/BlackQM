@@ -396,7 +396,7 @@ export function CollaborationManager() {
         a =>
           a.type === 'edit' &&
           activities[i] &&
-          Math.abs(a.timestamp.getTime() - activities[i].timestamp.getTime()) <
+          Math.abs(a.timestamp.getTime() - (activities[i]?.timestamp.getTime() || 0)) <
             timeWindow
       );
 
@@ -964,9 +964,6 @@ export function CollaborationManager() {
                 <MessageSquare className="w-4 h-4" />
                 Comments
               </h3>
-              <Button size="sm" onClick={() => setShowCommentDialog(true)}>
-                Add Comment
-              </Button>
             </div>
 
             <div className="h-64 overflow-y-auto">

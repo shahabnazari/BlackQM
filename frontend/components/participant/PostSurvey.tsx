@@ -43,7 +43,6 @@ export default function PostSurvey({
   });
   const [dynamicQuestions, setDynamicQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [qualityScore, setQualityScore] = useState(0);
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -84,7 +83,6 @@ export default function PostSurvey({
     const score = Math.round(
       (fields.length / Object.keys(formData).length) * 100
     );
-    setQualityScore(score);
     return score;
   };
 

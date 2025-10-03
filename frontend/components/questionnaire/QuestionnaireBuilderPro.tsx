@@ -4,8 +4,8 @@ import React, { useState, useMemo, useRef } from 'react';
 // import { DndProvider, useDrag, useDrop } from 'react-dnd';
 // import { HTML5Backend } from 'react-dnd-html5-backend';
 const DndProvider = ({ children }: any) => children;
-const useDrag = () => [{}, () => {}, () => {}];
-const useDrop = () => [{}, () => {}];
+const useDrag = (_config?: any) => [{}, () => {}, () => {}];
+const useDrop = (_config?: any) => [{}, () => {}];
 const HTML5Backend = {};
 import {
   ChevronLeft,

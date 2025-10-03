@@ -116,8 +116,11 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [settings, setSettings] = useState<AccessibilitySettings>(() => {
-    const saved = localStorage.getItem('accessibilitySettings');
-    return saved ? JSON.parse(saved) : defaultSettings;
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('accessibilitySettings');
+      return saved ? JSON.parse(saved) : defaultSettings;
+    }
+    return defaultSettings;
   });
 
   const ariaLiveRegion = useRef<HTMLDivElement>(null);
@@ -125,7 +128,9 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
   const originalFocusElement = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    localStorage.setItem('accessibilitySettings', JSON.stringify(settings));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('accessibilitySettings', JSON.stringify(settings));
+    }
     applyAccessibilitySettings(settings);
   }, [settings]);
 

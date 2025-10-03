@@ -277,7 +277,7 @@ export const ConsensusStatements: React.FC<ConsensusStatementsProps> = ({
     </BaseChart>
     
     {/* Tooltip */}
-    {tooltipOpen && tooltipData && (
+    {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
       <TooltipWithBounds
         left={tooltipLeft}
         top={tooltipTop}

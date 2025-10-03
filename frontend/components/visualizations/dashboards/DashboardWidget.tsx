@@ -4,7 +4,6 @@ import {
   CogIcon,
   TrashIcon,
   ArrowsPointingOutIcon,
-  _EyeIcon,
   DocumentArrowDownIcon,
   ChartBarIcon,
   FunnelIcon,

@@ -61,7 +61,7 @@ export const calculateMagneticPosition = (
  */
 export const getRandomLoadingMessage = (messages: readonly string[]): string => {
   const index = Math.floor(Math.random() * messages.length);
-  return messages[index];
+  return messages[index] || 'Loading...';
 };
 
 /**
@@ -166,10 +166,10 @@ export const calculateEasingPoints = (
   
   if (match) {
     const [, _x1, y1, _x2, y2] = match.map(Number);
-    
+
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
-      const y = cubicBezier(t, 0, y1, y2, 1);
+      const y = cubicBezier(t, 0, y1 || 0, y2 || 0, 1);
       points.push(y);
     }
   }

@@ -125,9 +125,10 @@ export function usePerformanceMonitor(
     try {
       const fidObserver = new PerformanceObserver(list => {
         const entries = list.getEntries();
-        if (entries.length > 0) {
+        const firstEntry = entries[0];
+        if (firstEntry) {
           metrics.firstInputDelay =
-            (entries[0] as any).processingStart - entries[0].startTime;
+            (firstEntry as any).processingStart - firstEntry.startTime;
         }
       });
       fidObserver.observe({ entryTypes: ['first-input'] });

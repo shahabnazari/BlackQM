@@ -10,11 +10,12 @@
 
 ## 📋 Where Everything Lives
 
-### Phase Tracker (PHASE_TRACKER_PART2.md)
+### Phase Trackers (PHASE_TRACKER_PART1/2/3.md)
 - Contains daily task checkboxes
 - Has "Technical Documentation" reminders
 - References Implementation Guide for details
 - No confusing patent language
+- Part 1: Phases 1-8 | Part 2: Phases 8.5-9 | Part 3: Phases 10-20
 
 ### Implementation Guide Part 5
 - Has technical code examples

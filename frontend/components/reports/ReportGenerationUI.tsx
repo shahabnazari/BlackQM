@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import {
   Card,
   CardContent,
@@ -22,10 +21,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import PopupModal from '@/components/ui/PopupModal';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Download,
   Eye,
@@ -360,6 +369,8 @@ export default function ReportGenerationUI({
       // Simulate API call for each section
       for (let i = 0; i < enabledSections.length; i++) {
         const section = enabledSections[i];
+        if (!section) continue;
+
         setCurrentSection(section.id);
 
         // Update section status

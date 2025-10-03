@@ -242,3 +242,102 @@ export class CitationNetwork {
     nodeIds: string[];
   }>;
 }
+
+// ============================================
+// PHASE 9 DAY 20: UNIFIED THEME EXTRACTION
+// ============================================
+
+export enum SourceType {
+  PAPER = 'paper',
+  YOUTUBE = 'youtube',
+  PODCAST = 'podcast',
+  TIKTOK = 'tiktok',
+  INSTAGRAM = 'instagram',
+}
+
+export class SourceContentDto {
+  @ApiProperty({ description: 'Source ID (paper ID, video ID, etc.)' })
+  @IsString()
+  id!: string;
+
+  @ApiProperty({
+    description: 'Source type',
+    enum: SourceType,
+  })
+  @IsEnum(SourceType)
+  type!: SourceType;
+
+  @ApiPropertyOptional({ description: 'Source title' })
+  @IsString()
+  @IsOptional()
+  title?: string;
+
+  @ApiPropertyOptional({ description: 'Source content or abstract' })
+  @IsString()
+  @IsOptional()
+  content?: string;
+
+  @ApiPropertyOptional({ description: 'Source keywords', type: [String] })
+  @IsArray()
+  @IsOptional()
+  keywords?: string[];
+
+  @ApiPropertyOptional({ description: 'Additional metadata' })
+  @IsObject()
+  @IsOptional()
+  metadata?: Record<string, any>;
+}
+
+export class ExtractionOptionsDto {
+  @ApiPropertyOptional({
+    description: 'Minimum confidence threshold (0-1)',
+    minimum: 0,
+    maximum: 1,
+  })
+  @IsNumber()
+  @IsOptional()
+  minConfidence?: number;
+
+  @ApiPropertyOptional({
+    description: 'Theme deduplication similarity threshold (0-1)',
+    minimum: 0,
+    maximum: 1,
+  })
+  @IsNumber()
+  @IsOptional()
+  deduplicationThreshold?: number;
+
+  @ApiPropertyOptional({ description: 'Include full provenance tracking' })
+  @IsBoolean()
+  @IsOptional()
+  includeProvenance?: boolean;
+}
+
+export class ExtractUnifiedThemesDto {
+  @ApiProperty({
+    description: 'Sources to extract themes from',
+    type: [SourceContentDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SourceContentDto)
+  sources!: SourceContentDto[];
+
+  @ApiPropertyOptional({
+    description: 'Extraction options',
+    type: ExtractionOptionsDto,
+  })
+  @ValidateNested()
+  @Type(() => ExtractionOptionsDto)
+  @IsOptional()
+  options?: ExtractionOptionsDto;
+}
+
+export class CompareStudyThemesDto {
+  @ApiProperty({
+    description: 'Study IDs to compare',
+    type: [String],
+  })
+  @IsArray()
+  studyIds!: string[];
+}

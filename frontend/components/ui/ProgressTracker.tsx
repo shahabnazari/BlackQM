@@ -140,7 +140,7 @@ function LinearProgress({
             >
               {/* Step Circle */}
               <motion.div
-                initial={animated ? { scale: 0 } : undefined}
+                initial={animated ? { scale: 0 } : false}
                 animate={{ scale: 1 }}
                 transition={{ delay: index * 0.1 }}
                 className={clsx(
@@ -274,7 +274,7 @@ function CircularProgress({
             strokeWidth="8"
             fill="none"
             strokeDasharray={circumference}
-            initial={animated ? { strokeDashoffset: circumference } : undefined}
+            initial={animated ? { strokeDashoffset: circumference } : false}
             animate={{ strokeDashoffset }}
             transition={{ duration: 1, ease: 'easeInOut' }}
             className="text-primary"
@@ -331,7 +331,7 @@ function MinimalProgress({
       {/* Progress bar */}
       <div className="h-2 w-full overflow-hidden rounded-full bg-border">
         <motion.div
-          initial={animated ? { width: 0 } : undefined}
+          initial={animated ? { width: 0 } : false}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.5, ease: 'easeInOut' }}
           className="h-full bg-gradient-to-r from-primary to-primary-dark"
@@ -380,7 +380,7 @@ export function StudyProgressTracker({
       steps={steps}
       variant="minimal"
       animated
-      className={className}
+      {...(className && { className })}
     />
   );
 }

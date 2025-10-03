@@ -162,15 +162,19 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const undo = useCallback(() => {
     if (historyIndex > 0) {
       const prevLayout = layoutHistory[historyIndex - 1];
-      onLayoutChange([...prevLayout]);
-      setHistoryIndex(historyIndex - 1);
+      if (prevLayout) {
+        onLayoutChange([...prevLayout]);
+        setHistoryIndex(historyIndex - 1);
+      }
     }
   }, [historyIndex, layoutHistory, onLayoutChange]);
 
   const redo = useCallback(() => {
     if (historyIndex < layoutHistory.length - 1) {
       const nextLayout = layoutHistory[historyIndex + 1];
-      onLayoutChange([...nextLayout]);
+      if (nextLayout) {
+        onLayoutChange([...nextLayout]);
+      }
       setHistoryIndex(historyIndex + 1);
     }
   }, [historyIndex, layoutHistory, onLayoutChange]);

@@ -1,7 +1,12 @@
 # VQMethod Complete Phase Tracker - Part 1 (Phases 1-8)
 
-**Purpose:** Complete implementation checklist with research lifecycle alignment  
-**Part 2:** [PHASE_TRACKER_PART2.md](./PHASE_TRACKER_PART2.md) - Phases 9-20  
+> **⚠️ CRITICAL: NO CODE BLOCKS IN PHASE TRACKERS**
+> Phase trackers contain ONLY checkboxes, task names, and high-level descriptions.
+> **ALL code, schemas, commands, and technical details belong in Implementation Guides ONLY.**
+
+**Purpose:** Complete implementation checklist with research lifecycle alignment
+**Part 2:** [PHASE_TRACKER_PART2.md](./PHASE_TRACKER_PART2.md) - Phases 8.5-9
+**Part 3:** [PHASE_TRACKER_PART3.md](./PHASE_TRACKER_PART3.md) - Phases 10-20
 **Reference Guides:** See Implementation Guide Parts 1-5 for ALL technical details  
 **Navigation System:** [Research Lifecycle Navigation Architecture](./RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md) - 10-phase unified navigation  
 **Status:** World-class implementation | Phase 6.86 Complete | Phase 6.86b Day 1 Complete

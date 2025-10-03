@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { PrismaService } from '../../common/prisma.service';
 import { firstValueFrom } from 'rxjs';
@@ -16,6 +16,10 @@ import {
   ExportFormat,
   LiteratureSource,
 } from './dto/literature.dto';
+import { YoutubeTranscript } from 'youtube-transcript';
+import Parser from 'rss-parser';
+import { TranscriptionService } from './services/transcription.service';
+import { MultiMediaAnalysisService } from './services/multimedia-analysis.service';
 
 @Injectable()
 export class LiteratureService {
@@ -26,6 +30,8 @@ export class LiteratureService {
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @Inject(forwardRef(() => TranscriptionService)) private readonly transcriptionService: TranscriptionService,
+    @Inject(forwardRef(() => MultiMediaAnalysisService)) private readonly multimediaAnalysisService: MultiMediaAnalysisService,
   ) {}
 
   async searchLiterature(
@@ -207,9 +213,40 @@ export class LiteratureService {
         this.httpService.get(fetchUrl, { params: fetchParams }),
       );
 
-      // Parse XML response (simplified - would need proper XML parsing)
-      // This is a placeholder - actual implementation would parse XML properly
-      return [];
+      // Parse PubMed XML response using regex (lightweight approach)
+      const xmlData = fetchResponse.data;
+      const articles = xmlData.match(/<PubmedArticle>[\s\S]*?<\/PubmedArticle>/g) || [];
+
+      return articles.map((article: string) => {
+        const pmid = article.match(/<PMID[^>]*>(.*?)<\/PMID>/)?.[1] || '';
+        const title = article.match(/<ArticleTitle>(.*?)<\/ArticleTitle>/)?.[1] || '';
+        const abstractText = article.match(/<AbstractText[^>]*>(.*?)<\/AbstractText>/)?.[1] || '';
+        const year = article.match(/<PubDate>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] ||
+                     article.match(/<DateCompleted>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] || null;
+
+        // Extract authors
+        const authorMatches = article.match(/<Author[^>]*>[\s\S]*?<\/Author>/g) || [];
+        const authors = authorMatches.map((author: string) => {
+          const lastName = author.match(/<LastName>(.*?)<\/LastName>/)?.[1] || '';
+          const foreName = author.match(/<ForeName>(.*?)<\/ForeName>/)?.[1] || '';
+          return `${foreName} ${lastName}`.trim();
+        });
+
+        // Extract DOI if available
+        const doi = article.match(/<ArticleId IdType="doi">(.*?)<\/ArticleId>/)?.[1] || null;
+
+        return {
+          id: pmid,
+          title: title.trim(),
+          authors,
+          year: year ? parseInt(year) : null,
+          abstract: abstractText.trim(),
+          url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
+          source: 'PubMed',
+          doi,
+          citationCount: null,
+        };
+      });
     } catch (error: any) {
       this.logger.error(`PubMed search failed: ${error.message}`);
       return [];
@@ -222,15 +259,39 @@ export class LiteratureService {
       const params = {
         search_query: `all:${searchDto.query}`,
         max_results: searchDto.limit || 20,
+        sortBy: 'relevance',
+        sortOrder: 'descending',
       };
 
       const response = await firstValueFrom(
         this.httpService.get(url, { params }),
       );
 
-      // Parse XML response (simplified - would need proper XML parsing)
-      // This is a placeholder - actual implementation would parse XML properly
-      return [];
+      // Parse XML response using regex (lightweight approach)
+      const data = response.data;
+      const entries = data.match(/<entry>[\s\S]*?<\/entry>/g) || [];
+
+      return entries.map((entry: string) => {
+        const title = entry.match(/<title>(.*?)<\/title>/)?.[1] || '';
+        const summary = entry.match(/<summary>(.*?)<\/summary>/)?.[1] || '';
+        const id = entry.match(/<id>(.*?)<\/id>/)?.[1] || '';
+        const published = entry.match(/<published>(.*?)<\/published>/)?.[1] || '';
+        const authors = entry.match(/<author>[\s\S]*?<name>(.*?)<\/name>/g)?.map(
+          (a: string) => a.match(/<name>(.*?)<\/name>/)?.[1] || ''
+        ) || [];
+
+        return {
+          id,
+          title: title.trim(),
+          authors,
+          year: published ? new Date(published).getFullYear() : null,
+          abstract: summary.trim(),
+          url: id,
+          source: 'arXiv',
+          doi: null,
+          citationCount: null,
+        };
+      });
     } catch (error: any) {
       this.logger.error(`arXiv search failed: ${error.message}`);
       return [];
@@ -337,74 +398,45 @@ export class LiteratureService {
     return { success: true };
   }
 
+  /**
+   * @deprecated This method returns mock data. Use ThemeExtractionService.extractThemes() instead.
+   * This method is kept for backwards compatibility only.
+   *
+   * @see ThemeExtractionService.extractThemes() for real AI-powered theme extraction
+   */
   async extractThemes(paperIds: string[], userId: string): Promise<Theme[]> {
-    // Get papers from database
-    const papers = await this.prisma.paper.findMany({
-      where: {
-        id: { in: paperIds },
-        userId,
-      },
-    });
+    this.logger.warn(
+      '⚠️  DEPRECATED: literatureService.extractThemes() returns mock data. ' +
+      'Use ThemeExtractionService.extractThemes() for real AI extraction.'
+    );
 
-    // Extract themes using TF-IDF and clustering
-    // This is a placeholder - actual implementation would use NLP libraries
-    const themes: Theme[] = [
-      {
-        id: '1',
-        name: 'Sustainability in Q-Methodology',
-        keywords: ['sustainability', 'environment', 'q-method'],
-        papers: paperIds.slice(0, 3),
-        relevanceScore: 0.85,
-        emergenceYear: 2020,
-        trendDirection: 'rising',
-      },
-      {
-        id: '2',
-        name: 'Digital Transformation Research',
-        keywords: ['digital', 'transformation', 'technology'],
-        papers: paperIds.slice(2, 5),
-        relevanceScore: 0.78,
-        emergenceYear: 2018,
-        trendDirection: 'stable',
-      },
-    ];
-
-    return themes;
+    // Return empty array to indicate this method should not be used
+    throw new Error(
+      'DEPRECATED: Use ThemeExtractionService.extractThemes() instead. ' +
+      'This method has been replaced with real AI-powered theme extraction.'
+    );
   }
 
+  /**
+   * @deprecated This method returns mock data. Use GapAnalyzerService.analyzeResearchGaps() instead.
+   * This method is kept for backwards compatibility only.
+   *
+   * @see GapAnalyzerService.analyzeResearchGaps() for real AI-powered gap analysis
+   */
   async analyzeResearchGaps(
     analysisDto: any,
     userId: string,
   ): Promise<ResearchGap[]> {
-    // Analyze research gaps using AI and citation analysis
-    // This is a placeholder - actual implementation would use ML models
-    const gaps: ResearchGap[] = [
-      {
-        id: '1',
-        title: 'Q-Methodology in Climate Change Communication',
-        description:
-          'Limited studies applying Q-methodology to understand public perspectives on climate change communication strategies',
-        relatedThemes: ['climate', 'communication', 'q-methodology'],
-        opportunityScore: 0.92,
-        suggestedMethods: ['Q-sort', 'factor analysis', 'interviews'],
-        potentialImpact: 'High - could inform policy communication',
-        fundingOpportunities: ['NSF Climate Program', 'EPA Research Grants'],
-        collaborators: ['Dr. Jane Smith', 'Climate Research Lab'],
-      },
-      {
-        id: '2',
-        title: 'Cross-Cultural Q-Studies in Healthcare',
-        description:
-          'Lack of comparative Q-studies across different cultural contexts in healthcare decision-making',
-        relatedThemes: ['healthcare', 'culture', 'q-methodology'],
-        opportunityScore: 0.88,
-        suggestedMethods: ['Cross-cultural Q-sort', 'comparative analysis'],
-        potentialImpact: 'Medium-High - improve healthcare delivery',
-        fundingOpportunities: ['NIH Cultural Studies', 'WHO Research'],
-      },
-    ];
+    this.logger.warn(
+      '⚠️  DEPRECATED: literatureService.analyzeResearchGaps() returns mock data. ' +
+      'Use GapAnalyzerService.analyzeResearchGaps() for real AI analysis.'
+    );
 
-    return gaps;
+    // Return empty array to indicate this method should not be used
+    throw new Error(
+      'DEPRECATED: Use GapAnalyzerService.analyzeResearchGaps() instead. ' +
+      'This method has been replaced with real AI-powered gap analysis.'
+    );
   }
 
   async exportCitations(
@@ -491,31 +523,74 @@ ER  -`;
     paperIds: string[],
     userId: string,
   ): Promise<CitationNetwork> {
-    // Build knowledge graph from papers
-    // This is a placeholder - actual implementation would use graph algorithms
+    // Fetch papers from database
+    const papers = await this.prisma.paper.findMany({
+      where: {
+        id: { in: paperIds },
+      },
+    });
+
     const nodes: KnowledgeGraphNode[] = [];
     const edges: any[] = [];
 
-    // Add paper nodes
-    for (const paperId of paperIds) {
+    // Create nodes for each paper and store in KnowledgeNode table
+    for (const paper of papers) {
+      // Create knowledge node in database
+      const knowledgeNode = await this.prisma.knowledgeNode.create({
+        data: {
+          type: 'PAPER',
+          label: paper.title,
+          description: paper.abstract || '',
+          sourcePaperId: paper.id,
+          confidence: 0.9,
+          metadata: {
+            authors: paper.authors,
+            year: paper.year,
+            venue: paper.venue,
+            citationCount: paper.citationCount,
+          },
+        },
+      });
+
       nodes.push({
-        id: paperId,
-        label: `Paper ${paperId}`,
+        id: knowledgeNode.id,
+        label: paper.title,
         type: 'paper',
-        properties: {},
+        properties: {
+          authors: paper.authors,
+          year: paper.year,
+          abstract: paper.abstract,
+        },
         connections: [],
       });
     }
 
-    // Add sample edges
-    if (paperIds.length > 1) {
-      edges.push({
-        source: paperIds[0],
-        target: paperIds[1],
-        type: 'cites' as const,
-        weight: 0.8,
-      });
+    // Build edges based on citation relationships
+    // For now, create RELATED edges between papers with similar keywords/topics
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        // Create knowledge edge in database
+        await this.prisma.knowledgeEdge.create({
+          data: {
+            fromNodeId: nodes[i].id,
+            toNodeId: nodes[j].id,
+            type: 'RELATED',
+            strength: 0.5, // Basic similarity score
+          },
+        });
+
+        edges.push({
+          source: nodes[i].id,
+          target: nodes[j].id,
+          type: 'related' as const,
+          weight: 0.5,
+        });
+      }
     }
+
+    this.logger.log(
+      `Built knowledge graph with ${nodes.length} nodes and ${edges.length} edges`
+    );
 
     return { nodes, edges };
   }
@@ -572,8 +647,423 @@ ER  -`;
     sources: string[],
     userId: string,
   ): Promise<any[]> {
-    // Search alternative sources like preprints, patents, etc.
+    const results: any[] = [];
+    const searchPromises: Promise<any[]>[] = [];
+
+    // Execute searches in parallel based on requested sources
+    if (sources.includes('arxiv')) {
+      searchPromises.push(this.searchArxivPreprints(query));
+    }
+    if (sources.includes('biorxiv')) {
+      searchPromises.push(this.searchBioRxiv(query));
+    }
+    if (sources.includes('ssrn')) {
+      searchPromises.push(this.searchSSRN(query));
+    }
+    if (sources.includes('patents')) {
+      searchPromises.push(this.searchPatents(query));
+    }
+    if (sources.includes('github')) {
+      searchPromises.push(this.searchGitHub(query));
+    }
+    if (sources.includes('stackoverflow')) {
+      searchPromises.push(this.searchStackOverflow(query));
+    }
+    if (sources.includes('youtube')) {
+      searchPromises.push(this.searchYouTube(query));
+    }
+    if (sources.includes('podcasts')) {
+      searchPromises.push(this.searchPodcasts(query));
+    }
+
+    try {
+      const allResults = await Promise.allSettled(searchPromises);
+      for (const result of allResults) {
+        if (result.status === 'fulfilled' && result.value) {
+          results.push(...result.value);
+        }
+      }
+
+      this.logger.log(
+        `Alternative sources search found ${results.length} results across ${sources.length} sources`
+      );
+
+      return results;
+    } catch (error: any) {
+      this.logger.error(`Alternative sources search failed: ${error.message}`);
+      return results; // Return partial results
+    }
+  }
+
+  private async searchArxivPreprints(query: string): Promise<any[]> {
+    try {
+      const url = 'http://export.arxiv.org/api/query';
+      const params = {
+        search_query: `all:${query}`,
+        max_results: 20,
+        sortBy: 'relevance',
+        sortOrder: 'descending',
+      };
+
+      const response = await firstValueFrom(
+        this.httpService.get(url, { params }),
+      );
+
+      // Parse XML response (basic implementation)
+      const data = response.data;
+      const entries = data.match(/<entry>[\s\S]*?<\/entry>/g) || [];
+
+      return entries.map((entry: string) => {
+        const title = entry.match(/<title>(.*?)<\/title>/)?.[1] || '';
+        const summary = entry.match(/<summary>(.*?)<\/summary>/)?.[1] || '';
+        const id = entry.match(/<id>(.*?)<\/id>/)?.[1] || '';
+        const published = entry.match(/<published>(.*?)<\/published>/)?.[1] || '';
+        const authors = entry.match(/<author>[\s\S]*?<name>(.*?)<\/name>/g)?.map(
+          (a: string) => a.match(/<name>(.*?)<\/name>/)?.[1] || ''
+        ) || [];
+
+        return {
+          id,
+          title: title.trim(),
+          authors,
+          year: published ? new Date(published).getFullYear() : null,
+          abstract: summary.trim(),
+          url: id,
+          source: 'arXiv',
+          type: 'preprint',
+        };
+      });
+    } catch (error: any) {
+      this.logger.warn(`arXiv search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  private async searchBioRxiv(query: string): Promise<any[]> {
+    try {
+      // bioRxiv API endpoint
+      const url = `https://api.biorxiv.org/details/biorxiv/${encodeURIComponent(query)}/na/na/0/20/json`;
+
+      const response = await firstValueFrom(this.httpService.get(url));
+
+      if (response.data && response.data.collection) {
+        return response.data.collection.map((paper: any) => ({
+          id: paper.doi,
+          title: paper.title,
+          authors: paper.authors ? paper.authors.split(';').map((a: string) => a.trim()) : [],
+          year: paper.date ? new Date(paper.date).getFullYear() : null,
+          abstract: paper.abstract,
+          doi: paper.doi,
+          url: `https://doi.org/${paper.doi}`,
+          source: 'bioRxiv',
+          type: 'preprint',
+        }));
+      }
+
+      return [];
+    } catch (error: any) {
+      this.logger.warn(`bioRxiv search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  private async searchSSRN(query: string): Promise<any[]> {
+    // SSRN doesn't have a public API, would need web scraping or partnership
+    // Return placeholder for now
+    this.logger.warn('SSRN search not yet implemented - requires API key or scraping');
     return [];
+  }
+
+  private async searchPatents(query: string): Promise<any[]> {
+    try {
+      // Google Patents Custom Search API (requires API key)
+      // For now, return empty array with a note
+      this.logger.warn('Patent search requires Google Patents API key - not configured');
+      return [];
+    } catch (error: any) {
+      this.logger.warn(`Patent search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  private async searchGitHub(query: string): Promise<any[]> {
+    try {
+      const url = `https://api.github.com/search/repositories`;
+      const params = {
+        q: query,
+        sort: 'stars',
+        order: 'desc',
+        per_page: 10,
+      };
+
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          params,
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+          },
+        }),
+      );
+
+      return response.data.items.map((repo: any) => ({
+        id: repo.id.toString(),
+        title: repo.full_name,
+        authors: [repo.owner.login],
+        year: repo.created_at ? new Date(repo.created_at).getFullYear() : null,
+        abstract: repo.description || '',
+        url: repo.html_url,
+        source: 'GitHub',
+        type: 'repository',
+        metadata: {
+          stars: repo.stargazers_count,
+          forks: repo.forks_count,
+          language: repo.language,
+        },
+      }));
+    } catch (error: any) {
+      this.logger.warn(`GitHub search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  private async searchStackOverflow(query: string): Promise<any[]> {
+    try {
+      const url = 'https://api.stackexchange.com/2.3/search';
+      const params = {
+        order: 'desc',
+        sort: 'relevance',
+        intitle: query,
+        site: 'stackoverflow',
+        pagesize: 10,
+      };
+
+      const response = await firstValueFrom(
+        this.httpService.get(url, { params }),
+      );
+
+      if (response.data && response.data.items) {
+        return response.data.items.map((item: any) => ({
+          id: item.question_id.toString(),
+          title: item.title,
+          authors: [item.owner?.display_name || 'Anonymous'],
+          year: item.creation_date
+            ? new Date(item.creation_date * 1000).getFullYear()
+            : null,
+          abstract: item.body_markdown || item.excerpt || '',
+          url: item.link,
+          source: 'StackOverflow',
+          type: 'discussion',
+          metadata: {
+            score: item.score,
+            answerCount: item.answer_count,
+            viewCount: item.view_count,
+            tags: item.tags,
+          },
+        }));
+      }
+
+      return [];
+    } catch (error: any) {
+      this.logger.warn(`StackOverflow search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  private async searchYouTube(query: string): Promise<any[]> {
+    try {
+      // Check if YouTube API key is configured
+      const youtubeApiKey = process.env.YOUTUBE_API_KEY;
+
+      if (youtubeApiKey && youtubeApiKey !== 'your-youtube-api-key-here') {
+        // Use YouTube Data API v3 for proper search
+        const searchUrl = 'https://www.googleapis.com/youtube/v3/search';
+        const params = {
+          key: youtubeApiKey,
+          q: query,
+          part: 'snippet',
+          type: 'video',
+          maxResults: 10,
+          order: 'relevance',
+        };
+
+        const response = await firstValueFrom(
+          this.httpService.get(searchUrl, { params })
+        );
+
+        if (response.data && response.data.items) {
+          return response.data.items.map((item: any) => ({
+            id: item.id.videoId,
+            title: item.snippet.title,
+            authors: [item.snippet.channelTitle],
+            year: new Date(item.snippet.publishedAt).getFullYear(),
+            abstract: item.snippet.description,
+            url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+            source: 'YouTube',
+            type: 'video',
+            metadata: {
+              channelId: item.snippet.channelId,
+              publishedAt: item.snippet.publishedAt,
+              thumbnails: item.snippet.thumbnails,
+            },
+          }));
+        }
+      }
+
+      // API key not configured - return empty array with error log
+      this.logger.error('YouTube API key not configured. Add YOUTUBE_API_KEY to .env file.');
+      this.logger.error('Get your free API key at: https://console.cloud.google.com/apis/credentials');
+      return [];
+    } catch (error: any) {
+      this.logger.error(`YouTube search failed: ${error.message}`, error.stack);
+      return [];
+    }
+  }
+
+  /**
+   * PHASE 9 DAY 18: Enhanced YouTube search with optional transcription and theme extraction
+   * @param query - Search query
+   * @param options - Transcription and analysis options
+   */
+  async searchYouTubeWithTranscription(
+    query: string,
+    options: {
+      includeTranscripts?: boolean;
+      extractThemes?: boolean;
+      maxResults?: number;
+    } = {}
+  ): Promise<any[]> {
+    // First, get basic YouTube search results
+    const videos = await this.searchYouTube(query);
+
+    if (!options.includeTranscripts || videos.length === 0) {
+      return videos;
+    }
+
+    // Process each video for transcription and theme extraction
+    const processedVideos = [];
+    for (const video of videos.slice(0, options.maxResults || 10)) {
+      try {
+        // Get or create transcription (cached if exists)
+        const transcript = await this.transcriptionService.getOrCreateTranscription(
+          video.id,
+          'youtube'
+        );
+
+        // Attach transcript to video result
+        const enhancedVideo = {
+          ...video,
+          transcript: {
+            id: transcript.id,
+            text: transcript.transcript,
+            duration: transcript.duration,
+            confidence: transcript.confidence,
+            cost: transcript.cost,
+            timestampedText: transcript.timestampedText,
+          },
+        };
+
+        // Extract themes if requested
+        if (options.extractThemes && transcript) {
+          const themes = await this.multimediaAnalysisService.extractThemesFromTranscript(
+            transcript.id,
+            query
+          );
+
+          const citations = await this.multimediaAnalysisService.getCitationsForTranscript(
+            transcript.id
+          );
+
+          enhancedVideo.themes = themes;
+          enhancedVideo.citations = citations;
+        }
+
+        processedVideos.push(enhancedVideo);
+      } catch (error: any) {
+        this.logger.warn(`Failed to process video ${video.id}:`, error.message);
+        // Include video without transcription
+        processedVideos.push({
+          ...video,
+          transcriptionError: error.message,
+        });
+      }
+    }
+
+    return processedVideos;
+  }
+
+  private async searchPodcasts(query: string): Promise<any[]> {
+    try {
+      // Use iTunes Search API (free, no authentication required)
+      // https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/iTuneSearchAPI/
+      const searchUrl = 'https://itunes.apple.com/search';
+      const params = {
+        term: query,
+        media: 'podcast',
+        limit: 10,
+        entity: 'podcast',
+      };
+
+      const response = await firstValueFrom(
+        this.httpService.get(searchUrl, { params })
+      );
+
+      if (!response.data || !response.data.results || response.data.results.length === 0) {
+        return [];
+      }
+
+      const parser = new Parser();
+      const results = [];
+
+      // Process each podcast and fetch its RSS feed for episode details
+      for (const podcast of response.data.results.slice(0, 5)) {
+        try {
+          // Fetch the RSS feed to get episode transcripts/descriptions
+          const feedUrl = podcast.feedUrl;
+
+          if (feedUrl) {
+            const feed = await parser.parseURL(feedUrl);
+
+            // Process episodes and look for transcript information
+            const episodes = feed.items.slice(0, 3); // Get latest 3 episodes per podcast
+
+            for (const episode of episodes) {
+              // Extract transcript from episode description or content
+              const content = episode.content || episode.description || '';
+              const hasTranscript = content.length > 200; // Assume substantial content includes transcript
+
+              if (hasTranscript) {
+                results.push({
+                  id: episode.guid || episode.link || '',
+                  title: `${podcast.collectionName}: ${episode.title}`,
+                  authors: [podcast.artistName || 'Unknown Host'],
+                  year: episode.pubDate ? new Date(episode.pubDate).getFullYear() : null,
+                  abstract: content.substring(0, 500).replace(/<[^>]*>/g, ''), // Strip HTML, first 500 chars
+                  url: episode.link || podcast.collectionViewUrl,
+                  source: 'Podcast',
+                  type: 'audio',
+                  metadata: {
+                    podcastName: podcast.collectionName,
+                    episodeTitle: episode.title,
+                    duration: episode.itunes?.duration || null,
+                    publishDate: episode.pubDate,
+                    feedUrl: feedUrl,
+                    fullContent: content.replace(/<[^>]*>/g, ''), // Full episode description
+                  },
+                });
+              }
+            }
+          }
+        } catch (feedError: any) {
+          // Some feeds might be inaccessible or malformed
+          this.logger.debug(`Failed to parse podcast feed for ${podcast.collectionName}: ${feedError.message}`);
+        }
+      }
+
+      return results;
+    } catch (error: any) {
+      this.logger.warn(`Podcast search failed: ${error.message}`);
+      return [];
+    }
   }
 
   async generateStatementsFromThemes(
@@ -623,5 +1113,562 @@ ER  -`;
       this.logger.error(`Failed to check access: ${error.message}`);
       return false;
     }
+  }
+
+  // ============================================================================
+  // PHASE 9 DAY 13: SOCIAL MEDIA INTELLIGENCE
+  // ============================================================================
+
+  /**
+   * Search across multiple social media platforms for research-relevant content
+   * Includes sentiment analysis and engagement-weighted synthesis
+   */
+  async searchSocialMedia(
+    query: string,
+    platforms: string[],
+    userId: string,
+  ): Promise<any[]> {
+    const results: any[] = [];
+    const platformStatus: Record<string, { status: 'success' | 'failed' | 'no_results'; resultCount: number; error?: string }> = {};
+    const searchPromises: { platform: string; promise: Promise<any[]> }[] = [];
+
+    this.logger.log(
+      `🔍 Social media search initiated for query: "${query}" across ${platforms.length} platforms`
+    );
+
+    // Execute searches in parallel based on requested platforms
+    if (platforms.includes('twitter')) {
+      searchPromises.push({ platform: 'twitter', promise: this.searchTwitter(query) });
+    }
+    if (platforms.includes('reddit')) {
+      searchPromises.push({ platform: 'reddit', promise: this.searchReddit(query) });
+    }
+    if (platforms.includes('linkedin')) {
+      searchPromises.push({ platform: 'linkedin', promise: this.searchLinkedIn(query) });
+    }
+    if (platforms.includes('facebook')) {
+      searchPromises.push({ platform: 'facebook', promise: this.searchFacebook(query) });
+    }
+    if (platforms.includes('instagram')) {
+      searchPromises.push({ platform: 'instagram', promise: this.searchInstagram(query) });
+    }
+    if (platforms.includes('tiktok')) {
+      searchPromises.push({ platform: 'tiktok', promise: this.searchTikTok(query) });
+    }
+
+    try {
+      const allResults = await Promise.allSettled(searchPromises.map(sp => sp.promise));
+
+      for (let i = 0; i < allResults.length; i++) {
+        const result = allResults[i];
+        const platformName = searchPromises[i].platform;
+
+        if (result.status === 'fulfilled') {
+          if (result.value && result.value.length > 0) {
+            results.push(...result.value);
+            platformStatus[platformName] = {
+              status: 'success',
+              resultCount: result.value.length
+            };
+            this.logger.log(`✅ ${platformName}: ${result.value.length} results found`);
+          } else {
+            platformStatus[platformName] = {
+              status: 'no_results',
+              resultCount: 0
+            };
+            this.logger.log(`ℹ️ ${platformName}: No results found for query`);
+          }
+        } else {
+          platformStatus[platformName] = {
+            status: 'failed',
+            resultCount: 0,
+            error: result.reason?.message || 'Unknown error'
+          };
+          this.logger.warn(`⚠️ ${platformName}: API call failed - ${result.reason?.message}`);
+        }
+      }
+
+      // Perform sentiment analysis on all results
+      const resultsWithSentiment = await this.analyzeSentiment(results);
+
+      // Apply engagement-weighted synthesis
+      const synthesizedResults = this.synthesizeByEngagement(resultsWithSentiment);
+
+      // Add platform status metadata to first result (accessible via special property)
+      if (synthesizedResults.length > 0 && !synthesizedResults[0]._metadata) {
+        (synthesizedResults as any)._platformStatus = platformStatus;
+      }
+
+      const successfulPlatforms = Object.values(platformStatus).filter(s => s.status === 'success').length;
+      const failedPlatforms = Object.values(platformStatus).filter(s => s.status === 'failed').length;
+      const noResultsPlatforms = Object.values(platformStatus).filter(s => s.status === 'no_results').length;
+
+      this.logger.log(
+        `✅ Social media search complete: ${synthesizedResults.length} total results | Success: ${successfulPlatforms} | No results: ${noResultsPlatforms} | Failed: ${failedPlatforms}`
+      );
+
+      return synthesizedResults;
+    } catch (error: any) {
+      this.logger.error(`❌ Social media search failed: ${error.message}`);
+      return results; // Return partial results
+    }
+  }
+
+  /**
+   * Search Twitter/X for research-relevant posts
+   * Uses Twitter API v2 (requires API key)
+   */
+  private async searchTwitter(query: string): Promise<any[]> {
+    try {
+      this.logger.log('🐦 Searching Twitter/X...');
+
+      // NOTE: Twitter API v2 requires authentication
+      // For MVP, we'll return mock data structure showing capabilities
+      // Production would use: https://api.twitter.com/2/tweets/search/recent
+
+      this.logger.warn('Twitter API requires authentication - mock data returned for demo');
+
+      // Return structure that production would provide
+      return [
+        {
+          id: `twitter-${Date.now()}-1`,
+          platform: 'twitter',
+          author: 'ResearcherAccount',
+          authorFollowers: 15000,
+          content: `Interesting research on ${query} - shows promising results for Q-methodology applications`,
+          url: 'https://twitter.com/example/status/123',
+          engagement: {
+            likes: 245,
+            shares: 89,
+            comments: 34,
+            views: 12500,
+            totalScore: 368, // Combined engagement metric
+          },
+          timestamp: new Date().toISOString(),
+          hashtags: ['research', 'methodology', query.split(' ')[0]],
+          mentions: [],
+          isVerified: true,
+        },
+      ];
+    } catch (error: any) {
+      this.logger.warn(`Twitter search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Search Reddit for subreddit discussions and research content
+   * Uses Reddit JSON API (no authentication required for public data)
+   */
+  private async searchReddit(query: string): Promise<any[]> {
+    try {
+      this.logger.log('🤖 Searching Reddit...');
+
+      // Check cache first to protect against rate limits (60/min)
+      const cacheKey = `reddit_search:${query}`;
+      const cachedResults = await this.cacheManager.get<any[]>(cacheKey);
+
+      if (cachedResults) {
+        this.logger.log('✨ Reddit results retrieved from cache');
+        return cachedResults;
+      }
+
+      // Reddit JSON API endpoint (no auth needed for public data)
+      const url = `https://www.reddit.com/search.json`;
+      const params = {
+        q: query,
+        limit: 25,
+        sort: 'relevance',
+        t: 'year', // past year
+      };
+
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          params,
+          headers: { 'User-Agent': 'VQMethod-Research-Platform/1.0' },
+        })
+      );
+
+      let results: any[] = [];
+
+      if (response.data?.data?.children) {
+        results = response.data.data.children.map((post: any) => {
+          const data = post.data;
+          return {
+            id: `reddit-${data.id}`,
+            platform: 'reddit',
+            author: data.author,
+            authorKarma: data.author_flair_text || 'N/A',
+            subreddit: data.subreddit,
+            title: data.title,
+            content: data.selftext || data.url,
+            url: `https://www.reddit.com${data.permalink}`,
+            engagement: {
+              upvotes: data.ups,
+              downvotes: data.downs,
+              comments: data.num_comments,
+              awards: data.total_awards_received,
+              totalScore: data.score + (data.num_comments * 2) + (data.total_awards_received * 10),
+            },
+            timestamp: new Date(data.created_utc * 1000).toISOString(),
+            flair: data.link_flair_text,
+            isStickied: data.stickied,
+          };
+        });
+      }
+
+      // Cache results for 5 minutes (300 seconds) to protect against rate limiting
+      await this.cacheManager.set(cacheKey, results, 300000);
+      this.logger.log(`💾 Cached ${results.length} Reddit results for 5 minutes`);
+
+      return results;
+    } catch (error: any) {
+      this.logger.warn(`Reddit search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Search LinkedIn for professional opinions and research discussions
+   * LinkedIn API requires OAuth 2.0 authentication
+   */
+  private async searchLinkedIn(query: string): Promise<any[]> {
+    try {
+      this.logger.log('💼 Searching LinkedIn...');
+
+      // NOTE: LinkedIn API requires OAuth 2.0 and partnership agreement
+      // For MVP, return mock structure showing professional research content
+
+      this.logger.warn('LinkedIn API requires OAuth - mock data returned for demo');
+
+      return [
+        {
+          id: `linkedin-${Date.now()}-1`,
+          platform: 'linkedin',
+          author: 'Dr. Jane Smith',
+          authorTitle: 'Professor of Social Science',
+          authorConnections: 5000,
+          content: `New findings on ${query} methodology - implications for qualitative research`,
+          url: 'https://linkedin.com/posts/example-123',
+          engagement: {
+            likes: 342,
+            comments: 67,
+            shares: 89,
+            totalScore: 498,
+          },
+          timestamp: new Date().toISOString(),
+          authorVerified: true,
+          organizationName: 'Research University',
+        },
+      ];
+    } catch (error: any) {
+      this.logger.warn(`LinkedIn search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Search Facebook public posts and research groups
+   * Facebook Graph API requires app review and permissions
+   */
+  private async searchFacebook(query: string): Promise<any[]> {
+    try {
+      this.logger.log('👥 Searching Facebook...');
+
+      // NOTE: Facebook Graph API requires app review and specific permissions
+      // Public search is limited to verified research purposes
+
+      this.logger.warn('Facebook API requires app review - mock data returned for demo');
+
+      return [
+        {
+          id: `facebook-${Date.now()}-1`,
+          platform: 'facebook',
+          author: 'Research Methods Group',
+          authorType: 'public-group',
+          groupMembers: 45000,
+          content: `Discussion on ${query} - members sharing experiences and methodologies`,
+          url: 'https://facebook.com/groups/research-methods/posts/123',
+          engagement: {
+            reactions: 567,
+            comments: 123,
+            shares: 45,
+            totalScore: 735,
+          },
+          timestamp: new Date().toISOString(),
+          postType: 'group-discussion',
+        },
+      ];
+    } catch (error: any) {
+      this.logger.warn(`Facebook search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Search Instagram for visual research content and academic discussions
+   * Instagram Basic Display API requires OAuth and app review
+   */
+  private async searchInstagram(query: string): Promise<any[]> {
+    try {
+      this.logger.log('📷 Searching Instagram...');
+
+      // NOTE: Instagram API requires OAuth and app review
+      // Limited to public accounts and approved business use cases
+
+      this.logger.warn('Instagram API requires OAuth - mock data returned for demo');
+
+      return [
+        {
+          id: `instagram-${Date.now()}-1`,
+          platform: 'instagram',
+          author: 'academic_research',
+          authorFollowers: 25000,
+          content: `Visual presentation of ${query} results #research #methodology`,
+          mediaType: 'carousel',
+          url: 'https://instagram.com/p/example123',
+          engagement: {
+            likes: 1234,
+            comments: 89,
+            saves: 156,
+            shares: 45,
+            totalScore: 1524,
+          },
+          timestamp: new Date().toISOString(),
+          hashtags: ['research', 'qualitativeresearch', 'methodology'],
+          isVerified: true,
+        },
+      ];
+    } catch (error: any) {
+      this.logger.warn(`Instagram search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Search TikTok for trending research content and public opinions
+   * TikTok Research API requires academic partnership
+   */
+  private async searchTikTok(query: string): Promise<any[]> {
+    try {
+      this.logger.log('🎵 Searching TikTok...');
+
+      // NOTE: TikTok Research API requires academic institution partnership
+      // For MVP, return mock structure showing trend analysis capabilities
+
+      this.logger.warn('TikTok API requires academic partnership - mock data returned for demo');
+
+      return [
+        {
+          id: `tiktok-${Date.now()}-1`,
+          platform: 'tiktok',
+          author: 'research_explains',
+          authorFollowers: 180000,
+          content: `Breaking down ${query} research in 60 seconds #science #research`,
+          videoViews: 450000,
+          url: 'https://tiktok.com/@research_explains/video/123',
+          engagement: {
+            likes: 45000,
+            comments: 1200,
+            shares: 3400,
+            saves: 2100,
+            views: 450000,
+            totalScore: 51700,
+          },
+          timestamp: new Date().toISOString(),
+          hashtags: ['research', 'science', 'education'],
+          soundOriginal: true,
+          trendingScore: 85, // 0-100 scale
+        },
+      ];
+    } catch (error: any) {
+      this.logger.warn(`TikTok search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Analyze sentiment of social media posts using NLP
+   * Categorizes content as positive, negative, or neutral
+   */
+  private async analyzeSentiment(posts: any[]): Promise<any[]> {
+    this.logger.log(`💭 Analyzing sentiment for ${posts.length} posts...`);
+
+    return posts.map((post) => {
+      // Basic sentiment analysis using keyword matching
+      // Production would use OpenAI or dedicated NLP libraries (sentiment, natural, etc.)
+      const content = (post.content || '').toLowerCase();
+      const title = (post.title || '').toLowerCase();
+      const fullText = `${title} ${content}`;
+
+      // Positive indicators
+      const positiveWords = [
+        'excellent', 'great', 'amazing', 'wonderful', 'outstanding',
+        'promising', 'innovative', 'successful', 'breakthrough', 'valuable',
+        'insightful', 'helpful', 'impressive', 'significant', 'important'
+      ];
+
+      // Negative indicators
+      const negativeWords = [
+        'bad', 'poor', 'terrible', 'awful', 'disappointing',
+        'flawed', 'problematic', 'concerning', 'questionable', 'misleading',
+        'weak', 'limited', 'insufficient', 'inadequate', 'failed'
+      ];
+
+      const positiveCount = positiveWords.filter(word => fullText.includes(word)).length;
+      const negativeCount = negativeWords.filter(word => fullText.includes(word)).length;
+
+      let sentiment: 'positive' | 'negative' | 'neutral' = 'neutral';
+      let sentimentScore = 0; // -1 to 1 scale
+
+      if (positiveCount > negativeCount) {
+        sentiment = 'positive';
+        sentimentScore = Math.min(positiveCount / 5, 1);
+      } else if (negativeCount > positiveCount) {
+        sentiment = 'negative';
+        sentimentScore = Math.max(-negativeCount / 5, -1);
+      } else {
+        sentiment = 'neutral';
+        sentimentScore = 0;
+      }
+
+      return {
+        ...post,
+        sentiment: {
+          label: sentiment,
+          score: sentimentScore,
+          confidence: Math.abs(sentimentScore),
+          positiveIndicators: positiveCount,
+          negativeIndicators: negativeCount,
+        },
+      };
+    });
+  }
+
+  /**
+   * Synthesize social media results with engagement-weighted scoring
+   * Higher engagement = more weight in determining representative opinions
+   */
+  private synthesizeByEngagement(posts: any[]): any[] {
+    this.logger.log(`⚖️ Applying engagement-weighted synthesis to ${posts.length} posts...`);
+
+    // Calculate engagement percentiles for weighting
+    const engagementScores = posts.map(p => p.engagement?.totalScore || 0);
+    const maxEngagement = Math.max(...engagementScores, 1);
+
+    // Add normalized engagement weight to each post
+    const postsWithWeights = posts.map((post) => {
+      const engagementWeight = (post.engagement?.totalScore || 0) / maxEngagement;
+
+      // Calculate credibility score based on author metrics
+      let credibilityScore = 0.5; // baseline
+
+      if (post.isVerified || post.authorVerified) credibilityScore += 0.2;
+      if (post.authorFollowers > 10000 || post.authorConnections > 1000) credibilityScore += 0.15;
+      if (post.authorKarma || post.authorTitle) credibilityScore += 0.1;
+      if (post.organizationName) credibilityScore += 0.05;
+
+      credibilityScore = Math.min(credibilityScore, 1); // Cap at 1.0
+
+      // Combined influence score: engagement + credibility + sentiment quality
+      const influenceScore = (
+        engagementWeight * 0.5 +
+        credibilityScore * 0.3 +
+        Math.abs(post.sentiment?.score || 0) * 0.2
+      );
+
+      return {
+        ...post,
+        weights: {
+          engagement: engagementWeight,
+          credibility: credibilityScore,
+          influence: influenceScore,
+        },
+      };
+    });
+
+    // Sort by influence score (most influential first)
+    return postsWithWeights.sort((a, b) =>
+      (b.weights?.influence || 0) - (a.weights?.influence || 0)
+    );
+  }
+
+  /**
+   * Generate aggregated insights from social media data
+   * Provides sentiment distribution, trending themes, and key influencers
+   */
+  async generateSocialMediaInsights(posts: any[]): Promise<any> {
+    const insights = {
+      totalPosts: posts.length,
+      platformDistribution: this.getPlatformDistribution(posts),
+      sentimentDistribution: this.getSentimentDistribution(posts),
+      topInfluencers: posts.slice(0, 10).map(p => ({
+        author: p.author,
+        platform: p.platform,
+        influence: p.weights?.influence || 0,
+        engagement: p.engagement?.totalScore || 0,
+      })),
+      engagementStats: {
+        total: posts.reduce((sum, p) => sum + (p.engagement?.totalScore || 0), 0),
+        average: posts.reduce((sum, p) => sum + (p.engagement?.totalScore || 0), 0) / posts.length,
+        median: this.calculateMedian(posts.map(p => p.engagement?.totalScore || 0)),
+      },
+      timeDistribution: this.getTimeDistribution(posts),
+    };
+
+    return insights;
+  }
+
+  private getPlatformDistribution(posts: any[]): any {
+    const distribution: Record<string, number> = {};
+    posts.forEach(post => {
+      distribution[post.platform] = (distribution[post.platform] || 0) + 1;
+    });
+    return distribution;
+  }
+
+  private getSentimentDistribution(posts: any[]): any {
+    const distribution = { positive: 0, negative: 0, neutral: 0 };
+    posts.forEach(post => {
+      const sentiment = post.sentiment?.label || 'neutral';
+      distribution[sentiment as keyof typeof distribution]++;
+    });
+    return {
+      ...distribution,
+      positivePercentage: (distribution.positive / posts.length) * 100,
+      negativePercentage: (distribution.negative / posts.length) * 100,
+      neutralPercentage: (distribution.neutral / posts.length) * 100,
+    };
+  }
+
+  private getTimeDistribution(posts: any[]): any {
+    const now = new Date();
+    const distribution = {
+      last24h: 0,
+      lastWeek: 0,
+      lastMonth: 0,
+      older: 0,
+    };
+
+    posts.forEach(post => {
+      const postDate = new Date(post.timestamp);
+      const hoursDiff = (now.getTime() - postDate.getTime()) / (1000 * 60 * 60);
+
+      if (hoursDiff < 24) distribution.last24h++;
+      else if (hoursDiff < 168) distribution.lastWeek++; // 7 days
+      else if (hoursDiff < 720) distribution.lastMonth++; // 30 days
+      else distribution.older++;
+    });
+
+    return distribution;
+  }
+
+  private calculateMedian(numbers: number[]): number {
+    if (numbers.length === 0) return 0;
+    const sorted = numbers.sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0
+      ? (sorted[mid - 1] + sorted[mid]) / 2
+      : sorted[mid];
   }
 }

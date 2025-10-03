@@ -83,7 +83,7 @@ export const useKeyboardNavigation = (
     navigableElements.current = filtered.map((element, index) => ({
       element,
       index,
-      groupId: element.getAttribute('data-group-id') || undefined,
+      groupId: element.getAttribute('data-group-id') || '',
       label: element.getAttribute('aria-label') || 
              element.textContent?.trim().substring(0, 50) || 
              'Unnamed element'
@@ -205,7 +205,10 @@ export const useKeyboardNavigation = (
       targetIndex = currentGroupIndex - 1 < 0 ? groups.length - 1 : currentGroupIndex - 1;
     }
 
-    focusElement(groups[targetIndex].index);
+    const targetGroup = groups[targetIndex];
+    if (targetGroup) {
+      focusElement(targetGroup.index);
+    }
   }, [currentIndex, updateNavigableElements, focusElement]);
 
   // Handle keyboard events
@@ -229,9 +232,12 @@ export const useKeyboardNavigation = (
     });
 
     if (shortcutKey) {
-      e.preventDefault();
-      shortcuts[shortcutKey]();
-      return;
+      const shortcutFn = shortcuts[shortcutKey];
+      if (shortcutFn) {
+        e.preventDefault();
+        shortcutFn();
+        return;
+      }
     }
 
     // Handle arrow key navigation
@@ -271,8 +277,12 @@ export const useKeyboardNavigation = (
       updateNavigableElements();
       if (navigableElements.current.length === 0) return;
 
-      const firstElement = navigableElements.current[0].element;
-      const lastElement = navigableElements.current[navigableElements.current.length - 1].element;
+      const firstNavElement = navigableElements.current[0];
+      const lastNavElement = navigableElements.current[navigableElements.current.length - 1];
+      if (!firstNavElement || !lastNavElement) return;
+
+      const firstElement = firstNavElement.element;
+      const lastElement = lastNavElement.element;
 
       if (e.shiftKey) {
         if (document.activeElement === firstElement) {
@@ -308,7 +318,7 @@ export const useKeyboardNavigation = (
       for (let i = 0; i < navigableElements.current.length; i++) {
         const index = (startIndex + i) % navigableElements.current.length;
         const element = navigableElements.current[index];
-        if (element.label?.toLowerCase().startsWith(char)) {
+        if (element && element.label?.toLowerCase().startsWith(char)) {
           foundIndex = index;
           break;
         }

@@ -19,7 +19,7 @@ import {
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
-import { questionApiService } from '@/lib/services/question-api.service';
+import { questionAPIService } from '@/lib/services/question-api.service';
 
 interface Question {
   id: string;
@@ -259,10 +259,9 @@ export function QuestionnairesTab({
     const newIndex = direction === 'up' ? index - 1 : index + 1;
 
     if (newIndex >= 0 && newIndex < questions.length) {
-      [newQuestions[index], newQuestions[newIndex]] = [
-        newQuestions[newIndex],
-        newQuestions[index],
-      ];
+      const temp = newQuestions[index];
+      newQuestions[index] = newQuestions[newIndex]!;
+      newQuestions[newIndex] = temp!;
 
       if (activeTab === 'pre-screening') {
         setPreScreeningQuestions(newQuestions);
@@ -339,23 +338,27 @@ export function QuestionnairesTab({
     try {
       // Save pre-screening questions
       if (preScreeningEnabled) {
-        await questionApiService.bulkCreateQuestions(
-          studyId,
-          preScreeningQuestions.map(q => ({
-            ...q,
-            metadata: { ...q.metadata, type: 'pre-screening' },
-          }))
+        await Promise.all(
+          preScreeningQuestions.map(q =>
+            questionAPIService.createQuestion({
+              ...q,
+              studyId,
+              metadata: { ...q.metadata, type: 'pre-screening' },
+            })
+          )
         );
       }
 
       // Save post-survey questions
       if (postSurveyEnabled) {
-        await questionApiService.bulkCreateQuestions(
-          studyId,
-          postSurveyQuestions.map(q => ({
-            ...q,
-            metadata: { ...q.metadata, type: 'post-survey' },
-          }))
+        await Promise.all(
+          postSurveyQuestions.map(q =>
+            questionAPIService.createQuestion({
+              ...q,
+              studyId,
+              metadata: { ...q.metadata, type: 'post-survey' },
+            })
+          )
         );
       }
     } catch (error: any) {

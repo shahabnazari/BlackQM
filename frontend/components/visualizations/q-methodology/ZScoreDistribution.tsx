@@ -155,7 +155,7 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
                   {factorIndex > 0 && (
                     <line
                       x1={(factorIndex - 1) / (statement.distributions.length - 1) * statementWidth}
-                      y1={yScale(statement.distributions[factorIndex - 1].zScore)}
+                      y1={yScale(statement.distributions[factorIndex - 1]?.zScore || 0)}
                       x2={factorX}
                       y2={pointY}
                       stroke={factorColorScale(distribution.factor)}
@@ -591,13 +591,13 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
             fontFamily="-apple-system"
             fill="#666"
           >
-            Z-Score range: [{zScoreExtent[0].toFixed(2)}, {zScoreExtent[1].toFixed(2)}]
+            Z-Score range: [{(zScoreExtent[0] || -3).toFixed(2)}, {(zScoreExtent[1] || 3).toFixed(2)}]
           </text>
         </Group>
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && (
+      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
         <TooltipWithBounds
           left={tooltipLeft}
           top={tooltipTop}

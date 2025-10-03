@@ -26,6 +26,35 @@ export interface StatementValidation {
   improvements: string[];
 }
 
+/**
+ * Multimedia source for statement provenance
+ * Phase 9 Day 19 Task 4 - Multimedia Provenance Tracking
+ */
+export interface MultimediaSource {
+  platform: 'paper' | 'youtube' | 'podcast' | 'tiktok' | 'instagram';
+  id: string;
+  title: string;
+  author: string;
+  url: string;
+  timestamp?: number; // Seconds into video/podcast
+  timestampUrl?: string; // URL with timestamp
+  quote?: string;
+  confidence: number; // 0-1, based on source type
+}
+
+export interface StatementWithProvenance extends Statement {
+  sources: MultimediaSource[];
+  sourceBreakdown: {
+    papers: number;
+    youtube: number;
+    podcasts: number;
+    tiktok: number;
+    instagram: number;
+  };
+  overallConfidence: number; // Weighted average of source confidences
+  hasTimestamps: boolean;
+}
+
 @Injectable()
 export class StatementGeneratorService {
   private readonly logger = new Logger(StatementGeneratorService.name);
@@ -337,5 +366,192 @@ Return only the variations, one per line.`;
       .filter(line => line.trim())
       .map(line => line.replace(/^\d+\.\s*/, '').trim())
       .slice(0, count);
+  }
+
+  /**
+   * Generate statements from multi-platform sources with full provenance tracking
+   * Phase 9 Day 19 Task 4 - Multimedia Provenance Implementation
+   *
+   * @param themes Extracted themes from various platforms
+   * @param studyContext Context for statement generation
+   * @param userId User ID for tracking
+   * @returns Statements with complete multimedia provenance
+   */
+  async generateStatementsFromMultiPlatform(
+    themes: Array<{
+      theme: string;
+      sources: Array<{
+        platform: 'paper' | 'youtube' | 'podcast' | 'tiktok' | 'instagram';
+        id: string;
+        title: string;
+        author: string;
+        url: string;
+        timestamp?: number;
+        quote?: string;
+      }>;
+    }>,
+    studyContext: string,
+    userId?: string
+  ): Promise<StatementWithProvenance[]> {
+    this.logger.log(`Generating statements from ${themes.length} multi-platform themes`);
+
+    const statements: StatementWithProvenance[] = [];
+
+    for (const themeData of themes) {
+      // Build prompt with source citations
+      const sourcesDescription = this.buildSourcesDescription(themeData.sources);
+
+      const prompt = `Generate a Q-methodology statement about "${themeData.theme}" for a study on "${studyContext}".
+
+CONTEXT:
+This theme appears across multiple sources:
+${sourcesDescription}
+
+REQUIREMENTS:
+1. Create a clear, concise statement (max 100 characters)
+2. Synthesize insights from all sources
+3. Use neutral, academic language
+4. Make it sortable on an agree-disagree scale
+5. Reflect the multi-source evidence
+
+Return only the statement text, nothing else.`;
+
+      const response = await this.openai.generateCompletion(prompt, {
+        model: 'smart',
+        temperature: 0.7,
+        maxTokens: 100,
+        userId,
+      });
+
+      const statementText = response.content.trim().replace(/^["']|["']$/g, '');
+
+      // Calculate provenance
+      const sources: MultimediaSource[] = themeData.sources.map(source => ({
+        platform: source.platform,
+        id: source.id,
+        title: source.title,
+        author: source.author,
+        url: source.url,
+        timestamp: source.timestamp,
+        timestampUrl: this.buildTimestampUrl(source),
+        quote: source.quote,
+        confidence: this.getSourceConfidence(source.platform),
+      }));
+
+      const sourceBreakdown = this.calculateSourceBreakdown(sources);
+      const overallConfidence = this.calculateOverallConfidence(sources);
+      const hasTimestamps = sources.some(s => s.timestamp !== undefined);
+
+      statements.push({
+        id: `S${String(statements.length + 1).padStart(2, '0')}`,
+        text: statementText,
+        perspective: themeData.theme,
+        polarity: 'neutral',
+        sources,
+        sourceBreakdown,
+        overallConfidence,
+        hasTimestamps,
+      });
+    }
+
+    this.logger.log(`Generated ${statements.length} statements with full provenance`);
+    return statements;
+  }
+
+  /**
+   * Get confidence score by source type
+   * Papers: 1.0, Academic YouTube: 0.7, Podcasts: 0.6, Social Media: 0.3
+   */
+  private getSourceConfidence(platform: string): number {
+    const confidenceMap: Record<string, number> = {
+      paper: 1.0,
+      youtube: 0.7,
+      podcast: 0.6,
+      tiktok: 0.3,
+      instagram: 0.3,
+    };
+
+    return confidenceMap[platform] || 0.5;
+  }
+
+  /**
+   * Calculate overall confidence (weighted average)
+   */
+  private calculateOverallConfidence(sources: MultimediaSource[]): number {
+    if (sources.length === 0) return 0;
+
+    const totalConfidence = sources.reduce((sum, s) => sum + s.confidence, 0);
+    return Math.round((totalConfidence / sources.length) * 100) / 100;
+  }
+
+  /**
+   * Calculate source breakdown by platform
+   */
+  private calculateSourceBreakdown(sources: MultimediaSource[]) {
+    const breakdown = {
+      papers: 0,
+      youtube: 0,
+      podcasts: 0,
+      tiktok: 0,
+      instagram: 0,
+    };
+
+    for (const source of sources) {
+      if (source.platform === 'paper') breakdown.papers++;
+      else if (source.platform === 'youtube') breakdown.youtube++;
+      else if (source.platform === 'podcast') breakdown.podcasts++;
+      else if (source.platform === 'tiktok') breakdown.tiktok++;
+      else if (source.platform === 'instagram') breakdown.instagram++;
+    }
+
+    return breakdown;
+  }
+
+  /**
+   * Build timestamp URL for multimedia sources
+   */
+  private buildTimestampUrl(source: {
+    platform: string;
+    url: string;
+    timestamp?: number;
+    id?: string;
+  }): string | undefined {
+    if (!source.timestamp) return undefined;
+
+    if (source.platform === 'youtube') {
+      return `${source.url}&t=${source.timestamp}`;
+    } else if (source.platform === 'podcast') {
+      return `${source.url}#t=${source.timestamp}`;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Build human-readable sources description
+   */
+  private buildSourcesDescription(sources: Array<{
+    platform: string;
+    title: string;
+    author: string;
+    timestamp?: number;
+  }>): string {
+    return sources
+      .map((source, index) => {
+        const timestampInfo = source.timestamp
+          ? ` (at ${this.formatTimestamp(source.timestamp)})`
+          : '';
+        return `${index + 1}. [${source.platform.toUpperCase()}] "${source.title}" by ${source.author}${timestampInfo}`;
+      })
+      .join('\n');
+  }
+
+  /**
+   * Format timestamp in MM:SS format
+   */
+  private formatTimestamp(seconds: number): string {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${String(secs).padStart(2, '0')}`;
   }
 }

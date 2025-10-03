@@ -923,13 +923,26 @@ model ResearchPipeline {
 
 model KnowledgeNode {
   id               String   @id @default(cuid())
-  type             String   // PAPER, FINDING, CONCEPT, THEORY, GAP, STATEMENT
+  type             String   // PAPER, FINDING, CONCEPT, THEORY, GAP, STATEMENT, BRIDGE_CONCEPT
   label            String
   description      String?
   sourceStudyId    String?
   sourcePaperId    String?
   confidence       Float?   @default(0.5)
   metadata         Json?
+
+  // Phase 9 Day 14-15: Enhanced Graph Features
+  isBridgeConcept  Boolean  @default(false) // Connects disparate research areas
+  controversyScore Float?   // 0-1, higher = more controversial
+  influenceScore   Float?   // Centrality/importance in the graph
+  citationCount    Int      @default(0)     // Number of citations
+  trendingScore    Float?   // Trending/emerging topic score
+  keywords         Json?    @default("[]")  // Array of extracted keywords
+
+  // ML Predictions
+  predictedImpact  Float?   // Predicted research impact score
+  emergingTopic    Boolean  @default(false) // Is this an emerging topic?
+  fundingPotential Float?   // Predicted funding probability 0-1
 
   // Relationships
   outgoingEdges    KnowledgeEdge[] @relation("FromNode")
@@ -941,6 +954,8 @@ model KnowledgeNode {
   @@index([type])
   @@index([sourceStudyId])
   @@index([sourcePaperId])
+  @@index([isBridgeConcept])
+  @@index([emergingTopic])
   @@map("knowledge_nodes")
 }
 
@@ -951,9 +966,16 @@ model KnowledgeEdge {
   toNodeId         String
   toNode           KnowledgeNode @relation("ToNode", fields: [toNodeId], references: [id], onDelete: Cascade)
 
-  type             String   // SUPPORTS, CONTRADICTS, EXTENDS, RELATED, DERIVED_FROM
+  type             String   // SUPPORTS, CONTRADICTS, EXTENDS, RELATED, DERIVED_FROM, CITES, INFLUENCES
   strength         Float    @default(0.5) // 0-1 strength of relationship
   metadata         Json?
+
+  // Phase 9 Day 14-15: Enhanced Edge Features
+  influenceFlow    Float?   // Directional influence strength
+  controversyType  String?  // Type of controversy (METHODOLOGY, FINDINGS, THEORY)
+  isPredicted      Boolean  @default(false) // Is this a predicted "missing link"?
+  predictionScore  Float?   // Confidence in prediction 0-1
+  temporalWeight   Float?   // Time-decay weight for citations
 
   createdAt        DateTime @default(now())
 
@@ -961,6 +983,7 @@ model KnowledgeEdge {
   @@index([fromNodeId])
   @@index([toNodeId])
   @@index([type])
+  @@index([isPredicted])
   @@map("knowledge_edges")
 }
 
@@ -1050,4 +1073,235 @@ model StatementProvenance {
   @@index([sourcePaperId])
   @@index([sourceThemeId])
   @@map("statement_provenance")
+}
+
+// ============================================
+// PHASE 9 DAY 18: Multi-Modal Transcription
+// ============================================
+
+/// Video/Podcast transcription storage with timestamps
+model VideoTranscript {
+  id              String   @id @default(uuid())
+  sourceId        String   // YouTube video ID or podcast URL
+  sourceType      String   // 'youtube' | 'podcast' | 'tiktok' | 'instagram'
+  sourceUrl       String
+  title           String
+  author          String?  // Channel name or podcast host
+  duration        Int      // Duration in seconds
+  transcript      String   // Full plain text transcript
+  timestampedText Json     // Array of {timestamp: number, text: string, speaker?: string}
+  language        String   @default("en")
+  confidence      Float?   // Whisper transcription confidence (0-1)
+  processedAt     DateTime @default(now())
+
+  // Cost tracking
+  transcriptionCost Float? // Whisper API cost for this transcription
+  analysisCost      Float? // GPT-4 theme extraction cost
+
+  // Metadata
+  metadata        Json?    // Platform-specific metadata (views, likes, etc.)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  themes          TranscriptTheme[]
+  citations       MultimediaCitation[]
+  socialMedia     SocialMediaContent?
+
+  @@unique([sourceId, sourceType])
+  @@index([sourceType])
+  @@index([processedAt])
+  @@index([sourceUrl])
+  @@map("video_transcripts")
+}
+
+/// Themes extracted from video/podcast transcripts
+model TranscriptTheme {
+  id              String   @id @default(uuid())
+  transcriptId    String
+  transcript      VideoTranscript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  theme           String   // Theme label (e.g., "Climate Change Adaptation")
+  relevanceScore  Float    // 0-1, how relevant this theme is to the content
+  timestamps      Json     // Array of {start: number, end: number} where theme appears
+  keywords        Json     // Array of extracted keywords for this theme
+
+  // GPT-4 analysis
+  summary         String?  // AI-generated summary of this theme in the video
+  quotes          Json?    // Array of {timestamp, quote} - key quotes for this theme
+
+  createdAt       DateTime @default(now())
+
+  @@index([transcriptId])
+  @@index([theme])
+  @@map("transcript_themes")
+}
+
+/// Citations/references found in video/podcast transcripts
+model MultimediaCitation {
+  id              String   @id @default(uuid())
+  transcriptId    String
+  transcript      VideoTranscript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  citedWork       String   // Paper title, author, or claim being cited
+  citationType    String   @default("mention") // 'mention' | 'citation' | 'reference'
+  timestamp       Int      // Second in video/podcast where citation occurs
+  context         String   // Surrounding text for context (~200 chars)
+  confidence      Float    // 0-1, how confident we are this is a citation
+
+  // Parsed citation details (if structured)
+  parsedCitation  Json?    // {author?, title?, year?, doi?}
+
+  createdAt       DateTime @default(now())
+
+  @@index([transcriptId])
+  @@index([citedWork])
+  @@map("multimedia_citations")
+}
+
+// ============================================
+// PHASE 9 DAY 19: Social Media Integration
+// ============================================
+
+/// Social media content (TikTok, Instagram)
+model SocialMediaContent {
+  id              String   @id @default(uuid())
+  platform        String   // 'tiktok' | 'instagram' | 'youtube_short'
+  platformId      String   // Platform-specific video ID
+  url             String   @unique
+  title           String?
+  description     String?
+  author          String   // Username/handle
+  authorId        String?  // Platform-specific user ID
+  publishedAt     DateTime
+
+  // Engagement metrics
+  views           Int?
+  likes           Int?
+  shares          Int?
+  comments        Int?
+
+  // Content analysis
+  transcriptId    String?  @unique
+  transcript      VideoTranscript? @relation(fields: [transcriptId], references: [id])
+  hashtags        Json?    // Array of extracted hashtags
+  trends          Json?    // Platform-specific trend data
+
+  // Research relevance
+  relevanceScore  Float?   // 0-1, how relevant to research query
+  researchThemes  Json?    // Array of themes identified in this content
+
+  // Upload metadata (for manual uploads like Instagram)
+  uploadMethod    String   @default("api") // 'api' | 'manual_upload'
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([platform, platformId])
+  @@index([platform])
+  @@index([publishedAt])
+  @@index([relevanceScore])
+  @@index([author])
+  @@map("social_media_content")
+}
+
+// ============================================
+// PHASE 9 DAY 20: Unified Theme Extraction
+// ============================================
+
+/// Unified theme model that consolidates paper themes and multimedia themes
+/// Provides single source of truth with full provenance tracking
+model UnifiedTheme {
+  id              String   @id @default(uuid())
+  label           String   // Theme name (e.g., "Climate Change Adaptation")
+  description     String?  // AI-generated description
+  keywords        Json     // string[] - Extracted keywords
+  weight          Float    // 0-1 - Importance/prevalence of this theme
+  controversial   Boolean  @default(false)
+
+  // Relations
+  sources         ThemeSource[]
+  provenance      ThemeProvenance?
+
+  // Study association
+  studyId         String?
+  collectionId    String?  // Link to paper collection if applicable
+
+  // Metadata
+  extractedAt     DateTime @default(now())
+  extractionModel String   // "gpt-4-turbo-preview" or other model
+  confidence      Float    // 0-1 - Overall confidence in theme extraction
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([studyId])
+  @@index([collectionId])
+  @@index([weight])
+  @@map("unified_themes")
+}
+
+/// Individual source that contributed to a unified theme
+/// Tracks statistical influence and provides audit trail
+model ThemeSource {
+  id              String   @id @default(uuid())
+  themeId         String
+  theme           UnifiedTheme @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  // Source identification
+  sourceType      String   // "paper" | "youtube" | "podcast" | "tiktok" | "instagram"
+  sourceId        String   // ID from respective table (Paper.id, VideoTranscript.id, etc.)
+  sourceUrl       String?  // DOI for papers, video URL for multimedia
+  sourceTitle     String   // Paper title or video title
+  sourceAuthor    String?  // Author names or channel name
+
+  // Statistical influence (how much this source contributed to theme)
+  influence       Float    // 0-1 - This source's contribution to theme
+  keywordMatches  Int      // Number of theme keywords found in source
+  excerpts        Json     // string[] - Relevant quotes/text from source
+
+  // Multimedia-specific (null for papers)
+  timestamps      Json?    // {start: number, end: number, text: string}[] - Relevant video segments
+
+  // Paper-specific (null for multimedia)
+  doi             String?
+  authors         Json?    // string[] - Paper authors
+  year            Int?     // Publication year
+
+  createdAt       DateTime @default(now())
+
+  @@index([themeId])
+  @@index([sourceType])
+  @@index([sourceId])
+  @@map("theme_sources")
+}
+
+/// Statistical provenance tracking for themes
+/// Shows which source types contributed most to each theme
+model ThemeProvenance {
+  id              String   @id @default(uuid())
+  themeId         String   @unique
+  theme           UnifiedTheme @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  // Statistical breakdown (percentages, sum = 1.0)
+  paperInfluence      Float  @default(0.0)  // e.g., 0.65 = 65% from papers
+  videoInfluence      Float  @default(0.0)  // e.g., 0.25 = 25% from videos
+  podcastInfluence    Float  @default(0.0)  // e.g., 0.10 = 10% from podcasts
+  socialInfluence     Float  @default(0.0)  // e.g., 0.00 = 0% from social media
+
+  // Source counts
+  paperCount          Int    @default(0)
+  videoCount          Int    @default(0)
+  podcastCount        Int    @default(0)
+  socialCount         Int    @default(0)
+
+  // Quality metrics
+  averageConfidence   Float  // Average confidence across all sources
+  citationChain       Json   // string[] - For reproducibility
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("theme_provenance")
 }

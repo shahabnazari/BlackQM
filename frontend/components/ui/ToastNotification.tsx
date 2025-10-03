@@ -154,7 +154,7 @@ export function useToast() {
   };
 
   const showSuccess = (message: string, duration?: number) => {
-    return addToast({ type: 'success', message, duration });
+    return addToast({ type: 'success', message, ...(duration !== undefined && { duration }) });
   };
 
   const showError = (message: string, duration?: number) => {
@@ -166,7 +166,7 @@ export function useToast() {
   };
 
   const showInfo = (message: string, duration?: number) => {
-    return addToast({ type: 'info', message, duration });
+    return addToast({ type: 'info', message, ...(duration !== undefined && { duration }) });
   };
 
   const showAutoSave = (message: string = 'Auto-saved') => {

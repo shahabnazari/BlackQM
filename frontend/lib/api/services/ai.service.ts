@@ -150,8 +150,8 @@ class AIService {
 
     try {
       const response = await apiClient.post<ApiResponse<StatementGenerationResponse>>('/ai/generate-statements', request);
-      this.setCache(cacheKey, response.data);
-      return response.data;
+      this.setCache(cacheKey, response.data.data);
+      return response.data.data;
     } catch (error: any) {
       console.error('Error generating statements:', error);
       throw error;
@@ -165,8 +165,8 @@ class AIService {
 
     try {
       const response = await apiClient.post<ApiResponse<GridDesignResponse>>('/ai/optimize-grid', request);
-      this.setCache(cacheKey, response.data);
-      return response.data;
+      this.setCache(cacheKey, response.data.data);
+      return response.data.data;
     } catch (error: any) {
       console.error('Error optimizing grid:', error);
       throw error;
@@ -180,8 +180,8 @@ class AIService {
 
     try {
       const response = await apiClient.post<ApiResponse<BiasDetectionResponse>>('/ai/detect-bias', request);
-      this.setCache(cacheKey, response.data);
-      return response.data;
+      this.setCache(cacheKey, response.data.data);
+      return response.data.data;
     } catch (error: any) {
       console.error('Error detecting bias:', error);
       throw error;
@@ -193,7 +193,7 @@ class AIService {
   ): Promise<FactorInterpretationResponse> {
     try {
       const response = await apiClient.post<ApiResponse<FactorInterpretationResponse>>('/ai/interpret-factor', request);
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       console.error('Error interpreting factor:', error);
       throw error;
@@ -207,8 +207,8 @@ class AIService {
 
     try {
       const response = await apiClient.post<ApiResponse<LiteratureSearchResponse>>('/ai/search-literature', request);
-      this.setCache(cacheKey, response.data);
-      return response.data;
+      this.setCache(cacheKey, response.data.data);
+      return response.data.data;
     } catch (error: any) {
       console.error('Error searching literature:', error);
       throw error;
@@ -223,7 +223,7 @@ class AIService {
   async generateReport(request: ReportGenerationRequest): Promise<ReportGenerationResponse> {
     try {
       const response = await apiClient.post<ApiResponse<ReportGenerationResponse>>('/ai/generate-report', request);
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       console.error('Error generating report:', error);
       throw error;
@@ -233,7 +233,7 @@ class AIService {
   async getUsage(): Promise<AIUsageResponse> {
     try {
       const response = await apiClient.get<ApiResponse<AIUsageResponse>>('/ai/usage');
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       console.error('Error fetching AI usage:', error);
       throw error;
@@ -243,7 +243,7 @@ class AIService {
   async validateGrid(gridStructure: number[]): Promise<{ valid: boolean; issues?: string[] }> {
     try {
       const response = await apiClient.post<ApiResponse<{ valid: boolean; issues?: string[] }>>('/ai/validate-grid', { gridStructure });
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       console.error('Error validating grid:', error);
       throw error;
@@ -259,7 +259,7 @@ class AIService {
         score: number;
         issues: Array<{ statement: string; concern: string; severity: string }>;
       }>>('/ai/check-cultural-sensitivity', { statements });
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       console.error('Error checking cultural sensitivity:', error);
       throw error;
@@ -277,7 +277,7 @@ class AIService {
         distribution: Record<string, number>;
         recommendations?: string[];
       }>>('/ai/analyze-perspective-balance', { statements });
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       console.error('Error analyzing perspective balance:', error);
       throw error;

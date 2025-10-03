@@ -128,7 +128,7 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
   const renderMatrixView = () => (
     <Group>
       {sortedData.map((participant, i) => (
-        <Group key={participant.participant} top={yScale(participant.participant)}>
+        <Group key={participant.participant} top={yScale(participant.participant) || 0}>
           {factors.map((factor, j) => {
             const loading = participant.loadings[factor] || 0;
             const cellX = xScale(factor) || 0;
@@ -385,10 +385,10 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
 
         {/* Data points */}
         {sortedData.map((participant, index) => {
-          const x1Loading = participant.loadings[factor1] || 0;
-          const x2Loading = participant.loadings[factor2] || 0;
-          const px = scatterXScale(x1Loading);
-          const py = scatterYScale(x2Loading);
+          const x1Loading = (factor1 && participant.loadings[factor1]) || 0;
+          const x2Loading = (factor2 && participant.loadings[factor2]) || 0;
+          const px = scatterXScale(x1Loading) || 0;
+          const py = scatterYScale(x2Loading) || 0;
           const isDefining1 = participant.definingFactor === factor1;
           const isDefining2 = participant.definingFactor === factor2;
           const isSignificant = Math.abs(x1Loading) >= significanceThreshold || Math.abs(x2Loading) >= significanceThreshold;
@@ -687,7 +687,7 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
             <defs>
               <linearGradient id="matrixColorLegend" x1="0%" y1="0%" x2="100%" y2="0%">
                 {Array.from({ length: 21 }, (_, i) => {
-                  const value = loadingExtent[0] + (i / 20) * (loadingExtent[1] - loadingExtent[0]);
+                  const value = (loadingExtent[0] || -1) + (i / 20) * ((loadingExtent[1] || 1) - (loadingExtent[0] || -1));
                   return (
                     <stop
                       key={i}
@@ -717,7 +717,7 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
               textAnchor="end"
               dominantBaseline="middle"
             >
-              {loadingExtent[0].toFixed(2)}
+              {(loadingExtent[0] || -1).toFixed(2)}
             </text>
             <text
               x={innerWidth / 2 + 160}
@@ -727,7 +727,7 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
               textAnchor="start"
               dominantBaseline="middle"
             >
-              {loadingExtent[1].toFixed(2)}
+              {(loadingExtent[1] || 1).toFixed(2)}
             </text>
             <text
               x={innerWidth / 2}
@@ -829,7 +829,7 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && (
+      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
         <TooltipWithBounds
           left={tooltipLeft}
           top={tooltipTop}

@@ -87,8 +87,8 @@ export default function PreScreening({
   });
 
   // ML Matching State
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [participantProfile, setParticipantProfile] =
+  const [_isAnalyzing, setIsAnalyzing] = useState(false);
+  const [_participantProfile, setParticipantProfile] =
     useState<ParticipantProfile | null>(null);
   const [studyMatches, setStudyMatches] = useState<StudyMatch[]>([]);
   const [matchConfidence, setMatchConfidence] = useState(0);

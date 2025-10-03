@@ -67,7 +67,7 @@ export function useQAnalysis() {
 
   // WebSocket for real-time updates
   const { sendMessage, lastMessage, connectionStatus } = useWebSocket(
-    process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001'
+    process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000'
   );
 
   // Handle WebSocket messages

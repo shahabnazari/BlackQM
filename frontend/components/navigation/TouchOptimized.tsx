@@ -213,9 +213,9 @@ export function TouchButton({
 
   return (
     <TouchOptimized
-      onTap={onClick ? () => onClick({} as any) : undefined}
+      {...(onClick && { onTap: () => onClick({} as any) })}
       hapticFeedback={haptic}
-      disabled={disabled}
+      {...(disabled && { disabled })}
       className="inline-block"
     >
       <button
@@ -255,8 +255,8 @@ export function TouchCard({
 }: TouchCardProps) {
   return (
     <TouchOptimized
-      onTap={onTap}
-      onLongPress={onLongPress}
+      {...(onTap && { onTap })}
+      {...(onLongPress && { onLongPress })}
       className={cn(
         'block bg-card rounded-xl p-4',
         'border border-border',
@@ -288,9 +288,9 @@ export function TouchListItem({
 }: TouchListItemProps) {
   return (
     <TouchOptimized
-      onTap={onTap}
-      onSwipeLeft={onSwipeLeft}
-      onSwipeRight={onSwipeRight}
+      {...(onTap && { onTap })}
+      {...(onSwipeLeft && { onSwipeLeft })}
+      {...(onSwipeRight && { onSwipeRight })}
       className={cn(
         'block bg-background',
         'border-b border-border',

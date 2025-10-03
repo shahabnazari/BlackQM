@@ -5,10 +5,8 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useReducedMotion } from 'framer-motion';
-import { 
-  _prefersReducedMotion,
+import {
   getAnimationDuration,
-  _applyGpuAcceleration,
   raf,
   cancelRaf
 } from '@/lib/animations/utils';

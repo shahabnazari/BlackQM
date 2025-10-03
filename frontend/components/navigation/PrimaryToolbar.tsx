@@ -22,6 +22,7 @@ import { ContextualHelp } from './ContextualHelp';
 import { PhaseOnboarding } from './PhaseOnboarding';
 import { NavigationPreferences } from './NavigationPreferences';
 import { GlobalSearch } from './GlobalSearch';
+import { UserProfileMenu } from './UserProfileMenu';
 import { cn } from '@/lib/utils';
 
 export type ResearchPhase =
@@ -266,7 +267,9 @@ export function PrimaryToolbar() {
           ];
           const currentIndex = modes.indexOf(navigationMode || 'expanded');
           const nextMode = modes[(currentIndex + 1) % modes.length];
-          updateNavigationMode(nextMode);
+          if (nextMode) {
+            updateNavigationMode(nextMode);
+          }
         }
       }
 
@@ -316,7 +319,9 @@ export function PrimaryToolbar() {
                     navigationMode || 'expanded'
                   );
                   const nextMode = modes[(currentIndex + 1) % modes.length];
-                  updateNavigationMode(nextMode);
+                  if (nextMode) {
+                    updateNavigationMode(nextMode);
+                  }
                 }}
                 className="p-1.5 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                 title={`Navigation: ${navigationMode} (⌘\\)`}
@@ -514,6 +519,9 @@ export function PrimaryToolbar() {
                   className="mr-2"
                 />
               )}
+
+              {/* User Profile Menu */}
+              <UserProfileMenu className="mr-2" />
 
               {/* Phase Tutorial Button */}
               <button

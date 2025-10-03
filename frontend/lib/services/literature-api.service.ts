@@ -77,13 +77,40 @@ class LiteratureAPIService {
       headers: {
         'Content-Type': 'application/json',
       },
+      // Configure params serialization for arrays
+      // NestJS expects 'sources=youtube' not 'sources[]=youtube'
+      paramsSerializer: {
+        serialize: (params) => {
+          const parts: string[] = [];
+          Object.keys(params).forEach(key => {
+            const value = params[key];
+            if (Array.isArray(value)) {
+              // For arrays, send as repeated params: sources=youtube&sources=github
+              // Or for single item: sources=youtube
+              if (value.length === 1) {
+                parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value[0])}`);
+              } else {
+                value.forEach(v => {
+                  parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(v)}`);
+                });
+              }
+            } else if (value !== undefined && value !== null) {
+              parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+            }
+          });
+          return parts.join('&');
+        }
+      },
     });
 
     // Add auth interceptor
-    this.api.interceptors.request.use(config => {
-      const token = getAuthToken();
+    this.api.interceptors.request.use(async (config) => {
+      const token = await getAuthToken();
+      console.log('🔑 [Auth Token]:', token ? `${token.substring(0, 20)}...` : 'No token found');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        console.warn('⚠️ [Auth] No token available - request will be unauthorized');
       }
       return config;
     });
@@ -369,16 +396,234 @@ class LiteratureAPIService {
     }
   }
 
-  // Build knowledge graph from papers
-  async buildKnowledgeGraph(paperIds: string[]): Promise<KnowledgeGraphData> {
+  // ===========================================================================
+  // PHASE 9 DAY 14-15: KNOWLEDGE GRAPH & PREDICTIVE GAP DETECTION
+  // ===========================================================================
+
+  /**
+   * Phase 9 Day 14: Build knowledge graph from papers
+   */
+  async buildKnowledgeGraph(paperIds: string[]): Promise<{
+    success: boolean;
+    metrics: {
+      entitiesExtracted: number;
+      citationsCreated: number;
+      bridgeConceptsFound: number;
+      controversiesDetected: number;
+      emergingTopicsFound: number;
+      processingTimeMs: number;
+    };
+    insights: {
+      bridgeConcepts: any[];
+      controversies: any[];
+      emergingTopics: any[];
+    };
+  }> {
     try {
       const response = await this.api.post(
-        '/literature/knowledge-graph',
-        paperIds
+        '/literature/knowledge-graph/build',
+        { paperIds }
       );
       return response.data;
     } catch (error) {
       console.error('Failed to build knowledge graph:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get knowledge graph for visualization
+   */
+  async getKnowledgeGraph(filters?: {
+    types?: string[];
+    minConfidence?: number;
+    includePredicted?: boolean;
+  }): Promise<{
+    success: boolean;
+    graph: KnowledgeGraphData;
+    stats: {
+      nodeCount: number;
+      edgeCount: number;
+      bridgeConcepts: number;
+      emergingTopics: number;
+    };
+  }> {
+    try {
+      const params: any = {};
+      if (filters?.types) params.types = filters.types.join(',');
+      if (filters?.minConfidence) params.minConfidence = filters.minConfidence;
+      if (filters?.includePredicted !== undefined) params.includePredicted = filters.includePredicted;
+
+      const response = await this.api.get('/literature/knowledge-graph/view', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get knowledge graph:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Track influence flow from a concept
+   */
+  async trackInfluenceFlow(nodeId: string): Promise<{
+    success: boolean;
+    sourceNodeId: string;
+    influenceFlows: any[];
+    totalInfluenced: number;
+  }> {
+    try {
+      const response = await this.api.get(`/literature/knowledge-graph/influence/${nodeId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to track influence flow:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Predict missing links in knowledge graph
+   */
+  async predictMissingLinks(): Promise<{
+    success: boolean;
+    predictedLinks: any[];
+    totalPredictions: number;
+  }> {
+    try {
+      const response = await this.api.post('/literature/knowledge-graph/predict-links');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to predict missing links:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Export knowledge graph in various formats
+   */
+  async exportKnowledgeGraph(format: 'json' | 'graphml' | 'cypher' = 'json'): Promise<{
+    success: boolean;
+    format: string;
+    data: string;
+  }> {
+    try {
+      const response = await this.api.get('/literature/knowledge-graph/export', {
+        params: { format }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to export knowledge graph:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Phase 9 Day 15: Score research opportunities with ML predictions
+   */
+  async scoreResearchOpportunities(gapIds: string[]): Promise<{
+    success: boolean;
+    opportunities: any[];
+    topOpportunities: any[];
+    averageScore: number;
+  }> {
+    try {
+      const response = await this.api.post('/literature/predictive-gaps/score-opportunities', {
+        gapIds
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to score research opportunities:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Predict funding probability for research gaps
+   */
+  async predictFundingProbability(gapIds: string[]): Promise<{
+    success: boolean;
+    fundingOpportunities: any[];
+    highProbability: any[];
+  }> {
+    try {
+      const response = await this.api.post('/literature/predictive-gaps/funding-probability', {
+        gapIds
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to predict funding probability:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get optimized research timelines
+   */
+  async getTimelineOptimizations(gapIds: string[]): Promise<{
+    success: boolean;
+    timelines: any[];
+    averageDuration: number;
+  }> {
+    try {
+      const response = await this.api.post('/literature/predictive-gaps/optimize-timeline', {
+        gapIds
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to optimize timeline:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Predict research impact
+   */
+  async predictImpact(gapIds: string[]): Promise<{
+    success: boolean;
+    predictions: any[];
+    transformativeOpportunities: any[];
+  }> {
+    try {
+      const response = await this.api.post('/literature/predictive-gaps/predict-impact', {
+        gapIds
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to predict impact:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Forecast research trends
+   */
+  async forecastTrends(topics: string[]): Promise<{
+    success: boolean;
+    forecasts: any[];
+    emergingTopics: any[];
+    decliningTopics: any[];
+  }> {
+    try {
+      const response = await this.api.post('/literature/predictive-gaps/forecast-trends', {
+        topics
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to forecast trends:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Analyze research gaps from papers (Phase 9 Day 8-10 enhanced)
+   */
+  async analyzeGapsFromPapers(paperIds: string[]): Promise<any[]> {
+    try {
+      const response = await this.api.post('/literature/gaps/analyze', {
+        paperIds
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to analyze gaps from papers:', error);
       throw error;
     }
   }
@@ -448,12 +693,192 @@ class LiteratureAPIService {
     sources: string[]
   ): Promise<any[]> {
     try {
-      const response = await this.api.get('/literature/alternative', {
+      console.log('🔍 [Alternative Sources] Searching...', { query, sources });
+
+      // Use public endpoint for development/testing to avoid authentication issues
+      // TODO: Switch back to '/literature/alternative' when authentication is properly implemented
+      const response = await this.api.get('/literature/alternative/public', {
         params: { query, sources },
+      });
+
+      console.log('✅ [Alternative Sources] Results received:', response.data);
+      console.log('📊 [Alternative Sources] Result count:', response.data?.length || 0);
+
+      // Ensure we always return an array
+      const results = Array.isArray(response.data) ? response.data : [];
+      console.log('📦 [Alternative Sources] Returning:', results.length, 'results');
+
+      return results;
+    } catch (error: any) {
+      console.error('❌ [Alternative Sources] Search failed:', error);
+      console.error('❌ [Alternative Sources] Error details:', error.response?.data);
+      console.error('❌ [Alternative Sources] Error status:', error.response?.status);
+
+      // Provide helpful error message about authentication
+      if (error.response?.status === 401) {
+        console.error('🔐 Authentication required. Using public endpoint as fallback.');
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * PHASE 9 DAY 13: Social Media Intelligence
+   * Search social media platforms for research-relevant content
+   */
+  async searchSocialMedia(
+    query: string,
+    platforms: string[]
+  ): Promise<any[]> {
+    try {
+      const response = await this.api.get('/literature/social/search/public', {
+        params: { query, platforms },
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to search alternative sources:', error);
+      console.error('Failed to search social media:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get aggregated insights from social media data
+   * Provides sentiment distribution, trending themes, and key influencers
+   */
+  async getSocialMediaInsights(posts: any[]): Promise<any> {
+    try {
+      const response = await this.api.get('/literature/social/insights', {
+        data: posts,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get social media insights:', error);
+      // Return basic insights on failure
+      return {
+        totalPosts: posts.length,
+        platformDistribution: {},
+        sentimentDistribution: { positive: 0, negative: 0, neutral: 0 },
+        topInfluencers: [],
+        engagementStats: { total: 0, average: 0, median: 0 },
+      };
+    }
+  }
+
+  // ============================================
+  // PHASE 9 DAY 18: MULTI-MODAL TRANSCRIPTION
+  // ============================================
+
+  /**
+   * Search YouTube videos with optional transcription and theme extraction
+   */
+  async searchYouTubeWithTranscription(
+    query: string,
+    options: {
+      includeTranscripts?: boolean;
+      extractThemes?: boolean;
+      maxResults?: number;
+    } = {}
+  ): Promise<any> {
+    try {
+      const response = await this.api.post('/literature/multimedia/youtube-search', {
+        query,
+        includeTranscripts: options.includeTranscripts || false,
+        extractThemes: options.extractThemes || false,
+        maxResults: options.maxResults || 10,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to search YouTube with transcription:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get or create transcription for a video/podcast
+   */
+  async transcribeMedia(
+    sourceId: string,
+    sourceType: 'youtube' | 'podcast',
+    sourceUrl?: string
+  ): Promise<any> {
+    try {
+      const response = await this.api.post('/literature/multimedia/transcribe', {
+        sourceId,
+        sourceType,
+        sourceUrl,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to transcribe media:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Extract themes from a transcript
+   */
+  async extractThemesFromTranscript(
+    transcriptId: string,
+    researchContext?: string
+  ): Promise<any> {
+    try {
+      const response = await this.api.post('/literature/multimedia/extract-themes', {
+        transcriptId,
+        researchContext,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to extract themes:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Extract citations from a transcript
+   */
+  async extractCitationsFromTranscript(transcriptId: string): Promise<any> {
+    try {
+      const response = await this.api.post('/literature/multimedia/extract-citations', {
+        transcriptId,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to extract citations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Estimate transcription cost
+   */
+  async estimateTranscriptionCost(
+    sourceId: string,
+    sourceType: 'youtube' | 'podcast'
+  ): Promise<{ duration: number; estimatedCost: number }> {
+    try {
+      const response = await this.api.post('/literature/multimedia/estimate-cost', {
+        sourceId,
+        sourceType,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to estimate cost:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add multimedia to knowledge graph
+   */
+  async addMultimediaToGraph(transcriptId: string): Promise<any> {
+    try {
+      const response = await this.api.post('/literature/multimedia/add-to-graph', {
+        transcriptId,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to add multimedia to graph:', error);
       throw error;
     }
   }

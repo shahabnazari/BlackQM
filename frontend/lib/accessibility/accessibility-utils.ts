@@ -175,7 +175,7 @@ export const meetsContrastRatio = (
   const getLuminance = (color: string): number => {
     // Convert hex to RGB
     const rgb = color.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
-    if (!rgb) return 0;
+    if (!rgb || !rgb[1] || !rgb[2] || !rgb[3]) return 0;
 
     const [r, g, b] = [
       parseInt(rgb[1], 16) / 255,
@@ -187,7 +187,7 @@ export const meetsContrastRatio = (
         : Math.pow((val + 0.055) / 1.055, 2.4);
     });
 
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return 0.2126 * (r || 0) + 0.7152 * (g || 0) + 0.0722 * (b || 0);
   };
 
   const l1 = getLuminance(foreground);

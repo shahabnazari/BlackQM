@@ -53,6 +53,7 @@ export const AccessibilityToggle: React.FC<AccessibilityToggleProps> = ({
       return () => clearTimeout(timer);
     } else {
       setIsVisible(true);
+      return undefined;
     }
   }, [isPanelOpen, position]);
 
@@ -113,9 +114,11 @@ export const AccessibilityIndicator: React.FC<{ className?: string }> = ({
   const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('accessibilitySettings');
-    if (stored) {
-      setSettings(JSON.parse(stored));
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('accessibilitySettings');
+      if (stored) {
+        setSettings(JSON.parse(stored));
+      }
     }
   }, []);
 

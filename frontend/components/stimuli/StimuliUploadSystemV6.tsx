@@ -1294,8 +1294,8 @@ export function StimuliUploadSystemV6({
         type={popupState.type}
         title={popupState.title || ''}
         message={popupState.message}
-        onConfirm={popupState.onConfirm}
-        onCancel={popupState.onCancel}
+        {...(popupState.onConfirm && { onConfirm: popupState.onConfirm })}
+        {...(popupState.onCancel && { onCancel: popupState.onCancel })}
       />
     </div>
   );

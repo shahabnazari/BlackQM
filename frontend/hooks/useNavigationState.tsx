@@ -41,7 +41,7 @@ export function NavigationProvider({
   const { user, isAuthenticated } = useAuth();
   const [navigationState, setNavigationState] = useState<NavigationState>({
     currentPhase: 'discover',
-    currentTool: undefined,
+    currentTool: '',
     phaseProgress: {
       discover: 0,
       design: 0,
@@ -56,7 +56,7 @@ export function NavigationProvider({
     },
     completedPhases: [],
     availablePhases: ['discover', 'design'],
-    studyId,
+    ...(studyId && { studyId }),
     preferences: {
       compactMode: false,
       showShortcuts: true,
@@ -74,9 +74,11 @@ export function NavigationProvider({
     const fetchNavigationState = async () => {
       try {
         const params = studyId ? `?studyId=${studyId}` : '';
+        // Get token from correct localStorage key
+        const token = localStorage.getItem('access_token') || localStorage.getItem('token');
         const response = await fetch(`/api/navigation/state${params}`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: token ? `Bearer ${token}` : '',
           },
         });
 
@@ -108,9 +110,9 @@ export function NavigationProvider({
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
-    const newSocket = io(`${process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001'}/navigation`, {
+    const newSocket = io(`${process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000'}/navigation`, {
       auth: {
-        token: localStorage.getItem('token'),
+        token: localStorage.getItem('access_token') || localStorage.getItem('token'),
       },
     });
 
@@ -152,7 +154,7 @@ export function NavigationProvider({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}`,
         },
         body: JSON.stringify({ phase, studyId }),
       });
@@ -176,7 +178,7 @@ export function NavigationProvider({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}`,
         },
         body: JSON.stringify({ studyId, phase, action }),
       });
@@ -191,7 +193,7 @@ export function NavigationProvider({
       const params = studyId ? `?studyId=${studyId}` : '';
       const response = await fetch(`/api/navigation/state${params}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}`,
         },
       });
 

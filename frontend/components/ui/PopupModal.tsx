@@ -225,9 +225,9 @@ export function usePopup() {
       isOpen: true,
       type,
       message,
-      title: options?.title,
-      onConfirm: options?.onConfirm,
-      onCancel: options?.onCancel,
+      ...(options?.title && { title: options.title }),
+      ...(options?.onConfirm && { onConfirm: options.onConfirm }),
+      ...(options?.onCancel && { onCancel: options.onCancel }),
     });
   };
 
@@ -239,10 +239,10 @@ export function usePopup() {
     popupState,
     showPopup,
     closePopup,
-    showSuccess: (message: string, title?: string) => showPopup('success', message, { title }),
-    showError: (message: string, title?: string) => showPopup('error', message, { title }),
-    showWarning: (message: string, title?: string) => showPopup('warning', message, { title }),
-    showInfo: (message: string, title?: string) => showPopup('info', message, { title }),
+    showSuccess: (message: string, title?: string) => showPopup('success', message, title ? { title } : {}),
+    showError: (message: string, title?: string) => showPopup('error', message, title ? { title } : {}),
+    showWarning: (message: string, title?: string) => showPopup('warning', message, title ? { title } : {}),
+    showInfo: (message: string, title?: string) => showPopup('info', message, title ? { title } : {}),
     showConfirm: (
       message: string,
       onConfirm: () => void,

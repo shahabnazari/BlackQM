@@ -222,7 +222,7 @@ export const CorrelationHeatmap: React.FC<CorrelationHeatmapProps> = ({
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && (
+      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
         <TooltipWithBounds
           left={tooltipLeft}
           top={tooltipTop}

@@ -37,9 +37,14 @@ export async function verifyAuth(req: NextRequest): Promise<{
     }
     
     // Try JWT token (for API routes)
-    const token = await getToken({ 
+    const secret = process.env.NEXTAUTH_SECRET;
+    if (!secret) {
+      return { authenticated: false };
+    }
+
+    const token = await getToken({
       req,
-      secret: process.env.NEXTAUTH_SECRET 
+      secret
     });
     
     if (token) {

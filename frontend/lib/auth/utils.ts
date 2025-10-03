@@ -94,7 +94,9 @@ export const sessionStorage = {
 export const isTokenExpired = (token: string): boolean => {
   try {
     // Decode JWT without verification (for client-side expiry check)
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    const parts = token.split('.');
+    if (!parts[1]) return true;
+    const payload = JSON.parse(atob(parts[1]));
     if (!payload.exp) return false;
     return Date.now() >= payload.exp * 1000;
   } catch (error: any) {

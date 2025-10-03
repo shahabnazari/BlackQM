@@ -282,7 +282,7 @@ export const DistinguishingStatements: React.FC<DistinguishingStatementsProps> =
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && (
+      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
         <TooltipWithBounds
           left={tooltipLeft}
           top={tooltipTop}

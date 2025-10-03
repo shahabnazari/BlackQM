@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import {
   GitBranch,
   GitCommit,
-  GitMerge,
   GitPullRequest,
   RotateCw,
   Download,
@@ -362,14 +361,6 @@ export function VersionControlManager() {
           <Card className="p-4">
             <h4 className="font-medium mb-3">Quick Actions</h4>
             <div className="space-y-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => setShowMergeDialog(true)}
-              >
-                <GitMerge className="w-4 h-4 mr-2" />
-                Merge Branch
-              </Button>
               <Button variant="outline" className="w-full justify-start">
                 <GitPullRequest className="w-4 h-4 mr-2" />
                 Create Pull Request

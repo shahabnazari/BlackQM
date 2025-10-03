@@ -28,30 +28,43 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // Changed to false to not block initial render
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true for initial session check
+  const [isClient, setIsClient] = useState(false);
 
-  // Check for existing session on mount
+  // Client-side only flag
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Check for existing session on mount (client-side only)
+  useEffect(() => {
+    if (!isClient) return; // Skip during SSR
+
     const checkSession = async () => {
       try {
+        console.log('[AuthProvider] Checking existing session...');
         // Check if we have a token
         if (authService.isAuthenticated()) {
-          setIsLoading(true);
-          // Get current user from backend
+          console.log('[AuthProvider] Token found, fetching user...');
+          // Get current user from storage or backend
           const currentUser = await authService.getCurrentUser();
+          console.log('[AuthProvider] User loaded:', currentUser);
           setUser(currentUser);
+        } else {
+          console.log('[AuthProvider] No token found');
         }
       } catch (error: any) {
-        console.error('Session check failed:', error);
+        console.error('[AuthProvider] Session check failed:', error);
         // Clear invalid token
         authService.clearAuthData();
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
     };
 
     checkSession();
-  }, []);
+  }, [isClient]);
 
   const login = useCallback(
     async (email: string, password: string, rememberMe: boolean = true) => {

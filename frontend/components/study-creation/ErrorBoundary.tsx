@@ -27,7 +27,7 @@ export class StudyCreationErrorBoundary extends React.Component<
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: undefined });
+    this.setState({ hasError: false });
     // Optionally reload the page
     window.location.reload();
   };

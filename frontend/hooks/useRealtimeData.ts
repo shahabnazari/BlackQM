@@ -225,8 +225,9 @@ export function useMultiChannelRealtimeData<T = any>(
   useEffect(() => {
     const newData: Record<string, T> = {};
     channels.forEach((channel, index) => {
-      if (results[index].data) {
-        newData[channel] = results[index].data;
+      const result = results[index];
+      if (result?.data) {
+        newData[channel] = result.data;
       }
     });
     setChannelData(newData);

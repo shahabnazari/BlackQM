@@ -111,9 +111,7 @@ export class AuthController {
     description: 'User profile retrieved successfully',
   })
   async getProfile(@Request() req: any) {
-    return {
-      user: req.user,
-    };
+    return req.user;
   }
 
   @Post('forgot-password')
@@ -148,3 +146,5 @@ export class AuthController {
     return this.authService.verifyEmail(token, ipAddress);
   }
 }
+
+

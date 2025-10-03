@@ -3,9 +3,7 @@ import {
   LoginCredentials,
   RegisterData,
   AuthResponse,
-  _PasswordResetRequest,
   PasswordReset,
-  _EmailVerification,
   User,
 } from './types';
 import { tokenStorage, getDeviceFingerprint } from './utils';
@@ -13,7 +11,7 @@ import { tokenStorage, getDeviceFingerprint } from './utils';
 // Create axios instance with base configuration
 const createAuthClient = (): AxiosInstance => {
   const baseURL =
-    process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
   const client = axios.create({
     baseURL,

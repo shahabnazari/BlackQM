@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   ChartBarIcon,
   TableCellsIcon,
   DocumentChartBarIcon,
@@ -10,7 +10,6 @@ import {
   MagnifyingGlassIcon,
   StarIcon,
   LightBulbIcon,
-  _FunnelIcon,
   ArrowTrendingUpIcon,
   PresentationChartLineIcon,
   Squares2X2Icon,
@@ -308,7 +307,7 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
     return widgetCatalog.filter((widget: any) => {
       const matchesSearch = widget.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            widget.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           widget.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+                           widget.tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
       
       const matchesCategory = selectedCategory === 'all' || widget.category === selectedCategory;
       const matchesDifficulty = selectedDifficulty === 'all' || widget.difficulty === selectedDifficulty;

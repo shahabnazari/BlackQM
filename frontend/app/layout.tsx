@@ -2,10 +2,10 @@ import { AuthProvider } from '@/components/providers/AuthProvider';
 import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeScript } from './theme-script';
-// Temporarily disabled for compilation fix
-// import { AccessibilityProvider } from '@/components/accessibility/AccessibilityManager';
-// import { AccessibilityToggle } from '@/components/accessibility/AccessibilityToggle';
+import { AccessibilityProvider } from '@/components/accessibility/AccessibilityManager';
+import { AccessibilityToggle } from '@/components/accessibility/AccessibilityToggle';
 import { SkipLinks } from '@/components/navigation/SkipLinks';
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: 'VQMethod - Advanced Q Methodology Research Platform',
@@ -28,12 +28,18 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased" suppressHydrationWarning>
-        {/* Skip navigation links for keyboard users - WCAG 2.1 Level A */}
-        <SkipLinks />
+        <AccessibilityProvider>
+          {/* Skip navigation links for keyboard users - WCAG 2.1 Level A */}
+          <SkipLinks />
 
-        <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>{children}</AuthProvider>
 
-        {/* Accessibility features temporarily disabled for compilation fix */}
+          {/* Accessibility toggle button */}
+          <AccessibilityToggle />
+
+          {/* Toast notifications */}
+          <Toaster position="top-right" />
+        </AccessibilityProvider>
       </body>
     </html>
   );

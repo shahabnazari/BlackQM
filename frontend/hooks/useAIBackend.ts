@@ -230,7 +230,9 @@ export function useCachedAIRequest<T, P>(
       // Clean old cache entries
       if (cache.current.size > 10) {
         const firstKey = cache.current.keys().next().value;
-        cache.current.delete(firstKey);
+        if (firstKey) {
+          cache.current.delete(firstKey);
+        }
       }
       
       setData(result);

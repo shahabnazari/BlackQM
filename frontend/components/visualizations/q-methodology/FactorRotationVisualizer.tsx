@@ -40,7 +40,7 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
   significanceThreshold = 0.4
 }) => {
   const [rotationAngles, setRotationAngles] = useState<{ [key: string]: number }>({});
-  const [selectedFactors, setSelectedFactors] = useState<[string, string]>([factors[0], factors[1]]);
+  const [selectedFactors, setSelectedFactors] = useState<[string, string]>([factors[0] || 'F1', factors[1] || 'F2']);
   const [showOriginal, setShowOriginal] = useState(false);
   const [animateRotation, setAnimateRotation] = useState(false);
   const [rotationHistory, setRotationHistory] = useState<RotationMatrix[]>([]);
@@ -110,10 +110,10 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
     for (let angle = -180; angle <= 180; angle += 1) {
       const matrix = getRotationMatrix(angle);
       let varianceSum = 0;
-      
+
       for (const [f1, f2] of loadings) {
-        const rotF1 = matrix[0][0] * f1 + matrix[0][1] * f2;
-        const rotF2 = matrix[1][0] * f1 + matrix[1][1] * f2;
+        const rotF1 = (matrix[0]?.[0] || 0) * f1 + (matrix[0]?.[1] || 0) * f2;
+        const rotF2 = (matrix[1]?.[0] || 0) * f1 + (matrix[1]?.[1] || 0) * f2;
         
         // Maximize variance of squared loadings
         varianceSum += Math.pow(rotF1, 4) + Math.pow(rotF2, 4);
@@ -667,7 +667,7 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && (
+      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
         <TooltipWithBounds
           left={tooltipLeft}
           top={tooltipTop}

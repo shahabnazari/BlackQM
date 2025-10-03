@@ -114,7 +114,8 @@ export default function ParticipantPreview({ previewData, studyTitle }: Particip
 
   const renderStepContent = () => {
     const step = steps[currentStep];
-    
+    if (!step) return null;
+
     switch (step.type) {
       case 'welcome':
         return (

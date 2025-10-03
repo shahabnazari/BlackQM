@@ -213,7 +213,7 @@ export const EigenvalueScreePlot: React.FC<EigenvalueScreePlotProps> = ({
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && (
+      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
         <TooltipWithBounds
           left={tooltipLeft}
           top={tooltipTop}

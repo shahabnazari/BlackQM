@@ -13,9 +13,9 @@ export interface User {
 }
 
 class AuthServicee {
-  private static instance: AuthServicee;e;
+  private static instance: AuthServicee;
   private tokens: AuthTokens | null = null;
-  private user: User | null = null
+  private user: User | null = null;
 
   private constructor() {
     // Load tokens from localStorage if available

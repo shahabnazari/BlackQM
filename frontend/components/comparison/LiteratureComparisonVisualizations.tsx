@@ -578,7 +578,7 @@ export default function LiteratureComparisonVisualizations({
                       cx="50%"
                       cy="50%"
                       outerRadius={80}
-                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      label={({ percent }: any) => `${(percent * 100).toFixed(0)}%`}
                     >
                       {categoryDistribution.map((entry, index) => (
                         <Cell
