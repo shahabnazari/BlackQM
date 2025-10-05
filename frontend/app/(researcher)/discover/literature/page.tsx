@@ -61,15 +61,18 @@ export default function LiteratureSearchPage() {
   const [totalResults, setTotalResults] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
   // const [selectedView, setSelectedView] = useState<'list' | 'grid'>('list');
 
   // Advanced filters
   const [filters, setFilters] = useState({
-    yearFrom: 2020,
-    yearTo: new Date().getFullYear(),
+    yearFrom: 2020 as number | undefined,
+    yearTo: new Date().getFullYear() as number | undefined,
     sources: ['semantic_scholar', 'crossref', 'pubmed', 'arxiv'],
     sortBy: 'relevance' as 'relevance' | 'date' | 'citations',
     citationMin: 0,
+    minCitations: undefined as number | undefined,
+    publicationType: 'all' as 'all' | 'journal' | 'conference' | 'preprint',
     includeAIMode: true,
   });
 
@@ -178,8 +181,8 @@ export default function LiteratureSearchPage() {
       const result = await literatureAPI.searchLiterature({
         query,
         sources: filters.sources,
-        yearFrom: filters.yearFrom,
-        yearTo: filters.yearTo,
+        ...(filters.yearFrom && { yearFrom: filters.yearFrom }),
+        ...(filters.yearTo && { yearTo: filters.yearTo }),
         sortBy: filters.sortBy,
         page: currentPage,
         limit: 20,
@@ -763,6 +766,231 @@ export default function LiteratureSearchPage() {
         </div>
       </div>
 
+      {/* PHASE 9 DAY 25.1: Global Search Bar - Searches ALL Sources */}
+      <Card className="border-2 border-gradient-to-r from-blue-500 to-purple-500 bg-gradient-to-r from-blue-50 to-purple-50">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Search className="w-5 h-5 text-blue-600" />
+            <h3 className="font-semibold text-gray-900">
+              Universal Search
+            </h3>
+            <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+              Searches all selected sources below
+            </Badge>
+          </div>
+
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-6 h-6" />
+              <Input
+                placeholder="Search across academic databases, alternative sources, and social media..."
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearchAllSources()}
+                className="pl-14 pr-4 h-14 text-lg border-2 focus:border-blue-500"
+              />
+            </div>
+            <Button
+              onClick={handleSearchAllSources}
+              disabled={loading || loadingAlternative || loadingSocial}
+              className="h-14 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold"
+              size="lg"
+            >
+              {loading || loadingAlternative || loadingSocial ? (
+                <Loader2 className="w-6 h-6 animate-spin" />
+              ) : (
+                <>
+                  <Search className="w-5 h-5 mr-2" />
+                  Search All Sources
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowAIAssistant(!showAIAssistant)}
+              className={cn(
+                'h-14 px-6 border-2',
+                showAIAssistant && 'bg-purple-100 border-purple-500'
+              )}
+            >
+              <Sparkles className="w-5 h-5 mr-2 text-purple-600" />
+              AI Assistant
+              {showAIAssistant && <Check className="w-4 h-4 ml-2 text-purple-600" />}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="h-14 px-6 border-2"
+            >
+              <Filter className="w-5 h-5 mr-2" />
+              Filters
+              {showFilters ? (
+                <X className="w-4 h-4 ml-2" />
+              ) : (
+                <ChevronRight className="w-4 h-4 ml-2" />
+              )}
+            </Button>
+          </div>
+
+          {/* Active Sources Indicator */}
+          <div className="flex items-center gap-2 mt-4 text-sm text-gray-600">
+            <span className="font-medium">Active sources:</span>
+            {academicDatabases.length > 0 && (
+              <Badge variant="outline" className="bg-blue-50">
+                {academicDatabases.length} Academic
+              </Badge>
+            )}
+            {alternativeSources.length > 0 && (
+              <Badge variant="outline" className="bg-indigo-50">
+                {alternativeSources.length} Alternative
+              </Badge>
+            )}
+            {socialPlatforms.length > 0 && (
+              <Badge variant="outline" className="bg-purple-50">
+                {socialPlatforms.length} Social Media
+              </Badge>
+            )}
+            {academicDatabases.length === 0 && alternativeSources.length === 0 && socialPlatforms.length === 0 && (
+              <span className="text-orange-600">⚠️ No sources selected - please select sources below</span>
+            )}
+          </div>
+
+          {/* AI Assistant Panel */}
+          <AnimatePresence>
+            {showAIAssistant && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="mt-4 pt-4 border-t"
+              >
+                <AISearchAssistant
+                  initialQuery={query}
+                  onQueryChange={setQuery}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Advanced Filters */}
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="space-y-4 pt-4 border-t mt-4"
+              >
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Year Range</label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        type="number"
+                        placeholder="From"
+                        value={filters.yearFrom}
+                        onChange={e =>
+                          setFilters({
+                            ...filters,
+                            yearFrom: parseInt(e.target.value) || undefined,
+                          })
+                        }
+                        className="w-full"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="To"
+                        value={filters.yearTo}
+                        onChange={e =>
+                          setFilters({
+                            ...filters,
+                            yearTo: parseInt(e.target.value) || undefined,
+                          })
+                        }
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Min Citations</label>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 10"
+                      value={filters.minCitations}
+                      onChange={e =>
+                        setFilters({
+                          ...filters,
+                          minCitations: parseInt(e.target.value) || undefined,
+                        })
+                      }
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Publication Type</label>
+                    <select
+                      value={filters.publicationType}
+                      onChange={e =>
+                        setFilters({
+                          ...filters,
+                          publicationType: e.target.value as any,
+                        })
+                      }
+                      className="mt-1 w-full h-10 px-3 border rounded-md"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="journal">Journal Articles</option>
+                      <option value="conference">Conference Papers</option>
+                      <option value="preprint">Preprints</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Sort By</label>
+                    <select
+                      value={filters.sortBy}
+                      onChange={e =>
+                        setFilters({
+                          ...filters,
+                          sortBy: e.target.value as any,
+                        })
+                      }
+                      className="mt-1 w-full h-10 px-3 border rounded-md"
+                    >
+                      <option value="relevance">Relevance</option>
+                      <option value="citations">Citations</option>
+                      <option value="date">Date (Newest)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setFilters({
+                        yearFrom: 2020,
+                        yearTo: new Date().getFullYear(),
+                        sources: ['semantic_scholar', 'crossref', 'pubmed', 'arxiv'],
+                        sortBy: 'relevance',
+                        citationMin: 0,
+                        minCitations: undefined,
+                        publicationType: 'all',
+                        includeAIMode: true,
+                      })
+                    }
+                  >
+                    Reset Filters
+                  </Button>
+                  <Button onClick={handleSearchAllSources}>
+                    Apply Filters
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </CardContent>
+      </Card>
+
       {/* PHASE 9 DAY 25: Panel 1 - Academic Resources & Institutional Access */}
       <Card className="border-2 border-blue-200">
         <CardHeader>
@@ -780,47 +1008,6 @@ export default function LiteratureSearchPage() {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <Input
-                placeholder="Enter keywords, research questions, or topics..."
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSearchAllSources()}
-                className="pl-10 pr-4 h-12 text-lg"
-              />
-            </div>
-            <Button
-              onClick={handleSearchAllSources}
-              disabled={loading || loadingAlternative || loadingSocial}
-              className="h-12 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-              size="lg"
-            >
-              {loading || loadingAlternative || loadingSocial ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <Search className="w-5 h-5 mr-2" />
-                  Search All Sources
-                </>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="h-12"
-            >
-              <Filter className="w-5 h-5 mr-2" />
-              Filters
-              {showFilters ? (
-                <X className="w-4 h-4 ml-1" />
-              ) : (
-                <ChevronRight className="w-4 h-4 ml-1" />
-              )}
-            </Button>
-          </div>
-
           {/* PHASE 9 DAY 25: Academic Database Selection */}
           <div>
             <label className="text-sm font-medium mb-2 block">
@@ -828,13 +1015,27 @@ export default function LiteratureSearchPage() {
             </label>
             <div className="flex gap-2 flex-wrap">
               {[
-                { id: 'pubmed', label: 'PubMed', icon: '🏥', desc: 'Medical/life sciences' },
-                { id: 'semantic_scholar', label: 'Semantic Scholar', icon: '🎓', desc: 'CS/interdisciplinary' },
-                { id: 'arxiv', label: 'ArXiv', icon: '📐', desc: 'Physics/Math/CS preprints' },
-                { id: 'crossref', label: 'CrossRef', icon: '🔗', desc: 'DOI database' },
-                { id: 'ieee', label: 'IEEE Xplore', icon: '⚡', desc: 'Engineering' },
-                { id: 'biorxiv', label: 'bioRxiv', icon: '🧬', desc: 'Biology preprints' },
-                { id: 'pmc', label: 'PubMed Central', icon: '📖', desc: 'Free full-text' },
+                // Free & Open Access
+                { id: 'pubmed', label: 'PubMed', icon: '🏥', desc: 'Medical/life sciences - FREE', category: 'Free' },
+                { id: 'pmc', label: 'PubMed Central', icon: '📖', desc: 'Free full-text articles', category: 'Free' },
+                { id: 'arxiv', label: 'ArXiv', icon: '📐', desc: 'Physics/Math/CS preprints - FREE', category: 'Free' },
+                { id: 'biorxiv', label: 'bioRxiv', icon: '🧬', desc: 'Biology preprints - FREE', category: 'Free' },
+                { id: 'semantic_scholar', label: 'Semantic Scholar', icon: '🎓', desc: 'CS/interdisciplinary - FREE', category: 'Free' },
+
+                // Multidisciplinary Premium
+                { id: 'web_of_science', label: 'Web of Science', icon: '🌐', desc: 'Multidisciplinary citation index', category: 'Premium' },
+                { id: 'scopus', label: 'Scopus', icon: '🔬', desc: 'Multidisciplinary abstract/citation', category: 'Premium' },
+                { id: 'crossref', label: 'CrossRef', icon: '🔗', desc: 'DOI database registry', category: 'Free' },
+
+                // Subject-Specific
+                { id: 'ieee', label: 'IEEE Xplore', icon: '⚡', desc: 'Engineering/tech/CS', category: 'Premium' },
+                { id: 'jstor', label: 'JSTOR', icon: '📚', desc: 'Humanities/social sciences', category: 'Premium' },
+                { id: 'springer', label: 'SpringerLink', icon: '📕', desc: 'STM & social sciences', category: 'Premium' },
+                { id: 'nature', label: 'Nature', icon: '🔬', desc: 'Science journals', category: 'Premium' },
+                { id: 'wiley', label: 'Wiley Online', icon: '📘', desc: 'Multidisciplinary', category: 'Premium' },
+                { id: 'elsevier', label: 'ScienceDirect', icon: '🔵', desc: 'Elsevier journals', category: 'Premium' },
+                { id: 'psycinfo', label: 'PsycINFO', icon: '🧠', desc: 'Psychology/behavioral sciences', category: 'Premium' },
+                { id: 'eric', label: 'ERIC', icon: '🎓', desc: 'Education research - FREE', category: 'Free' },
               ].map(source => (
                 <Badge
                   key={source.id}
@@ -875,155 +1076,6 @@ export default function LiteratureSearchPage() {
               toast.info('Scroll up to login with your institution');
             }}
           />
-
-          {/* Advanced Filters */}
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="space-y-4 pt-4 border-t"
-              >
-                <div className="grid grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Year Range</label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        type="number"
-                        value={filters.yearFrom}
-                        onChange={e =>
-                          setFilters({
-                            ...filters,
-                            yearFrom: parseInt(e.target.value),
-                          })
-                        }
-                        className="w-24"
-                      />
-                      <span className="self-center">to</span>
-                      <Input
-                        type="number"
-                        value={filters.yearTo}
-                        onChange={e =>
-                          setFilters({
-                            ...filters,
-                            yearTo: parseInt(e.target.value),
-                          })
-                        }
-                        className="w-24"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Min Citations</label>
-                    <Input
-                      type="number"
-                      value={filters.citationMin}
-                      onChange={e =>
-                        setFilters({
-                          ...filters,
-                          citationMin: parseInt(e.target.value),
-                        })
-                      }
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Sort By</label>
-                    <select
-                      value={filters.sortBy}
-                      onChange={e =>
-                        setFilters({
-                          ...filters,
-                          sortBy: e.target.value as any,
-                        })
-                      }
-                      className="w-full mt-1 px-3 py-2 border rounded-md"
-                    >
-                      <option value="relevance">Relevance</option>
-                      <option value="date">Date (Newest)</option>
-                      <option value="citations">Citations</option>
-                    </select>
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-sm font-medium">
-                      Main Databases
-                    </label>
-                    <div className="flex gap-2 mt-1 flex-wrap">
-                      <Badge
-                        variant={
-                          filters.sources.includes('semantic_scholar')
-                            ? 'default'
-                            : 'outline'
-                        }
-                        className="cursor-pointer"
-                        onClick={() => {
-                          const sources = filters.sources.includes(
-                            'semantic_scholar'
-                          )
-                            ? filters.sources.filter(
-                                s => s !== 'semantic_scholar'
-                              )
-                            : [...filters.sources, 'semantic_scholar'];
-                          setFilters({ ...filters, sources });
-                        }}
-                      >
-                        Semantic Scholar
-                      </Badge>
-                      <Badge
-                        variant={
-                          filters.sources.includes('crossref')
-                            ? 'default'
-                            : 'outline'
-                        }
-                        className="cursor-pointer"
-                        onClick={() => {
-                          const sources = filters.sources.includes('crossref')
-                            ? filters.sources.filter(s => s !== 'crossref')
-                            : [...filters.sources, 'crossref'];
-                          setFilters({ ...filters, sources });
-                        }}
-                      >
-                        CrossRef
-                      </Badge>
-                      <Badge
-                        variant={
-                          filters.sources.includes('pubmed')
-                            ? 'default'
-                            : 'outline'
-                        }
-                        className="cursor-pointer"
-                        onClick={() => {
-                          const sources = filters.sources.includes('pubmed')
-                            ? filters.sources.filter(s => s !== 'pubmed')
-                            : [...filters.sources, 'pubmed'];
-                          setFilters({ ...filters, sources });
-                        }}
-                      >
-                        PubMed
-                      </Badge>
-                      <Badge
-                        variant={
-                          filters.sources.includes('arxiv')
-                            ? 'default'
-                            : 'outline'
-                        }
-                        className="cursor-pointer"
-                        onClick={() => {
-                          const sources = filters.sources.includes('arxiv')
-                            ? filters.sources.filter(s => s !== 'arxiv')
-                            : [...filters.sources, 'arxiv'];
-                          setFilters({ ...filters, sources });
-                        }}
-                      >
-                        arXiv
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-4 border-t">
