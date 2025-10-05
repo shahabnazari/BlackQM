@@ -1,12 +1,24 @@
 /**
  * Academic Institution Login Component
- * Phase 9 Day 25: Enterprise-grade institutional access integration
+ * Phase 9 Day 25.1: Enterprise-grade institutional access integration
  *
  * Supports:
  * - Shibboleth SSO (most universities)
  * - OpenAthens (UK institutions)
  * - ORCID authentication
- * - Direct institution login
+ * - 358 universities across 6 continents
+ *
+ * ⚠️ IMPORTANT: DEMONSTRATION IMPLEMENTATION
+ * This is a simulated SSO flow for UX demonstration purposes.
+ *
+ * Production deployment requires:
+ * 1. Backend Shibboleth Service Provider (SP) configuration
+ * 2. OpenAthens account and integration keys
+ * 3. ORCID OAuth application registration
+ * 4. Database licensing agreements with academic publishers
+ * 5. Server-side SSO redirect handling and session management
+ *
+ * Current implementation shows the intended user flow without real authentication.
  */
 
 'use client';
@@ -21,22 +33,14 @@ import {
   Search,
   ExternalLink,
   AlertCircle,
+  Info,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-
-// Enterprise-grade type definitions
-interface Institution {
-  id: string;
-  name: string;
-  country: string;
-  authMethod: 'shibboleth' | 'openathens';
-  ssoUrl?: string;
-  logo?: string;
-}
+import { UNIVERSITIES, type Institution } from './UNIVERSITY_LIST';
 
 interface InstitutionAuthState {
   isAuthenticated: boolean;
@@ -52,75 +56,6 @@ interface AcademicInstitutionLoginProps {
   currentAuth: InstitutionAuthState;
 }
 
-// Top 100 universities worldwide (comprehensive list)
-const MAJOR_INSTITUTIONS: Institution[] = [
-  // US - Top Universities
-  { id: 'mit', name: 'Massachusetts Institute of Technology', country: 'US', authMethod: 'shibboleth', ssoUrl: 'https://idp.mit.edu' },
-  { id: 'stanford', name: 'Stanford University', country: 'US', authMethod: 'shibboleth', ssoUrl: 'https://login.stanford.edu' },
-  { id: 'harvard', name: 'Harvard University', country: 'US', authMethod: 'shibboleth', ssoUrl: 'https://idp.harvard.edu' },
-  { id: 'caltech', name: 'California Institute of Technology', country: 'US', authMethod: 'shibboleth' },
-  { id: 'princeton', name: 'Princeton University', country: 'US', authMethod: 'shibboleth' },
-  { id: 'yale', name: 'Yale University', country: 'US', authMethod: 'shibboleth' },
-  { id: 'columbia', name: 'Columbia University', country: 'US', authMethod: 'shibboleth' },
-  { id: 'chicago', name: 'University of Chicago', country: 'US', authMethod: 'shibboleth' },
-  { id: 'upenn', name: 'University of Pennsylvania', country: 'US', authMethod: 'shibboleth' },
-  { id: 'berkeley', name: 'University of California, Berkeley', country: 'US', authMethod: 'shibboleth' },
-  { id: 'ucla', name: 'University of California, Los Angeles', country: 'US', authMethod: 'shibboleth' },
-  { id: 'cornell', name: 'Cornell University', country: 'US', authMethod: 'shibboleth' },
-  { id: 'duke', name: 'Duke University', country: 'US', authMethod: 'shibboleth' },
-  { id: 'northwestern', name: 'Northwestern University', country: 'US', authMethod: 'shibboleth' },
-  { id: 'jhu', name: 'Johns Hopkins University', country: 'US', authMethod: 'shibboleth' },
-  { id: 'umich', name: 'University of Michigan', country: 'US', authMethod: 'shibboleth' },
-  { id: 'nyu', name: 'New York University', country: 'US', authMethod: 'shibboleth' },
-  { id: 'carnegie', name: 'Carnegie Mellon University', country: 'US', authMethod: 'shibboleth' },
-  { id: 'usc', name: 'University of Southern California', country: 'US', authMethod: 'shibboleth' },
-  { id: 'ucsd', name: 'University of California, San Diego', country: 'US', authMethod: 'shibboleth' },
-
-  // UK - Top Universities
-  { id: 'oxford', name: 'University of Oxford', country: 'UK', authMethod: 'openathens', ssoUrl: 'https://openathens.ox.ac.uk' },
-  { id: 'cambridge', name: 'University of Cambridge', country: 'UK', authMethod: 'openathens', ssoUrl: 'https://raven.cam.ac.uk' },
-  { id: 'imperial', name: 'Imperial College London', country: 'UK', authMethod: 'openathens' },
-  { id: 'ucl', name: 'University College London', country: 'UK', authMethod: 'openathens' },
-  { id: 'edinburgh', name: 'University of Edinburgh', country: 'UK', authMethod: 'openathens' },
-  { id: 'manchester', name: 'University of Manchester', country: 'UK', authMethod: 'openathens' },
-  { id: 'kings', name: "King's College London", country: 'UK', authMethod: 'openathens' },
-  { id: 'lse', name: 'London School of Economics', country: 'UK', authMethod: 'openathens' },
-  { id: 'warwick', name: 'University of Warwick', country: 'UK', authMethod: 'openathens' },
-  { id: 'bristol', name: 'University of Bristol', country: 'UK', authMethod: 'openathens' },
-
-  // Europe - Top Universities
-  { id: 'eth', name: 'ETH Zurich', country: 'CH', authMethod: 'shibboleth' },
-  { id: 'epfl', name: 'EPFL Lausanne', country: 'CH', authMethod: 'shibboleth' },
-  { id: 'karolinska', name: 'Karolinska Institute', country: 'SE', authMethod: 'shibboleth' },
-  { id: 'copenhagen', name: 'University of Copenhagen', country: 'DK', authMethod: 'shibboleth' },
-  { id: 'lmu', name: 'LMU Munich', country: 'DE', authMethod: 'shibboleth' },
-  { id: 'heidelberg', name: 'Heidelberg University', country: 'DE', authMethod: 'shibboleth' },
-  { id: 'tu_munich', name: 'Technical University Munich', country: 'DE', authMethod: 'shibboleth' },
-  { id: 'sorbonne', name: 'Sorbonne University', country: 'FR', authMethod: 'shibboleth' },
-  { id: 'psl', name: 'PSL Research University', country: 'FR', authMethod: 'shibboleth' },
-  { id: 'leiden', name: 'Leiden University', country: 'NL', authMethod: 'shibboleth' },
-  { id: 'amsterdam', name: 'University of Amsterdam', country: 'NL', authMethod: 'shibboleth' },
-  { id: 'delft', name: 'Delft University of Technology', country: 'NL', authMethod: 'shibboleth' },
-
-  // Asia-Pacific - Top Universities
-  { id: 'tokyo', name: 'University of Tokyo', country: 'JP', authMethod: 'shibboleth' },
-  { id: 'kyoto', name: 'Kyoto University', country: 'JP', authMethod: 'shibboleth' },
-  { id: 'nus', name: 'National University of Singapore', country: 'SG', authMethod: 'shibboleth' },
-  { id: 'ntu', name: 'Nanyang Technological University', country: 'SG', authMethod: 'shibboleth' },
-  { id: 'tsinghua', name: 'Tsinghua University', country: 'CN', authMethod: 'shibboleth' },
-  { id: 'peking', name: 'Peking University', country: 'CN', authMethod: 'shibboleth' },
-  { id: 'hku', name: 'University of Hong Kong', country: 'HK', authMethod: 'shibboleth' },
-  { id: 'anu', name: 'Australian National University', country: 'AU', authMethod: 'shibboleth' },
-  { id: 'melbourne', name: 'University of Melbourne', country: 'AU', authMethod: 'shibboleth' },
-  { id: 'sydney', name: 'University of Sydney', country: 'AU', authMethod: 'shibboleth' },
-
-  // Canada - Top Universities
-  { id: 'toronto', name: 'University of Toronto', country: 'CA', authMethod: 'shibboleth' },
-  { id: 'ubc', name: 'University of British Columbia', country: 'CA', authMethod: 'shibboleth' },
-  { id: 'mcgill', name: 'McGill University', country: 'CA', authMethod: 'shibboleth' },
-  { id: 'waterloo', name: 'University of Waterloo', country: 'CA', authMethod: 'shibboleth' },
-];
-
 export function AcademicInstitutionLogin({
   onAuthChange,
   currentAuth,
@@ -130,8 +65,8 @@ export function AcademicInstitutionLogin({
   const [isLoading, setIsLoading] = useState(false);
   const [showInstitutionList, setShowInstitutionList] = useState(false);
 
-  // Filter institutions based on search
-  const filteredInstitutions = MAJOR_INSTITUTIONS.filter(inst =>
+  // Filter institutions based on search (358 universities worldwide)
+  const filteredInstitutions = UNIVERSITIES.filter(inst =>
     inst.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     inst.country.toLowerCase().includes(searchQuery.toLowerCase())
   );

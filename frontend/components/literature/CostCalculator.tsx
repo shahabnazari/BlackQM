@@ -1,19 +1,14 @@
 /**
- * Academic Resource Cost Calculator
- * Phase 9 Day 25: Enterprise-grade cost transparency
+ * Academic Resource Cost Calculator - COMPACT VERSION
+ * Phase 9 Day 25.1: Space-efficient cost transparency
  *
- * Calculates and displays:
- * - Per-article costs by database
- * - Total estimated cost without institutional access
- * - Comparison: with vs without institution
- * - Cost breakdown by source
+ * Displays inline cost summary with detailed breakdown on demand
  */
 
 'use client';
 
-import React, { useMemo } from 'react';
-import { DollarSign, TrendingDown, AlertCircle, Info } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useMemo, useState } from 'react';
+import { DollarSign, TrendingDown, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { Paper } from '@/lib/services/literature-api.service';
@@ -39,18 +34,23 @@ interface CostCalculatorProps {
 
 // Industry-standard article access costs (2025 estimates)
 const ARTICLE_COSTS: DatabaseCosts = {
-  pubmed: 30, // Average $30 per article via publishers
-  'pubmed central': 0, // Free full-text
-  semantic_scholar: 25, // Average across sources
-  crossref: 35, // DOI resolution to paid sources
-  arxiv: 0, // Free preprints
-  ieee: 33, // IEEE Xplore individual article
-  biorxiv: 0, // Free biology preprints
-  pmc: 0, // PubMed Central - free
-  jstor: 40, // Premium humanities/social sciences
-  springer: 39.95, // Springer Nature standard
-  elsevier: 31.50, // Elsevier ScienceDirect
-  wiley: 30, // Wiley Online Library
+  pubmed: 30,
+  'pubmed central': 0,
+  semantic_scholar: 0, // Free access
+  crossref: 35,
+  arxiv: 0,
+  ieee: 33,
+  biorxiv: 0,
+  pmc: 0,
+  jstor: 40,
+  springer: 39.95,
+  elsevier: 31.50,
+  wiley: 30,
+  nature: 32,
+  web_of_science: 35,
+  scopus: 35,
+  psycinfo: 40,
+  eric: 0,
 };
 
 export function CostCalculator({
@@ -59,6 +59,8 @@ export function CostCalculator({
   institutionAccessActive,
   onLoginClick,
 }: CostCalculatorProps) {
+  const [showBreakdown, setShowBreakdown] = useState(false);
+
   // Calculate cost breakdown by database
   const costBreakdown = useMemo<CostBreakdown[]>(() => {
     const breakdown = new Map<string, CostBreakdown>();
@@ -66,7 +68,7 @@ export function CostCalculator({
     papers.forEach(paper => {
       if (!selectedPapers.has(paper.id)) return;
 
-      // Determine database source (simplified - would be more robust in production)
+      // Determine database source
       const source = paper.source?.toLowerCase() || 'unknown';
       const database = source.includes('pmc') || source.includes('pubmed central')
         ? 'pmc'
@@ -80,6 +82,20 @@ export function CostCalculator({
         ? 'biorxiv'
         : source.includes('semantic')
         ? 'semantic_scholar'
+        : source.includes('jstor')
+        ? 'jstor'
+        : source.includes('springer')
+        ? 'springer'
+        : source.includes('elsevier') || source.includes('sciencedirect')
+        ? 'elsevier'
+        : source.includes('wiley')
+        ? 'wiley'
+        : source.includes('nature')
+        ? 'nature'
+        : source.includes('web of science')
+        ? 'web_of_science'
+        : source.includes('scopus')
+        ? 'scopus'
         : 'crossref';
 
       const costPerArticle = ARTICLE_COSTS[database] || 30; // Default $30
@@ -101,7 +117,7 @@ export function CostCalculator({
     return Array.from(breakdown.values()).sort((a, b) => b.totalCost - a.totalCost);
   }, [selectedPapers, papers]);
 
-  // Calculate total costs
+  // Calculate totals
   const totalCost = useMemo(() => {
     return costBreakdown.reduce((sum, item) => sum + item.totalCost, 0);
   }, [costBreakdown]);
@@ -124,150 +140,121 @@ export function CostCalculator({
   }
 
   return (
-    <Card className={
-      institutionAccessActive
-        ? 'border-2 border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20'
-        : 'border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20'
-    }>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between text-lg">
-          <span className="flex items-center gap-2">
-            <DollarSign className={
-              institutionAccessActive
-                ? 'w-5 h-5 text-green-600'
-                : 'w-5 h-5 text-orange-600'
-            } />
-            Cost Transparency
-          </span>
-          {institutionAccessActive ? (
-            <Badge className="bg-green-600 text-white">
-              Free Access Active
-            </Badge>
-          ) : (
-            <Badge className="bg-orange-600 text-white">
-              Estimated Cost
-            </Badge>
-          )}
-        </CardTitle>
-      </CardHeader>
+    <div className="space-y-2">
+      {/* Compact cost summary */}
+      <div className={
+        institutionAccessActive
+          ? 'flex items-center justify-between gap-3 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg'
+          : 'flex items-center justify-between gap-3 p-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg'
+      }>
+        <div className="flex items-center gap-3">
+          <DollarSign className={
+            institutionAccessActive ? 'w-4 h-4 text-green-600' : 'w-4 h-4 text-orange-600'
+          } />
 
-      <CardContent className="space-y-4">
-        {/* Cost comparison */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Without institution */}
-          <div className={
-            institutionAccessActive
-              ? 'opacity-60'
-              : 'p-3 bg-white dark:bg-gray-800 rounded-lg border-2 border-orange-300'
-          }>
-            <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              Without Institution
-            </p>
-            <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-              ${totalCost.toFixed(2)}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {paidArticles} paid articles
-            </p>
-          </div>
-
-          {/* With institution */}
-          <div className={
-            institutionAccessActive
-              ? 'p-3 bg-white dark:bg-gray-800 rounded-lg border-2 border-green-300'
-              : 'opacity-60'
-          }>
-            <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              With Institution
-            </p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-              $0.00
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Free access
-            </p>
-          </div>
-        </div>
-
-        {/* Savings indicator */}
-        {!institutionAccessActive && totalCost > 0 && (
-          <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-            <TrendingDown className="w-5 h-5 text-green-600" />
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-green-900 dark:text-green-100">
-                Save ${totalCost.toFixed(2)} with institutional access
-              </p>
-              <p className="text-xs text-green-700 dark:text-green-300">
-                Login with your university to get free access
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Cost breakdown */}
-        {costBreakdown.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-              <Info className="w-4 h-4" />
-              Cost Breakdown ({selectedPapers.size} articles selected)
-            </p>
-            <div className="space-y-1 max-h-40 overflow-y-auto">
-              {costBreakdown.map(item => (
-                <div
-                  key={item.database}
-                  className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border"
-                >
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {item.database.toUpperCase()}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {item.count} article{item.count > 1 ? 's' : ''} × ${item.costPerArticle.toFixed(2)}
-                    </p>
-                  </div>
-                  <p className={
-                    item.costPerArticle === 0
-                      ? 'text-sm font-semibold text-green-600 dark:text-green-400'
-                      : 'text-sm font-semibold text-gray-900 dark:text-gray-100'
-                  }>
-                    {item.costPerArticle === 0 ? 'FREE' : `$${item.totalCost.toFixed(2)}`}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Free articles summary */}
-        {freeArticles > 0 && (
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <AlertCircle className="w-4 h-4" />
-            <span>
-              {freeArticles} article{freeArticles > 1 ? 's are' : ' is'} free (ArXiv, bioRxiv, PMC)
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {selectedPapers.size} paper{selectedPapers.size !== 1 ? 's' : ''}:
             </span>
+            {institutionAccessActive ? (
+              <Badge className="bg-green-600 text-white text-xs">FREE</Badge>
+            ) : (
+              <>
+                <span className="text-base font-bold text-orange-600 dark:text-orange-400">
+                  ${totalCost.toFixed(2)}
+                </span>
+                <span className="text-xs text-gray-500">
+                  ({paidArticles} paid, {freeArticles} free)
+                </span>
+              </>
+            )}
           </div>
-        )}
 
-        {/* Login CTA */}
-        {!institutionAccessActive && totalCost > 0 && onLoginClick && (
-          <Button
-            onClick={onLoginClick}
-            className="w-full bg-blue-600 hover:bg-blue-700"
-          >
-            Login with Institution to Get Free Access
-          </Button>
-        )}
+          {!institutionAccessActive && totalCost > 0 && (
+            <div className="flex items-center gap-1">
+              <TrendingDown className="w-3 h-3 text-green-600" />
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                Save with institution
+              </span>
+            </div>
+          )}
+        </div>
 
-        {/* Help text */}
-        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1 p-2 bg-gray-50 dark:bg-gray-800 rounded">
-          <p>
-            <strong>Note:</strong> Costs shown are estimates for individual article purchases.
-          </p>
-          <p>
-            Institutional access provides unlimited free access to all premium databases.
+        {/* Expand/Collapse button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowBreakdown(!showBreakdown)}
+          className="h-6 px-2 text-xs"
+        >
+          {showBreakdown ? (
+            <>
+              <ChevronUp className="w-3 h-3 mr-1" />
+              Hide
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-3 h-3 mr-1" />
+              Details
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* Detailed breakdown (collapsible) */}
+      {showBreakdown && (
+        <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg space-y-2">
+          {/* Cost breakdown */}
+          {costBreakdown.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <Info className="w-3 h-3" />
+                Cost by Database:
+              </p>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {costBreakdown.map(item => (
+                  <div
+                    key={item.database}
+                    className="flex items-center justify-between py-1 px-2 bg-white dark:bg-gray-900 rounded text-xs"
+                  >
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {item.database.toUpperCase()}
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400 ml-2">
+                        {item.count}× ${item.costPerArticle.toFixed(2)}
+                      </span>
+                    </div>
+                    <span className={
+                      item.costPerArticle === 0
+                        ? 'font-semibold text-green-600 dark:text-green-400'
+                        : 'font-semibold text-gray-900 dark:text-gray-100'
+                    }>
+                      {item.costPerArticle === 0 ? 'FREE' : `$${item.totalCost.toFixed(2)}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Login CTA */}
+          {!institutionAccessActive && totalCost > 0 && onLoginClick && (
+            <Button
+              onClick={onLoginClick}
+              size="sm"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-xs h-7"
+            >
+              Login with Institution → Get Free Access
+            </Button>
+          )}
+
+          {/* Note */}
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            💡 Institutional access provides unlimited free access to premium databases
           </p>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }

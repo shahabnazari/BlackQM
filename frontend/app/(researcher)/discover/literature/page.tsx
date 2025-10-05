@@ -183,6 +183,7 @@ export default function LiteratureSearchPage() {
         sources: filters.sources,
         ...(filters.yearFrom && { yearFrom: filters.yearFrom }),
         ...(filters.yearTo && { yearTo: filters.yearTo }),
+        ...(filters.minCitations && { minCitations: filters.minCitations }),
         sortBy: filters.sortBy,
         page: currentPage,
         limit: 20,
