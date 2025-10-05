@@ -6,10 +6,10 @@
 
 **Purpose:** Future phases roadmap for world-class research platform expansion
 **Part 1:** [PHASE_TRACKER_PART1.md](./PHASE_TRACKER_PART1.md) - Phases 1-8
-**Part 2:** [PHASE_TRACKER_PART2.md](./PHASE_TRACKER_PART2.md) - Phases 8.5-9
+**Part 2:** [PHASE_TRACKER_PART2.md](./PHASE_TRACKER_PART2.md) - Phases 8.5-9.5
 **Reference Guides:** See Implementation Guide Parts 1-5 for ALL technical details
 **Navigation System:** [Research Lifecycle Navigation Architecture](./RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md) - 10-phase unified navigation
-**Patent Strategy:** [PATENT_ROADMAP_SUMMARY.md](./PATENT_ROADMAP_SUMMARY.md) - 7+ patents identified
+**Patent Strategy:** [PATENT_ROADMAP_SUMMARY.md](./PATENT_ROADMAP_SUMMARY.md) - 21 innovations documented
 **Status:** Phase 10+ Future Roadmap | Post-MVP Expansion
 
 ## 🚀 PART 3 SCOPE
@@ -21,7 +21,8 @@ This document contains **Phases 10-20** representing the future expansion roadma
 - Internationalization and growth features
 - Monetization infrastructure
 
-**Current Focus:** Part 2 (Phase 9) is in active development
+**Current Focus:** Part 2 (Phases 9-9.5) complete - Literature Review & Research Design Intelligence
+**Next:** Phase 10 (Report Generation & Research Repository)
 **Timeline:** Part 3 phases to be prioritized based on customer feedback and market demands
 
 ---
@@ -39,30 +40,330 @@ This document contains **Phases 10-20** representing the future expansion roadma
 
 ---
 
+## 📚 PHASE 9 COMPLETION RECORDS (Moved from Part 2)
+
+### 🎯 PHASE 9 DAY 20 COMPLETION SUMMARY
+
+**Date:** October 3, 2025
+**Status:** ✅ TASKS 1-2 COMPLETE
+**Implementation Time:** 3 hours (Tasks 1-2 only)
+
+#### Implementation Completed
+
+**Task 1: UnifiedThemeExtractionService (870 lines)**
+✅ Full enterprise-grade service with:
+- `extractThemesFromSource()` - Extract from ANY source type
+- `mergeThemesFromSources()` - Deduplicate and combine themes
+- `getThemeProvenanceReport()` - Full transparency reports
+- Statistical influence calculation algorithms
+- Request caching and retry logic
+- Comprehensive error handling
+
+**Task 2: Service Refactoring**
+✅ MultiMediaAnalysisService updated:
+- Delegates to unified service when available
+- Maintains backward compatibility
+- Converts between formats seamlessly
+
+✅ LiteratureModule updated:
+- All Phase 9 Day 19 services added
+- UnifiedThemeExtractionService registered
+- Proper dependency injection configured
+
+#### Database Schema Added
+- `UnifiedTheme` model (13 fields)
+- `ThemeSource` model (14 fields)
+- `ThemeProvenance` model (12 fields)
+- Migration created and applied successfully
+
+#### Quality Metrics
+- **Lines of Code:** 870 (service) + 580 (tests) = 1,450 lines
+- **Test Coverage:** 33 tests (30 passing, 91% pass rate)
+- **TypeScript Errors:** 0
+- **Enterprise Features:** Caching, retry logic, error handling, provenance tracking
+
+#### Tasks 3-4 Status
+**DEFERRED to when UI needed:**
+- Task 3: Frontend ThemeProvenancePanel component
+- Task 4: API integration tests
+
+**Rationale:** Backend core complete and fully functional. UI can be added when needed for user-facing features.
+
+---
+
+### ✅ PHASE 9 DAYS 26-28: AI Integration, Authentication & Progress Animations
+
+**Date:** October 5, 2025
+**Status:** ✅ ALL DAYS COMPLETE
+**Implementation Time:** 6 hours total
+**Quality Level:** Enterprise-Grade Production Ready
+
+#### Day 26: Real AI Integration - COMPLETE ✅
+
+**Objective:** Replace demo AI with real OpenAI GPT-4 for search assistant
+
+**Implementation:**
+- ✅ Backend: 3 AI endpoints (`/api/ai/query/expand`, `/suggest-terms`, `/narrow`)
+- ✅ Frontend: API service `query-expansion-api.service.ts`
+- ✅ Component: AISearchAssistant updated (removed 93 lines of mock code)
+- ✅ UI: "Demo Mode" → "✨ AI Powered" badge
+- ✅ Security: JWT auth, rate limiting (30 req/min), validation
+- ✅ Cost: $0.001-0.002/query with 40-50% cache hit rate
+
+**Files Modified:**
+1. `backend/src/modules/ai/controllers/ai.controller.ts` - Query expansion endpoints
+2. `frontend/lib/api/services/query-expansion-api.service.ts` - NEW
+3. `frontend/components/literature/AISearchAssistant.tsx` - Real AI
+4. `backend/src/modules/literature/literature.service.ts` - Type fixes
+
+**Status:** Production ready
+
+#### Institution Login Simplified - COMPLETE ✅
+
+**Changes:**
+- ✅ Removed searchbar with preloaded universities
+- ✅ Simplified to single "Sign in with ORCID" button
+- ✅ Clean UI with loading states
+
+**Files Modified:**
+1. `frontend/components/literature/AcademicInstitutionLogin.tsx` - Complete simplification
+
+#### Day 27: ORCID OAuth SSO - COMPLETE ✅
+
+**Objective:** Implement enterprise-grade OAuth 2.0 authentication with ORCID
+
+**Implementation:**
+- ✅ Backend: `findOrCreateOrcidUser` method in AuthService (72 lines)
+- ✅ Backend: ORCID endpoints (`/auth/orcid`, `/auth/orcid/callback`)
+- ✅ Backend: `orcid.strategy.ts` Passport strategy
+- ✅ Database: Prisma schema with ORCID fields (orcidId, tokens, institution, lastLogin)
+- ✅ Database: Migration applied successfully
+- ✅ Frontend: Callback handler (`/auth/orcid/success/page.tsx`)
+- ✅ Frontend: Token storage and auto-redirect
+- ✅ Environment: ORCID OAuth configuration added to .env
+- ✅ Security: JWT token generation for OAuth users
+- ✅ Audit: Complete logging for ORCID login/registration
+
+**Files Modified:**
+1. `backend/src/modules/auth/services/auth.service.ts` - ORCID user management
+2. `backend/src/modules/auth/controllers/auth.controller.ts` - OAuth endpoints
+3. `backend/src/modules/auth/strategies/orcid.strategy.ts` - NEW
+4. `backend/prisma/schema.prisma` - ORCID fields
+5. `frontend/app/auth/orcid/success/page.tsx` - NEW
+6. `frontend/components/literature/AcademicInstitutionLogin.tsx` - ORCID integration
+7. `backend/.env` - ORCID configuration
+
+**Status:** Production ready (pending ORCID app registration)
+
+#### Day 28: Real-time Progress Animations - COMPLETE ✅
+
+**Objective:** Add live progress updates during theme extraction with WebSocket
+
+**Implementation:**
+- ✅ Backend: WebSocket gateway (`theme-extraction.gateway.ts`, 137 lines)
+- ✅ Backend: Progress emission in UnifiedThemeExtractionService
+- ✅ Backend: Room-based architecture for user isolation
+- ✅ Frontend: ThemeExtractionProgress component (223 lines)
+- ✅ Frontend: Socket.IO client with auto-reconnect
+- ✅ UI: 5 animated stage indicators (analyzing, papers, videos, social, merging)
+- ✅ UI: Real-time progress bar and percentage
+- ✅ UI: Source count tracking (X / Y sources processed)
+- ✅ UI: Completion callback with themes count
+- ✅ Animations: Framer Motion for smooth transitions
+- ✅ Error handling: Error state display with red styling
+
+**Files Created:**
+1. `backend/src/modules/literature/gateways/theme-extraction.gateway.ts` - NEW
+2. `frontend/components/literature/progress/ThemeExtractionProgress.tsx` - NEW
+
+**Files Modified:**
+1. `backend/src/modules/literature/services/unified-theme-extraction.service.ts` - Progress emission
+2. `backend/src/modules/literature/literature.module.ts` - Gateway registration
+
+**Status:** Production ready
+
+#### Manual Audit - COMPLETE ✅
+
+**Performed:**
+- ✅ Duplicate import check (0 duplicates found)
+- ✅ Catch block type check (2 fixed with `: any`)
+- ✅ TypeScript compilation (0 errors)
+- ✅ No automated/bulk fixes applied
+- ✅ All fixes manual and context-aware
+
+**Catch Blocks Fixed:**
+1. `backend/src/modules/auth/services/auth.service.ts:440` - Email service error
+2. `backend/src/modules/auth/services/audit.service.ts:31` - Audit logging error
+
+**Quality Metrics:**
+- **TypeScript Errors:** 0
+- **Lines Added:** 535 (production code)
+- **Lines Removed:** 161 (mock/demo code)
+- **New Files:** 6
+- **Files Modified:** 16
+
+**Documentation:**
+- `PHASE9_DAY26_COMPLETION_SUMMARY.md` - Day 26 complete report
+- `PHASE9_DAY27_COMPLETION_SUMMARY.md` - Day 27 complete report
+- `PHASE9_DAY28_COMPLETION_SUMMARY.md` - Day 28 complete report
+- `PHASE9_DAYS26-27_COMPLETION_STATUS.md` - Status tracking
+
+---
+
+### 🔬 PHASE 9 DAY 22 PLANNING SUMMARY (Gap Analysis)
+
+**Date:** October 4, 2025
+**Status:** 🔴 PLANNED
+**Integration Gap Identified:** Cross-platform synthesis dashboard missing
+
+#### Gap Analysis Findings
+- ✅ Day 19 Backend: CrossPlatformSynthesisService (21,851 bytes) complete
+- ✅ Day 19 Social Media Search: Instagram, TikTok, Twitter, Reddit, LinkedIn, Facebook working
+- ✅ Day 20 Unified Theme Extraction: 100% integrated
+- ❌ Cross-platform synthesis NOT exposed via API endpoints
+- ❌ No dashboard for unified cross-platform insights
+
+#### Day 22 Resolution Plan
+**Duration:** 45 minutes
+**Scope:**
+1. Controller endpoints (15 min) - Expose synthesis service
+2. Frontend API methods (10 min) - Add synthesis calls
+3. Dashboard UI (20 min) - Comprehensive visualization
+4. Integration testing (5 min) - End-to-end validation
+
+**Expected Outcome:** 100% completion of Day 19 social media vision with unified cross-platform research intelligence dashboard
+
+---
+
+### 🧪 PHASE 9 DAY 23 COMPLETION SUMMARY (Test Coverage & UX Integration)
+
+**Date:** October 4, 2025
+**Status:** ✅ ALL TASKS COMPLETE
+**Implementation Time:** 2 hours
+**Focus:** Enterprise test coverage + UX integration fixes
+
+#### Test Files Created (100% Coverage)
+
+**1. video-relevance.service.spec.ts** (373 lines)
+- Single & batch video relevance scoring
+- AI response parsing (valid, invalid, markdown)
+- Caching mechanisms with TTL
+- Cost calculations & auto-selection logic
+- Edge cases: missing fields, extreme values
+- **Coverage:** 100% of service methods
+
+**2. query-expansion.service.spec.ts** (528 lines)
+- Query expansion with domain context
+- Vagueness detection & narrowing
+- Related term suggestions
+- Domain-specific behavior (climate, health, education)
+- Edge cases: single-word, long queries, special characters
+- **Coverage:** 100% of service methods
+
+**3. theme-to-statement.service.spec.ts** (719 lines)
+- Theme-to-statement mapping
+- Multi-perspective generation (supportive, critical, neutral, balanced)
+- Controversy pair generation
+- Confidence scoring algorithms
+- Provenance tracking & study scaffolding
+- Database persistence (survey, statements, research pipeline)
+- **Coverage:** 100% of service methods
+
+#### UX Integration Fixes
+
+**4. Statement Generation Navigation** ✅
+- Session storage for generated statements
+- Metadata tracking (query, theme count, timestamp)
+- Navigation to `/create/study?from=literature&statementsReady=true`
+- **File:** `frontend/app/(researcher)/discover/literature/page.tsx:355-384`
+
+**5. VideoSelectionPanel Connection** ✅
+- Connected to YouTube search results
+- Video data mapping (videoId, duration, views, etc.)
+- Real transcription API integration
+- Auto-switch to transcriptions tab
+- **File:** `frontend/app/(researcher)/discover/literature/page.tsx:93-94,448-451,1893-1970`
+
+**6. YouTubeChannelBrowser Integration** ✅
+- Video queue management
+- Deduplication logic
+- Auto-navigation to selection panel
+- **File:** `frontend/app/(researcher)/discover/literature/page.tsx:1882-1906`
+
+#### Backend API Enhancement
+
+**7. YouTube Channel API** ✅
+- `getYouTubeChannel()` - Parse ID, @handle, or URL
+- `getChannelVideos()` - Pagination & filters
+- `parseYouTubeDuration()` - ISO 8601 parsing
+- **File:** `backend/src/modules/literature/literature.service.ts:950-1141`
+
+**8. Controller Endpoints** ✅
+- `/youtube/channel/info` - Channel metadata
+- `/youtube/channel/videos` - Channel video list
+- **File:** `backend/src/modules/literature/literature.controller.ts:2016-2097`
+
+**9. Frontend API Methods** ✅
+- `getYouTubeChannel()` - Real API integration
+- `getChannelVideos()` - Pagination support
+- **File:** `frontend/lib/services/literature-api.service.ts:954-1014`
+
+**10. Mock Data Replacement** ✅
+- Removed `mockFetchChannel()` and `mockFetchChannelVideos()`
+- Connected to real YouTube Data API v3
+- **File:** `frontend/components/literature/YouTubeChannelBrowser.tsx:130-214`
+
+#### Quality Metrics
+- **Lines of Code:** 1,620 (tests) + 350 (backend) + 150 (frontend) = 2,120 lines
+- **Test Coverage:** 100% for all 3 AI services
+- **TypeScript Errors:** 0 (no new errors)
+- **Mock Data:** 0% (all replaced with real API)
+- **UX Gaps:** 0 (all integration issues resolved)
+
+#### Limitations Resolved
+1. ✅ **VideoSelectionPanel** - Now receives real YouTube search results
+2. ✅ **YouTubeChannelBrowser** - Connected to transcription queue
+3. ✅ **Mock Data** - Replaced with real YouTube Data API v3
+4. ✅ **Statement Navigation** - Users can see & use generated statements
+5. ✅ **Test Coverage** - All Day 21 AI services now have comprehensive tests
+
+#### Enterprise Features Delivered
+- Zero-downtime integration (backward compatible)
+- Comprehensive error handling throughout
+- Full provenance tracking in all services
+- Production-ready implementations
+- Real-time user feedback (toast notifications)
+
+---
+
 ## PHASE 10: REPORT GENERATION, RESEARCH REPOSITORY & AI GUARDRAILS
 
-**Duration:** 15 days (expanded to include Research Repository and AI Guardrails)
+**Duration:** 16 days (expanded to include Research Repository, AI Guardrails, and Production Deployment)
 **Status:** 🔴 Not Started
 **Revolutionary Features:** ⭐ Self-Evolving Statements (Days 7-8), ⭐ Explainable AI (Days 9-10), ⭐ Research Repository (Days 11-15)
 **Reference:** [Implementation Guide Part 5](./IMPLEMENTATION_GUIDE_PART5.md#phase-10)
 **Navigation Architecture:** [Research Lifecycle Navigation](./RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md#-9-report)
-**Dependencies:** Phase 8 AI Analysis recommended, Phase 9 Literature System COMPLETE
+**Dependencies:** Phase 9 Literature System COMPLETE, Phase 9.5 Research Design Intelligence COMPLETE
 **Type Safety:** ZERO NEW ERRORS DAILY
 **Lifecycle Phase:** REPORT - Documentation (30% Coverage 🟡)
 **Patent Potential:** 🔥 EXCEPTIONAL - 3 Major Innovations (Self-evolving statements, Explainable AI, Research Repository)
-**Addresses Gaps:** #4 Research-ops UX, #5 AI Guardrails
+**Addresses Gaps:** #1 Literature→Study Pipeline, #4 Research-ops UX, #5 AI Guardrails
 
 ### 📊 PHASE 10 WORLD-CLASS AUDIT
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| Days Completed | 5 | 0 | 🔴 |
+| Days Completed | 16 | 0 | 🔴 |
 | Code Quality | World-Class | - | 🔴 |
 | Test Coverage | >75% | 0% | 🔴 |
 | TypeScript Errors | ≤587 | - | 🔴 |
 | Report Generation | <10s | - | 🔴 |
 | Export Formats | 5+ | 1 | 🟡 |
-| Self-Evolution Engine | Yes | 0 | 🔴 |
+| Pipeline Integration | 100% | 0% | 🔴 |
+| Provenance Tracking | Yes | 0 | 🔴 |
 | Explainable AI | Yes | 0 | 🔴 |
+| Research Repository | Yes | 0 | 🔴 |
+| Accessibility (WCAG AA) | Yes | 0 | 🔴 |
+| Deployment Pipeline | Yes | 0 | 🔴 |
 | REPORT Coverage | 100% | 30% | 🟡 |
 
 ### 🔍 GAP ANALYSIS - REPORT Phase
@@ -71,14 +372,49 @@ This document contains **Phases 10-20** representing the future expansion roadma
 **Missing Features (to be implemented in this phase):**
 - [ ] Comprehensive report generation system
 - [ ] Academic formatting templates (APA, MLA, Chicago)
-- [ ] Auto-generated literature review section from Phase 9 data
-- [ ] Methods section with statement provenance
+- [ ] **CRITICAL:** Auto-generated literature review section from Phase 9 data (Gap #1)
+- [ ] **CRITICAL:** Methods section with statement provenance (paper → theme → statement lineage) (Gap #1)
+- [ ] **CRITICAL:** Full pipeline integration (DISCOVER → BUILD → ANALYZE → REPORT) (Gap #1)
 - [ ] Discussion section comparing with literature
 - [ ] Collaborative report editing
 - [ ] Version control for reports
 - [ ] Multi-format export (PDF, Word, LaTeX, HTML, Markdown)
+- [ ] Presentation mode (PowerPoint/Slides export)
+- [ ] Infographics auto-generation
+- [ ] Executive summary AI generation
 
 ### Day 1: Report Builder Core & Backend Service
+
+**⚡ Pre-work: UX Critical Fixes (2 hours - Phase 9 Polish)**
+
+**AI Search Assistant Fixes (1 hour):**
+- [ ] **BUG FIX (CRITICAL):** Fix suggestion dismissal in AISearchAssistant
+  - [ ] Add click outside detection (useRef + useEffect)
+  - [ ] Add ESC key handler to dismiss suggestions
+  - [ ] Add explicit close button to suggestion cards
+  - [ ] Test dismissal on all suggestion types
+- [ ] **TRANSPARENCY FIX (HIGH):** Add explainability to current AI suggestions
+  - [ ] Add "How This Works" modal with detailed methodology
+  - [ ] Show confidence score breakdown per suggestion
+  - [ ] Display data sources used (GPT-4, academic corpus)
+  - [ ] Add tooltip: "GPT-4 analyzes your query and suggests improvements based on academic language patterns"
+
+**ORCID Fixes (1 hour total):**
+- [ ] **ORCID FIX #1 (CRITICAL):** Fix redirect after ORCID login to return to literature page (30 min)
+  - [ ] Add returnUrl parameter to ORCID OAuth flow
+  - [ ] Update /auth/orcid/success to redirect to returnUrl
+  - [ ] Update AcademicInstitutionLogin to pass returnUrl=/discover/literature
+  - [ ] Test complete flow: literature page → ORCID login → return to literature page
+- [ ] **ORCID FIX #2 (UX):** Add visual feedback for ORCID authentication in literature page (15 min)
+  - [ ] Display "✓ ORCID Authenticated" badge when logged in
+  - [ ] Show authenticated user name in Academic Resources panel
+- [ ] **ORCID FIX #3 (CLARITY):** Update UI text to clarify ORCID purpose (15 min)
+  - [ ] Update AcademicInstitutionLogin description: "ORCID provides researcher identity and progress tracking"
+  - [ ] Add note: "ORCID does NOT grant access to premium databases (use institutional login for that)"
+  - [ ] Remove any false claims about ORCID unlocking database access
+  - [ ] Update tooltips and help text for accuracy
+
+**Report Builder Core:**
 - [ ] **Create report.module.ts and report-generator.service.ts in backend**
 - [ ] **Build /app/(researcher)/reports/[studyId]/page.tsx** builder interface
 - [ ] **Design ReportBuilder component** with drag-and-drop sections
@@ -93,6 +429,14 @@ This document contains **Phases 10-20** representing the future expansion roadma
 - [ ] Add conditional logic for dynamic sections
 - [ ] **Create report.store.ts** for state management
 - [ ] Write template tests
+- [ ] **PIPELINE INTEGRATION:** Wire to Phase 9 PipelineController
+- [ ] **PIPELINE INTEGRATION:** Wire to Phase 9.5 ResearchQuestionService (read refined questions)
+- [ ] **PIPELINE INTEGRATION:** Wire to Phase 9.5 HypothesisGeneratorService (read hypotheses)
+- [ ] **PIPELINE INTEGRATION:** Import ThemeToStatementService for provenance
+- [ ] **PIPELINE INTEGRATION:** Build literature review section from Phase 9 papers
+- [ ] **PIPELINE INTEGRATION:** Include research questions from Phase 9.5 in introduction
+- [ ] **PIPELINE INTEGRATION:** Include hypotheses from Phase 9.5 in methods
+- [ ] **PIPELINE INTEGRATION:** Create provenance data structure (paper → gap → question → hypothesis → theme → statement → factor)
 - [ ] Daily error check at 5 PM
 
 ### Day 2: Export Formats & AI Paper Generation
@@ -103,7 +447,13 @@ This document contains **Phases 10-20** representing the future expansion roadma
 - [ ] Create Markdown export
 - [ ] Build citation manager
 - [ ] Create AI-powered full manuscript generator
-- [ ] Auto-write methods section from study data
+- [ ] Auto-write methods section from study data with provenance
+- [ ] **PROVENANCE:** Show complete statement lineage in methods (X statements from Y papers/videos, refined through Z research questions)
+- [ ] **PROVENANCE:** Link to Phase 9 + Phase 9.5 pipeline data via foreign keys
+- [ ] **PROVENANCE:** Generate statement origins appendix with full lineage table (paper → gap → question → hypothesis → theme → statement)
+- [ ] **PROVENANCE:** Include research question refinement methodology (SQUARE-IT)
+- [ ] **PROVENANCE:** Include hypothesis generation methodology (multi-source evidence)
+- [ ] **PROVENANCE:** Include theme extraction methodology used
 - [ ] Generate discussion comparing to literature
 - [ ] **Enhancement:** Add journal-specific formatting AI (APA, MLA, Chicago)
 - [ ] **Enhancement:** Add literature synthesis from Phase 9 knowledge graph
@@ -138,6 +488,18 @@ This document contains **Phases 10-20** representing the future expansion roadma
 - [ ] Create preview mode
 - [ ] Optimize generation speed
 - [ ] Add batch processing
+- [ ] **PIPELINE E2E TESTING:** Test full flow (Literature → Questions → Hypotheses → Themes → Statements → Study → Analysis → Report with complete provenance)
+- [ ] **PIPELINE E2E TESTING:** Verify complete lineage displays correctly (paper → gap → question → hypothesis → statement → factor)
+- [ ] **PIPELINE E2E TESTING:** Test research questions from Phase 9.5 appear in introduction
+- [ ] **PIPELINE E2E TESTING:** Test hypotheses from Phase 9.5 appear in methods
+- [ ] **PIPELINE E2E TESTING:** Test auto-populated references from Phase 9 papers
+- [ ] **PIPELINE E2E TESTING:** Validate foreign key relationships across complete pipeline (Phase 9 → 9.5 → 10)
+- [ ] **RESEARCH VALIDATION (Evening):** Academic credibility testing
+  - [ ] Create 3-5 benchmark Q-methodology studies with known outcomes
+  - [ ] Generate reports using VQMethod and compare against published reports
+  - [ ] Validate statistical accuracy (factor loadings, correlations, Z-scores)
+  - [ ] Create academic expert review checklist for report quality
+  - [ ] Document validation methodology for academic publications
 - [ ] Final testing
 - [ ] Final error check
 
@@ -146,6 +508,9 @@ This document contains **Phases 10-20** representing the future expansion roadma
 - [ ] Report generation <10s
 - [ ] Export format validation (5+ formats)
 - [ ] Template accuracy checks
+- [ ] **PIPELINE E2E:** Full flow test (Literature → Themes → Statements → Study → Report)
+- [ ] **PIPELINE E2E:** Provenance chain validation
+- [ ] **PIPELINE E2E:** Foreign key relationship verification
 
 ### Day 6: Statement Evolution Infrastructure (⭐ Pre-work for Revolutionary Feature)
 - [ ] Create statement evolution database schema
@@ -178,17 +543,28 @@ This document contains **Phases 10-20** representing the future expansion roadma
   - [ ] Export format validation suite
   - [ ] Performance benchmarking tools
   - [ ] Cross-browser testing setup
-- [ ] **Day 8 Afternoon:** Create Documentation System
+- [ ] **Day 8 Afternoon:** Create Documentation System & Accessibility Compliance
   - [ ] Auto-generate API docs from code
   - [ ] Interactive report examples
   - [ ] Template gallery with previews
   - [ ] Video tutorial integration
+  - [ ] **ARCHITECTURE FEATURE:** Build Presentation Mode (export as PowerPoint/Google Slides)
+  - [ ] **ARCHITECTURE FEATURE:** Build Infographics generator (auto-generate visual summary from findings)
+  - [ ] **ARCHITECTURE FEATURE:** Build Executive Summary AI (GPT-4 one-page study summary)
+  - [ ] **ACCESSIBILITY COMPLIANCE (WCAG AA):** Add automated accessibility testing
+  - [ ] **ACCESSIBILITY:** Add axe-core automated WCAG checks to test suite
+  - [ ] **ACCESSIBILITY:** Ensure all interactive elements have keyboard navigation
+  - [ ] **ACCESSIBILITY:** Add ARIA labels to all dynamic content
+  - [ ] **ACCESSIBILITY:** Verify color contrast ratios (4.5:1 minimum)
+  - [ ] **ACCESSIBILITY:** Test screen reader compatibility (NVDA/JAWS)
+  - [ ] **ACCESSIBILITY:** Add focus indicators to all interactive elements
+  - [ ] **ACCESSIBILITY:** Document accessibility features for users
 - [ ] **3:00 PM:** Collaboration Testing
 - [ ] **4:00 PM:** Performance Testing (10 concurrent editors)
 - [ ] **5:00 PM:** Run Daily Error Check (npm run typecheck)
 - [ ] **5:30 PM:** Security & Quality Audit
 - [ ] **5:45 PM:** Documentation Coverage Check
-- [ ] **6:00 PM:** Test Suite Validation
+- [ ] **6:00 PM:** Test Suite Validation & Accessibility Audit
 
 ### Days 9-10: ⭐ Revolutionary Explainable AI with Interactive Guardrails (APPROVED TIER 1 PATENT + AI GUARDRAILS GAP)
 - [ ] **Day 9 Morning:** Implement SHAP for factor explanations
@@ -299,11 +675,43 @@ This document contains **Phases 10-20** representing the future expansion roadma
   - [ ] Add progressive loading
   - [ ] Create onboarding tour
   - [ ] Build help documentation
+  - [ ] **PIPELINE DOCUMENTATION:** Document complete DISCOVER → DESIGN → BUILD → ANALYZE → REPORT pipeline
+  - [ ] **PIPELINE DOCUMENTATION:** Create user guide "From Literature Discovery to Research Design to Publication in VQMethod"
+  - [ ] **PIPELINE DOCUMENTATION:** Build sample report showing full provenance chain (paper → gap → question → hypothesis → statement → factor → insight)
+  - [ ] **PIPELINE DOCUMENTATION:** Document Phase 9.5 integration (how research questions inform statement generation)
+  - [ ] **PIPELINE DOCUMENTATION:** Update navigation flow (DISCOVER → DESIGN → BUILD → ANALYZE → REPORT seamless)
 - [ ] **3:00 PM:** Full System Integration Testing
 - [ ] **4:00 PM:** Repository Performance Testing (search <500ms)
+- [ ] **5:00 PM:** Daily Error Check
+- [ ] **5:30 PM:** Security & Quality Audit
+- [ ] **6:00 PM:** Day 15 Complete
+
+#### Day 16: Production Deployment Infrastructure (MVP-CRITICAL)
+- [ ] **Morning:** CI/CD Pipeline Setup
+  - [ ] Create GitHub Actions workflows for automated testing
+  - [ ] Set up staging environment (Vercel/Railway for frontend, backend)
+  - [ ] Configure production environment variables
+  - [ ] Add pre-deployment TypeScript/lint checks
+  - [ ] Create automated database migration scripts
+  - [ ] Set up rollback procedures
+- [ ] **Afternoon:** Production Monitoring & Health Checks
+  - [ ] Implement health check endpoints (/health, /ready)
+  - [ ] Add basic error tracking (Sentry or similar)
+  - [ ] Configure uptime monitoring (UptimeRobot or similar)
+  - [ ] Set up database backup automation (daily snapshots)
+  - [ ] Create deployment runbook documentation
+  - [ ] Add environment-specific configs (dev/staging/production)
+  - [ ] Configure CORS and security headers for production
+- [ ] **Evening:** Deployment Testing & Validation
+  - [ ] Test deployment to staging environment
+  - [ ] Validate all services start correctly
+  - [ ] Test health check endpoints
+  - [ ] Verify database migrations run successfully
+  - [ ] Test rollback procedure
+  - [ ] Document deployment process
 - [ ] **5:00 PM:** Final Error Check
 - [ ] **5:30 PM:** Final Security Audit
-- [ ] **6:00 PM:** Phase 10 Complete
+- [ ] **6:00 PM:** Phase 10 Complete (Production-Ready)
 
 ### Daily Completion Checklist:
 - [ ] **5:00 PM:** Run Daily Error Check
@@ -579,6 +987,14 @@ This document contains **Phases 10-20** representing the future expansion roadma
 - [ ] **PRIORITY: Cache Service Unit Tests** (frontend/lib/services/cache.service.ts - 805 lines)
 - [ ] **PRIORITY: E2E tests with real backend** (not mock-only testing)
 - [ ] **PRIORITY: Automated Navigation Tests** (Playwright/Cypress for phase-to-phase flow)
+- [ ] **PRIORITY: ORCID Authentication Flow Tests** (comprehensive Phase 9 validation)
+  - [ ] Test anonymous literature search flow (no login)
+  - [ ] Test ORCID login from literature page → verify redirect back to literature
+  - [ ] Test authenticated literature search with ORCID (backend storage)
+  - [ ] Test theme extraction with real-time progress (WebSocket)
+  - [ ] Test complete pipeline: search → save → extract → generate statements
+  - [ ] Verify visual feedback (ORCID badge, user name display)
+  - [ ] Test session persistence across page refreshes
 - [ ] Create test coverage dashboard (Jest/Vitest HTML reports)
 - [ ] Document all test suites (unit, integration, E2E, performance)
 - [ ] Build regression test matrix (critical user journeys)
@@ -637,6 +1053,10 @@ This document contains **Phases 10-20** representing the future expansion roadma
 - [ ] Create runbooks
 - [ ] Build training materials
 - [ ] Record video tutorials
+- [ ] **UX CLARITY:** Separate ORCID identity from institution access in literature page
+  - [ ] Split "Academic Institution Login" into "Researcher Identity" (ORCID) and "Institution Access" (Shibboleth)
+  - [ ] Add tooltip: "ORCID provides researcher identity, not database access"
+  - [ ] Update documentation to clarify authentication vs access
 - [ ] Final checklist review
 - [ ] Final error check
 
@@ -693,7 +1113,11 @@ This document contains **Phases 10-20** representing the future expansion roadma
   - [ ] Microsoft OAuth integration
   - [ ] Generic OAuth support
   - [ ] JWT token management
-- [ ] **Note:** Shibboleth, Okta, custom SSO deferred
+- [ ] **Note:** Shibboleth, OpenAthens, Okta, custom SSO deferred to Phase 19
+  - [ ] **Rationale:** ORCID provides sufficient authentication for MVP
+  - [ ] **When needed:** Only if institutional database access becomes critical
+  - [ ] **Complexity:** Shibboleth requires institution-specific configuration (high maintenance)
+  - [ ] **Alternative:** Generic SAML support (above) covers 80% of use cases
 - [ ] **5:00 PM:** Run Daily Error Check
 - [ ] **5:30 PM:** Security & Quality Audit
 - [ ] **5:45 PM:** SSO Testing
@@ -902,10 +1326,12 @@ This document contains **Phases 10-20** representing the future expansion roadma
 
 ## PHASE 17: ADVANCED AI ANALYSIS & SELF-EVOLVING FEATURES
 
-**Duration:** 7 days
+**Duration:** 10 days (expanded from 7 days)
 **Status:** 🔴 FUTURE (Post-MVP)
+**Revolutionary Features:** ⭐ Multi-Modal Query Intelligence (Day 9), ⭐ Self-Evolving Statements (Day 2-3)
 **Reference:** [Implementation Guide Part 5](./IMPLEMENTATION_GUIDE_PART5.md#phase-17)
-**Note:** Includes Self-Evolving Statements moved from Phase 10
+**Patent Potential:** 🔥 TIER 1 - Query Intelligence System (6 data sources + explainable AI)
+**Note:** Includes Self-Evolving Statements moved from Phase 10 + NEW Query Intelligence Innovation
 
 ### Day 1: ML Infrastructure
 - [ ] Set up ML pipeline
@@ -977,6 +1403,108 @@ This document contains **Phases 10-20** representing the future expansion roadma
 - [ ] Daily error check at 5 PM
 
 ### Day 7: Integration & Polish
+- [ ] Performance optimization
+- [ ] User documentation
+- [ ] Training materials
+- [ ] Demo preparation
+- [ ] Launch checklist
+- [ ] Monitoring setup
+- [ ] Final testing
+- [ ] Final error check
+
+### Day 8: Reserved for Future Expansion
+
+### Day 9: ⭐ Revolutionary Multi-Modal Query Intelligence System (PATENT-WORTHY)
+**🔥 Innovation:** "Adaptive Research Query Enhancement Using Multi-Source Intelligence & Explainable AI"
+
+**⚡ Morning: Social Media & Trend Analysis Engine**
+- [ ] Build real-time social media monitoring service
+  - [ ] Academic Twitter API integration (trending research hashtags)
+  - [ ] Reddit API (r/science, domain-specific subreddits)
+  - [ ] Google Trends academic keyword tracking
+  - [ ] arXiv daily listings scraper
+- [ ] Implement trend velocity algorithm
+  - [ ] 7/30/90 day keyword frequency tracking
+  - [ ] Growth rate calculation using linear regression
+  - [ ] N-gram co-occurrence extraction
+  - [ ] trendScore = (currentFrequency / baseline) * velocityWeight
+- [ ] Create TrendAnalysisService backend
+
+**⚡ Afternoon: Statistical Intelligence Layer**
+- [ ] Build co-occurrence matrix from academic papers
+  - [ ] Extract term pairs from 1M+ paper abstracts
+  - [ ] Calculate Pointwise Mutual Information (PMI) scores
+  - [ ] Weight by citation count (impact factor)
+  - [ ] Store in Redis for fast lookup
+- [ ] Implement citation network analysis
+  - [ ] Build paper citation graph
+  - [ ] PageRank algorithm for paper influence
+  - [ ] Extract keywords from high-impact papers
+  - [ ] impactScore = (citationCount * recencyBoost) / ageInYears
+- [ ] Create StatisticalRelevanceService backend
+
+**⚡ Evening: Temporal Topic Modeling**
+- [ ] Implement LDA (Latent Dirichlet Allocation) over time
+  - [ ] Divide papers into yearly windows
+  - [ ] Extract topics per time period
+  - [ ] Track topic evolution (emerging, growing, mature, declining)
+  - [ ] Identify emerging research areas (<2 years old, rapid growth)
+- [ ] Create TopicEvolutionService backend
+
+**⚡ Integration: Enhanced GPT-4 Query Expansion**
+- [ ] Upgrade query expansion with multi-source context
+  - [ ] Include trend data in GPT-4 prompt
+  - [ ] Add co-occurrence statistics
+  - [ ] Include citation network insights
+  - [ ] Request chain-of-thought reasoning
+- [ ] Implement confidence scoring algorithm
+  - [ ] Combine scores from all sources
+  - [ ] Weight: 30% trends + 25% co-occurrence + 25% citations + 20% GPT-4
+  - [ ] Final confidence = weighted average
+
+**⚡ Explainable AI Transparency Layer**
+- [ ] Build suggestion provenance system
+  - [ ] For each suggestion, show WHY it was made
+  - [ ] Display source attribution ("Based on 1,234 recent papers")
+  - [ ] Show trend indicators ("Trending +45% on Academic Twitter")
+  - [ ] Co-occurrence stats ("Appears with your term 89% of time")
+  - [ ] Citation context ("Used by 340 highly-cited papers")
+- [ ] Create ExplainabilityService backend
+- [ ] Build ProvenancePanel frontend component
+  - [ ] Expandable "Why this suggestion?" cards
+  - [ ] Visual confidence breakdown (pie chart)
+  - [ ] Interactive source explorer
+  - [ ] Expected impact prediction ("May increase results by 30-50%")
+
+**⚡ Frontend UX Enhancements**
+- [ ] Add "How This Works" detailed modal
+- [ ] Build confidence breakdown visualization
+- [ ] Create source attribution badges
+- [ ] Implement suggestion filtering (by confidence, source, impact)
+- [ ] Add "Explore reasoning" interactive view
+
+**🔬 Testing & Validation**
+- [ ] **3:00 PM:** Trend analysis accuracy testing (validate against known trends)
+- [ ] **4:00 PM:** Co-occurrence matrix performance (<100ms lookups)
+- [ ] **5:00 PM:** Run Daily Error Check (npm run typecheck)
+- [ ] **5:30 PM:** Security & Quality Audit
+- [ ] **5:45 PM:** API rate limit testing (social media APIs)
+- [ ] **6:00 PM:** ML model accuracy validation
+
+**📋 Patent Documentation (Critical)**
+- [ ] Document algorithm novelty
+  - [ ] Multi-source integration approach (6 data sources)
+  - [ ] Statistical co-occurrence + trend analysis combination
+  - [ ] Explainable AI transparency layer
+  - [ ] Self-improving feedback loop
+- [ ] Create patent claims document
+  - [ ] Method claims (the algorithm)
+  - [ ] System claims (the architecture)
+  - [ ] UI claims (transparency visualization)
+- [ ] Prior art analysis (ensure uniqueness)
+- [ ] Technical diagrams for patent application
+
+### Day 10: Integration & Polish
 - [ ] Performance optimization
 - [ ] User documentation
 - [ ] Training materials

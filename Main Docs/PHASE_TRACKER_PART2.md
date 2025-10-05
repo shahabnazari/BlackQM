@@ -72,30 +72,34 @@
 ## 🎯 WORLD-CLASS PHASE INTEGRATION ASSESSMENT
 
 ### 🔴 OPTIMIZED EXECUTION ORDER (Practical MVP Focus)
-**Revised for faster time-to-market with ~45 days to MVP:**
+**Revised for faster time-to-market with ~49 days to MVP:**
 
 1. **Phase 8.5** ✅ COMPLETE - Navigation System
-2. **Phase 9 Days 8-15** 🔴 CRITICAL NEXT - Pipeline Integration (8 days)
-3. **Phase 10 (15 days)** 🔴 HIGH - Report + Repository + AI Guardrails
-4. **Phase 10.5 (5 days)** 🔴 HIGH - Core Interoperability (simplified)
-5. **Phase 11 (8 days)** 🟡 MEDIUM - Archive + Progressive Analysis
-6. **Phase 12 (5 days)** 🟡 MEDIUM - Pre-Production Readiness
-7. **Phase 13 (5 days)** 🔴 HIGH - Essential Enterprise Security
-8. **Phase 14-20** 🟢 FUTURE - Post-launch enhancements
+2. **Phase 9 Days 0-28** ✅ COMPLETE - Literature Review & Knowledge Pipeline
+3. **Phase 9.5 (3 days)** 🔴 CRITICAL NEXT - Research Design Intelligence (DISCOVER → DESIGN bridge)
+4. **Phase 10 (16 days)** 🔴 HIGH - Report + Repository + AI Guardrails + Production Deployment
+5. **Phase 10.5 (5 days)** 🔴 HIGH - Core Interoperability (simplified)
+6. **Phase 11 (8 days)** 🟡 MEDIUM - Archive + Progressive Analysis
+7. **Phase 12 (5 days)** 🟡 MEDIUM - Pre-Production Readiness
+8. **Phase 13 (5 days)** 🔴 HIGH - Essential Enterprise Security
+9. **Phase 14-20** 🟢 FUTURE - Post-launch enhancements
 
-**Total MVP Timeline:** ~45 days (was 52)
-**Deferred to Post-Launch:** Advanced AI, complex integrations, certifications
+**Total MVP Timeline:** ~49 days (was 45, added Phase 9.5 + production deployment)
+**Critical Additions:** Phase 9.5 (research design), Phase 10 Day 16 (deployment), accessibility compliance
+**MVP-Critical Only:** Rejected 8 of 11 audit recommendations as over-engineering (deferred post-launch)
+**Deferred to Post-Launch:** Advanced AI, complex integrations, certifications, chaos engineering
 
 ### Overall Part 2 Implementation Status (Gap-Fixed)
 | Category | Phases | Status | Priority | Notes |
 |----------|---------|--------|----------|-------|
 | Navigation System | 8.5 | ✅ Complete | - | World-class implementation |
-| Literature & Pipeline | 9 Days 0-25 | ⏳ IN PROGRESS | CRITICAL | Days 0-11,14-15,17-25 ✅ | Days 12-13,16 Deferred |
-| Report & Repository | 10 (15 days) | 🔴 Not Started | HIGH | Includes AI Guardrails + Research Ops |
-| Interoperability | 10.5 (NEW) | 🔴 Not Started | HIGH | Enterprise adoption differentiator |
+| Literature & Pipeline | 9 Days 0-28 | ✅ Complete | - | Full pipeline with multi-source integration |
+| Research Design | 9.5 (NEW) | 🔴 Not Started | CRITICAL | DISCOVER → DESIGN bridge (3 days) |
+| Report & Repository | 10 (16 days) | 🔴 Not Started | HIGH | Includes AI Guardrails + Production Deployment + Accessibility |
+| Interoperability | 10.5 | 🔴 Not Started | HIGH | Enterprise adoption differentiator |
 | Archive & Patterns | 11 (8 days) | 🔴 Not Started | MEDIUM | Real-time analysis + cross-study |
 | Pre-Production | 12 | 🔴 Not Started | MEDIUM | Required for launch |
-| Enterprise Trust | 13 (7 days) | 🔴 Not Started | HIGH | SSO, compliance, AI governance |
+| Enterprise Trust | 13 (5 days) | 🔴 Not Started | HIGH | SSO, compliance, AI governance |
 | Advanced Features | 14-20 | 🔴 Not Started | LOW | Post-launch enhancements |
 
 ## 🔍 GAP ANALYSIS & RESOLUTION STATUS (Updated)
@@ -3825,5 +3829,266 @@ Detailed completion records for Phase 9 have been moved to [PHASE_TRACKER_PART3.
 - Day 20: UnifiedThemeExtractionService ✅ Complete (870 lines, 33 tests, 91% pass rate)
 - Day 22: Cross-platform synthesis dashboard ✅ Complete (45 min, all 4 tasks delivered)
 
+### Transition to Phase 9.5
+Phase 9 literature review complete. Next: [Phase 9.5: Research Design Intelligence](#phase-95-research-design-intelligence--hypothesis-development) to refine questions and develop hypotheses from discovered literature.
+
+---
+
+## PHASE 9.5: RESEARCH DESIGN INTELLIGENCE & HYPOTHESIS DEVELOPMENT
+
+**Duration:** 3 days
+**Status:** 🔴 Not Started
+**Revolutionary Features:** ⭐ AI Question Refinement, ⭐ Hypothesis Generator, ⭐ Theory Builder, ⭐ SQUARE-IT Integration
+**Reference:** [Implementation Guide Part 5](./IMPLEMENTATION_GUIDE_PART5.md#phase-95)
+**Navigation Architecture:** [Research Lifecycle Navigation](./RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md#-2-design)
+**Dependencies:** Phase 9 Literature System COMPLETE
+**Type Safety:** ZERO NEW ERRORS DAILY
+**Lifecycle Phase:** DESIGN - Question Formulation (0% Coverage 🔴)
+**Patent Potential:** 🔥🔥 **TIER 1 PATENT** - "AI-Powered Research Design from Multi-Source Literature Synthesis"
+**Addresses Gaps:** Critical gap between DISCOVER and BUILD phases
+
+### 📊 PHASE 9.5 WORLD-CLASS AUDIT
+| Metric | Target | Current | Status |
+|--------|--------|---------|--------|
+| Days Completed | 3 | 0 | 🔴 |
+| Code Quality | World-Class | - | 🔴 |
+| Test Coverage | >80% | 0% | 🔴 |
+| TypeScript Errors | ≤587 | - | 🔴 |
+| Question Quality Score | >8/10 | - | 🔴 |
+| SQUARE-IT Compliance | 100% | 0% | 🔴 |
+| DESIGN Coverage | 100% | 0% | 🔴 |
+
+### 🔍 GAP ANALYSIS - DESIGN Phase
+**Current Coverage:** 0% 🔴
+**Available:** Basic study creation workflow
+**Missing Features (critical for research workflow):**
+- [ ] Research question refinement from literature gaps
+- [ ] Hypothesis generation from contradictions
+- [ ] Sub-question decomposition and prioritization
+- [ ] SQUARE-IT framework implementation
+- [ ] Theory development from theme synthesis
+- [ ] Conceptual framework visualization
+- [ ] Methodology recommendation engine
+- [ ] Complete provenance: Gap → Question → Hypothesis → Statement
+
+### 🎯 INNOVATION RATIONALE
+
+**The Critical Gap:**
+Currently researchers jump from DISCOVER (literature review) directly to BUILD (statement creation) with NO systematic question/hypothesis development. This is scientifically unsound.
+
+**Standard Research Process:**
+1. Literature review → identify gaps ✅ (Phase 9)
+2. **Refine research questions from gaps** ❌ (MISSING)
+3. **Develop hypotheses from contradictions** ❌ (MISSING)
+4. Design methodology ⏳ (Partial in study creation)
+5. Create instruments (statements) ✅ (Phase 10)
+
+**What Competitors Don't Have:**
+- Elicit: Only paper search + basic brainstorming
+- Consensus: Only answer extraction
+- SciSpace: Only literature search
+- AnswerThis: Only gap identification
+- **NO TOOL** does systematic question refinement + hypothesis generation + theory building
+
+### Day 1: Research Question Refinement Engine
+
+**⚡ Integration with Existing Services:**
+- [ ] **USE EXISTING:** LiteratureService for papers
+- [ ] **USE EXISTING:** KnowledgeGraphService for gaps
+- [ ] **USE EXISTING:** CrossPlatformSynthesisService for contradictions
+- [ ] **CREATE NEW:** ResearchQuestionService (extends literature insights)
+
+**Morning: AI-Powered Question Analysis & Refinement (3 hours)**
+- [ ] Create ResearchQuestionService in backend/src/modules/research-design/
+- [ ] Wire to LiteratureService (read papers from Phase 9)
+- [ ] Wire to KnowledgeGraphService (read identified gaps)
+- [ ] **VERIFICATION:** Confirm data transformation from Phase 9 models (UnifiedTheme, KnowledgeNode) works correctly
+- [ ] Implement initial question analyzer (vague → specific)
+- [ ] **Build SQUARE-IT Framework Integration:**
+  - [ ] Specific: Narrow using discovered themes
+  - [ ] Quantifiable: Identify measurable variables from literature
+  - [ ] Usable: Assess contribution potential based on gap size
+  - [ ] Accurate: Precise problem definition
+  - [ ] Restricted: Focus by domain/methodology/population
+  - [ ] Eligible: Q-methodology suitability assessment
+  - [ ] Investigable: Feasibility scoring (time/resources/sample)
+  - [ ] Timely: Check if gap still exists (recent papers)
+- [ ] Create GPT-4 chain-of-thought question refinement
+- [ ] Generate 3-5 refined questions with paper citations
+
+**Afternoon: Sub-Question Decomposition & Hierarchy (2 hours)**
+- [ ] Build sub-question identifier algorithm
+- [ ] Map each sub-question to specific research gaps
+- [ ] Prioritize by: Feasibility × Impact × Novelty
+- [ ] Create question hierarchy tree structure
+- [ ] Link each question level to supporting papers
+- [ ] Build gap-to-question mapper
+- [ ] Calculate gap importance (citation impact)
+
+**Evening: Question Quality Scoring & Validation (2.5 hours)**
+- [ ] Implement FINER criteria scoring
+- [ ] Build scope analyzer (too broad/narrow/just right)
+- [ ] **QUALITY VALIDATION:** Add confidence threshold (reject questions <7/10 score)
+- [ ] **QUALITY VALIDATION:** Implement iterative refinement loop (max 3 attempts)
+- [ ] **QUALITY VALIDATION:** Add manual review flag for edge cases
+- [ ] Generate improvement suggestions for weak questions
+- [ ] Create QuestionQuality entity in Prisma
+- [ ] **COST CONTROLS:** Integrate with existing AIUsage model
+- [ ] **COST CONTROLS:** Track GPT-4 usage per question refinement
+- [ ] **COST CONTROLS:** Implement caching for repeated questions
+- [ ] **COST CONTROLS:** Set per-question cost budget ($0.05 max)
+- [ ] Write service tests
+- [ ] **3:00 PM:** Integration Testing
+- [ ] **4:00 PM:** Performance Testing (refinement <5s)
+- [ ] **5:00 PM:** Run Daily Error Check (npm run typecheck)
+- [ ] **5:30 PM:** Security & Quality Audit
+- [ ] **5:45 PM:** Dependency Check
+- [ ] **6:00 PM:** Test Coverage Report
+
+### Day 2: Hypothesis Generator & Theory Builder
+
+**⚡ Integration with Existing Services:**
+- [ ] **USE EXISTING:** UnifiedThemeExtractionService for themes
+- [ ] **USE EXISTING:** CrossPlatformSynthesisService for contradictions
+- [ ] **USE EXISTING:** KnowledgeEdge model (SUPPORTS, CONTRADICTS relationships)
+- [ ] **CREATE NEW:** HypothesisGeneratorService
+
+**Morning: AI Hypothesis Generation from Literature (3 hours)**
+- [ ] Create HypothesisGeneratorService in backend/src/modules/research-design/
+- [ ] Wire to CrossPlatformSynthesisService (read contradictions)
+- [ ] Wire to KnowledgeEdge model (read relationship types)
+- [ ] **Implement hypothesis generators:**
+  - [ ] From contradictions: Analyze conflicting findings → competing hypotheses
+  - [ ] From gaps: Unexplored relationships → exploratory hypotheses
+  - [ ] From trends: Emerging patterns → predictive hypotheses
+- [ ] Generate null, alternative, and directional hypotheses
+- [ ] Link each hypothesis to supporting papers
+- [ ] Recommend expected effect size from similar studies
+- [ ] Suggest statistical tests based on hypothesis type
+
+**Afternoon: Theory Development Assistant (2 hours)**
+- [ ] Build conceptual framework generator
+- [ ] Extract constructs from UnifiedTheme model
+- [ ] Use KnowledgeGraph to identify relationships
+- [ ] Generate visual theory diagram (constructs + arrows)
+- [ ] Implement theoretical model builder
+- [ ] Identify mediators/moderators from literature
+- [ ] Suggest causal pathways
+- [ ] Compare alternative models
+- [ ] Create construct operationalization helper
+
+**Evening: Methodology Recommender & Quality Validation (2.5 hours)**
+- [ ] Build methodology comparison engine
+- [ ] Q-methodology suitability scoring
+- [ ] Sample size recommendations based on question
+- [ ] Timeline estimates
+- [ ] Create Q-methodology optimizer
+- [ ] Recommend statement count (30-60)
+- [ ] Suggest P-set size from literature
+- [ ] Estimate factor count from themes
+- [ ] **QUALITY VALIDATION:** Verify hypothesis evidence strength (require 2+ supporting papers)
+- [ ] **QUALITY VALIDATION:** Check for contradictory evidence and flag conflicts
+- [ ] **QUALITY VALIDATION:** Add expert review option for complex hypotheses
+- [ ] **COST CONTROLS:** Track hypothesis generation costs per iteration
+- [ ] **3:00 PM:** Hypothesis Accuracy Testing
+- [ ] **4:00 PM:** Performance Testing (generation <10s)
+- [ ] **5:00 PM:** Run Daily Error Check
+- [ ] **5:30 PM:** Security & Quality Audit
+- [ ] **5:45 PM:** AI Cost Analysis (GPT-4 usage)
+- [ ] **6:00 PM:** Test Coverage Report
+
+### Day 3: Pipeline Integration & Frontend
+
+**⚡ Integration with Existing Services:**
+- [ ] **USE EXISTING:** ThemeToStatementService (wire questions → statements)
+- [ ] **USE EXISTING:** ResearchPipeline model (add designOutput field)
+- [ ] **USE EXISTING:** Survey model (add researchQuestionId field)
+- [ ] **CREATE NEW:** PhaseContext model (track phase outputs)
+
+**Morning: Database & Pipeline Integration (3 hours)**
+- [ ] Create database migration for PhaseContext model
+- [ ] Add designOutput to ResearchPipeline (questions, hypotheses, theory)
+- [ ] Add researchQuestionId to Survey model
+- [ ] Add hypothesisIds to Survey model (JSON array)
+- [ ] Wire ResearchQuestionService → ThemeToStatementService
+- [ ] Ensure research questions inform statement generation
+- [ ] Ensure hypotheses inform statement perspectives
+- [ ] Ensure theory informs statement balance
+- [ ] Create provenance chain: Paper → Gap → Question → Hypothesis → Statement
+- [ ] Test complete pipeline flow
+
+**Afternoon: Frontend Components & UX Flow (3.5 hours)**
+- [ ] Create ResearchDesignPage (/app/(researcher)/design/page.tsx)
+- [ ] **UX FLOW:** Add progress indicator (Literature Complete → Designing Questions → Building Study)
+- [ ] **UX FLOW:** Add navigation buttons (Back to Literature | Skip to Build | Continue to Build)
+- [ ] **UX FLOW:** Implement save/resume functionality (auto-save every 30s)
+- [ ] **UX FLOW:** Add "Skip this phase" option with explanation
+- [ ] **UX FLOW:** Show phase transition animation (DISCOVER → DESIGN → BUILD)
+- [ ] Build QuestionRefinementPanel component
+- [ ] Display SQUARE-IT scores with visual indicators
+- [ ] Show sub-question hierarchy tree
+- [ ] Interactive question editing with AI suggestions
+- [ ] **UX ENHANCEMENT:** Add tooltips explaining SQUARE-IT criteria
+- [ ] **UX ENHANCEMENT:** Show real-time quality score as user types
+- [ ] Build HypothesisBuilderPanel component
+- [ ] Visual hypothesis cards with paper citations
+- [ ] Drag-to-reorder hypotheses by priority
+- [ ] Edit hypotheses with AI assistance
+- [ ] **UX ENHANCEMENT:** Show evidence strength indicators
+- [ ] Build TheoryDiagramBuilder component
+- [ ] Visual construct relationship editor (boxes + arrows)
+- [ ] Export diagram for papers (SVG/PNG)
+- [ ] Wire all components to backend APIs
+
+**Evening: Testing & Documentation (1 hour)**
+- [ ] Test E2E pipeline: Literature → Gaps → Questions → Hypotheses → Statements → Study
+- [ ] Verify complete provenance chain in database
+- [ ] Create user guide: "From Literature to Research Design"
+- [ ] Update navigation architecture with DESIGN phase
+- [ ] **3:00 PM:** Full Pipeline Integration Testing
+- [ ] **4:00 PM:** E2E User Flow Testing
+- [ ] **5:00 PM:** Final Error Check
+- [ ] **5:30 PM:** Final Security Audit
+- [ ] **6:00 PM:** Phase 9.5 Complete
+
+### Testing Requirements (Days 1-3)
+**Unit Tests:**
+- [ ] 25+ unit tests passing (ResearchQuestionService, HypothesisGeneratorService)
+- [ ] SQUARE-IT evaluation accuracy >90%
+- [ ] Question refinement <5s response time
+- [ ] Hypothesis generation <10s response time
+
+**Benchmark Datasets:**
+- [ ] **DATASET 1:** 10 vague research questions from novice researchers (test refinement quality)
+- [ ] **DATASET 2:** 20 papers with known contradictions (test hypothesis generation accuracy)
+- [ ] **DATASET 3:** 5 well-established research questions (test SQUARE-IT scoring against expert ratings)
+- [ ] **DATASET 4:** 15 research gaps from literature reviews (test sub-question decomposition)
+
+**Accuracy Metrics:**
+- [ ] Question quality improvement: >30% increase in SQUARE-IT score after refinement
+- [ ] Hypothesis evidence match: >80% of generated hypotheses supported by cited papers
+- [ ] Sub-question coverage: >90% of identified gaps mapped to sub-questions
+- [ ] Expert agreement: >75% agreement between AI and expert researchers on question quality
+
+**Integration Tests:**
+- [ ] Complete pipeline test: Literature → Design → Build
+- [ ] Provenance chain verification: Paper → Gap → Question → Hypothesis → Statement
+- [ ] Cross-phase data flow: Phase 9 data correctly consumed by Phase 9.5
+
+**Cost Controls:**
+- [ ] GPT-4 cost per question refinement <$0.05
+- [ ] Total Phase 9.5 cost per study <$2.00
+- [ ] Caching effectiveness: >50% cache hit rate for similar questions
+
+### Daily Completion Checklist:
+- [ ] **3:00 PM:** Integration Testing
+- [ ] **4:00 PM:** Performance Testing
+- [ ] **5:00 PM:** Run Daily Error Check
+- [ ] **5:30 PM:** Security & Quality Audit
+- [ ] **5:45 PM:** Dependency Check
+- [ ] **6:00 PM:** Mark completed tasks for the day
+
+---
+
 ### Transition to Phase 10
-Once Days 20.5-22 are complete, proceed to [Phase 10: Report Generation & Research Repository](./PHASE_TRACKER_PART3.md#phase-10-report-generation-research-repository--ai-guardrails)
+Phase 9.5 research design complete. Next: [Phase 10: Report Generation & Research Repository](./PHASE_TRACKER_PART3.md#phase-10-report-generation-research-repository--ai-guardrails)

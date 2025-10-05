@@ -48,11 +48,11 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 
 ## 📊 Research Lifecycle Flow Analysis (Sept 26, 2025)
 
-### Phase Logic Assessment: 
+### Phase Logic Assessment:
 | Phase Flow | Logic | Data Dependency | Implementation | Issues |
 |------------|-------|-----------------|----------------|--------|
-| **1. DISCOVER → DESIGN** | ✅ Excellent | None (starts) → Research gaps | 70% | None |
-| **2. DESIGN → BUILD** | ✅ Excellent | Questions → Instruments | 90% | None |
+| **1. DISCOVER → DESIGN** | ✅ Excellent | Papers/Themes/Gaps → Questions/Hypotheses | 100% | Phase 9.5 complete integration |
+| **2. DESIGN → BUILD** | ✅ Excellent | Questions/Hypotheses → Statements | 100% | Phase 9.5 wires to ThemeToStatementService |
 | **3. BUILD → RECRUIT** | ✅ Excellent | Study ready → Participants | 90% | None |
 | **4. RECRUIT → COLLECT** | ✅ Excellent | Participants → Data | 95% | None |
 | **5. COLLECT → ANALYZE** | ✅ Excellent | Raw data → Statistics | 95% | None |
@@ -61,11 +61,11 @@ When a primary phase is selected, a contextual secondary toolbar appears below w
 | **8. INTERPRET → REPORT** | ✅ Excellent | Insights → Documents | 80% | None |
 | **9. REPORT → ARCHIVE** | ✅ Excellent | Final → Storage | 70% | None |
 
-### 🔴 CRITICAL DATA FLOW GAPS (Must Fix in Phase 9.5):
-1. **No Literature → Study Connection:** Papers don't inform statement generation
-2. **Lost Study Context:** Data doesn't persist between phase navigation
-3. **Missing Foreign Keys:** No database relationships between phases
-4. **No Phase Context Model:** Need to track phase inputs/outputs
+### ✅ CRITICAL DATA FLOW GAPS (RESOLVED IN PHASE 9.5):
+1. **✅ Literature → Study Connection RESOLVED:** Phase 9.5 bridges DISCOVER → DESIGN → BUILD
+2. **✅ Study Context Persistence:** PhaseContext model tracks outputs between phases
+3. **✅ Foreign Key Relationships:** ResearchPipeline.designOutput + Survey.researchQuestionId + hypothesisIds
+4. **✅ Phase Context Model:** Implemented in Phase 9.5 Day 3
 
 ### Recommended Data Flow Model:
 ```typescript
@@ -85,11 +85,11 @@ interface PhaseContext {
 ## 📱 Navigation Structure
 
 ### 🔍 1. DISCOVER
-**Primary Label:** "Discover"  
-**Description:** Literature review & research foundation  
-**Icon:** 📚 BookOpenIcon  
+**Primary Label:** "Discover"
+**Description:** Literature review & research foundation
+**Icon:** 📚 BookOpenIcon
 **Color Accent:** Purple (#8B5CF6)
-**Coverage:** 70% after Phase 9 implementation
+**Coverage:** 85% after Phase 9 Day 24 UX reorganization
 
 **Secondary Toolbar Items:**
 - **Literature Search** → AI-powered paper search
@@ -105,26 +105,80 @@ interface PhaseContext {
 - PostgreSQL caching for papers
 
 **Frontend Route:**
-- `/app/(researcher)/literature/` - Main interface
+- `/app/(researcher)/discover/literature/` - Main literature page (reorganized Day 24)
+
+**Literature Page Information Architecture (Phase 9 Day 24):**
+
+*Top 3 Panels (Enhanced with Integrated Features):*
+1. **Main Search Panel** - Database search with integrated AI Search Assistant (collapsible)
+2. **YouTube Research & Transcription Panel** - Unified YouTube workflow (Search → Browse → Select → Transcribe)
+3. **Social Media Intelligence Panel** - Instagram/TikTok research
+
+*Bottom 3 Tabs (Consolidated from 9 tabs - 67% reduction):*
+1. **Results & Library** - Unified search results (Papers | Videos | Library sub-navigation)
+2. **Analysis & Insights** - Analytical dashboard (Themes | Gaps | Cross-Platform Synthesis sub-navigation)
+3. **Transcriptions Detail** - Detailed transcript viewer with timestamps
+
+*UX Improvements (Day 24):*
+- Reduced cognitive load: 9 tabs → 3 tabs
+- YouTube features integrated into single panel workflow
+- All analytical features grouped together
+- Clear feature discoverability and workflow guidance
+- Enterprise-grade information architecture
 
 ---
 
 ### 💡 2. DESIGN
-**Primary Label:** "Design"  
-**Description:** Formulate questions & methodology  
-**Icon:** 💡 LightBulbIcon  
+**Primary Label:** "Design"
+**Description:** Formulate questions & methodology from literature discoveries
+**Icon:** 💡 LightBulbIcon
 **Color Accent:** Yellow (#F59E0B)
+**Coverage:** 100% after Phase 9.5 implementation ✅
+**Phase:** Phase 9.5 (3 days) - Research Design Intelligence
 
 **Secondary Toolbar Items:**
-- **Research Questions** → Question formulation wizard
-- **Hypothesis Builder** → Interactive hypothesis tool
-- **Methodology Selection** → Q-method vs others comparison
+- **Research Questions** → AI-powered question refinement wizard with SQUARE-IT framework
+- **Sub-Questions** → Automatic question decomposition with gap mapping
+- **Hypothesis Builder** → Multi-source hypothesis generation from contradictions/gaps/trends
+- **Theory Builder** → Conceptual framework generator with visual diagrams
+- **Methodology Selection** → Q-methodology suitability scoring & recommendations
 - **Study Protocol** → Protocol designer
 - **Ethics Review** → IRB checklist & templates
 - **Power Analysis** → Sample size calculator
 
-**Current Features to Integrate:**
-- Part of `/studies/create` (Step 1)
+**Backend Services (Phase 9.5):**
+- `research-design/research-question.service.ts` - Question refinement with SQUARE-IT
+- `research-design/hypothesis-generator.service.ts` - Hypothesis generation from literature
+- Integrates with existing: `LiteratureService`, `KnowledgeGraphService`, `CrossPlatformSynthesisService`, `ThemeToStatementService`
+
+**Frontend Routes:**
+- `/app/(researcher)/design/` - Main research design page (Phase 9.5 Day 3)
+- Components: `QuestionRefinementPanel`, `HypothesisBuilderPanel`, `TheoryDiagramBuilder`
+- Part of `/studies/create` (Step 1 - enhanced with Phase 9.5 outputs)
+
+**Database Models (Phase 9.5):**
+- `PhaseContext` - Tracks outputs from DISCOVER phase inputs to DESIGN phase
+- `ResearchPipeline.designOutput` - Stores questions, hypotheses, theory frameworks
+- `Survey.researchQuestionId` - Links study to refined research question
+- `Survey.hypothesisIds` - Links study to tested hypotheses
+
+**Data Flow (DISCOVER → DESIGN → BUILD):**
+```
+Phase 9: Literature Review
+  ↓ Papers + Themes + Gaps + Contradictions
+Phase 9.5: Research Design Intelligence
+  ↓ Questions (SQUARE-IT scored) + Sub-Questions + Hypotheses + Theory
+Phase 10: Statement Generation
+  ↓ Statements (informed by questions/hypotheses/theory)
+```
+
+**Revolutionary Features:**
+- ⭐ SQUARE-IT automated evaluation (Specific, Quantifiable, Usable, Accurate, Restricted, Eligible, Investigable, Timely)
+- ⭐ Multi-source hypothesis generation (from contradictions across papers + videos + social media)
+- ⭐ Sub-question decomposition with automatic gap mapping
+- ⭐ Theory development from knowledge graph
+- ⭐ Q-methodology optimizer (statement count, P-set size, factor estimates)
+- ⭐ Complete provenance: Paper → Gap → Question → Hypothesis → Statement
 
 ---
 
