@@ -1862,12 +1862,6 @@ export default function LiteratureSearchPage() {
                   <span className="font-semibold text-purple-600">{transcribedVideos.length}</span>
                   <span className="text-gray-500 ml-1">videos transcribed</span>
                 </div>
-                {instagramPosts.length > 0 && (
-                  <div className="text-sm">
-                    <span className="font-semibold text-pink-600">{instagramPosts.length}</span>
-                    <span className="text-gray-500 ml-1">Instagram posts</span>
-                  </div>
-                )}
               </div>
 
               {/* Action Button */}
