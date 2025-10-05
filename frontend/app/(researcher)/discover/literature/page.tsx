@@ -25,6 +25,7 @@ import {
   Check,
   X,
   MessageSquare,
+  Video,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,12 @@ import {
 } from '@/lib/services/literature-api.service';
 import DatabaseSourcesInfo from '@/components/literature/DatabaseSourcesInfo';
 import { ThemeCard } from '@/components/literature/ThemeCard';
+import { CrossPlatformDashboard } from '@/components/literature/CrossPlatformDashboard';
+import { VideoSelectionPanel } from '@/components/literature/VideoSelectionPanel';
+import { YouTubeChannelBrowser } from '@/components/literature/YouTubeChannelBrowser';
+import { AISearchAssistant } from '@/components/literature/AISearchAssistant';
+import { AcademicInstitutionLogin } from '@/components/literature/AcademicInstitutionLogin';
+import { CostCalculator } from '@/components/literature/CostCalculator';
 import {
   useUnifiedThemeAPI,
   UnifiedTheme,
@@ -78,12 +85,15 @@ export default function LiteratureSearchPage() {
 
   // Library state
   const [savedPapers, setSavedPapers] = useState<Paper[]>([]);
-  const [activeTab, setActiveTab] = useState('search');
+  const [activeTab, setActiveTab] = useState('results'); // PHASE 9 DAY 24: Changed from 'search' to 'results'
 
   // Alternative sources state
   const [alternativeSources, setAlternativeSources] = useState<string[]>([]);
   const [alternativeResults, setAlternativeResults] = useState<any[]>([]);
   const [loadingAlternative, setLoadingAlternative] = useState(false);
+
+  // YouTube video selection state
+  const [youtubeVideos, setYoutubeVideos] = useState<any[]>([]);
 
   // PHASE 9 DAY 13: Social media state
   const [socialPlatforms, setSocialPlatforms] = useState<string[]>([]);
@@ -96,6 +106,48 @@ export default function LiteratureSearchPage() {
     includeTranscripts: false,
     extractThemes: false,
     maxResults: 10,
+  });
+
+  // PHASE 9 DAY 20.5: Transcribed videos state
+  const [transcribedVideos, setTranscribedVideos] = useState<{
+    id: string;
+    title: string;
+    sourceId: string; // YouTube video ID
+    url: string;
+    channel?: string;
+    duration: number; // in seconds
+    cost: number; // transcription cost
+    transcript: string;
+    themes?: any[];
+    extractedAt: string;
+    cached: boolean; // whether this was cached (no cost)
+  }[]>([]);
+
+  // PHASE 9 DAY 24: UX Reorganization - Panel and tab navigation state
+  const [expandedPanel, setExpandedPanel] = useState<string | null>(null); // Which panel section is expanded
+  const [activeResultsSubTab, setActiveResultsSubTab] = useState<'papers' | 'videos' | 'library'>('papers');
+  const [activeAnalysisSubTab, setActiveAnalysisSubTab] = useState<'themes' | 'gaps' | 'synthesis'>('themes');
+
+  // PHASE 9 DAY 25: Academic categorization - New state for institution auth and database selection
+  const [academicDatabases, setAcademicDatabases] = useState<string[]>([
+    'pubmed',
+    'semantic_scholar',
+    'crossref',
+    'arxiv',
+  ]);
+  const [institutionAuth, setInstitutionAuth] = useState<{
+    isAuthenticated: boolean;
+    institution: any | null;
+    authMethod: 'shibboleth' | 'openathens' | 'orcid' | null;
+    userName?: string;
+    freeAccess: boolean;
+    accessibleDatabases: string[];
+  }>({
+    isAuthenticated: false,
+    institution: null,
+    authMethod: null,
+    freeAccess: false,
+    accessibleDatabases: [],
   });
 
   // Load saved papers on mount
@@ -141,13 +193,14 @@ export default function LiteratureSearchPage() {
       if (result.papers && result.papers.length > 0) {
         setPapers(result.papers);
         setTotalResults(result.total);
-        setActiveTab('search'); // Make sure we're on the search tab to see results
+        setActiveTab('results'); // PHASE 9 DAY 24: Switch to results tab
+        setActiveResultsSubTab('papers'); // Show papers sub-tab
         console.log(
           '✅ Papers state updated with',
           result.papers.length,
           'papers'
         );
-        console.log('📑 Active tab set to:', 'search');
+        console.log('📑 Active tab set to:', 'results');
         toast.success(
           `Found ${result.total} papers across ${filters.sources.length} databases`
         );
@@ -155,7 +208,8 @@ export default function LiteratureSearchPage() {
         console.warn('⚠️ No papers in result');
         setPapers([]);
         setTotalResults(0);
-        setActiveTab('search'); // Still switch to search tab
+        setActiveTab('results'); // PHASE 9 DAY 24: Switch to results tab
+        setActiveResultsSubTab('papers'); // Show papers sub-tab
         toast.info('No papers found. Try adjusting your search terms.');
       }
     } catch (error) {
@@ -211,8 +265,11 @@ export default function LiteratureSearchPage() {
   };
 
   const handleExtractThemes = async () => {
-    if (selectedPapers.size === 0) {
-      toast.error('Please select papers to analyze');
+    // PHASE 9 DAY 20.5: Unified extraction from papers AND videos
+    const totalSources = selectedPapers.size + transcribedVideos.length;
+
+    if (totalSources === 0) {
+      toast.error('Please select papers or transcribe videos to analyze');
       return;
     }
 
@@ -224,7 +281,7 @@ export default function LiteratureSearchPage() {
       const selectedPaperObjects = papers.filter(p => selectedPapers.has(p.id));
 
       // Convert papers to SourceContent format for unified theme extraction
-      const sources: SourceContent[] = selectedPaperObjects.map(paper => ({
+      const paperSources: SourceContent[] = selectedPaperObjects.map(paper => ({
         id: paper.id,
         type: 'paper' as const,
         title: paper.title,
@@ -236,15 +293,34 @@ export default function LiteratureSearchPage() {
         ...(paper.url && { url: paper.url }),
       }));
 
+      // PHASE 9 DAY 20.5: Add transcribed videos to sources
+      const videoSources: SourceContent[] = transcribedVideos.map(video => ({
+        id: video.id,
+        type: 'youtube' as const,
+        title: video.title,
+        content: video.transcript,
+        keywords: video.themes?.map((t: any) => t.label || t) || [],
+        url: video.url,
+        metadata: {
+          videoId: video.sourceId,
+          duration: video.duration,
+          channel: video.channel,
+        },
+      }));
+
+      // Combine all sources
+      const allSources = [...paperSources, ...videoSources];
+
       // Phase 9 Day 20: Use unified theme extraction with full provenance
-      const result = await extractUnifiedThemes(sources, {
+      const result = await extractUnifiedThemes(allSources, {
         maxThemes: 15,
         minConfidence: 0.5,
       });
 
       if (result && result.themes) {
         setUnifiedThemes(result.themes);
-        setActiveTab('themes');
+        setActiveTab('analysis'); // PHASE 9 DAY 24: Switch to analysis tab
+        setActiveAnalysisSubTab('themes'); // Show themes sub-tab
         toast.success(
           `Extracted ${result.themes.length} themes with full provenance from ${paperIds.length} papers`
         );
@@ -272,7 +348,8 @@ export default function LiteratureSearchPage() {
         includeCollaborations: true,
       });
       setGaps(researchGaps);
-      setActiveTab('gaps');
+      setActiveTab('analysis'); // PHASE 9 DAY 24: Switch to analysis tab
+      setActiveAnalysisSubTab('gaps'); // Show gaps sub-tab
       toast.success(`Identified ${researchGaps.length} research opportunities`);
     } catch (error) {
       toast.error('Gap analysis failed');
@@ -323,8 +400,20 @@ export default function LiteratureSearchPage() {
         themeNames,
         { topic: query }
       );
+
+      // Store statements in session storage for study creation page
+      sessionStorage.setItem('generatedStatements', JSON.stringify(statements));
+      sessionStorage.setItem('statementSource', JSON.stringify({
+        type: 'themes',
+        query,
+        themeCount: unifiedThemes.length,
+        timestamp: new Date().toISOString(),
+      }));
+
       toast.success(`Generated ${statements.length} Q-statements from themes`);
-      // TODO: Navigate to statement builder with generated statements
+
+      // Navigate to study creation page with generated statements
+      window.location.href = '/create/study?from=literature&statementsReady=true';
     } catch (error) {
       toast.error('Statement generation failed');
     }
@@ -344,11 +433,37 @@ export default function LiteratureSearchPage() {
     setLoadingAlternative(true);
     try {
       // PHASE 9 DAY 18: Use enhanced YouTube search with transcription if enabled
-      if (alternativeSources.includes('youtube') && transcriptionOptions.includeTranscripts) {
-        const youtubeResults = await literatureAPI.searchYouTubeWithTranscription(
-          query,
-          transcriptionOptions
-        );
+      if (
+        alternativeSources.includes('youtube') &&
+        transcriptionOptions.includeTranscripts
+      ) {
+        const youtubeResults =
+          await literatureAPI.searchYouTubeWithTranscription(
+            query,
+            transcriptionOptions
+          );
+
+        // PHASE 9 DAY 20.5: Store transcribed videos separately
+        if (youtubeResults.transcripts && youtubeResults.transcripts.length > 0) {
+          const newTranscriptions = youtubeResults.transcripts.map((transcript: any) => ({
+            id: transcript.id || transcript.videoId,
+            title: transcript.title || 'Untitled Video',
+            sourceId: transcript.videoId,
+            url: `https://www.youtube.com/watch?v=${transcript.videoId}`,
+            channel: transcript.channel,
+            duration: transcript.duration || 0,
+            cost: transcript.cost || 0,
+            transcript: transcript.transcript || transcript.text || '',
+            themes: transcript.themes || [],
+            extractedAt: transcript.extractedAt || new Date().toISOString(),
+            cached: transcript.cached || false,
+          }));
+
+          setTranscribedVideos(prev => [...prev, ...newTranscriptions]);
+
+          // Auto-switch to transcriptions tab
+          setActiveTab('transcriptions');
+        }
 
         // Get results from other sources
         const otherSources = alternativeSources.filter(s => s !== 'youtube');
@@ -363,9 +478,14 @@ export default function LiteratureSearchPage() {
         const allResults = [...(youtubeResults.videos || []), ...otherResults];
         setAlternativeResults(allResults);
 
+        // Extract YouTube videos for VideoSelectionPanel
+        if (youtubeResults.videos && youtubeResults.videos.length > 0) {
+          setYoutubeVideos(youtubeResults.videos);
+        }
+
         if (youtubeResults.transcriptionCost) {
           toast.success(
-            `Found ${allResults.length} results (Transcription cost: $${youtubeResults.transcriptionCost.toFixed(2)})`
+            `Found ${allResults.length} results. ${youtubeResults.transcripts?.length || 0} videos transcribed ($${youtubeResults.transcriptionCost.toFixed(2)})`
           );
         } else {
           toast.success(`Found ${allResults.length} results`);
@@ -377,6 +497,15 @@ export default function LiteratureSearchPage() {
           alternativeSources
         );
         setAlternativeResults(results);
+
+        // Extract YouTube videos if present
+        if (alternativeSources.includes('youtube')) {
+          const youtubeResults = results.filter((r: any) => r.source === 'youtube');
+          if (youtubeResults.length > 0) {
+            setYoutubeVideos(youtubeResults);
+          }
+        }
+
         toast.success(
           `Found ${results.length} results from ${alternativeSources.length} alternative sources`
         );
@@ -406,7 +535,12 @@ export default function LiteratureSearchPage() {
 
     setLoadingSocial(true);
     try {
-      console.log('🔍 Social Media Search:', query, 'Platforms:', socialPlatforms);
+      console.log(
+        '🔍 Social Media Search:',
+        query,
+        'Platforms:',
+        socialPlatforms
+      );
 
       const results = await literatureAPI.searchSocialMedia(
         query,
@@ -424,7 +558,9 @@ export default function LiteratureSearchPage() {
           `Found ${results.length} posts from ${socialPlatforms.length} platforms with sentiment analysis`
         );
       } else {
-        toast.info('No social media results found. Try different platforms or queries.');
+        toast.info(
+          'No social media results found. Try different platforms or queries.'
+        );
       }
     } catch (error) {
       toast.error('Social media search failed');
@@ -475,7 +611,9 @@ export default function LiteratureSearchPage() {
       (hasAltSources ? alternativeSources.length : 0) +
       (hasSocialSources ? socialPlatforms.length : 0);
 
-    toast.success(`🔍 Comprehensive search completed across ${totalSources} sources!`);
+    toast.success(
+      `🔍 Comprehensive search completed across ${totalSources} sources!`
+    );
   };
 
   const togglePaperSelection = (paperId: string) => {
@@ -625,18 +763,21 @@ export default function LiteratureSearchPage() {
         </div>
       </div>
 
-      {/* Search Section */}
-      <Card className="border-2">
+      {/* PHASE 9 DAY 25: Panel 1 - Academic Resources & Institutional Access */}
+      <Card className="border-2 border-blue-200">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Multi-Database Literature Search</span>
-            <div className="flex gap-2">
-              <Badge variant={filters.includeAIMode ? 'default' : 'secondary'}>
-                <Sparkles className="w-3 h-3 mr-1" />
-                AI Mode {filters.includeAIMode ? 'ON' : 'OFF'}
-              </Badge>
-            </div>
+            <span className="flex items-center gap-2">
+              <Database className="w-5 h-5 text-blue-600" />
+              Academic Resources & Institutional Access
+            </span>
+            <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+              Scholarly Databases
+            </Badge>
           </CardTitle>
+          <p className="text-sm text-gray-600 mt-2">
+            Search peer-reviewed academic literature from leading scholarly databases
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
@@ -656,7 +797,7 @@ export default function LiteratureSearchPage() {
               className="h-12 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               size="lg"
             >
-              {(loading || loadingAlternative || loadingSocial) ? (
+              {loading || loadingAlternative || loadingSocial ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
@@ -680,10 +821,60 @@ export default function LiteratureSearchPage() {
             </Button>
           </div>
 
-          {/* Helper text */}
-          <p className="text-xs text-gray-500 mt-1">
-            💡 Tip: Select sources below, then click "Search All Sources" for comprehensive results across main databases, alternative sources, and social media
-          </p>
+          {/* PHASE 9 DAY 25: Academic Database Selection */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Select Academic Databases
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { id: 'pubmed', label: 'PubMed', icon: '🏥', desc: 'Medical/life sciences' },
+                { id: 'semantic_scholar', label: 'Semantic Scholar', icon: '🎓', desc: 'CS/interdisciplinary' },
+                { id: 'arxiv', label: 'ArXiv', icon: '📐', desc: 'Physics/Math/CS preprints' },
+                { id: 'crossref', label: 'CrossRef', icon: '🔗', desc: 'DOI database' },
+                { id: 'ieee', label: 'IEEE Xplore', icon: '⚡', desc: 'Engineering' },
+                { id: 'biorxiv', label: 'bioRxiv', icon: '🧬', desc: 'Biology preprints' },
+                { id: 'pmc', label: 'PubMed Central', icon: '📖', desc: 'Free full-text' },
+              ].map(source => (
+                <Badge
+                  key={source.id}
+                  variant={academicDatabases.includes(source.id) ? 'default' : 'outline'}
+                  className="cursor-pointer py-2 px-4 text-sm hover:scale-105 transition-transform"
+                  onClick={() => {
+                    const newDatabases = academicDatabases.includes(source.id)
+                      ? academicDatabases.filter(s => s !== source.id)
+                      : [...academicDatabases, source.id];
+                    setAcademicDatabases(newDatabases);
+                  }}
+                  title={source.desc}
+                >
+                  <span className="mr-2">{source.icon}</span>
+                  {source.label}
+                </Badge>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              {academicDatabases.length} database{academicDatabases.length !== 1 ? 's' : ''} selected
+              {academicDatabases.length === 0 && ' (select at least one)'}
+            </p>
+          </div>
+
+          {/* PHASE 9 DAY 25: Institution Login */}
+          <AcademicInstitutionLogin
+            currentAuth={institutionAuth}
+            onAuthChange={setInstitutionAuth}
+          />
+
+          {/* PHASE 9 DAY 25: Cost Calculator */}
+          <CostCalculator
+            selectedPapers={selectedPapers}
+            papers={papers}
+            institutionAccessActive={institutionAuth.freeAccess}
+            onLoginClick={() => {
+              // Scroll to institution login section
+              toast.info('Scroll up to login with your institution');
+            }}
+          />
 
           {/* Advanced Filters */}
           <AnimatePresence>
@@ -755,7 +946,9 @@ export default function LiteratureSearchPage() {
                     </select>
                   </div>
                   <div className="col-span-2">
-                    <label className="text-sm font-medium">Main Databases</label>
+                    <label className="text-sm font-medium">
+                      Main Databases
+                    </label>
                     <div className="flex gap-2 mt-1 flex-wrap">
                       <Badge
                         variant={
@@ -837,14 +1030,29 @@ export default function LiteratureSearchPage() {
             <Button
               variant="outline"
               onClick={handleExtractThemes}
-              disabled={selectedPapers.size === 0 || analyzingThemes}
+              disabled={(selectedPapers.size === 0 && transcribedVideos.length === 0) || analyzingThemes}
+              className="flex items-center gap-2"
             >
               {analyzingThemes ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <Sparkles className="w-4 h-4 mr-2" />
               )}
-              Extract Themes ({selectedPapers.size})
+              <span>Extract Themes from All Sources</span>
+              {(selectedPapers.size > 0 || transcribedVideos.length > 0) && (
+                <div className="flex gap-1">
+                  {selectedPapers.size > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {selectedPapers.size} papers
+                    </Badge>
+                  )}
+                  {transcribedVideos.length > 0 && (
+                    <Badge variant="secondary" className="text-xs bg-purple-100 dark:bg-purple-900">
+                      {transcribedVideos.length} videos
+                    </Badge>
+                  )}
+                </div>
+              )}
             </Button>
             <Button
               variant="outline"
@@ -873,26 +1081,65 @@ export default function LiteratureSearchPage() {
               </Button>
             )}
           </div>
+
+          {/* PHASE 9 DAY 24: Integrated AI Search Assistant (collapsible) */}
+          <div className="pt-4 border-t">
+            <Button
+              variant="ghost"
+              onClick={() => setExpandedPanel(expandedPanel === 'ai-assistant' ? null : 'ai-assistant')}
+              className="w-full justify-between hover:bg-purple-50"
+            >
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+                AI Search Assistant - Refine Your Query
+              </span>
+              <ChevronRight className={cn(
+                "w-5 h-5 transition-transform",
+                expandedPanel === 'ai-assistant' && "rotate-90"
+              )} />
+            </Button>
+            <AnimatePresence>
+              {expandedPanel === 'ai-assistant' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="mt-4"
+                >
+                  <AISearchAssistant
+                    initialQuery={query}
+                    onQueryChange={(newQuery) => {
+                      setQuery(newQuery);
+                      toast.success('Query updated! Click "Search All Sources" to search.');
+                    }}
+                    domain="general"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Alternative Sources Search */}
-      <Card className="border-2 border-purple-200">
+      {/* PHASE 9 DAY 25: Panel 2 - Alternative Knowledge Sources */}
+      <Card className="border-2 border-indigo-200">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-purple-600" />
-              Alternative Research Sources
+              <GitBranch className="w-5 h-5 text-indigo-600" />
+              Alternative Knowledge Sources
             </span>
-            <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-              Beta Feature
+            <Badge
+              variant="secondary"
+              className="bg-indigo-100 text-indigo-700"
+            >
+              Expert Insights
             </Badge>
           </CardTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Search beyond traditional academic databases: YouTube videos, podcasts,
-            GitHub repos, StackOverflow discussions, and preprint servers.
-            <span className="block mt-1 text-xs font-medium text-purple-600">
-              💡 Use "Search All Sources" above to search everything at once, or use the button below for these sources only
+            Discover expert knowledge beyond traditional academic databases: podcasts, technical documentation, and community expertise
+            <span className="block mt-1 text-xs font-medium text-indigo-600">
+              💡 All sources are free and open-access
             </span>
           </p>
         </CardHeader>
@@ -903,17 +1150,17 @@ export default function LiteratureSearchPage() {
             </label>
             <div className="flex gap-2 flex-wrap">
               {[
-                { id: 'youtube', label: 'YouTube', icon: '🎥' },
-                { id: 'podcasts', label: 'Podcasts', icon: '🎙️' },
-                { id: 'github', label: 'GitHub', icon: '💻' },
-                { id: 'stackoverflow', label: 'StackOverflow', icon: '📚' },
-                { id: 'biorxiv', label: 'bioRxiv', icon: '🧬' },
-                { id: 'arxiv-preprints', label: 'arXiv Preprints', icon: '📄' },
+                { id: 'podcasts', label: 'Podcasts', icon: '🎙️', desc: 'Expert interviews & discussions' },
+                { id: 'github', label: 'GitHub', icon: '💻', desc: 'Code & datasets' },
+                { id: 'stackoverflow', label: 'StackOverflow', icon: '📚', desc: 'Technical Q&A' },
+                { id: 'medium', label: 'Medium', icon: '📝', desc: 'Practitioner insights' },
               ].map(source => (
                 <Badge
                   key={source.id}
                   variant={
-                    alternativeSources.includes(source.id) ? 'default' : 'outline'
+                    alternativeSources.includes(source.id)
+                      ? 'default'
+                      : 'outline'
                   }
                   className="cursor-pointer py-2 px-4 text-sm"
                   onClick={() => {
@@ -930,79 +1177,49 @@ export default function LiteratureSearchPage() {
             </div>
           </div>
 
-          {/* PHASE 9 DAY 18: Multimedia Transcription Options */}
-          {alternativeSources.includes('youtube') && (
-            <div className="border rounded-lg p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20">
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                🎥 YouTube Video Transcription & AI Analysis
-                <Badge variant="secondary" className="ml-auto">
-                  OpenAI Whisper
-                </Badge>
+          {/* PHASE 9 DAY 25: Conditional sections for Alternative Sources */}
+          {alternativeSources.includes('podcasts') && (
+            <div className="border rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20">
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                🎙️ Podcast Search
               </h4>
+              <p className="text-xs text-gray-600 mb-2">
+                Search for research podcasts, expert interviews, and academic discussions
+              </p>
+              <Input placeholder="Search podcasts..." className="mb-2" />
+              <p className="text-xs text-gray-500">
+                Coming soon: Integration with Apple Podcasts, Spotify, and Google Podcasts
+              </p>
+            </div>
+          )}
 
-              <div className="space-y-3">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={transcriptionOptions.includeTranscripts}
-                    onChange={(e) =>
-                      setTranscriptionOptions({
-                        ...transcriptionOptions,
-                        includeTranscripts: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4 rounded border-gray-300"
-                  />
-                  <div className="flex-1">
-                    <span className="text-sm font-medium">
-                      Include video transcriptions
-                    </span>
-                    <p className="text-xs text-muted-foreground">
-                      Transcribe audio to searchable text (~$0.006/min)
-                    </p>
-                  </div>
-                </label>
+          {alternativeSources.includes('github') && (
+            <div className="border rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20">
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                💻 GitHub Repository Browser
+              </h4>
+              <p className="text-xs text-gray-600 mb-2">
+                Find code implementations, datasets, and technical documentation
+              </p>
+              <Input placeholder="Search repositories..." className="mb-2" />
+              <p className="text-xs text-gray-500">
+                Coming soon: GitHub API integration for code search and dataset discovery
+              </p>
+            </div>
+          )}
 
-                {transcriptionOptions.includeTranscripts && (
-                  <label className="flex items-center gap-3 cursor-pointer ml-7">
-                    <input
-                      type="checkbox"
-                      checked={transcriptionOptions.extractThemes}
-                      onChange={(e) =>
-                        setTranscriptionOptions({
-                          ...transcriptionOptions,
-                          extractThemes: e.target.checked,
-                        })
-                      }
-                      className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <div className="flex-1">
-                      <span className="text-sm font-medium">
-                        Extract themes with GPT-4
-                      </span>
-                      <p className="text-xs text-muted-foreground">
-                        AI-powered theme extraction (+$0.10-0.50/video)
-                      </p>
-                    </div>
-                  </label>
-                )}
-
-                {transcriptionOptions.includeTranscripts && (
-                  <div className="ml-7 mt-2 p-3 rounded bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                    <p className="text-xs font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2">
-                      <span>💰</span>
-                      Estimated cost for 10 videos (~10 min each):
-                      <span className="font-bold">
-                        ${transcriptionOptions.extractThemes ? '5.00-8.00' : '0.60'}
-                      </span>
-                    </p>
-                    <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                      ✓ All transcriptions cached - pay only once per video
-                    </p>
-                  </div>
-                )}
-              </div>
+          {alternativeSources.includes('stackoverflow') && (
+            <div className="border rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20">
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                📚 StackOverflow Search
+              </h4>
+              <p className="text-xs text-gray-600 mb-2">
+                Search technical Q&A and community knowledge
+              </p>
+              <Input placeholder="Search questions..." className="mb-2" />
+              <p className="text-xs text-gray-500">
+                Coming soon: StackOverflow API integration for technical problem-solving
+              </p>
             </div>
           )}
 
@@ -1084,7 +1301,7 @@ export default function LiteratureSearchPage() {
         </CardContent>
       </Card>
 
-      {/* PHASE 9 DAY 13: Social Media Intelligence */}
+      {/* PHASE 9 DAY 25: Panel 3 - Social Media Intelligence (with YouTube moved here) */}
       <Card className="border-2 border-indigo-200">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -1092,15 +1309,17 @@ export default function LiteratureSearchPage() {
               <MessageSquare className="w-5 h-5 text-indigo-600" />
               Social Media Intelligence
             </span>
-            <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">
+            <Badge
+              variant="secondary"
+              className="bg-indigo-100 text-indigo-700"
+            >
               🔥 New
             </Badge>
           </CardTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Discover public opinions and research discussions across social media platforms.
-            Includes sentiment analysis and engagement-weighted synthesis.
-            <span className="block mt-1 text-xs font-medium text-indigo-600">
-              💡 Use "Search All Sources" above to search everything at once, or use the button below for these platforms only
+            Research social media platforms for trends, public opinion, and content analysis. Each platform unlocks specific research tools.
+            <span className="block mt-1 text-xs font-medium text-pink-600">
+              💡 Select a platform below to see available research options
             </span>
           </p>
         </CardHeader>
@@ -1111,17 +1330,17 @@ export default function LiteratureSearchPage() {
             </label>
             <div className="flex gap-2 flex-wrap">
               {[
-                { id: 'twitter', label: 'Twitter/X', icon: '🐦' },
-                { id: 'reddit', label: 'Reddit', icon: '🤖' },
-                { id: 'linkedin', label: 'LinkedIn', icon: '💼' },
-                { id: 'facebook', label: 'Facebook', icon: '👥' },
-                { id: 'instagram', label: 'Instagram', icon: '📷' },
-                { id: 'tiktok', label: 'TikTok', icon: '🎵' },
+                { id: 'youtube', label: 'YouTube', icon: '🎥', color: 'red' },
+                { id: 'instagram', label: 'Instagram', icon: '📸', color: 'pink' },
+                { id: 'tiktok', label: 'TikTok', icon: '🎵', color: 'cyan' },
+                { id: 'twitter', label: 'Twitter/X', icon: '🐦', color: 'blue' },
               ].map(platform => (
                 <Badge
                   key={platform.id}
                   variant={
-                    socialPlatforms.includes(platform.id) ? 'default' : 'outline'
+                    socialPlatforms.includes(platform.id)
+                      ? 'default'
+                      : 'outline'
                   }
                   className="cursor-pointer py-2 px-4 text-sm"
                   onClick={() => {
@@ -1137,6 +1356,234 @@ export default function LiteratureSearchPage() {
               ))}
             </div>
           </div>
+
+          {/* PHASE 9 DAY 25: Conditional YouTube Section */}
+          {socialPlatforms.includes('youtube') && (
+            <div className="space-y-4 p-4 bg-gradient-to-r from-red-50 to-purple-50 dark:from-red-900/20 dark:to-purple-900/20 rounded-lg border-2 border-red-200">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <Video className="w-4 h-4 text-red-600" />
+                🎥 YouTube Video Research & Transcription
+                <Badge variant="secondary" className="ml-auto bg-red-100 text-red-700">
+                  AI-Powered
+                </Badge>
+              </h4>
+
+              {/* Transcription options */}
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={transcriptionOptions.includeTranscripts}
+                    onChange={e =>
+                      setTranscriptionOptions({
+                        ...transcriptionOptions,
+                        includeTranscripts: e.target.checked,
+                      })
+                    }
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium">
+                      Include video transcriptions
+                    </span>
+                    <p className="text-xs text-muted-foreground">
+                      Transcribe audio to searchable text (~$0.006/min)
+                    </p>
+                  </div>
+                </label>
+
+                {transcriptionOptions.includeTranscripts && (
+                  <div className="ml-7 p-3 rounded bg-red-50 dark:bg-red-900/20 border border-red-200">
+                    <p className="text-xs font-medium text-red-800 dark:text-red-200">
+                      💰 Estimated cost: $0.60 for 10 videos (~10 min each)
+                    </p>
+                    <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                      ✓ All transcriptions cached - pay only once per video
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* YouTube Channel Browser (collapsible) */}
+              <div className="pt-2 border-t border-red-200">
+                <Button
+                  variant="ghost"
+                  onClick={() => setExpandedPanel(expandedPanel === 'youtube-browser' ? null : 'youtube-browser')}
+                  className="w-full justify-between hover:bg-red-100"
+                >
+                  <span className="flex items-center gap-2 text-sm">
+                    <Video className="w-4 h-4 text-red-600" />
+                    Browse YouTube Channels
+                  </span>
+                  <ChevronRight className={cn(
+                    "w-4 h-4 transition-transform",
+                    expandedPanel === 'youtube-browser' && "rotate-90"
+                  )} />
+                </Button>
+                <AnimatePresence>
+                  {expandedPanel === 'youtube-browser' && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="mt-2"
+                    >
+                      <YouTubeChannelBrowser
+                        onVideosSelected={(videos) => {
+                          setYoutubeVideos(prev => {
+                            const existingIds = new Set(prev.map((v: any) => v.videoId || v.id));
+                            const newVideos = videos.filter(v => !existingIds.has(v.videoId));
+                            if (newVideos.length === 0) {
+                              toast.info('All selected videos are already in the queue');
+                              return prev;
+                            }
+                            toast.success(`Added ${newVideos.length} videos to selection queue`);
+                            setExpandedPanel('video-selection');
+                            return [...prev, ...newVideos];
+                          });
+                        }}
+                        researchContext={query}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Video Selection Panel (collapsible) */}
+              <div className="pt-2 border-t border-red-200">
+                <Button
+                  variant="ghost"
+                  onClick={() => setExpandedPanel(expandedPanel === 'video-selection' ? null : 'video-selection')}
+                  className="w-full justify-between hover:bg-red-100"
+                >
+                  <span className="flex items-center gap-2 text-sm">
+                    <Check className="w-4 h-4 text-red-600" />
+                    Video Selection Queue
+                    {youtubeVideos.length > 0 && (
+                      <Badge variant="secondary" className="ml-2">
+                        {youtubeVideos.length}
+                      </Badge>
+                    )}
+                  </span>
+                  <ChevronRight className={cn(
+                    "w-4 h-4 transition-transform",
+                    expandedPanel === 'video-selection' && "rotate-90"
+                  )} />
+                </Button>
+                <AnimatePresence>
+                  {expandedPanel === 'video-selection' && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="mt-2"
+                    >
+                      {youtubeVideos.length > 0 ? (
+                        <VideoSelectionPanel
+                          videos={youtubeVideos.map((video: any) => ({
+                            videoId: video.videoId || video.id,
+                            title: video.title,
+                            description: video.description || '',
+                            channelName: video.channelName || video.channel || '',
+                            channelId: video.channelId || '',
+                            thumbnailUrl: video.thumbnailUrl || video.thumbnail || 'https://via.placeholder.com/320x180',
+                            duration: video.duration || 0,
+                            viewCount: video.viewCount || video.views || 0,
+                            publishedAt: video.publishedAt ? new Date(video.publishedAt) : new Date(),
+                            relevanceScore: video.relevanceScore,
+                            isTranscribed: video.isTranscribed || false,
+                            transcriptionStatus: video.transcriptionStatus || 'not_started',
+                            cachedTranscript: video.cachedTranscript || false,
+                          }))}
+                          researchContext={query}
+                          onTranscribe={async (videoIds) => {
+                            try {
+                              toast.info(`Starting transcription for ${videoIds.length} videos...`);
+                              const result = await literatureAPI.searchYouTubeWithTranscription(query, {
+                                ...transcriptionOptions,
+                                includeTranscripts: true,
+                                maxResults: videoIds.length,
+                              });
+                              if (result.transcripts && result.transcripts.length > 0) {
+                                const newTranscriptions = result.transcripts.map((transcript: any) => ({
+                                  id: transcript.id || transcript.videoId,
+                                  title: transcript.title || 'Untitled Video',
+                                  sourceId: transcript.videoId,
+                                  url: `https://www.youtube.com/watch?v=${transcript.videoId}`,
+                                  channel: transcript.channel,
+                                  duration: transcript.duration || 0,
+                                  cost: transcript.cost || 0,
+                                  transcript: transcript.transcript || transcript.text || '',
+                                  themes: transcript.themes || [],
+                                  extractedAt: transcript.extractedAt || new Date().toISOString(),
+                                  cached: transcript.cached || false,
+                                }));
+                                setTranscribedVideos(prev => [...prev, ...newTranscriptions]);
+                                toast.success(`Successfully transcribed ${result.transcripts.length} videos`);
+                                setActiveTab('results');
+                                setActiveResultsSubTab('videos');
+                              } else {
+                                toast.error('Transcription failed - no results returned');
+                              }
+                            } catch (error) {
+                              console.error('Transcription error:', error);
+                              toast.error('Failed to transcribe videos. Please try again.');
+                            }
+                          }}
+                          isLoading={loadingAlternative}
+                        />
+                      ) : (
+                        <div className="text-center py-6 text-gray-500 border border-dashed rounded-lg bg-white">
+                          <Video className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+                          <p className="text-xs">No videos in queue</p>
+                          <p className="text-xs mt-1">Browse channels to add videos</p>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          )}
+
+          {/* PHASE 9 DAY 25: Conditional Instagram Section */}
+          {socialPlatforms.includes('instagram') && (
+            <div className="p-4 bg-gradient-to-r from-pink-50 to-orange-50 dark:from-pink-900/20 dark:to-orange-900/20 rounded-lg border-2 border-pink-200">
+              <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                📸 Instagram Research
+              </h4>
+              <p className="text-xs text-gray-600 mb-2">
+                Manual upload, hashtag trends, and profile analysis
+              </p>
+              <p className="text-xs text-gray-500">
+                Coming soon: Instagram research tools
+              </p>
+            </div>
+          )}
+
+          {/* PHASE 9 DAY 25: Conditional TikTok Section */}
+          {socialPlatforms.includes('tiktok') && (
+            <div className="p-4 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-lg border-2 border-cyan-200">
+              <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                🎵 TikTok Research
+              </h4>
+              <p className="text-xs text-gray-600 mb-2">
+                Hashtag search, trend analysis, and content discovery
+              </p>
+              <p className="text-xs text-gray-500">
+                Coming soon: TikTok research tools
+              </p>
+            </div>
+          )}
+
+          {/* Show empty state when no platform selected */}
+          {socialPlatforms.length === 0 && (
+            <div className="text-center py-12 text-gray-500 border-2 border-dashed rounded-lg">
+              <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p className="font-medium mb-2">Select a platform above</p>
+              <p className="text-sm">Choose YouTube, Instagram, TikTok, or Twitter to see research options</p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex gap-2">
@@ -1178,19 +1625,28 @@ export default function LiteratureSearchPage() {
                   <div className="grid grid-cols-3 gap-3">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-600">
-                        {socialInsights.sentimentDistribution?.positivePercentage?.toFixed(0) || 0}%
+                        {socialInsights.sentimentDistribution?.positivePercentage?.toFixed(
+                          0
+                        ) || 0}
+                        %
                       </div>
                       <div className="text-xs text-gray-600">Positive</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-gray-600">
-                        {socialInsights.sentimentDistribution?.neutralPercentage?.toFixed(0) || 0}%
+                        {socialInsights.sentimentDistribution?.neutralPercentage?.toFixed(
+                          0
+                        ) || 0}
+                        %
                       </div>
                       <div className="text-xs text-gray-600">Neutral</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-red-600">
-                        {socialInsights.sentimentDistribution?.negativePercentage?.toFixed(0) || 0}%
+                        {socialInsights.sentimentDistribution?.negativePercentage?.toFixed(
+                          0
+                        ) || 0}
+                        %
                       </div>
                       <div className="text-xs text-gray-600">Negative</div>
                     </div>
@@ -1215,9 +1671,12 @@ export default function LiteratureSearchPage() {
                             variant="secondary"
                             className={cn(
                               'text-xs',
-                              post.sentiment.label === 'positive' && 'bg-green-100 text-green-800',
-                              post.sentiment.label === 'negative' && 'bg-red-100 text-red-800',
-                              post.sentiment.label === 'neutral' && 'bg-gray-100 text-gray-800'
+                              post.sentiment.label === 'positive' &&
+                                'bg-green-100 text-green-800',
+                              post.sentiment.label === 'negative' &&
+                                'bg-red-100 text-red-800',
+                              post.sentiment.label === 'neutral' &&
+                                'bg-gray-100 text-gray-800'
                             )}
                           >
                             {post.sentiment.label === 'positive' && '😊'}
@@ -1228,7 +1687,8 @@ export default function LiteratureSearchPage() {
                         )}
                         {post.weights && (
                           <Badge variant="secondary" className="text-xs">
-                            Influence: {(post.weights.influence * 100).toFixed(0)}%
+                            Influence:{' '}
+                            {(post.weights.influence * 100).toFixed(0)}%
                           </Badge>
                         )}
                       </div>
@@ -1246,7 +1706,11 @@ export default function LiteratureSearchPage() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <span className="font-semibold">{post.author}</span>
-                        {post.authorVerified && <Badge variant="secondary" className="text-xs">✓</Badge>}
+                        {post.authorVerified && (
+                          <Badge variant="secondary" className="text-xs">
+                            ✓
+                          </Badge>
+                        )}
                         {post.authorFollowers && (
                           <span className="text-xs text-gray-500">
                             {post.authorFollowers.toLocaleString()} followers
@@ -1265,27 +1729,41 @@ export default function LiteratureSearchPage() {
                       {post.engagement && (
                         <div className="flex gap-4 text-xs text-gray-600 mt-2">
                           {post.engagement.likes && (
-                            <span>👍 {post.engagement.likes.toLocaleString()}</span>
+                            <span>
+                              👍 {post.engagement.likes.toLocaleString()}
+                            </span>
                           )}
                           {post.engagement.comments && (
-                            <span>💬 {post.engagement.comments.toLocaleString()}</span>
+                            <span>
+                              💬 {post.engagement.comments.toLocaleString()}
+                            </span>
                           )}
                           {post.engagement.shares && (
-                            <span>🔄 {post.engagement.shares.toLocaleString()}</span>
+                            <span>
+                              🔄 {post.engagement.shares.toLocaleString()}
+                            </span>
                           )}
                           {post.engagement.views && (
-                            <span>👁️ {post.engagement.views.toLocaleString()}</span>
+                            <span>
+                              👁️ {post.engagement.views.toLocaleString()}
+                            </span>
                           )}
                         </div>
                       )}
 
                       {post.hashtags && post.hashtags.length > 0 && (
                         <div className="flex gap-1 flex-wrap mt-2">
-                          {post.hashtags.slice(0, 5).map((tag: string, i: number) => (
-                            <Badge key={i} variant="outline" className="text-xs">
-                              #{tag}
-                            </Badge>
-                          ))}
+                          {post.hashtags
+                            .slice(0, 5)
+                            .map((tag: string, i: number) => (
+                              <Badge
+                                key={i}
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                #{tag}
+                              </Badge>
+                            ))}
                         </div>
                       )}
                     </div>
@@ -1300,101 +1778,439 @@ export default function LiteratureSearchPage() {
       {/* Database Sources Transparency */}
       <DatabaseSourcesInfo />
 
-      {/* Results Tabs */}
+      {/* PHASE 9 DAY 24: Consolidated Results Tabs (9 → 3 tabs) */}
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
         className="space-y-4"
       >
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="search">
-            Search Results
-            {papers.length > 0 && (
-              <Badge className="ml-2" variant="secondary">
-                {papers.length}
+        <TabsList className="grid w-full grid-cols-3 h-14">
+          <TabsTrigger value="results" className="flex-col h-full">
+            <span className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              Results & Library
+            </span>
+            {(papers.length + transcribedVideos.length + savedPapers.length) > 0 && (
+              <Badge className="mt-1" variant="secondary">
+                {papers.length + transcribedVideos.length + savedPapers.length} total
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="library">
-            My Library
-            <Badge className="ml-2" variant="secondary">
-              {savedPapers.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="themes">
-            Themes
-            {unifiedThemes.length > 0 && (
-              <Badge className="ml-2" variant="secondary">
-                {unifiedThemes.length}
+          <TabsTrigger value="analysis" className="flex-col h-full">
+            <span className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              Analysis & Insights
+            </span>
+            {(unifiedThemes.length + gaps.length) > 0 && (
+              <Badge className="mt-1" variant="secondary">
+                {unifiedThemes.length + gaps.length} insights
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="gaps">
-            Research Gaps
-            {gaps.length > 0 && (
-              <Badge className="ml-2" variant="secondary">
-                {gaps.length}
+          <TabsTrigger value="transcriptions" className="flex-col h-full">
+            <span className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Transcriptions
+            </span>
+            {transcribedVideos.length > 0 && (
+              <Badge className="mt-1" variant="secondary">
+                {transcribedVideos.length}
               </Badge>
             )}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="search" className="space-y-4">
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-            </div>
-          ) : papers.length > 0 ? (
+        {/* PHASE 9 DAY 24: Tab 1 - Results & Library (with sub-navigation) */}
+        <TabsContent value="results" className="space-y-4">
+          {/* Sub-navigation for Results */}
+          <div className="flex gap-2 border-b pb-2">
+            <Button
+              variant={activeResultsSubTab === 'papers' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveResultsSubTab('papers')}
+            >
+              <BookOpen className="w-4 h-4 mr-2" />
+              Papers
+              {papers.length > 0 && (
+                <Badge className="ml-2" variant="secondary">
+                  {papers.length}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant={activeResultsSubTab === 'videos' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveResultsSubTab('videos')}
+            >
+              <Video className="w-4 h-4 mr-2" />
+              Videos
+              {transcribedVideos.length > 0 && (
+                <Badge className="ml-2" variant="secondary">
+                  {transcribedVideos.length}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant={activeResultsSubTab === 'library' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveResultsSubTab('library')}
+            >
+              <Star className="w-4 h-4 mr-2" />
+              Library
+              <Badge className="ml-2" variant="secondary">
+                {savedPapers.length}
+              </Badge>
+            </Button>
+          </div>
+
+          {/* Papers sub-tab */}
+          {activeResultsSubTab === 'papers' && (
+            <>
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                </div>
+              ) : papers.length > 0 ? (
+                <div className="space-y-4">
+                  {papers.map(paper => (
+                    <PaperCard key={paper.id} paper={paper} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>No papers found. Try adjusting your search query or filters.</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Videos sub-tab */}
+          {activeResultsSubTab === 'videos' && (
+            <>
+              {transcribedVideos.length > 0 ? (
+                <div className="space-y-4">
+                  {transcribedVideos.map(video => (
+                    <Card key={video.id} className="overflow-hidden">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-lg font-semibold">{video.title}</CardTitle>
+                            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
+                              {video.channel && <span>{video.channel}</span>}
+                              <span>{Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, '0')} min</span>
+                            </div>
+                          </div>
+                          <Button variant="outline" size="sm" onClick={() => window.open(video.url, '_blank')}>
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <Video className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>No transcribed videos yet</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Library sub-tab */}
+          {activeResultsSubTab === 'library' && (
+            <>
+              {savedPapers.length > 0 ? (
+                savedPapers.map(paper => <PaperCard key={paper.id} paper={paper} />)
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <Star className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>No saved papers yet. Star papers from search results to add them here.</p>
+                </div>
+              )}
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="transcriptions" className="space-y-4">
+          {transcribedVideos.length > 0 ? (
             <div className="space-y-4">
-              {papers.map(paper => (
-                <PaperCard key={paper.id} paper={paper} />
+              {/* Summary Card */}
+              <Card className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200 dark:border-purple-800">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Total Transcriptions
+                      </p>
+                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                        {transcribedVideos.length}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Total Cost
+                      </p>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        ${transcribedVideos.reduce((sum, v) => sum + v.cost, 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Cached (Free)
+                      </p>
+                      <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {transcribedVideos.filter(v => v.cached).length}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Transcribed Videos List */}
+              {transcribedVideos.map(video => (
+                <Card key={video.id} className="overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                          {video.title}
+                          {video.cached && (
+                            <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                              🟣 Cached ($0.00)
+                            </Badge>
+                          )}
+                          {!video.cached && (
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                              🟢 ${video.cost.toFixed(2)}
+                            </Badge>
+                          )}
+                        </CardTitle>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
+                          {video.channel && (
+                            <span className="flex items-center gap-1">
+                              <MessageSquare className="w-4 h-4" />
+                              {video.channel}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            {Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, '0')} min
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            {new Date(video.extractedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(video.url, '_blank')}
+                        >
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          Watch
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Transcript Display */}
+                    <div className="mb-4">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Transcript
+                      </h4>
+                      <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-md max-h-48 overflow-y-auto text-sm text-gray-600 dark:text-gray-400">
+                        {video.transcript}
+                      </div>
+                    </div>
+
+                    {/* Extracted Themes */}
+                    {video.themes && video.themes.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                          Extracted Themes ({video.themes.length})
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {video.themes.map((theme: any, idx: number) => (
+                            <Badge key={idx} variant="outline" className="bg-purple-50 dark:bg-purple-950/20">
+                              {theme.label || theme}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Button */}
+                    <div className="mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Add this video to unified themes extraction
+                          setSelectedPapers(new Set([...Array.from(selectedPapers), video.id]));
+                          toast.success('Video added to theme extraction queue');
+                        }}
+                      >
+                        <Sparkles className="w-4 h-4 mr-1" />
+                        Add to Unified Themes
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           ) : (
             <div className="text-center py-12 text-gray-500">
-              <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>
-                No papers found. Try adjusting your search query or filters.
+              <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p className="text-lg font-medium mb-2">No transcriptions yet</p>
+              <p className="text-sm text-gray-400">
+                Enable &quot;Include video transcriptions&quot; when searching YouTube to transcribe videos
               </p>
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="library" className="space-y-4">
-          {savedPapers.length > 0 ? (
-            savedPapers.map(paper => <PaperCard key={paper.id} paper={paper} />)
-          ) : (
-            <div className="text-center py-12 text-gray-500">
-              <Star className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>
-                No saved papers yet. Star papers from search results to add them
-                here.
-              </p>
-            </div>
-          )}
-        </TabsContent>
+        {/* PHASE 9 DAY 24: Tab 2 - Analysis & Insights (with sub-navigation) */}
+        <TabsContent value="analysis" className="space-y-4">
+          {/* Sub-navigation for Analysis */}
+          <div className="flex gap-2 border-b pb-2">
+            <Button
+              variant={activeAnalysisSubTab === 'themes' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveAnalysisSubTab('themes')}
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Themes
+              {unifiedThemes.length > 0 && (
+                <Badge className="ml-2" variant="secondary">
+                  {unifiedThemes.length}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant={activeAnalysisSubTab === 'gaps' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveAnalysisSubTab('gaps')}
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Research Gaps
+              {gaps.length > 0 && (
+                <Badge className="ml-2" variant="secondary">
+                  {gaps.length}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant={activeAnalysisSubTab === 'synthesis' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveAnalysisSubTab('synthesis')}
+            >
+              <GitBranch className="w-4 h-4 mr-2" />
+              Cross-Platform Synthesis
+            </Button>
+          </div>
 
-        <TabsContent value="themes" className="space-y-4">
+          {/* Themes sub-tab */}
+          {activeAnalysisSubTab === 'themes' && (
+            <div className="space-y-4">
           {unifiedThemes.length > 0 ? (
-            unifiedThemes.map(theme => (
-              <ThemeCard
-                key={theme.id}
-                theme={theme}
-                showProvenanceButton={true}
-              />
-            ))
+            <div className="space-y-4">
+              {/* PHASE 9 DAY 20.5: Source Summary Card */}
+              <Card className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-950/20 dark:to-teal-950/20 border-green-200 dark:border-green-800">
+                <CardContent className="p-4">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    Theme Sources Summary
+                  </h3>
+                  <div className="flex items-center gap-6">
+                    {/* Count themes by source type */}
+                    {(() => {
+                      const sourceCounts = {
+                        papers: 0,
+                        youtube: 0,
+                        podcasts: 0,
+                        social: 0,
+                      };
+
+                      unifiedThemes.forEach(theme => {
+                        theme.sources?.forEach(source => {
+                          if (source.sourceType === 'paper') sourceCounts.papers++;
+                          else if (source.sourceType === 'youtube') sourceCounts.youtube++;
+                          else if (source.sourceType === 'podcast') sourceCounts.podcasts++;
+                          else if (source.sourceType === 'tiktok' || source.sourceType === 'instagram') sourceCounts.social++;
+                        });
+                      });
+
+                      return (
+                        <>
+                          {sourceCounts.papers > 0 && (
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-blue-500">Papers</Badge>
+                              <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                {sourceCounts.papers}
+                              </span>
+                            </div>
+                          )}
+                          {sourceCounts.youtube > 0 && (
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-purple-500">Videos</Badge>
+                              <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                                {sourceCounts.youtube}
+                              </span>
+                            </div>
+                          )}
+                          {sourceCounts.podcasts > 0 && (
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-orange-500">Podcasts</Badge>
+                              <span className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                                {sourceCounts.podcasts}
+                              </span>
+                            </div>
+                          )}
+                          {sourceCounts.social > 0 && (
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-pink-500">Social</Badge>
+                              <span className="text-lg font-bold text-pink-600 dark:text-pink-400">
+                                {sourceCounts.social}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                    ✨ Themes extracted from {unifiedThemes.length} sources with full provenance tracking
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Theme Cards */}
+              {unifiedThemes.map(theme => (
+                <ThemeCard
+                  key={theme.id}
+                  theme={theme}
+                  showProvenanceButton={true}
+                />
+              ))}
+            </div>
           ) : (
             <div className="text-center py-12 text-gray-500">
               <Sparkles className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>
-                Select papers and click "Extract Themes" to identify research
-                themes with full provenance tracking.
+              <p className="text-lg font-medium mb-2">No themes extracted yet</p>
+              <p className="text-sm text-gray-400">
+                Select papers and/or transcribe videos, then click &quot;Extract Themes from All Sources&quot; to identify research themes with full provenance tracking
               </p>
             </div>
           )}
-        </TabsContent>
+            </div>
+          )}
 
-        <TabsContent value="gaps" className="space-y-4">
+          {/* Gaps sub-tab */}
+          {activeAnalysisSubTab === 'gaps' && (
+            <div className="space-y-4">
           {gaps.length > 0 ? (
             gaps.map(gap => (
               <Card key={gap.id} className="border-l-4 border-l-orange-500">
@@ -1464,11 +2280,35 @@ export default function LiteratureSearchPage() {
               </p>
             </div>
           )}
+            </div>
+          )}
+
+          {/* Synthesis sub-tab */}
+          {activeAnalysisSubTab === 'synthesis' && (
+            <div className="space-y-4">
+          {query ? (
+            <CrossPlatformDashboard
+              query={query}
+              maxResults={10}
+              timeWindow={90}
+            />
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p>
+                Enter a search query above, then switch to this tab to view
+                cross-platform research synthesis across papers, YouTube,
+                podcasts, TikTok, and Instagram.
+              </p>
+            </div>
+          )}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
       {/* Pagination */}
-      {totalResults > 20 && activeTab === 'search' && (
+      {totalResults > 20 && activeTab === 'results' && activeResultsSubTab === 'papers' && (
         <div className="flex justify-center gap-2">
           <Button
             variant="outline"
