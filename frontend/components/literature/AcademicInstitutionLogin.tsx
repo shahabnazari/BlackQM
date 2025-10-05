@@ -53,7 +53,6 @@ export function AcademicInstitutionLogin({
   currentAuth,
 }: AcademicInstitutionLoginProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedInstitution, setSelectedInstitution] = useState<Institution | null>(null);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -104,7 +103,6 @@ export function AcademicInstitutionLogin({
 
   // Handle institution selection and SSO
   const handleInstitutionSelect = useCallback(async (institution: Institution) => {
-    setSelectedInstitution(institution);
     setShowInstitutionList(false);
     setIsLoading(true);
 
@@ -154,7 +152,6 @@ export function AcademicInstitutionLogin({
       freeAccess: false,
       accessibleDatabases: [],
     });
-    setSelectedInstitution(null);
     setSearchQuery('');
     toast.info('Logged out successfully');
   }, [onAuthChange]);
