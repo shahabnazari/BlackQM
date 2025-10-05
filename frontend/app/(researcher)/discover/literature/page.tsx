@@ -26,12 +26,16 @@ import {
   X,
   MessageSquare,
   Video,
+  AlertCircle,
+  Info,
+  ArrowRight,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -1793,6 +1797,119 @@ export default function LiteratureSearchPage() {
 
       {/* Database Sources Transparency */}
       <DatabaseSourcesInfo />
+
+      {/* PHASE 9 DAY 26: Unified Theme Extraction Visual Guide */}
+      <Card className="border-2 border-green-200 bg-gradient-to-r from-green-50 to-blue-50">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  🔬 Unified Theme Extraction from All Sources
+                </h3>
+                <Badge variant="outline" className="bg-blue-100 text-blue-700">
+                  AI-Powered
+                </Badge>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-4">
+                Extract cross-cutting research themes from academic papers, YouTube videos, Instagram posts, and alternative sources.
+                AI analyzes all selected content to identify patterns, key concepts, and emerging trends with full provenance tracking.
+              </p>
+
+              {/* Visual Workflow */}
+              <div className="flex items-center gap-2 mb-4 text-xs flex-wrap">
+                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                  1. Select Papers
+                </Badge>
+                <ArrowRight className="w-3 h-3 text-gray-400" />
+                <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                  2. Transcribe Videos
+                </Badge>
+                <ArrowRight className="w-3 h-3 text-gray-400" />
+                <Badge variant="outline" className="bg-indigo-50 text-indigo-700">
+                  3. Add Alt Sources
+                </Badge>
+                <ArrowRight className="w-3 h-3 text-gray-400" />
+                <Badge variant="outline" className="bg-green-50 text-green-700 font-semibold">
+                  4. Extract Themes
+                </Badge>
+              </div>
+
+              {/* How It Works */}
+              <div className="bg-white rounded-lg p-3 mb-4 border border-gray-200">
+                <div className="flex items-start gap-2">
+                  <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <div className="text-xs text-gray-600">
+                    <span className="font-semibold text-gray-900">How it works:</span> AI combines content from all sources →
+                    Analyzes text using NLP → Identifies recurring concepts → Groups related ideas into themes →
+                    Tracks which sources contributed to each theme → Generates confidence scores and evidence citations.
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="flex items-center gap-4 mb-4 flex-wrap">
+                <div className="text-sm">
+                  <span className="font-semibold text-blue-600">{selectedPapers.size}</span>
+                  <span className="text-gray-500 ml-1">papers selected</span>
+                </div>
+                <div className="text-sm">
+                  <span className="font-semibold text-purple-600">{transcribedVideos.length}</span>
+                  <span className="text-gray-500 ml-1">videos transcribed</span>
+                </div>
+                {instagramPosts.length > 0 && (
+                  <div className="text-sm">
+                    <span className="font-semibold text-pink-600">{instagramPosts.length}</span>
+                    <span className="text-gray-500 ml-1">Instagram posts</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Button */}
+              <div className="flex items-center gap-3">
+                <Button
+                  size="lg"
+                  onClick={handleExtractThemes}
+                  disabled={(selectedPapers.size === 0 && transcribedVideos.length === 0) || analyzingThemes}
+                  className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white"
+                >
+                  {analyzingThemes ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Extracting Themes...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      Extract Themes from {selectedPapers.size + transcribedVideos.length} Sources
+                    </>
+                  )}
+                </Button>
+
+                {unifiedThemes.length > 0 && (
+                  <Badge variant="outline" className="bg-green-100 text-green-700">
+                    ✓ {unifiedThemes.length} themes extracted
+                  </Badge>
+                )}
+              </div>
+
+              {(selectedPapers.size === 0 && transcribedVideos.length === 0) && (
+                <Alert className="mt-4 border-amber-200 bg-amber-50">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-800">
+                    Select papers from search results above or transcribe YouTube videos to begin theme extraction
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* PHASE 9 DAY 24: Consolidated Results Tabs (9 → 3 tabs) */}
       <Tabs
