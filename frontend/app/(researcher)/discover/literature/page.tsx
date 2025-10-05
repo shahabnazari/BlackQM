@@ -1134,43 +1134,6 @@ export default function LiteratureSearchPage() {
               </Button>
             )}
           </div>
-
-          {/* PHASE 9 DAY 24: Integrated AI Search Assistant (collapsible) */}
-          <div className="pt-4 border-t">
-            <Button
-              variant="ghost"
-              onClick={() => setExpandedPanel(expandedPanel === 'ai-assistant' ? null : 'ai-assistant')}
-              className="w-full justify-between hover:bg-purple-50"
-            >
-              <span className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                AI Search Assistant - Refine Your Query
-              </span>
-              <ChevronRight className={cn(
-                "w-5 h-5 transition-transform",
-                expandedPanel === 'ai-assistant' && "rotate-90"
-              )} />
-            </Button>
-            <AnimatePresence>
-              {expandedPanel === 'ai-assistant' && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="mt-4"
-                >
-                  <AISearchAssistant
-                    initialQuery={query}
-                    onQueryChange={(newQuery) => {
-                      setQuery(newQuery);
-                      toast.success('Query updated! Click "Search All Sources" to search.');
-                    }}
-                    domain="general"
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
         </CardContent>
       </Card>
 
