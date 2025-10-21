@@ -23,6 +23,9 @@ import { PredictiveGapService } from './services/predictive-gap.service'; // Pha
 import { TranscriptionService } from './services/transcription.service'; // Phase 9 Day 18
 import { MultiMediaAnalysisService } from './services/multimedia-analysis.service'; // Phase 9 Day 18
 import { UnifiedThemeExtractionService } from './services/unified-theme-extraction.service'; // Phase 9 Day 20
+import { CrossPlatformSynthesisService } from './services/cross-platform-synthesis.service'; // Phase 9 Day 22
+import { VideoRelevanceService } from '../ai/services/video-relevance.service'; // Phase 9 Day 21
+import { QueryExpansionService } from '../ai/services/query-expansion.service'; // Phase 9 Day 21
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import {
@@ -33,6 +36,12 @@ import {
   AnalyzeGapsDto,
   ExtractUnifiedThemesDto,
   CompareStudyThemesDto,
+  CrossPlatformSynthesisDto,
+  PlatformFilterDto,
+  ScoreVideoRelevanceDto,
+  BatchScoreVideosDto,
+  AISelectVideosDto,
+  ExpandQueryDto,
 } from './dto/literature.dto';
 import {
   ApiTags,
@@ -58,6 +67,9 @@ export class LiteratureController {
     private readonly transcriptionService: TranscriptionService, // Phase 9 Day 18
     private readonly multimediaAnalysisService: MultiMediaAnalysisService, // Phase 9 Day 18
     private readonly unifiedThemeExtractionService: UnifiedThemeExtractionService, // Phase 9 Day 20
+    private readonly crossPlatformSynthesisService: CrossPlatformSynthesisService, // Phase 9 Day 22
+    private readonly videoRelevanceService: VideoRelevanceService, // Phase 9 Day 21
+    private readonly queryExpansionService: QueryExpansionService, // Phase 9 Day 21
   ) {}
 
   @Post('search')
@@ -70,7 +82,7 @@ export class LiteratureController {
     @Body() searchDto: SearchLiteratureDto,
     @CurrentUser() user: any,
   ) {
-    return await this.literatureService.searchLiterature(searchDto, user.id);
+    return await this.literatureService.searchLiterature(searchDto, user.userId);
   }
 
   // Temporary public endpoint for testing
@@ -127,9 +139,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Themes extracted' })
   async extractThemesPublic(@Body() themesDto: ExtractThemesDto) {
     // Use theme extraction service for real AI extraction
-    return await this.themeExtractionService.extractThemes(
-      themesDto.paperIds,
-    );
+    return await this.themeExtractionService.extractThemes(themesDto.paperIds);
   }
 
   /**
@@ -151,11 +161,12 @@ export class LiteratureController {
     // Return helpful error message directing to correct endpoint
     return {
       error: 'DEPRECATED_ENDPOINT',
-      message: 'This endpoint returns mock data. Please use POST /api/literature/gaps/analyze with paperIds array instead.',
+      message:
+        'This endpoint returns mock data. Please use POST /api/literature/gaps/analyze with paperIds array instead.',
       correctEndpoint: 'POST /api/literature/gaps/analyze',
       examplePayload: {
-        paperIds: ['paper1', 'paper2', 'paper3']
-      }
+        paperIds: ['paper1', 'paper2', 'paper3'],
+      },
     };
   }
 
@@ -165,7 +176,7 @@ export class LiteratureController {
   @ApiOperation({ summary: 'Save paper to user library' })
   @ApiResponse({ status: 201, description: 'Paper saved successfully' })
   async savePaper(@Body() saveDto: SavePaperDto, @CurrentUser() user: any) {
-    return await this.literatureService.savePaper(saveDto, user.id);
+    return await this.literatureService.savePaper(saveDto, user.userId);
   }
 
   @Post('export')
@@ -178,7 +189,7 @@ export class LiteratureController {
     @Body() exportDto: ExportCitationsDto,
     @CurrentUser() user: any,
   ) {
-    return await this.literatureService.exportCitations(exportDto, user.id);
+    return await this.literatureService.exportCitations(exportDto, user.userId);
   }
 
   @Get('library')
@@ -187,11 +198,15 @@ export class LiteratureController {
   @ApiOperation({ summary: "Get user's saved papers" })
   @ApiResponse({ status: 200, description: 'User library returned' })
   async getUserLibrary(
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
     @CurrentUser() user: any,
   ) {
-    return await this.literatureService.getUserLibrary(user.id, page, limit);
+    // Ensure page and limit are numbers
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 20;
+
+    return await this.literatureService.getUserLibrary(user.userId, pageNum, limitNum);
   }
 
   @Delete('library/:paperId')
@@ -203,7 +218,7 @@ export class LiteratureController {
     @Param('paperId') paperId: string,
     @CurrentUser() user: any,
   ) {
-    return await this.literatureService.removePaper(paperId, user.id);
+    return await this.literatureService.removePaper(paperId, user.userId);
   }
 
   @Post('themes')
@@ -217,9 +232,7 @@ export class LiteratureController {
     @CurrentUser() user: any,
   ) {
     // Use theme extraction service for real AI extraction
-    return await this.themeExtractionService.extractThemes(
-      themesDto.paperIds,
-    );
+    return await this.themeExtractionService.extractThemes(themesDto.paperIds);
   }
 
   @Post('pipeline/themes-to-statements')
@@ -273,7 +286,7 @@ export class LiteratureController {
       pipeline: {
         stage: 'literature-to-statements',
         timestamp: new Date(),
-        userId: user.id,
+        userId: user.userId,
       },
     };
   }
@@ -352,7 +365,7 @@ export class LiteratureController {
     // Extract themes
     const themes = await this.themeExtractionService.extractThemes(
       dto.paperIds,
-      user.id,
+      user.userId,
     );
 
     // Analyze gaps if requested
@@ -473,7 +486,7 @@ export class LiteratureController {
     return await this.literatureService.analyzeSocialOpinion(
       topic,
       platforms,
-      user.id,
+      user.userId,
     );
   }
 
@@ -492,13 +505,13 @@ export class LiteratureController {
       const sourcesArray = Array.isArray(sources) ? sources : [sources];
 
       this.logger.log(
-        `🔍 [Alternative Sources] Request received - Query: "${query}", Sources: ${JSON.stringify(sourcesArray)}, User: ${user.id}`,
+        `🔍 [Alternative Sources] Request received - Query: "${query}", Sources: ${JSON.stringify(sourcesArray)}, User: ${user.userId}`,
       );
 
       const results = await this.literatureService.searchAlternativeSources(
         query,
         sourcesArray,
-        user.id,
+        user.userId,
       );
 
       this.logger.log(
@@ -562,18 +575,21 @@ export class LiteratureController {
   @Get('social/search')
   @ApiOperation({
     summary: 'Search social media platforms for research content',
-    description: 'Search Twitter, Reddit, LinkedIn, Facebook, Instagram, TikTok for research-relevant discussions with sentiment analysis',
+    description:
+      'Search Twitter, Reddit, LinkedIn, Facebook, Instagram, TikTok for research-relevant discussions with sentiment analysis',
   })
   @ApiQuery({ name: 'query', required: true, description: 'Search query' })
   @ApiQuery({
     name: 'platforms',
     required: true,
     isArray: true,
-    description: 'Social media platforms to search (twitter, reddit, linkedin, facebook, instagram, tiktok)',
+    description:
+      'Social media platforms to search (twitter, reddit, linkedin, facebook, instagram, tiktok)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Social media results with sentiment analysis and engagement weights',
+    description:
+      'Social media results with sentiment analysis and engagement weights',
   })
   async searchSocialMedia(
     @Query('query') query: string,
@@ -583,14 +599,15 @@ export class LiteratureController {
     return await this.literatureService.searchSocialMedia(
       query,
       platforms,
-      user.id,
+      user.userId,
     );
   }
 
   @Get('social/search/public')
   @ApiOperation({
     summary: 'PUBLIC: Search social media platforms (for development)',
-    description: 'Public endpoint for testing social media search during development',
+    description:
+      'Public endpoint for testing social media search during development',
   })
   @ApiQuery({ name: 'query', required: true })
   @ApiQuery({ name: 'platforms', required: true, isArray: true })
@@ -641,7 +658,7 @@ export class LiteratureController {
   ) {
     return await this.literatureService.getStudyRecommendations(
       studyId,
-      user.id,
+      user.userId,
     );
   }
 
@@ -668,7 +685,7 @@ export class LiteratureController {
     return await this.literatureService.generateStatementsFromThemes(
       themesDto.themes,
       themesDto.studyContext,
-      user.id,
+      user.userId,
     );
   }
 
@@ -864,7 +881,7 @@ export class LiteratureController {
     @Body() body: { apiKey: string; zoteroUserId: string },
     @CurrentUser() user: any,
   ) {
-    return await this.referenceService.syncWithZotero(body.apiKey, user.id);
+    return await this.referenceService.syncWithZotero(body.apiKey, user.userId);
   }
 
   @Post('references/pdf/:paperId')
@@ -890,26 +907,40 @@ export class LiteratureController {
   @Post('knowledge-graph/build')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '🌉 Build knowledge graph from papers (Phase 9 Day 14)' })
-  @ApiResponse({ status: 200, description: 'Knowledge graph constructed successfully' })
+  @ApiOperation({
+    summary: '🌉 Build knowledge graph from papers (Phase 9 Day 14)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Knowledge graph constructed successfully',
+  })
   async buildKnowledgeGraph(
     @Body() body: { paperIds: string[] },
     @CurrentUser() user: any,
   ) {
-    this.logger.log(`Building knowledge graph for ${body.paperIds.length} papers (User: ${user.id})`);
+    this.logger.log(
+      `Building knowledge graph for ${body.paperIds.length} papers (User: ${user.userId})`,
+    );
 
     const startTime = Date.now();
 
     // Extract entities from papers
-    const entities = await this.knowledgeGraphService.extractEntitiesFromPapers(body.paperIds);
+    const entities = await this.knowledgeGraphService.extractEntitiesFromPapers(
+      body.paperIds,
+    );
 
     // Build citation network
-    const citations = await this.knowledgeGraphService.buildCitationNetwork(body.paperIds);
+    const citations = await this.knowledgeGraphService.buildCitationNetwork(
+      body.paperIds,
+    );
 
     // Revolutionary algorithms
-    const bridgeConcepts = await this.knowledgeGraphService.detectBridgeConcepts();
-    const controversies = await this.knowledgeGraphService.detectControversies();
-    const emergingTopics = await this.knowledgeGraphService.detectEmergingTopics();
+    const bridgeConcepts =
+      await this.knowledgeGraphService.detectBridgeConcepts();
+    const controversies =
+      await this.knowledgeGraphService.detectControversies();
+    const emergingTopics =
+      await this.knowledgeGraphService.detectEmergingTopics();
 
     const duration = Date.now() - startTime;
 
@@ -957,8 +988,8 @@ export class LiteratureController {
       stats: {
         nodeCount: graph.nodes.length,
         edgeCount: graph.edges.length,
-        bridgeConcepts: graph.nodes.filter(n => n.isBridgeConcept).length,
-        emergingTopics: graph.nodes.filter(n => n.emergingTopic).length,
+        bridgeConcepts: graph.nodes.filter((n) => n.isBridgeConcept).length,
+        emergingTopics: graph.nodes.filter((n) => n.emergingTopic).length,
       },
     };
   }
@@ -1006,7 +1037,9 @@ export class LiteratureController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '📥 Export knowledge graph' })
   @ApiResponse({ status: 200, description: 'Knowledge graph exported' })
-  async exportKnowledgeGraph(@Query('format') format: 'json' | 'graphml' | 'cypher' = 'json') {
+  async exportKnowledgeGraph(
+    @Query('format') format: 'json' | 'graphml' | 'cypher' = 'json',
+  ) {
     const exportData = await this.knowledgeGraphService.exportGraph(format);
 
     return {
@@ -1022,21 +1055,28 @@ export class LiteratureController {
   @Post('predictive-gaps/score-opportunities')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '💎 Score research opportunities with ML (Phase 9 Day 15)' })
+  @ApiOperation({
+    summary: '💎 Score research opportunities with ML (Phase 9 Day 15)',
+  })
   @ApiResponse({ status: 200, description: 'Research opportunities scored' })
   async scoreResearchOpportunities(
     @Body() body: { gapIds: string[] },
     @CurrentUser() user: any,
   ) {
-    this.logger.log(`Scoring ${body.gapIds.length} research opportunities (User: ${user.id})`);
+    this.logger.log(
+      `Scoring ${body.gapIds.length} research opportunities (User: ${user.userId})`,
+    );
 
-    const opportunities = await this.predictiveGapService.scoreResearchOpportunities(body.gapIds);
+    const opportunities =
+      await this.predictiveGapService.scoreResearchOpportunities(body.gapIds);
 
     return {
       success: true,
       opportunities,
       topOpportunities: opportunities.slice(0, 10), // Top 10 by score
-      averageScore: opportunities.reduce((sum, o) => sum + o.opportunityScore, 0) / opportunities.length,
+      averageScore:
+        opportunities.reduce((sum, o) => sum + o.opportunityScore, 0) /
+        opportunities.length,
     };
   }
 
@@ -1049,12 +1089,15 @@ export class LiteratureController {
   @ApiOperation({ summary: '💰 Predict funding probability' })
   @ApiResponse({ status: 200, description: 'Funding probability predicted' })
   async predictFundingProbability(@Body() body: { gapIds: string[] }) {
-    const fundingOpportunities = await this.predictiveGapService.getFundingOpportunities(body.gapIds);
+    const fundingOpportunities =
+      await this.predictiveGapService.getFundingOpportunities(body.gapIds);
 
     return {
       success: true,
       fundingOpportunities,
-      highProbability: fundingOpportunities.filter(f => f.fundingProbability > 0.7),
+      highProbability: fundingOpportunities.filter(
+        (f) => f.fundingProbability > 0.7,
+      ),
     };
   }
 
@@ -1067,12 +1110,16 @@ export class LiteratureController {
   @ApiOperation({ summary: '⏱️ Optimize research timeline' })
   @ApiResponse({ status: 200, description: 'Timeline optimized' })
   async optimizeTimeline(@Body() body: { gapIds: string[] }) {
-    const timelines = await this.predictiveGapService.getTimelineOptimizations(body.gapIds);
+    const timelines = await this.predictiveGapService.getTimelineOptimizations(
+      body.gapIds,
+    );
 
     return {
       success: true,
       timelines,
-      averageDuration: timelines.reduce((sum, t) => sum + t.totalDuration, 0) / timelines.length,
+      averageDuration:
+        timelines.reduce((sum, t) => sum + t.totalDuration, 0) /
+        timelines.length,
     };
   }
 
@@ -1085,12 +1132,16 @@ export class LiteratureController {
   @ApiOperation({ summary: '📊 Predict research impact' })
   @ApiResponse({ status: 200, description: 'Impact predicted' })
   async predictImpact(@Body() body: { gapIds: string[] }) {
-    const predictions = await this.predictiveGapService.getImpactPredictions(body.gapIds);
+    const predictions = await this.predictiveGapService.getImpactPredictions(
+      body.gapIds,
+    );
 
     return {
       success: true,
       predictions,
-      transformativeOpportunities: predictions.filter(p => p.impactCategory === 'TRANSFORMATIVE'),
+      transformativeOpportunities: predictions.filter(
+        (p) => p.impactCategory === 'TRANSFORMATIVE',
+      ),
     };
   }
 
@@ -1103,13 +1154,15 @@ export class LiteratureController {
   @ApiOperation({ summary: '📈 Forecast research trends' })
   @ApiResponse({ status: 200, description: 'Trends forecasted' })
   async forecastTrends(@Body() body: { topics: string[] }) {
-    const forecasts = await this.predictiveGapService.forecastTrends(body.topics);
+    const forecasts = await this.predictiveGapService.forecastTrends(
+      body.topics,
+    );
 
     return {
       success: true,
       forecasts,
-      emergingTopics: forecasts.filter(f => f.currentTrend === 'EMERGING'),
-      decliningTopics: forecasts.filter(f => f.currentTrend === 'DECLINING'),
+      emergingTopics: forecasts.filter((f) => f.currentTrend === 'EMERGING'),
+      decliningTopics: forecasts.filter((f) => f.currentTrend === 'DECLINING'),
     };
   }
 
@@ -1123,15 +1176,22 @@ export class LiteratureController {
   @Post('multimedia/youtube-search')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '🎥 Search YouTube videos with optional transcription' })
-  @ApiResponse({ status: 200, description: 'YouTube videos retrieved with optional transcripts and themes' })
+  @ApiOperation({
+    summary: '🎥 Search YouTube videos with optional transcription',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'YouTube videos retrieved with optional transcripts and themes',
+  })
   async searchYouTubeWithTranscription(
-    @Body() body: {
+    @Body()
+    body: {
       query: string;
       includeTranscripts?: boolean;
       extractThemes?: boolean;
       maxResults?: number;
-    }
+    },
   ) {
     const videos = await this.literatureService.searchYouTubeWithTranscription(
       body.query,
@@ -1139,14 +1199,17 @@ export class LiteratureController {
         includeTranscripts: body.includeTranscripts,
         extractThemes: body.extractThemes,
         maxResults: body.maxResults || 10,
-      }
+      },
     );
 
     return {
       success: true,
       count: videos.length,
       videos,
-      transcriptionCost: videos.reduce((sum, v) => sum + (v.transcript?.cost || 0), 0),
+      transcriptionCost: videos.reduce(
+        (sum, v) => sum + (v.transcript?.cost || 0),
+        0,
+      ),
     };
   }
 
@@ -1159,16 +1222,17 @@ export class LiteratureController {
   @ApiOperation({ summary: '📝 Transcribe video/podcast' })
   @ApiResponse({ status: 200, description: 'Transcription created/retrieved' })
   async transcribeMedia(
-    @Body() body: {
+    @Body()
+    body: {
       sourceId: string;
       sourceType: 'youtube' | 'podcast';
       sourceUrl?: string;
-    }
+    },
   ) {
     const transcript = await this.transcriptionService.getOrCreateTranscription(
       body.sourceId,
       body.sourceType,
-      body.sourceUrl
+      body.sourceUrl,
     );
 
     return {
@@ -1186,15 +1250,13 @@ export class LiteratureController {
   @ApiOperation({ summary: '🎯 Extract themes from transcript' })
   @ApiResponse({ status: 200, description: 'Themes extracted' })
   async extractThemesFromMultimedia(
-    @Body() body: {
-      transcriptId: string;
-      researchContext?: string;
-    }
+    @Body() body: { transcriptId: string; researchContext?: string },
   ) {
-    const themes = await this.multimediaAnalysisService.extractThemesFromTranscript(
-      body.transcriptId,
-      body.researchContext
-    );
+    const themes =
+      await this.multimediaAnalysisService.extractThemesFromTranscript(
+        body.transcriptId,
+        body.researchContext,
+      );
 
     return {
       success: true,
@@ -1211,12 +1273,11 @@ export class LiteratureController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '📚 Extract citations from transcript' })
   @ApiResponse({ status: 200, description: 'Citations extracted' })
-  async extractCitations(
-    @Body() body: { transcriptId: string }
-  ) {
-    const citations = await this.multimediaAnalysisService.extractCitationsFromTranscript(
-      body.transcriptId
-    );
+  async extractCitations(@Body() body: { transcriptId: string }) {
+    const citations =
+      await this.multimediaAnalysisService.extractCitationsFromTranscript(
+        body.transcriptId,
+      );
 
     return {
       success: true,
@@ -1234,14 +1295,11 @@ export class LiteratureController {
   @ApiOperation({ summary: '💰 Estimate transcription cost' })
   @ApiResponse({ status: 200, description: 'Cost estimated' })
   async estimateCost(
-    @Body() body: {
-      sourceId: string;
-      sourceType: 'youtube' | 'podcast';
-    }
+    @Body() body: { sourceId: string; sourceType: 'youtube' | 'podcast' },
   ) {
     const estimate = await this.transcriptionService.estimateTranscriptionCost(
       body.sourceId,
-      body.sourceType
+      body.sourceType,
     );
 
     return {
@@ -1257,21 +1315,20 @@ export class LiteratureController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '🕸️ Add multimedia to knowledge graph' })
-  @ApiResponse({ status: 200, description: 'Multimedia added to knowledge graph' })
-  async addMultimediaToGraph(
-    @Body() body: {
-      transcriptId: string;
-    }
-  ) {
+  @ApiResponse({
+    status: 200,
+    description: 'Multimedia added to knowledge graph',
+  })
+  async addMultimediaToGraph(@Body() body: { transcriptId: string }) {
     // First get themes for the transcript
     const themes = await this.multimediaAnalysisService.getThemesForTranscript(
-      body.transcriptId
+      body.transcriptId,
     );
 
     // Add to knowledge graph
     const node = await this.knowledgeGraphService.addMultimediaNode(
       body.transcriptId,
-      themes
+      themes,
     );
 
     return {
@@ -1294,8 +1351,10 @@ export class LiteratureController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: '🎯 Extract unified themes from multiple source types (Phase 9 Day 20)',
-    description: 'Extract themes from papers, videos, podcasts, and social media with full provenance tracking and citation chains',
+    summary:
+      '🎯 Extract unified themes from multiple source types (Phase 9 Day 20)',
+    description:
+      'Extract themes from papers, videos, podcasts, and social media with full provenance tracking and citation chains',
   })
   @ApiResponse({
     status: 200,
@@ -1306,7 +1365,7 @@ export class LiteratureController {
     @CurrentUser() user: any,
   ) {
     this.logger.log(
-      `Extracting unified themes from ${dto.sources.length} sources (User: ${user.id})`,
+      `Extracting unified themes from ${dto.sources.length} sources (User: ${user.userId})`,
     );
 
     const startTime = Date.now();
@@ -1327,10 +1386,11 @@ export class LiteratureController {
     }));
 
     // Extract themes from multiple sources
-    const result = await this.unifiedThemeExtractionService.extractFromMultipleSources(
-      sources,
-      dto.options,
-    );
+    const result =
+      await this.unifiedThemeExtractionService.extractFromMultipleSources(
+        sources,
+        dto.options,
+      );
 
     const duration = Date.now() - startTime;
 
@@ -1340,10 +1400,13 @@ export class LiteratureController {
       provenance: result.provenance,
       metadata: {
         totalSources: dto.sources.length,
-        sourceBreakdown: dto.sources.reduce((acc, s) => {
-          acc[s.type] = (acc[s.type] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
+        sourceBreakdown: dto.sources.reduce(
+          (acc, s) => {
+            acc[s.type] = (acc[s.type] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        ),
         processingTimeMs: duration,
         themesExtracted: result.themes.length,
       },
@@ -1358,7 +1421,8 @@ export class LiteratureController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: '🔍 Get theme provenance with citation chain',
-    description: 'Retrieve full provenance data showing which sources contributed to a theme',
+    description:
+      'Retrieve full provenance data showing which sources contributed to a theme',
   })
   @ApiResponse({
     status: 200,
@@ -1368,11 +1432,12 @@ export class LiteratureController {
     @Param('themeId') themeId: string,
     @CurrentUser() user: any,
   ) {
-    this.logger.log(`Fetching provenance for theme ${themeId} (User: ${user.id})`);
-
-    const provenance = await this.unifiedThemeExtractionService.getThemeProvenance(
-      themeId,
+    this.logger.log(
+      `Fetching provenance for theme ${themeId} (User: ${user.userId})`,
     );
+
+    const provenance =
+      await this.unifiedThemeExtractionService.getThemeProvenance(themeId);
 
     if (!provenance) {
       return {
@@ -1395,7 +1460,8 @@ export class LiteratureController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: '🔎 Filter themes by source type and influence',
-    description: 'Get themes filtered by source type with minimum influence threshold',
+    description:
+      'Get themes filtered by source type with minimum influence threshold',
   })
   @ApiResponse({
     status: 200,
@@ -1437,7 +1503,8 @@ export class LiteratureController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: '📚 Get themes for a collection',
-    description: 'Retrieve all unified themes for a specific collection with provenance',
+    description:
+      'Retrieve all unified themes for a specific collection with provenance',
   })
   @ApiResponse({
     status: 200,
@@ -1448,12 +1515,13 @@ export class LiteratureController {
     @CurrentUser() user: any,
   ) {
     this.logger.log(
-      `Fetching themes for collection ${collectionId} (User: ${user.id})`,
+      `Fetching themes for collection ${collectionId} (User: ${user.userId})`,
     );
 
-    const themes = await this.unifiedThemeExtractionService.getCollectionThemes(
-      collectionId,
-    );
+    const themes =
+      await this.unifiedThemeExtractionService.getCollectionThemes(
+        collectionId,
+      );
 
     return {
       success: true,
@@ -1462,7 +1530,12 @@ export class LiteratureController {
       themes,
       sourceBreakdown: themes.reduce(
         (
-          acc: { papers: number; videos: number; podcasts: number; social: number },
+          acc: {
+            papers: number;
+            videos: number;
+            podcasts: number;
+            social: number;
+          },
           theme: any,
         ) => {
           if (theme.provenance) {
@@ -1487,7 +1560,8 @@ export class LiteratureController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: '📊 Compare themes across studies',
-    description: 'Compare unified themes across multiple studies to find commonalities and differences',
+    description:
+      'Compare unified themes across multiple studies to find commonalities and differences',
   })
   @ApiResponse({
     status: 200,
@@ -1498,12 +1572,11 @@ export class LiteratureController {
     @CurrentUser() user: any,
   ) {
     this.logger.log(
-      `Comparing themes across ${dto.studyIds.length} studies (User: ${user.id})`,
+      `Comparing themes across ${dto.studyIds.length} studies (User: ${user.userId})`,
     );
 
-    const comparison = await this.unifiedThemeExtractionService.compareStudyThemes(
-      dto.studyIds,
-    );
+    const comparison =
+      await this.unifiedThemeExtractionService.compareStudyThemes(dto.studyIds);
 
     return {
       success: true,
@@ -1514,6 +1587,516 @@ export class LiteratureController {
         uniqueThemes: comparison.uniqueThemes?.length || 0,
         totalStudies: dto.studyIds.length,
       },
+    };
+  }
+
+  // ==================== CROSS-PLATFORM SYNTHESIS ENDPOINTS (Phase 9 Day 22) ====================
+
+  @Post('synthesis/multi-platform')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '🌐 Synthesize research across all platforms',
+    description:
+      'Unified synthesis across academic papers, YouTube, podcasts, TikTok, and Instagram. Returns theme clusters, dissemination paths, emerging topics, and platform-specific insights.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Comprehensive cross-platform synthesis result',
+  })
+  async synthesizeMultiPlatform(
+    @Body() dto: CrossPlatformSynthesisDto,
+    @CurrentUser() user: any,
+  ) {
+    this.logger.log(
+      `Multi-platform synthesis: "${dto.query}" (User: ${user.userId})`,
+    );
+
+    const result =
+      await this.crossPlatformSynthesisService.synthesizeMultiPlatformResearch(
+        dto.query,
+        {
+          maxResults: dto.maxResults,
+          includeTranscripts: dto.includeTranscripts,
+          timeWindow: dto.timeWindow,
+        },
+      );
+
+    return {
+      success: true,
+      ...result,
+      metadata: {
+        totalSources: result.sources.length,
+        totalThemeClusters: result.themeClusters.length,
+        totalDisseminationPaths: result.disseminationPaths.length,
+        totalEmergingTopics: result.emergingTopics.length,
+        platformCount: result.platformInsights.length,
+        synthesisDate: result.synthesisDate,
+      },
+    };
+  }
+
+  @Get('synthesis/emerging-topics')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '🔥 Get emerging research topics',
+    description:
+      'Identify trending topics across social media and academic platforms. Detect gaps and research opportunities.',
+  })
+  @ApiQuery({ name: 'query', required: true })
+  @ApiQuery({ name: 'timeWindow', required: false, type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'List of emerging topics with trend analysis',
+  })
+  async getEmergingTopics(
+    @Query('query') query: string,
+    @Query('timeWindow') timeWindow?: number,
+    @CurrentUser() user?: any,
+  ) {
+    this.logger.log(`Fetching emerging topics for: "${query}"`);
+
+    const result =
+      await this.crossPlatformSynthesisService.synthesizeMultiPlatformResearch(
+        query,
+        {
+          maxResults: 20,
+          timeWindow: timeWindow || 30,
+        },
+      );
+
+    return {
+      success: true,
+      query,
+      emergingTopics: result.emergingTopics,
+      summary: {
+        total: result.emergingTopics.length,
+        withPotentialGaps: result.emergingTopics.filter((t) => t.potentialGap)
+          .length,
+        highTrend: result.emergingTopics.filter((t) => t.trendScore > 0.7)
+          .length,
+      },
+    };
+  }
+
+  @Get('synthesis/dissemination/:theme')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '📈 Track theme dissemination across platforms',
+    description:
+      'Visualize how research themes spread from academic papers to social media over time.',
+  })
+  @ApiQuery({ name: 'query', required: true })
+  @ApiQuery({ name: 'timeWindow', required: false, type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Dissemination timeline and pattern analysis',
+  })
+  async getThemeDissemination(
+    @Param('theme') theme: string,
+    @Query('query') query: string,
+    @Query('timeWindow') timeWindow?: number,
+    @CurrentUser() user?: any,
+  ) {
+    this.logger.log(`Tracking dissemination for theme: "${theme}"`);
+
+    const result =
+      await this.crossPlatformSynthesisService.synthesizeMultiPlatformResearch(
+        query,
+        {
+          maxResults: 30,
+          timeWindow: timeWindow || 90,
+        },
+      );
+
+    const disseminationPath = result.disseminationPaths.find(
+      (path) => path.theme.toLowerCase() === theme.toLowerCase(),
+    );
+
+    if (!disseminationPath) {
+      return {
+        success: false,
+        message: `No dissemination path found for theme: "${theme}"`,
+        availableThemes: result.disseminationPaths.map((p) => p.theme),
+      };
+    }
+
+    return {
+      success: true,
+      theme,
+      disseminationPath,
+      analytics: {
+        totalReach: disseminationPath.totalReach,
+        velocity: disseminationPath.disseminationVelocity,
+        pattern: disseminationPath.disseminationPattern,
+        timelineLength: disseminationPath.timeline.length,
+        platforms: [
+          ...new Set(disseminationPath.timeline.map((t) => t.platform)),
+        ],
+      },
+    };
+  }
+
+  @Get('synthesis/platform-insights')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '📊 Get platform-specific insights',
+    description:
+      'Compare how different platforms discuss the same research topic. Identify platform-specific language and engagement patterns.',
+  })
+  @ApiQuery({ name: 'query', required: true })
+  @ApiQuery({ name: 'platforms', required: false, type: [String] })
+  @ApiResponse({
+    status: 200,
+    description: 'Platform-by-platform analysis',
+  })
+  async getPlatformInsights(
+    @Query('query') query: string,
+    @Query('platforms') platforms?: string,
+    @CurrentUser() user?: any,
+  ) {
+    this.logger.log(`Fetching platform insights for: "${query}"`);
+
+    const result =
+      await this.crossPlatformSynthesisService.synthesizeMultiPlatformResearch(
+        query,
+        {
+          maxResults: 15,
+        },
+      );
+
+    let filteredInsights = result.platformInsights;
+
+    // Filter by platforms if specified
+    if (platforms) {
+      const platformList = platforms.split(',');
+      filteredInsights = filteredInsights.filter((insight) =>
+        platformList.includes(insight.platform),
+      );
+    }
+
+    return {
+      success: true,
+      query,
+      platformInsights: filteredInsights,
+      summary: {
+        totalPlatforms: filteredInsights.length,
+        totalSources: filteredInsights.reduce(
+          (sum, p) => sum + p.sourceCount,
+          0,
+        ),
+        avgEngagement:
+          filteredInsights.reduce((sum, p) => sum + p.averageEngagement, 0) /
+          filteredInsights.length,
+      },
+    };
+  }
+
+  // ==================== YOUTUBE ENHANCEMENT ENDPOINTS (Phase 9 Day 21) ====================
+
+  @Post('youtube/score-relevance')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '🎯 Score video relevance with AI',
+    description:
+      'Use GPT-4 to score video relevance (0-100) based on research context. Returns reasoning, topics, and transcription recommendation.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Video relevance score with AI reasoning',
+  })
+  async scoreVideoRelevance(
+    @Body() dto: ScoreVideoRelevanceDto,
+    @CurrentUser() user: any,
+  ) {
+    this.logger.log(
+      `Scoring video relevance: ${dto.videoId} (User: ${user.userId})`,
+    );
+
+    const score = await this.videoRelevanceService.scoreVideoRelevance(
+      {
+        videoId: dto.videoId,
+        title: dto.title,
+        description: dto.description,
+        channelName: dto.channelName,
+        duration: dto.duration,
+        publishedAt: new Date(),
+      },
+      dto.researchContext,
+    );
+
+    return {
+      success: true,
+      ...score,
+      costEstimate: (dto.duration / 60) * 0.006, // $0.006 per minute
+    };
+  }
+
+  @Post('youtube/batch-score')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '🎯 Batch score multiple videos',
+    description:
+      'Score multiple videos in parallel. Efficient for scoring search results. Cached for 24 hours.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of relevance scores',
+  })
+  async batchScoreVideos(
+    @Body() dto: BatchScoreVideosDto,
+    @CurrentUser() user: any,
+  ) {
+    this.logger.log(
+      `Batch scoring ${dto.videos.length} videos (User: ${user.userId})`,
+    );
+
+    const videoMetadata = dto.videos.map(v => ({
+      videoId: v.videoId,
+      title: v.title,
+      description: v.description,
+      channelName: v.channelName,
+      duration: v.duration,
+      publishedAt: new Date(),
+    }));
+
+    const scores = await this.videoRelevanceService.batchScoreVideos(
+      videoMetadata,
+      dto.researchContext,
+    );
+
+    const totalCost = scores.reduce(
+      (sum, score) => {
+        const video = dto.videos.find(v => v.videoId === score.videoId);
+        return sum + (video ? (video.duration / 60) * 0.006 : 0);
+      },
+      0,
+    );
+
+    return {
+      success: true,
+      scores,
+      totalVideos: scores.length,
+      totalCostEstimate: totalCost,
+      avgScore: scores.reduce((sum, s) => sum + s.score, 0) / scores.length,
+    };
+  }
+
+  @Post('youtube/ai-select')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '🤖 AI auto-select top N relevant videos',
+    description:
+      'Let AI automatically select the most relevant videos based on research context. Returns selected videos with reasoning.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'AI-selected videos with cost estimate',
+  })
+  async aiSelectVideos(
+    @Body() dto: AISelectVideosDto,
+    @CurrentUser() user: any,
+  ) {
+    this.logger.log(
+      `AI selecting top ${dto.topN || 5} videos from ${dto.videos.length} (User: ${user.userId})`,
+    );
+
+    const videoMetadata = dto.videos.map(v => ({
+      videoId: v.videoId,
+      title: v.title,
+      description: v.description,
+      channelName: v.channelName,
+      duration: v.duration,
+      publishedAt: new Date(),
+    }));
+
+    const result = await this.videoRelevanceService.selectTopVideos(
+      videoMetadata,
+      dto.researchContext,
+      dto.topN || 5,
+    );
+
+    return {
+      success: true,
+      ...result,
+      selectedCount: result.selectedVideos.length,
+      costEstimate: result.totalCost,
+    };
+  }
+
+  @Post('ai/expand-query')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '🔍 Expand search query with AI',
+    description:
+      'Transform vague queries into comprehensive academic search terms. Detects vagueness and suggests related terms.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Expanded query with suggestions',
+  })
+  async expandQuery(@Body() dto: ExpandQueryDto, @CurrentUser() user: any) {
+    this.logger.log(`Expanding query: "${dto.query}" (User: ${user.userId})`);
+
+    const result = await this.queryExpansionService.expandQuery(
+      dto.query,
+      dto.domain,
+    );
+
+    return {
+      success: true,
+      originalQuery: dto.query,
+      ...result,
+    };
+  }
+
+  @Get('ai/suggest-terms')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '💡 Suggest related academic terms',
+    description:
+      'Get AI-suggested related terms, keywords, and synonyms to improve search results.',
+  })
+  @ApiQuery({ name: 'query', required: true })
+  @ApiQuery({ name: 'field', required: false })
+  @ApiResponse({
+    status: 200,
+    description: 'Related academic terms with confidence scores',
+  })
+  async suggestTerms(
+    @Query('query') query: string,
+    @Query('field') field?: string,
+    @CurrentUser() user?: any,
+  ) {
+    this.logger.log(`Suggesting terms for: "${query}"`);
+
+    const result = await this.queryExpansionService.suggestTerms(query, field);
+
+    return {
+      success: true,
+      query,
+      ...result,
+    };
+  }
+
+  @Post('ai/narrow-query')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '🎯 Narrow overly broad query',
+    description:
+      'Get specific research angles for broad queries. Helps focus vague searches.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Narrowed query suggestions with reasoning',
+  })
+  async narrowQuery(@Body() dto: ExpandQueryDto, @CurrentUser() user: any) {
+    this.logger.log(`Narrowing query: "${dto.query}" (User: ${user.userId})`);
+
+    const result = await this.queryExpansionService.narrowQuery(dto.query);
+
+    return {
+      success: true,
+      originalQuery: dto.query,
+      ...result,
+    };
+  }
+
+  @Post('youtube/channel/info')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '📺 Get YouTube channel information',
+    description:
+      'Fetch channel metadata by ID, handle (@username), or URL. Supports all channel identifier formats.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Channel information with statistics',
+  })
+  async getYouTubeChannelInfo(
+    @Body() dto: { channelIdentifier: string },
+    @CurrentUser() user: any,
+  ) {
+    this.logger.log(
+      `Fetching YouTube channel: ${dto.channelIdentifier} (User: ${user.userId})`,
+    );
+
+    const channelInfo = await this.literatureService.getYouTubeChannel(
+      dto.channelIdentifier,
+    );
+
+    return {
+      success: true,
+      channel: channelInfo,
+    };
+  }
+
+  @Post('youtube/channel/videos')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '🎥 Get videos from YouTube channel',
+    description:
+      'Fetch videos from a channel with pagination and filters. Includes duration, views, and metadata.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Channel videos with pagination',
+  })
+  async getChannelVideos(
+    @Body()
+    dto: {
+      channelId: string;
+      maxResults?: number;
+      publishedAfter?: string;
+      publishedBefore?: string;
+      order?: 'date' | 'relevance' | 'viewCount';
+    },
+    @CurrentUser() user: any,
+  ) {
+    this.logger.log(
+      `Fetching videos for channel: ${dto.channelId} (User: ${user.userId})`,
+    );
+
+    const options: any = {
+      maxResults: dto.maxResults || 20,
+      order: dto.order || 'date',
+    };
+
+    if (dto.publishedAfter) {
+      options.publishedAfter = new Date(dto.publishedAfter);
+    }
+
+    if (dto.publishedBefore) {
+      options.publishedBefore = new Date(dto.publishedBefore);
+    }
+
+    const result = await this.literatureService.getChannelVideos(
+      dto.channelId,
+      options,
+    );
+
+    return {
+      success: true,
+      ...result,
     };
   }
 }

@@ -1,25 +1,24 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import { PrismaService } from '../../common/prisma.service';
-import { firstValueFrom } from 'rxjs';
-import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import {
-  SearchLiteratureDto,
-  SavePaperDto,
-  ExportCitationsDto,
-  Paper,
-  Theme,
-  ResearchGap,
-  KnowledgeGraphNode,
-  CitationNetwork,
-  ExportFormat,
-  LiteratureSource,
-} from './dto/literature.dto';
-import { YoutubeTranscript } from 'youtube-transcript';
+import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
+import { Cache } from 'cache-manager';
 import Parser from 'rss-parser';
-import { TranscriptionService } from './services/transcription.service';
+import { firstValueFrom } from 'rxjs';
+import { PrismaService } from '../../common/prisma.service';
+import {
+  CitationNetwork,
+  ExportCitationsDto,
+  ExportFormat,
+  KnowledgeGraphNode,
+  LiteratureSource,
+  Paper,
+  ResearchGap,
+  SavePaperDto,
+  SearchLiteratureDto,
+  Theme,
+} from './dto/literature.dto';
 import { MultiMediaAnalysisService } from './services/multimedia-analysis.service';
+import { TranscriptionService } from './services/transcription.service';
 
 @Injectable()
 export class LiteratureService {
@@ -30,8 +29,10 @@ export class LiteratureService {
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-    @Inject(forwardRef(() => TranscriptionService)) private readonly transcriptionService: TranscriptionService,
-    @Inject(forwardRef(() => MultiMediaAnalysisService)) private readonly multimediaAnalysisService: MultiMediaAnalysisService,
+    @Inject(forwardRef(() => TranscriptionService))
+    private readonly transcriptionService: TranscriptionService,
+    @Inject(forwardRef(() => MultiMediaAnalysisService))
+    private readonly multimediaAnalysisService: MultiMediaAnalysisService,
   ) {}
 
   async searchLiterature(
@@ -215,25 +216,35 @@ export class LiteratureService {
 
       // Parse PubMed XML response using regex (lightweight approach)
       const xmlData = fetchResponse.data;
-      const articles = xmlData.match(/<PubmedArticle>[\s\S]*?<\/PubmedArticle>/g) || [];
+      const articles =
+        xmlData.match(/<PubmedArticle>[\s\S]*?<\/PubmedArticle>/g) || [];
 
       return articles.map((article: string) => {
         const pmid = article.match(/<PMID[^>]*>(.*?)<\/PMID>/)?.[1] || '';
-        const title = article.match(/<ArticleTitle>(.*?)<\/ArticleTitle>/)?.[1] || '';
-        const abstractText = article.match(/<AbstractText[^>]*>(.*?)<\/AbstractText>/)?.[1] || '';
-        const year = article.match(/<PubDate>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] ||
-                     article.match(/<DateCompleted>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] || null;
+        const title =
+          article.match(/<ArticleTitle>(.*?)<\/ArticleTitle>/)?.[1] || '';
+        const abstractText =
+          article.match(/<AbstractText[^>]*>(.*?)<\/AbstractText>/)?.[1] || '';
+        const year =
+          article.match(/<PubDate>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] ||
+          article.match(/<DateCompleted>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] ||
+          null;
 
         // Extract authors
-        const authorMatches = article.match(/<Author[^>]*>[\s\S]*?<\/Author>/g) || [];
+        const authorMatches =
+          article.match(/<Author[^>]*>[\s\S]*?<\/Author>/g) || [];
         const authors = authorMatches.map((author: string) => {
-          const lastName = author.match(/<LastName>(.*?)<\/LastName>/)?.[1] || '';
-          const foreName = author.match(/<ForeName>(.*?)<\/ForeName>/)?.[1] || '';
+          const lastName =
+            author.match(/<LastName>(.*?)<\/LastName>/)?.[1] || '';
+          const foreName =
+            author.match(/<ForeName>(.*?)<\/ForeName>/)?.[1] || '';
           return `${foreName} ${lastName}`.trim();
         });
 
         // Extract DOI if available
-        const doi = article.match(/<ArticleId IdType="doi">(.*?)<\/ArticleId>/)?.[1] || null;
+        const doi =
+          article.match(/<ArticleId IdType="doi">(.*?)<\/ArticleId>/)?.[1] ||
+          null;
 
         return {
           id: pmid,
@@ -275,10 +286,13 @@ export class LiteratureService {
         const title = entry.match(/<title>(.*?)<\/title>/)?.[1] || '';
         const summary = entry.match(/<summary>(.*?)<\/summary>/)?.[1] || '';
         const id = entry.match(/<id>(.*?)<\/id>/)?.[1] || '';
-        const published = entry.match(/<published>(.*?)<\/published>/)?.[1] || '';
-        const authors = entry.match(/<author>[\s\S]*?<name>(.*?)<\/name>/g)?.map(
-          (a: string) => a.match(/<name>(.*?)<\/name>/)?.[1] || ''
-        ) || [];
+        const published =
+          entry.match(/<published>(.*?)<\/published>/)?.[1] || '';
+        const authors =
+          entry
+            .match(/<author>[\s\S]*?<name>(.*?)<\/name>/g)
+            ?.map((a: string) => a.match(/<name>(.*?)<\/name>/)?.[1] || '') ||
+          [];
 
         return {
           id,
@@ -325,34 +339,46 @@ export class LiteratureService {
     saveDto: SavePaperDto,
     userId: string,
   ): Promise<{ success: boolean; paperId: string }> {
-    // For public-user, just return success without database operation
-    if (userId === 'public-user') {
-      console.log('Public user save - returning mock success');
-      return {
-        success: true,
-        paperId: `paper-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      };
+    try {
+      this.logger.log(`Saving paper for user: ${userId}`);
+      this.logger.debug(`Paper data: ${JSON.stringify(saveDto)}`);
+
+      // For public-user, just return success without database operation
+      if (userId === 'public-user') {
+        this.logger.log('Public user save - returning mock success');
+        return {
+          success: true,
+          paperId: `paper-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        };
+      }
+
+      // Save paper to database for authenticated users
+      const paper = await this.prisma.paper.create({
+        data: {
+          title: saveDto.title,
+          authors: saveDto.authors as any, // Json field
+          year: saveDto.year,
+          abstract: saveDto.abstract,
+          doi: saveDto.doi,
+          url: saveDto.url,
+          venue: saveDto.venue,
+          citationCount: saveDto.citationCount,
+          userId,
+          tags: saveDto.tags as any, // Json field
+          collectionId: saveDto.collectionId,
+          source: 'user_added', // Required field
+        },
+      });
+
+      this.logger.log(`Paper saved successfully with ID: ${paper.id}`);
+      return { success: true, paperId: paper.id };
+    } catch (error: any) {
+      this.logger.error(`Failed to save paper: ${error.message}`);
+      this.logger.error(`Error stack: ${error.stack}`);
+      this.logger.error(`User ID: ${userId}`);
+      this.logger.error(`SaveDto: ${JSON.stringify(saveDto, null, 2)}`);
+      throw error;
     }
-
-    // Save paper to database for authenticated users
-    const paper = await this.prisma.paper.create({
-      data: {
-        title: saveDto.title,
-        authors: saveDto.authors as any, // Json field
-        year: saveDto.year,
-        abstract: saveDto.abstract,
-        doi: saveDto.doi,
-        url: saveDto.url,
-        venue: saveDto.venue,
-        citationCount: saveDto.citationCount,
-        userId,
-        tags: saveDto.tags as any, // Json field
-        collectionId: saveDto.collectionId,
-        source: 'user_added', // Required field
-      },
-    });
-
-    return { success: true, paperId: paper.id };
   }
 
   async getUserLibrary(
@@ -360,25 +386,74 @@ export class LiteratureService {
     page: number,
     limit: number,
   ): Promise<{ papers: any[]; total: number }> {
-    // For public-user, return empty library
-    if (userId === 'public-user') {
-      console.log('Public user library - returning empty');
-      return { papers: [], total: 0 };
+    try {
+      this.logger.log(
+        `Getting library for user: ${userId}, page: ${page}, limit: ${limit}`,
+      );
+
+      // For public-user, return empty library
+      if (userId === 'public-user') {
+        this.logger.log('Public user library - returning empty');
+        return { papers: [], total: 0 };
+      }
+
+      const skip = (page - 1) * limit;
+
+      const [papers, total] = await Promise.all([
+        this.prisma.paper.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            title: true,
+            authors: true,
+            year: true,
+            abstract: true,
+            journal: true,
+            volume: true,
+            issue: true,
+            pages: true,
+            doi: true,
+            url: true,
+            venue: true,
+            citationCount: true,
+            keywords: true,
+            fieldsOfStudy: true,
+            source: true,
+            tags: true,
+            notes: true,
+            collectionId: true,
+            pdfPath: true,
+            hasFullText: true,
+            createdAt: true,
+            updatedAt: true,
+            // Exclude relations to avoid circular references and serialization issues
+            // themes: false,
+            // gaps: false,
+            // statementProvenances: false,
+            // collection: false,
+            // user: false,
+          },
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.paper.count({ where: { userId } }),
+      ]);
+
+      this.logger.log(`Retrieved ${papers.length} papers, total: ${total}`);
+      return { papers, total };
+    } catch (error: any) {
+      this.logger.error(`Failed to get user library: ${error.message}`);
+      this.logger.error(`Error stack: ${error.stack}`);
+      this.logger.error(`User ID: ${userId}, Page: ${page}, Limit: ${limit}`);
+      if (error.code) {
+        this.logger.error(`Prisma Error Code: ${error.code}`);
+      }
+      if (error.meta) {
+        this.logger.error(`Prisma Meta: ${JSON.stringify(error.meta, null, 2)}`);
+      }
+      throw error;
     }
-
-    const skip = (page - 1) * limit;
-
-    const [papers, total] = await Promise.all([
-      this.prisma.paper.findMany({
-        where: { userId },
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.paper.count({ where: { userId } }),
-    ]);
-
-    return { papers, total };
   }
 
   async removePaper(
@@ -407,13 +482,13 @@ export class LiteratureService {
   async extractThemes(paperIds: string[], userId: string): Promise<Theme[]> {
     this.logger.warn(
       '⚠️  DEPRECATED: literatureService.extractThemes() returns mock data. ' +
-      'Use ThemeExtractionService.extractThemes() for real AI extraction.'
+        'Use ThemeExtractionService.extractThemes() for real AI extraction.',
     );
 
     // Return empty array to indicate this method should not be used
     throw new Error(
       'DEPRECATED: Use ThemeExtractionService.extractThemes() instead. ' +
-      'This method has been replaced with real AI-powered theme extraction.'
+        'This method has been replaced with real AI-powered theme extraction.',
     );
   }
 
@@ -429,13 +504,13 @@ export class LiteratureService {
   ): Promise<ResearchGap[]> {
     this.logger.warn(
       '⚠️  DEPRECATED: literatureService.analyzeResearchGaps() returns mock data. ' +
-      'Use GapAnalyzerService.analyzeResearchGaps() for real AI analysis.'
+        'Use GapAnalyzerService.analyzeResearchGaps() for real AI analysis.',
     );
 
     // Return empty array to indicate this method should not be used
     throw new Error(
       'DEPRECATED: Use GapAnalyzerService.analyzeResearchGaps() instead. ' +
-      'This method has been replaced with real AI-powered gap analysis.'
+        'This method has been replaced with real AI-powered gap analysis.',
     );
   }
 
@@ -589,7 +664,7 @@ ER  -`;
     }
 
     this.logger.log(
-      `Built knowledge graph with ${nodes.length} nodes and ${edges.length} edges`
+      `Built knowledge graph with ${nodes.length} nodes and ${edges.length} edges`,
     );
 
     return { nodes, edges };
@@ -685,7 +760,7 @@ ER  -`;
       }
 
       this.logger.log(
-        `Alternative sources search found ${results.length} results across ${sources.length} sources`
+        `Alternative sources search found ${results.length} results across ${sources.length} sources`,
       );
 
       return results;
@@ -717,10 +792,13 @@ ER  -`;
         const title = entry.match(/<title>(.*?)<\/title>/)?.[1] || '';
         const summary = entry.match(/<summary>(.*?)<\/summary>/)?.[1] || '';
         const id = entry.match(/<id>(.*?)<\/id>/)?.[1] || '';
-        const published = entry.match(/<published>(.*?)<\/published>/)?.[1] || '';
-        const authors = entry.match(/<author>[\s\S]*?<name>(.*?)<\/name>/g)?.map(
-          (a: string) => a.match(/<name>(.*?)<\/name>/)?.[1] || ''
-        ) || [];
+        const published =
+          entry.match(/<published>(.*?)<\/published>/)?.[1] || '';
+        const authors =
+          entry
+            .match(/<author>[\s\S]*?<name>(.*?)<\/name>/g)
+            ?.map((a: string) => a.match(/<name>(.*?)<\/name>/)?.[1] || '') ||
+          [];
 
         return {
           id,
@@ -750,7 +828,9 @@ ER  -`;
         return response.data.collection.map((paper: any) => ({
           id: paper.doi,
           title: paper.title,
-          authors: paper.authors ? paper.authors.split(';').map((a: string) => a.trim()) : [],
+          authors: paper.authors
+            ? paper.authors.split(';').map((a: string) => a.trim())
+            : [],
           year: paper.date ? new Date(paper.date).getFullYear() : null,
           abstract: paper.abstract,
           doi: paper.doi,
@@ -770,7 +850,9 @@ ER  -`;
   private async searchSSRN(query: string): Promise<any[]> {
     // SSRN doesn't have a public API, would need web scraping or partnership
     // Return placeholder for now
-    this.logger.warn('SSRN search not yet implemented - requires API key or scraping');
+    this.logger.warn(
+      'SSRN search not yet implemented - requires API key or scraping',
+    );
     return [];
   }
 
@@ -778,7 +860,9 @@ ER  -`;
     try {
       // Google Patents Custom Search API (requires API key)
       // For now, return empty array with a note
-      this.logger.warn('Patent search requires Google Patents API key - not configured');
+      this.logger.warn(
+        'Patent search requires Google Patents API key - not configured',
+      );
       return [];
     } catch (error: any) {
       this.logger.warn(`Patent search failed: ${error.message}`);
@@ -887,7 +971,7 @@ ER  -`;
         };
 
         const response = await firstValueFrom(
-          this.httpService.get(searchUrl, { params })
+          this.httpService.get(searchUrl, { params }),
         );
 
         if (response.data && response.data.items) {
@@ -910,13 +994,223 @@ ER  -`;
       }
 
       // API key not configured - return empty array with error log
-      this.logger.error('YouTube API key not configured. Add YOUTUBE_API_KEY to .env file.');
-      this.logger.error('Get your free API key at: https://console.cloud.google.com/apis/credentials');
+      this.logger.error(
+        'YouTube API key not configured. Add YOUTUBE_API_KEY to .env file.',
+      );
+      this.logger.error(
+        'Get your free API key at: https://console.cloud.google.com/apis/credentials',
+      );
       return [];
     } catch (error: any) {
       this.logger.error(`YouTube search failed: ${error.message}`, error.stack);
       return [];
     }
+  }
+
+  /**
+   * Get YouTube channel information by ID, handle (@username), or URL
+   * Supports: UC..., @username, https://youtube.com/channel/UC...
+   */
+  async getYouTubeChannel(channelIdentifier: string): Promise<any> {
+    try {
+      const youtubeApiKey = process.env.YOUTUBE_API_KEY;
+
+      if (!youtubeApiKey || youtubeApiKey === 'your-youtube-api-key-here') {
+        throw new Error('YouTube API key not configured');
+      }
+
+      // Parse channel identifier
+      let channelId = channelIdentifier;
+      let isHandle = false;
+
+      // Extract from URL if provided
+      if (channelIdentifier.includes('youtube.com/channel/')) {
+        const match = channelIdentifier.match(/channel\/([^/?]+)/);
+        channelId = match?.[1] || channelIdentifier;
+      } else if (channelIdentifier.includes('youtube.com/@')) {
+        const match = channelIdentifier.match(/@([^/?]+)/);
+        channelId = match?.[1] || channelIdentifier;
+        isHandle = true;
+      } else if (channelIdentifier.startsWith('@')) {
+        channelId = channelIdentifier.slice(1);
+        isHandle = true;
+      }
+
+      // If it's a handle, first resolve to channel ID
+      if (
+        isHandle ||
+        (!channelId.startsWith('UC') && channelId.length !== 24)
+      ) {
+        const searchUrl = 'https://www.googleapis.com/youtube/v3/search';
+        const searchParams = {
+          key: youtubeApiKey,
+          q: channelId,
+          part: 'snippet',
+          type: 'channel',
+          maxResults: 1,
+        };
+
+        const searchResponse = await firstValueFrom(
+          this.httpService.get(searchUrl, { params: searchParams }),
+        );
+
+        if (searchResponse.data?.items?.[0]) {
+          channelId = searchResponse.data.items[0].id.channelId;
+        } else {
+          throw new Error('Channel not found');
+        }
+      }
+
+      // Get channel details
+      const channelUrl = 'https://www.googleapis.com/youtube/v3/channels';
+      const channelParams = {
+        key: youtubeApiKey,
+        id: channelId,
+        part: 'snippet,statistics,brandingSettings',
+      };
+
+      const channelResponse = await firstValueFrom(
+        this.httpService.get(channelUrl, { params: channelParams }),
+      );
+
+      if (!channelResponse.data?.items?.[0]) {
+        throw new Error('Channel not found');
+      }
+
+      const channel = channelResponse.data.items[0];
+
+      return {
+        channelId: channel.id,
+        channelName: channel.snippet.title,
+        channelHandle:
+          channel.snippet.customUrl ||
+          `@${channel.snippet.title.replace(/\s+/g, '')}`,
+        description: channel.snippet.description,
+        thumbnailUrl:
+          channel.snippet.thumbnails.high?.url ||
+          channel.snippet.thumbnails.default.url,
+        subscriberCount: parseInt(channel.statistics.subscriberCount || '0'),
+        videoCount: parseInt(channel.statistics.videoCount || '0'),
+        verified: channel.snippet.customUrl ? true : false, // Approximate verification
+      };
+    } catch (error: any) {
+      this.logger.error(`Failed to fetch YouTube channel: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get videos from a YouTube channel with pagination and filters
+   */
+  async getChannelVideos(
+    channelId: string,
+    options: {
+      page?: number;
+      maxResults?: number;
+      publishedAfter?: Date;
+      publishedBefore?: Date;
+      order?: 'date' | 'relevance' | 'viewCount';
+    } = {},
+  ): Promise<{ videos: any[]; nextPageToken?: string; hasMore: boolean }> {
+    try {
+      const youtubeApiKey = process.env.YOUTUBE_API_KEY;
+
+      if (!youtubeApiKey || youtubeApiKey === 'your-youtube-api-key-here') {
+        throw new Error('YouTube API key not configured');
+      }
+
+      const maxResults = options.maxResults || 20;
+      const order = options.order || 'date';
+
+      const searchUrl = 'https://www.googleapis.com/youtube/v3/search';
+      const params: any = {
+        key: youtubeApiKey,
+        channelId: channelId,
+        part: 'snippet',
+        type: 'video',
+        maxResults,
+        order,
+      };
+
+      if (options.publishedAfter) {
+        params.publishedAfter = options.publishedAfter.toISOString();
+      }
+
+      if (options.publishedBefore) {
+        params.publishedBefore = options.publishedBefore.toISOString();
+      }
+
+      const response = await firstValueFrom(
+        this.httpService.get(searchUrl, { params }),
+      );
+
+      if (!response.data?.items) {
+        return { videos: [], hasMore: false };
+      }
+
+      // Get video details (duration, view count, etc.)
+      const videoIds = response.data.items
+        .map((item: any) => item.id.videoId)
+        .join(',');
+      const videoDetailsUrl = 'https://www.googleapis.com/youtube/v3/videos';
+      const videoDetailsParams = {
+        key: youtubeApiKey,
+        id: videoIds,
+        part: 'contentDetails,statistics',
+      };
+
+      const detailsResponse = await firstValueFrom(
+        this.httpService.get(videoDetailsUrl, { params: videoDetailsParams }),
+      );
+
+      const videoDetailsMap = new Map(
+        detailsResponse.data.items?.map((item: any) => [item.id, item]) || [],
+      );
+
+      const videos = response.data.items.map((item: any) => {
+        const details: any = videoDetailsMap.get(item.id.videoId);
+        const duration = this.parseYouTubeDuration(
+          details?.contentDetails?.duration || 'PT0S',
+        );
+
+        return {
+          videoId: item.id.videoId,
+          title: item.snippet.title,
+          description: item.snippet.description,
+          thumbnailUrl:
+            item.snippet.thumbnails.medium?.url ||
+            item.snippet.thumbnails.default.url,
+          duration, // in seconds
+          viewCount: parseInt(details?.statistics?.viewCount || '0'),
+          publishedAt: new Date(item.snippet.publishedAt),
+          tags: details?.snippet?.tags || [],
+        };
+      });
+
+      return {
+        videos,
+        nextPageToken: response.data.nextPageToken,
+        hasMore: !!response.data.nextPageToken,
+      };
+    } catch (error: any) {
+      this.logger.error(`Failed to fetch channel videos: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Parse YouTube ISO 8601 duration to seconds
+   * Example: PT1H2M30S -> 3750 seconds
+   */
+  private parseYouTubeDuration(duration: string): number {
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return 0;
+
+    const hours = parseInt(match[1] || '0');
+    const minutes = parseInt(match[2] || '0');
+    const seconds = parseInt(match[3] || '0');
+
+    return hours * 3600 + minutes * 60 + seconds;
   }
 
   /**
@@ -930,7 +1224,7 @@ ER  -`;
       includeTranscripts?: boolean;
       extractThemes?: boolean;
       maxResults?: number;
-    } = {}
+    } = {},
   ): Promise<any[]> {
     // First, get basic YouTube search results
     const videos = await this.searchYouTube(query);
@@ -944,10 +1238,11 @@ ER  -`;
     for (const video of videos.slice(0, options.maxResults || 10)) {
       try {
         // Get or create transcription (cached if exists)
-        const transcript = await this.transcriptionService.getOrCreateTranscription(
-          video.id,
-          'youtube'
-        );
+        const transcript =
+          await this.transcriptionService.getOrCreateTranscription(
+            video.id,
+            'youtube',
+          );
 
         // Attach transcript to video result
         const enhancedVideo = {
@@ -964,14 +1259,16 @@ ER  -`;
 
         // Extract themes if requested
         if (options.extractThemes && transcript) {
-          const themes = await this.multimediaAnalysisService.extractThemesFromTranscript(
-            transcript.id,
-            query
-          );
+          const themes =
+            await this.multimediaAnalysisService.extractThemesFromTranscript(
+              transcript.id,
+              query,
+            );
 
-          const citations = await this.multimediaAnalysisService.getCitationsForTranscript(
-            transcript.id
-          );
+          const citations =
+            await this.multimediaAnalysisService.getCitationsForTranscript(
+              transcript.id,
+            );
 
           enhancedVideo.themes = themes;
           enhancedVideo.citations = citations;
@@ -1004,10 +1301,14 @@ ER  -`;
       };
 
       const response = await firstValueFrom(
-        this.httpService.get(searchUrl, { params })
+        this.httpService.get(searchUrl, { params }),
       );
 
-      if (!response.data || !response.data.results || response.data.results.length === 0) {
+      if (
+        !response.data ||
+        !response.data.results ||
+        response.data.results.length === 0
+      ) {
         return [];
       }
 
@@ -1036,7 +1337,9 @@ ER  -`;
                   id: episode.guid || episode.link || '',
                   title: `${podcast.collectionName}: ${episode.title}`,
                   authors: [podcast.artistName || 'Unknown Host'],
-                  year: episode.pubDate ? new Date(episode.pubDate).getFullYear() : null,
+                  year: episode.pubDate
+                    ? new Date(episode.pubDate).getFullYear()
+                    : null,
                   abstract: content.substring(0, 500).replace(/<[^>]*>/g, ''), // Strip HTML, first 500 chars
                   url: episode.link || podcast.collectionViewUrl,
                   source: 'Podcast',
@@ -1055,7 +1358,9 @@ ER  -`;
           }
         } catch (feedError: any) {
           // Some feeds might be inaccessible or malformed
-          this.logger.debug(`Failed to parse podcast feed for ${podcast.collectionName}: ${feedError.message}`);
+          this.logger.debug(
+            `Failed to parse podcast feed for ${podcast.collectionName}: ${feedError.message}`,
+          );
         }
       }
 
@@ -1129,35 +1434,62 @@ ER  -`;
     userId: string,
   ): Promise<any[]> {
     const results: any[] = [];
-    const platformStatus: Record<string, { status: 'success' | 'failed' | 'no_results'; resultCount: number; error?: string }> = {};
+    const platformStatus: Record<
+      string,
+      {
+        status: 'success' | 'failed' | 'no_results';
+        resultCount: number;
+        error?: string;
+      }
+    > = {};
     const searchPromises: { platform: string; promise: Promise<any[]> }[] = [];
 
     this.logger.log(
-      `🔍 Social media search initiated for query: "${query}" across ${platforms.length} platforms`
+      `🔍 Social media search initiated for query: "${query}" across ${platforms.length} platforms`,
     );
 
     // Execute searches in parallel based on requested platforms
     if (platforms.includes('twitter')) {
-      searchPromises.push({ platform: 'twitter', promise: this.searchTwitter(query) });
+      searchPromises.push({
+        platform: 'twitter',
+        promise: this.searchTwitter(query),
+      });
     }
     if (platforms.includes('reddit')) {
-      searchPromises.push({ platform: 'reddit', promise: this.searchReddit(query) });
+      searchPromises.push({
+        platform: 'reddit',
+        promise: this.searchReddit(query),
+      });
     }
     if (platforms.includes('linkedin')) {
-      searchPromises.push({ platform: 'linkedin', promise: this.searchLinkedIn(query) });
+      searchPromises.push({
+        platform: 'linkedin',
+        promise: this.searchLinkedIn(query),
+      });
     }
     if (platforms.includes('facebook')) {
-      searchPromises.push({ platform: 'facebook', promise: this.searchFacebook(query) });
+      searchPromises.push({
+        platform: 'facebook',
+        promise: this.searchFacebook(query),
+      });
     }
     if (platforms.includes('instagram')) {
-      searchPromises.push({ platform: 'instagram', promise: this.searchInstagram(query) });
+      searchPromises.push({
+        platform: 'instagram',
+        promise: this.searchInstagram(query),
+      });
     }
     if (platforms.includes('tiktok')) {
-      searchPromises.push({ platform: 'tiktok', promise: this.searchTikTok(query) });
+      searchPromises.push({
+        platform: 'tiktok',
+        promise: this.searchTikTok(query),
+      });
     }
 
     try {
-      const allResults = await Promise.allSettled(searchPromises.map(sp => sp.promise));
+      const allResults = await Promise.allSettled(
+        searchPromises.map((sp) => sp.promise),
+      );
 
       for (let i = 0; i < allResults.length; i++) {
         const result = allResults[i];
@@ -1168,13 +1500,15 @@ ER  -`;
             results.push(...result.value);
             platformStatus[platformName] = {
               status: 'success',
-              resultCount: result.value.length
+              resultCount: result.value.length,
             };
-            this.logger.log(`✅ ${platformName}: ${result.value.length} results found`);
+            this.logger.log(
+              `✅ ${platformName}: ${result.value.length} results found`,
+            );
           } else {
             platformStatus[platformName] = {
               status: 'no_results',
-              resultCount: 0
+              resultCount: 0,
             };
             this.logger.log(`ℹ️ ${platformName}: No results found for query`);
           }
@@ -1182,9 +1516,11 @@ ER  -`;
           platformStatus[platformName] = {
             status: 'failed',
             resultCount: 0,
-            error: result.reason?.message || 'Unknown error'
+            error: result.reason?.message || 'Unknown error',
           };
-          this.logger.warn(`⚠️ ${platformName}: API call failed - ${result.reason?.message}`);
+          this.logger.warn(
+            `⚠️ ${platformName}: API call failed - ${result.reason?.message}`,
+          );
         }
       }
 
@@ -1192,19 +1528,26 @@ ER  -`;
       const resultsWithSentiment = await this.analyzeSentiment(results);
 
       // Apply engagement-weighted synthesis
-      const synthesizedResults = this.synthesizeByEngagement(resultsWithSentiment);
+      const synthesizedResults =
+        this.synthesizeByEngagement(resultsWithSentiment);
 
       // Add platform status metadata to first result (accessible via special property)
       if (synthesizedResults.length > 0 && !synthesizedResults[0]._metadata) {
         (synthesizedResults as any)._platformStatus = platformStatus;
       }
 
-      const successfulPlatforms = Object.values(platformStatus).filter(s => s.status === 'success').length;
-      const failedPlatforms = Object.values(platformStatus).filter(s => s.status === 'failed').length;
-      const noResultsPlatforms = Object.values(platformStatus).filter(s => s.status === 'no_results').length;
+      const successfulPlatforms = Object.values(platformStatus).filter(
+        (s) => s.status === 'success',
+      ).length;
+      const failedPlatforms = Object.values(platformStatus).filter(
+        (s) => s.status === 'failed',
+      ).length;
+      const noResultsPlatforms = Object.values(platformStatus).filter(
+        (s) => s.status === 'no_results',
+      ).length;
 
       this.logger.log(
-        `✅ Social media search complete: ${synthesizedResults.length} total results | Success: ${successfulPlatforms} | No results: ${noResultsPlatforms} | Failed: ${failedPlatforms}`
+        `✅ Social media search complete: ${synthesizedResults.length} total results | Success: ${successfulPlatforms} | No results: ${noResultsPlatforms} | Failed: ${failedPlatforms}`,
       );
 
       return synthesizedResults;
@@ -1226,7 +1569,9 @@ ER  -`;
       // For MVP, we'll return mock data structure showing capabilities
       // Production would use: https://api.twitter.com/2/tweets/search/recent
 
-      this.logger.warn('Twitter API requires authentication - mock data returned for demo');
+      this.logger.warn(
+        'Twitter API requires authentication - mock data returned for demo',
+      );
 
       // Return structure that production would provide
       return [
@@ -1286,7 +1631,7 @@ ER  -`;
         this.httpService.get(url, {
           params,
           headers: { 'User-Agent': 'VQMethod-Research-Platform/1.0' },
-        })
+        }),
       );
 
       let results: any[] = [];
@@ -1308,7 +1653,10 @@ ER  -`;
               downvotes: data.downs,
               comments: data.num_comments,
               awards: data.total_awards_received,
-              totalScore: data.score + (data.num_comments * 2) + (data.total_awards_received * 10),
+              totalScore:
+                data.score +
+                data.num_comments * 2 +
+                data.total_awards_received * 10,
             },
             timestamp: new Date(data.created_utc * 1000).toISOString(),
             flair: data.link_flair_text,
@@ -1319,7 +1667,9 @@ ER  -`;
 
       // Cache results for 5 minutes (300 seconds) to protect against rate limiting
       await this.cacheManager.set(cacheKey, results, 300000);
-      this.logger.log(`💾 Cached ${results.length} Reddit results for 5 minutes`);
+      this.logger.log(
+        `💾 Cached ${results.length} Reddit results for 5 minutes`,
+      );
 
       return results;
     } catch (error: any) {
@@ -1339,7 +1689,9 @@ ER  -`;
       // NOTE: LinkedIn API requires OAuth 2.0 and partnership agreement
       // For MVP, return mock structure showing professional research content
 
-      this.logger.warn('LinkedIn API requires OAuth - mock data returned for demo');
+      this.logger.warn(
+        'LinkedIn API requires OAuth - mock data returned for demo',
+      );
 
       return [
         {
@@ -1378,7 +1730,9 @@ ER  -`;
       // NOTE: Facebook Graph API requires app review and specific permissions
       // Public search is limited to verified research purposes
 
-      this.logger.warn('Facebook API requires app review - mock data returned for demo');
+      this.logger.warn(
+        'Facebook API requires app review - mock data returned for demo',
+      );
 
       return [
         {
@@ -1416,7 +1770,9 @@ ER  -`;
       // NOTE: Instagram API requires OAuth and app review
       // Limited to public accounts and approved business use cases
 
-      this.logger.warn('Instagram API requires OAuth - mock data returned for demo');
+      this.logger.warn(
+        'Instagram API requires OAuth - mock data returned for demo',
+      );
 
       return [
         {
@@ -1456,7 +1812,9 @@ ER  -`;
       // NOTE: TikTok Research API requires academic institution partnership
       // For MVP, return mock structure showing trend analysis capabilities
 
-      this.logger.warn('TikTok API requires academic partnership - mock data returned for demo');
+      this.logger.warn(
+        'TikTok API requires academic partnership - mock data returned for demo',
+      );
 
       return [
         {
@@ -1503,20 +1861,48 @@ ER  -`;
 
       // Positive indicators
       const positiveWords = [
-        'excellent', 'great', 'amazing', 'wonderful', 'outstanding',
-        'promising', 'innovative', 'successful', 'breakthrough', 'valuable',
-        'insightful', 'helpful', 'impressive', 'significant', 'important'
+        'excellent',
+        'great',
+        'amazing',
+        'wonderful',
+        'outstanding',
+        'promising',
+        'innovative',
+        'successful',
+        'breakthrough',
+        'valuable',
+        'insightful',
+        'helpful',
+        'impressive',
+        'significant',
+        'important',
       ];
 
       // Negative indicators
       const negativeWords = [
-        'bad', 'poor', 'terrible', 'awful', 'disappointing',
-        'flawed', 'problematic', 'concerning', 'questionable', 'misleading',
-        'weak', 'limited', 'insufficient', 'inadequate', 'failed'
+        'bad',
+        'poor',
+        'terrible',
+        'awful',
+        'disappointing',
+        'flawed',
+        'problematic',
+        'concerning',
+        'questionable',
+        'misleading',
+        'weak',
+        'limited',
+        'insufficient',
+        'inadequate',
+        'failed',
       ];
 
-      const positiveCount = positiveWords.filter(word => fullText.includes(word)).length;
-      const negativeCount = negativeWords.filter(word => fullText.includes(word)).length;
+      const positiveCount = positiveWords.filter((word) =>
+        fullText.includes(word),
+      ).length;
+      const negativeCount = negativeWords.filter((word) =>
+        fullText.includes(word),
+      ).length;
 
       let sentiment: 'positive' | 'negative' | 'neutral' = 'neutral';
       let sentimentScore = 0; // -1 to 1 scale
@@ -1550,32 +1936,35 @@ ER  -`;
    * Higher engagement = more weight in determining representative opinions
    */
   private synthesizeByEngagement(posts: any[]): any[] {
-    this.logger.log(`⚖️ Applying engagement-weighted synthesis to ${posts.length} posts...`);
+    this.logger.log(
+      `⚖️ Applying engagement-weighted synthesis to ${posts.length} posts...`,
+    );
 
     // Calculate engagement percentiles for weighting
-    const engagementScores = posts.map(p => p.engagement?.totalScore || 0);
+    const engagementScores = posts.map((p) => p.engagement?.totalScore || 0);
     const maxEngagement = Math.max(...engagementScores, 1);
 
     // Add normalized engagement weight to each post
     const postsWithWeights = posts.map((post) => {
-      const engagementWeight = (post.engagement?.totalScore || 0) / maxEngagement;
+      const engagementWeight =
+        (post.engagement?.totalScore || 0) / maxEngagement;
 
       // Calculate credibility score based on author metrics
       let credibilityScore = 0.5; // baseline
 
       if (post.isVerified || post.authorVerified) credibilityScore += 0.2;
-      if (post.authorFollowers > 10000 || post.authorConnections > 1000) credibilityScore += 0.15;
+      if (post.authorFollowers > 10000 || post.authorConnections > 1000)
+        credibilityScore += 0.15;
       if (post.authorKarma || post.authorTitle) credibilityScore += 0.1;
       if (post.organizationName) credibilityScore += 0.05;
 
       credibilityScore = Math.min(credibilityScore, 1); // Cap at 1.0
 
       // Combined influence score: engagement + credibility + sentiment quality
-      const influenceScore = (
+      const influenceScore =
         engagementWeight * 0.5 +
         credibilityScore * 0.3 +
-        Math.abs(post.sentiment?.score || 0) * 0.2
-      );
+        Math.abs(post.sentiment?.score || 0) * 0.2;
 
       return {
         ...post,
@@ -1588,8 +1977,8 @@ ER  -`;
     });
 
     // Sort by influence score (most influential first)
-    return postsWithWeights.sort((a, b) =>
-      (b.weights?.influence || 0) - (a.weights?.influence || 0)
+    return postsWithWeights.sort(
+      (a, b) => (b.weights?.influence || 0) - (a.weights?.influence || 0),
     );
   }
 
@@ -1602,16 +1991,23 @@ ER  -`;
       totalPosts: posts.length,
       platformDistribution: this.getPlatformDistribution(posts),
       sentimentDistribution: this.getSentimentDistribution(posts),
-      topInfluencers: posts.slice(0, 10).map(p => ({
+      topInfluencers: posts.slice(0, 10).map((p) => ({
         author: p.author,
         platform: p.platform,
         influence: p.weights?.influence || 0,
         engagement: p.engagement?.totalScore || 0,
       })),
       engagementStats: {
-        total: posts.reduce((sum, p) => sum + (p.engagement?.totalScore || 0), 0),
-        average: posts.reduce((sum, p) => sum + (p.engagement?.totalScore || 0), 0) / posts.length,
-        median: this.calculateMedian(posts.map(p => p.engagement?.totalScore || 0)),
+        total: posts.reduce(
+          (sum, p) => sum + (p.engagement?.totalScore || 0),
+          0,
+        ),
+        average:
+          posts.reduce((sum, p) => sum + (p.engagement?.totalScore || 0), 0) /
+          posts.length,
+        median: this.calculateMedian(
+          posts.map((p) => p.engagement?.totalScore || 0),
+        ),
       },
       timeDistribution: this.getTimeDistribution(posts),
     };
@@ -1621,7 +2017,7 @@ ER  -`;
 
   private getPlatformDistribution(posts: any[]): any {
     const distribution: Record<string, number> = {};
-    posts.forEach(post => {
+    posts.forEach((post) => {
       distribution[post.platform] = (distribution[post.platform] || 0) + 1;
     });
     return distribution;
@@ -1629,7 +2025,7 @@ ER  -`;
 
   private getSentimentDistribution(posts: any[]): any {
     const distribution = { positive: 0, negative: 0, neutral: 0 };
-    posts.forEach(post => {
+    posts.forEach((post) => {
       const sentiment = post.sentiment?.label || 'neutral';
       distribution[sentiment as keyof typeof distribution]++;
     });
@@ -1650,13 +2046,15 @@ ER  -`;
       older: 0,
     };
 
-    posts.forEach(post => {
+    posts.forEach((post) => {
       const postDate = new Date(post.timestamp);
       const hoursDiff = (now.getTime() - postDate.getTime()) / (1000 * 60 * 60);
 
       if (hoursDiff < 24) distribution.last24h++;
-      else if (hoursDiff < 168) distribution.lastWeek++; // 7 days
-      else if (hoursDiff < 720) distribution.lastMonth++; // 30 days
+      else if (hoursDiff < 168)
+        distribution.lastWeek++; // 7 days
+      else if (hoursDiff < 720)
+        distribution.lastMonth++; // 30 days
       else distribution.older++;
     });
 
