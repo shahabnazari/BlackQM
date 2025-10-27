@@ -18,9 +18,16 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { ThemeToStatementService, StatementWithProvenance, StudyScaffoldingContext } from './theme-to-statement.service';
+import {
+  ThemeToStatementService,
+  StatementWithProvenance,
+  StudyScaffoldingContext,
+} from './theme-to-statement.service';
 import { PrismaService } from '../../../common/prisma.service';
-import { ThemeExtractionService, ExtractedTheme } from './theme-extraction.service';
+import {
+  ThemeExtractionService,
+  ExtractedTheme,
+} from './theme-extraction.service';
 import { StatementGeneratorService } from '../../ai/services/statement-generator.service';
 
 describe('ThemeToStatementService', () => {
@@ -132,7 +139,7 @@ describe('ThemeToStatementService', () => {
 
       // Non-controversial themes should only have neutral perspectives
       const neutralStatements = statements.filter(
-        (s) => s.perspective === 'neutral'
+        (s) => s.perspective === 'neutral',
       );
       expect(neutralStatements.length).toBeGreaterThan(0);
     });
@@ -162,12 +169,12 @@ describe('ThemeToStatementService', () => {
 
       const result = await service.mapThemesToStatements(
         [mockExtractedTheme, mockExtractedTheme],
-        { targetStatements: 10 }
+        { targetStatements: 10 },
       );
 
       const totalStatements = result.reduce(
         (sum, mapping) => sum + mapping.statements.length,
-        0
+        0,
       );
 
       // Should generate approximately the target number (may vary due to minimum per theme)
@@ -187,7 +194,7 @@ describe('ThemeToStatementService', () => {
         expect.any(String),
         expect.objectContaining({
           academicLevel: 'advanced',
-        })
+        }),
       );
     });
 
@@ -205,7 +212,9 @@ describe('ThemeToStatementService', () => {
       const orders = allStatements.map((s) => s.order);
 
       // Orders should be sequential starting from 1
-      expect(orders).toEqual([...Array(orders.length).keys()].map((i) => i + 1));
+      expect(orders).toEqual(
+        [...Array(orders.length).keys()].map((i) => i + 1),
+      );
     });
 
     it('should ensure minimum statements per theme', async () => {
@@ -231,7 +240,7 @@ describe('ThemeToStatementService', () => {
         ]);
 
       const result = await service['generateControversyPairs'](
-        mockControversialTheme
+        mockControversialTheme,
       );
 
       expect(result).toHaveLength(2);
@@ -247,7 +256,7 @@ describe('ThemeToStatementService', () => {
       ]);
 
       const result = await service['generateControversyPairs'](
-        mockControversialTheme
+        mockControversialTheme,
       );
 
       expect(result[0].provenance.controversyContext).toEqual({
@@ -257,9 +266,8 @@ describe('ThemeToStatementService', () => {
     });
 
     it('should return empty array for non-controversial themes', async () => {
-      const result = await service['generateControversyPairs'](
-        mockExtractedTheme
-      );
+      const result =
+        await service['generateControversyPairs'](mockExtractedTheme);
 
       expect(result).toEqual([]);
     });
@@ -270,7 +278,8 @@ describe('ThemeToStatementService', () => {
         opposingViews: ['Only one view'],
       };
 
-      const result = await service['generateControversyPairs'](themeWithOneView);
+      const result =
+        await service['generateControversyPairs'](themeWithOneView);
 
       expect(result).toEqual([]);
     });
@@ -285,7 +294,7 @@ describe('ThemeToStatementService', () => {
       const result = await service['generatePerspectiveStatement'](
         mockExtractedTheme,
         'supportive',
-        'intermediate'
+        'intermediate',
       );
 
       expect(result.perspective).toBe('supportive');
@@ -301,7 +310,7 @@ describe('ThemeToStatementService', () => {
       const result = await service['generatePerspectiveStatement'](
         mockExtractedTheme,
         'critical',
-        'intermediate'
+        'intermediate',
       );
 
       expect(result.perspective).toBe('critical');
@@ -315,14 +324,14 @@ describe('ThemeToStatementService', () => {
       await service['generatePerspectiveStatement'](
         mockExtractedTheme,
         'neutral',
-        'intermediate'
+        'intermediate',
       );
 
       expect(statementGeneratorService.generateStatements).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
           avoidBias: true,
-        })
+        }),
       );
     });
 
@@ -334,7 +343,7 @@ describe('ThemeToStatementService', () => {
       const result = await service['generatePerspectiveStatement'](
         mockExtractedTheme,
         'neutral',
-        'intermediate'
+        'intermediate',
       );
 
       expect(result.provenance).toMatchObject({
@@ -361,7 +370,7 @@ describe('ThemeToStatementService', () => {
       const result = await service['generatePerspectiveStatement'](
         themeWithManyPapers,
         'neutral',
-        'intermediate'
+        'intermediate',
       );
 
       // More papers should lead to higher confidence
@@ -377,18 +386,18 @@ describe('ThemeToStatementService', () => {
       const balancedResult = await service['generatePerspectiveStatement'](
         mockControversialTheme,
         'balanced',
-        'intermediate'
+        'intermediate',
       );
 
       // Partisan statements on controversial topics should have slightly lower confidence
       const supportiveResult = await service['generatePerspectiveStatement'](
         mockControversialTheme,
         'supportive',
-        'intermediate'
+        'intermediate',
       );
 
       expect(balancedResult.confidence).toBeGreaterThan(
-        supportiveResult.confidence
+        supportiveResult.confidence,
       );
     });
 
@@ -410,13 +419,13 @@ describe('ThemeToStatementService', () => {
       const highResult = await service['generatePerspectiveStatement'](
         highWeightTheme,
         'neutral',
-        'intermediate'
+        'intermediate',
       );
 
       const lowResult = await service['generatePerspectiveStatement'](
         lowWeightTheme,
         'neutral',
-        'intermediate'
+        'intermediate',
       );
 
       expect(highResult.confidence).toBeGreaterThan(lowResult.confidence);
@@ -436,7 +445,7 @@ describe('ThemeToStatementService', () => {
       const result = await service['generatePerspectiveStatement'](
         extremeTheme,
         'balanced',
-        'intermediate'
+        'intermediate',
       );
 
       expect(result.confidence).toBeLessThanOrEqual(1);
@@ -447,14 +456,16 @@ describe('ThemeToStatementService', () => {
   describe('createStudyScaffolding', () => {
     it('should generate research questions from gaps', async () => {
       const gaps = [
-        { topic: 'climate adaptation in urban areas', description: 'Research gap description' },
+        {
+          topic: 'climate adaptation in urban areas',
+          description: 'Research gap description',
+        },
         { topic: 'renewable energy policy', description: 'Policy gap' },
       ];
 
-      const result = await service.createStudyScaffolding(
-        gaps,
-        [mockExtractedTheme]
-      );
+      const result = await service.createStudyScaffolding(gaps, [
+        mockExtractedTheme,
+      ]);
 
       expect(result.researchQuestions).toHaveLength(2);
       expect(result.researchQuestions![0]).toContain('climate adaptation');
@@ -463,7 +474,7 @@ describe('ThemeToStatementService', () => {
     it('should generate hypotheses from controversial themes', async () => {
       const result = await service.createStudyScaffolding(
         [],
-        [mockControversialTheme]
+        [mockControversialTheme],
       );
 
       expect(result.hypotheses).toHaveLength(1);
@@ -473,12 +484,12 @@ describe('ThemeToStatementService', () => {
     it('should suggest larger grid for controversial topics', async () => {
       const controversialResult = await service.createStudyScaffolding(
         [],
-        [mockControversialTheme]
+        [mockControversialTheme],
       );
 
       const nonControversialResult = await service.createStudyScaffolding(
         [],
-        [mockExtractedTheme]
+        [mockExtractedTheme],
       );
 
       expect(controversialResult.suggestedMethods!.gridSize).toBe(11);
@@ -497,19 +508,19 @@ describe('ThemeToStatementService', () => {
     it('should suggest analysis approach based on controversy', async () => {
       const controversialResult = await service.createStudyScaffolding(
         [],
-        [mockControversialTheme]
+        [mockControversialTheme],
       );
 
       const nonControversialResult = await service.createStudyScaffolding(
         [],
-        [mockExtractedTheme]
+        [mockExtractedTheme],
       );
 
       expect(controversialResult.suggestedMethods!.analysisApproach).toBe(
-        'varimax-rotation'
+        'varimax-rotation',
       );
       expect(nonControversialResult.suggestedMethods!.analysisApproach).toBe(
-        'pca-extraction'
+        'pca-extraction',
       );
     });
   });
@@ -520,7 +531,9 @@ describe('ThemeToStatementService', () => {
         mockGeneratedStatement,
       ]);
 
-      const mappings = await service.mapThemesToStatements([mockExtractedTheme]);
+      const mappings = await service.mapThemesToStatements([
+        mockExtractedTheme,
+      ]);
 
       await service.persistToSurvey('survey-123', mappings);
 
@@ -538,7 +551,9 @@ describe('ThemeToStatementService', () => {
         mockGeneratedStatement,
       ]);
 
-      const mappings = await service.mapThemesToStatements([mockExtractedTheme]);
+      const mappings = await service.mapThemesToStatements([
+        mockExtractedTheme,
+      ]);
 
       await service.persistToSurvey('survey-123', mappings);
 
@@ -566,7 +581,9 @@ describe('ThemeToStatementService', () => {
         mockGeneratedStatement,
       ]);
 
-      const mappings = await service.mapThemesToStatements([mockExtractedTheme]);
+      const mappings = await service.mapThemesToStatements([
+        mockExtractedTheme,
+      ]);
 
       await service.persistToSurvey('survey-123', mappings);
 
@@ -599,7 +616,7 @@ describe('ThemeToStatementService', () => {
           targetStatementCount: 30,
           perspectives: ['supportive', 'critical', 'neutral'],
         },
-        'user-123'
+        'user-123',
       );
 
       expect(result.statements).toHaveLength(3);
@@ -616,7 +633,7 @@ describe('ThemeToStatementService', () => {
           targetStatementCount: 30,
           perspectives: ['supportive', 'critical', 'neutral'],
         },
-        'user-123'
+        'user-123',
       );
 
       const perspectives = result.statements.map((s) => s.perspective);

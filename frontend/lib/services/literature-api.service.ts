@@ -80,7 +80,7 @@ class LiteratureAPIService {
       // Configure params serialization for arrays
       // NestJS expects 'sources=youtube' not 'sources[]=youtube'
       paramsSerializer: {
-        serialize: (params) => {
+        serialize: params => {
           const parts: string[] = [];
           Object.keys(params).forEach(key => {
             const value = params[key];
@@ -88,29 +88,40 @@ class LiteratureAPIService {
               // For arrays, send as repeated params: sources=youtube&sources=github
               // Or for single item: sources=youtube
               if (value.length === 1) {
-                parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value[0])}`);
+                parts.push(
+                  `${encodeURIComponent(key)}=${encodeURIComponent(value[0])}`
+                );
               } else {
                 value.forEach(v => {
-                  parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(v)}`);
+                  parts.push(
+                    `${encodeURIComponent(key)}=${encodeURIComponent(v)}`
+                  );
                 });
               }
             } else if (value !== undefined && value !== null) {
-              parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+              parts.push(
+                `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+              );
             }
           });
           return parts.join('&');
-        }
+        },
       },
     });
 
     // Add auth interceptor
-    this.api.interceptors.request.use(async (config) => {
+    this.api.interceptors.request.use(async config => {
       const token = await getAuthToken();
-      console.log('🔑 [Auth Token]:', token ? `${token.substring(0, 20)}...` : 'No token found');
+      console.log(
+        '🔑 [Auth Token]:',
+        token ? `${token.substring(0, 20)}...` : 'No token found'
+      );
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       } else {
-        console.warn('⚠️ [Auth] No token available - request will be unauthorized');
+        console.warn(
+          '⚠️ [Auth] No token available - request will be unauthorized'
+        );
       }
       return config;
     });
@@ -140,14 +151,21 @@ class LiteratureAPIService {
       console.log('📡 API: Sending search request with params:', params);
       // Temporarily use public endpoint for development
       const response = await this.api.post('/literature/search/public', params);
-      console.log('📥 API: Response received:', response.data);
-      console.log('📚 API: Papers count:', response.data.papers?.length || 0);
+      console.log('📥 API: Raw response:', response);
+      console.log('📥 API: Response.data:', response.data);
+
+      // apiClient.post returns response.data already, which contains {data: actualData}
+      // Backend returns {papers, total, page} directly
+      // So response = {data: {papers, total, page}}
+      const actualData = response.data || response;
+      console.log('📥 API: Actual data:', actualData);
+      console.log('📚 API: Papers count:', actualData.papers?.length || 0);
 
       // Ensure we have the expected structure
       const result = {
-        papers: response.data.papers || [],
-        total: response.data.total || 0,
-        page: response.data.page || params.page || 1,
+        papers: actualData.papers || [],
+        total: actualData.total || 0,
+        page: actualData.page || params.page || 1,
       };
 
       console.log('✅ API: Returning result:', result);
@@ -452,9 +470,12 @@ class LiteratureAPIService {
       const params: any = {};
       if (filters?.types) params.types = filters.types.join(',');
       if (filters?.minConfidence) params.minConfidence = filters.minConfidence;
-      if (filters?.includePredicted !== undefined) params.includePredicted = filters.includePredicted;
+      if (filters?.includePredicted !== undefined)
+        params.includePredicted = filters.includePredicted;
 
-      const response = await this.api.get('/literature/knowledge-graph/view', { params });
+      const response = await this.api.get('/literature/knowledge-graph/view', {
+        params,
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to get knowledge graph:', error);
@@ -472,7 +493,9 @@ class LiteratureAPIService {
     totalInfluenced: number;
   }> {
     try {
-      const response = await this.api.get(`/literature/knowledge-graph/influence/${nodeId}`);
+      const response = await this.api.get(
+        `/literature/knowledge-graph/influence/${nodeId}`
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to track influence flow:', error);
@@ -489,7 +512,9 @@ class LiteratureAPIService {
     totalPredictions: number;
   }> {
     try {
-      const response = await this.api.post('/literature/knowledge-graph/predict-links');
+      const response = await this.api.post(
+        '/literature/knowledge-graph/predict-links'
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to predict missing links:', error);
@@ -500,15 +525,20 @@ class LiteratureAPIService {
   /**
    * Export knowledge graph in various formats
    */
-  async exportKnowledgeGraph(format: 'json' | 'graphml' | 'cypher' = 'json'): Promise<{
+  async exportKnowledgeGraph(
+    format: 'json' | 'graphml' | 'cypher' = 'json'
+  ): Promise<{
     success: boolean;
     format: string;
     data: string;
   }> {
     try {
-      const response = await this.api.get('/literature/knowledge-graph/export', {
-        params: { format }
-      });
+      const response = await this.api.get(
+        '/literature/knowledge-graph/export',
+        {
+          params: { format },
+        }
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to export knowledge graph:', error);
@@ -526,9 +556,12 @@ class LiteratureAPIService {
     averageScore: number;
   }> {
     try {
-      const response = await this.api.post('/literature/predictive-gaps/score-opportunities', {
-        gapIds
-      });
+      const response = await this.api.post(
+        '/literature/predictive-gaps/score-opportunities',
+        {
+          gapIds,
+        }
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to score research opportunities:', error);
@@ -545,9 +578,12 @@ class LiteratureAPIService {
     highProbability: any[];
   }> {
     try {
-      const response = await this.api.post('/literature/predictive-gaps/funding-probability', {
-        gapIds
-      });
+      const response = await this.api.post(
+        '/literature/predictive-gaps/funding-probability',
+        {
+          gapIds,
+        }
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to predict funding probability:', error);
@@ -564,9 +600,12 @@ class LiteratureAPIService {
     averageDuration: number;
   }> {
     try {
-      const response = await this.api.post('/literature/predictive-gaps/optimize-timeline', {
-        gapIds
-      });
+      const response = await this.api.post(
+        '/literature/predictive-gaps/optimize-timeline',
+        {
+          gapIds,
+        }
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to optimize timeline:', error);
@@ -583,9 +622,12 @@ class LiteratureAPIService {
     transformativeOpportunities: any[];
   }> {
     try {
-      const response = await this.api.post('/literature/predictive-gaps/predict-impact', {
-        gapIds
-      });
+      const response = await this.api.post(
+        '/literature/predictive-gaps/predict-impact',
+        {
+          gapIds,
+        }
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to predict impact:', error);
@@ -603,9 +645,12 @@ class LiteratureAPIService {
     decliningTopics: any[];
   }> {
     try {
-      const response = await this.api.post('/literature/predictive-gaps/forecast-trends', {
-        topics
-      });
+      const response = await this.api.post(
+        '/literature/predictive-gaps/forecast-trends',
+        {
+          topics,
+        }
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to forecast trends:', error);
@@ -619,7 +664,7 @@ class LiteratureAPIService {
   async analyzeGapsFromPapers(paperIds: string[]): Promise<any[]> {
     try {
       const response = await this.api.post('/literature/gaps/analyze', {
-        paperIds
+        paperIds,
       });
       return response.data;
     } catch (error) {
@@ -702,21 +747,36 @@ class LiteratureAPIService {
       });
 
       console.log('✅ [Alternative Sources] Results received:', response.data);
-      console.log('📊 [Alternative Sources] Result count:', response.data?.length || 0);
+      console.log(
+        '📊 [Alternative Sources] Result count:',
+        response.data?.length || 0
+      );
 
       // Ensure we always return an array
       const results = Array.isArray(response.data) ? response.data : [];
-      console.log('📦 [Alternative Sources] Returning:', results.length, 'results');
+      console.log(
+        '📦 [Alternative Sources] Returning:',
+        results.length,
+        'results'
+      );
 
       return results;
     } catch (error: any) {
       console.error('❌ [Alternative Sources] Search failed:', error);
-      console.error('❌ [Alternative Sources] Error details:', error.response?.data);
-      console.error('❌ [Alternative Sources] Error status:', error.response?.status);
+      console.error(
+        '❌ [Alternative Sources] Error details:',
+        error.response?.data
+      );
+      console.error(
+        '❌ [Alternative Sources] Error status:',
+        error.response?.status
+      );
 
       // Provide helpful error message about authentication
       if (error.response?.status === 401) {
-        console.error('🔐 Authentication required. Using public endpoint as fallback.');
+        console.error(
+          '🔐 Authentication required. Using public endpoint as fallback.'
+        );
       }
 
       throw error;
@@ -727,10 +787,7 @@ class LiteratureAPIService {
    * PHASE 9 DAY 13: Social Media Intelligence
    * Search social media platforms for research-relevant content
    */
-  async searchSocialMedia(
-    query: string,
-    platforms: string[]
-  ): Promise<any[]> {
+  async searchSocialMedia(query: string, platforms: string[]): Promise<any[]> {
     try {
       const response = await this.api.get('/literature/social/search/public', {
         params: { query, platforms },
@@ -781,12 +838,15 @@ class LiteratureAPIService {
     } = {}
   ): Promise<any> {
     try {
-      const response = await this.api.post('/literature/multimedia/youtube-search', {
-        query,
-        includeTranscripts: options.includeTranscripts || false,
-        extractThemes: options.extractThemes || false,
-        maxResults: options.maxResults || 10,
-      });
+      const response = await this.api.post(
+        '/literature/multimedia/youtube-search',
+        {
+          query,
+          includeTranscripts: options.includeTranscripts || false,
+          extractThemes: options.extractThemes || false,
+          maxResults: options.maxResults || 10,
+        }
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to search YouTube with transcription:', error);
@@ -803,11 +863,14 @@ class LiteratureAPIService {
     sourceUrl?: string
   ): Promise<any> {
     try {
-      const response = await this.api.post('/literature/multimedia/transcribe', {
-        sourceId,
-        sourceType,
-        sourceUrl,
-      });
+      const response = await this.api.post(
+        '/literature/multimedia/transcribe',
+        {
+          sourceId,
+          sourceType,
+          sourceUrl,
+        }
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to transcribe media:', error);
@@ -823,10 +886,13 @@ class LiteratureAPIService {
     researchContext?: string
   ): Promise<any> {
     try {
-      const response = await this.api.post('/literature/multimedia/extract-themes', {
-        transcriptId,
-        researchContext,
-      });
+      const response = await this.api.post(
+        '/literature/multimedia/extract-themes',
+        {
+          transcriptId,
+          researchContext,
+        }
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to extract themes:', error);
@@ -839,9 +905,12 @@ class LiteratureAPIService {
    */
   async extractCitationsFromTranscript(transcriptId: string): Promise<any> {
     try {
-      const response = await this.api.post('/literature/multimedia/extract-citations', {
-        transcriptId,
-      });
+      const response = await this.api.post(
+        '/literature/multimedia/extract-citations',
+        {
+          transcriptId,
+        }
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to extract citations:', error);
@@ -857,10 +926,13 @@ class LiteratureAPIService {
     sourceType: 'youtube' | 'podcast'
   ): Promise<{ duration: number; estimatedCost: number }> {
     try {
-      const response = await this.api.post('/literature/multimedia/estimate-cost', {
-        sourceId,
-        sourceType,
-      });
+      const response = await this.api.post(
+        '/literature/multimedia/estimate-cost',
+        {
+          sourceId,
+          sourceType,
+        }
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to estimate cost:', error);
@@ -873,12 +945,77 @@ class LiteratureAPIService {
    */
   async addMultimediaToGraph(transcriptId: string): Promise<any> {
     try {
-      const response = await this.api.post('/literature/multimedia/add-to-graph', {
-        transcriptId,
-      });
+      const response = await this.api.post(
+        '/literature/multimedia/add-to-graph',
+        {
+          transcriptId,
+        }
+      );
       return response.data;
     } catch (error) {
       console.error('Failed to add multimedia to graph:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get YouTube channel information
+   * Supports: channel ID, @handle, or full URL
+   */
+  async getYouTubeChannel(channelIdentifier: string): Promise<any> {
+    try {
+      const response = await this.api.post(
+        '/literature/youtube/channel/info',
+        {
+          channelIdentifier,
+        }
+      );
+      return response.data.channel;
+    } catch (error) {
+      console.error('Failed to fetch YouTube channel:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get videos from a YouTube channel
+   */
+  async getChannelVideos(
+    channelId: string,
+    options?: {
+      maxResults?: number;
+      publishedAfter?: Date;
+      publishedBefore?: Date;
+      order?: 'date' | 'relevance' | 'viewCount';
+    }
+  ): Promise<{ videos: any[]; nextPageToken?: string; hasMore: boolean }> {
+    try {
+      const payload: any = {
+        channelId,
+        maxResults: options?.maxResults || 20,
+        order: options?.order || 'date',
+      };
+
+      if (options?.publishedAfter) {
+        payload.publishedAfter = options.publishedAfter.toISOString();
+      }
+
+      if (options?.publishedBefore) {
+        payload.publishedBefore = options.publishedBefore.toISOString();
+      }
+
+      const response = await this.api.post(
+        '/literature/youtube/channel/videos',
+        payload
+      );
+
+      return {
+        videos: response.data.videos || [],
+        nextPageToken: response.data.nextPageToken,
+        hasMore: response.data.hasMore || false,
+      };
+    } catch (error) {
+      console.error('Failed to fetch channel videos:', error);
       throw error;
     }
   }

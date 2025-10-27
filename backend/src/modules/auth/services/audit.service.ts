@@ -28,7 +28,7 @@ export class AuditService {
           userAgent: data.userAgent,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       // Log audit errors but don't throw to avoid breaking the main flow
       console.error('Audit logging failed:', error);
     }

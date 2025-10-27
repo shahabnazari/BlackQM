@@ -212,9 +212,12 @@ export const useGridStore = create<GridState>()(
         removeColumn: (index) => {
           const state = get();
           if (!state.config || !state.config.allowRemoveColumns) return;
-          
+
+          const column = state.config.columns[index];
+          if (!column) return;
+
           const newColumns = state.config.columns.filter((_, i) => i !== index);
-          const removedCells = state.config.columns[index].cells;
+          const removedCells = column.cells;
           
           const newConfig = {
             ...state.config,
@@ -228,15 +231,21 @@ export const useGridStore = create<GridState>()(
         updateColumnCells: (index, cells) => {
           const state = get();
           if (!state.config || !state.config.allowCellAdjustment) return;
-          
+
+          const column = state.config.columns[index];
+          if (!column) return;
+
           const newColumns = [...state.config.columns];
-          newColumns[index] = { ...newColumns[index], cells };
-          
+          newColumns[index] = { ...column, cells };
+
           // Maintain symmetry if enabled
           if (state.config.symmetry) {
             const mirrorIndex = newColumns.length - 1 - index;
             if (mirrorIndex !== index && mirrorIndex >= 0) {
-              newColumns[mirrorIndex] = { ...newColumns[mirrorIndex], cells };
+              const mirrorColumn = newColumns[mirrorIndex];
+              if (mirrorColumn) {
+                newColumns[mirrorIndex] = { ...mirrorColumn, cells };
+              }
             }
           }
           
@@ -256,10 +265,13 @@ export const useGridStore = create<GridState>()(
         updateColumnLabel: (index, label) => {
           const state = get();
           if (!state.config) return;
-          
+
+          const column = state.config.columns[index];
+          if (!column) return;
+
           const newColumns = [...state.config.columns];
-          newColumns[index] = { ...newColumns[index], customLabel: label };
-          
+          newColumns[index] = { ...column, customLabel: label };
+
           set((state) => ({
             config: state.config ? { ...state.config, columns: newColumns } : null,
           }));
@@ -269,15 +281,21 @@ export const useGridStore = create<GridState>()(
         addCellToColumn: (columnIndex) => {
           const state = get();
           if (!state.config) return;
-          
-          get().updateColumnCells(columnIndex, state.config.columns[columnIndex].cells + 1);
+
+          const column = state.config.columns[columnIndex];
+          if (!column) return;
+
+          get().updateColumnCells(columnIndex, column.cells + 1);
         },
-        
+
         removeCellFromColumn: (columnIndex) => {
           const state = get();
           if (!state.config) return;
-          
-          const currentCells = state.config.columns[columnIndex].cells;
+
+          const column = state.config.columns[columnIndex];
+          if (!column) return;
+
+          const currentCells = column.cells;
           if (currentCells > 0) {
             get().updateColumnCells(columnIndex, currentCells - 1);
           }

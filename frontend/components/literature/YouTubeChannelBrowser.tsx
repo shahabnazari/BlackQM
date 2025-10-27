@@ -14,7 +14,13 @@ import {
   Users,
   Video,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -69,32 +75,6 @@ interface FilterOptions {
 
 // ==================== UTILITIES ====================
 
-const parseChannelInput = (input: string): { type: 'url' | 'handle' | 'id'; value: string } => {
-  // URL: https://www.youtube.com/channel/UCxxxxxx or https://www.youtube.com/@channelname
-  if (input.includes('youtube.com/channel/')) {
-    const match = input.match(/channel\/([^/?]+)/);
-    return { type: 'id', value: match?.[1] || input };
-  }
-
-  if (input.includes('youtube.com/@')) {
-    const match = input.match(/@([^/?]+)/);
-    return { type: 'handle', value: match?.[1] || input };
-  }
-
-  // Handle: @channelname
-  if (input.startsWith('@')) {
-    return { type: 'handle', value: input.slice(1) };
-  }
-
-  // ID: UCxxxxxx
-  if (input.startsWith('UC') && input.length === 24) {
-    return { type: 'id', value: input };
-  }
-
-  // Default to handle
-  return { type: 'handle', value: input };
-};
-
 const formatDuration = (seconds: number): string => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -132,13 +112,15 @@ const getDateRangeFilter = (range: FilterOptions['dateRange']): Date | null => {
 
 export const YouTubeChannelBrowser: React.FC<YouTubeChannelBrowserProps> = ({
   onVideosSelected,
-  researchContext,
+  researchContext: _researchContext,
   className = '',
 }) => {
   const [channelInput, setChannelInput] = useState('');
   const [channel, setChannel] = useState<ChannelMetadata | null>(null);
   const [videos, setVideos] = useState<VideoItem[]>([]);
-  const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
+  const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(
+    new Set()
+  );
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
   const [isLoadingVideos, setIsLoadingVideos] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -170,7 +152,10 @@ export const YouTubeChannelBrowser: React.FC<YouTubeChannelBrowserProps> = ({
       // Auto-load first page of videos
       await loadVideos(channelData.channelId, 1);
     } catch (err: any) {
-      setError(err.message || 'Failed to load channel. Please check the input and try again.');
+      setError(
+        err.message ||
+          'Failed to load channel. Please check the input and try again.'
+      );
       console.error(err);
     } finally {
       setIsLoadingChannel(false);
@@ -192,10 +177,8 @@ export const YouTubeChannelBrowser: React.FC<YouTubeChannelBrowserProps> = ({
       }
 
       // Use real API instead of mock
-      const { videos: newVideos, hasMore: more } = await literatureAPI.getChannelVideos(
-        channelId,
-        options
-      );
+      const { videos: newVideos, hasMore: more } =
+        await literatureAPI.getChannelVideos(channelId, options);
 
       if (page === 1) {
         setVideos(newVideos);
@@ -249,8 +232,10 @@ export const YouTubeChannelBrowser: React.FC<YouTubeChannelBrowserProps> = ({
     const dateFilter = getDateRangeFilter(filters.dateRange);
     if (dateFilter && new Date(video.publishedAt) < dateFilter) return false;
 
-    if (filters.minDuration && video.duration < filters.minDuration) return false;
-    if (filters.maxDuration && video.duration > filters.maxDuration) return false;
+    if (filters.minDuration && video.duration < filters.minDuration)
+      return false;
+    if (filters.maxDuration && video.duration > filters.maxDuration)
+      return false;
 
     if (filters.keyword) {
       const keyword = filters.keyword.toLowerCase();
@@ -278,7 +263,8 @@ export const YouTubeChannelBrowser: React.FC<YouTubeChannelBrowserProps> = ({
             YouTube Channel Browser
           </CardTitle>
           <CardDescription>
-            Enter a channel URL, handle (@username), or channel ID to browse videos
+            Enter a channel URL, handle (@username), or channel ID to browse
+            videos
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -286,8 +272,8 @@ export const YouTubeChannelBrowser: React.FC<YouTubeChannelBrowserProps> = ({
             <Input
               placeholder="e.g., @TEDx or https://youtube.com/channel/UCxxxxxx"
               value={channelInput}
-              onChange={(e) => setChannelInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLoadChannel()}
+              onChange={e => setChannelInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleLoadChannel()}
               className="flex-1"
             />
             <Button
@@ -374,7 +360,9 @@ export const YouTubeChannelBrowser: React.FC<YouTubeChannelBrowserProps> = ({
                 <Label>Date Range</Label>
                 <Select
                   value={filters.dateRange}
-                  onValueChange={(value: any) => setFilters(prev => ({ ...prev, dateRange: value }))}
+                  onValueChange={(value: any) =>
+                    setFilters(prev => ({ ...prev, dateRange: value }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -394,7 +382,9 @@ export const YouTubeChannelBrowser: React.FC<YouTubeChannelBrowserProps> = ({
                 <Input
                   placeholder="Filter by keyword..."
                   value={filters.keyword || ''}
-                  onChange={(e) => setFilters(prev => ({ ...prev, keyword: e.target.value }))}
+                  onChange={e =>
+                    setFilters(prev => ({ ...prev, keyword: e.target.value }))
+                  }
                 />
               </div>
 
@@ -403,8 +393,12 @@ export const YouTubeChannelBrowser: React.FC<YouTubeChannelBrowserProps> = ({
                 <Input
                   type="number"
                   placeholder="0"
-                  value={filters.minDuration ? Math.floor(filters.minDuration / 60) : ''}
-                  onChange={(e) => {
+                  value={
+                    filters.minDuration
+                      ? Math.floor(filters.minDuration / 60)
+                      : ''
+                  }
+                  onChange={e => {
                     const val = e.target.value;
                     setFilters(prev => {
                       const newFilters = { ...prev };
@@ -425,7 +419,7 @@ export const YouTubeChannelBrowser: React.FC<YouTubeChannelBrowserProps> = ({
                   type="number"
                   placeholder="0"
                   value={filters.minViews || ''}
-                  onChange={(e) => {
+                  onChange={e => {
                     const val = e.target.value;
                     setFilters(prev => {
                       const newFilters = { ...prev };
@@ -489,15 +483,19 @@ export const YouTubeChannelBrowser: React.FC<YouTubeChannelBrowserProps> = ({
                       <div
                         key={video.videoId}
                         className={`flex gap-4 p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                          isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' : 'border-gray-200 dark:border-gray-700'
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                            : 'border-gray-200 dark:border-gray-700'
                         }`}
                         onClick={() => toggleVideoSelection(video.videoId)}
                       >
                         <div className="flex-shrink-0">
                           <Checkbox
                             checked={isSelected}
-                            onCheckedChange={() => toggleVideoSelection(video.videoId)}
-                            onClick={(e) => e.stopPropagation()}
+                            onCheckedChange={() =>
+                              toggleVideoSelection(video.videoId)
+                            }
+                            onClick={e => e.stopPropagation()}
                           />
                         </div>
                         <img

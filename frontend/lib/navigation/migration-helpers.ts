@@ -1,6 +1,6 @@
-import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useCallback } from 'react';
-import { useFeatureFlag, FEATURE_FLAGS } from '@/lib/feature-flags';
+import { FEATURE_FLAGS, useFeatureFlag } from '@/lib/feature-flags';
+import { usePathname, useRouter } from 'next/navigation';
+import { useCallback, useEffect } from 'react';
 
 // Old to new route mappings
 const ROUTE_MIGRATIONS: Record<string, string> = {
@@ -179,7 +179,7 @@ export function getNextPhase(currentPhase: string): string | null {
     return null;
   }
 
-  return phaseOrder[currentIndex + 1];
+  return phaseOrder[currentIndex + 1] || null;
 }
 
 // Breadcrumb generator for new navigation

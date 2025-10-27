@@ -30,7 +30,14 @@ import OpenAI from 'openai';
 
 export interface KnowledgeGraphNode {
   id: string;
-  type: 'PAPER' | 'FINDING' | 'CONCEPT' | 'THEORY' | 'GAP' | 'STATEMENT' | 'BRIDGE_CONCEPT';
+  type:
+    | 'PAPER'
+    | 'FINDING'
+    | 'CONCEPT'
+    | 'THEORY'
+    | 'GAP'
+    | 'STATEMENT'
+    | 'BRIDGE_CONCEPT';
   label: string;
   description?: string;
   confidence: number;
@@ -59,7 +66,14 @@ export interface KnowledgeGraphEdge {
   id: string;
   fromNodeId: string;
   toNodeId: string;
-  type: 'SUPPORTS' | 'CONTRADICTS' | 'EXTENDS' | 'RELATED' | 'DERIVED_FROM' | 'CITES' | 'INFLUENCES';
+  type:
+    | 'SUPPORTS'
+    | 'CONTRADICTS'
+    | 'EXTENDS'
+    | 'RELATED'
+    | 'DERIVED_FROM'
+    | 'CITES'
+    | 'INFLUENCES';
   strength: number;
 
   // Phase 9 Day 14-15 Enhanced Features
@@ -81,8 +95,8 @@ export interface BridgeConcept {
 export interface Controversy {
   topic: string;
   opposingClusters: {
-    clusterA: string[];  // Node IDs supporting one view
-    clusterB: string[];  // Node IDs supporting opposite view
+    clusterA: string[]; // Node IDs supporting one view
+    clusterB: string[]; // Node IDs supporting opposite view
   };
   controversyScore: number; // 0-1
   controversyType: 'METHODOLOGY' | 'FINDINGS' | 'THEORY';
@@ -136,7 +150,9 @@ export class KnowledgeGraphService {
    * Extract entities from paper abstracts using NLP
    * PATENT FEATURE: AI-powered entity extraction with relationship inference
    */
-  async extractEntitiesFromPapers(paperIds: string[]): Promise<KnowledgeGraphNode[]> {
+  async extractEntitiesFromPapers(
+    paperIds: string[],
+  ): Promise<KnowledgeGraphNode[]> {
     this.logger.log(`📊 Extracting entities from ${paperIds.length} papers...`);
 
     const papers = await this.prisma.paper.findMany({
@@ -178,7 +194,11 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
         const response = await this.openai.chat.completions.create({
           model: 'gpt-4',
           messages: [
-            { role: 'system', content: 'You are an expert research analyst extracting structured knowledge from academic papers.' },
+            {
+              role: 'system',
+              content:
+                'You are an expert research analyst extracting structured knowledge from academic papers.',
+            },
             { role: 'user', content: prompt },
           ],
           temperature: 0.3,
@@ -186,7 +206,9 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
           response_format: { type: 'json_object' },
         });
 
-        const extractedData = JSON.parse(response.choices[0].message.content || '{"entities": []}');
+        const extractedData = JSON.parse(
+          response.choices[0].message.content || '{"entities": []}',
+        );
         const entities = extractedData.entities || [];
 
         // Create knowledge nodes
@@ -198,7 +220,9 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
             description: entity.description,
             confidence: 0.8, // GPT-4 extraction confidence
             metadata: {
-              authors: Array.isArray(paper.authors) ? (paper.authors as string[]) : [],
+              authors: Array.isArray(paper.authors)
+                ? (paper.authors as string[])
+                : [],
               year: paper.year ?? new Date().getFullYear(),
               citations: paper.citationCount ?? 0,
             },
@@ -224,9 +248,14 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
           allEntities.push({ ...node, id: savedNode.id });
         }
 
-        this.logger.log(`✓ Extracted ${entities.length} entities from "${paper.title}"`);
+        this.logger.log(
+          `✓ Extracted ${entities.length} entities from "${paper.title}"`,
+        );
       } catch (error) {
-        this.logger.error(`Failed to extract entities from paper ${paper.id}:`, error);
+        this.logger.error(
+          `Failed to extract entities from paper ${paper.id}:`,
+          error,
+        );
       }
     }
 
@@ -237,8 +266,12 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
    * Build citation network by analyzing paper citations
    * PATENT FEATURE: Temporal citation analysis with influence decay
    */
-  async buildCitationNetwork(paperIds: string[]): Promise<KnowledgeGraphEdge[]> {
-    this.logger.log(`🔗 Building citation network for ${paperIds.length} papers...`);
+  async buildCitationNetwork(
+    paperIds: string[],
+  ): Promise<KnowledgeGraphEdge[]> {
+    this.logger.log(
+      `🔗 Building citation network for ${paperIds.length} papers...`,
+    );
 
     const papers = await this.prisma.paper.findMany({
       where: { id: { in: paperIds } },
@@ -292,7 +325,9 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
             type: 'RELATED',
             strength: 0.5,
             temporalWeight,
-            influenceFlow: paper.citationCount ? paper.citationCount / 100 : 0.1,
+            influenceFlow: paper.citationCount
+              ? paper.citationCount / 100
+              : 0.1,
           },
         });
 
@@ -357,7 +392,8 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
 
       // A bridge concept connects 2+ different research areas
       if (connectedAreas.size >= 2) {
-        const betweenness = concept.outgoingEdges.length * concept.incomingEdges.length;
+        const betweenness =
+          concept.outgoingEdges.length * concept.incomingEdges.length;
         const normalizedBetweenness = Math.min(betweenness / 100, 1);
 
         bridgeConcepts.push({
@@ -371,7 +407,10 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
         // Mark in database
         await this.prisma.knowledgeNode.update({
           where: { id: concept.id },
-          data: { isBridgeConcept: true, influenceScore: normalizedBetweenness },
+          data: {
+            isBridgeConcept: true,
+            influenceScore: normalizedBetweenness,
+          },
         });
       }
     }
@@ -432,8 +471,12 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
       const clusterB: string[] = [];
 
       for (const node of relatedNodes) {
-        const supportsCount = node.outgoingEdges.filter(e => e.type === 'SUPPORTS').length;
-        const contradictsCount = node.outgoingEdges.filter(e => e.type === 'CONTRADICTS').length;
+        const supportsCount = node.outgoingEdges.filter(
+          (e) => e.type === 'SUPPORTS',
+        ).length;
+        const contradictsCount = node.outgoingEdges.filter(
+          (e) => e.type === 'CONTRADICTS',
+        ).length;
 
         if (supportsCount > contradictsCount) {
           clusterA.push(node.id);
@@ -443,13 +486,18 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
       }
 
       if (clusterA.length > 0 && clusterB.length > 0) {
-        const controversyScore = Math.min((clusterA.length + clusterB.length) / 20, 1);
+        const controversyScore = Math.min(
+          (clusterA.length + clusterB.length) / 20,
+          1,
+        );
 
         controversies.push({
           topic,
           opposingClusters: { clusterA, clusterB },
           controversyScore,
-          controversyType: this.classifyControversyType(edge.fromNode.description || ''),
+          controversyType: this.classifyControversyType(
+            edge.fromNode.description || '',
+          ),
           description: `Debate around ${topic} with ${clusterA.length} vs ${clusterB.length} opposing perspectives`,
         });
 
@@ -577,17 +625,23 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
         if (existingEdge) continue;
 
         // Calculate similarity based on shared connections
-        const connectionsA = new Set(conceptA.outgoingEdges.map(e => e.toNodeId));
+        const connectionsA = new Set(
+          conceptA.outgoingEdges.map((e) => e.toNodeId),
+        );
         const connectionsB = new Set(
           (await this.prisma.knowledgeNode.findUnique({
             where: { id: conceptB.id },
             include: { outgoingEdges: true },
-          }))!.outgoingEdges.map(e => e.toNodeId)
+          }))!.outgoingEdges.map((e) => e.toNodeId),
         );
 
-        const sharedConnections = Array.from(connectionsA).filter(id => connectionsB.has(id));
-        const jaccardSimilarity = sharedConnections.length /
-          (connectionsA.size + connectionsB.size - sharedConnections.length || 1);
+        const sharedConnections = Array.from(connectionsA).filter((id) =>
+          connectionsB.has(id),
+        );
+        const jaccardSimilarity =
+          sharedConnections.length /
+          (connectionsA.size + connectionsB.size - sharedConnections.length ||
+            1);
 
         // Predict if similarity is high
         if (jaccardSimilarity > 0.2) {
@@ -650,29 +704,36 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
 
     for (const concept of concepts) {
       // Calculate citation growth rate
-      const recentCitations = concept.incomingEdges.filter(edge => {
+      const recentCitations = concept.incomingEdges.filter((edge) => {
         const metadata = edge.fromNode.metadata as any;
-        const year = metadata?.year || new Date(edge.fromNode.createdAt).getFullYear();
+        const year =
+          metadata?.year || new Date(edge.fromNode.createdAt).getFullYear();
         return currentYear - year <= 2; // Last 2 years
       }).length;
 
-      const olderCitations = concept.incomingEdges.filter(edge => {
+      const olderCitations = concept.incomingEdges.filter((edge) => {
         const metadata = edge.fromNode.metadata as any;
-        const year = metadata?.year || new Date(edge.fromNode.createdAt).getFullYear();
+        const year =
+          metadata?.year || new Date(edge.fromNode.createdAt).getFullYear();
         return currentYear - year > 2 && currentYear - year <= 5;
       }).length;
 
       if (olderCitations === 0) continue;
 
-      const citationGrowth = ((recentCitations - olderCitations) / olderCitations) * 100;
+      const citationGrowth =
+        ((recentCitations - olderCitations) / olderCitations) * 100;
 
       // Consider emerging if growth > 50%
       if (citationGrowth > 50) {
         const emergenceScore = Math.min(citationGrowth / 200, 1);
         const trajectory: 'EXPONENTIAL' | 'LINEAR' | 'PLATEAU' | 'DECLINING' =
-          citationGrowth > 100 ? 'EXPONENTIAL' :
-          citationGrowth > 50 ? 'LINEAR' :
-          citationGrowth > 0 ? 'PLATEAU' : 'DECLINING';
+          citationGrowth > 100
+            ? 'EXPONENTIAL'
+            : citationGrowth > 50
+              ? 'LINEAR'
+              : citationGrowth > 0
+                ? 'PLATEAU'
+                : 'DECLINING';
 
         emergingTopics.push({
           conceptId: concept.id,
@@ -714,14 +775,15 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
   }): Promise<{ nodes: KnowledgeGraphNode[]; edges: KnowledgeGraphEdge[] }> {
     const where: any = {};
     if (filters?.types) where.type = { in: filters.types };
-    if (filters?.minConfidence) where.confidence = { gte: filters.minConfidence };
+    if (filters?.minConfidence)
+      where.confidence = { gte: filters.minConfidence };
 
     const nodes = await this.prisma.knowledgeNode.findMany({
       where,
       take: 500, // Limit for performance
     });
 
-    const nodeIds = nodes.map(n => n.id);
+    const nodeIds = nodes.map((n) => n.id);
     const edgeWhere: any = {
       fromNodeId: { in: nodeIds },
       toNodeId: { in: nodeIds },
@@ -735,8 +797,8 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
     });
 
     return {
-      nodes: nodes.map(n => this.mapNodeToDto(n)),
-      edges: edges.map(e => this.mapEdgeToDto(e)),
+      nodes: nodes.map((n) => this.mapNodeToDto(n)),
+      edges: edges.map((e) => this.mapEdgeToDto(e)),
     };
   }
 
@@ -765,10 +827,14 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
   // HELPER METHODS
   // ============================================================================
 
-  private classifyControversyType(description: string): 'METHODOLOGY' | 'FINDINGS' | 'THEORY' {
+  private classifyControversyType(
+    description: string,
+  ): 'METHODOLOGY' | 'FINDINGS' | 'THEORY' {
     const lower = description.toLowerCase();
-    if (lower.includes('method') || lower.includes('approach')) return 'METHODOLOGY';
-    if (lower.includes('finding') || lower.includes('result')) return 'FINDINGS';
+    if (lower.includes('method') || lower.includes('approach'))
+      return 'METHODOLOGY';
+    if (lower.includes('finding') || lower.includes('result'))
+      return 'FINDINGS';
     return 'THEORY';
   }
 
@@ -861,7 +927,7 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
    */
   async addMultimediaNode(
     transcriptId: string,
-    themes: Array<{ theme: string; relevanceScore: number; keywords: any }>
+    themes: Array<{ theme: string; relevanceScore: number; keywords: any }>,
   ): Promise<any> {
     const transcript = await this.prisma.videoTranscript.findUnique({
       where: { id: transcriptId },
@@ -884,7 +950,7 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
           sourceUrl: transcript.sourceUrl,
           author: transcript.author,
           duration: transcript.duration,
-          themes: themes.map(t => t.theme),
+          themes: themes.map((t) => t.theme),
           platform: transcript.sourceType,
         },
       },
@@ -901,15 +967,15 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
    */
   private async connectMultimediaToLiterature(
     multimediaNodeId: string,
-    themes: Array<{ theme: string; relevanceScore: number; keywords: any }>
+    themes: Array<{ theme: string; relevanceScore: number; keywords: any }>,
   ): Promise<void> {
-    const themeLabels = themes.map(t => t.theme);
+    const themeLabels = themes.map((t) => t.theme);
 
     // Find papers mentioning similar themes
     // Note: In production, use embedding similarity for better matching
     const papers = await this.prisma.paper.findMany({
       where: {
-        OR: themeLabels.map(theme => ({
+        OR: themeLabels.map((theme) => ({
           abstract: { contains: theme, mode: 'insensitive' as any },
         })),
       },
@@ -920,7 +986,7 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
     for (const paper of papers) {
       const similarity = this.calculateThemeSimilarity(
         themeLabels,
-        paper.abstract || ''
+        paper.abstract || '',
       );
 
       if (similarity > 0.3) {
@@ -969,8 +1035,8 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
    */
   private calculateThemeSimilarity(themes: string[], text: string): number {
     const lowerText = text.toLowerCase();
-    const matches = themes.filter(theme =>
-      lowerText.includes(theme.toLowerCase())
+    const matches = themes.filter((theme) =>
+      lowerText.includes(theme.toLowerCase()),
     );
     return matches.length / themes.length;
   }

@@ -2,8 +2,8 @@
  * React Query configuration for enterprise-grade server state management
  * Implements caching, optimistic updates, and error recovery
  */
-import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query';
 import { ErrorHandler, isRetryableError } from '@/lib/errors';
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 /**
  * Query client configuration
  */
@@ -35,7 +35,8 @@ export const queryClient = new QueryClient({
       },
 
       // Retry delay with exponential backoff
-      retryDelay: (attemptIndex: any) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retryDelay: (attemptIndex: any) =>
+        Math.min(1000 * 2 ** attemptIndex, 30000),
 
       // Refetch configuration
       refetchOnWindowFocus: false,
@@ -43,7 +44,7 @@ export const queryClient = new QueryClient({
       refetchOnMount: true,
 
       // Network mode
-      networkMode: 'online'
+      networkMode: 'online',
     },
 
     mutations: {
@@ -52,22 +53,22 @@ export const queryClient = new QueryClient({
       retryDelay: 1000,
 
       // Network mode
-      networkMode: 'online'
-    }
+      networkMode: 'online',
+    },
   },
 
   // Query cache configuration
   queryCache: new QueryCache({
     onError: (error: any, query: any) => {
       // Handle query errors globally
-      ErrorHandler.handle(error)
+      ErrorHandler.handle(error);
 
       // Log query errors in development
       if (process.env['NODE_ENV'] === 'development') {
         console.error('Query error:', {
           queryKey: query.queryKey,
-          error
-        })
+          error,
+        });
       }
     },
 
@@ -75,25 +76,25 @@ export const queryClient = new QueryClient({
       // Track successful queries
       if (typeof window !== 'undefined' && (window as any).gtag) {
         (window as any).gtag('event', 'query_success', {
-          query_key: JSON.stringify(query.queryKey)
-        })
+          query_key: JSON.stringify(query.queryKey),
+        });
       }
-    }
+    },
   }),
 
   // Mutation cache configuration
   mutationCache: new MutationCache({
     onError: (error: any, mutation: any) => {
       // Handle mutation errors globally
-      ErrorHandler.handle(error)
+      ErrorHandler.handle(error);
 
       // Log mutation errors in development
       if (process.env['NODE_ENV'] === 'development') {
         console.error('Mutation error:', {
           mutationKey: mutation.options.mutationKey,
 
-          error
-        })
+          error,
+        });
       }
     },
 
@@ -101,12 +102,12 @@ export const queryClient = new QueryClient({
       // Track successful mutations
       if (typeof window !== 'undefined' && (window as any).gtag) {
         (window as any).gtag('event', 'mutation_success', {
-          mutation_key: JSON.stringify(mutation.options.mutationKey)
-        })
+          mutation_key: JSON.stringify(mutation.options.mutationKey),
+        });
       }
-    }
-  })
-})
+    },
+  }),
+});
 /**
  * Query key factory for consistent key generation
  */
@@ -115,19 +116,21 @@ export const queryKeys = {
   auth: {
     user: () => ['auth', 'user'] as const,
     session: () => ['auth', 'session'] as const,
-    permissions: (userId: string) => ['auth', 'permissions', userId] as const
+    permissions: (userId: string) => ['auth', 'permissions', userId] as const,
   },
 
   // Study queries
   studies: {
     all: () => ['studies'] as const,
     lists: () => [...queryKeys.studies.all(), 'list'] as const,
-    list: (filters: Record<string, any>) => [...queryKeys.studies.lists(), filters] as const,
+    list: (filters: Record<string, any>) =>
+      [...queryKeys.studies.lists(), filters] as const,
     details: () => [...queryKeys.studies.all(), 'detail'] as const,
     detail: (id: string) => [...queryKeys.studies.details(), id] as const,
     participants: (studyId: string) =>
       [...queryKeys.studies.detail(studyId), 'participants'] as const,
-    results: (studyId: string) => [...queryKeys.studies.detail(studyId), 'results'] as const
+    results: (studyId: string) =>
+      [...queryKeys.studies.detail(studyId), 'results'] as const,
   },
 
   // Participant queries
@@ -136,7 +139,7 @@ export const queryKeys = {
     list: (studyId: string, filters?: Record<string, any>) =>
       ['participants', studyId, filters] as const,
     detail: (id: string) => ['participants', 'detail', id] as const,
-    metrics: (studyId: string) => ['participants', 'metrics', studyId] as const
+    metrics: (studyId: string) => ['participants', 'metrics', studyId] as const,
   },
 
   // Questionnaire queries
@@ -145,22 +148,23 @@ export const queryKeys = {
     templates: () => ['questionnaires', 'templates'] as const,
     detail: (id: string) => ['questionnaires', 'detail', id] as const,
     responses: (questionnaireId: string) =>
-      ['questionnaires', 'responses', questionnaireId] as const
+      ['questionnaires', 'responses', questionnaireId] as const,
   },
 
   // Analysis queries
   analysis: {
     results: (studyId: string) => ['analysis', 'results', studyId] as const,
     insights: (studyId: string) => ['analysis', 'insights', studyId] as const,
-    export: (studyId: string, format: string) => ['analysis', 'export', studyId, format] as const
+    export: (studyId: string, format: string) =>
+      ['analysis', 'export', studyId, format] as const,
   },
 
   // AI queries
   ai: {
     suggestions: (_context: string) => ['ai', 'suggestions'] as const,
     analysis: (_data: any) => ['ai', 'analysis'] as const,
-    generation: (prompt: string) => ['ai', 'generation', prompt] as const
-  }
+    generation: (prompt: string) => ['ai', 'generation', prompt] as const,
+  },
 } as const;
 /**
  * Optimistic update helpers
@@ -169,10 +173,13 @@ export const optimisticUpdates = {
   /**
    * Add item to list optimistically
    */
-  addToList: <T extends { id: string }>(queryKey: readonly unknown[], newItem: T) => {
+  addToList: <T extends { id: string }>(
+    queryKey: readonly unknown[],
+    newItem: T
+  ) => {
     queryClient.setQueryData(queryKey, (old: T | undefined) => {
       return old ? [...(old as any), newItem] : [newItem];
-    })
+    });
   },
 
   /**
@@ -183,18 +190,23 @@ export const optimisticUpdates = {
     id: string,
     updates: Partial<T>
   ) => {
-    queryClient.setQueryData(queryKey, (old: T | undefined) => {
-      return old?.map((item: any) => (item.id === id ? { ...(item as any), ...updates } : item));
-    })
+    queryClient.setQueryData(queryKey, (old: T[] | undefined) => {
+      return old?.map((item: any) =>
+        item.id === id ? { ...(item as any), ...updates } : item
+      );
+    });
   },
 
   /**
    * Remove item from list optimistically
    */
-  removeFromList: <T extends { id: string }>(queryKey: readonly unknown[], id: string) => {
-    queryClient.setQueryData(queryKey, (old: T | undefined) => {
+  removeFromList: <T extends { id: string }>(
+    queryKey: readonly unknown[],
+    id: string
+  ) => {
+    queryClient.setQueryData(queryKey, (old: T[] | undefined) => {
       return old?.filter((item: any) => item.id !== id);
-    })
+    });
   },
 
   /**
@@ -203,9 +215,9 @@ export const optimisticUpdates = {
   updateItem: <T>(queryKey: readonly unknown[], updates: Partial<T>) => {
     queryClient.setQueryData(queryKey, (old: T | undefined) => {
       return old ? { ...(old as any), ...updates } : old;
-    })
-  }
-}
+    });
+  },
+};
 /**
  * Cache invalidation helpers
  */
@@ -217,13 +229,13 @@ export const cacheInvalidation = {
     const resourceKey = queryKeys[resource];
     if ('all' in resourceKey && typeof resourceKey.all === 'function') {
       queryClient.invalidateQueries({
-        queryKey: resourceKey.all()
-      })
+        queryKey: resourceKey.all(),
+      });
     } else {
       // For resources without 'all' method, invalidate the entire resource
       queryClient.invalidateQueries({
-        queryKey: [resource]
-      })
+        queryKey: [resource],
+      });
     }
   },
 
@@ -231,14 +243,14 @@ export const cacheInvalidation = {
    * Invalidate specific query
    */
   invalidateQuery: (queryKey: readonly unknown[]) => {
-    queryClient.invalidateQueries({ queryKey })
+    queryClient.invalidateQueries({ queryKey });
   },
 
   /**
    * Reset all queries
    */
   resetAll: () => {
-    queryClient.clear()
+    queryClient.clear();
   },
 
   /**
@@ -253,14 +265,14 @@ export const cacheInvalidation = {
       queryKey,
       queryFn,
       staleTime: staleTime || 5 * 60 * 1000, // 5 minutes default;
-    })
-  }
-}
+    });
+  },
+};
 /**
  * Performance monitoring for React Query
  */
 export class QueryPerformanceMonitor {
-  private static queryTimes = new Map<string, number>()
+  private static queryTimes = new Map<string, number[]>();
 
   /**
    * Track query execution time
@@ -268,11 +280,11 @@ export class QueryPerformanceMonitor {
   static trackQueryTime(queryKey: readonly unknown[], time: number): void {
     const key = JSON.stringify(queryKey);
     const times: number[] = this.queryTimes.get(key) || [];
-    (Array.isArray(times) ? times : []).push(time);
+    times.push(time);
 
     // Keep only last 100 measurements
-    if ((Array.isArray(times) ? times.length : 0) > 100) {
-      (times as number[]).shift()
+    if (times.length > 100) {
+      times.shift();
     }
 
     this.queryTimes.set(key, times);
@@ -294,7 +306,10 @@ export class QueryPerformanceMonitor {
       return null;
     }
 
-    const sum = (times as number[]).reduce((acc: any, time: any) => acc + time, 0);
+    const sum = (times as number[]).reduce(
+      (acc: any, time: any) => acc + time,
+      0
+    );
     return sum / (Array.isArray(times) ? times.length : 0);
   }
 
@@ -302,14 +317,17 @@ export class QueryPerformanceMonitor {
    * Get query performance metrics
    */
   static getMetrics(): Record<string, { average: number; count: number }> {
-    const metrics: Record<string, { average: number; count: number }> = {}
+    const metrics: Record<string, { average: number; count: number }> = {};
     this.queryTimes.forEach((times: any, key: any) => {
-      const sum = (times as number[]).reduce((acc: any, time: any) => acc + time, 0);
+      const sum = (times as number[]).reduce(
+        (acc: any, time: any) => acc + time,
+        0
+      );
       metrics[key] = {
         average: sum / (Array.isArray(times) ? times.length : 0),
-        count: (Array.isArray(times) ? times.length : 0)
-      }
-    })
+        count: Array.isArray(times) ? times.length : 0,
+      };
+    });
 
     return metrics;
   }
@@ -318,7 +336,7 @@ export class QueryPerformanceMonitor {
    * Clear metrics
    */
   static clear(): void {
-    this.queryTimes.clear()
+    this.queryTimes.clear();
   }
 }
 /**
@@ -338,8 +356,8 @@ export const offlineConfig = {
       // Implement persistence plugin
       // This would integrate with a persistence library
     }
-  }
-}
+  },
+};
 /**
  * Export configured providers
  */

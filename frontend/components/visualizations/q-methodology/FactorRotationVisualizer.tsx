@@ -31,20 +31,27 @@ interface FactorRotationVisualizerProps {
   significanceThreshold?: number;
 }
 
-export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> = ({
+export const FactorRotationVisualizer: React.FC<
+  FactorRotationVisualizerProps
+> = ({
   data,
   factors,
   width = 800,
   height = 800,
   enableVarimax = true,
-  significanceThreshold = 0.4
+  significanceThreshold = 0.4,
 }) => {
-  const [rotationAngles, setRotationAngles] = useState<{ [key: string]: number }>({});
-  const [selectedFactors, setSelectedFactors] = useState<[string, string]>([factors[0] || 'F1', factors[1] || 'F2']);
+  const [rotationAngles, setRotationAngles] = useState<{
+    [key: string]: number;
+  }>({});
+  const [selectedFactors, setSelectedFactors] = useState<[string, string]>([
+    factors[0] || 'F1',
+    factors[1] || 'F2',
+  ]);
   const [showOriginal, setShowOriginal] = useState(false);
   const [animateRotation, setAnimateRotation] = useState(false);
   const [rotationHistory, setRotationHistory] = useState<RotationMatrix[]>([]);
-  
+
   const rotationRef = useRef<SVGGElement>(null);
   const isDragging = useRef(false);
 
@@ -55,7 +62,11 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
     tooltipOpen,
     showTooltip,
     hideTooltip,
-  } = useTooltip<{ participant: string; loadings: { [factor: string]: number }; communality: number }>();
+  } = useTooltip<{
+    participant: string;
+    loadings: { [factor: string]: number };
+    communality: number;
+  }>();
 
   // Chart dimensions
   const margin = { top: 80, right: 40, bottom: 80, left: 80 };
@@ -71,42 +82,50 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
     const sin = Math.sin(rad);
     return [
       [cos, -sin],
-      [sin, cos]
+      [sin, cos],
     ];
   };
 
   // Apply rotation to loadings
-  const applyRotation = useCallback((loadings: { [factor: string]: number }, angle: number = 0): { [factor: string]: number } => {
-    const [factor1, factor2] = selectedFactors;
-    const matrix = getRotationMatrix(angle);
-    
-    const originalF1 = loadings[factor1] || 0;
-    const originalF2 = loadings[factor2] || 0;
-    
-    const rotatedF1 = (matrix[0]?.[0] || 0) * originalF1 + (matrix[0]?.[1] || 0) * originalF2;
-    const rotatedF2 = (matrix[1]?.[0] || 0) * originalF1 + (matrix[1]?.[1] || 0) * originalF2;
-    
-    return {
-      ...loadings,
-      [factor1]: rotatedF1,
-      [factor2]: rotatedF2
-    };
-  }, [selectedFactors]);
+  const applyRotation = useCallback(
+    (
+      loadings: { [factor: string]: number },
+      angle: number = 0
+    ): { [factor: string]: number } => {
+      const [factor1, factor2] = selectedFactors;
+      const matrix = getRotationMatrix(angle);
+
+      const originalF1 = loadings[factor1] || 0;
+      const originalF2 = loadings[factor2] || 0;
+
+      const rotatedF1 =
+        (matrix[0]?.[0] || 0) * originalF1 + (matrix[0]?.[1] || 0) * originalF2;
+      const rotatedF2 =
+        (matrix[1]?.[0] || 0) * originalF1 + (matrix[1]?.[1] || 0) * originalF2;
+
+      return {
+        ...loadings,
+        [factor1]: rotatedF1,
+        [factor2]: rotatedF2,
+      };
+    },
+    [selectedFactors]
+  );
 
   // Varimax rotation calculation (simplified)
   const calculateVarimaxRotation = useCallback((): number => {
     if (!enableVarimax) return 0;
-    
+
     const [factor1, factor2] = selectedFactors;
     const loadings = data.map((d: any) => [
       d.originalLoadings[factor1] || 0,
-      d.originalLoadings[factor2] || 0
+      d.originalLoadings[factor2] || 0,
     ]);
-    
+
     // Simplified varimax objective function
     let bestAngle = 0;
     let maxVariance = -Infinity;
-    
+
     for (let angle = -180; angle <= 180; angle += 1) {
       const matrix = getRotationMatrix(angle);
       let varianceSum = 0;
@@ -114,24 +133,28 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
       for (const [f1, f2] of loadings) {
         const rotF1 = (matrix[0]?.[0] || 0) * f1 + (matrix[0]?.[1] || 0) * f2;
         const rotF2 = (matrix[1]?.[0] || 0) * f1 + (matrix[1]?.[1] || 0) * f2;
-        
+
         // Maximize variance of squared loadings
         varianceSum += Math.pow(rotF1, 4) + Math.pow(rotF2, 4);
       }
-      
+
       if (varianceSum > maxVariance) {
         maxVariance = varianceSum;
         bestAngle = angle;
       }
     }
-    
+
     return bestAngle;
   }, [data, selectedFactors, enableVarimax]);
 
   // Scales
-  const maxLoading = Math.max(...data.flatMap(d => 
-    Object.values(showOriginal ? d.originalLoadings : d.rotatedLoadings).map(Math.abs)
-  ));
+  const maxLoading = Math.max(
+    ...data.flatMap(d =>
+      Object.values(showOriginal ? d.originalLoadings : d.rotatedLoadings).map(
+        Math.abs
+      )
+    )
+  );
   const loadingScale = Math.max(1.2, maxLoading);
 
   const xScale = scaleLinear({
@@ -145,12 +168,15 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
   });
 
   // Get current rotation angle
-  const currentRotation = rotationAngles[`${selectedFactors[0]}-${selectedFactors[1]}`] || 0;
+  const currentRotation =
+    rotationAngles[`${selectedFactors[0]}-${selectedFactors[1]}`] || 0;
 
   // Get rotated data
   const displayData = data.map((d: any) => ({
     ...d,
-    currentLoadings: showOriginal ? d.originalLoadings : applyRotation(d.originalLoadings, currentRotation)
+    currentLoadings: showOriginal
+      ? d.originalLoadings
+      : applyRotation(d.originalLoadings, currentRotation),
   }));
 
   // Handle drag for manual rotation
@@ -165,13 +191,16 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
         const rect = rotationRef.current!.getBoundingClientRect();
         const centerXPage = rect.left + rect.width / 2;
         const centerYPage = rect.top + rect.height / 2;
-        
-        const angle = Math.atan2(event.sourceEvent.clientY - centerYPage, event.sourceEvent.clientX - centerXPage);
+
+        const angle = Math.atan2(
+          event.sourceEvent.clientY - centerYPage,
+          event.sourceEvent.clientX - centerXPage
+        );
         const degrees = (angle * 180) / Math.PI;
-        
+
         setRotationAngles(prev => ({
           ...prev,
-          [`${selectedFactors[0]}-${selectedFactors[1]}`]: degrees
+          [`${selectedFactors[0]}-${selectedFactors[1]}`]: degrees,
         }));
       })
       .on('end', () => {
@@ -184,25 +213,28 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
   const handleVarimaxRotation = () => {
     const optimalAngle = calculateVarimaxRotation();
     setAnimateRotation(true);
-    
+
     // Add to rotation history
-    setRotationHistory(prev => [...prev, {
-      angle: optimalAngle,
-      matrix: getRotationMatrix(optimalAngle)
-    }]);
-    
+    setRotationHistory(prev => [
+      ...prev,
+      {
+        angle: optimalAngle,
+        matrix: getRotationMatrix(optimalAngle),
+      },
+    ]);
+
     // Animate to optimal angle
     const startAngle = currentRotation;
     const steps = 60;
     const angleStep = (optimalAngle - startAngle) / steps;
-    
+
     let step = 0;
     const animate = () => {
       if (step < steps) {
-        const currentAngle = startAngle + (angleStep * step);
+        const currentAngle = startAngle + angleStep * step;
         setRotationAngles(prev => ({
           ...prev,
-          [`${selectedFactors[0]}-${selectedFactors[1]}`]: currentAngle
+          [`${selectedFactors[0]}-${selectedFactors[1]}`]: currentAngle,
         }));
         step++;
         requestAnimationFrame(animate);
@@ -210,14 +242,14 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
         setAnimateRotation(false);
       }
     };
-    
+
     animate();
   };
 
   const resetRotation = () => {
     setRotationAngles(prev => ({
       ...prev,
-      [`${selectedFactors[0]}-${selectedFactors[1]}`]: 0
+      [`${selectedFactors[0]}-${selectedFactors[1]}`]: 0,
     }));
     setRotationHistory([]);
   };
@@ -245,11 +277,13 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
             >
               Factor Pair:
             </text>
-            {factors.slice(0, -1).map((factor1, i) => 
+            {factors.slice(0, -1).map((factor1, i) =>
               factors.slice(i + 1).map((factor2, j) => {
                 const key = `${factor1}-${factor2}`;
-                const isSelected = selectedFactors[0] === factor1 && selectedFactors[1] === factor2;
-                
+                const isSelected =
+                  selectedFactors[0] === factor1 &&
+                  selectedFactors[1] === factor2;
+
                 return (
                   <motion.g
                     key={key}
@@ -314,7 +348,11 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
               </text>
             </motion.g>
 
-            <motion.g transform="translate(110, 0)" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <motion.g
+              transform="translate(110, 0)"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <rect
                 x={0}
                 y={-20}
@@ -339,7 +377,11 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
               </text>
             </motion.g>
 
-            <motion.g transform="translate(180, 0)" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <motion.g
+              transform="translate(180, 0)"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <rect
                 x={0}
                 y={-20}
@@ -441,7 +483,7 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
                 strokeDasharray="8 4"
                 opacity={0.6}
               />
-              
+
               {/* Axis labels */}
               <text
                 x={centerX + 110}
@@ -468,14 +510,18 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
 
           {/* Participant points */}
           {displayData.map((participant, index) => {
-            const x1Loading = participant.currentLoadings[selectedFactors[0]] || 0;
-            const x2Loading = participant.currentLoadings[selectedFactors[1]] || 0;
+            const x1Loading =
+              participant.currentLoadings[selectedFactors[0]] || 0;
+            const x2Loading =
+              participant.currentLoadings[selectedFactors[1]] || 0;
             const px = xScale(x1Loading);
             const py = yScale(x2Loading);
-            
-            const isSignificant = Math.abs(x1Loading) >= significanceThreshold || Math.abs(x2Loading) >= significanceThreshold;
+
+            const isSignificant =
+              Math.abs(x1Loading) >= significanceThreshold ||
+              Math.abs(x2Loading) >= significanceThreshold;
             const communality = participant.communality;
-            
+
             return (
               <motion.g
                 key={participant.participant}
@@ -639,11 +685,17 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
             fontFamily="-apple-system"
             fill="#666"
           >
-            Significant (≥{significanceThreshold}): {displayData.filter((d: any) => {
-              const x1 = d.currentLoadings[selectedFactors[0]] || 0;
-              const x2 = d.currentLoadings[selectedFactors[1]] || 0;
-              return Math.abs(x1) >= significanceThreshold || Math.abs(x2) >= significanceThreshold;
-            }).length}
+            Significant (≥{significanceThreshold}):{' '}
+            {
+              displayData.filter((d: any) => {
+                const x1 = d.currentLoadings[selectedFactors[0]] || 0;
+                const x2 = d.currentLoadings[selectedFactors[1]] || 0;
+                return (
+                  Math.abs(x1) >= significanceThreshold ||
+                  Math.abs(x2) >= significanceThreshold
+                );
+              }).length
+            }
           </text>
           <text
             x={0}
@@ -652,7 +704,10 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
             fontFamily="-apple-system"
             fill="#666"
           >
-            Mean Communality: {(data.reduce((sum, d) => sum + d.communality, 0) / data.length).toFixed(3)}
+            Mean Communality:{' '}
+            {(
+              data.reduce((sum, d) => sum + d.communality, 0) / data.length
+            ).toFixed(3)}
           </text>
           <text
             x={0}
@@ -667,40 +722,55 @@ export const FactorRotationVisualizer: React.FC<FactorRotationVisualizerProps> =
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
-        <TooltipWithBounds
-          left={tooltipLeft}
-          top={tooltipTop}
-          style={{
-            ...defaultStyles,
-            backgroundColor: 'rgba(255, 255, 255, 0.98)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            borderRadius: '12px',
-            padding: '12px 16px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
-          }}
-        >
-          <div style={{ fontFamily: '-apple-system', fontSize: '12px' }}>
-            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>
-              {tooltipData.participant}
+      {tooltipOpen &&
+        tooltipData &&
+        tooltipLeft !== undefined &&
+        tooltipTop !== undefined && (
+          <TooltipWithBounds
+            left={tooltipLeft}
+            top={tooltipTop}
+            style={{
+              ...defaultStyles,
+              backgroundColor: 'rgba(255, 255, 255, 0.98)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+            }}
+          >
+            <div style={{ fontFamily: '-apple-system', fontSize: '12px' }}>
+              <div
+                style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  marginBottom: '6px',
+                }}
+              >
+                {tooltipData.participant}
+              </div>
+              <div style={{ marginBottom: '4px' }}>
+                {selectedFactors[0]}:{' '}
+                <span style={{ fontWeight: '600' }}>
+                  {tooltipData.loadings[selectedFactors[0]]?.toFixed(3) ||
+                    '0.000'}
+                </span>
+              </div>
+              <div style={{ marginBottom: '4px' }}>
+                {selectedFactors[1]}:{' '}
+                <span style={{ fontWeight: '600' }}>
+                  {tooltipData.loadings[selectedFactors[1]]?.toFixed(3) ||
+                    '0.000'}
+                </span>
+              </div>
+              <div
+                style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}
+              >
+                Communality: {tooltipData.communality.toFixed(3)}
+              </div>
             </div>
-            <div style={{ marginBottom: '4px' }}>
-              {selectedFactors[0]}: <span style={{ fontWeight: '600' }}>
-                {tooltipData.loadings[selectedFactors[0]]?.toFixed(3) || '0.000'}
-              </span>
-            </div>
-            <div style={{ marginBottom: '4px' }}>
-              {selectedFactors[1]}: <span style={{ fontWeight: '600' }}>
-                {tooltipData.loadings[selectedFactors[1]]?.toFixed(3) || '0.000'}
-              </span>
-            </div>
-            <div style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}>
-              Communality: {tooltipData.communality.toFixed(3)}
-            </div>
-          </div>
-        </TooltipWithBounds>
-      )}
+          </TooltipWithBounds>
+        )}
     </>
   );
 };

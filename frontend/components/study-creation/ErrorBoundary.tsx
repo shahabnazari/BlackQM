@@ -42,7 +42,7 @@ export class StudyCreationErrorBoundary extends React.Component<
                 <AlertCircle className="w-8 h-8 text-red-600" />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <h2 className="text-xl font-semibold text-label">
                 Something went wrong
@@ -61,18 +61,12 @@ export class StudyCreationErrorBoundary extends React.Component<
                 </details>
               )}
             </div>
-            
+
             <div className="flex gap-2 justify-center">
-              <Button
-                variant="secondary"
-                onClick={() => window.history.back()}
-              >
+              <Button variant="secondary" onClick={() => window.history.back()}>
                 Go Back
               </Button>
-              <Button
-                variant="primary"
-                onClick={this.handleReset}
-              >
+              <Button variant="primary" onClick={this.handleReset}>
                 Try Again
               </Button>
             </div>

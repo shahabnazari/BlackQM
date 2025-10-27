@@ -44,7 +44,8 @@ export interface RelevanceScore {
 @Injectable()
 export class VideoRelevanceService {
   private readonly logger = new Logger(VideoRelevanceService.name);
-  private cache: Map<string, { score: RelevanceScore; timestamp: number }> = new Map();
+  private cache: Map<string, { score: RelevanceScore; timestamp: number }> =
+    new Map();
   private readonly CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
   constructor(private readonly openaiService: OpenAIService) {}
@@ -82,7 +83,9 @@ export class VideoRelevanceService {
 
       return score;
     } catch (error: any) {
-      this.logger.error(`Failed to score video ${video.videoId}: ${error.message}`);
+      this.logger.error(
+        `Failed to score video ${video.videoId}: ${error.message}`,
+      );
       // Return default low score on error
       return {
         videoId: video.videoId,
@@ -110,7 +113,7 @@ export class VideoRelevanceService {
 
     // Process in parallel with Promise.all
     const scores = await Promise.all(
-      videos.map(video => this.scoreVideoRelevance(video, researchContext)),
+      videos.map((video) => this.scoreVideoRelevance(video, researchContext)),
     );
 
     return scores;
@@ -136,14 +139,14 @@ export class VideoRelevanceService {
 
     // Select top N
     const topScores = sortedScores.slice(0, topN);
-    const selectedVideoIds = topScores.map(s => s.videoId);
+    const selectedVideoIds = topScores.map((s) => s.videoId);
 
     // Calculate total transcription cost
     const totalCost = topScores.reduce((sum, score) => {
-      const video = videos.find(v => v.videoId === score.videoId);
+      const video = videos.find((v) => v.videoId === score.videoId);
       if (!video) return sum;
       const durationMinutes = video.duration / 60;
-      return sum + (durationMinutes * 0.006); // $0.006 per minute
+      return sum + durationMinutes * 0.006; // $0.006 per minute
     }, 0);
 
     const reasoning = this.generateSelectionReasoning(topScores);
@@ -159,7 +162,10 @@ export class VideoRelevanceService {
   /**
    * Build GPT-4 scoring prompt
    */
-  private buildScoringPrompt(video: VideoMetadata, researchContext: string): string {
+  private buildScoringPrompt(
+    video: VideoMetadata,
+    researchContext: string,
+  ): string {
     return `Research Topic: "${researchContext}"
 Video Title: "${video.title}"
 Video Description: "${video.description}"
@@ -214,11 +220,15 @@ Return JSON with this exact structure:
         confidence: Math.min(1, Math.max(0, parsed.confidence || 0.5)),
         recommendations: {
           transcribe: parsed.transcribe || parsed.score > 60,
-          priority: parsed.priority || (parsed.score > 80 ? 'high' : parsed.score > 60 ? 'medium' : 'low'),
+          priority:
+            parsed.priority ||
+            (parsed.score > 80 ? 'high' : parsed.score > 60 ? 'medium' : 'low'),
         },
       };
     } catch (error: any) {
-      this.logger.warn(`Failed to parse AI response for video ${videoId}: ${error.message}`);
+      this.logger.warn(
+        `Failed to parse AI response for video ${videoId}: ${error.message}`,
+      );
       // Return safe default
       return {
         videoId,
@@ -239,8 +249,9 @@ Return JSON with this exact structure:
    * Generate reasoning for auto-selection
    */
   private generateSelectionReasoning(topScores: RelevanceScore[]): string {
-    const avgScore = topScores.reduce((sum, s) => sum + s.score, 0) / topScores.length;
-    const academicCount = topScores.filter(s => s.isAcademic).length;
+    const avgScore =
+      topScores.reduce((sum, s) => sum + s.score, 0) / topScores.length;
+    const academicCount = topScores.filter((s) => s.isAcademic).length;
 
     return `Selected ${topScores.length} videos with average relevance score of ${avgScore.toFixed(0)}%. ${academicCount} videos identified as academic content. Recommended for transcription based on research value and topic alignment.`;
   }

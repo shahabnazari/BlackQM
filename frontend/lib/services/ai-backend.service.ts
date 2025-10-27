@@ -1,9 +1,9 @@
 /**
  * AI Backend Service
- * 
+ *
  * This service acts as a proxy to the backend AI endpoints.
  * All AI operations go through the secure backend API.
- * 
+ *
  * Security:
  * - No API keys stored in frontend
  * - All requests authenticated via JWT
@@ -13,7 +13,8 @@
 
 import { getAuthToken } from '../auth/auth-utils';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 export interface GridRecommendation {
   columns: number;
@@ -58,10 +59,10 @@ class AIBackendService {
     options: RequestInit = {}
   ): Promise<Response> {
     const token = await getAuthToken();
-    
+
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
       ...options.headers,
     };
 
@@ -71,13 +72,17 @@ class AIBackendService {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Request failed' }));
-      throw new Error(error.message || `HTTP ${response.status}: ${response.statusText}`);
+      const error = await response
+        .json()
+        .catch(() => ({ message: 'Request failed' }));
+      throw new Error(
+        error.message || `HTTP ${response.status}: ${response.statusText}`
+      );
     }
 
     return response;
   }
-  
+
   // Fetch with retry logic and exponential backoff
   private async fetchWithRetry(
     endpoint: string,
@@ -85,26 +90,32 @@ class AIBackendService {
     maxRetries: number = 3
   ): Promise<Response> {
     let lastError: Error | null = null;
-    
+
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         const response = await this.fetchWithAuth(endpoint, options);
         return response; // Success - return immediately
       } catch (error) {
         lastError = error as Error;
-        
+
         // Check if error is retryable
         const errorMessage = lastError.message || '';
-        const isRateLimitError = errorMessage.includes('429') || errorMessage.includes('rate limit');
-        const isServerError = errorMessage.includes('500') || errorMessage.includes('502') || 
-                             errorMessage.includes('503') || errorMessage.includes('504');
-        const isTimeoutError = errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT');
-        
+        const isRateLimitError =
+          errorMessage.includes('429') || errorMessage.includes('rate limit');
+        const isServerError =
+          errorMessage.includes('500') ||
+          errorMessage.includes('502') ||
+          errorMessage.includes('503') ||
+          errorMessage.includes('504');
+        const isTimeoutError =
+          errorMessage.includes('timeout') ||
+          errorMessage.includes('ETIMEDOUT');
+
         // Only retry for specific errors
         if (!isRateLimitError && !isServerError && !isTimeoutError) {
           throw error; // Not retryable - throw immediately
         }
-        
+
         // Don't wait after the last attempt
         if (attempt < maxRetries - 1) {
           // Exponential backoff: 1s, 2s, 4s
@@ -112,13 +123,15 @@ class AIBackendService {
           // Add some jitter to prevent thundering herd
           const jitterMs = Math.random() * 500;
           const waitMs = backoffMs + jitterMs;
-          
-          console.log(`Retry attempt ${attempt + 1}/${maxRetries} after ${waitMs}ms for ${endpoint}`);
+
+          console.log(
+            `Retry attempt ${attempt + 1}/${maxRetries} after ${waitMs}ms for ${endpoint}`
+          );
           await new Promise(resolve => setTimeout(resolve, waitMs));
         }
       }
     }
-    
+
     // All retries exhausted
     throw lastError || new Error('Request failed after retries');
   }
@@ -157,7 +170,9 @@ class AIBackendService {
   async generateQuestionnaire(params: {
     studyTopic: string;
     questionCount: number;
-    questionTypes: Array<'likert' | 'multipleChoice' | 'openEnded' | 'ranking' | 'demographic'>;
+    questionTypes: Array<
+      'likert' | 'multipleChoice' | 'openEnded' | 'ranking' | 'demographic'
+    >;
     targetAudience?: string;
     includeSkipLogic?: boolean;
   }): Promise<{ success: boolean; questions: GeneratedQuestion[] }> {
@@ -275,7 +290,7 @@ class AIBackendService {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
-    
+
     const response = await this.fetchWithAuth(`/usage/report?${params}`, {
       method: 'GET',
     });
@@ -283,10 +298,7 @@ class AIBackendService {
   }
 
   // Update Budget
-  async updateBudget(params: {
-    dailyLimit: number;
-    monthlyLimit: number;
-  }) {
+  async updateBudget(params: { dailyLimit: number; monthlyLimit: number }) {
     const response = await this.fetchWithAuth('/budget/update', {
       method: 'POST',
       body: JSON.stringify(params),
@@ -311,13 +323,19 @@ class AIBackendService {
     });
     return response.json();
   }
-  
+
   // Smart Validation - Adaptive form validation with AI
   async validateSmartly(params: {
     formData: Record<string, any>;
     validationRules?: Array<{
       field: string;
-      rule: 'required' | 'email' | 'minLength' | 'maxLength' | 'pattern' | 'custom';
+      rule:
+        | 'required'
+        | 'email'
+        | 'minLength'
+        | 'maxLength'
+        | 'pattern'
+        | 'custom';
       value?: any;
       message?: string;
     }>;

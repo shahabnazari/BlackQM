@@ -93,7 +93,8 @@ class ThemeReportIntegrationVerifier {
         this.addResult({
           step: '2.1 PhaseContext Structure',
           status: 'WARN',
-          message: 'No PhaseContext records found - create a study to test integration',
+          message:
+            'No PhaseContext records found - create a study to test integration',
         });
         return;
       }
@@ -121,7 +122,9 @@ class ThemeReportIntegrationVerifier {
         message: hasQuestions
           ? `Phase 9.5 designOutput has research questions (${designOutput.subQuestions?.length || 0} questions)`
           : 'No research questions found in designOutput',
-        details: hasQuestions ? { sampleQuestion: designOutput.subQuestions?.[0] } : null,
+        details: hasQuestions
+          ? { sampleQuestion: designOutput.subQuestions?.[0] }
+          : null,
       });
 
       // Verify buildOutput has statements
@@ -166,7 +169,9 @@ class ThemeReportIntegrationVerifier {
       });
 
       // Check if ThemeExtractionGateway exists
-      const gatewayExists = await this.checkServiceExists('ThemeExtractionGateway');
+      const gatewayExists = await this.checkServiceExists(
+        'ThemeExtractionGateway',
+      );
 
       this.addResult({
         step: '3.2 ThemeExtractionGateway',
@@ -193,7 +198,9 @@ class ThemeReportIntegrationVerifier {
 
     try {
       // Check if ReportGeneratorService exists
-      const serviceExists = await this.checkServiceExists('ReportGeneratorService');
+      const serviceExists = await this.checkServiceExists(
+        'ReportGeneratorService',
+      );
 
       this.addResult({
         step: '4.1 ReportGeneratorService',
@@ -217,7 +224,8 @@ class ThemeReportIntegrationVerifier {
         this.addResult({
           step: '4.2 Report.provenance',
           status: 'WARN',
-          message: 'No reports found - generate a report to test provenance tracking',
+          message:
+            'No reports found - generate a report to test provenance tracking',
         });
       } else {
         const hasProvenance = sampleReport.provenance !== null;
@@ -227,7 +235,9 @@ class ThemeReportIntegrationVerifier {
           message: hasProvenance
             ? 'Report has provenance chain tracking'
             : 'Report exists but no provenance data',
-          details: hasProvenance ? { sampleProvenance: sampleReport.provenance } : null,
+          details: hasProvenance
+            ? { sampleProvenance: sampleReport.provenance }
+            : null,
         });
       }
     } catch (error: any) {
@@ -316,10 +326,26 @@ class ThemeReportIntegrationVerifier {
     logger.log('Step 6: Verifying API endpoints...');
 
     const endpoints = [
-      { path: '/api/literature/themes/unified-extract', method: 'POST', description: 'Unified theme extraction' },
-      { path: '/api/literature/pipeline/themes-to-statements', method: 'POST', description: 'Themes to statements pipeline' },
-      { path: '/api/reports/generate', method: 'POST', description: 'Report generation' },
-      { path: '/api/reports/study/:studyId', method: 'GET', description: 'List reports by study' },
+      {
+        path: '/api/literature/themes/unified-extract',
+        method: 'POST',
+        description: 'Unified theme extraction',
+      },
+      {
+        path: '/api/literature/pipeline/themes-to-statements',
+        method: 'POST',
+        description: 'Themes to statements pipeline',
+      },
+      {
+        path: '/api/reports/generate',
+        method: 'POST',
+        description: 'Report generation',
+      },
+      {
+        path: '/api/reports/study/:studyId',
+        method: 'GET',
+        description: 'List reports by study',
+      },
     ];
 
     this.addResult({
@@ -343,7 +369,10 @@ class ThemeReportIntegrationVerifier {
 
       for (const file of files) {
         const content = await fs.readFile(file, 'utf-8');
-        if (content.includes(`class ${serviceName}`) || content.includes(`export.*${serviceName}`)) {
+        if (
+          content.includes(`class ${serviceName}`) ||
+          content.includes(`export.*${serviceName}`)
+        ) {
           return true;
         }
       }
@@ -356,7 +385,10 @@ class ThemeReportIntegrationVerifier {
   /**
    * Helper: Find files recursively
    */
-  private async findFilesRecursive(dir: string, ext: string): Promise<string[]> {
+  private async findFilesRecursive(
+    dir: string,
+    ext: string,
+  ): Promise<string[]> {
     const fs = require('fs').promises;
     const path = require('path');
 
@@ -386,7 +418,8 @@ class ThemeReportIntegrationVerifier {
    */
   private addResult(result: VerificationResult): void {
     this.results.push(result);
-    const emoji = result.status === 'PASS' ? '✅' : result.status === 'FAIL' ? '❌' : '⚠️';
+    const emoji =
+      result.status === 'PASS' ? '✅' : result.status === 'FAIL' ? '❌' : '⚠️';
     logger.log(`${emoji} ${result.step}: ${result.message}`);
   }
 
@@ -395,12 +428,14 @@ class ThemeReportIntegrationVerifier {
    */
   generateReport(): void {
     logger.log('\n' + '='.repeat(80));
-    logger.log('PHASE 10 DAY 1 STEP 9: THEME → REPORT INTEGRATION VERIFICATION REPORT');
+    logger.log(
+      'PHASE 10 DAY 1 STEP 9: THEME → REPORT INTEGRATION VERIFICATION REPORT',
+    );
     logger.log('='.repeat(80) + '\n');
 
-    const passed = this.results.filter(r => r.status === 'PASS').length;
-    const failed = this.results.filter(r => r.status === 'FAIL').length;
-    const warnings = this.results.filter(r => r.status === 'WARN').length;
+    const passed = this.results.filter((r) => r.status === 'PASS').length;
+    const failed = this.results.filter((r) => r.status === 'FAIL').length;
+    const warnings = this.results.filter((r) => r.status === 'WARN').length;
     const total = this.results.length;
 
     logger.log(`Total Checks: ${total}`);
@@ -410,7 +445,9 @@ class ThemeReportIntegrationVerifier {
     logger.log('');
 
     if (failed === 0) {
-      logger.log('🎉 ALL CRITICAL CHECKS PASSED - Theme → Report integration is operational!');
+      logger.log(
+        '🎉 ALL CRITICAL CHECKS PASSED - Theme → Report integration is operational!',
+      );
     } else {
       logger.log('⚠️ SOME CHECKS FAILED - Review the details above');
     }
@@ -419,12 +456,19 @@ class ThemeReportIntegrationVerifier {
     logger.log('DETAILED RESULTS:');
     logger.log('='.repeat(80) + '\n');
 
-    this.results.forEach(result => {
-      const emoji = result.status === 'PASS' ? '✅' : result.status === 'FAIL' ? '❌' : '⚠️';
+    this.results.forEach((result) => {
+      const emoji =
+        result.status === 'PASS'
+          ? '✅'
+          : result.status === 'FAIL'
+            ? '❌'
+            : '⚠️';
       logger.log(`${emoji} [${result.status}] ${result.step}`);
       logger.log(`   ${result.message}`);
       if (result.details) {
-        logger.log(`   Details: ${JSON.stringify(result.details, null, 2).substring(0, 200)}...`);
+        logger.log(
+          `   Details: ${JSON.stringify(result.details, null, 2).substring(0, 200)}...`,
+        );
       }
       logger.log('');
     });
@@ -438,9 +482,13 @@ class ThemeReportIntegrationVerifier {
       logger.log('To test the complete integration:');
       logger.log('1. Create a new study');
       logger.log('2. Add papers to Phase 9 (Literature Discovery)');
-      logger.log('3. Extract themes: POST /api/literature/themes/unified-extract');
+      logger.log(
+        '3. Extract themes: POST /api/literature/themes/unified-extract',
+      );
       logger.log('4. Create research questions in Phase 9.5 (Research Design)');
-      logger.log('5. Generate statements: POST /api/literature/pipeline/themes-to-statements');
+      logger.log(
+        '5. Generate statements: POST /api/literature/pipeline/themes-to-statements',
+      );
       logger.log('6. Generate report: POST /api/reports/generate');
       logger.log('7. Verify provenance chain in report sections');
       logger.log('');
@@ -480,7 +528,7 @@ async function main() {
   await verifier.run();
 }
 
-main().catch(error => {
+main().catch((error) => {
   console.error('Fatal error:', error);
   process.exit(1);
 });

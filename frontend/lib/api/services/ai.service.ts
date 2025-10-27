@@ -21,7 +21,7 @@ export interface StatementGenerationResponse {
   metadata: {
     tokensUsed: number;
     processingTime: number;
-  }
+  };
 }
 
 export interface GridDesignRequest {
@@ -76,7 +76,7 @@ export interface LiteratureSearchRequest {
   query?: string; // Made optional for compatibility
   topic?: string; // Added for compatibility
   keywords?: string[]; // Added for compatibility
-  yearRange?: { start: number; end: number; }
+  yearRange?: { start: number; end: number };
   sources?: Array<'semantic_scholar' | 'crossref' | 'pubmed'>;
   limit?: number;
 }
@@ -98,7 +98,11 @@ export interface LiteratureSearchResponse {
 export interface ReportGenerationRequest {
   studyId: string;
   sections: Array<
-    'executive_summary' | 'methodology' | 'findings' | 'interpretations' | 'conclusions'
+    | 'executive_summary'
+    | 'methodology'
+    | 'findings'
+    | 'interpretations'
+    | 'conclusions'
   >;
   format: 'pdf' | 'docx' | 'latex';
   includeVisualizations?: boolean;
@@ -137,7 +141,7 @@ class AIService {
   private setCache(key: string, data: any): void {
     this.cache.set(key, {
       data,
-      expiry: Date.now() + this.cacheTimeout
+      expiry: Date.now() + this.cacheTimeout,
     });
   }
 
@@ -149,7 +153,9 @@ class AIService {
     if (cached) return cached;
 
     try {
-      const response = await apiClient.post<ApiResponse<StatementGenerationResponse>>('/ai/generate-statements', request);
+      const response = await apiClient.post<
+        ApiResponse<StatementGenerationResponse>
+      >('/ai/generate-statements', request);
       this.setCache(cacheKey, response.data.data);
       return response.data.data;
     } catch (error: any) {
@@ -164,7 +170,10 @@ class AIService {
     if (cached) return cached;
 
     try {
-      const response = await apiClient.post<ApiResponse<GridDesignResponse>>('/ai/optimize-grid', request);
+      const response = await apiClient.post<ApiResponse<GridDesignResponse>>(
+        '/ai/optimize-grid',
+        request
+      );
       this.setCache(cacheKey, response.data.data);
       return response.data.data;
     } catch (error: any) {
@@ -173,13 +182,18 @@ class AIService {
     }
   }
 
-  async detectBias(request: BiasDetectionRequest): Promise<BiasDetectionResponse> {
+  async detectBias(
+    request: BiasDetectionRequest
+  ): Promise<BiasDetectionResponse> {
     const cacheKey = this.getCacheKey('detectBias', request);
     const cached = this.getFromCache(cacheKey);
     if (cached) return cached;
 
     try {
-      const response = await apiClient.post<ApiResponse<BiasDetectionResponse>>('/ai/detect-bias', request);
+      const response = await apiClient.post<ApiResponse<BiasDetectionResponse>>(
+        '/ai/detect-bias',
+        request
+      );
       this.setCache(cacheKey, response.data.data);
       return response.data.data;
     } catch (error: any) {
@@ -192,7 +206,9 @@ class AIService {
     request: FactorInterpretationRequest
   ): Promise<FactorInterpretationResponse> {
     try {
-      const response = await apiClient.post<ApiResponse<FactorInterpretationResponse>>('/ai/interpret-factor', request);
+      const response = await apiClient.post<
+        ApiResponse<FactorInterpretationResponse>
+      >('/ai/interpret-factor', request);
       return response.data.data;
     } catch (error: any) {
       console.error('Error interpreting factor:', error);
@@ -200,13 +216,17 @@ class AIService {
     }
   }
 
-  async searchLiterature(request: LiteratureSearchRequest): Promise<LiteratureSearchResponse> {
+  async searchLiterature(
+    request: LiteratureSearchRequest
+  ): Promise<LiteratureSearchResponse> {
     const cacheKey = this.getCacheKey('searchLiterature', request);
     const cached = this.getFromCache(cacheKey);
     if (cached) return cached;
 
     try {
-      const response = await apiClient.post<ApiResponse<LiteratureSearchResponse>>('/ai/search-literature', request);
+      const response = await apiClient.post<
+        ApiResponse<LiteratureSearchResponse>
+      >('/ai/search-literature', request);
       this.setCache(cacheKey, response.data.data);
       return response.data.data;
     } catch (error: any) {
@@ -216,13 +236,19 @@ class AIService {
   }
 
   // Alias for backward compatibility
-  async reviewLiterature(request: LiteratureSearchRequest): Promise<LiteratureSearchResponse> {
+  async reviewLiterature(
+    request: LiteratureSearchRequest
+  ): Promise<LiteratureSearchResponse> {
     return this.searchLiterature(request);
   }
 
-  async generateReport(request: ReportGenerationRequest): Promise<ReportGenerationResponse> {
+  async generateReport(
+    request: ReportGenerationRequest
+  ): Promise<ReportGenerationResponse> {
     try {
-      const response = await apiClient.post<ApiResponse<ReportGenerationResponse>>('/ai/generate-report', request);
+      const response = await apiClient.post<
+        ApiResponse<ReportGenerationResponse>
+      >('/ai/generate-report', request);
       return response.data.data;
     } catch (error: any) {
       console.error('Error generating report:', error);
@@ -232,7 +258,8 @@ class AIService {
 
   async getUsage(): Promise<AIUsageResponse> {
     try {
-      const response = await apiClient.get<ApiResponse<AIUsageResponse>>('/ai/usage');
+      const response =
+        await apiClient.get<ApiResponse<AIUsageResponse>>('/ai/usage');
       return response.data.data;
     } catch (error: any) {
       console.error('Error fetching AI usage:', error);
@@ -240,9 +267,13 @@ class AIService {
     }
   }
 
-  async validateGrid(gridStructure: number[]): Promise<{ valid: boolean; issues?: string[] }> {
+  async validateGrid(
+    gridStructure: number[]
+  ): Promise<{ valid: boolean; issues?: string[] }> {
     try {
-      const response = await apiClient.post<ApiResponse<{ valid: boolean; issues?: string[] }>>('/ai/validate-grid', { gridStructure });
+      const response = await apiClient.post<
+        ApiResponse<{ valid: boolean; issues?: string[] }>
+      >('/ai/validate-grid', { gridStructure });
       return response.data.data;
     } catch (error: any) {
       console.error('Error validating grid:', error);
@@ -255,10 +286,16 @@ class AIService {
     issues: Array<{ statement: string; concern: string; severity: string }>;
   }> {
     try {
-      const response = await apiClient.post<ApiResponse<{
-        score: number;
-        issues: Array<{ statement: string; concern: string; severity: string }>;
-      }>>('/ai/check-cultural-sensitivity', { statements });
+      const response = await apiClient.post<
+        ApiResponse<{
+          score: number;
+          issues: Array<{
+            statement: string;
+            concern: string;
+            severity: string;
+          }>;
+        }>
+      >('/ai/check-cultural-sensitivity', { statements });
       return response.data.data;
     } catch (error: any) {
       console.error('Error checking cultural sensitivity:', error);
@@ -272,11 +309,13 @@ class AIService {
     recommendations?: string[];
   }> {
     try {
-      const response = await apiClient.post<ApiResponse<{
-        balanced: boolean;
-        distribution: Record<string, number>;
-        recommendations?: string[];
-      }>>('/ai/analyze-perspective-balance', { statements });
+      const response = await apiClient.post<
+        ApiResponse<{
+          balanced: boolean;
+          distribution: Record<string, number>;
+          recommendations?: string[];
+        }>
+      >('/ai/analyze-perspective-balance', { statements });
       return response.data.data;
     } catch (error: any) {
       console.error('Error analyzing perspective balance:', error);
@@ -292,14 +331,16 @@ class AIService {
     }>;
   }> {
     try {
-      const response = await apiClient.post<ApiResponse<{
-        issues: Array<{
-          statementIndex: number;
-          phrase: string;
-          suggestion: string;
-        }>;
-      }>>('/ai/detect-loaded-language', { statements });
-      return response.data;
+      const response = await apiClient.post<
+        ApiResponse<{
+          issues: Array<{
+            statementIndex: number;
+            phrase: string;
+            suggestion: string;
+          }>;
+        }>
+      >('/ai/detect-loaded-language', { statements });
+      return response.data.data;
     } catch (error: any) {
       console.error('Error detecting loaded language:', error);
       throw error;
@@ -312,28 +353,36 @@ class AIService {
       perspectiveDiversity: number;
       demographicReach: number;
       inclusionScore: number;
-    }
+    };
   }> {
     try {
-      const response = await apiClient.post<ApiResponse<{
-        reportUrl: string;
-        metrics: {
-          perspectiveDiversity: number;
-          demographicReach: number;
-          inclusionScore: number;
-        }
-      }>>('/ai/generate-diversity-report', { studyId });
-      return response.data;
+      const response = await apiClient.post<
+        ApiResponse<{
+          reportUrl: string;
+          metrics: {
+            perspectiveDiversity: number;
+            demographicReach: number;
+            inclusionScore: number;
+          };
+        }>
+      >('/ai/generate-diversity-report', { studyId });
+      return response.data.data;
     } catch (error: any) {
       console.error('Error generating diversity report:', error);
       throw error;
     }
   }
 
-  async regenerateStatement(statement: string, issue: string): Promise<{ improved: string }> {
+  async regenerateStatement(
+    statement: string,
+    issue: string
+  ): Promise<{ improved: string }> {
     try {
-      const response = await apiClient.post<ApiResponse<{ improved: string }>>('/ai/regenerate-statement', { statement, issue });
-      return response.data;
+      const response = await apiClient.post<ApiResponse<{ improved: string }>>(
+        '/ai/regenerate-statement',
+        { statement, issue }
+      );
+      return response.data.data;
     } catch (error: any) {
       console.error('Error regenerating statement:', error);
       throw error;
@@ -341,11 +390,13 @@ class AIService {
   }
 
   async suggestNeutralAlternative(
-    text: string,
+    text: string
   ): Promise<{ suggestion: string; explanation: string }> {
     try {
-      const response = await apiClient.post<ApiResponse<{ suggestion: string; explanation: string }>>('/ai/suggest-neutral', { text });
-      return response.data;
+      const response = await apiClient.post<
+        ApiResponse<{ suggestion: string; explanation: string }>
+      >('/ai/suggest-neutral', { text });
+      return response.data.data;
     } catch (error: any) {
       console.error('Error suggesting neutral alternative:', error);
       throw error;
@@ -354,18 +405,26 @@ class AIService {
 
   async analyzeAllBias(statements: string[]): Promise<BiasDetectionResponse> {
     try {
-      const response = await apiClient.post<ApiResponse<BiasDetectionResponse>>('/ai/analyze-bias', { statements });
-      return response.data;
+      const response = await apiClient.post<ApiResponse<BiasDetectionResponse>>(
+        '/ai/analyze-bias',
+        { statements }
+      );
+      return response.data.data;
     } catch (error: any) {
       console.error('Error analyzing bias:', error);
       throw error;
     }
   }
 
-  async suggestGridConfiguration(params: GridDesignRequest): Promise<GridDesignResponse> {
+  async suggestGridConfiguration(
+    params: GridDesignRequest
+  ): Promise<GridDesignResponse> {
     try {
-      const response = await apiClient.post<ApiResponse<GridDesignResponse>>('/ai/grid-suggestion', params);
-      return response.data;
+      const response = await apiClient.post<ApiResponse<GridDesignResponse>>(
+        '/ai/grid-suggestion',
+        params
+      );
+      return response.data.data;
     } catch (error: any) {
       console.error('Error suggesting grid configuration:', error);
       throw error;

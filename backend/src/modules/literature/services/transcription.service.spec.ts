@@ -67,22 +67,31 @@ describe('TranscriptionService', () => {
         transcriptionCost: 0.06,
       };
 
-      mockPrismaService.videoTranscript.findUnique.mockResolvedValue(cachedTranscript);
+      mockPrismaService.videoTranscript.findUnique.mockResolvedValue(
+        cachedTranscript,
+      );
 
-      const result = await service.getOrCreateTranscription('abc123', 'youtube');
+      const result = await service.getOrCreateTranscription(
+        'abc123',
+        'youtube',
+      );
 
       expect(result.id).toBe('123');
       expect(result.cost).toBe(0); // Cached, so cost is 0
-      expect(mockPrismaService.videoTranscript.findUnique).toHaveBeenCalledWith({
-        where: { sourceId_sourceType: { sourceId: 'abc123', sourceType: 'youtube' } },
-      });
+      expect(mockPrismaService.videoTranscript.findUnique).toHaveBeenCalledWith(
+        {
+          where: {
+            sourceId_sourceType: { sourceId: 'abc123', sourceType: 'youtube' },
+          },
+        },
+      );
     });
 
     it('should throw error for unsupported source type', async () => {
       mockPrismaService.videoTranscript.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.getOrCreateTranscription('abc123', 'invalid' as any)
+        service.getOrCreateTranscription('abc123', 'invalid' as any),
       ).rejects.toThrow('Unsupported source type: invalid');
     });
   });
@@ -91,31 +100,39 @@ describe('TranscriptionService', () => {
     it('should estimate cost for YouTube video', async () => {
       const mockVideoData = {
         data: {
-          items: [{
-            snippet: {
-              title: 'Test Video',
-              channelTitle: 'Test Channel',
-              channelId: 'channel123',
-              publishedAt: '2024-01-01',
-              thumbnails: {},
+          items: [
+            {
+              snippet: {
+                title: 'Test Video',
+                channelTitle: 'Test Channel',
+                channelId: 'channel123',
+                publishedAt: '2024-01-01',
+                thumbnails: {},
+              },
+              contentDetails: {
+                duration: 'PT10M30S', // 10 minutes 30 seconds = 630 seconds
+              },
             },
-            contentDetails: {
-              duration: 'PT10M30S', // 10 minutes 30 seconds = 630 seconds
-            },
-          }],
+          ],
         },
       };
 
       mockHttpService.get.mockReturnValue(of(mockVideoData));
 
-      const result = await service.estimateTranscriptionCost('abc123', 'youtube');
+      const result = await service.estimateTranscriptionCost(
+        'abc123',
+        'youtube',
+      );
 
       expect(result.duration).toBe(630);
       expect(result.estimatedCost).toBeCloseTo(0.063, 3); // 630 / 60 * 0.006
     });
 
     it('should return default estimate for podcasts', async () => {
-      const result = await service.estimateTranscriptionCost('podcast-url', 'podcast');
+      const result = await service.estimateTranscriptionCost(
+        'podcast-url',
+        'podcast',
+      );
 
       expect(result.duration).toBe(3600); // Default 1 hour
       expect(result.estimatedCost).toBeCloseTo(0.216, 3); // 3600 / 60 * 0.006

@@ -1,9 +1,14 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import {
+  useQuery,
+  useQueryClient,
+  UseQueryOptions,
+} from '@tanstack/react-query';
 import { useWebSocket } from './useWebSocket';
 import { apiClient } from '@/lib/api/config';
 
-interface RealtimeDataOptions<T> extends Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'> {
+interface RealtimeDataOptions<T>
+  extends Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'> {
   channel?: string;
   refetchInterval?: number;
   onUpdate?: (data: T) => void;
@@ -24,7 +29,7 @@ interface RealtimeMetadata {
 
 /**
  * Enhanced real-time data hook with WebSocket integration
- * 
+ *
  * Features:
  * - Seamless WebSocket and HTTP data fetching
  * - Smart caching with React Query
@@ -50,65 +55,78 @@ export function useRealtimeData<T = any>(
 
   const queryClient = useQueryClient();
   const [updateCount, setUpdateCount] = useState(0);
-  const [lastWebSocketUpdate, setLastWebSocketUpdate] = useState<Date | null>(null);
+  const [lastWebSocketUpdate, setLastWebSocketUpdate] = useState<Date | null>(
+    null
+  );
 
   // Channel name generation
   const channelName = channel || `data:${endpoint}`;
 
   // WebSocket integration
   const webSocket = useWebSocket({
-    onMessage: useCallback((event: MessageEvent) => {
-      try {
-        const message = JSON.parse(event.data);
-        
-        // Handle data updates for this specific channel
-        if (message.channel === channelName && message.type === 'data') {
-          let newData = message.data;
-          
-          // Apply data transformation if provided
-          if (transformData) {
-            newData = transformData(newData);
-          }
+    onMessage: useCallback(
+      (event: MessageEvent) => {
+        try {
+          const message = JSON.parse(event.data);
 
-          // Update based on merge strategy
-          queryClient.setQueryData([endpoint], (oldData: T | undefined) => {
-            switch (mergeStrategy) {
-              case 'merge':
-                return oldData && typeof oldData === 'object' 
-                  ? { ...oldData as any, ...newData }
-                  : newData;
-              
-              case 'append':
-                return Array.isArray(oldData) && Array.isArray(newData)
-                  ? [...oldData, ...newData]
-                  : Array.isArray(oldData) && !Array.isArray(newData)
-                  ? [...oldData, newData]
-                  : newData;
-              
-              default: // 'replace'
-                return newData;
+          // Handle data updates for this specific channel
+          if (message.channel === channelName && message.type === 'data') {
+            let newData = message.data;
+
+            // Apply data transformation if provided
+            if (transformData) {
+              newData = transformData(newData);
             }
-          });
 
-          setUpdateCount(prev => prev + 1);
-          setLastWebSocketUpdate(new Date());
+            // Update based on merge strategy
+            queryClient.setQueryData([endpoint], (oldData: T | undefined) => {
+              switch (mergeStrategy) {
+                case 'merge':
+                  return oldData && typeof oldData === 'object'
+                    ? { ...(oldData as any), ...newData }
+                    : newData;
 
-          // Trigger update callback
-          onUpdate?.(newData);
+                case 'append':
+                  return Array.isArray(oldData) && Array.isArray(newData)
+                    ? [...oldData, ...newData]
+                    : Array.isArray(oldData) && !Array.isArray(newData)
+                      ? [...oldData, newData]
+                      : newData;
+
+                default: // 'replace'
+                  return newData;
+              }
+            });
+
+            setUpdateCount(prev => prev + 1);
+            setLastWebSocketUpdate(new Date());
+
+            // Trigger update callback
+            onUpdate?.(newData);
+          }
+        } catch (error: any) {
+          console.error('Error processing WebSocket message:', error);
+          onError?.(error as Error);
         }
-      } catch (error: any) {
-        console.error('Error processing WebSocket message:', error);
-        onError?.(error as Error);
-      }
-    }, [channelName, endpoint, queryClient, mergeStrategy, transformData, onUpdate, onError])
+      },
+      [
+        channelName,
+        endpoint,
+        queryClient,
+        mergeStrategy,
+        transformData,
+        onUpdate,
+        onError,
+      ]
+    ),
   });
 
   // Subscribe to channel when connected
   useEffect(() => {
     if (
-      enabled && 
-      websocketEnabled && 
-      webSocket.connectionStatus === 'connected' && 
+      enabled &&
+      websocketEnabled &&
+      webSocket.connectionStatus === 'connected' &&
       channelName
     ) {
       webSocket.subscribe(channelName);
@@ -121,7 +139,13 @@ export function useRealtimeData<T = any>(
         console.log(`Unsubscribed from channel: ${channelName}`);
       }
     };
-  }, [enabled, websocketEnabled, webSocket.connectionStatus, channelName, webSocket]);
+  }, [
+    enabled,
+    websocketEnabled,
+    webSocket.connectionStatus,
+    channelName,
+    webSocket,
+  ]);
 
   // HTTP query for initial data and fallback
   const queryResult = useQuery<T>({
@@ -130,12 +154,12 @@ export function useRealtimeData<T = any>(
       try {
         const response = await apiClient.get(`/${endpoint}`);
         let data = response.data;
-        
+
         // Apply data transformation if provided
         if (transformData) {
           data = transformData(data);
         }
-        
+
         return data;
       } catch (error: any) {
         console.error(`Error fetching ${endpoint}:`, error);
@@ -143,25 +167,29 @@ export function useRealtimeData<T = any>(
       }
     },
     enabled,
-    refetchInterval: websocketEnabled && webSocket.connectionStatus === 'connected' 
-      ? false // Disable polling when WebSocket is active
-      : refetchInterval,
+    refetchInterval:
+      websocketEnabled && webSocket.connectionStatus === 'connected'
+        ? false // Disable polling when WebSocket is active
+        : refetchInterval,
     staleTime: websocketEnabled ? 5 * 60 * 1000 : 30 * 1000, // 5 min if WS, 30 sec if not
     ...queryOptions,
   });
 
   // Send data through WebSocket
-  const sendRealtimeMessage = useCallback((data: any) => {
-    if (webSocket.connectionStatus === 'connected') {
-      webSocket.sendJsonMessage({
-        type: 'data',
-        channel: channelName,
-        data,
-      });
-    } else {
-      console.warn('Cannot send real-time message: WebSocket not connected');
-    }
-  }, [webSocket, channelName]);
+  const sendRealtimeMessage = useCallback(
+    (data: any) => {
+      if (webSocket.connectionStatus === 'connected') {
+        webSocket.sendJsonMessage({
+          type: 'data',
+          channel: channelName,
+          data,
+        });
+      } else {
+        console.warn('Cannot send real-time message: WebSocket not connected');
+      }
+    },
+    [webSocket, channelName]
+  );
 
   // Force refresh data
   const refresh = useCallback(() => {
@@ -176,12 +204,17 @@ export function useRealtimeData<T = any>(
 
   // Metadata
   const metadata: RealtimeMetadata = useMemo(() => {
-    const isWebSocketActive = websocketEnabled && webSocket.connectionStatus === 'connected';
-    
+    const isWebSocketActive =
+      websocketEnabled && webSocket.connectionStatus === 'connected';
+
     return {
-      lastUpdated: lastWebSocketUpdate || new Date(queryResult.dataUpdatedAt || Date.now()),
+      lastUpdated:
+        lastWebSocketUpdate ||
+        new Date(queryResult.dataUpdatedAt || Date.now()),
       source: lastWebSocketUpdate ? 'websocket' : 'http',
-      connectionStatus: websocketEnabled ? webSocket.connectionStatus : 'disconnected',
+      connectionStatus: websocketEnabled
+        ? webSocket.connectionStatus
+        : 'disconnected',
       updateCount,
       subscriptionActive: isWebSocketActive && !!channelName,
     };
@@ -218,7 +251,7 @@ export function useMultiChannelRealtimeData<T = any>(
   options: Omit<RealtimeDataOptions<T>, 'channel'> = {}
 ) {
   const [channelData, setChannelData] = useState<Record<string, T>>({});
-  const results = channels.map((channel: any) => 
+  const results = channels.map((channel: any) =>
     useRealtimeData<T>(channel, { ...options, channel })
   );
 
@@ -250,8 +283,8 @@ export function useDashboardMetrics(
   aggregateFunction?: (data: any[]) => any
 ) {
   const { data, isLoading, isError } = useMultiChannelRealtimeData(endpoints);
-  
-  const aggregatedData = aggregateFunction 
+
+  const aggregatedData = aggregateFunction
     ? aggregateFunction(Object.values(data))
     : data;
 
@@ -270,7 +303,13 @@ export function useParticipantRealtimeTracking(studyId: string) {
   const { data, isConnected, sendMessage, metadata } = useRealtimeData<{
     participants: Array<{
       id: string;
-      status: 'welcome' | 'familiarization' | 'sorting' | 'commentary' | 'survey' | 'complete';
+      status:
+        | 'welcome'
+        | 'familiarization'
+        | 'sorting'
+        | 'commentary'
+        | 'survey'
+        | 'complete';
       progress: number;
       lastActivity: string;
       currentStep?: string;
@@ -284,27 +323,33 @@ export function useParticipantRealtimeTracking(studyId: string) {
     refetchInterval: 15000, // Fallback every 15 seconds
   });
 
-  const updateParticipantStatus = useCallback((participantId: string, status: string, progress?: number) => {
-    sendMessage({
-      type: 'participant_status_update',
-      participantId,
-      studyId,
-      status,
-      progress,
-      timestamp: Date.now(),
-    });
-  }, [sendMessage, studyId]);
+  const updateParticipantStatus = useCallback(
+    (participantId: string, status: string, progress?: number) => {
+      sendMessage({
+        type: 'participant_status_update',
+        participantId,
+        studyId,
+        status,
+        progress,
+        timestamp: Date.now(),
+      });
+    },
+    [sendMessage, studyId]
+  );
 
-  const trackActivity = useCallback((participantId: string, activity: string, metadata?: any) => {
-    sendMessage({
-      type: 'participant_activity',
-      participantId,
-      studyId,
-      activity,
-      metadata,
-      timestamp: Date.now(),
-    });
-  }, [sendMessage, studyId]);
+  const trackActivity = useCallback(
+    (participantId: string, activity: string, metadata?: any) => {
+      sendMessage({
+        type: 'participant_activity',
+        participantId,
+        studyId,
+        activity,
+        metadata,
+        timestamp: Date.now(),
+      });
+    },
+    [sendMessage, studyId]
+  );
 
   return {
     participants: data?.participants || [],
@@ -321,8 +366,11 @@ export function useParticipantRealtimeTracking(studyId: string) {
 /**
  * Hook for live Q-methodology analysis updates
  */
-export function useAnalysisRealtimeUpdates(studyId: string, analysisId?: string) {
-  const endpoint = analysisId 
+export function useAnalysisRealtimeUpdates(
+  studyId: string,
+  analysisId?: string
+) {
+  const endpoint = analysisId
     ? `studies/${studyId}/analyses/${analysisId}`
     : `studies/${studyId}/analyses/current`;
 
@@ -345,15 +393,18 @@ export function useAnalysisRealtimeUpdates(studyId: string, analysisId?: string)
     refetchInterval: 10000,
   });
 
-  const triggerAnalysis = useCallback((parameters?: any) => {
-    sendMessage({
-      type: 'trigger_analysis',
-      studyId,
-      analysisId,
-      parameters,
-      timestamp: Date.now(),
-    });
-  }, [sendMessage, studyId, analysisId]);
+  const triggerAnalysis = useCallback(
+    (parameters?: any) => {
+      sendMessage({
+        type: 'trigger_analysis',
+        studyId,
+        analysisId,
+        parameters,
+        timestamp: Date.now(),
+      });
+    },
+    [sendMessage, studyId, analysisId]
+  );
 
   const cancelAnalysis = useCallback(() => {
     sendMessage({

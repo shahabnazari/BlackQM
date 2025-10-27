@@ -10,9 +10,9 @@ import { PERFORMANCE_CONFIG, A11Y_CONFIG } from './constants';
  */
 export const prefersReducedMotion = (): boolean => {
   if (!A11Y_CONFIG.respectPrefersReducedMotion) return false;
-  
+
   if (typeof window === 'undefined') return false;
-  
+
   const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   return mediaQuery.matches;
 };
@@ -39,12 +39,12 @@ export const calculateMagneticPosition = (
 ): { x: number; y: number } => {
   const elementCenterX = elementRect.left + elementRect.width / 2;
   const elementCenterY = elementRect.top + elementRect.height / 2;
-  
+
   const deltaX = mouseX - elementCenterX;
   const deltaY = mouseY - elementCenterY;
-  
+
   const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-  
+
   if (distance < attractionRadius) {
     const force = (1 - distance / attractionRadius) * strength;
     return {
@@ -52,14 +52,16 @@ export const calculateMagneticPosition = (
       y: deltaY * force,
     };
   }
-  
+
   return { x: 0, y: 0 };
 };
 
 /**
  * Generate random loading message
  */
-export const getRandomLoadingMessage = (messages: readonly string[]): string => {
+export const getRandomLoadingMessage = (
+  messages: readonly string[]
+): string => {
   const index = Math.floor(Math.random() * messages.length);
   return messages[index] || 'Loading...';
 };
@@ -94,13 +96,17 @@ export const calculateStaggerDelay = (
 /**
  * Apply GPU acceleration to element
  */
-export const applyGpuAcceleration = (styles: React.CSSProperties): React.CSSProperties => {
+export const applyGpuAcceleration = (
+  styles: React.CSSProperties
+): React.CSSProperties => {
   if (!PERFORMANCE_CONFIG.enableGpuAcceleration) return styles;
-  
+
   return {
     ...styles,
     transform: styles.transform || 'translateZ(0)',
-    willChange: PERFORMANCE_CONFIG.enableWillChange ? 'transform, opacity' : 'auto',
+    willChange: PERFORMANCE_CONFIG.enableWillChange
+      ? 'transform, opacity'
+      : 'auto',
   };
 };
 
@@ -114,10 +120,10 @@ export const calculateSpringPhysics = (
 ): { duration: number; bounce: number } => {
   const criticalDamping = 2 * Math.sqrt(stiffness);
   const dampingRatio = damping / criticalDamping;
-  
-  const duration = 1 / Math.sqrt(stiffness) * 1000; // Convert to ms
+
+  const duration = (1 / Math.sqrt(stiffness)) * 1000; // Convert to ms
   const bounce = Math.max(0, 1 - dampingRatio);
-  
+
   return { duration, bounce };
 };
 
@@ -129,7 +135,7 @@ export const debounceAnimation = <T extends (...args: any[]) => any>(
   delay: number = 100
 ): ((...args: Parameters<T>) => void) => {
   let timeoutId: NodeJS.Timeout;
-  
+
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func(...args), delay);
@@ -144,7 +150,7 @@ export const throttleAnimation = <T extends (...args: any[]) => any>(
   limit: number = 16 // ~60fps
 ): ((...args: Parameters<T>) => void) => {
   let inThrottle: boolean;
-  
+
   return (...args: Parameters<T>) => {
     if (!inThrottle) {
       func(...args);
@@ -162,8 +168,10 @@ export const calculateEasingPoints = (
   steps: number = 60
 ): number[] => {
   const points: number[] = [];
-  const match = easing.match(/cubic-bezier\(([\d.]+),\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)\)/);
-  
+  const match = easing.match(
+    /cubic-bezier\(([\d.]+),\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)\)/
+  );
+
   if (match) {
     const [, _x1, y1, _x2, y2] = match.map(Number);
 
@@ -173,7 +181,7 @@ export const calculateEasingPoints = (
       points.push(y);
     }
   }
-  
+
   return points;
 };
 
@@ -192,7 +200,7 @@ const cubicBezier = (
   const mt = 1 - t;
   const mt2 = mt * mt;
   const mt3 = mt2 * mt;
-  
+
   return mt3 * p0 + 3 * mt2 * t * p1 + 3 * mt * t2 * p2 + t3 * p3;
 };
 
@@ -222,13 +230,19 @@ export const createTransition = (
 /**
  * Check if element is in viewport for lazy animations
  */
-export const isInViewport = (element: HTMLElement, threshold: number = 0): boolean => {
+export const isInViewport = (
+  element: HTMLElement,
+  threshold: number = 0
+): boolean => {
   const rect = element.getBoundingClientRect();
-  
+
   return (
-    rect.top <= (window.innerHeight || document.documentElement.clientHeight) + threshold &&
+    rect.top <=
+      (window.innerHeight || document.documentElement.clientHeight) +
+        threshold &&
     rect.bottom >= -threshold &&
-    rect.left <= (window.innerWidth || document.documentElement.clientWidth) + threshold &&
+    rect.left <=
+      (window.innerWidth || document.documentElement.clientWidth) + threshold &&
     rect.right >= -threshold
   );
 };

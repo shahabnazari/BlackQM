@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   RectangleGroupIcon,
   Squares2X2Icon,
   RectangleStackIcon,
@@ -13,7 +13,7 @@ import {
   ComputerDesktopIcon,
   DeviceTabletIcon,
   AdjustmentsHorizontalIcon,
-  BookmarkIcon
+  BookmarkIcon,
 } from '@heroicons/react/24/outline';
 import { Layout, Responsive, WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
@@ -22,7 +22,7 @@ import 'react-resizable/css/styles.css';
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 // Layout templates
-export type LayoutTemplate = 
+export type LayoutTemplate =
   | 'blank'
   | 'single-focus'
   | 'two-column'
@@ -47,16 +47,14 @@ const layoutPresets: LayoutPreset[] = [
     name: 'Blank Canvas',
     description: 'Start with an empty dashboard',
     icon: RectangleGroupIcon,
-    layout: []
+    layout: [],
   },
   {
     id: 'single-focus',
     name: 'Single Focus',
     description: 'One large central visualization',
     icon: Squares2X2Icon,
-    layout: [
-      { i: 'main', x: 2, y: 0, w: 8, h: 8, minW: 6, minH: 6 }
-    ]
+    layout: [{ i: 'main', x: 2, y: 0, w: 8, h: 8, minW: 6, minH: 6 }],
   },
   {
     id: 'two-column',
@@ -65,8 +63,8 @@ const layoutPresets: LayoutPreset[] = [
     icon: ViewColumnsIcon,
     layout: [
       { i: 'left', x: 0, y: 0, w: 6, h: 8, minW: 4, minH: 4 },
-      { i: 'right', x: 6, y: 0, w: 6, h: 8, minW: 4, minH: 4 }
-    ]
+      { i: 'right', x: 6, y: 0, w: 6, h: 8, minW: 4, minH: 4 },
+    ],
   },
   {
     id: 'three-column',
@@ -76,8 +74,8 @@ const layoutPresets: LayoutPreset[] = [
     layout: [
       { i: 'left', x: 0, y: 0, w: 4, h: 8, minW: 3, minH: 4 },
       { i: 'center', x: 4, y: 0, w: 4, h: 8, minW: 3, minH: 4 },
-      { i: 'right', x: 8, y: 0, w: 4, h: 8, minW: 3, minH: 4 }
-    ]
+      { i: 'right', x: 8, y: 0, w: 4, h: 8, minW: 3, minH: 4 },
+    ],
   },
   {
     id: 'dashboard-classic',
@@ -90,8 +88,8 @@ const layoutPresets: LayoutPreset[] = [
       { i: 'metric3', x: 6, y: 0, w: 3, h: 3, minW: 2, minH: 2 },
       { i: 'metric4', x: 9, y: 0, w: 3, h: 3, minW: 2, minH: 2 },
       { i: 'chart1', x: 0, y: 3, w: 6, h: 5, minW: 4, minH: 4 },
-      { i: 'chart2', x: 6, y: 3, w: 6, h: 5, minW: 4, minH: 4 }
-    ]
+      { i: 'chart2', x: 6, y: 3, w: 6, h: 5, minW: 4, minH: 4 },
+    ],
   },
   {
     id: 'analysis-workflow',
@@ -103,9 +101,9 @@ const layoutPresets: LayoutPreset[] = [
       { i: 'loadings', x: 4, y: 0, w: 4, h: 4, minW: 3, minH: 3 },
       { i: 'heatmap', x: 8, y: 0, w: 4, h: 4, minW: 3, minH: 3 },
       { i: 'distinguishing', x: 0, y: 4, w: 6, h: 4, minW: 4, minH: 3 },
-      { i: 'distribution', x: 6, y: 4, w: 6, h: 4, minW: 4, minH: 3 }
-    ]
-  }
+      { i: 'distribution', x: 6, y: 4, w: 6, h: 4, minW: 4, minH: 3 },
+    ],
+  },
 ];
 
 // Device breakpoints
@@ -127,7 +125,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   onApplyTemplate,
   children,
   isReadOnly = false,
-  className = ""
+  className = '',
 }) => {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showLayoutControls, setShowLayoutControls] = useState(false);
@@ -135,28 +133,33 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const [zoomLevel, setZoomLevel] = useState(1);
   const [gridSpacing, setGridSpacing] = useState(10);
   const [autoResize, setAutoResize] = useState(true);
-  const [savedLayouts, setSavedLayouts] = useState<{ name: string; layout: Layout[]; timestamp: Date }[]>([]);
+  const [savedLayouts, setSavedLayouts] = useState<
+    { name: string; layout: Layout[]; timestamp: Date }[]
+  >([]);
   const [layoutHistory, setLayoutHistory] = useState<Layout[][]>([layout]);
   const [historyIndex, setHistoryIndex] = useState(0);
-  
+
   const gridRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Apple spring physics
   const springConfig = {
-    type: "spring" as const,
+    type: 'spring' as const,
     stiffness: 300,
     damping: 30,
-    mass: 0.8
+    mass: 0.8,
   };
 
   // Add layout to history
-  const addToHistory = useCallback((newLayout: Layout[]) => {
-    const newHistory = layoutHistory.slice(0, historyIndex + 1);
-    newHistory.push([...newLayout]);
-    setLayoutHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
-  }, [layoutHistory, historyIndex]);
+  const addToHistory = useCallback(
+    (newLayout: Layout[]) => {
+      const newHistory = layoutHistory.slice(0, historyIndex + 1);
+      newHistory.push([...newLayout]);
+      setLayoutHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+    },
+    [layoutHistory, historyIndex]
+  );
 
   // Undo/Redo functionality
   const undo = useCallback(() => {
@@ -180,19 +183,25 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   }, [historyIndex, layoutHistory, onLayoutChange]);
 
   // Handle layout changes
-  const handleLayoutChange = useCallback((newLayout: Layout[], allLayouts?: any) => {
-    onLayoutChange(newLayout, allLayouts);
-    addToHistory(newLayout);
-  }, [onLayoutChange, addToHistory]);
+  const handleLayoutChange = useCallback(
+    (newLayout: Layout[], allLayouts?: any) => {
+      onLayoutChange(newLayout, allLayouts);
+      addToHistory(newLayout);
+    },
+    [onLayoutChange, addToHistory]
+  );
 
   // Apply template
-  const applyTemplate = useCallback((template: LayoutTemplate) => {
-    const preset = layoutPresets.find(p => p.id === template);
-    if (preset && onApplyTemplate) {
-      onApplyTemplate(template);
-    }
-    setShowTemplates(false);
-  }, [onApplyTemplate]);
+  const applyTemplate = useCallback(
+    (template: LayoutTemplate) => {
+      const preset = layoutPresets.find(p => p.id === template);
+      if (preset && onApplyTemplate) {
+        onApplyTemplate(template);
+      }
+      setShowTemplates(false);
+    },
+    [onApplyTemplate]
+  );
 
   // Save current layout
   const saveLayout = useCallback(() => {
@@ -201,17 +210,20 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       const newSavedLayout = {
         name,
         layout: [...layout],
-        timestamp: new Date()
+        timestamp: new Date(),
       };
       setSavedLayouts([...savedLayouts, newSavedLayout]);
     }
   }, [layout, savedLayouts]);
 
   // Load saved layout
-  const loadLayout = useCallback((savedLayout: Layout[]) => {
-    onLayoutChange([...savedLayout]);
-    addToHistory(savedLayout);
-  }, [onLayoutChange, addToHistory]);
+  const loadLayout = useCallback(
+    (savedLayout: Layout[]) => {
+      onLayoutChange([...savedLayout]);
+      addToHistory(savedLayout);
+    },
+    [onLayoutChange, addToHistory]
+  );
 
   // Auto-arrange widgets
   const autoArrange = useCallback(() => {
@@ -221,17 +233,17 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     });
 
     const itemsPerRow = Math.floor(12 / 4); // Assuming 4-unit width items
-    
+
     const arrangedLayout = sortedItems.map((item, index) => {
       const row = Math.floor(index / itemsPerRow);
       const col = index % itemsPerRow;
-      
+
       return {
         ...item,
         x: col * 4,
         y: row * 4,
         w: Math.min(item.w, 4),
-        h: Math.min(item.h, 4)
+        h: Math.min(item.h, 4),
       };
     });
 
@@ -245,16 +257,19 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   }, []);
 
   // Zoom controls
-  const handleZoom = useCallback((delta: number) => {
-    const newZoom = Math.max(0.5, Math.min(2, zoomLevel + delta));
-    setZoomLevel(newZoom);
-  }, [zoomLevel]);
+  const handleZoom = useCallback(
+    (delta: number) => {
+      const newZoom = Math.max(0.5, Math.min(2, zoomLevel + delta));
+      setZoomLevel(newZoom);
+    },
+    [zoomLevel]
+  );
 
   // Device preview modes
   const previewModes = [
     { name: 'Desktop', icon: ComputerDesktopIcon, breakpoint: 'lg' },
     { name: 'Tablet', icon: DeviceTabletIcon, breakpoint: 'md' },
-    { name: 'Mobile', icon: DevicePhoneMobileIcon, breakpoint: 'sm' }
+    { name: 'Mobile', icon: DevicePhoneMobileIcon, breakpoint: 'sm' },
   ];
 
   return (
@@ -289,9 +304,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       exit={{ opacity: 0, scale: 0.8, y: -10 }}
                       className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 p-4 z-50"
                     >
-                      <h3 className="font-semibold text-sm mb-3">Layout Templates</h3>
+                      <h3 className="font-semibold text-sm mb-3">
+                        Layout Templates
+                      </h3>
                       <div className="grid grid-cols-2 gap-2">
-                        {layoutPresets.map((preset) => (
+                        {layoutPresets.map(preset => (
                           <motion.button
                             key={preset.id}
                             whileHover={{ scale: 1.02 }}
@@ -301,9 +318,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                           >
                             <div className="flex items-center mb-2">
                               <preset.icon className="w-4 h-4 mr-2 text-blue-600" />
-                              <span className="font-medium text-xs">{preset.name}</span>
+                              <span className="font-medium text-xs">
+                                {preset.name}
+                              </span>
                             </div>
-                            <p className="text-xs text-gray-600">{preset.description}</p>
+                            <p className="text-xs text-gray-600">
+                              {preset.description}
+                            </p>
                           </motion.button>
                         ))}
                       </div>
@@ -349,7 +370,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             <div className="flex items-center space-x-2">
               {/* Device Preview */}
               <div className="flex items-center space-x-1 bg-white/80 backdrop-blur-lg rounded-lg border border-gray-200 shadow-lg p-1">
-                {previewModes.map((mode) => (
+                {previewModes.map(mode => (
                   <motion.button
                     key={mode.breakpoint}
                     whileHover={{ scale: 1.05 }}
@@ -415,7 +436,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 className="absolute top-20 right-4 w-80 bg-white/95 backdrop-blur-lg rounded-xl border border-gray-200 shadow-xl p-4 z-40"
               >
                 <h3 className="font-semibold text-sm mb-4">Layout Settings</h3>
-                
+
                 <div className="space-y-4">
                   {/* Grid Spacing */}
                   <div>
@@ -427,7 +448,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       min="5"
                       max="30"
                       value={gridSpacing}
-                      onChange={(e: any) => setGridSpacing(Number(e.target.value))}
+                      onChange={(e: any) =>
+                        setGridSpacing(Number(e.target.value))
+                      }
                       className="w-full"
                     />
                   </div>
@@ -441,7 +464,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       onChange={(e: any) => setAutoResize(e.target.checked)}
                       className="mr-2"
                     />
-                    <label htmlFor="autoResize" className="text-xs font-medium text-gray-700">
+                    <label
+                      htmlFor="autoResize"
+                      className="text-xs font-medium text-gray-700"
+                    >
                       Auto resize widgets
                     </label>
                   </div>
@@ -449,7 +475,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                   {/* Save/Load Layouts */}
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-gray-700">Saved Layouts</span>
+                      <span className="text-xs font-medium text-gray-700">
+                        Saved Layouts
+                      </span>
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -460,12 +488,17 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                         Save Current
                       </motion.button>
                     </div>
-                    
+
                     <div className="space-y-2 max-h-32 overflow-y-auto">
                       {savedLayouts.map((savedLayout, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs"
+                        >
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{savedLayout.name}</p>
+                            <p className="font-medium truncate">
+                              {savedLayout.name}
+                            </p>
                             <p className="text-gray-500 text-xs">
                               {savedLayout.timestamp.toLocaleDateString()}
                             </p>
@@ -478,7 +511,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                           </button>
                         </div>
                       ))}
-                      
+
                       {savedLayouts.length === 0 && (
                         <p className="text-xs text-gray-500 text-center py-2">
                           No saved layouts
@@ -496,9 +529,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       {/* Grid Container */}
       <motion.div
         className="h-full pt-16 pb-4 px-4"
-        animate={{ 
+        animate={{
           scale: zoomLevel,
-          transformOrigin: "top center"
+          transformOrigin: 'top center',
         }}
         transition={springConfig}
       >

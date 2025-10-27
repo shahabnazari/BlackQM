@@ -1,4 +1,9 @@
-import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { PrismaService } from '@/common/prisma.service';
@@ -7,7 +12,10 @@ import youtubedl from 'youtube-dl-exec';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { TranscriptionService } from './transcription.service';
-import { MultiMediaAnalysisService, ExtractedTheme } from './multimedia-analysis.service';
+import {
+  MultiMediaAnalysisService,
+  ExtractedTheme,
+} from './multimedia-analysis.service';
 
 /**
  * TikTok Research API Service
@@ -85,17 +93,22 @@ export class TikTokResearchService {
     private transcriptionService: TranscriptionService,
     private multimediaAnalysisService: MultiMediaAnalysisService,
   ) {
-    this.apiKey = this.configService.get<string>('TIKTOK_RESEARCH_API_KEY') || '';
-    this.clientSecret = this.configService.get<string>('TIKTOK_CLIENT_SECRET') || '';
+    this.apiKey =
+      this.configService.get<string>('TIKTOK_RESEARCH_API_KEY') || '';
+    this.clientSecret =
+      this.configService.get<string>('TIKTOK_CLIENT_SECRET') || '';
 
     // Check if Research API is configured
-    this.hasResearchApiAccess = !!(this.apiKey && this.clientSecret &&
-      this.apiKey !== 'your-tiktok-api-key-here');
+    this.hasResearchApiAccess = !!(
+      this.apiKey &&
+      this.clientSecret &&
+      this.apiKey !== 'your-tiktok-api-key-here'
+    );
 
     if (!this.hasResearchApiAccess) {
       this.logger.warn(
         'TikTok Research API not configured. Using fallback yt-dlp method. ' +
-        'To enable full features, apply for access at: https://developers.tiktok.com/products/research-api/'
+          'To enable full features, apply for access at: https://developers.tiktok.com/products/research-api/',
       );
     }
   }
@@ -108,7 +121,7 @@ export class TikTokResearchService {
    */
   async searchTikTokVideos(
     query: string,
-    maxResults: number = 10
+    maxResults: number = 10,
   ): Promise<TikTokSearchResult> {
     this.logger.log(`Searching TikTok: "${query}" (max: ${maxResults})`);
 
@@ -124,7 +137,9 @@ export class TikTokResearchService {
       }
     } catch (error: any) {
       this.logger.error(`TikTok search failed: ${error.message}`, error.stack);
-      throw new InternalServerErrorException(`Failed to search TikTok: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to search TikTok: ${error.message}`,
+      );
     }
   }
 
@@ -134,7 +149,7 @@ export class TikTokResearchService {
    */
   private async searchViaResearchAPI(
     query: string,
-    maxResults: number
+    maxResults: number,
   ): Promise<TikTokSearchResult> {
     const accessToken = await this.getAccessToken();
 
@@ -147,30 +162,32 @@ export class TikTokResearchService {
               {
                 operation: 'IN',
                 field_name: 'keyword',
-                field_values: [query]
-              }
-            ]
+                field_values: [query],
+              },
+            ],
           },
           max_count: maxResults,
           start_date: this.getStartDate(), // 30 days ago (API limitation)
-          end_date: new Date().toISOString().split('T')[0]
+          end_date: new Date().toISOString().split('T')[0],
         },
         {
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      )
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
     );
 
-    const videos = response.data.data.videos.map((video: any) => this.parseResearchAPIVideo(video));
+    const videos = response.data.data.videos.map((video: any) =>
+      this.parseResearchAPIVideo(video),
+    );
 
     return {
       videos,
       totalResults: response.data.data.total || videos.length,
       hasMore: response.data.data.has_more || false,
-      nextCursor: response.data.data.cursor
+      nextCursor: response.data.data.cursor,
     };
   }
 
@@ -181,16 +198,18 @@ export class TikTokResearchService {
    */
   private async searchViaFallback(
     query: string,
-    maxResults: number
+    maxResults: number,
   ): Promise<TikTokSearchResult> {
-    this.logger.warn('Using fallback search (limited functionality). For production, use TikTok Research API.');
+    this.logger.warn(
+      'Using fallback search (limited functionality). For production, use TikTok Research API.',
+    );
 
     // For MVP, we'll return empty results with helpful message
     // In production with Research API access, this won't be called
     return {
       videos: [],
       totalResults: 0,
-      hasMore: false
+      hasMore: false,
     };
   }
 
@@ -206,20 +225,22 @@ export class TikTokResearchService {
           {
             client_key: this.apiKey,
             client_secret: this.clientSecret,
-            grant_type: 'client_credentials'
+            grant_type: 'client_credentials',
           },
           {
             headers: {
-              'Content-Type': 'application/x-www-form-urlencoded'
-            }
-          }
-        )
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+          },
+        ),
       );
 
       return response.data.access_token;
     } catch (error: any) {
       this.logger.error(`Failed to get TikTok access token: ${error.message}`);
-      throw new InternalServerErrorException('Failed to authenticate with TikTok Research API');
+      throw new InternalServerErrorException(
+        'Failed to authenticate with TikTok Research API',
+      );
     }
   }
 
@@ -236,7 +257,9 @@ export class TikTokResearchService {
     try {
       // Check cache first
       const existing = await this.prisma.videoTranscript.findUnique({
-        where: { sourceId_sourceType: { sourceId: videoId, sourceType: 'tiktok' } }
+        where: {
+          sourceId_sourceType: { sourceId: videoId, sourceType: 'tiktok' },
+        },
       });
 
       if (existing) {
@@ -249,7 +272,7 @@ export class TikTokResearchService {
           timestampedText: existing.timestampedText,
           duration: existing.duration,
           confidence: existing.confidence,
-          cost: 0
+          cost: 0,
         };
       }
 
@@ -260,7 +283,8 @@ export class TikTokResearchService {
       const audioPath = await this.extractAudioFromVideo(videoPath);
 
       // 3. Transcribe with Whisper (delegate to TranscriptionService)
-      const transcription = await this.transcriptionService['transcribeAudioFile'](audioPath);
+      const transcription =
+        await this.transcriptionService['transcribeAudioFile'](audioPath);
 
       // 4. Get video metadata
       const metadata = await this.getTikTokMetadata(videoId);
@@ -288,9 +312,9 @@ export class TikTokResearchService {
             likes: metadata.likes,
             shares: metadata.shares,
             comments: metadata.comments,
-            hashtags: metadata.hashtags
-          }
-        }
+            hashtags: metadata.hashtags,
+          },
+        },
       });
 
       // Cleanup temp files
@@ -304,12 +328,16 @@ export class TikTokResearchService {
         timestampedText: saved.timestampedText,
         duration: saved.duration,
         confidence: saved.confidence,
-        cost: transcriptionCost
+        cost: transcriptionCost,
       };
-
     } catch (error: any) {
-      this.logger.error(`TikTok transcription failed: ${error.message}`, error.stack);
-      throw new InternalServerErrorException(`Failed to transcribe TikTok video: ${error.message}`);
+      this.logger.error(
+        `TikTok transcription failed: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        `Failed to transcribe TikTok video: ${error.message}`,
+      );
     }
   }
 
@@ -322,7 +350,7 @@ export class TikTokResearchService {
    */
   async analyzeTikTokContent(
     videoId: string,
-    context?: string
+    context?: string,
   ): Promise<TikTokContentAnalysis> {
     this.logger.log(`Analyzing TikTok content: ${videoId}`);
 
@@ -331,10 +359,11 @@ export class TikTokResearchService {
       const transcription = await this.transcribeTikTokVideo(videoId);
 
       // 2. Extract themes using MultiMediaAnalysisService
-      const themes = await this.multimediaAnalysisService.extractThemesFromTranscript(
-        transcription.id,
-        context
-      );
+      const themes =
+        await this.multimediaAnalysisService.extractThemesFromTranscript(
+          transcription.id,
+          context,
+        );
 
       // 3. Get engagement metrics
       const metadata = await this.getTikTokMetadata(videoId);
@@ -348,18 +377,22 @@ export class TikTokResearchService {
         transcript: {
           id: transcription.id,
           text: transcription.transcript,
-          confidence: transcription.confidence || 0.9
+          confidence: transcription.confidence || 0.9,
         },
         themes,
         engagement,
         hashtags: metadata.hashtags || [],
         trends: metadata.trends || [],
-        relevanceScore: this.calculateRelevanceScore(themes, metadata)
+        relevanceScore: this.calculateRelevanceScore(themes, metadata),
       };
-
     } catch (error: any) {
-      this.logger.error(`TikTok analysis failed: ${error.message}`, error.stack);
-      throw new InternalServerErrorException(`Failed to analyze TikTok content: ${error.message}`);
+      this.logger.error(
+        `TikTok analysis failed: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        `Failed to analyze TikTok content: ${error.message}`,
+      );
     }
   }
 
@@ -407,7 +440,7 @@ export class TikTokResearchService {
       format: 'best',
       noCheckCertificates: true,
       noWarnings: true,
-      preferFreeFormats: true
+      preferFreeFormats: true,
     });
 
     return outputPath;
@@ -435,7 +468,7 @@ export class TikTokResearchService {
       const info: any = await youtubedl(url, {
         dumpSingleJson: true,
         noCheckCertificates: true,
-        noWarnings: true
+        noWarnings: true,
       });
 
       return {
@@ -447,7 +480,7 @@ export class TikTokResearchService {
         shares: info.repost_count || 0,
         comments: info.comment_count || 0,
         hashtags: info.tags || [],
-        trends: []
+        trends: [],
       };
     } catch (error: any) {
       this.logger.warn(`Failed to get TikTok metadata: ${error.message}`);
@@ -460,7 +493,7 @@ export class TikTokResearchService {
         shares: 0,
         comments: 0,
         hashtags: [],
-        trends: []
+        trends: [],
       };
     }
   }
@@ -470,15 +503,17 @@ export class TikTokResearchService {
    * @private
    */
   private calculateEngagement(metadata: any) {
-    const totalEngagement = (metadata.likes || 0) + (metadata.shares || 0) + (metadata.comments || 0);
-    const engagementRate = metadata.views > 0 ? totalEngagement / metadata.views : 0;
+    const totalEngagement =
+      (metadata.likes || 0) + (metadata.shares || 0) + (metadata.comments || 0);
+    const engagementRate =
+      metadata.views > 0 ? totalEngagement / metadata.views : 0;
 
     return {
       views: metadata.views || 0,
       likes: metadata.likes || 0,
       shares: metadata.shares || 0,
       comments: metadata.comments || 0,
-      engagementRate: Math.round(engagementRate * 10000) / 100 // Percentage with 2 decimals
+      engagementRate: Math.round(engagementRate * 10000) / 100, // Percentage with 2 decimals
     };
   }
 
@@ -486,11 +521,15 @@ export class TikTokResearchService {
    * Calculate relevance score based on themes and engagement
    * @private
    */
-  private calculateRelevanceScore(themes: ExtractedTheme[], metadata: any): number {
+  private calculateRelevanceScore(
+    themes: ExtractedTheme[],
+    metadata: any,
+  ): number {
     // Average theme relevance (0-1)
-    const themeScore = themes.length > 0
-      ? themes.reduce((sum, t) => sum + t.relevanceScore, 0) / themes.length
-      : 0;
+    const themeScore =
+      themes.length > 0
+        ? themes.reduce((sum, t) => sum + t.relevanceScore, 0) / themes.length
+        : 0;
 
     // Engagement factor (normalized, max 0.2 boost)
     const engagement = this.calculateEngagement(metadata);
@@ -507,12 +546,12 @@ export class TikTokResearchService {
   private async storeSocialMediaContent(
     videoId: string,
     transcriptId: string,
-    metadata: any
+    metadata: any,
   ) {
     try {
       await this.prisma.socialMediaContent.upsert({
         where: {
-          url: `https://www.tiktok.com/@${metadata.author}/video/${videoId}`
+          url: `https://www.tiktok.com/@${metadata.author}/video/${videoId}`,
         },
         create: {
           platform: 'tiktok',
@@ -527,17 +566,19 @@ export class TikTokResearchService {
           comments: metadata.comments,
           transcriptId,
           hashtags: metadata.hashtags,
-          trends: metadata.trends || []
+          trends: metadata.trends || [],
         },
         update: {
           views: metadata.views,
           likes: metadata.likes,
           shares: metadata.shares,
-          comments: metadata.comments
-        }
+          comments: metadata.comments,
+        },
       });
     } catch (error: any) {
-      this.logger.warn(`Failed to store social media content: ${error.message}`);
+      this.logger.warn(
+        `Failed to store social media content: ${error.message}`,
+      );
     }
   }
 
@@ -560,7 +601,7 @@ export class TikTokResearchService {
       shares: apiVideo.share_count || 0,
       comments: apiVideo.comment_count || 0,
       hashtags: apiVideo.hashtag_names || [],
-      trends: []
+      trends: [],
     };
   }
 
@@ -583,7 +624,9 @@ export class TikTokResearchService {
       try {
         await fs.unlink(filePath);
       } catch (error: any) {
-        this.logger.warn(`Failed to cleanup file ${filePath}: ${error.message}`);
+        this.logger.warn(
+          `Failed to cleanup file ${filePath}: ${error.message}`,
+        );
       }
     }
   }

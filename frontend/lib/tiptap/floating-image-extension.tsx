@@ -1,10 +1,9 @@
 import {
   Node,
-  _mergeAttributes,
   NodeViewWrapper,
   ReactNodeViewRenderer,
 } from '@tiptap/react';
-import React, { useState, useRef, _useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   Move,
   X,
@@ -12,7 +11,6 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  _Maximize2,
   Square,
   Image as ImageIcon,
 } from 'lucide-react';

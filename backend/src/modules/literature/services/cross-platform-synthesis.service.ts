@@ -4,7 +4,10 @@ import { LiteratureService } from '../literature.service';
 import { TikTokResearchService } from './tiktok-research.service';
 import { InstagramManualService } from './instagram-manual.service';
 import { TranscriptionService } from './transcription.service';
-import { MultiMediaAnalysisService, ExtractedTheme } from './multimedia-analysis.service';
+import {
+  MultiMediaAnalysisService,
+  ExtractedTheme,
+} from './multimedia-analysis.service';
 
 /**
  * Cross-Platform Knowledge Synthesis Service
@@ -125,7 +128,7 @@ export class CrossPlatformSynthesisService {
       maxResults?: number;
       includeTranscripts?: boolean;
       timeWindow?: number; // Days
-    }
+    },
   ): Promise<CrossPlatformSynthesisResult> {
     this.logger.log(`Starting multi-platform synthesis for: "${query}"`);
 
@@ -159,19 +162,19 @@ export class CrossPlatformSynthesisService {
     const disseminationPaths = await this.traceDisseminationPaths(
       themeClusters,
       allSources,
-      timeWindow
+      timeWindow,
     );
 
     // 4. Identify emerging topics
     const emergingTopics = await this.identifyEmergingTopics(
       allSources,
-      timeWindow
+      timeWindow,
     );
 
     // 5. Generate platform-specific insights
     const platformInsights = this.analyzePlatformDifferences(
       allSources,
-      themeClusters
+      themeClusters,
     );
 
     return {
@@ -192,7 +195,7 @@ export class CrossPlatformSynthesisService {
   async traceDisseminationPaths(
     themeClusters: ThemeCluster[],
     sources: MultiPlatformSource[],
-    timeWindow: number
+    timeWindow: number,
   ): Promise<DisseminationPath[]> {
     this.logger.log('Tracing dissemination paths across platforms');
 
@@ -200,21 +203,21 @@ export class CrossPlatformSynthesisService {
 
     for (const cluster of themeClusters) {
       // Find all sources mentioning this theme
-      const relevantSources = sources.filter(source =>
-        source.themes.some(t =>
-          this.areThemesSimilar(t.theme, cluster.theme)
-        )
+      const relevantSources = sources.filter((source) =>
+        source.themes.some((t) =>
+          this.areThemesSimilar(t.theme, cluster.theme),
+        ),
       );
 
       if (relevantSources.length < 2) continue;
 
       // Sort by publication date
       const sortedSources = relevantSources.sort(
-        (a, b) => a.publishedAt.getTime() - b.publishedAt.getTime()
+        (a, b) => a.publishedAt.getTime() - b.publishedAt.getTime(),
       );
 
       // Build timeline
-      const timeline = sortedSources.map(source => ({
+      const timeline = sortedSources.map((source) => ({
         date: source.publishedAt,
         platform: source.type,
         sourceTitle: source.title,
@@ -226,7 +229,8 @@ export class CrossPlatformSynthesisService {
       const firstMention = sortedSources[0].publishedAt;
       const latestMention = sortedSources[sortedSources.length - 1].publishedAt;
       const velocityDays = Math.floor(
-        (latestMention.getTime() - firstMention.getTime()) / (1000 * 60 * 60 * 24)
+        (latestMention.getTime() - firstMention.getTime()) /
+          (1000 * 60 * 60 * 24),
       );
 
       const totalReach = timeline.reduce((sum, item) => sum + item.reach, 0);
@@ -252,7 +256,7 @@ export class CrossPlatformSynthesisService {
    */
   async identifyEmergingTopics(
     sources: MultiPlatformSource[],
-    timeWindow: number
+    timeWindow: number,
   ): Promise<EmergingTopic[]> {
     this.logger.log('Identifying emerging topics from social media');
 
@@ -261,20 +265,24 @@ export class CrossPlatformSynthesisService {
 
     // Collect all themes from recent social media
     const socialMediaSources = sources.filter(
-      s => ['tiktok', 'instagram', 'youtube'].includes(s.type) &&
-           s.publishedAt >= cutoffDate
+      (s) =>
+        ['tiktok', 'instagram', 'youtube'].includes(s.type) &&
+        s.publishedAt >= cutoffDate,
     );
 
-    const academicSources = sources.filter(s => s.type === 'paper');
+    const academicSources = sources.filter((s) => s.type === 'paper');
 
     // Count theme mentions by platform
-    const themeStats = new Map<string, {
-      socialMentions: number;
-      academicMentions: number;
-      platforms: Set<string>;
-      firstMention: Date;
-      recentMentions: Date[];
-    }>();
+    const themeStats = new Map<
+      string,
+      {
+        socialMentions: number;
+        academicMentions: number;
+        platforms: Set<string>;
+        firstMention: Date;
+        recentMentions: Date[];
+      }
+    >();
 
     for (const source of socialMediaSources) {
       for (const theme of source.themes) {
@@ -318,11 +326,14 @@ export class CrossPlatformSynthesisService {
       // 2. <5 academic papers
       // 3. Showing growth
       if (stats.socialMentions >= 10 && stats.academicMentions < 5) {
-        const growthRate = this.calculateGrowthRate(stats.recentMentions, timeWindow);
+        const growthRate = this.calculateGrowthRate(
+          stats.recentMentions,
+          timeWindow,
+        );
         const trendScore = this.calculateTrendScore(
           stats.socialMentions,
           stats.academicMentions,
-          growthRate
+          growthRate,
         );
 
         emergingTopics.push({
@@ -333,7 +344,10 @@ export class CrossPlatformSynthesisService {
           platforms: Array.from(stats.platforms),
           firstMentionDate: stats.firstMention,
           growthRate,
-          recommendation: this.generateRecommendation(trendScore, stats.socialMentions),
+          recommendation: this.generateRecommendation(
+            trendScore,
+            stats.socialMentions,
+          ),
           potentialGap: stats.academicMentions === 0,
         });
       }
@@ -347,7 +361,7 @@ export class CrossPlatformSynthesisService {
    */
   analyzePlatformDifferences(
     sources: MultiPlatformSource[],
-    clusters: ThemeCluster[]
+    clusters: ThemeCluster[],
   ): Array<{
     platform: string;
     sourceCount: number;
@@ -361,7 +375,7 @@ export class CrossPlatformSynthesisService {
     const insights = [];
 
     for (const platform of platforms) {
-      const platformSources = sources.filter(s => s.type === platform);
+      const platformSources = sources.filter((s) => s.type === platform);
 
       if (platformSources.length === 0) continue;
 
@@ -383,12 +397,12 @@ export class CrossPlatformSynthesisService {
       const topThemes = Array.from(themeFrequency.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
-        .map(entry => entry[0]);
+        .map((entry) => entry[0]);
 
       // Extract unique language patterns
       const uniqueLanguage = this.extractPlatformSpecificLanguage(
         platformSources,
-        platform
+        platform,
       );
 
       insights.push({
@@ -409,11 +423,11 @@ export class CrossPlatformSynthesisService {
   async buildCrossPlatformGraph(sources: MultiPlatformSource[]) {
     this.logger.log('Building cross-platform knowledge graph');
 
-    const nodes = sources.map(source => ({
+    const nodes = sources.map((source) => ({
       id: source.id,
       type: source.type,
       label: source.title,
-      themes: source.themes.map(t => t.theme),
+      themes: source.themes.map((t) => t.theme),
       publishedAt: source.publishedAt,
     }));
 
@@ -424,7 +438,7 @@ export class CrossPlatformSynthesisService {
       for (let j = i + 1; j < sources.length; j++) {
         const similarity = this.calculateThemeSimilarity(
           sources[i].themes,
-          sources[j].themes
+          sources[j].themes,
         );
 
         if (similarity > 0.3) {
@@ -448,7 +462,7 @@ export class CrossPlatformSynthesisService {
    */
   private async searchAcademicPapers(
     query: string,
-    maxResults: number
+    maxResults: number,
   ): Promise<MultiPlatformSource[]> {
     try {
       const result = await this.literatureService.searchLiterature(
@@ -457,10 +471,10 @@ export class CrossPlatformSynthesisService {
           limit: maxResults,
           page: 1,
         },
-        'system'
+        'system',
       );
 
-      return result.papers.map(paper => ({
+      return result.papers.map((paper) => ({
         type: 'paper' as const,
         id: paper.doi || paper.id,
         title: paper.title,
@@ -485,7 +499,7 @@ export class CrossPlatformSynthesisService {
   private async searchYouTube(
     query: string,
     maxResults: number,
-    includeTranscripts?: boolean
+    includeTranscripts?: boolean,
   ): Promise<MultiPlatformSource[]> {
     try {
       const videos = await this.literatureService['searchYouTube'](query);
@@ -493,7 +507,7 @@ export class CrossPlatformSynthesisService {
       // Limit results
       const limitedVideos = videos.slice(0, maxResults);
 
-      return limitedVideos.map(video => ({
+      return limitedVideos.map((video) => ({
         type: 'youtube' as const,
         id: video.id,
         title: video.title,
@@ -518,12 +532,15 @@ export class CrossPlatformSynthesisService {
    */
   private async searchTikTok(
     query: string,
-    maxResults: number
+    maxResults: number,
   ): Promise<MultiPlatformSource[]> {
     try {
-      const result = await this.tiktokService.searchTikTokVideos(query, maxResults);
+      const result = await this.tiktokService.searchTikTokVideos(
+        query,
+        maxResults,
+      );
 
-      return result.videos.map(video => ({
+      return result.videos.map((video) => ({
         type: 'tiktok' as const,
         id: video.id,
         title: video.title || video.description,
@@ -548,7 +565,7 @@ export class CrossPlatformSynthesisService {
    * Cluster themes across all platforms
    */
   private async clusterThemesAcrossPlatforms(
-    sources: MultiPlatformSource[]
+    sources: MultiPlatformSource[],
   ): Promise<ThemeCluster[]> {
     const themeClusters = new Map<string, ThemeCluster>();
 
@@ -581,13 +598,14 @@ export class CrossPlatformSynthesisService {
         cluster.totalSources++;
         cluster.sources[source.type as keyof typeof cluster.sources]++;
         cluster.averageRelevance =
-          (cluster.averageRelevance * (cluster.totalSources - 1) + theme.relevanceScore) /
+          (cluster.averageRelevance * (cluster.totalSources - 1) +
+            theme.relevanceScore) /
           cluster.totalSources;
       }
     }
 
     return Array.from(themeClusters.values()).sort(
-      (a, b) => b.totalSources - a.totalSources
+      (a, b) => b.totalSources - a.totalSources,
     );
   }
 
@@ -601,7 +619,7 @@ export class CrossPlatformSynthesisService {
     const words1 = new Set(normalized1.split(/\s+/));
     const words2 = new Set(normalized2.split(/\s+/));
 
-    const intersection = new Set([...words1].filter(x => words2.has(x)));
+    const intersection = new Set([...words1].filter((x) => words2.has(x)));
     const union = new Set([...words1, ...words2]);
 
     return intersection.size / union.size > 0.5;
@@ -624,7 +642,7 @@ export class CrossPlatformSynthesisService {
    * Categorize source type
    */
   private categorizeSourceType(
-    type: string
+    type: string,
   ): 'academic' | 'educational' | 'popular' {
     if (type === 'paper') return 'academic';
     if (type === 'youtube' || type === 'podcast') return 'educational';
@@ -635,7 +653,7 @@ export class CrossPlatformSynthesisService {
    * Identify dissemination pattern
    */
   private identifyDisseminationPattern(
-    timeline: Array<{ type: string; platform: string }>
+    timeline: Array<{ type: string; platform: string }>,
   ): 'academic-first' | 'viral-first' | 'parallel' {
     if (timeline.length < 2) return 'parallel';
 
@@ -658,7 +676,7 @@ export class CrossPlatformSynthesisService {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - halfWindow);
 
-    const recentMentions = mentions.filter(d => d >= cutoffDate).length;
+    const recentMentions = mentions.filter((d) => d >= cutoffDate).length;
     const olderMentions = mentions.length - recentMentions;
 
     if (olderMentions === 0) return 100;
@@ -672,10 +690,11 @@ export class CrossPlatformSynthesisService {
   private calculateTrendScore(
     socialMentions: number,
     academicMentions: number,
-    growthRate: number
+    growthRate: number,
   ): number {
     const mentionScore = Math.log10(socialMentions + 1) * 20;
-    const gapScore = academicMentions === 0 ? 30 : Math.max(0, 30 - academicMentions * 5);
+    const gapScore =
+      academicMentions === 0 ? 30 : Math.max(0, 30 - academicMentions * 5);
     const growthScore = Math.min(growthRate, 50);
 
     return Math.round(mentionScore + gapScore + growthScore);
@@ -701,12 +720,12 @@ export class CrossPlatformSynthesisService {
    */
   private extractPlatformSpecificLanguage(
     sources: MultiPlatformSource[],
-    platform: string
+    platform: string,
   ): string[] {
     const words = new Map<string, number>();
 
     for (const source of sources) {
-      const text = `${source.title} ${source.themes.map(t => t.theme).join(' ')}`;
+      const text = `${source.title} ${source.themes.map((t) => t.theme).join(' ')}`;
       const tokens = text.toLowerCase().match(/\b\w{4,}\b/g) || [];
 
       for (const token of tokens) {
@@ -716,7 +735,7 @@ export class CrossPlatformSynthesisService {
 
     return Array.from(words.entries())
       .sort((a, b) => b[1] - a[1])
-      .map(entry => entry[0]);
+      .map((entry) => entry[0]);
   }
 
   /**
@@ -724,7 +743,7 @@ export class CrossPlatformSynthesisService {
    */
   private calculateThemeSimilarity(
     themes1: ExtractedTheme[],
-    themes2: ExtractedTheme[]
+    themes2: ExtractedTheme[],
   ): number {
     if (themes1.length === 0 || themes2.length === 0) return 0;
 

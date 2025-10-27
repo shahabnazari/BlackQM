@@ -64,7 +64,7 @@ export class StatementGeneratorService {
   async generateStatements(
     topic: string,
     options: StatementGenerationOptions = {},
-    userId?: string
+    userId?: string,
   ): Promise<Statement[]> {
     const {
       count = 30,
@@ -80,7 +80,7 @@ export class StatementGeneratorService {
       perspectives,
       avoidBias,
       academicLevel,
-      maxLength
+      maxLength,
     );
 
     const response = await this.openai.generateCompletion(prompt, {
@@ -99,11 +99,12 @@ export class StatementGeneratorService {
     perspectives: string[],
     avoidBias: boolean,
     level: string,
-    maxLength: number
+    maxLength: number,
   ): string {
-    const perspectivesList = perspectives.length > 0 
-      ? perspectives.join(', ')
-      : 'various viewpoints including supporters, critics, and neutral observers';
+    const perspectivesList =
+      perspectives.length > 0
+        ? perspectives.join(', ')
+        : 'various viewpoints including supporters, critics, and neutral observers';
 
     return `Generate ${count} diverse statements for a Q-methodology study about "${topic}".
 
@@ -132,7 +133,7 @@ IMPORTANT: Generate exactly ${count} statements, no more, no less.`;
   }
 
   private parseStatements(response: string): Statement[] {
-    const lines = response.split('\n').filter(line => line.trim());
+    const lines = response.split('\n').filter((line) => line.trim());
     const statements: Statement[] = [];
 
     for (const line of lines) {
@@ -142,7 +143,10 @@ IMPORTANT: Generate exactly ${count} statements, no more, no less.`;
           id: match[1],
           text: match[2].trim(),
           perspective: match[3].trim(),
-          polarity: match[4].trim().toLowerCase() as 'positive' | 'negative' | 'neutral',
+          polarity: match[4].trim().toLowerCase() as
+            | 'positive'
+            | 'negative'
+            | 'neutral',
         });
       }
     }
@@ -171,12 +175,12 @@ IMPORTANT: Generate exactly ${count} statements, no more, no less.`;
   async validateStatements(
     statements: Statement[],
     topic: string,
-    userId?: string
+    userId?: string,
   ): Promise<StatementValidation> {
     const validationPrompt = `Review these Q-methodology statements about "${topic}" for quality and appropriateness.
 
 STATEMENTS:
-${statements.map(s => `${s.id}: "${s.text}"`).join('\n')}
+${statements.map((s) => `${s.id}: "${s.text}"`).join('\n')}
 
 EVALUATE:
 1. Clarity and conciseness (are statements easy to understand?)
@@ -221,7 +225,7 @@ Provide a JSON response with:
 
   async suggestNeutralAlternative(
     statement: string,
-    userId?: string
+    userId?: string,
   ): Promise<string> {
     const prompt = `Rewrite this Q-methodology statement to be more neutral and unbiased while preserving the core concept:
 
@@ -248,7 +252,7 @@ Provide only the rewritten statement, nothing else.`;
 
   async generatePerspectiveGuidelines(
     topic: string,
-    userId?: string
+    userId?: string,
   ): Promise<string[]> {
     const prompt = `For a Q-methodology study about "${topic}", identify 5-7 key perspectives or stakeholder groups that should be represented in the statements.
 
@@ -268,14 +272,14 @@ Format as a simple list of perspectives.`;
 
     return response.content
       .split('\n')
-      .filter(line => line.trim())
-      .map(line => line.replace(/^\d+\.\s*/, '').trim());
+      .filter((line) => line.trim())
+      .map((line) => line.replace(/^\d+\.\s*/, '').trim());
   }
 
   async enhanceStatements(
     statements: string[],
     enhancementType: 'clarity' | 'balance' | 'diversity',
-    userId?: string
+    userId?: string,
   ): Promise<Statement[]> {
     const enhancementPrompts = {
       clarity: 'Improve clarity and remove ambiguity',
@@ -309,7 +313,7 @@ Format: S[number]: [enhanced statement] | [perspective] | [polarity]`;
   async checkCulturalSensitivity(
     statements: string[],
     targetRegions: string[] = ['Global'],
-    userId?: string
+    userId?: string,
   ): Promise<any> {
     const prompt = `Review these Q-methodology statements for cultural sensitivity issues considering ${targetRegions.join(', ')} audiences:
 
@@ -340,7 +344,7 @@ Return as JSON with flagged statements and recommendations.`;
   async generateStatementVariations(
     originalStatement: string,
     count: number = 3,
-    userId?: string
+    userId?: string,
   ): Promise<string[]> {
     const prompt = `Generate ${count} variations of this Q-methodology statement that express slightly different nuances of the same concept:
 
@@ -363,8 +367,8 @@ Return only the variations, one per line.`;
 
     return response.content
       .split('\n')
-      .filter(line => line.trim())
-      .map(line => line.replace(/^\d+\.\s*/, '').trim())
+      .filter((line) => line.trim())
+      .map((line) => line.replace(/^\d+\.\s*/, '').trim())
       .slice(0, count);
   }
 
@@ -391,15 +395,19 @@ Return only the variations, one per line.`;
       }>;
     }>,
     studyContext: string,
-    userId?: string
+    userId?: string,
   ): Promise<StatementWithProvenance[]> {
-    this.logger.log(`Generating statements from ${themes.length} multi-platform themes`);
+    this.logger.log(
+      `Generating statements from ${themes.length} multi-platform themes`,
+    );
 
     const statements: StatementWithProvenance[] = [];
 
     for (const themeData of themes) {
       // Build prompt with source citations
-      const sourcesDescription = this.buildSourcesDescription(themeData.sources);
+      const sourcesDescription = this.buildSourcesDescription(
+        themeData.sources,
+      );
 
       const prompt = `Generate a Q-methodology statement about "${themeData.theme}" for a study on "${studyContext}".
 
@@ -426,7 +434,7 @@ Return only the statement text, nothing else.`;
       const statementText = response.content.trim().replace(/^["']|["']$/g, '');
 
       // Calculate provenance
-      const sources: MultimediaSource[] = themeData.sources.map(source => ({
+      const sources: MultimediaSource[] = themeData.sources.map((source) => ({
         platform: source.platform,
         id: source.id,
         title: source.title,
@@ -440,7 +448,7 @@ Return only the statement text, nothing else.`;
 
       const sourceBreakdown = this.calculateSourceBreakdown(sources);
       const overallConfidence = this.calculateOverallConfidence(sources);
-      const hasTimestamps = sources.some(s => s.timestamp !== undefined);
+      const hasTimestamps = sources.some((s) => s.timestamp !== undefined);
 
       statements.push({
         id: `S${String(statements.length + 1).padStart(2, '0')}`,
@@ -454,7 +462,9 @@ Return only the statement text, nothing else.`;
       });
     }
 
-    this.logger.log(`Generated ${statements.length} statements with full provenance`);
+    this.logger.log(
+      `Generated ${statements.length} statements with full provenance`,
+    );
     return statements;
   }
 
@@ -530,12 +540,14 @@ Return only the statement text, nothing else.`;
   /**
    * Build human-readable sources description
    */
-  private buildSourcesDescription(sources: Array<{
-    platform: string;
-    title: string;
-    author: string;
-    timestamp?: number;
-  }>): string {
+  private buildSourcesDescription(
+    sources: Array<{
+      platform: string;
+      title: string;
+      author: string;
+      timestamp?: number;
+    }>,
+  ): string {
     return sources
       .map((source, index) => {
         const timestampInfo = source.timestamp

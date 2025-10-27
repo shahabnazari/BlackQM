@@ -58,10 +58,7 @@ describe('LiteratureService Integration Tests', () => {
             {
               paperId: 'abc123',
               title: 'Test Paper on Machine Learning',
-              authors: [
-                { name: 'John Doe' },
-                { name: 'Jane Smith' },
-              ],
+              authors: [{ name: 'John Doe' }, { name: 'Jane Smith' }],
               year: 2023,
               abstract: 'This is a test abstract about machine learning.',
               externalIds: { DOI: '10.1234/test' },
@@ -73,7 +70,9 @@ describe('LiteratureService Integration Tests', () => {
         },
       };
 
-      jest.spyOn(httpService, 'get').mockReturnValue(of({ data: mockResponse.data } as any));
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of({ data: mockResponse.data } as any));
       mockCacheManager.get.mockResolvedValue(null);
 
       const result = await service.searchLiterature(
@@ -95,9 +94,9 @@ describe('LiteratureService Integration Tests', () => {
     });
 
     it('should handle Semantic Scholar API errors gracefully', async () => {
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        throwError(() => new Error('API Error'))
-      );
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(throwError(() => new Error('API Error')));
       mockCacheManager.get.mockResolvedValue(null);
 
       const result = await service.searchLiterature(
@@ -134,7 +133,9 @@ describe('LiteratureService Integration Tests', () => {
         },
       };
 
-      jest.spyOn(httpService, 'get').mockReturnValue(of({ data: mockResponse.data } as any));
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of({ data: mockResponse.data } as any));
       mockCacheManager.get.mockResolvedValue(null);
 
       const result = await service.searchLiterature(
@@ -147,7 +148,10 @@ describe('LiteratureService Integration Tests', () => {
 
       expect(result.papers).toHaveLength(1);
       expect(result.papers[0].title).toBe('CrossRef Test Paper');
-      expect(result.papers[0].authors).toEqual(['Alice Johnson', 'Bob Williams']);
+      expect(result.papers[0].authors).toEqual([
+        'Alice Johnson',
+        'Bob Williams',
+      ]);
       expect(result.papers[0].year).toBe(2022);
       expect(result.papers[0].doi).toBe('10.1234/crossref-test');
     });
@@ -226,7 +230,9 @@ describe('LiteratureService Integration Tests', () => {
         },
       };
 
-      jest.spyOn(httpService, 'get').mockReturnValue(of({ data: searchResponse.data } as any));
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of({ data: searchResponse.data } as any));
       mockCacheManager.get.mockResolvedValue(null);
 
       const result = await service.searchLiterature(
@@ -261,7 +267,9 @@ describe('LiteratureService Integration Tests', () => {
 </feed>`,
       };
 
-      jest.spyOn(httpService, 'get').mockReturnValue(of({ data: arxivResponse.data } as any));
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of({ data: arxivResponse.data } as any));
       mockCacheManager.get.mockResolvedValue(null);
 
       const result = await service.searchLiterature(
@@ -274,7 +282,10 @@ describe('LiteratureService Integration Tests', () => {
 
       expect(result.papers).toHaveLength(1);
       expect(result.papers[0].title).toBe('Test arXiv Paper on AI');
-      expect(result.papers[0].authors).toEqual(['Alice Researcher', 'Bob Scientist']);
+      expect(result.papers[0].authors).toEqual([
+        'Alice Researcher',
+        'Bob Scientist',
+      ]);
       expect(result.papers[0].year).toBe(2023);
       expect(result.papers[0].source).toBe('arXiv');
       expect(result.papers[0].abstract).toContain('artificial intelligence');
@@ -293,7 +304,9 @@ describe('LiteratureService Integration Tests', () => {
         </entry></feed>`,
       };
 
-      jest.spyOn(httpService, 'get').mockReturnValue(of({ data: arxivResponse.data } as any));
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of({ data: arxivResponse.data } as any));
 
       const result = await service.searchAlternativeSources(
         'test query',
@@ -321,7 +334,9 @@ describe('LiteratureService Integration Tests', () => {
         },
       };
 
-      jest.spyOn(httpService, 'get').mockReturnValue(of({ data: bioRxivResponse.data } as any));
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of({ data: bioRxivResponse.data } as any));
 
       const result = await service.searchAlternativeSources(
         'biology research',
@@ -351,7 +366,9 @@ describe('LiteratureService Integration Tests', () => {
         },
       };
 
-      jest.spyOn(httpService, 'get').mockReturnValue(of({ data: githubResponse.data } as any));
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of({ data: githubResponse.data } as any));
 
       const result = await service.searchAlternativeSources(
         'python library',
@@ -382,7 +399,9 @@ describe('LiteratureService Integration Tests', () => {
         },
       };
 
-      jest.spyOn(httpService, 'get').mockReturnValue(of({ data: stackOverflowResponse.data } as any));
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of({ data: stackOverflowResponse.data } as any));
 
       const result = await service.searchAlternativeSources(
         'typescript nestjs',
@@ -406,7 +425,9 @@ describe('LiteratureService Integration Tests', () => {
         `,
       };
 
-      jest.spyOn(httpService, 'get').mockReturnValue(of({ data: youtubeHtmlResponse.data } as any));
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of({ data: youtubeHtmlResponse.data } as any));
 
       const result = await service.searchAlternativeSources(
         'machine learning tutorial',
@@ -518,7 +539,10 @@ describe('LiteratureService Integration Tests', () => {
       const result = await service.searchLiterature(
         {
           query: 'test query',
-          sources: [LiteratureSource.SEMANTIC_SCHOLAR, LiteratureSource.CROSSREF],
+          sources: [
+            LiteratureSource.SEMANTIC_SCHOLAR,
+            LiteratureSource.CROSSREF,
+          ],
         },
         'test-user',
       );
@@ -554,7 +578,9 @@ describe('LiteratureService Integration Tests', () => {
         },
       };
 
-      jest.spyOn(httpService, 'get').mockReturnValue(of({ data: mockResponse.data } as any));
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of({ data: mockResponse.data } as any));
       mockCacheManager.get.mockResolvedValue(null);
 
       const result = await service.searchLiterature(
@@ -571,9 +597,9 @@ describe('LiteratureService Integration Tests', () => {
 
   describe('Error Handling', () => {
     it('should handle network errors gracefully', async () => {
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        throwError(() => new Error('Network error'))
-      );
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(throwError(() => new Error('Network error')));
       mockCacheManager.get.mockResolvedValue(null);
 
       const result = await service.searchLiterature(
@@ -604,14 +630,17 @@ describe('LiteratureService Integration Tests', () => {
                 ],
               },
             },
-          } as any)
+          } as any),
         );
       mockCacheManager.get.mockResolvedValue(null);
 
       const result = await service.searchLiterature(
         {
           query: 'test',
-          sources: [LiteratureSource.SEMANTIC_SCHOLAR, LiteratureSource.CROSSREF],
+          sources: [
+            LiteratureSource.SEMANTIC_SCHOLAR,
+            LiteratureSource.CROSSREF,
+          ],
         },
         'test-user',
       );

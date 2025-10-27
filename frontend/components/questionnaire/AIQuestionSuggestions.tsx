@@ -1,10 +1,9 @@
 'use client';
 
-import React from 'react';
-import { Sparkles, RefreshCw, Plus } from 'lucide-react';
-import { Question } from '@/lib/stores/questionnaire.store';
-import { QuestionType } from '@/lib/types/questionnaire';
 import { useGenerateQuestionnaire } from '@/hooks/useAIBackend';
+import { Question, QuestionType } from '@/lib/types/questionnaire';
+import { Plus, RefreshCw, Sparkles } from 'lucide-react';
+import React from 'react';
 
 interface AIQuestionSuggestionsProps {
   surveyContext: {
@@ -17,12 +16,17 @@ interface AIQuestionSuggestionsProps {
 
 export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
   surveyContext,
-  onAddQuestion
+  onAddQuestion,
 }) => {
   const [suggestions, setSuggestions] = React.useState<any[]>([]);
-  
+
   // Use the AI backend hook for questionnaire generation
-  const { questions: _questions, loading: isGenerating, error, generateQuestionnaire } = useGenerateQuestionnaire();
+  const {
+    questions: _questions,
+    loading: isGenerating,
+    error,
+    generateQuestionnaire,
+  } = useGenerateQuestionnaire();
 
   const generateSuggestions = async () => {
     try {
@@ -32,20 +36,22 @@ export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
         questionCount: 5,
         questionTypes: ['likert', 'multipleChoice', 'openEnded'],
         targetAudience: 'General',
-        includeSkipLogic: false
+        includeSkipLogic: false,
       });
 
       if (generatedQuestions) {
         // Map generated questions to suggestion format
-        const mappedSuggestions = generatedQuestions.map((q: any, idx: number) => ({
-          id: `ai-${idx + 1}`,
-          type: mapQuestionType(q.type),
-          text: q.text,
-          category: q.category || surveyContext.category || 'General',
-          confidence: q.confidence || 85,
-          options: q.options
-        }));
-        
+        const mappedSuggestions = generatedQuestions.map(
+          (q: any, idx: number) => ({
+            id: `ai-${idx + 1}`,
+            type: mapQuestionType(q.type),
+            text: q.text,
+            category: q.category || surveyContext.category || 'General',
+            confidence: q.confidence || 85,
+            options: q.options,
+          })
+        );
+
         setSuggestions(mappedSuggestions);
       }
     } catch (err) {
@@ -57,7 +63,7 @@ export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
           type: QuestionType.LIKERT_SCALE,
           text: 'How satisfied are you with the overall quality of our service?',
           category: 'Satisfaction',
-          confidence: 95
+          confidence: 95,
         },
         {
           id: 'ai-2',
@@ -69,16 +75,16 @@ export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
             { text: 'Dashboard Analytics', value: 'dashboard' },
             { text: 'Reporting Tools', value: 'reporting' },
             { text: 'Collaboration Features', value: 'collaboration' },
-            { text: 'Mobile App', value: 'mobile' }
-          ]
+            { text: 'Mobile App', value: 'mobile' },
+          ],
         },
         {
           id: 'ai-3',
           type: QuestionType.TEXT_LONG,
           text: 'What improvements would you like to see in future updates?',
           category: 'Feedback',
-          confidence: 82
-        }
+          confidence: 82,
+        },
       ]);
     }
   };
@@ -86,11 +92,11 @@ export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
   // Helper function to map AI question types to app question types
   const mapQuestionType = (aiType: string): QuestionType => {
     const typeMap: Record<string, QuestionType> = {
-      'likert': QuestionType.LIKERT_SCALE,
-      'multipleChoice': QuestionType.MULTIPLE_CHOICE_SINGLE,
-      'openEnded': QuestionType.TEXT_LONG,
-      'ranking': QuestionType.RANKING,
-      'demographic': QuestionType.TEXT_SHORT
+      likert: QuestionType.LIKERT_SCALE,
+      multipleChoice: QuestionType.MULTIPLE_CHOICE_SINGLE,
+      openEnded: QuestionType.TEXT_LONG,
+      ranking: QuestionType.RANKING,
+      demographic: QuestionType.TEXT_SHORT,
     };
     return typeMap[aiType] || QuestionType.TEXT_SHORT;
   };
@@ -111,20 +117,24 @@ export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
           disabled={isGenerating}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
         >
-          <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`}
+          />
         </button>
       </div>
 
       <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
         <p className="text-sm text-purple-700 dark:text-purple-300">
-          AI-powered suggestions based on your survey context and existing questions.
+          AI-powered suggestions based on your survey context and existing
+          questions.
         </p>
       </div>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
           <p className="text-sm text-red-700 dark:text-red-300">
-            {error || 'Failed to generate AI suggestions. Using default suggestions.'}
+            {error ||
+              'Failed to generate AI suggestions. Using default suggestions.'}
           </p>
         </div>
       )}

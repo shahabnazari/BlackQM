@@ -61,23 +61,30 @@ describe('KnowledgeGraphService', () => {
         {
           id: 'paper1',
           title: 'Machine Learning in Healthcare',
-          abstract: 'This study explores the application of machine learning algorithms in predicting patient outcomes.',
+          abstract:
+            'This study explores the application of machine learning algorithms in predicting patient outcomes.',
           authors: ['Author 1'],
         },
       ];
 
       mockPrisma.paper.findMany.mockResolvedValue(mockPapers);
       mockOpenAI.chat.completions.create.mockResolvedValue({
-        choices: [{
-          message: {
-            content: JSON.stringify({
-              concepts: ['machine learning', 'healthcare', 'patient outcomes'],
-              theories: ['predictive modeling'],
-              methods: ['supervised learning'],
-              findings: ['improved prediction accuracy'],
-            }),
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                concepts: [
+                  'machine learning',
+                  'healthcare',
+                  'patient outcomes',
+                ],
+                theories: ['predictive modeling'],
+                methods: ['supervised learning'],
+                findings: ['improved prediction accuracy'],
+              }),
+            },
           },
-        }],
+        ],
       });
 
       const result = await service.buildKnowledgeGraph(['paper1']);
@@ -88,25 +95,29 @@ describe('KnowledgeGraphService', () => {
 
     it('should categorize entities correctly', async () => {
       // Test entity type classification logic
-      const mockPapers = [{
-        id: 'paper1',
-        title: 'Test Paper',
-        abstract: 'A study about concepts and theories.',
-        authors: ['Test Author'],
-      }];
+      const mockPapers = [
+        {
+          id: 'paper1',
+          title: 'Test Paper',
+          abstract: 'A study about concepts and theories.',
+          authors: ['Test Author'],
+        },
+      ];
 
       mockPrisma.paper.findMany.mockResolvedValue(mockPapers);
       mockOpenAI.chat.completions.create.mockResolvedValue({
-        choices: [{
-          message: {
-            content: JSON.stringify({
-              concepts: ['concept1', 'concept2'],
-              theories: ['theory1'],
-              methods: ['method1'],
-              findings: [],
-            }),
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                concepts: ['concept1', 'concept2'],
+                theories: ['theory1'],
+                methods: ['method1'],
+                findings: [],
+              }),
+            },
           },
-        }],
+        ],
       });
 
       const result = await service.buildKnowledgeGraph(['paper1']);
@@ -115,7 +126,9 @@ describe('KnowledgeGraphService', () => {
     });
 
     it('should handle empty abstracts gracefully', async () => {
-      const mockPapers = [{ id: 'paper1', title: 'No Abstract', abstract: '', authors: [] }];
+      const mockPapers = [
+        { id: 'paper1', title: 'No Abstract', abstract: '', authors: [] },
+      ];
 
       mockPrisma.paper.findMany.mockResolvedValue(mockPapers);
 
@@ -150,9 +163,24 @@ describe('KnowledgeGraphService', () => {
 
     it('should detect cross-disciplinary connectors', async () => {
       const mockNodes = [
-        { id: 'n1', label: 'ML Algorithm', type: 'CONCEPT', keywords: ['computer science'] },
-        { id: 'n2', label: 'Patient Outcome', type: 'CONCEPT', keywords: ['medicine'] },
-        { id: 'n3', label: 'Predictive Model', type: 'CONCEPT', keywords: ['computer science', 'medicine'] },
+        {
+          id: 'n1',
+          label: 'ML Algorithm',
+          type: 'CONCEPT',
+          keywords: ['computer science'],
+        },
+        {
+          id: 'n2',
+          label: 'Patient Outcome',
+          type: 'CONCEPT',
+          keywords: ['medicine'],
+        },
+        {
+          id: 'n3',
+          label: 'Predictive Model',
+          type: 'CONCEPT',
+          keywords: ['computer science', 'medicine'],
+        },
       ];
 
       mockPrisma.knowledgeNode.findMany.mockResolvedValue(mockNodes);
@@ -245,8 +273,18 @@ describe('KnowledgeGraphService', () => {
       ];
 
       const mockEdges = [
-        { fromNodeId: 'n1', toNodeId: 'n2', type: 'EXTENDS', createdAt: new Date('2020-01-01') },
-        { fromNodeId: 'n2', toNodeId: 'n3', type: 'USES', createdAt: new Date('2021-01-01') },
+        {
+          fromNodeId: 'n1',
+          toNodeId: 'n2',
+          type: 'EXTENDS',
+          createdAt: new Date('2020-01-01'),
+        },
+        {
+          fromNodeId: 'n2',
+          toNodeId: 'n3',
+          type: 'USES',
+          createdAt: new Date('2021-01-01'),
+        },
       ];
 
       mockPrisma.knowledgeNode.findMany.mockResolvedValue(mockNodes);
@@ -298,9 +336,24 @@ describe('KnowledgeGraphService', () => {
   describe('Missing Link Prediction', () => {
     it('should predict plausible connections', async () => {
       const mockNodes = [
-        { id: 'n1', label: 'Concept A', type: 'CONCEPT', keywords: ['ML', 'healthcare'] },
-        { id: 'n2', label: 'Concept B', type: 'CONCEPT', keywords: ['ML', 'finance'] },
-        { id: 'n3', label: 'Concept C', type: 'CONCEPT', keywords: ['healthcare', 'finance'] },
+        {
+          id: 'n1',
+          label: 'Concept A',
+          type: 'CONCEPT',
+          keywords: ['ML', 'healthcare'],
+        },
+        {
+          id: 'n2',
+          label: 'Concept B',
+          type: 'CONCEPT',
+          keywords: ['ML', 'finance'],
+        },
+        {
+          id: 'n3',
+          label: 'Concept C',
+          type: 'CONCEPT',
+          keywords: ['healthcare', 'finance'],
+        },
       ];
 
       mockPrisma.knowledgeNode.findMany.mockResolvedValue(mockNodes);
@@ -326,7 +379,9 @@ describe('KnowledgeGraphService', () => {
 
       if (result.predictedLinks.length > 1) {
         // Higher keyword overlap should result in higher confidence
-        expect(result.predictedLinks[0].confidence).toBeGreaterThanOrEqual(result.predictedLinks[1].confidence);
+        expect(result.predictedLinks[0].confidence).toBeGreaterThanOrEqual(
+          result.predictedLinks[1].confidence,
+        );
       }
     });
 
@@ -365,9 +420,27 @@ describe('KnowledgeGraphService', () => {
 
     it('should calculate growth rate correctly', async () => {
       const mockNodes = [
-        { id: 'n1', label: 'Topic', type: 'CONCEPT', createdAt: new Date('2020-01-01'), citationCount: 10 },
-        { id: 'n2', label: 'Topic', type: 'CONCEPT', createdAt: new Date('2021-01-01'), citationCount: 15 },
-        { id: 'n3', label: 'Topic', type: 'CONCEPT', createdAt: new Date('2022-01-01'), citationCount: 25 },
+        {
+          id: 'n1',
+          label: 'Topic',
+          type: 'CONCEPT',
+          createdAt: new Date('2020-01-01'),
+          citationCount: 10,
+        },
+        {
+          id: 'n2',
+          label: 'Topic',
+          type: 'CONCEPT',
+          createdAt: new Date('2021-01-01'),
+          citationCount: 15,
+        },
+        {
+          id: 'n3',
+          label: 'Topic',
+          type: 'CONCEPT',
+          createdAt: new Date('2022-01-01'),
+          citationCount: 25,
+        },
       ];
 
       mockPrisma.knowledgeNode.findMany.mockResolvedValue(mockNodes);
@@ -389,7 +462,9 @@ describe('KnowledgeGraphService', () => {
       const result = await service.buildKnowledgeGraph([]);
 
       // Declining topics should not be in emerging topics
-      const emergingLabels = result.insights.emergingTopics.map((t: any) => t.topic);
+      const emergingLabels = result.insights.emergingTopics.map(
+        (t: any) => t.topic,
+      );
       expect(emergingLabels).not.toContain('Declining');
     });
   });

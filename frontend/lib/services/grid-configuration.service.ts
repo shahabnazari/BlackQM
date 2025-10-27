@@ -137,7 +137,9 @@ export class GridConfigurationService {
     if (difference !== 0) {
       // Adjust the center column
       const centerIndex = Math.floor(distribution.length / 2);
-      distribution[centerIndex] += difference;
+      if (distribution[centerIndex] !== undefined) {
+        distribution[centerIndex] += difference;
+      }
     }
 
     return distribution;
@@ -194,7 +196,8 @@ export class GridConfigurationService {
     // let _remaining = totalItems - (2 * 2); // Account for edge minimums (not used in current calculation)
 
     for (let i = 1; i < columns - 1; i++) {
-      const idealCount = Math.round(totalItems * proportions[i]);
+      const proportion = proportions[i] ?? 0;
+      const idealCount = Math.round(totalItems * proportion);
       distribution[i] = Math.max(
         2,
         Math.min(idealCount, Math.floor(totalItems / 4))
@@ -208,13 +211,16 @@ export class GridConfigurationService {
     if (adjustment > 0) {
       // Add to center columns
       const centerIndex = Math.floor(columns / 2);
-      distribution[centerIndex] += adjustment;
+      if (distribution[centerIndex] !== undefined) {
+        distribution[centerIndex] += adjustment;
+      }
     } else if (adjustment < 0) {
       // Remove from middle columns
       for (let i = 1; i < columns - 1 && adjustment < 0; i++) {
-        if (distribution[i] > 2) {
-          const reduction = Math.min(distribution[i] - 2, -adjustment);
-          distribution[i] -= reduction;
+        const currentValue = distribution[i] ?? 0;
+        if (currentValue > 2) {
+          const reduction = Math.min(currentValue - 2, -adjustment);
+          distribution[i] = currentValue - reduction;
           adjustment += reduction;
         }
       }
@@ -222,9 +228,9 @@ export class GridConfigurationService {
 
     // Ensure perfect symmetry
     for (let i = 0; i < Math.floor(columns / 2); i++) {
-      const avg = Math.round(
-        (distribution[i] + distribution[columns - 1 - i]) / 2
-      );
+      const leftValue = distribution[i] ?? 0;
+      const rightValue = distribution[columns - 1 - i] ?? 0;
+      const avg = Math.round((leftValue + rightValue) / 2);
       distribution[i] = avg;
       distribution[columns - 1 - i] = avg;
     }
@@ -233,7 +239,9 @@ export class GridConfigurationService {
     const finalSum = distribution.reduce((a, b) => a + b, 0);
     if (finalSum !== totalItems) {
       const centerIndex = Math.floor(columns / 2);
-      distribution[centerIndex] += totalItems - finalSum;
+      if (distribution[centerIndex] !== undefined) {
+        distribution[centerIndex] += totalItems - finalSum;
+      }
     }
 
     return distribution;
@@ -272,8 +280,8 @@ export class GridConfigurationService {
 
     // Check bell shape
     const center = Math.floor(n / 2);
-    const centerValue = distribution[center];
-    const edgeValue = distribution[0];
+    const centerValue = distribution[center] ?? 0;
+    const edgeValue = distribution[0] ?? 0;
 
     if (centerValue <= edgeValue) {
       issues.push('Center should be higher than edges');
@@ -282,7 +290,9 @@ export class GridConfigurationService {
 
     // Check monotonicity
     for (let i = 0; i < center; i++) {
-      if (distribution[i] > distribution[i + 1]) {
+      const current = distribution[i] ?? 0;
+      const next = distribution[i + 1] ?? 0;
+      if (current > next) {
         issues.push('Distribution should increase toward center');
         score -= 15;
         break;
@@ -290,7 +300,9 @@ export class GridConfigurationService {
     }
 
     // Check edge minimum
-    if (distribution[0] < 2 || distribution[n - 1] < 2) {
+    const firstValue = distribution[0] ?? 0;
+    const lastValue = distribution[n - 1] ?? 0;
+    if (firstValue < 2 || lastValue < 2) {
       issues.push('Edge columns should have at least 2 items');
       score -= 10;
     }

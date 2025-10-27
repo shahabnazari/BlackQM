@@ -31,7 +31,7 @@ class SocialMediaBenchmark {
   async benchmarkPlatform(
     platform: string,
     searchFunction: (query: string) => Promise<any[]>,
-    iterations: number = 10
+    iterations: number = 10,
   ): Promise<BenchmarkResult> {
     const latencies: number[] = [];
     const errors: string[] = [];
@@ -49,17 +49,21 @@ class SocialMediaBenchmark {
         latencies.push(latency);
         totalResults += results.length;
         successCount++;
-        console.log(`  ✓ Iteration ${i + 1}: ${latency}ms (${results.length} results)`);
+        console.log(
+          `  ✓ Iteration ${i + 1}: ${latency}ms (${results.length} results)`,
+        );
       } catch (error: any) {
         const latency = Date.now() - startTime;
         latencies.push(latency);
         failureCount++;
         errors.push(error.message);
-        console.log(`  ✗ Iteration ${i + 1}: ${latency}ms (FAILED: ${error.message})`);
+        console.log(
+          `  ✗ Iteration ${i + 1}: ${latency}ms (FAILED: ${error.message})`,
+        );
       }
 
       // Small delay between requests to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     // Calculate percentiles
@@ -85,15 +89,17 @@ class SocialMediaBenchmark {
   // Platform-specific search methods
   async searchTwitter(query: string): Promise<any[]> {
     // Mock implementation since real Twitter API requires authentication
-    await new Promise(resolve => setTimeout(resolve, 100)); // Simulate API call
-    return [{
-      id: `twitter-${Date.now()}`,
-      platform: 'twitter',
-      author: 'TestUser',
-      content: `Research on ${query}`,
-      engagement: { likes: 100, shares: 20, comments: 10, totalScore: 130 },
-      timestamp: new Date().toISOString(),
-    }];
+    await new Promise((resolve) => setTimeout(resolve, 100)); // Simulate API call
+    return [
+      {
+        id: `twitter-${Date.now()}`,
+        platform: 'twitter',
+        author: 'TestUser',
+        content: `Research on ${query}`,
+        engagement: { likes: 100, shares: 20, comments: 10, totalScore: 130 },
+        timestamp: new Date().toISOString(),
+      },
+    ];
   }
 
   async searchReddit(query: string): Promise<any[]> {
@@ -105,7 +111,7 @@ class SocialMediaBenchmark {
         this.httpService.get(url, {
           params,
           headers: { 'User-Agent': 'VQMethod-Benchmark/1.0' },
-        })
+        }),
       );
 
       if (response.data?.data?.children) {
@@ -130,53 +136,71 @@ class SocialMediaBenchmark {
 
   async searchLinkedIn(query: string): Promise<any[]> {
     // Mock implementation (LinkedIn requires OAuth)
-    await new Promise(resolve => setTimeout(resolve, 150));
-    return [{
-      id: `linkedin-${Date.now()}`,
-      platform: 'linkedin',
-      author: 'Dr. Test User',
-      authorTitle: 'Research Professor',
-      content: `Professional insights on ${query}`,
-      engagement: { likes: 200, comments: 30, shares: 40, totalScore: 270 },
-    }];
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    return [
+      {
+        id: `linkedin-${Date.now()}`,
+        platform: 'linkedin',
+        author: 'Dr. Test User',
+        authorTitle: 'Research Professor',
+        content: `Professional insights on ${query}`,
+        engagement: { likes: 200, comments: 30, shares: 40, totalScore: 270 },
+      },
+    ];
   }
 
   async searchFacebook(query: string): Promise<any[]> {
     // Mock implementation (Facebook requires app review)
-    await new Promise(resolve => setTimeout(resolve, 120));
-    return [{
-      id: `facebook-${Date.now()}`,
-      platform: 'facebook',
-      author: 'Research Group',
-      content: `Group discussion on ${query}`,
-      engagement: { reactions: 150, comments: 50, shares: 25, totalScore: 225 },
-    }];
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    return [
+      {
+        id: `facebook-${Date.now()}`,
+        platform: 'facebook',
+        author: 'Research Group',
+        content: `Group discussion on ${query}`,
+        engagement: {
+          reactions: 150,
+          comments: 50,
+          shares: 25,
+          totalScore: 225,
+        },
+      },
+    ];
   }
 
   async searchInstagram(query: string): Promise<any[]> {
     // Mock implementation (Instagram requires OAuth)
-    await new Promise(resolve => setTimeout(resolve, 130));
-    return [{
-      id: `instagram-${Date.now()}`,
-      platform: 'instagram',
-      author: 'research_account',
-      content: `Visual content on ${query}`,
-      mediaType: 'carousel',
-      engagement: { likes: 500, comments: 80, saves: 60, totalScore: 640 },
-    }];
+    await new Promise((resolve) => setTimeout(resolve, 130));
+    return [
+      {
+        id: `instagram-${Date.now()}`,
+        platform: 'instagram',
+        author: 'research_account',
+        content: `Visual content on ${query}`,
+        mediaType: 'carousel',
+        engagement: { likes: 500, comments: 80, saves: 60, totalScore: 640 },
+      },
+    ];
   }
 
   async searchTikTok(query: string): Promise<any[]> {
     // Mock implementation (TikTok requires partnership)
-    await new Promise(resolve => setTimeout(resolve, 140));
-    return [{
-      id: `tiktok-${Date.now()}`,
-      platform: 'tiktok',
-      author: 'research_edu',
-      content: `Educational content on ${query}`,
-      videoViews: 10000,
-      engagement: { likes: 1200, comments: 150, shares: 300, totalScore: 1650 },
-    }];
+    await new Promise((resolve) => setTimeout(resolve, 140));
+    return [
+      {
+        id: `tiktok-${Date.now()}`,
+        platform: 'tiktok',
+        author: 'research_edu',
+        content: `Educational content on ${query}`,
+        videoViews: 10000,
+        engagement: {
+          likes: 1200,
+          comments: 150,
+          shares: 300,
+          totalScore: 1650,
+        },
+      },
+    ];
   }
 
   printResults(results: BenchmarkResult[]): void {
@@ -184,9 +208,11 @@ class SocialMediaBenchmark {
     console.log('SOCIAL MEDIA BENCHMARK RESULTS');
     console.log('='.repeat(80));
 
-    results.forEach(result => {
+    results.forEach((result) => {
       console.log(`\n📊 ${result.platform.toUpperCase()}`);
-      console.log(`   Success Rate: ${((result.successCount / result.iterations) * 100).toFixed(1)}%`);
+      console.log(
+        `   Success Rate: ${((result.successCount / result.iterations) * 100).toFixed(1)}%`,
+      );
       console.log(`   Latency p50: ${result.p50}ms`);
       console.log(`   Latency p95: ${result.p95}ms`);
       console.log(`   Latency p99: ${result.p99}ms`);
@@ -203,12 +229,16 @@ class SocialMediaBenchmark {
 
     const totalIterations = results.reduce((sum, r) => sum + r.iterations, 0);
     const totalSuccesses = results.reduce((sum, r) => sum + r.successCount, 0);
-    const allLatencies = results.flatMap(r => r.latencies).sort((a, b) => a - b);
+    const allLatencies = results
+      .flatMap((r) => r.latencies)
+      .sort((a, b) => a - b);
     const overallP50 = allLatencies[Math.floor(allLatencies.length * 0.5)];
     const overallP95 = allLatencies[Math.floor(allLatencies.length * 0.95)];
 
     console.log(`Total Requests: ${totalIterations}`);
-    console.log(`Success Rate: ${((totalSuccesses / totalIterations) * 100).toFixed(1)}%`);
+    console.log(
+      `Success Rate: ${((totalSuccesses / totalIterations) * 100).toFixed(1)}%`,
+    );
     console.log(`Overall p50 Latency: ${overallP50}ms`);
     console.log(`Overall p95 Latency: ${overallP95}ms`);
 
@@ -222,9 +252,13 @@ class SocialMediaBenchmark {
 
     const totalSuccessRate = (totalSuccesses / totalIterations) * 100;
     if (totalSuccessRate > 80) {
-      console.log(`✓ Success rate > 80%: PASSED (${totalSuccessRate.toFixed(1)}%)`);
+      console.log(
+        `✓ Success rate > 80%: PASSED (${totalSuccessRate.toFixed(1)}%)`,
+      );
     } else {
-      console.log(`✗ Success rate > 80%: FAILED (${totalSuccessRate.toFixed(1)}%)`);
+      console.log(
+        `✗ Success rate > 80%: FAILED (${totalSuccessRate.toFixed(1)}%)`,
+      );
     }
   }
 
@@ -238,12 +272,48 @@ class SocialMediaBenchmark {
     const results: BenchmarkResult[] = [];
 
     // Benchmark each platform
-    results.push(await this.benchmarkPlatform('Twitter/X', (q) => this.searchTwitter(q), iterations));
-    results.push(await this.benchmarkPlatform('Reddit', (q) => this.searchReddit(q), iterations));
-    results.push(await this.benchmarkPlatform('LinkedIn', (q) => this.searchLinkedIn(q), iterations));
-    results.push(await this.benchmarkPlatform('Facebook', (q) => this.searchFacebook(q), iterations));
-    results.push(await this.benchmarkPlatform('Instagram', (q) => this.searchInstagram(q), iterations));
-    results.push(await this.benchmarkPlatform('TikTok', (q) => this.searchTikTok(q), iterations));
+    results.push(
+      await this.benchmarkPlatform(
+        'Twitter/X',
+        (q) => this.searchTwitter(q),
+        iterations,
+      ),
+    );
+    results.push(
+      await this.benchmarkPlatform(
+        'Reddit',
+        (q) => this.searchReddit(q),
+        iterations,
+      ),
+    );
+    results.push(
+      await this.benchmarkPlatform(
+        'LinkedIn',
+        (q) => this.searchLinkedIn(q),
+        iterations,
+      ),
+    );
+    results.push(
+      await this.benchmarkPlatform(
+        'Facebook',
+        (q) => this.searchFacebook(q),
+        iterations,
+      ),
+    );
+    results.push(
+      await this.benchmarkPlatform(
+        'Instagram',
+        (q) => this.searchInstagram(q),
+        iterations,
+      ),
+    );
+    results.push(
+      await this.benchmarkPlatform(
+        'TikTok',
+        (q) => this.searchTikTok(q),
+        iterations,
+      ),
+    );
 
     // Print results
     this.printResults(results);
@@ -252,10 +322,7 @@ class SocialMediaBenchmark {
     const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
     const filename = `social-media-benchmark-${timestamp}.json`;
     const fs = require('fs');
-    fs.writeFileSync(
-      filename,
-      JSON.stringify(results, null, 2)
-    );
+    fs.writeFileSync(filename, JSON.stringify(results, null, 2));
     console.log(`\n💾 Results saved to: ${filename}`);
   }
 }
@@ -263,7 +330,8 @@ class SocialMediaBenchmark {
 // Run benchmark
 if (require.main === module) {
   const benchmark = new SocialMediaBenchmark();
-  benchmark.run()
+  benchmark
+    .run()
     .then(() => {
       console.log('\n✅ Benchmark complete');
       process.exit(0);

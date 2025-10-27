@@ -29,15 +29,14 @@ interface FactorArraysVisualizationProps {
   showZScores?: boolean;
 }
 
-export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps> = ({
-  data,
-  width = 1000,
-  height = 600,
-  showZScores = false
-}) => {
-  const [selectedFactor, setSelectedFactor] = useState<string>(data[0]?.factor || '');
+export const FactorArraysVisualization: React.FC<
+  FactorArraysVisualizationProps
+> = ({ data, width = 1000, height = 600, showZScores = false }) => {
+  const [selectedFactor, setSelectedFactor] = useState<string>(
+    data[0]?.factor || ''
+  );
   const [viewMode, setViewMode] = useState<'grid' | 'distribution'>('grid');
-  
+
   const {
     tooltipData,
     tooltipLeft,
@@ -55,15 +54,18 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
   const selectedFactorData = data.find(d => d.factor === selectedFactor);
   if (!selectedFactorData) return null;
 
-  const sortedStatements = [...selectedFactorData.statements].sort((a, b) => 
+  const sortedStatements = [...selectedFactorData.statements].sort((a, b) =>
     showZScores ? b.zScore - a.zScore : b.score - a.score
   );
 
   // Q-sort grid dimensions (typical -4 to +4 range)
-  const qSortRange = Array.from({length: 9}, (_, i) => i - 4);
-  const maxStatementsPerColumn = Math.max(...qSortRange.map((score: any) => 
-    sortedStatements.filter((s: any) => s.score === score).length
-  ));
+  const qSortRange = Array.from({ length: 9 }, (_, i) => i - 4);
+  const maxStatementsPerColumn = Math.max(
+    ...qSortRange.map(
+      (score: any) =>
+        sortedStatements.filter((s: any) => s.score === score).length
+    )
+  );
 
   // Scales for grid view
   const xScale = scaleBand({
@@ -73,12 +75,12 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
   });
 
   const yScale = scaleBand({
-    domain: Array.from({length: maxStatementsPerColumn}, (_, i) => String(i)),
+    domain: Array.from({ length: maxStatementsPerColumn }, (_, i) => String(i)),
     range: [innerHeight, 0],
     padding: 0.05,
   });
 
-  // Scales for distribution view  
+  // Scales for distribution view
   const distributionXScale = scaleBand({
     domain: sortedStatements.map((_, i) => String(i)),
     range: [0, innerWidth],
@@ -86,8 +88,11 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
   });
 
   const distributionYScale = scaleLinear({
-    domain: showZScores 
-      ? [Math.min(...sortedStatements.map((s: any) => s.zScore)), Math.max(...sortedStatements.map((s: any) => s.zScore))]
+    domain: showZScores
+      ? [
+          Math.min(...sortedStatements.map((s: any) => s.zScore)),
+          Math.max(...sortedStatements.map((s: any) => s.zScore)),
+        ]
       : [-4, 4],
     range: [innerHeight, 0],
     nice: true,
@@ -95,7 +100,17 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
 
   const colorScale = scaleOrdinal({
     domain: ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4'],
-    range: ['#FF3B30', '#FF6B46', '#FF9500', '#FFCC02', '#8E8E93', '#34C759', '#32D74B', '#30B350', '#007AFF'],
+    range: [
+      '#FF3B30',
+      '#FF6B46',
+      '#FF9500',
+      '#FFCC02',
+      '#8E8E93',
+      '#34C759',
+      '#32D74B',
+      '#30B350',
+      '#007AFF',
+    ],
   });
 
   const renderGridView = () => (
@@ -116,7 +131,9 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
 
       {/* Q-sort positions */}
       {qSortRange.map((score: any) => {
-        const statementsAtScore = sortedStatements.filter((s: any) => s.score === score);
+        const statementsAtScore = sortedStatements.filter(
+          (s: any) => s.score === score
+        );
         const columnX = xScale(String(score)) || 0;
         const columnWidth = xScale.bandwidth();
 
@@ -148,14 +165,14 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
             {statementsAtScore.map((statement, index) => {
               const cellY = yScale(String(index)) || 0;
               const cellHeight = yScale.bandwidth();
-              
+
               return (
                 <motion.g
                   key={statement.statementId}
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{
-                    delay: (Math.abs(score) * 0.1) + (index * 0.05),
+                    delay: Math.abs(score) * 0.1 + index * 0.05,
                     duration: 0.4,
                     ease: 'backOut',
                   }}
@@ -243,8 +260,11 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
         const barX = distributionXScale(String(index)) || 0;
         const barWidth = distributionXScale.bandwidth();
         const value = showZScores ? statement.zScore : statement.score;
-        const barY = value >= 0 ? distributionYScale(value) : distributionYScale(0);
-        const barHeight = Math.abs(distributionYScale(value) - distributionYScale(0));
+        const barY =
+          value >= 0 ? distributionYScale(value) : distributionYScale(0);
+        const barHeight = Math.abs(
+          distributionYScale(value) - distributionYScale(0)
+        );
 
         return (
           <motion.g
@@ -256,7 +276,9 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
               duration: 0.5,
               ease: 'easeOut',
             }}
-            style={{ transformOrigin: `${barX + barWidth/2}px ${distributionYScale(0)}px` }}
+            style={{
+              transformOrigin: `${barX + barWidth / 2}px ${distributionYScale(0)}px`,
+            }}
           >
             <rect
               x={barX}
@@ -295,7 +317,7 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
       {/* Axes for distribution view */}
       <AxisLeft
         scale={distributionYScale}
-        label={showZScores ? "Z-Score" : "Q-Sort Value"}
+        label={showZScores ? 'Z-Score' : 'Q-Sort Value'}
         labelProps={{
           fontSize: 12,
           fontFamily: '-apple-system',
@@ -311,7 +333,7 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
           fontFamily: '-apple-system',
           textAnchor: 'middle',
         }}
-        tickFormat={(_d, i) => i % 5 === 0 ? String(i + 1) : ''}
+        tickFormat={(_d, i) => (i % 5 === 0 ? String(i + 1) : '')}
       />
     </Group>
   );
@@ -340,7 +362,11 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
                 y={0}
                 width={70}
                 height={30}
-                fill={selectedFactor === factor.factor ? '#007AFF' : 'rgba(255, 255, 255, 0.8)'}
+                fill={
+                  selectedFactor === factor.factor
+                    ? '#007AFF'
+                    : 'rgba(255, 255, 255, 0.8)'
+                }
                 stroke="#007AFF"
                 strokeWidth={1}
                 rx={8}
@@ -369,12 +395,16 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
               y={0}
               width={120}
               height={30}
-              fill={viewMode === 'grid' ? '#34C759' : 'rgba(255, 255, 255, 0.8)'}
+              fill={
+                viewMode === 'grid' ? '#34C759' : 'rgba(255, 255, 255, 0.8)'
+              }
               stroke="#34C759"
               strokeWidth={1}
               rx={8}
               style={{ cursor: 'pointer' }}
-              onClick={() => setViewMode(viewMode === 'grid' ? 'distribution' : 'grid')}
+              onClick={() =>
+                setViewMode(viewMode === 'grid' ? 'distribution' : 'grid')
+              }
             />
             <text
               x={60}
@@ -470,44 +500,75 @@ export const FactorArraysVisualization: React.FC<FactorArraysVisualizationProps>
             fontFamily="-apple-system"
             fill="#666"
           >
-            Range: {Math.min(...sortedStatements.map((s: any) => s.score))} to {Math.max(...sortedStatements.map((s: any) => s.score))}
+            Range: {Math.min(...sortedStatements.map((s: any) => s.score))} to{' '}
+            {Math.max(...sortedStatements.map((s: any) => s.score))}
           </text>
         </Group>
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
-        <TooltipWithBounds
-          left={tooltipLeft}
-          top={tooltipTop}
-          style={{
-            ...defaultStyles,
-            backgroundColor: 'rgba(255, 255, 255, 0.98)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            borderRadius: '12px',
-            padding: '12px 16px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
-            maxWidth: '300px',
-          }}
-        >
-          <div style={{ fontFamily: '-apple-system', fontSize: '12px', lineHeight: 1.4 }}>
-            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>
-              Statement {tooltipData.statementId}
+      {tooltipOpen &&
+        tooltipData &&
+        tooltipLeft !== undefined &&
+        tooltipTop !== undefined && (
+          <TooltipWithBounds
+            left={tooltipLeft}
+            top={tooltipTop}
+            style={{
+              ...defaultStyles,
+              backgroundColor: 'rgba(255, 255, 255, 0.98)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+              maxWidth: '300px',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: '-apple-system',
+                fontSize: '12px',
+                lineHeight: 1.4,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  marginBottom: '6px',
+                }}
+              >
+                Statement {tooltipData.statementId}
+              </div>
+              <div style={{ marginBottom: '8px', color: '#333' }}>
+                {tooltipData.statement}
+              </div>
+              <div style={{ fontSize: '11px', color: '#666' }}>
+                <div>
+                  Score:{' '}
+                  <span
+                    style={{
+                      fontWeight: '600',
+                      color: colorScale(String(tooltipData.score)),
+                    }}
+                  >
+                    {tooltipData.score > 0
+                      ? `+${tooltipData.score}`
+                      : String(tooltipData.score)}
+                  </span>
+                </div>
+                <div>
+                  Z-Score:{' '}
+                  <span style={{ fontWeight: '600' }}>
+                    {tooltipData.zScore.toFixed(3)}
+                  </span>
+                </div>
+                <div>Rank: #{tooltipData.rank}</div>
+              </div>
             </div>
-            <div style={{ marginBottom: '8px', color: '#333' }}>
-              {tooltipData.statement}
-            </div>
-            <div style={{ fontSize: '11px', color: '#666' }}>
-              <div>Score: <span style={{ fontWeight: '600', color: colorScale(String(tooltipData.score)) }}>
-                {tooltipData.score > 0 ? `+${tooltipData.score}` : String(tooltipData.score)}
-              </span></div>
-              <div>Z-Score: <span style={{ fontWeight: '600' }}>{tooltipData.zScore.toFixed(3)}</span></div>
-              <div>Rank: #{tooltipData.rank}</div>
-            </div>
-          </div>
-        </TooltipWithBounds>
-      )}
+          </TooltipWithBounds>
+        )}
     </>
   );
 };

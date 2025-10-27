@@ -70,7 +70,9 @@ describe('PredictiveGapService', () => {
       expect(result.success).toBe(true);
       expect(result.opportunities).toHaveLength(1);
       expect(result.opportunities[0]).toHaveProperty('opportunityScore');
-      expect(result.opportunities[0].opportunityScore).toBeGreaterThanOrEqual(0);
+      expect(result.opportunities[0].opportunityScore).toBeGreaterThanOrEqual(
+        0,
+      );
       expect(result.opportunities[0].opportunityScore).toBeLessThanOrEqual(1);
     });
 
@@ -121,7 +123,9 @@ describe('PredictiveGapService', () => {
       mockPrisma.researchGap.findMany.mockResolvedValue(mockGaps);
       mockPrisma.paper.findMany.mockResolvedValue([]);
 
-      const result = await service.scoreResearchOpportunities(mockGaps.map(g => g.id));
+      const result = await service.scoreResearchOpportunities(
+        mockGaps.map((g) => g.id),
+      );
 
       result.opportunities.forEach((opp: any) => {
         expect(opp.opportunityScore).toBeGreaterThanOrEqual(0);
@@ -143,17 +147,27 @@ describe('PredictiveGapService', () => {
 
       mockPrisma.researchGap.findMany.mockResolvedValue(mockGaps);
       mockOpenAI.chat.completions.create.mockResolvedValue({
-        choices: [{
-          message: {
-            content: JSON.stringify({
-              matchedGrants: [
-                { type: 'NIH', match: 0.85, rationale: 'Strong fit for healthcare research' },
-                { type: 'NSF', match: 0.60, rationale: 'Moderate fit for ML research' },
-              ],
-              probability: 0.72,
-            }),
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                matchedGrants: [
+                  {
+                    type: 'NIH',
+                    match: 0.85,
+                    rationale: 'Strong fit for healthcare research',
+                  },
+                  {
+                    type: 'NSF',
+                    match: 0.6,
+                    rationale: 'Moderate fit for ML research',
+                  },
+                ],
+                probability: 0.72,
+              }),
+            },
           },
-        }],
+        ],
       });
 
       const result = await service.predictFundingProbability(['gap1']);
@@ -161,7 +175,7 @@ describe('PredictiveGapService', () => {
       expect(result.success).toBe(true);
       expect(result.fundingOpportunities).toBeDefined();
       expect(result.fundingOpportunities[0].matchedGrants).toContain(
-        expect.objectContaining({ type: 'NIH' })
+        expect.objectContaining({ type: 'NIH' }),
       );
     });
 
@@ -176,14 +190,16 @@ describe('PredictiveGapService', () => {
 
       mockPrisma.researchGap.findMany.mockResolvedValue([mockGap]);
       mockOpenAI.chat.completions.create.mockResolvedValue({
-        choices: [{
-          message: {
-            content: JSON.stringify({
-              matchedGrants: [{ type: 'NSF', match: 0.9 }],
-              probability: 0.85,
-            }),
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                matchedGrants: [{ type: 'NSF', match: 0.9 }],
+                probability: 0.85,
+              }),
+            },
           },
-        }],
+        ],
       });
 
       const result = await service.predictFundingProbability(['gap1']);
@@ -201,15 +217,17 @@ describe('PredictiveGapService', () => {
 
       mockPrisma.researchGap.findMany.mockResolvedValue([mockGap]);
       mockOpenAI.chat.completions.create.mockResolvedValue({
-        choices: [{
-          message: {
-            content: JSON.stringify({
-              matchedGrants: [],
-              probability: 0.3,
-              reasoning: 'Limited funding history in this area',
-            }),
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                matchedGrants: [],
+                probability: 0.3,
+                reasoning: 'Limited funding history in this area',
+              }),
+            },
           },
-        }],
+        ],
       });
 
       const result = await service.predictFundingProbability(['gap1']);
@@ -231,7 +249,8 @@ describe('PredictiveGapService', () => {
         {
           id: 'gap2',
           title: 'Complex Interdisciplinary Research',
-          description: 'Complex multi-phase research requiring multiple disciplines',
+          description:
+            'Complex multi-phase research requiring multiple disciplines',
           keywords: ['complex', 'interdisciplinary'],
         },
       ];
@@ -244,17 +263,24 @@ describe('PredictiveGapService', () => {
       expect(result.timelines).toHaveLength(2);
 
       // Complex research should have longer duration
-      const simpleTimeline = result.timelines.find((t: any) => t.gapId === 'gap1');
-      const complexTimeline = result.timelines.find((t: any) => t.gapId === 'gap2');
+      const simpleTimeline = result.timelines.find(
+        (t: any) => t.gapId === 'gap1',
+      );
+      const complexTimeline = result.timelines.find(
+        (t: any) => t.gapId === 'gap2',
+      );
 
-      expect(complexTimeline.estimatedDuration).toBeGreaterThan(simpleTimeline.estimatedDuration);
+      expect(complexTimeline.estimatedDuration).toBeGreaterThan(
+        simpleTimeline.estimatedDuration,
+      );
     });
 
     it('should adjust for complexity', async () => {
       const highComplexityGap = {
         id: 'gap1',
         title: 'Multi-Phase Longitudinal Study',
-        description: 'Complex longitudinal study requiring multiple phases and large sample sizes',
+        description:
+          'Complex longitudinal study requiring multiple phases and large sample sizes',
         keywords: ['longitudinal', 'complex', 'multi-phase'],
       };
 
@@ -301,7 +327,7 @@ describe('PredictiveGapService', () => {
           id: `paper${i}`,
           citationCount: i * 2,
           createdAt: new Date(2020 + Math.floor(i / 10), 0, 1),
-        }))
+        })),
       );
 
       const result = await service.predictImpact(['gap1']);
@@ -369,7 +395,7 @@ describe('PredictiveGapService', () => {
           title: 'AI Ethics Paper',
           createdAt: new Date(2015 + i, 0, 1),
           citationCount: Math.pow(2, i), // Exponential growth
-        }))
+        })),
       );
 
       const result = await service.forecastTrends(topics);
@@ -388,7 +414,7 @@ describe('PredictiveGapService', () => {
           title: 'Stable Topic Paper',
           createdAt: new Date(2015 + i, 0, 1),
           citationCount: 100 + Math.random() * 10, // Stable with noise
-        }))
+        })),
       );
 
       const result = await service.forecastTrends(topics);
@@ -405,7 +431,7 @@ describe('PredictiveGapService', () => {
           title: 'Linear Topic Paper',
           createdAt: new Date(2015 + i, 0, 1),
           citationCount: i * 10, // Linear growth
-        }))
+        })),
       );
 
       const result = await service.forecastTrends(topics);
@@ -422,7 +448,7 @@ describe('PredictiveGapService', () => {
           title: 'Declining Topic Paper',
           createdAt: new Date(2015 + i, 0, 1),
           citationCount: 100 - i * 10, // Declining
-        }))
+        })),
       );
 
       const result = await service.forecastTrends(topics);
@@ -461,7 +487,9 @@ describe('PredictiveGapService', () => {
       const result = await service.scoreResearchOpportunities(['gap1']);
 
       expect(result.opportunities[0]).toHaveProperty('suggestedCollaborators');
-      expect(result.opportunities[0].suggestedCollaborators).toBeInstanceOf(Array);
+      expect(result.opportunities[0].suggestedCollaborators).toBeInstanceOf(
+        Array,
+      );
     });
 
     it('should suggest interdisciplinary teams', async () => {
@@ -552,16 +580,20 @@ describe('PredictiveGapService', () => {
       mockPrisma.paper.findMany.mockResolvedValue([]);
 
       const startTime = Date.now();
-      await service.scoreResearchOpportunities(manyGaps.map(g => g.id));
+      await service.scoreResearchOpportunities(manyGaps.map((g) => g.id));
       const endTime = Date.now();
 
       expect(endTime - startTime).toBeLessThan(5000); // Should complete in <5s
     });
 
     it('should handle API failures gracefully', async () => {
-      mockPrisma.researchGap.findMany.mockRejectedValue(new Error('Database error'));
+      mockPrisma.researchGap.findMany.mockRejectedValue(
+        new Error('Database error'),
+      );
 
-      await expect(service.scoreResearchOpportunities(['gap1'])).rejects.toThrow();
+      await expect(
+        service.scoreResearchOpportunities(['gap1']),
+      ).rejects.toThrow();
     });
   });
 });

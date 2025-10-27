@@ -24,6 +24,13 @@ model User {
   createdAt             DateTime                  @default(now())
   updatedAt             DateTime                  @updatedAt
   tenantId              String?                   @default("default")
+
+  // ORCID OAuth fields (Day 27)
+  orcidId               String?                   @unique
+  orcidAccessToken      String?
+  orcidRefreshToken     String?
+  institution           String?
+  lastLogin             DateTime?
   auditLogs             AuditLog[]
   invitedCollaborations Collaboration[]           @relation("CollaborationInviter")
   collaborations        Collaboration[]
@@ -48,6 +55,17 @@ model User {
   paperCollections      PaperCollection[]
   researchGaps          ResearchGap[]
   searchLogs            SearchLog[]
+
+  // Report models (Phase 10)
+  reports               Report[]              @relation("UserReports")
+
+  // Phase 10 Day 4: Collaboration models
+  reportCollaborations  ReportCollaborator[]  @relation("ReportCollaborators")
+  reportVersions        ReportVersion[]       @relation("ReportVersions")
+  reportComments        ReportComment[]       @relation("ReportComments")
+  reportChanges         ReportChange[]        @relation("ReportChanges")
+  approvalRequests      ReportApproval[]      @relation("ApprovalRequesters")
+  approvalReviews       ReportApproval[]      @relation("ApprovalReviewers")
 
   @@index([email])
   @@index([tenantId])
@@ -128,6 +146,11 @@ model Survey {
   extractedThemeIds       Json?              @default("[]") // Array of theme IDs stored as JSON
   studyContext            Json?              // Stores context like academic level, target statements, etc.
   literatureReviewId      String?
+
+  // Phase 9.5: Research Design Fields
+  researchQuestionId      String?            // Links to refined research question from Phase 9.5
+  hypothesisIds           Json?              @default("[]") // Array of hypothesis IDs from Phase 9.5
+  theoryDiagram           Json?              // Conceptual framework diagram
 
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
@@ -890,6 +913,9 @@ model ResearchPipeline {
   extractedThemes        Json?               // Themes extracted from papers
   researchGaps           Json?               // Identified research gaps
 
+  // Design Phase (Phase 9.5)
+  designOutput           Json?               // { refinedQuestion, subQuestions, hypotheses, theoryDiagram, methodologyRec }
+
   // Study Design Phase
   generatedStatements    Json?               // Statements generated from themes
   statementProvenance    Json?               // Provenance for each statement
@@ -1304,4 +1330,221 @@ model ThemeProvenance {
   updatedAt           DateTime @updatedAt
 
   @@map("theme_provenance")
+}
+
+// ============================================
+// PHASE 9.5: Research Design Intelligence
+// ============================================
+
+/// Phase context tracks outputs from each research lifecycle phase
+/// Enables complete provenance: Literature → Design → Build → Analysis
+model PhaseContext {
+  id              String   @id @default(uuid())
+  surveyId        String   @unique
+
+  // DISCOVER Phase (Phase 9) - Literature Review Outputs
+  discoverOutput  Json?    // { papers: [], themes: [], gaps: [], contradictions: [], trends: [] }
+
+  // DESIGN Phase (Phase 9.5) - Research Design Outputs
+  designOutput    Json?    // { refinedQuestion: {}, subQuestions: [], hypotheses: [], theoryDiagram: {}, methodologyRec: {} }
+
+  // BUILD Phase (Phase 10) - Study Instrument Outputs
+  buildOutput     Json?    // { statements: [], gridConfig: {}, questionnaires: [] }
+
+  // COLLECT Phase - Data Collection Metadata
+  collectOutput   Json?    // { participantCount: 0, responseRate: 0, qualityMetrics: {} }
+
+  // ANALYZE Phase - Analysis Results
+  analyzeOutput   Json?    // { factors: [], loadings: [], distinguishing: [] }
+
+  // INTERPRET Phase - Interpretation Outputs
+  interpretOutput Json?    // { narratives: [], themes: [], insights: [] }
+
+  // REPORT Phase - Report Metadata
+  reportOutput    Json?    // { reportIds: [], citations: [], exportFormats: [] }
+
+  // ARCHIVE Phase - Archival Metadata
+  archiveOutput   Json?    // { doi: "", repositoryUrl: "", version: "" }
+
+  // Tracking
+  currentPhase    String   @default("discover")
+  completedPhases Json     @default("[]") // string[] of completed phase names
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([surveyId])
+  @@index([currentPhase])
+  @@map("phase_contexts")
+}
+
+// ============================================
+// PHASE 10 DAY 1 STEP 6: Report Generation
+// ============================================
+
+/// Comprehensive report generation with full pipeline integration
+/// Integrates Phase 9 (literature), Phase 9.5 (research design), and Phase 10 (analysis)
+model Report {
+  id              String   @id @default(uuid())
+
+  // Relations
+  studyId         String
+  userId          String
+  user            User     @relation("UserReports", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Report Content
+  metadata        Json     // { title, authors[], institution?, date, version, studyId }
+  sections        Json     // Array of { id, title, content, order, subsections? }
+  provenance      Json     // Array of provenance chains (paper → gap → question → hypothesis → theme → statement → factor)
+
+  // Format & Template
+  format          String   // 'html' | 'pdf' | 'word' | 'latex' | 'markdown'
+  templateType    String?  // 'apa' | 'mla' | 'chicago' | 'thesis' | 'custom'
+
+  // Rendered Content (optional, for caching)
+  content         String?  // Full rendered content in specified format
+
+  // Collaboration Status (Phase 10 Day 4)
+  status          String   @default("draft") // 'draft' | 'in_review' | 'approved' | 'published'
+  isLocked        Boolean  @default(false)   // Lock for editing during approval
+  currentVersion  Int      @default(1)
+
+  // Timestamps
+  generatedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Phase 10 Day 4: Collaboration Relations
+  collaborators   ReportCollaborator[]
+  versions        ReportVersion[]
+  comments        ReportComment[]
+  changes         ReportChange[]
+  approvals       ReportApproval[]
+
+  @@index([studyId])
+  @@index([userId])
+  @@index([format])
+  @@index([createdAt])
+  @@index([status])
+  @@map("reports")
+}
+
+/// Phase 10 Day 4: Co-author management for reports
+model ReportCollaborator {
+  id          String   @id @default(uuid())
+  reportId    String
+  userId      String
+  role        String   // 'owner' | 'editor' | 'reviewer' | 'viewer'
+  permissions Json     // { canEdit, canComment, canApprove, canDelete, canInvite }
+  invitedBy   String?
+  invitedAt   DateTime @default(now())
+  acceptedAt  DateTime?
+  status      String   @default("pending") // 'pending' | 'accepted' | 'declined'
+
+  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user        User     @relation("ReportCollaborators", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reportId, userId])
+  @@index([reportId])
+  @@index([userId])
+  @@index([status])
+  @@map("report_collaborators")
+}
+
+/// Phase 10 Day 4: Version control for reports
+model ReportVersion {
+  id              String   @id @default(uuid())
+  reportId        String
+  versionNumber   Int
+  createdBy       String
+  changeMessage   String?
+  snapshot        Json     // Complete report state at this version
+  diff            Json?    // Changes from previous version
+  isPublished     Boolean  @default(false)
+  publishedAt     DateTime?
+  createdAt       DateTime @default(now())
+
+  report          Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user            User     @relation("ReportVersions", fields: [createdBy], references: [id])
+
+  @@unique([reportId, versionNumber])
+  @@index([reportId])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@map("report_versions")
+}
+
+/// Phase 10 Day 4: Comments for collaborative editing
+model ReportComment {
+  id          String   @id @default(uuid())
+  reportId    String
+  userId      String
+  sectionId   String?  // Which section this comment is on
+  content     String
+  resolved    Boolean  @default(false)
+  resolvedBy  String?
+  resolvedAt  DateTime?
+  parentId    String?  // For threaded comments
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user        User     @relation("ReportComments", fields: [userId], references: [id])
+  parent      ReportComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies     ReportComment[] @relation("CommentReplies")
+
+  @@index([reportId])
+  @@index([userId])
+  @@index([sectionId])
+  @@index([resolved])
+  @@index([createdAt])
+  @@map("report_comments")
+}
+
+/// Phase 10 Day 4: Track changes for reports
+model ReportChange {
+  id          String   @id @default(uuid())
+  reportId    String
+  userId      String
+  sectionId   String?
+  changeType  String   // 'insert' | 'delete' | 'modify' | 'format'
+  before      String?  // Text before change
+  after       String?  // Text after change
+  position    Json?    // { start, end, line, column }
+  accepted    Boolean  @default(false)
+  rejected    Boolean  @default(false)
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user        User     @relation("ReportChanges", fields: [userId], references: [id])
+
+  @@index([reportId])
+  @@index([userId])
+  @@index([accepted])
+  @@index([createdAt])
+  @@map("report_changes")
+}
+
+/// Phase 10 Day 4: Approval workflow for reports
+model ReportApproval {
+  id          String   @id @default(uuid())
+  reportId    String
+  requestedBy String
+  reviewerId  String
+  status      String   @default("pending") // 'pending' | 'approved' | 'rejected' | 'changes_requested'
+  comments    String?
+  requestedAt DateTime @default(now())
+  reviewedAt  DateTime?
+
+  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  requester   User     @relation("ApprovalRequesters", fields: [requestedBy], references: [id])
+  reviewer    User     @relation("ApprovalReviewers", fields: [reviewerId], references: [id])
+
+  @@index([reportId])
+  @@index([reviewerId])
+  @@index([status])
+  @@index([requestedAt])
+  @@map("report_approvals")
 }

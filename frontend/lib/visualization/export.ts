@@ -86,11 +86,14 @@ export class ChartExporter {
 
       // Process each element
       for (let i = 0; i < elements.length; i++) {
+        const element = elements[i];
+        if (!element) continue;
+
         if (i > 0 && !includeTitle) {
           pdf.addPage();
         }
 
-        const canvas = await html2canvas(elements[i], {
+        const canvas = await html2canvas(element, {
           backgroundColor: '#ffffff',
           scale: 2,
           logging: false,

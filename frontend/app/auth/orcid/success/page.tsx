@@ -7,14 +7,16 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 
-export default function OrcidSuccessPage() {
+function OrcidSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>(
+    'loading'
+  );
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -24,6 +26,7 @@ export default function OrcidSuccessPage() {
         const token = searchParams.get('token');
         const refresh = searchParams.get('refresh');
         const userStr = searchParams.get('user');
+        const returnUrl = searchParams.get('returnUrl');
 
         if (!token || !refresh) {
           throw new Error('Missing authentication tokens');
@@ -44,11 +47,11 @@ export default function OrcidSuccessPage() {
         // Set success status
         setStatus('success');
 
-        // Redirect to dashboard after 1 second
+        // Redirect to returnUrl or default to literature page after 1 second
         setTimeout(() => {
-          router.push('/dashboard');
+          const destination = returnUrl || '/discover/literature';
+          router.push(destination);
         }, 1000);
-
       } catch (error: any) {
         console.error('ORCID callback error:', error);
         setStatus('error');
@@ -85,9 +88,7 @@ export default function OrcidSuccessPage() {
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               Authentication Successful!
             </h1>
-            <p className="text-gray-600">
-              Redirecting you to the dashboard...
-            </p>
+            <p className="text-gray-600">Redirecting you back...</p>
           </>
         )}
 
@@ -97,9 +98,7 @@ export default function OrcidSuccessPage() {
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               Authentication Failed
             </h1>
-            <p className="text-gray-600 mb-4">
-              {errorMessage}
-            </p>
+            <p className="text-gray-600 mb-4">{errorMessage}</p>
             <p className="text-sm text-gray-500">
               Redirecting you back to login...
             </p>
@@ -107,5 +106,21 @@ export default function OrcidSuccessPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function OrcidSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+          <Loader2 className="w-16 h-16 animate-spin mx-auto text-green-600 mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Loading...</h1>
+          <p className="text-gray-600">Please wait...</p>
+        </div>
+      </div>
+    }>
+      <OrcidSuccessContent />
+    </Suspense>
   );
 }

@@ -30,8 +30,8 @@ export function generateSampleFactorLoadings(
 
     // Determine defining factor (highest absolute loading)
     const loadings = [
-      { factor: factors[0], value: x },
-      { factor: factors[1], value: y },
+      { factor: factors[0] || 'Factor 1', value: x },
+      { factor: factors[1] || 'Factor 2', value: y },
       ...(factors[2] ? [{ factor: factors[2], value: z }] : []),
     ];
 
@@ -39,15 +39,23 @@ export function generateSampleFactorLoadings(
       Math.abs(curr.value) > Math.abs(prev.value) ? curr : prev
     ).factor;
 
-    participants.push({
+    const participantData: ParticipantLoading = {
       participant: participantId,
       x,
       y,
-      z: factors[2] ? z : undefined,
       loadingStrength,
-      definingFactor: loadingStrength > 0.4 ? definingFactor : undefined,
       allLoadings: loadings,
-    });
+    };
+
+    if (factors[2]) {
+      participantData.z = z;
+    }
+
+    if (loadingStrength > 0.4) {
+      participantData.definingFactor = definingFactor;
+    }
+
+    participants.push(participantData);
   }
 
   return participants;
@@ -63,13 +71,14 @@ export function generateSampleQSortDistribution(): DistributionData[] {
   const expectedCounts = [2, 3, 5, 8, 10, 8, 5, 3, 2]; // Bell curve
 
   return values.map((value, index) => {
-    const count = expectedCounts[index] + Math.floor(Math.random() * 3) - 1;
+    const expectedCount = expectedCounts[index] || 5;
+    const count = expectedCount + Math.floor(Math.random() * 3) - 1;
     return {
       value,
       frequency: count,
       category: `Value ${value}`,
       count,
-      expectedCount: expectedCounts[index],
+      expectedCount,
     };
   });
 }
@@ -116,7 +125,7 @@ export function generateSampleDistinguishingStatements(
     // Create factor scores map
     const factorScores = factors.reduce(
       (acc, factor, idx) => {
-        acc[factor] = scores[idx].zScore;
+        acc[factor] = scores[idx]?.zScore || 0;
         return acc;
       },
       {} as { [factor: string]: number }

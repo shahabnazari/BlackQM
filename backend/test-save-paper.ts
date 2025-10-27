@@ -15,7 +15,10 @@ async function testSavePaper() {
       where: { id: userId },
     });
 
-    console.log('User found:', user ? `${user.name} (${user.email})` : 'NOT FOUND');
+    console.log(
+      'User found:',
+      user ? `${user.name} (${user.email})` : 'NOT FOUND',
+    );
 
     if (!user) {
       console.error('User does not exist!');
@@ -47,7 +50,6 @@ async function testSavePaper() {
     papers.forEach((p, i) => {
       console.log(`${i + 1}. ${p.title} (ID: ${p.id})`);
     });
-
   } catch (error: any) {
     console.error('\\n❌ ERROR:', error.message);
     console.error('Stack:', error.stack);

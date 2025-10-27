@@ -27,13 +27,12 @@ interface DistinguishingStatementsProps {
   height?: number;
 }
 
-export const DistinguishingStatements: React.FC<DistinguishingStatementsProps> = ({
-  data,
-  factors,
-  width = 900,
-  height = 600
-}) => {
-  const [selectedStatement, setSelectedStatement] = useState<string | null>(null);
+export const DistinguishingStatements: React.FC<
+  DistinguishingStatementsProps
+> = ({ data, factors, width = 900, height = 600 }) => {
+  const [selectedStatement, setSelectedStatement] = useState<string | null>(
+    null
+  );
   const {
     tooltipData,
     tooltipLeft,
@@ -41,7 +40,11 @@ export const DistinguishingStatements: React.FC<DistinguishingStatementsProps> =
     tooltipOpen,
     showTooltip,
     hideTooltip,
-  } = useTooltip<{ statement: DistinguishingStatement; factor: string; score: StatementScore }>();
+  } = useTooltip<{
+    statement: DistinguishingStatement;
+    factor: string;
+    score: StatementScore;
+  }>();
 
   // Chart dimensions
   const margin = { top: 60, right: 200, bottom: 40, left: 60 };
@@ -149,7 +152,9 @@ export const DistinguishingStatements: React.FC<DistinguishingStatementsProps> =
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
                 style={{ cursor: 'pointer' }}
-                onClick={() => setSelectedStatement(isSelected ? null : statement.id)}
+                onClick={() =>
+                  setSelectedStatement(isSelected ? null : statement.id)
+                }
               />
 
               {/* Factor scores */}
@@ -160,9 +165,9 @@ export const DistinguishingStatements: React.FC<DistinguishingStatementsProps> =
                   <motion.g
                     key={`${statement.id}-${score.factor}`}
                     initial={{ scale: 0, opacity: 0 }}
-                    animate={{ 
+                    animate={{
                       scale: isSelected || !selectedStatement ? 1 : 0.7,
-                      opacity: isSelected || !selectedStatement ? 1 : 0.5
+                      opacity: isSelected || !selectedStatement ? 1 : 0.5,
                     }}
                     transition={{
                       delay: i * 0.05 + j * 0.02,
@@ -179,9 +184,14 @@ export const DistinguishingStatements: React.FC<DistinguishingStatementsProps> =
                       style={{ cursor: 'pointer' }}
                       onMouseEnter={() => {
                         showTooltip({
-                          tooltipData: { statement, factor: score.factor, score },
+                          tooltipData: {
+                            statement,
+                            factor: score.factor,
+                            score,
+                          },
                           tooltipLeft: xPos + margin.left,
-                          tooltipTop: yPos + yScale.bandwidth() / 2 + margin.top,
+                          tooltipTop:
+                            yPos + yScale.bandwidth() / 2 + margin.top,
                         });
                       }}
                       onMouseLeave={hideTooltip}
@@ -233,11 +243,12 @@ export const DistinguishingStatements: React.FC<DistinguishingStatementsProps> =
         })}
 
         {/* Statement labels */}
-        {distinguishingStatements.map((statement) => {
+        {distinguishingStatements.map(statement => {
           const yPos = yScale(statement.id)!;
-          const displayText = statement.text.length > 40 
-            ? statement.text.substring(0, 40) + '...' 
-            : statement.text;
+          const displayText =
+            statement.text.length > 40
+              ? statement.text.substring(0, 40) + '...'
+              : statement.text;
 
           return (
             <text
@@ -248,9 +259,11 @@ export const DistinguishingStatements: React.FC<DistinguishingStatementsProps> =
               fontFamily="-apple-system"
               fill="#333"
               style={{ cursor: 'pointer' }}
-              onClick={() => setSelectedStatement(
-                selectedStatement === statement.id ? null : statement.id
-              )}
+              onClick={() =>
+                setSelectedStatement(
+                  selectedStatement === statement.id ? null : statement.id
+                )
+              }
             >
               {statement.id}. {displayText}
             </text>
@@ -261,12 +274,7 @@ export const DistinguishingStatements: React.FC<DistinguishingStatementsProps> =
         <Group top={-40} left={innerWidth / 2 - (factors.length * 40) / 2}>
           {factors.map((factor, i) => (
             <Group key={factor} left={i * 80}>
-              <circle
-                cx={0}
-                cy={0}
-                r={5}
-                fill={colorScale(factor)}
-              />
+              <circle cx={0} cy={0} r={5} fill={colorScale(factor)} />
               <text
                 x={10}
                 y={3}
@@ -282,45 +290,56 @@ export const DistinguishingStatements: React.FC<DistinguishingStatementsProps> =
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
-        <TooltipWithBounds
-          left={tooltipLeft}
-          top={tooltipTop}
-          style={{
-            ...defaultStyles,
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            borderRadius: '8px',
-            padding: '10px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            maxWidth: '300px',
-          }}
-        >
-          <div style={{ fontFamily: '-apple-system', fontSize: '12px' }}>
-            <strong>{tooltipData.factor}</strong>
-            <div style={{ marginTop: '6px', fontSize: '11px', color: '#666' }}>
-              {tooltipData.statement.text}
+      {tooltipOpen &&
+        tooltipData &&
+        tooltipLeft !== undefined &&
+        tooltipTop !== undefined && (
+          <TooltipWithBounds
+            left={tooltipLeft}
+            top={tooltipTop}
+            style={{
+              ...defaultStyles,
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '8px',
+              padding: '10px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              maxWidth: '300px',
+            }}
+          >
+            <div style={{ fontFamily: '-apple-system', fontSize: '12px' }}>
+              <strong>{tooltipData.factor}</strong>
+              <div
+                style={{ marginTop: '6px', fontSize: '11px', color: '#666' }}
+              >
+                {tooltipData.statement.text}
+              </div>
+              <div style={{ marginTop: '6px' }}>
+                Z-score:{' '}
+                <span
+                  style={{
+                    color: colorScale(tooltipData.factor),
+                    fontWeight: '600',
+                  }}
+                >
+                  {tooltipData.score.zScore.toFixed(2)}
+                </span>
+              </div>
+              <div>
+                Rank:{' '}
+                <span style={{ fontWeight: '600' }}>
+                  {tooltipData.score.rank}
+                </span>
+              </div>
+              <div
+                style={{ marginTop: '4px', fontSize: '10px', color: '#999' }}
+              >
+                p-value: {tooltipData.statement.pValue.toFixed(4)}
+              </div>
             </div>
-            <div style={{ marginTop: '6px' }}>
-              Z-score: <span style={{ 
-                color: colorScale(tooltipData.factor),
-                fontWeight: '600' 
-              }}>
-                {tooltipData.score.zScore.toFixed(2)}
-              </span>
-            </div>
-            <div>
-              Rank: <span style={{ fontWeight: '600' }}>
-                {tooltipData.score.rank}
-              </span>
-            </div>
-            <div style={{ marginTop: '4px', fontSize: '10px', color: '#999' }}>
-              p-value: {tooltipData.statement.pValue.toFixed(4)}
-            </div>
-          </div>
-        </TooltipWithBounds>
-      )}
+          </TooltipWithBounds>
+        )}
     </>
   );
 };

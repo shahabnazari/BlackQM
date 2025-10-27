@@ -1,7 +1,7 @@
-import { studyService, Study, CreateStudyDto, Statement } from './services';
+import { CreateStudyDto, Statement, Study, studyService } from './services';
 
 // Re-export types from service for backward compatibility
-export type { Study, CreateStudyDto, Statement };
+export type { CreateStudyDto, Statement, Study };
 
 export interface StudyStatistics {
   totalResponses: number;
@@ -57,7 +57,7 @@ export const studyApi = {
     const statementsToAdd = statements.map((s, index) => ({
       text: s.text,
       order: s.order ?? index,
-      category: undefined,
+      category: '',
     }));
     return await studyService.addStatements(studyId, statementsToAdd);
   },

@@ -29,8 +29,21 @@ class APIService {
     return response;
   }
 
-  async get(endpoint: string) {
-    const response = await this.request(endpoint, { method: 'GET' });
+  async get(endpoint: string, options?: { params?: Record<string, any> }) {
+    let url = endpoint;
+    if (options?.params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(options.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+      const queryString = searchParams.toString();
+      if (queryString) {
+        url = `${endpoint}?${queryString}`;
+      }
+    }
+    const response = await this.request(url, { method: 'GET' });
     return { data: await response.json() };
   }
 

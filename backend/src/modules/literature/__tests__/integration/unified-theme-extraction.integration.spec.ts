@@ -39,7 +39,9 @@ describe('UnifiedThemeExtractionService Integration Tests', () => {
       ],
     }).compile();
 
-    service = module.get<UnifiedThemeExtractionService>(UnifiedThemeExtractionService);
+    service = module.get<UnifiedThemeExtractionService>(
+      UnifiedThemeExtractionService,
+    );
     prisma = module.get<PrismaService>(PrismaService);
   });
 
@@ -50,7 +52,8 @@ describe('UnifiedThemeExtractionService Integration Tests', () => {
           id: 'paper1',
           type: 'paper' as const,
           title: 'Climate Change Impacts on Biodiversity',
-          content: 'Climate change poses significant threats to global biodiversity...',
+          content:
+            'Climate change poses significant threats to global biodiversity...',
           keywords: ['climate change', 'biodiversity', 'conservation'],
           doi: '10.1000/example1',
           authors: ['Smith, J.', 'Doe, A.'],
@@ -60,7 +63,8 @@ describe('UnifiedThemeExtractionService Integration Tests', () => {
           id: 'paper2',
           type: 'paper' as const,
           title: 'Adaptation Strategies for Climate Resilience',
-          content: 'Effective adaptation strategies are crucial for climate resilience...',
+          content:
+            'Effective adaptation strategies are crucial for climate resilience...',
           keywords: ['adaptation', 'climate resilience', 'sustainability'],
           doi: '10.1000/example2',
           authors: ['Johnson, B.'],
@@ -93,7 +97,8 @@ describe('UnifiedThemeExtractionService Integration Tests', () => {
           id: 'paper1',
           type: 'paper' as const,
           title: 'Machine Learning in Healthcare',
-          content: 'Machine learning algorithms revolutionize medical diagnostics...',
+          content:
+            'Machine learning algorithms revolutionize medical diagnostics...',
           keywords: ['machine learning', 'healthcare', 'AI'],
           doi: '10.1000/ml-health',
         },
@@ -101,12 +106,19 @@ describe('UnifiedThemeExtractionService Integration Tests', () => {
           id: 'video1',
           type: 'youtube' as const,
           title: 'AI in Medicine: Future Perspectives',
-          content: 'Artificial intelligence is transforming healthcare delivery...',
+          content:
+            'Artificial intelligence is transforming healthcare delivery...',
           keywords: ['AI', 'healthcare', 'machine learning'],
           url: 'https://youtube.com/watch?v=example',
           timestampedSegments: [
-            { timestamp: 120, text: 'AI algorithms can predict patient outcomes' },
-            { timestamp: 300, text: 'Machine learning enables precision medicine' },
+            {
+              timestamp: 120,
+              text: 'AI algorithms can predict patient outcomes',
+            },
+            {
+              timestamp: 300,
+              text: 'Machine learning enables precision medicine',
+            },
           ],
         },
       ];
@@ -138,7 +150,8 @@ describe('UnifiedThemeExtractionService Integration Tests', () => {
           id: 'youtube1',
           type: 'youtube' as const,
           title: 'Climate Crisis: What You Need to Know',
-          content: 'The climate crisis demands urgent action from governments...',
+          content:
+            'The climate crisis demands urgent action from governments...',
           keywords: ['climate crisis', 'urgent action'],
         },
         {
@@ -186,7 +199,8 @@ describe('UnifiedThemeExtractionService Integration Tests', () => {
           id: 'paper2',
           type: 'paper' as const,
           title: 'Deep Learning Paper 2',
-          content: 'Convolutional neural networks excel at image recognition...',
+          content:
+            'Convolutional neural networks excel at image recognition...',
           keywords: ['deep learning', 'CNN', 'computer vision'],
         },
         {
@@ -298,8 +312,14 @@ describe('UnifiedThemeExtractionService Integration Tests', () => {
           keywords: ['quantum computing', 'qubits'],
           url: 'https://youtube.com/watch?v=quantum',
           timestampedSegments: [
-            { timestamp: 180, text: 'Quantum superposition enables parallel states' },
-            { timestamp: 420, text: 'Quantum entanglement creates correlations' },
+            {
+              timestamp: 180,
+              text: 'Quantum superposition enables parallel states',
+            },
+            {
+              timestamp: 420,
+              text: 'Quantum entanglement creates correlations',
+            },
           ],
         },
       ];

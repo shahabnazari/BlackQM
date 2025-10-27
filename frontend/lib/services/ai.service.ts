@@ -56,7 +56,9 @@ class SimpleCache {
     // Limit cache size
     if (this.cache.size >= AI_CONFIG.cache.maxSize) {
       const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
     }
 
     this.cache.set(key, {

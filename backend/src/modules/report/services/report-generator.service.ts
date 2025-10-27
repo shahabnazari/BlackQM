@@ -116,7 +116,9 @@ export class ReportGeneratorService {
    * Generate comprehensive report for a study
    * Integrates data from Phase 9 (literature), Phase 9.5 (research design), and current study
    */
-  async generateReport(request: GenerateReportRequest): Promise<GeneratedReport> {
+  async generateReport(
+    request: GenerateReportRequest,
+  ): Promise<GeneratedReport> {
     this.logger.log(`Generating report for study ${request.studyId}`);
 
     try {
@@ -150,7 +152,7 @@ export class ReportGeneratorService {
           'results',
           'discussion',
           'references',
-          'appendix_provenance'
+          'appendix_provenance',
         ],
       });
 
@@ -178,7 +180,11 @@ export class ReportGeneratorService {
       // 8. Render content if requested
       let content: string | undefined;
       if (request.format) {
-        content = await this.renderReport(report, request.format, request.templateType);
+        content = await this.renderReport(
+          report,
+          request.format,
+          request.templateType,
+        );
       }
 
       return {
@@ -254,7 +260,9 @@ export class ReportGeneratorService {
   /**
    * Build complete provenance chain: paper → gap → question → hypothesis → theme → statement → factor
    */
-  private async buildProvenanceChain(studyId: string): Promise<ProvenanceChain[]> {
+  private async buildProvenanceChain(
+    studyId: string,
+  ): Promise<ProvenanceChain[]> {
     // Fetch all knowledge graph nodes and edges for this study
     const nodes = await this.prisma.knowledgeNode.findMany({
       where: { sourceStudyId: studyId },
@@ -277,7 +285,7 @@ export class ReportGeneratorService {
     const chains: ProvenanceChain[] = [];
 
     // Group by statement (end point of most chains)
-    const statements = nodes.filter(n => n.type === 'STATEMENT');
+    const statements = nodes.filter((n) => n.type === 'STATEMENT');
 
     for (const statement of statements) {
       const chain = await this.traceProvenanceChain(statement.id, nodes, edges);
@@ -295,7 +303,7 @@ export class ReportGeneratorService {
   private async traceProvenanceChain(
     statementId: string,
     nodes: any[],
-    edges: any[]
+    edges: any[],
   ): Promise<ProvenanceChain | null> {
     const chain: ProvenanceChain = {};
 
@@ -305,7 +313,7 @@ export class ReportGeneratorService {
     while (currentNodeId && !visited.has(currentNodeId)) {
       visited.add(currentNodeId);
 
-      const node = nodes.find(n => n.id === currentNodeId);
+      const node = nodes.find((n) => n.id === currentNodeId);
       if (!node) break;
 
       // Add to chain based on type
@@ -341,7 +349,7 @@ export class ReportGeneratorService {
       }
 
       // Find incoming edge
-      const incomingEdge = edges.find(e => e.toNodeId === currentNodeId);
+      const incomingEdge = edges.find((e) => e.toNodeId === currentNodeId);
       if (incomingEdge) {
         currentNodeId = incomingEdge.fromNodeId;
       } else {
@@ -410,9 +418,11 @@ export class ReportGeneratorService {
 
       if (context.researchDesignData.subQuestions?.length > 0) {
         content += `#### Sub-Questions\n\n`;
-        context.researchDesignData.subQuestions.forEach((sq: any, idx: number) => {
-          content += `${idx + 1}. ${sq.question}\n`;
-        });
+        context.researchDesignData.subQuestions.forEach(
+          (sq: any, idx: number) => {
+            content += `${idx + 1}. ${sq.question}\n`;
+          },
+        );
         content += `\n`;
       }
     }
@@ -433,7 +443,12 @@ export class ReportGeneratorService {
 
     if (!context.literatureData || !context.literatureData.papers) {
       content += `*No literature review data available.*\n\n`;
-      return { id: 'literature_review', title: 'Literature Review', content, order: 2 };
+      return {
+        id: 'literature_review',
+        title: 'Literature Review',
+        content,
+        order: 2,
+      };
     }
 
     const papers = context.literatureData.papers;
@@ -452,7 +467,7 @@ export class ReportGeneratorService {
 
       // Find papers related to this theme
       const relatedPapers = papers.filter((p: any) =>
-        p.themes?.some((t: string) => t === theme.label)
+        p.themes?.some((t: string) => t === theme.label),
       );
 
       if (relatedPapers.length > 0) {
@@ -613,7 +628,10 @@ export class ReportGeneratorService {
   private async generateReferences(context: any): Promise<ReportSection> {
     let content = `## References\n\n`;
 
-    if (!context.literatureData?.papers || context.literatureData.papers.length === 0) {
+    if (
+      !context.literatureData?.papers ||
+      context.literatureData.papers.length === 0
+    ) {
       content += `*No references available.*\n\n`;
       return { id: 'references', title: 'References', content, order: 6 };
     }
@@ -649,18 +667,27 @@ export class ReportGeneratorService {
   /**
    * Generate Provenance Appendix showing complete paper → statement lineage
    */
-  private async generateProvenanceAppendix(context: any): Promise<ReportSection> {
+  private async generateProvenanceAppendix(
+    context: any,
+  ): Promise<ReportSection> {
     let content = `## Appendix A: Statement Provenance\n\n`;
 
     content += `This appendix documents the complete provenance chain for each statement, ensuring methodological transparency and reproducibility.\n\n`;
 
     if (context.provenance.length === 0) {
       content += `*No provenance data available.*\n\n`;
-      return { id: 'appendix_provenance', title: 'Appendix A: Statement Provenance', content, order: 7 };
+      return {
+        id: 'appendix_provenance',
+        title: 'Appendix A: Statement Provenance',
+        content,
+        order: 7,
+      };
     }
 
     // Group by statement
-    const statementChains = context.provenance.filter((p: ProvenanceChain) => p.statement);
+    const statementChains = context.provenance.filter(
+      (p: ProvenanceChain) => p.statement,
+    );
 
     content += `| Statement # | Statement Text | Source Paper | Theme | Gap | Research Question |\n`;
     content += `|------------|---------------|--------------|-------|-----|-------------------|\n`;
@@ -668,7 +695,9 @@ export class ReportGeneratorService {
     statementChains.forEach((chain: ProvenanceChain) => {
       const stmtNum = chain.statement?.statementNumber || '?';
       const stmtText = (chain.statement?.text || '').slice(0, 50) + '...';
-      const paper = chain.paper ? `${chain.paper.authors.split(',')[0]} (${chain.paper.year})` : 'N/A';
+      const paper = chain.paper
+        ? `${chain.paper.authors.split(',')[0]} (${chain.paper.year})`
+        : 'N/A';
       const theme = chain.theme?.label || 'N/A';
       const gap = chain.gap?.description?.slice(0, 30) || 'N/A';
       const question = chain.question?.text?.slice(0, 30) || 'N/A';
@@ -768,7 +797,7 @@ export class ReportGeneratorService {
   private async renderReport(
     report: GeneratedReport,
     format: string,
-    templateType?: string
+    templateType?: string,
   ): Promise<string> {
     // Combine all sections
     let content = `# ${report.metadata.title}\n\n`;
@@ -836,7 +865,10 @@ export class ReportGeneratorService {
       };
     } catch (error) {
       const err = error as Error;
-      this.logger.error(`Failed to retrieve report ${reportId}: ${err.message}`, err.stack);
+      this.logger.error(
+        `Failed to retrieve report ${reportId}: ${err.message}`,
+        err.stack,
+      );
       throw error;
     }
   }
@@ -884,7 +916,10 @@ export class ReportGeneratorService {
       return { reports, total };
     } catch (error) {
       const err = error as Error;
-      this.logger.error(`Failed to retrieve reports for study ${studyId}: ${err.message}`, err.stack);
+      this.logger.error(
+        `Failed to retrieve reports for study ${studyId}: ${err.message}`,
+        err.stack,
+      );
       throw error;
     }
   }
@@ -905,11 +940,16 @@ export class ReportGeneratorService {
         return true;
       }
 
-      this.logger.warn(`Report ${reportId} not found or not authorized for user ${userId}`);
+      this.logger.warn(
+        `Report ${reportId} not found or not authorized for user ${userId}`,
+      );
       return false;
     } catch (error) {
       const err = error as Error;
-      this.logger.error(`Failed to delete report ${reportId}: ${err.message}`, err.stack);
+      this.logger.error(
+        `Failed to delete report ${reportId}: ${err.message}`,
+        err.stack,
+      );
       throw error;
     }
   }
@@ -926,7 +966,9 @@ export class ReportGeneratorService {
       institution?: string;
     },
   ): Promise<GeneratedReport | null> {
-    this.logger.log(`Updating metadata for report ${reportId} by user ${userId}`);
+    this.logger.log(
+      `Updating metadata for report ${reportId} by user ${userId}`,
+    );
 
     try {
       // First check if report exists and belongs to user
@@ -972,7 +1014,10 @@ export class ReportGeneratorService {
       };
     } catch (error) {
       const err = error as Error;
-      this.logger.error(`Failed to update report ${reportId} metadata: ${err.message}`, err.stack);
+      this.logger.error(
+        `Failed to update report ${reportId} metadata: ${err.message}`,
+        err.stack,
+      );
       throw error;
     }
   }

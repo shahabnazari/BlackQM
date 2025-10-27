@@ -4,13 +4,14 @@
 **Phase:** 9 - Literature Review & Knowledge Pipeline Integration  
 **Day:** 19 - Social Media Integration & Cross-Platform Synthesis  
 **Status:** ✅ ALL 4 TASKS COMPLETE  
-**Auditor:** AI Development Assistant  
+**Auditor:** AI Development Assistant
 
 ---
 
 ## 📋 Executive Summary
 
 Phase 9 Day 19 has been successfully completed with all 4 major tasks implemented:
+
 1. ✅ TikTok Research API Integration (625 lines)
 2. ✅ Instagram Manual Upload Integration (490 lines)
 3. ✅ Cross-Platform Knowledge Synthesis (743 lines)
@@ -19,7 +20,7 @@ Phase 9 Day 19 has been successfully completed with all 4 major tasks implemente
 **Total Code Added:** ~2,445 lines across 5 backend services + comprehensive test suites  
 **TypeScript Errors:** 0 (maintained clean state)  
 **Security:** No exposed API keys, all secure  
-**Test Coverage:** 40+ tests across all services  
+**Test Coverage:** 40+ tests across all services
 
 ---
 
@@ -31,6 +32,7 @@ Phase 9 Day 19 has been successfully completed with all 4 major tasks implemente
 **File:** `backend/src/modules/literature/services/tiktok-research.service.ts` (625 lines)
 
 #### ✅ Completed Features:
+
 - [x] TikTok Research API integration with fallback to public scraping
 - [x] Video download capability using yt-dlp
 - [x] Integration with Day 18 transcription service
@@ -41,6 +43,7 @@ Phase 9 Day 19 has been successfully completed with all 4 major tasks implemente
 #### Backend/Frontend Integration Assessment:
 
 **Backend Services:**
+
 ```typescript
 // ✅ Service Methods Available:
 - searchTikTokVideos(query, maxResults): Promise<TikTokVideo[]>
@@ -52,12 +55,14 @@ Phase 9 Day 19 has been successfully completed with all 4 major tasks implemente
 ```
 
 **Frontend Integration Status:**
+
 - ⚠️ **GAP IDENTIFIED:** No frontend UI components created for TikTok search
 - ⚠️ **GAP IDENTIFIED:** No API route handlers in `/app/api/literature/tiktok/`
 - ✅ Backend service is fully functional and tested
 - ✅ Can be integrated via existing literature search page
 
 **Recommendation:**
+
 ```typescript
 // FUTURE: Create frontend integration
 // File: frontend/app/(researcher)/discover/literature/page.tsx
@@ -66,12 +71,14 @@ Phase 9 Day 19 has been successfully completed with all 4 major tasks implemente
 ```
 
 #### Security Audit:
+
 - ✅ TikTok API key stored in environment variables only
 - ✅ No hardcoded credentials
 - ✅ Proper error handling for API failures
 - ✅ Fallback mechanism when API unavailable
 
 #### Test Coverage:
+
 - ✅ 15+ unit tests covering all major methods
 - ✅ Mock data for testing without API calls
 - ✅ Error handling tests
@@ -85,6 +92,7 @@ Phase 9 Day 19 has been successfully completed with all 4 major tasks implemente
 **File:** `backend/src/modules/literature/services/instagram-manual.service.ts` (490 lines)
 
 #### ✅ Completed Features:
+
 - [x] Instagram URL validation (supports /p/, /reel/, /tv/ formats)
 - [x] File upload processing (max 500MB, multiple formats)
 - [x] Video transcription integration
@@ -95,6 +103,7 @@ Phase 9 Day 19 has been successfully completed with all 4 major tasks implemente
 #### Backend/Frontend Integration Assessment:
 
 **Backend Services:**
+
 ```typescript
 // ✅ Service Methods Available:
 - processInstagramUrl(url, context): Promise<UploadPrompt>
@@ -104,6 +113,7 @@ Phase 9 Day 19 has been successfully completed with all 4 major tasks implemente
 ```
 
 **Frontend Integration Status:**
+
 - ✅ **COMPLETE:** InstagramManualUpload.tsx component created (350 lines)
 - ✅ **COMPLETE:** URL validation with real-time feedback
 - ✅ **COMPLETE:** File upload with progress tracking
@@ -112,6 +122,7 @@ Phase 9 Day 19 has been successfully completed with all 4 major tasks implemente
 - ⚠️ **GAP:** Component not yet integrated into main literature search page
 
 **Integration Path:**
+
 ```typescript
 // File: frontend/app/(researcher)/discover/literature/page.tsx
 // Add Instagram tab alongside YouTube, Papers, etc.
@@ -124,6 +135,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ```
 
 #### Security Audit:
+
 - ✅ File size limits enforced (500MB max)
 - ✅ File type validation (.mp4, .mov, .avi, .mkv)
 - ✅ Virus scanning integration ready
@@ -131,6 +143,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 - ✅ User consent required before upload
 
 #### Test Coverage:
+
 - ✅ 25+ unit tests covering all scenarios
 - ✅ URL validation tests (valid/invalid formats)
 - ✅ File upload tests (size limits, formats)
@@ -145,6 +158,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 **File:** `backend/src/modules/literature/services/cross-platform-synthesis.service.ts` (743 lines)
 
 #### ✅ Completed Features:
+
 - [x] Multi-platform research synthesis (papers, YouTube, TikTok, Instagram)
 - [x] Theme clustering with similarity detection
 - [x] Dissemination tracking with timeline visualization
@@ -157,6 +171,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 #### Backend/Frontend Integration Assessment:
 
 **Backend Services:**
+
 ```typescript
 // ✅ Service Methods Available:
 - synthesizeMultiPlatformResearch(query): Promise<SynthesisResult>
@@ -167,6 +182,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ```
 
 **Frontend Integration Status:**
+
 - ⚠️ **GAP IDENTIFIED:** No frontend dashboard created
 - ⚠️ **GAP IDENTIFIED:** No visualization components for:
   - Multi-platform search results
@@ -178,6 +194,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 - ✅ All data structures ready for visualization
 
 **Recommendation:**
+
 ```typescript
 // FUTURE: Create comprehensive dashboard
 // File: frontend/app/(researcher)/discover/cross-platform-synthesis/page.tsx
@@ -190,12 +207,14 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ```
 
 #### Security Audit:
+
 - ✅ No exposed API keys
 - ✅ Proper authentication required for all endpoints
 - ✅ Rate limiting implemented
 - ✅ Input validation on all parameters
 
 #### Test Coverage:
+
 - ✅ 30+ unit tests covering all major features
 - ✅ Multi-platform search tests
 - ✅ Theme clustering validation
@@ -211,6 +230,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 **File:** `backend/src/modules/ai/services/statement-generator.service.ts` (187 lines added)
 
 #### ✅ Completed Features:
+
 - [x] Extended StatementGeneratorService with multimedia support
 - [x] Confidence scoring algorithm (Paper: 1.0, YouTube: 0.7, Podcast: 0.6, Social: 0.3)
 - [x] Timestamp extraction with clickable URLs
@@ -223,6 +243,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 #### Backend/Frontend Integration Assessment:
 
 **Backend Services:**
+
 ```typescript
 // ✅ Service Methods Available:
 - generateStatementsFromMultiPlatform(themes, studyContext): Promise<StatementWithProvenance[]>
@@ -235,6 +256,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ```
 
 **Frontend Integration Status:**
+
 - ⚠️ **GAP IDENTIFIED:** StatementCard.tsx not updated with provenance display
 - ⚠️ **GAP IDENTIFIED:** No UI components for:
   - Source count badges (Papers, Videos, Podcasts, Social Media)
@@ -244,6 +266,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 - ✅ All data structures ready for UI display
 
 **Recommendation:**
+
 ```typescript
 // FUTURE: Update StatementCard component
 // File: frontend/components/statements/StatementCard.tsx
@@ -255,12 +278,14 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ```
 
 #### Security Audit:
+
 - ✅ No exposed API keys
 - ✅ Proper authentication required
 - ✅ Input validation on all parameters
 - ✅ Rate limiting on AI calls
 
 #### Test Coverage:
+
 - ✅ Unit tests for all new methods
 - ✅ Confidence scoring validation
 - ✅ Timestamp extraction tests
@@ -282,15 +307,18 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ### ⚠️ Integration Gaps Identified:
 
 #### Gap 1: Frontend UI Components Missing
+
 **Impact:** Medium  
 **Services Affected:** All 4 tasks  
 **Details:**
+
 - TikTok search UI not created
 - Instagram upload not integrated into main page
 - Cross-platform synthesis dashboard missing
 - Statement provenance UI not updated
 
 **Recommendation:**
+
 ```typescript
 // Priority 1: Integrate existing components
 // 1. Add InstagramManualUpload to literature search page
@@ -302,14 +330,17 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ```
 
 #### Gap 2: API Route Handlers
+
 **Impact:** Low  
 **Services Affected:** TikTok, Cross-Platform Synthesis  
 **Details:**
+
 - No `/app/api/literature/tiktok/route.ts`
 - No `/app/api/literature/cross-platform/route.ts`
 - Services can be called directly from frontend via existing literature API
 
 **Recommendation:**
+
 ```typescript
 // OPTIONAL: Create dedicated API routes
 // File: frontend/app/api/literature/tiktok/route.ts
@@ -318,13 +349,16 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ```
 
 #### Gap 3: Navigation Integration
+
 **Impact:** Low  
 **Services Affected:** All  
 **Details:**
+
 - New features not added to DISCOVER phase secondary toolbar
 - No quick actions for social media search
 
 **Recommendation:**
+
 ```typescript
 // Update: Main Docs/RESEARCH_LIFECYCLE_NAVIGATION_ARCHITECTURE.md
 // Add to DISCOVER phase secondary toolbar:
@@ -338,6 +372,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ## 📊 Technical Metrics
 
 ### Code Quality:
+
 - **Total Lines Added:** ~2,445 lines
 - **TypeScript Errors:** 0 ✅
 - **ESLint Warnings:** 0 ✅
@@ -345,12 +380,14 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 - **Documentation:** Inline comments complete ✅
 
 ### Performance:
+
 - **API Response Times:** All services < 3s ✅
 - **Database Queries:** Optimized with indexes ✅
 - **Caching:** Implemented where appropriate ✅
 - **Rate Limiting:** Configured for all endpoints ✅
 
 ### Security:
+
 - **API Keys:** All in environment variables ✅
 - **Authentication:** Required for all endpoints ✅
 - **Input Validation:** Comprehensive validation ✅
@@ -361,15 +398,18 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ## 🚨 CRITICAL GAPS NOT PLANNED IN NEXT DAYS OR PHASES
 
 ### Gap 1: Real-Time API Testing Infrastructure ⚠️ HIGH PRIORITY
+
 **Status:** NOT PLANNED  
 **Impact:** Cannot verify TikTok/Instagram integrations work in production  
 **Details:**
+
 - All 40+ tests use mock data
 - No live API testing with real TikTok Research API
 - No end-to-end testing with actual video downloads
 - No verification of transcription pipeline with real social media content
 
 **Why This Matters:**
+
 - Mock tests pass but real API might fail due to:
   - Rate limiting differences
   - API response format changes
@@ -378,6 +418,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 - Could discover integration issues only in production
 
 **Recommendation:**
+
 ```typescript
 // URGENT: Create integration test suite
 // File: backend/src/modules/literature/__tests__/integration/
@@ -391,15 +432,18 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ---
 
 ### Gap 2: Frontend State Management for Multi-Platform Data ⚠️ MEDIUM PRIORITY
+
 **Status:** NOT PLANNED  
 **Impact:** Complex data from 4 platforms needs coordinated state management  
 **Details:**
+
 - No Redux/Zustand store for cross-platform synthesis results
 - No caching strategy for expensive multi-platform searches
 - No optimistic updates for social media uploads
 - No state persistence for in-progress searches
 
 **Why This Matters:**
+
 - Cross-platform synthesis returns complex nested data:
   - Multiple themes with sources from 4+ platforms
   - Dissemination timelines with temporal data
@@ -410,6 +454,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
   - Lost work if user navigates away
 
 **Recommendation:**
+
 ```typescript
 // Create centralized state management
 // File: frontend/lib/stores/cross-platform-store.ts
@@ -424,9 +469,11 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ---
 
 ### Gap 3: Social Media Content Moderation & Filtering ⚠️ MEDIUM PRIORITY
+
 **Status:** NOT PLANNED  
 **Impact:** No safeguards against inappropriate content in research  
 **Details:**
+
 - No content filtering for TikTok/Instagram results
 - No age-restriction checking
 - No NSFW content detection
@@ -434,12 +481,14 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 - No user reporting mechanism
 
 **Why This Matters:**
+
 - Academic research platform needs content safety
 - Could expose researchers to inappropriate content
 - Institutional compliance requirements (FERPA, COPPA)
 - Liability concerns for platform
 
 **Recommendation:**
+
 ```typescript
 // Add content moderation layer
 // File: backend/src/modules/literature/services/content-moderation.service.ts
@@ -454,9 +503,11 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ---
 
 ### Gap 4: Social Media API Cost Management ⚠️ MEDIUM PRIORITY
+
 **Status:** NOT PLANNED  
 **Impact:** No budget controls or cost tracking for API usage  
 **Details:**
+
 - TikTok Research API has usage costs
 - No quota management per user/organization
 - No cost estimation before searches
@@ -464,12 +515,14 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 - No fallback when quota exceeded
 
 **Why This Matters:**
+
 - Could incur unexpected API costs
 - No way to limit usage per user tier (Free/Pro/Enterprise)
 - No visibility into which features drive costs
 - Could hit API limits without warning
 
 **Recommendation:**
+
 ```typescript
 // Create API cost management system
 // File: backend/src/modules/billing/services/api-usage-tracker.service.ts
@@ -485,20 +538,24 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ---
 
 ### Gap 5: Cross-Platform Data Deduplication ⚠️ LOW PRIORITY
+
 **Status:** NOT PLANNED  
 **Impact:** Same content might appear multiple times across platforms  
 **Details:**
+
 - No deduplication when same video appears on TikTok + Instagram
 - No detection of cross-posted content
 - No merging of duplicate themes from different platforms
 - Could inflate source counts artificially
 
 **Why This Matters:**
+
 - Researchers might think they have more sources than reality
 - Skews confidence scores if same content counted multiple times
 - Wastes API quota fetching duplicate content
 
 **Recommendation:**
+
 ```typescript
 // Add deduplication layer
 // File: backend/src/modules/literature/services/content-deduplication.service.ts
@@ -513,21 +570,25 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ---
 
 ### Gap 6: Offline Mode for Social Media Content ⚠️ LOW PRIORITY
+
 **Status:** NOT PLANNED  
 **Impact:** Cannot access previously fetched social media content offline  
 **Details:**
+
 - No local caching of video transcripts
 - No offline access to synthesis results
 - No download option for social media research
 - Requires internet for all operations
 
 **Why This Matters:**
+
 - Researchers often work in low-connectivity environments
 - Conference presentations without reliable WiFi
 - Field research locations
 - Cost savings on repeated API calls
 
 **Recommendation:**
+
 ```typescript
 // Add offline support
 // File: frontend/lib/services/offline-cache.service.ts
@@ -542,21 +603,25 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ---
 
 ### Gap 7: Social Media Platform Analytics Dashboard ⚠️ LOW PRIORITY
+
 **Status:** NOT PLANNED  
 **Impact:** No insights into which platforms/content types are most valuable  
 **Details:**
+
 - No analytics on platform usage patterns
 - No tracking of which platforms yield best results
 - No comparison of engagement metrics across platforms
 - No ROI analysis for API costs vs. research value
 
 **Why This Matters:**
+
 - Could optimize API spending by focusing on high-value platforms
 - Help researchers understand platform strengths
 - Inform future feature development
 - Provide data for marketing/sales
 
 **Recommendation:**
+
 ```typescript
 // Create analytics dashboard
 // File: frontend/app/(researcher)/analytics/social-media/page.tsx
@@ -571,21 +636,25 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ---
 
 ### Gap 8: Legal Compliance Documentation ⚠️ MEDIUM PRIORITY
+
 **Status:** NOT PLANNED  
 **Impact:** No formal documentation of ToS compliance for social media platforms  
 **Details:**
+
 - Instagram manual upload has disclaimers but no formal legal review
 - No documentation of TikTok Research API terms compliance
 - No user agreement updates for social media features
 - No institutional review board (IRB) guidance
 
 **Why This Matters:**
+
 - Academic institutions require legal compliance documentation
 - Could face platform bans if ToS violated
 - Researchers need IRB approval for social media research
 - Liability protection for platform
 
 **Recommendation:**
+
 ```typescript
 // Create legal compliance package
 // Files needed:
@@ -601,16 +670,16 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 
 ## 📊 Gap Priority Matrix
 
-| Gap | Priority | Effort | Risk | Recommended Phase |
-|-----|----------|--------|------|-------------------|
-| 1. Real-Time API Testing | HIGH | 2 days | HIGH | Phase 10 Day 1-2 |
-| 2. State Management | MEDIUM | 3 days | MEDIUM | Phase 10 Day 3-5 |
-| 3. Content Moderation | MEDIUM | 4 days | MEDIUM | Phase 11 |
-| 4. Cost Management | MEDIUM | 3 days | MEDIUM | Phase 11 |
-| 5. Deduplication | LOW | 2 days | LOW | Phase 12 |
-| 6. Offline Mode | LOW | 3 days | LOW | Phase 13 |
-| 7. Analytics Dashboard | LOW | 2 days | LOW | Phase 14 |
-| 8. Legal Compliance | MEDIUM | 1 day | MEDIUM | Phase 10 Day 6 |
+| Gap                      | Priority | Effort | Risk   | Recommended Phase |
+| ------------------------ | -------- | ------ | ------ | ----------------- |
+| 1. Real-Time API Testing | HIGH     | 2 days | HIGH   | Phase 10 Day 1-2  |
+| 2. State Management      | MEDIUM   | 3 days | MEDIUM | Phase 10 Day 3-5  |
+| 3. Content Moderation    | MEDIUM   | 4 days | MEDIUM | Phase 11          |
+| 4. Cost Management       | MEDIUM   | 3 days | MEDIUM | Phase 11          |
+| 5. Deduplication         | LOW      | 2 days | LOW    | Phase 12          |
+| 6. Offline Mode          | LOW      | 3 days | LOW    | Phase 13          |
+| 7. Analytics Dashboard   | LOW      | 2 days | LOW    | Phase 14          |
+| 8. Legal Compliance      | MEDIUM   | 1 day  | MEDIUM | Phase 10 Day 6    |
 
 **Total Estimated Effort:** 20 days  
 **Critical Path Items:** Gaps 1, 2, 8 (6 days)  
@@ -657,6 +726,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 ## ✅ Acceptance Criteria Validation
 
 ### Task 1: TikTok Integration
+
 - ✅ TikTok Research API integration complete
 - ✅ Video download and transcription working
 - ✅ Engagement metrics analysis functional
@@ -664,6 +734,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 - ⚠️ Frontend UI not created (deferred)
 
 ### Task 2: Instagram Integration
+
 - ✅ Instagram URL validation working
 - ✅ File upload processing complete
 - ✅ Legal compliance implemented
@@ -671,6 +742,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 - ⚠️ Not integrated into main page (deferred)
 
 ### Task 3: Cross-Platform Synthesis
+
 - ✅ Multi-platform search working
 - ✅ Theme clustering functional
 - ✅ Dissemination tracking complete
@@ -678,6 +750,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 - ⚠️ Frontend dashboard not created (deferred)
 
 ### Task 4: Statement Generation
+
 - ✅ Multimedia provenance tracking complete
 - ✅ Confidence scoring implemented
 - ✅ Timestamp extraction working
@@ -691,6 +764,7 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 **Phase 9 Day 19 Status:** ✅ **COMPLETE (Backend 100%, Frontend 60%)**
 
 ### What Was Delivered:
+
 - ✅ All 4 backend services fully implemented (2,445 lines)
 - ✅ Comprehensive test coverage (40+ tests)
 - ✅ 0 TypeScript errors maintained
@@ -698,12 +772,14 @@ import { InstagramManualUpload } from '@/components/multimedia/InstagramManualUp
 - ✅ 1 frontend component created (InstagramManualUpload)
 
 ### What Was Deferred:
+
 - ⚠️ Frontend UI integration (can be done in Phase 10)
 - ⚠️ Cross-platform synthesis dashboard
 - ⚠️ Statement card provenance display
 - ⚠️ Navigation architecture updates
 
 ### Recommendation:
+
 **PROCEED TO PHASE 9 DAY 20** or **PHASE 10**
 
 The backend infrastructure is solid and complete. Frontend integration can be done incrementally as needed. The deferred items are UI enhancements that don't block core functionality.
@@ -713,16 +789,19 @@ The backend infrastructure is solid and complete. Frontend integration can be do
 ## 📝 Documentation Updates Required
 
 ### Phase Tracker Updates:
+
 - [x] Mark Day 19 Tasks 1-4 as COMPLETE in PHASE_TRACKER_PART2.md
 - [ ] Add note about frontend integration gaps
 - [ ] Update Day 20 planning with frontend integration tasks
 
 ### Implementation Guide Updates:
+
 - [x] Document all 4 services in IMPLEMENTATION_GUIDE_PART5.md
 - [ ] Add frontend integration examples
 - [ ] Update API documentation
 
 ### Navigation Architecture Updates:
+
 - [ ] Add social media features to DISCOVER phase
 - [ ] Update secondary toolbar items
 - [ ] Document new quick actions
@@ -785,11 +864,13 @@ The backend infrastructure is solid and complete. Frontend integration can be do
 ## 📅 Next Session Planning
 
 ### If Continuing Phase 9:
+
 - **Day 20:** Unified Theme Extraction & Transparency Layer (planned)
 - Focus on consolidating all theme extraction methods
 - Create provenance tracking for advanced researchers
 
 ### If Moving to Phase 10:
+
 - **Phase 10:** Report Generation & Research Repository
 - Can integrate social media features into reports
 - Use multimedia provenance in citations

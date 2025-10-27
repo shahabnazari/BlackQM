@@ -3,6 +3,7 @@
 ## 🎯 CURRENT STATUS: FULLY FUNCTIONAL WITH DEMO DATA
 
 **All fixes applied:**
+
 - ✅ Authentication token bug fixed
 - ✅ Loading indicators added
 - ✅ Backend parameter parsing fixed
@@ -14,6 +15,7 @@
 ## ✅ STEP-BY-STEP VERIFICATION GUIDE
 
 ### Step 1: Navigate to Literature Review
+
 ```
 URL: http://localhost:3000/discover/literature
 Path: Dashboard → Discover (top nav) → Literature
@@ -24,6 +26,7 @@ Path: Dashboard → Discover (top nav) → Literature
 ---
 
 ### Step 2: Enter Search Query
+
 ```
 Action: Type "climate" (or any topic) in the main search box at top
 ```
@@ -33,6 +36,7 @@ Action: Type "climate" (or any topic) in the main search box at top
 ---
 
 ### Step 3: Scroll to Alternative Sources Panel
+
 ```
 Location: Second card/panel on the page
 Title: "📌 Alternative Sources & Social Media"
@@ -43,11 +47,13 @@ Title: "📌 Alternative Sources & Social Media"
 ---
 
 ### Step 4: Select YouTube Source
+
 ```
 Action: Click the [🎥 YouTube] badge
 ```
 
 **✓ Expected:**
+
 - Badge changes color (purple/blue background)
 - Badge appears "selected" or "active"
 - Button below is enabled
@@ -55,11 +61,13 @@ Action: Click the [🎥 YouTube] badge
 ---
 
 ### Step 5: Click Search Button
+
 ```
 Action: Click "Search These Sources Only" button
 ```
 
 **✓ Expected IMMEDIATELY:**
+
 ```
 Button changes to:
 ┌─────────────────────────┐
@@ -71,6 +79,7 @@ Below button appears:
 ```
 
 **✓ Expected AFTER 1-3 seconds:**
+
 ```
 Button returns to:
 ┌─────────────────────────────┐
@@ -117,6 +126,7 @@ Results appear below:
 **Open Console:** Press F12, click "Console" tab
 
 **✓ Expected Messages (in order):**
+
 ```
 🔑 [Auth Token]: eyJhbGciOiJIUzI1NiIs...
 🔍 [Alternative Sources] Searching... {query: "climate", sources: ["youtube"]}
@@ -126,6 +136,7 @@ Results appear below:
 ```
 
 **❌ You should NOT see:**
+
 ```
 ❌ [Alternative Sources] Search failed
 401 Unauthorized
@@ -139,17 +150,20 @@ Results appear below:
 ### Issue 1: "Nothing happens when I click the button"
 
 **Check:**
+
 1. ✅ Is YouTube badge selected (highlighted)?
 2. ✅ Is button enabled (not grey)?
 3. ✅ Do you see spinner animation?
 4. ✅ Do you see progress message below button?
 
 **If NO spinner appears:**
+
 - Open browser console (F12)
 - Look for JavaScript errors
 - Check if `loadingAlternative` state is being set
 
 **If spinner appears but no results:**
+
 - Check console for error messages
 - Look for red text starting with ❌
 - Share the error message
@@ -159,6 +173,7 @@ Results appear below:
 ### Issue 2: "I see 401 Unauthorized error"
 
 **Solution:**
+
 1. Log out (click profile icon → Logout)
 2. Log back in
 3. Try YouTube search again
@@ -170,6 +185,7 @@ Results appear below:
 ### Issue 3: "I see 500 Internal Server Error"
 
 **Solution:**
+
 1. Check if backend is running: `curl http://localhost:4000/api/health`
 2. If not healthy, restart: `npm run restart`
 3. Check backend logs for errors
@@ -199,6 +215,7 @@ Results appear below:
 ### Demo Data vs Real Data
 
 **DEMO DATA (Current - No API Key):**
+
 ```
 Title: "climate - Educational Video (DEMO)"
 Channel: "Science Channel"
@@ -207,6 +224,7 @@ URL: https://console.cloud.google.com/apis/credentials (setup link)
 ```
 
 **REAL DATA (After Adding API Key):**
+
 ```
 Title: "Climate Change Explained in 5 Minutes"
 Channel: "Vox"
@@ -221,6 +239,7 @@ URL: https://www.youtube.com/watch?v=abc123 (actual video)
 ### Quick Setup (5 minutes, FREE)
 
 **1. Get YouTube Data API v3 Key:**
+
 - Visit: https://console.cloud.google.com/apis/credentials
 - Create new project (or select existing)
 - Enable "YouTube Data API v3"
@@ -228,6 +247,7 @@ URL: https://www.youtube.com/watch?v=abc123 (actual video)
 - Copy the key (looks like: `AIzaSyD...`)
 
 **2. Add to Backend:**
+
 ```bash
 # Open backend/.env file
 nano backend/.env
@@ -239,11 +259,13 @@ YOUTUBE_API_KEY=AIzaSyD_your_actual_key_here
 ```
 
 **3. Restart Backend:**
+
 ```bash
 npm run restart
 ```
 
 **4. Test:**
+
 - Search YouTube again
 - Results will now show real video titles, channels, descriptions
 - URLs will link to actual YouTube videos
@@ -253,6 +275,7 @@ npm run restart
 ## 📈 API QUOTA INFORMATION
 
 **Free Tier Limits:**
+
 ```
 Daily Quota: 10,000 units
 Search Cost: 100 units per request
@@ -261,11 +284,13 @@ Reset: Midnight Pacific Time
 ```
 
 **How to Stay Within Limits:**
+
 - Implement caching (planned for Phase 9 Day 12)
 - Cache results for 1 hour per query
 - Monitor usage: Google Cloud Console → APIs & Services → Dashboard
 
 **Example:**
+
 ```
 Day 1: 50 searches = 5,000 units (OK ✅)
 Day 2: 150 searches = 15,000 units (EXCEEDS QUOTA ❌)
@@ -328,12 +353,14 @@ Day 2: 150 searches = 15,000 units (EXCEEDS QUOTA ❌)
 ## 📞 NEED HELP?
 
 **Share this information:**
+
 1. Which step failed (Step 1-5)?
 2. What you see instead of expected result
 3. Browser console output (copy/paste error messages)
 4. Screenshot of the Alternative Sources panel
 
 **Common Issues Already Fixed:**
+
 - ✅ 401 Unauthorized - Fixed async token retrieval
 - ✅ 500 Server Error - Fixed parameter parsing
 - ✅ No loading indicator - Added spinner + progress message
@@ -346,6 +373,7 @@ Day 2: 150 searches = 15,000 units (EXCEEDS QUOTA ❌)
 The YouTube alternative source search is **fully functional** with demo data.
 
 **To upgrade to real YouTube search:**
+
 1. Get free API key (5 min)
 2. Add to backend/.env
 3. Restart backend

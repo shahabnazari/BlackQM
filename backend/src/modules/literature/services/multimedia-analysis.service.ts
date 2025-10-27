@@ -68,7 +68,9 @@ export class MultiMediaAnalysisService {
     transcriptId: string,
     researchContext?: string,
   ): Promise<ExtractedTheme[]> {
-    this.logger.log(`[UNIFIED] Extracting themes from transcript: ${transcriptId}`);
+    this.logger.log(
+      `[UNIFIED] Extracting themes from transcript: ${transcriptId}`,
+    );
 
     // Get transcript to determine source type
     const transcript = await this.prisma.videoTranscript.findUnique({
@@ -80,20 +82,25 @@ export class MultiMediaAnalysisService {
     }
 
     // Determine source type
-    const sourceType = transcript.sourceType as 'youtube' | 'podcast' | 'tiktok' | 'instagram';
+    const sourceType = transcript.sourceType as
+      | 'youtube'
+      | 'podcast'
+      | 'tiktok'
+      | 'instagram';
 
     // Extract themes using unified service
-    const unifiedThemes = await this.unifiedThemeService!.extractThemesFromSource(
-      sourceType,
-      [transcript.sourceId], // Use sourceId, not transcriptId
-      {
-        researchContext,
-        maxThemes: 10,
-      }
-    );
+    const unifiedThemes =
+      await this.unifiedThemeService!.extractThemesFromSource(
+        sourceType,
+        [transcript.sourceId], // Use sourceId, not transcriptId
+        {
+          researchContext,
+          maxThemes: 10,
+        },
+      );
 
     // Convert unified themes to ExtractedTheme format for backward compatibility
-    const extractedThemes: ExtractedTheme[] = unifiedThemes.map(theme => ({
+    const extractedThemes: ExtractedTheme[] = unifiedThemes.map((theme) => ({
       theme: theme.label,
       relevanceScore: theme.weight,
       timestamps: this.extractTimestampsFromSources(theme.sources),
@@ -105,7 +112,9 @@ export class MultiMediaAnalysisService {
     // Also store in legacy TranscriptTheme table for backward compatibility
     await this.storeThemes(transcriptId, extractedThemes);
 
-    this.logger.log(`[UNIFIED] Extracted ${extractedThemes.length} themes with full provenance`);
+    this.logger.log(
+      `[UNIFIED] Extracted ${extractedThemes.length} themes with full provenance`,
+    );
 
     return extractedThemes;
   }
@@ -113,15 +122,19 @@ export class MultiMediaAnalysisService {
   /**
    * Extract timestamps from unified theme sources
    */
-  private extractTimestampsFromSources(sources: any[]): Array<{ start: number; end: number }> {
+  private extractTimestampsFromSources(
+    sources: any[],
+  ): Array<{ start: number; end: number }> {
     const timestamps: Array<{ start: number; end: number }> = [];
 
     for (const source of sources) {
       if (source.timestamps && Array.isArray(source.timestamps)) {
-        timestamps.push(...source.timestamps.map((t: any) => ({
-          start: t.start,
-          end: t.end,
-        })));
+        timestamps.push(
+          ...source.timestamps.map((t: any) => ({
+            start: t.start,
+            end: t.end,
+          })),
+        );
       }
     }
 
@@ -131,7 +144,9 @@ export class MultiMediaAnalysisService {
   /**
    * Extract quotes from unified theme sources
    */
-  private extractQuotesFromSources(sources: any[]): Array<{ timestamp: number; quote: string }> {
+  private extractQuotesFromSources(
+    sources: any[],
+  ): Array<{ timestamp: number; quote: string }> {
     const quotes: Array<{ timestamp: number; quote: string }> = [];
 
     for (const source of sources) {
@@ -218,7 +233,7 @@ Respond in JSON format:
     for (const theme of themes) {
       theme.timestamps = this.findThemeTimestamps(
         theme.keywords,
-        timestampedSegments
+        timestampedSegments,
       );
     }
 
@@ -226,13 +241,17 @@ Respond in JSON format:
     await this.storeThemes(transcriptId, themes);
 
     // Calculate cost
-    const cost = this.calculateGPT4Cost(response.usage || { prompt_tokens: 0, completion_tokens: 0 });
+    const cost = this.calculateGPT4Cost(
+      response.usage || { prompt_tokens: 0, completion_tokens: 0 },
+    );
     await this.prisma.videoTranscript.update({
       where: { id: transcriptId },
       data: { analysisCost: cost },
     });
 
-    this.logger.log(`Extracted ${themes.length} themes (cost: $${cost.toFixed(4)})`);
+    this.logger.log(
+      `Extracted ${themes.length} themes (cost: $${cost.toFixed(4)})`,
+    );
 
     return themes;
   }
@@ -242,14 +261,14 @@ Respond in JSON format:
    */
   private findThemeTimestamps(
     keywords: string[],
-    segments: Array<{ timestamp: number; text: string }>
+    segments: Array<{ timestamp: number; text: string }>,
   ): Array<{ start: number; end: number }> {
     const timestamps: Array<{ start: number; end: number }> = [];
-    const keywordSet = new Set(keywords.map(k => k.toLowerCase()));
+    const keywordSet = new Set(keywords.map((k) => k.toLowerCase()));
 
     for (let i = 0; i < segments.length; i++) {
       const text = segments[i].text.toLowerCase();
-      const hasKeyword = Array.from(keywordSet).some(kw => text.includes(kw));
+      const hasKeyword = Array.from(keywordSet).some((kw) => text.includes(kw));
 
       if (hasKeyword) {
         const start = segments[i].timestamp;
@@ -266,10 +285,10 @@ Respond in JSON format:
    */
   private async storeThemes(
     transcriptId: string,
-    themes: ExtractedTheme[]
+    themes: ExtractedTheme[],
   ): Promise<void> {
     await this.prisma.transcriptTheme.createMany({
-      data: themes.map(theme => ({
+      data: themes.map((theme) => ({
         transcriptId,
         theme: theme.theme,
         relevanceScore: theme.relevanceScore,
@@ -286,7 +305,7 @@ Respond in JSON format:
    * Identifies when speaker mentions papers, studies, or authors
    */
   async extractCitationsFromTranscript(
-    transcriptId: string
+    transcriptId: string,
   ): Promise<ExtractedCitation[]> {
     this.logger.log(`Extracting citations from transcript: ${transcriptId}`);
 
@@ -344,7 +363,7 @@ Respond in JSON format:
 
     // Store citations in database
     await this.prisma.multimediaCitation.createMany({
-      data: citations.map(cit => ({
+      data: citations.map((cit) => ({
         transcriptId,
         citedWork: cit.citedWork,
         citationType: cit.citationType,
@@ -363,7 +382,10 @@ Respond in JSON format:
   /**
    * Calculate GPT-4 cost based on token usage
    */
-  private calculateGPT4Cost(usage: { prompt_tokens: number; completion_tokens: number }): number {
+  private calculateGPT4Cost(usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+  }): number {
     const inputCost = (usage.prompt_tokens / 1000) * 0.01; // $0.01 per 1K input tokens
     const outputCost = (usage.completion_tokens / 1000) * 0.03; // $0.03 per 1K output tokens
     return inputCost + outputCost;
@@ -372,13 +394,15 @@ Respond in JSON format:
   /**
    * Get themes for a transcript
    */
-  async getThemesForTranscript(transcriptId: string): Promise<ExtractedTheme[]> {
+  async getThemesForTranscript(
+    transcriptId: string,
+  ): Promise<ExtractedTheme[]> {
     const themes = await this.prisma.transcriptTheme.findMany({
       where: { transcriptId },
       orderBy: { relevanceScore: 'desc' },
     });
 
-    return themes.map(theme => ({
+    return themes.map((theme) => ({
       theme: theme.theme,
       relevanceScore: theme.relevanceScore,
       timestamps: theme.timestamps as any,
@@ -391,13 +415,15 @@ Respond in JSON format:
   /**
    * Get citations for a transcript
    */
-  async getCitationsForTranscript(transcriptId: string): Promise<ExtractedCitation[]> {
+  async getCitationsForTranscript(
+    transcriptId: string,
+  ): Promise<ExtractedCitation[]> {
     const citations = await this.prisma.multimediaCitation.findMany({
       where: { transcriptId },
       orderBy: { timestamp: 'asc' },
     });
 
-    return citations.map(cit => ({
+    return citations.map((cit) => ({
       citedWork: cit.citedWork,
       citationType: cit.citationType as any,
       timestamp: cit.timestamp,

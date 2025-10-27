@@ -5,6 +5,8 @@ import { AICostService } from './services/ai-cost.service';
 import { StatementGeneratorService } from './services/statement-generator.service';
 import { GridRecommendationService } from './services/grid-recommendation.service';
 import { QuestionnaireGeneratorService } from './services/questionnaire-generator.service';
+import { VideoRelevanceService } from './services/video-relevance.service'; // Phase 9 Day 21
+import { QueryExpansionService } from './services/query-expansion.service'; // Phase 9 Day 21
 import { AIController } from './controllers/ai.controller';
 import { PrismaService } from '../../common/prisma.service';
 
@@ -19,6 +21,8 @@ import { PrismaService } from '../../common/prisma.service';
     StatementGeneratorService,
     GridRecommendationService,
     QuestionnaireGeneratorService,
+    VideoRelevanceService,
+    QueryExpansionService,
     PrismaService,
   ],
   exports: [
@@ -27,6 +31,8 @@ import { PrismaService } from '../../common/prisma.service';
     StatementGeneratorService,
     GridRecommendationService,
     QuestionnaireGeneratorService,
+    VideoRelevanceService,
+    QueryExpansionService,
   ],
 })
 export class AIModule {}

@@ -45,7 +45,9 @@ export function ProgressTracker({
 }: ProgressTrackerProps) {
   // Calculate progress percentage
   const progress = useMemo(() => {
-    const completedSteps = steps.filter((s: any) => s.status === 'completed').length;
+    const completedSteps = steps.filter(
+      (s: any) => s.status === 'completed'
+    ).length;
     const currentStep = steps.findIndex(s => s.status === 'current');
     const totalProgress = completedSteps + (currentStep >= 0 ? 0.5 : 0);
     return (totalProgress / steps.length) * 100;
@@ -249,7 +251,9 @@ function CircularProgress({
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   const currentStep = steps.find(s => s.status === 'current');
-  const completedCount = steps.filter((s: any) => s.status === 'completed').length;
+  const completedCount = steps.filter(
+    (s: any) => s.status === 'completed'
+  ).length;
 
   return (
     <div className={clsx('flex flex-col items-center', className)}>

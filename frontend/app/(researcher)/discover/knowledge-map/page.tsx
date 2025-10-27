@@ -184,51 +184,72 @@ export default function KnowledgeMapPage() {
             controversies: buildResult.insights.controversies || [],
             emergingTopics: buildResult.insights.emergingTopics || [],
           });
-          console.log(`💡 Extracted ${buildResult.insights.bridgeConcepts?.length || 0} bridge concepts, ${buildResult.insights.controversies?.length || 0} controversies, ${buildResult.insights.emergingTopics?.length || 0} emerging topics`);
+          console.log(
+            `💡 Extracted ${buildResult.insights.bridgeConcepts?.length || 0} bridge concepts, ${buildResult.insights.controversies?.length || 0} controversies, ${buildResult.insights.emergingTopics?.length || 0} emerging topics`
+          );
         }
 
         // Step 3: Fetch graph data for visualization
         const graphResult = await literatureAPI.getKnowledgeGraph({
-          types: ['CONCEPT', 'THEORY', 'METHOD', 'FINDING', 'PAPER', 'BRIDGE_CONCEPT'],
+          types: [
+            'CONCEPT',
+            'THEORY',
+            'METHOD',
+            'FINDING',
+            'PAPER',
+            'BRIDGE_CONCEPT',
+          ],
           minConfidence: 0.5,
           includePredicted: true,
         });
 
-        console.log(`📊 Fetched graph with ${graphResult.graph.nodes.length} nodes and ${graphResult.graph.edges.length} edges`);
+        console.log(
+          `📊 Fetched graph with ${graphResult.graph.nodes.length} nodes and ${graphResult.graph.edges.length} edges`
+        );
 
         // Step 4: Transform backend data to frontend format
         const canvasWidth = containerRef.current?.offsetWidth || 800;
         const canvasHeight = containerRef.current?.offsetHeight || 600;
 
-        const transformedNodes: Node[] = graphResult.graph.nodes.map((node: any, index: number) => {
-          // Position nodes in a circle layout initially
-          const angle = (index / graphResult.graph.nodes.length) * 2 * Math.PI;
-          const radius = Math.min(canvasWidth, canvasHeight) * 0.3;
+        const transformedNodes: Node[] = graphResult.graph.nodes.map(
+          (node: any, index: number) => {
+            // Position nodes in a circle layout initially
+            const angle =
+              (index / graphResult.graph.nodes.length) * 2 * Math.PI;
+            const radius = Math.min(canvasWidth, canvasHeight) * 0.3;
 
-          return {
-            id: node.id,
-            label: node.label,
-            type: node.type.toLowerCase() as any,
-            x: canvasWidth / 2 + radius * Math.cos(angle),
-            y: canvasHeight / 2 + radius * Math.sin(angle),
-            size: node.isBridgeConcept ? 40 : 20 + (node.influenceScore || 0) * 20,
-            color: NODE_COLORS[node.type.toLowerCase() as keyof typeof NODE_COLORS] || NODE_COLORS.concept,
-            description: node.description || '',
-            tags: node.keywords || [],
-            importance: Math.round((node.influenceScore || 0) * 10),
-            connections: 0, // Will be calculated
-            locked: false,
-          };
-        });
+            return {
+              id: node.id,
+              label: node.label,
+              type: node.type.toLowerCase() as any,
+              x: canvasWidth / 2 + radius * Math.cos(angle),
+              y: canvasHeight / 2 + radius * Math.sin(angle),
+              size: node.isBridgeConcept
+                ? 40
+                : 20 + (node.influenceScore || 0) * 20,
+              color:
+                NODE_COLORS[
+                  node.type.toLowerCase() as keyof typeof NODE_COLORS
+                ] || NODE_COLORS.concept,
+              description: node.description || '',
+              tags: node.keywords || [],
+              importance: Math.round((node.influenceScore || 0) * 10),
+              connections: 0, // Will be calculated
+              locked: false,
+            };
+          }
+        );
 
-        const transformedEdges: Edge[] = graphResult.graph.edges.map((edge: any) => ({
-          id: edge.id,
-          source: edge.fromNodeId,
-          target: edge.toNodeId,
-          type: edge.type.toLowerCase(),
-          strength: edge.strength || 0.5,
-          label: edge.type.toLowerCase().replace('_', ' '),
-        }));
+        const transformedEdges: Edge[] = graphResult.graph.edges.map(
+          (edge: any) => ({
+            id: edge.id,
+            source: edge.fromNodeId,
+            target: edge.toNodeId,
+            type: edge.type.toLowerCase(),
+            strength: edge.strength || 0.5,
+            label: edge.type.toLowerCase().replace('_', ' '),
+          })
+        );
 
         // Calculate connections for each node
         transformedNodes.forEach(node => {
@@ -239,7 +260,9 @@ export default function KnowledgeMapPage() {
 
         setNodes(transformedNodes);
         setEdges(transformedEdges);
-        console.log(`✅ Loaded knowledge graph with ${transformedNodes.length} nodes and ${transformedEdges.length} edges`);
+        console.log(
+          `✅ Loaded knowledge graph with ${transformedNodes.length} nodes and ${transformedEdges.length} edges`
+        );
       } catch (err: any) {
         console.error('❌ Failed to fetch knowledge graph:', err);
         setError(err.message || 'Failed to load knowledge graph');
@@ -333,14 +356,24 @@ export default function KnowledgeMapPage() {
     // Phase 9 Day 16: Draw predicted missing links
     if (showPredictedLinks && predictedLinks.length > 0) {
       predictedLinks.forEach((prediction: any) => {
-        const source = nodes.find((n: any) => n.id === prediction.source || n.label === prediction.source);
-        const target = nodes.find((n: any) => n.id === prediction.target || n.label === prediction.target);
+        const source = nodes.find(
+          (n: any) =>
+            n.id === prediction.source || n.label === prediction.source
+        );
+        const target = nodes.find(
+          (n: any) =>
+            n.id === prediction.target || n.label === prediction.target
+        );
         if (!source || !target) return;
 
         ctx.beginPath();
         ctx.moveTo(source.x, source.y);
         ctx.lineTo(target.x, target.y);
-        ctx.strokeStyle = '#10B981' + Math.round((prediction.confidence || 0.5) * 255).toString(16).padStart(2, '0');
+        ctx.strokeStyle =
+          '#10B981' +
+          Math.round((prediction.confidence || 0.5) * 255)
+            .toString(16)
+            .padStart(2, '0');
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]);
         ctx.stroke();
@@ -352,15 +385,25 @@ export default function KnowledgeMapPage() {
           const midY = (source.y + target.y) / 2;
           ctx.fillStyle = '#10B981';
           ctx.font = '9px sans-serif';
-          ctx.fillText(`${Math.round((prediction.confidence || 0) * 100)}%`, midX, midY);
+          ctx.fillText(
+            `${Math.round((prediction.confidence || 0) * 100)}%`,
+            midX,
+            midY
+          );
         }
       });
     }
 
     // Phase 9 Day 16: Draw influence flow paths
-    if (showInfluenceFlow && influenceFlowData && influenceFlowData.influenceFlows) {
+    if (
+      showInfluenceFlow &&
+      influenceFlowData &&
+      influenceFlowData.influenceFlows
+    ) {
       influenceFlowData.influenceFlows.forEach((path: any, idx: number) => {
-        const pathNodes = path.nodeIds?.map((id: string) => nodes.find((n: any) => n.id === id)).filter(Boolean);
+        const pathNodes = path.nodeIds
+          ?.map((id: string) => nodes.find((n: any) => n.id === id))
+          .filter(Boolean);
         if (!pathNodes || pathNodes.length < 2) return;
 
         ctx.beginPath();
@@ -625,7 +668,9 @@ export default function KnowledgeMapPage() {
       console.log('🔮 Loading predicted missing links...');
       const result = await literatureAPI.predictMissingLinks();
       setPredictedLinks(result.predictedLinks || []);
-      console.log(`✓ Loaded ${result.predictedLinks?.length || 0} predicted links`);
+      console.log(
+        `✓ Loaded ${result.predictedLinks?.length || 0} predicted links`
+      );
     } catch (err: any) {
       console.error('❌ Failed to load predicted links:', err);
     }
@@ -638,14 +683,18 @@ export default function KnowledgeMapPage() {
       const flowData = await literatureAPI.trackInfluenceFlow(nodeId);
       setInfluenceFlowData(flowData);
       setShowInfluenceFlow(true);
-      console.log(`✓ Loaded influence flow with ${flowData.influenceFlows?.length || 0} paths`);
+      console.log(
+        `✓ Loaded influence flow with ${flowData.influenceFlows?.length || 0} paths`
+      );
     } catch (err: any) {
       console.error('❌ Failed to load influence flow:', err);
     }
   };
 
   // Phase 9 Day 16: Enhanced export with backend API support
-  const exportMap = async (format: 'json' | 'svg' | 'png' | 'graphml' | 'cypher') => {
+  const exportMap = async (
+    format: 'json' | 'svg' | 'png' | 'graphml' | 'cypher'
+  ) => {
     if (format === 'json') {
       const data = {
         nodes,
@@ -713,52 +762,52 @@ export default function KnowledgeMapPage() {
             </div>
 
             {!isLoading && !error && (
-            <div className="flex items-center gap-3">
-              <Button
-                variant={aiMode ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setAiMode(!aiMode)}
-                className={cn(
-                  aiMode && 'bg-gradient-to-r from-indigo-600 to-purple-600'
-                )}
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                AI Assist
-              </Button>
-              <Select
-                value={layoutMode}
-                onValueChange={(value: any) => setLayoutMode(value)}
-              >
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="force">Force Layout</SelectItem>
-                  <SelectItem value="hierarchical">Hierarchical</SelectItem>
-                  <SelectItem value="circular">Circular</SelectItem>
-                  <SelectItem value="grid">Grid</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={applyForceLayout} variant="outline" size="sm">
-                <GitBranch className="w-4 h-4 mr-2" />
-                Auto Layout
-              </Button>
-              <Select
-                value=""
-                onValueChange={(format: any) => exportMap(format)}
-              >
-                <SelectTrigger className="w-32">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="json">JSON</SelectItem>
-                  <SelectItem value="png">PNG Image</SelectItem>
-                  <SelectItem value="graphml">GraphML</SelectItem>
-                  <SelectItem value="cypher">Cypher</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant={aiMode ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setAiMode(!aiMode)}
+                  className={cn(
+                    aiMode && 'bg-gradient-to-r from-indigo-600 to-purple-600'
+                  )}
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  AI Assist
+                </Button>
+                <Select
+                  value={layoutMode}
+                  onValueChange={(value: any) => setLayoutMode(value)}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="force">Force Layout</SelectItem>
+                    <SelectItem value="hierarchical">Hierarchical</SelectItem>
+                    <SelectItem value="circular">Circular</SelectItem>
+                    <SelectItem value="grid">Grid</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={applyForceLayout} variant="outline" size="sm">
+                  <GitBranch className="w-4 h-4 mr-2" />
+                  Auto Layout
+                </Button>
+                <Select
+                  value=""
+                  onValueChange={(format: any) => exportMap(format)}
+                >
+                  <SelectTrigger className="w-32">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="json">JSON</SelectItem>
+                    <SelectItem value="png">PNG Image</SelectItem>
+                    <SelectItem value="graphml">GraphML</SelectItem>
+                    <SelectItem value="cypher">Cypher</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </div>
         </div>
@@ -769,8 +818,12 @@ export default function KnowledgeMapPage() {
             <div className="text-center space-y-4">
               <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600 mx-auto"></div>
               <div>
-                <p className="text-lg font-medium text-indigo-900">Building Knowledge Graph...</p>
-                <p className="text-sm text-gray-600">Analyzing relationships between concepts</p>
+                <p className="text-lg font-medium text-indigo-900">
+                  Building Knowledge Graph...
+                </p>
+                <p className="text-sm text-gray-600">
+                  Analyzing relationships between concepts
+                </p>
               </div>
             </div>
           </div>
@@ -783,7 +836,9 @@ export default function KnowledgeMapPage() {
               <CardContent className="p-6">
                 <div className="flex items-start gap-3">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-red-900">Error Loading Knowledge Graph</h3>
+                    <h3 className="font-semibold text-red-900">
+                      Error Loading Knowledge Graph
+                    </h3>
                     <p className="text-sm text-red-700 mt-1">{error}</p>
                     <Button
                       onClick={() => window.location.reload()}
@@ -806,12 +861,16 @@ export default function KnowledgeMapPage() {
             <Card className="max-w-md">
               <CardContent className="p-12 text-center">
                 <GitBranch className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Papers in Library</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  No Papers in Library
+                </h3>
                 <p className="text-gray-600 mb-4">
                   Add papers to your library to build a knowledge graph
                 </p>
                 <Button
-                  onClick={() => window.location.href = '/discover/literature'}
+                  onClick={() =>
+                    (window.location.href = '/discover/literature')
+                  }
                   className="bg-indigo-600 hover:bg-indigo-700"
                 >
                   Search Literature
@@ -823,453 +882,486 @@ export default function KnowledgeMapPage() {
 
         {/* Main Content */}
         {!isLoading && !error && nodes.length > 0 && (
-        <>
-        <div className="flex-1 flex">
-          {/* Sidebar */}
-          <div className="w-80 bg-white border-r p-4 overflow-y-auto">
-            <Tabs defaultValue="nodes">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="nodes">Nodes</TabsTrigger>
-                <TabsTrigger value="edges">Edges</TabsTrigger>
-                <TabsTrigger value="filters">Filters</TabsTrigger>
-                <TabsTrigger value="insights">Insights</TabsTrigger>
-              </TabsList>
+          <>
+            <div className="flex-1 flex">
+              {/* Sidebar */}
+              <div className="w-80 bg-white border-r p-4 overflow-y-auto">
+                <Tabs defaultValue="nodes">
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="nodes">Nodes</TabsTrigger>
+                    <TabsTrigger value="edges">Edges</TabsTrigger>
+                    <TabsTrigger value="filters">Filters</TabsTrigger>
+                    <TabsTrigger value="insights">Insights</TabsTrigger>
+                  </TabsList>
 
-              <TabsContent value="nodes" className="space-y-4">
-                {/* Add Node Buttons */}
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Add Node
-                  </label>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    {Object.entries(NODE_COLORS).map(([type, color]) => (
-                      <Button
-                        key={type}
-                        size="sm"
-                        variant="outline"
-                        onClick={() => addNode(type as Node['type'])}
-                        className="text-xs"
-                      >
-                        <Circle className="w-3 h-3 mr-1" style={{ color }} />
-                        {type}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Selected Node Info */}
-                {selectedNode && (
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm flex items-center justify-between">
-                        Selected Node
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSelectedNode(null)}
-                        >
-                          ×
-                        </Button>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div>
-                        <label className="text-xs font-medium text-gray-600">
-                          Label
-                        </label>
-                        <Input
-                          value={selectedNode.label}
-                          onChange={e => {
-                            setNodes(
-                              nodes.map(n =>
-                                n.id === selectedNode.id
-                                  ? { ...n, label: e.target.value }
-                                  : n
-                              )
-                            );
-                            setSelectedNode({
-                              ...selectedNode,
-                              label: e.target.value,
-                            });
-                          }}
-                          className="mt-1"
-                        />
+                  <TabsContent value="nodes" className="space-y-4">
+                    {/* Add Node Buttons */}
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Add Node
+                      </label>
+                      <div className="grid grid-cols-3 gap-2 mt-2">
+                        {Object.entries(NODE_COLORS).map(([type, color]) => (
+                          <Button
+                            key={type}
+                            size="sm"
+                            variant="outline"
+                            onClick={() => addNode(type as Node['type'])}
+                            className="text-xs"
+                          >
+                            <Circle
+                              className="w-3 h-3 mr-1"
+                              style={{ color }}
+                            />
+                            {type}
+                          </Button>
+                        ))}
                       </div>
+                    </div>
 
-                      <div>
-                        <label className="text-xs font-medium text-gray-600">
-                          Type
-                        </label>
-                        <Badge
-                          className="mt-1"
-                          style={{ backgroundColor: selectedNode.color }}
-                        >
-                          {selectedNode.type}
-                        </Badge>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-medium text-gray-600">
-                          Size
-                        </label>
-                        <Slider
-                          value={[selectedNode.size || 20]}
-                          onValueChange={([value]) => {
-                            setNodes(
-                              nodes.map(n => ({
-                                ...n,
-                                size:
-                                  n.id === selectedNode.id
-                                    ? (value ?? 20)
-                                    : (n.size ?? 20),
-                              }))
-                            );
-                            setSelectedNode({
-                              ...selectedNode,
-                              size: value ?? 20,
-                            });
-                          }}
-                          min={10}
-                          max={50}
-                          className="mt-1"
-                        />
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setNodes(
-                              nodes.map(n =>
-                                n.id === selectedNode.id
-                                  ? { ...n, locked: !n.locked }
-                                  : n
-                              )
-                            );
-                            setSelectedNode({
-                              ...selectedNode,
-                              locked: !selectedNode.locked,
-                            });
-                          }}
-                        >
-                          {selectedNode.locked ? (
-                            <Lock className="w-4 h-4" />
-                          ) : (
-                            <Unlock className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-red-600"
-                          onClick={() => {
-                            setNodes(
-                              nodes.filter(n => n.id !== selectedNode.id)
-                            );
-                            setEdges(
-                              edges.filter(
-                                e =>
-                                  e.source !== selectedNode.id &&
-                                  e.target !== selectedNode.id
-                              )
-                            );
-                            setSelectedNode(null);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-
-              <TabsContent value="edges" className="space-y-4">
-                {/* Add Edge Buttons */}
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Add Edge
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {Object.keys(EDGE_COLORS).map(type => (
-                      <Button
-                        key={type}
-                        size="sm"
-                        variant="outline"
-                        onClick={() => addEdge(type as Edge['type'])}
-                        disabled={!selectedNode}
-                        className="text-xs"
-                      >
-                        {type}
-                      </Button>
-                    ))}
-                  </div>
-                  {!selectedNode && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      Select a node first
-                    </p>
-                  )}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="filters" className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Search
-                  </label>
-                  <div className="relative mt-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      placeholder="Search nodes..."
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Filter by Type
-                  </label>
-                  <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      {Object.keys(NODE_COLORS).map(type => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={showLabels}
-                      onChange={e => setShowLabels(e.target.checked)}
-                      className="rounded border-gray-300"
-                    />
-                    <span className="text-sm">Show Labels</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={showEdges}
-                      onChange={e => setShowEdges(e.target.checked)}
-                      className="rounded border-gray-300"
-                    />
-                    <span className="text-sm">Show Edges</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={autoLayout}
-                      onChange={e => setAutoLayout(e.target.checked)}
-                      className="rounded border-gray-300"
-                    />
-                    <span className="text-sm">Auto Layout</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={showPredictedLinks}
-                      onChange={e => {
-                        setShowPredictedLinks(e.target.checked);
-                        if (e.target.checked && predictedLinks.length === 0) {
-                          loadPredictedLinks();
-                        }
-                      }}
-                      className="rounded border-gray-300"
-                    />
-                    <span className="text-sm">Show Predicted Links</span>
-                  </label>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="insights" className="space-y-4">
-                {/* Phase 9 Day 16: Insights Panel */}
-                {!insights && (
-                  <div className="text-center py-8 text-gray-500 text-sm">
-                    No insights available yet
-                  </div>
-                )}
-
-                {insights && (
-                  <>
-                    {/* Bridge Concepts */}
-                    {insights.bridgeConcepts && insights.bridgeConcepts.length > 0 && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-                          <GitBranch className="w-4 h-4 text-purple-600" />
-                          Bridge Concepts
-                        </label>
-                        <div className="space-y-2">
-                          {insights.bridgeConcepts.slice(0, 5).map((bridge: any, idx: number) => (
-                            <Card key={idx} className="border-purple-200">
-                              <CardContent className="p-3">
-                                <div className="font-medium text-sm">{bridge.concept}</div>
-                                <div className="text-xs text-gray-600 mt-1">
-                                  Betweenness: {bridge.betweenness.toFixed(3)}
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Connects: {bridge.connects?.join(', ') || 'Multiple areas'}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Controversies */}
-                    {insights.controversies && insights.controversies.length > 0 && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-                          <AlertCircle className="w-4 h-4 text-red-600" />
-                          Controversies
-                        </label>
-                        <div className="space-y-2">
-                          {insights.controversies.slice(0, 5).map((controversy: any, idx: number) => (
-                            <Card key={idx} className="border-red-200">
-                              <CardContent className="p-3">
-                                <div className="font-medium text-sm">{controversy.topic}</div>
-                                <div className="text-xs text-gray-600 mt-1">
-                                  Intensity: {controversy.intensity}/10
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                  {controversy.clusters?.join(' vs ') || 'Opposing views detected'}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Emerging Topics */}
-                    {insights.emergingTopics && insights.emergingTopics.length > 0 && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-                          <TrendingUp className="w-4 h-4 text-green-600" />
-                          Emerging Topics
-                        </label>
-                        <div className="space-y-2">
-                          {insights.emergingTopics.slice(0, 5).map((topic: any, idx: number) => (
-                            <Card key={idx} className="border-green-200">
-                              <CardContent className="p-3">
-                                <div className="font-medium text-sm">{topic.topic}</div>
-                                <div className="text-xs text-gray-600 mt-1">
-                                  Growth: {topic.growthRate}%/year
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                  {topic.papers?.length || 0} recent papers
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Influence Flow Controls */}
+                    {/* Selected Node Info */}
                     {selectedNode && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 mb-2 block">
-                          Influence Flow
-                        </label>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => loadInfluenceFlow(selectedNode.id)}
-                          className="w-full"
-                        >
-                          Show Influence Flow for {selectedNode.label}
-                        </Button>
-                        {showInfluenceFlow && influenceFlowData && (
-                          <div className="mt-2 text-xs text-gray-600">
-                            {influenceFlowData.influenceFlows?.length || 0} influence paths found
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm flex items-center justify-between">
+                            Selected Node
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setSelectedNode(null)}
+                            >
+                              ×
+                            </Button>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div>
+                            <label className="text-xs font-medium text-gray-600">
+                              Label
+                            </label>
+                            <Input
+                              value={selectedNode.label}
+                              onChange={e => {
+                                setNodes(
+                                  nodes.map(n =>
+                                    n.id === selectedNode.id
+                                      ? { ...n, label: e.target.value }
+                                      : n
+                                  )
+                                );
+                                setSelectedNode({
+                                  ...selectedNode,
+                                  label: e.target.value,
+                                });
+                              }}
+                              className="mt-1"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-xs font-medium text-gray-600">
+                              Type
+                            </label>
+                            <Badge
+                              className="mt-1"
+                              style={{ backgroundColor: selectedNode.color }}
+                            >
+                              {selectedNode.type}
+                            </Badge>
+                          </div>
+
+                          <div>
+                            <label className="text-xs font-medium text-gray-600">
+                              Size
+                            </label>
+                            <Slider
+                              value={[selectedNode.size || 20]}
+                              onValueChange={([value]) => {
+                                setNodes(
+                                  nodes.map(n => ({
+                                    ...n,
+                                    size:
+                                      n.id === selectedNode.id
+                                        ? (value ?? 20)
+                                        : (n.size ?? 20),
+                                  }))
+                                );
+                                setSelectedNode({
+                                  ...selectedNode,
+                                  size: value ?? 20,
+                                });
+                              }}
+                              min={10}
+                              max={50}
+                              className="mt-1"
+                            />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setNodes(
+                                  nodes.map(n =>
+                                    n.id === selectedNode.id
+                                      ? { ...n, locked: !n.locked }
+                                      : n
+                                  )
+                                );
+                                setSelectedNode({
+                                  ...selectedNode,
+                                  locked: !selectedNode.locked,
+                                });
+                              }}
+                            >
+                              {selectedNode.locked ? (
+                                <Lock className="w-4 h-4" />
+                              ) : (
+                                <Unlock className="w-4 h-4" />
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600"
+                              onClick={() => {
+                                setNodes(
+                                  nodes.filter(n => n.id !== selectedNode.id)
+                                );
+                                setEdges(
+                                  edges.filter(
+                                    e =>
+                                      e.source !== selectedNode.id &&
+                                      e.target !== selectedNode.id
+                                  )
+                                );
+                                setSelectedNode(null);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="edges" className="space-y-4">
+                    {/* Add Edge Buttons */}
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Add Edge
+                      </label>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {Object.keys(EDGE_COLORS).map(type => (
+                          <Button
+                            key={type}
+                            size="sm"
+                            variant="outline"
+                            onClick={() => addEdge(type as Edge['type'])}
+                            disabled={!selectedNode}
+                            className="text-xs"
+                          >
+                            {type}
+                          </Button>
+                        ))}
+                      </div>
+                      {!selectedNode && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Select a node first
+                        </p>
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="filters" className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Search
+                      </label>
+                      <div className="relative mt-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                          value={searchQuery}
+                          onChange={e => setSearchQuery(e.target.value)}
+                          placeholder="Search nodes..."
+                          className="pl-9"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Filter by Type
+                      </label>
+                      <Select value={filterType} onValueChange={setFilterType}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Types</SelectItem>
+                          {Object.keys(NODE_COLORS).map(type => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={showLabels}
+                          onChange={e => setShowLabels(e.target.checked)}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm">Show Labels</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={showEdges}
+                          onChange={e => setShowEdges(e.target.checked)}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm">Show Edges</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={autoLayout}
+                          onChange={e => setAutoLayout(e.target.checked)}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm">Auto Layout</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={showPredictedLinks}
+                          onChange={e => {
+                            setShowPredictedLinks(e.target.checked);
+                            if (
+                              e.target.checked &&
+                              predictedLinks.length === 0
+                            ) {
+                              loadPredictedLinks();
+                            }
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm">Show Predicted Links</span>
+                      </label>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="insights" className="space-y-4">
+                    {/* Phase 9 Day 16: Insights Panel */}
+                    {!insights && (
+                      <div className="text-center py-8 text-gray-500 text-sm">
+                        No insights available yet
+                      </div>
+                    )}
+
+                    {insights && (
+                      <>
+                        {/* Bridge Concepts */}
+                        {insights.bridgeConcepts &&
+                          insights.bridgeConcepts.length > 0 && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                                <GitBranch className="w-4 h-4 text-purple-600" />
+                                Bridge Concepts
+                              </label>
+                              <div className="space-y-2">
+                                {insights.bridgeConcepts
+                                  .slice(0, 5)
+                                  .map((bridge: any, idx: number) => (
+                                    <Card
+                                      key={idx}
+                                      className="border-purple-200"
+                                    >
+                                      <CardContent className="p-3">
+                                        <div className="font-medium text-sm">
+                                          {bridge.concept}
+                                        </div>
+                                        <div className="text-xs text-gray-600 mt-1">
+                                          Betweenness:{' '}
+                                          {bridge.betweenness.toFixed(3)}
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Connects:{' '}
+                                          {bridge.connects?.join(', ') ||
+                                            'Multiple areas'}
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+
+                        {/* Controversies */}
+                        {insights.controversies &&
+                          insights.controversies.length > 0 && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                                <AlertCircle className="w-4 h-4 text-red-600" />
+                                Controversies
+                              </label>
+                              <div className="space-y-2">
+                                {insights.controversies
+                                  .slice(0, 5)
+                                  .map((controversy: any, idx: number) => (
+                                    <Card key={idx} className="border-red-200">
+                                      <CardContent className="p-3">
+                                        <div className="font-medium text-sm">
+                                          {controversy.topic}
+                                        </div>
+                                        <div className="text-xs text-gray-600 mt-1">
+                                          Intensity: {controversy.intensity}/10
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          {controversy.clusters?.join(' vs ') ||
+                                            'Opposing views detected'}
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+
+                        {/* Emerging Topics */}
+                        {insights.emergingTopics &&
+                          insights.emergingTopics.length > 0 && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                                <TrendingUp className="w-4 h-4 text-green-600" />
+                                Emerging Topics
+                              </label>
+                              <div className="space-y-2">
+                                {insights.emergingTopics
+                                  .slice(0, 5)
+                                  .map((topic: any, idx: number) => (
+                                    <Card
+                                      key={idx}
+                                      className="border-green-200"
+                                    >
+                                      <CardContent className="p-3">
+                                        <div className="font-medium text-sm">
+                                          {topic.topic}
+                                        </div>
+                                        <div className="text-xs text-gray-600 mt-1">
+                                          Growth: {topic.growthRate}%/year
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          {topic.papers?.length || 0} recent
+                                          papers
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+
+                        {/* Influence Flow Controls */}
+                        {selectedNode && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-700 mb-2 block">
+                              Influence Flow
+                            </label>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => loadInfluenceFlow(selectedNode.id)}
+                              className="w-full"
+                            >
+                              Show Influence Flow for {selectedNode.label}
+                            </Button>
+                            {showInfluenceFlow && influenceFlowData && (
+                              <div className="mt-2 text-xs text-gray-600">
+                                {influenceFlowData.influenceFlows?.length || 0}{' '}
+                                influence paths found
+                              </div>
+                            )}
                           </div>
                         )}
-                      </div>
+                      </>
                     )}
-                  </>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
 
-          {/* Canvas Area */}
-          <div className="flex-1 relative" ref={containerRef}>
-            <canvas
-              ref={canvasRef}
-              className="absolute inset-0 w-full h-full cursor-move"
-              onMouseDown={handleCanvasMouseDown}
-              onMouseMove={handleCanvasMouseMove}
-              onMouseUp={handleCanvasMouseUp}
-              onMouseLeave={handleCanvasMouseUp}
-              style={{
-                cursor: isDragging
-                  ? 'grabbing'
-                  : hoveredNode
-                    ? 'pointer'
-                    : 'grab',
-              }}
-            />
+              {/* Canvas Area */}
+              <div className="flex-1 relative" ref={containerRef}>
+                <canvas
+                  ref={canvasRef}
+                  className="absolute inset-0 w-full h-full cursor-move"
+                  onMouseDown={handleCanvasMouseDown}
+                  onMouseMove={handleCanvasMouseMove}
+                  onMouseUp={handleCanvasMouseUp}
+                  onMouseLeave={handleCanvasMouseUp}
+                  style={{
+                    cursor: isDragging
+                      ? 'grabbing'
+                      : hoveredNode
+                        ? 'pointer'
+                        : 'grab',
+                  }}
+                />
 
-            {/* Zoom Controls */}
-            <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => setZoom(Math.min(zoom * 1.2, 3))}
-              >
-                <ZoomIn className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => setZoom(Math.max(zoom * 0.8, 0.3))}
-              >
-                <ZoomOut className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  setZoom(1);
-                  setPan({ x: 0, y: 0 });
-                }}
-              >
-                <Crosshair className="w-4 h-4" />
-              </Button>
-            </div>
+                {/* Zoom Controls */}
+                <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setZoom(Math.min(zoom * 1.2, 3))}
+                  >
+                    <ZoomIn className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setZoom(Math.max(zoom * 0.8, 0.3))}
+                  >
+                    <ZoomOut className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setZoom(1);
+                      setPan({ x: 0, y: 0 });
+                    }}
+                  >
+                    <Crosshair className="w-4 h-4" />
+                  </Button>
+                </div>
 
-            {/* Status Bar */}
-            <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur rounded-lg px-3 py-2">
-              <div className="flex items-center gap-4 text-xs text-gray-600">
-                <span>Zoom: {Math.round(zoom * 100)}%</span>
-                <span>•</span>
-                <span>
-                  Pan: ({Math.round(pan.x)}, {Math.round(pan.y)})
-                </span>
-                {hoveredNode && (
-                  <>
+                {/* Status Bar */}
+                <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-4 text-xs text-gray-600">
+                    <span>Zoom: {Math.round(zoom * 100)}%</span>
                     <span>•</span>
-                    <span>Hovering: {hoveredNode.label}</span>
-                  </>
-                )}
+                    <span>
+                      Pan: ({Math.round(pan.x)}, {Math.round(pan.y)})
+                    </span>
+                    {hoveredNode && (
+                      <>
+                        <span>•</span>
+                        <span>Hovering: {hoveredNode.label}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-        </>
+          </>
         )}
       </div>
     </div>

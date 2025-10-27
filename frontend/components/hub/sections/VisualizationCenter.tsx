@@ -179,7 +179,9 @@ function VisualizationCenterComponent({
   }, [realtimeEnabled, studyId]);
 
   const connectWebSocket = () => {
-    const ws = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000'}/ws`);
+    const ws = new WebSocket(
+      `${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000'}/ws`
+    );
 
     ws.onopen = () => {
       console.log('WebSocket connected for visualization updates');

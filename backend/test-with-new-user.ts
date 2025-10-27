@@ -62,7 +62,6 @@ async function testWithNewUser() {
     });
 
     console.log(`User has ${papers.length} papers total`);
-
   } catch (error: any) {
     console.error('❌ ERROR:', error.message);
     console.error('Stack:', error.stack);

@@ -21,7 +21,9 @@ export class OrcidStrategy extends PassportStrategy(Strategy, 'orcid') {
     super({
       clientID: configService.get('ORCID_CLIENT_ID'),
       clientSecret: configService.get('ORCID_CLIENT_SECRET'),
-      callbackURL: configService.get('ORCID_CALLBACK_URL') || 'http://localhost:4000/api/auth/orcid/callback',
+      callbackURL:
+        configService.get('ORCID_CALLBACK_URL') ||
+        'http://localhost:4000/api/auth/orcid/callback',
       scope: '/authenticate',
       sandbox: configService.get('NODE_ENV') === 'development', // Use sandbox in dev
     } as any);
@@ -38,9 +40,14 @@ export class OrcidStrategy extends PassportStrategy(Strategy, 'orcid') {
       // Extract ORCID data
       const orcidData = {
         orcid: profile.id || profile.orcid,
-        name: profile.displayName || (profile.name ? `${profile.name.givenName} ${profile.name.familyName}` : 'ORCID User'),
+        name:
+          profile.displayName ||
+          (profile.name
+            ? `${profile.name.givenName} ${profile.name.familyName}`
+            : 'ORCID User'),
         email: profile.emails?.[0]?.value,
-        institution: profile._json?.['affiliation']?.[0]?.['organization']?.['name'],
+        institution:
+          profile._json?.['affiliation']?.[0]?.['organization']?.['name'],
         accessToken,
         refreshToken,
       };

@@ -1,22 +1,22 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card } from '@/components/apple-ui/Card';
 import { Button } from '@/components/apple-ui/Button';
+import { Card } from '@/components/apple-ui/Card';
 import { Alert } from '@/components/ui/alert';
 import {
   Question,
-  QuestionType,
   ScreeningResult,
   questionAPIService,
 } from '@/lib/services/question-api.service';
+import { QuestionType } from '@/lib/types/questionnaire';
 import {
+  ArrowPathIcon,
+  CheckCircleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CheckCircleIcon,
   ExclamationTriangleIcon,
-  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 /**
  * Phase 8.2 Day 1: World-Class Screening Questionnaire Component
@@ -474,7 +474,7 @@ function renderQuestionInput(
         </div>
       );
 
-    case QuestionType.TEXT_ENTRY:
+    case QuestionType.TEXT_LONG:
       return (
         <textarea
           value={value || ''}
@@ -545,8 +545,10 @@ function renderQuestionInput(
       );
 
     case QuestionType.SLIDER:
-      const min = question.validation?.minValue || 0;
-      const max = question.validation?.maxValue || 100;
+      const minRule = question.validation?.find(rule => rule.type === 'min');
+      const maxRule = question.validation?.find(rule => rule.type === 'max');
+      const min = minRule?.value || 0;
+      const max = maxRule?.value || 100;
 
       return (
         <div>

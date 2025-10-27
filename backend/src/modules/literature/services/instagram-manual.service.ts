@@ -1,11 +1,19 @@
-import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { PrismaService } from '@/common/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { TranscriptionService } from './transcription.service';
-import { MultiMediaAnalysisService, ExtractedTheme } from './multimedia-analysis.service';
+import {
+  MultiMediaAnalysisService,
+  ExtractedTheme,
+} from './multimedia-analysis.service';
 
 /**
  * Instagram Manual Upload Service
@@ -74,7 +82,9 @@ export class InstagramManualService {
     private transcriptionService: TranscriptionService,
     private multimediaAnalysisService: MultiMediaAnalysisService,
   ) {
-    this.uploadDir = this.configService.get<string>('INSTAGRAM_UPLOAD_DIR') || '/tmp/vqmethod-instagram-uploads';
+    this.uploadDir =
+      this.configService.get<string>('INSTAGRAM_UPLOAD_DIR') ||
+      '/tmp/vqmethod-instagram-uploads';
   }
 
   /**
@@ -90,10 +100,10 @@ export class InstagramManualService {
   isValidInstagramUrl(url: string): boolean {
     const patterns = [
       /^https?:\/\/(www\.)?instagram\.com\/(p|reel|tv)\/[A-Za-z0-9_-]+\/?(\?.*)?$/,
-      /^https?:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._]+\/(p|reel|tv)\/[A-Za-z0-9_-]+\/?(\?.*)?$/
+      /^https?:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._]+\/(p|reel|tv)\/[A-Za-z0-9_-]+\/?(\?.*)?$/,
     ];
 
-    return patterns.some(pattern => pattern.test(url));
+    return patterns.some((pattern) => pattern.test(url));
   }
 
   /**
@@ -119,7 +129,9 @@ export class InstagramManualService {
    */
   extractUsername(url: string): string | null {
     const match = url.match(/instagram\.com\/([A-Za-z0-9._]+)\/(p|reel|tv)/);
-    return match && match[1] !== 'p' && match[1] !== 'reel' && match[1] !== 'tv' ? match[1] : null;
+    return match && match[1] !== 'p' && match[1] !== 'reel' && match[1] !== 'tv'
+      ? match[1]
+      : null;
   }
 
   /**
@@ -136,7 +148,7 @@ export class InstagramManualService {
     // Validate URL
     if (!this.isValidInstagramUrl(url)) {
       throw new BadRequestException(
-        'Invalid Instagram URL. Please provide a valid Instagram post, reel, or TV URL.'
+        'Invalid Instagram URL. Please provide a valid Instagram post, reel, or TV URL.',
       );
     }
 
@@ -144,15 +156,17 @@ export class InstagramManualService {
     const username = this.extractUsername(url);
 
     if (!videoId) {
-      throw new BadRequestException('Could not extract video ID from Instagram URL');
+      throw new BadRequestException(
+        'Could not extract video ID from Instagram URL',
+      );
     }
 
     // Check if we already have this video
     const existing = await this.prisma.videoTranscript.findFirst({
       where: {
         sourceUrl: url,
-        sourceType: 'instagram'
-      }
+        sourceType: 'instagram',
+      },
     });
 
     if (existing) {
@@ -161,7 +175,8 @@ export class InstagramManualService {
         status: 'already_processed',
         videoId,
         transcriptId: existing.id,
-        message: 'This Instagram video has already been processed. View existing results below.'
+        message:
+          'This Instagram video has already been processed. View existing results below.',
       };
     }
 
@@ -172,24 +187,31 @@ export class InstagramManualService {
       username,
       url,
       instructions: {
-        step1: 'Due to Instagram API limitations, please manually download this video.',
+        step1:
+          'Due to Instagram API limitations, please manually download this video.',
         step2: 'Recommended tools:',
         tools: [
           {
             name: 'Browser Extension',
-            description: 'Install a browser extension like "Video Downloader Professional"',
-            chrome: 'https://chrome.google.com/webstore/search/video%20downloader',
-            firefox: 'https://addons.mozilla.org/en-US/firefox/search/?q=video%20downloader'
+            description:
+              'Install a browser extension like "Video Downloader Professional"',
+            chrome:
+              'https://chrome.google.com/webstore/search/video%20downloader',
+            firefox:
+              'https://addons.mozilla.org/en-US/firefox/search/?q=video%20downloader',
           },
           {
             name: 'Online Service',
-            description: 'Use a web-based downloader (ensure it\'s from a trusted source)',
-            examples: ['SaveFrom.net', 'DownloadGram.org']
-          }
+            description:
+              "Use a web-based downloader (ensure it's from a trusted source)",
+            examples: ['SaveFrom.net', 'DownloadGram.org'],
+          },
         ],
-        step3: 'Once downloaded, upload the video file using the upload button below.',
-        legal_notice: 'IMPORTANT: Only upload videos you have permission to use. This tool is for academic research purposes only. You are responsible for complying with Instagram\'s Terms of Service and copyright laws.'
-      }
+        step3:
+          'Once downloaded, upload the video file using the upload button below.',
+        legal_notice:
+          "IMPORTANT: Only upload videos you have permission to use. This tool is for academic research purposes only. You are responsible for complying with Instagram's Terms of Service and copyright laws.",
+      },
     };
   }
 
@@ -203,7 +225,7 @@ export class InstagramManualService {
    */
   async processUploadedVideo(
     upload: InstagramVideoUpload,
-    context?: string
+    context?: string,
   ): Promise<InstagramContentAnalysis> {
     this.logger.log(`Processing uploaded Instagram video: ${upload.fileName}`);
 
@@ -215,16 +237,22 @@ export class InstagramManualService {
       const storedPath = await this.storeUploadedFile(upload);
 
       // 3. Generate unique video ID
-      const videoId = this.extractVideoId(upload.url) || this.generateVideoId(upload.url);
+      const videoId =
+        this.extractVideoId(upload.url) || this.generateVideoId(upload.url);
 
       // 4. Extract audio and transcribe
-      const transcription = await this.transcribeUploadedVideo(storedPath, videoId, upload);
+      const transcription = await this.transcribeUploadedVideo(
+        storedPath,
+        videoId,
+        upload,
+      );
 
       // 5. Extract themes
-      const themes = await this.multimediaAnalysisService.extractThemesFromTranscript(
-        transcription.id,
-        context
-      );
+      const themes =
+        await this.multimediaAnalysisService.extractThemesFromTranscript(
+          transcription.id,
+          context,
+        );
 
       // 6. Store in SocialMediaContent table
       await this.storeSocialMediaContent(videoId, transcription.id, upload);
@@ -241,20 +269,24 @@ export class InstagramManualService {
         transcript: {
           id: transcription.id,
           text: transcription.transcript,
-          confidence: transcription.confidence || 0.9
+          confidence: transcription.confidence || 0.9,
         },
         themes,
         metadata: {
           username: upload.metadata?.username,
           caption: upload.metadata?.caption,
-          hashtags: upload.metadata?.hashtags || []
+          hashtags: upload.metadata?.hashtags || [],
         },
-        relevanceScore
+        relevanceScore,
       };
-
     } catch (error: any) {
-      this.logger.error(`Failed to process Instagram video: ${error.message}`, error.stack);
-      throw new InternalServerErrorException(`Failed to process Instagram video: ${error.message}`);
+      this.logger.error(
+        `Failed to process Instagram video: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        `Failed to process Instagram video: ${error.message}`,
+      );
     }
   }
 
@@ -266,17 +298,18 @@ export class InstagramManualService {
     const existing = await this.prisma.videoTranscript.findFirst({
       where: {
         sourceUrl: url,
-        sourceType: 'instagram'
+        sourceType: 'instagram',
       },
       include: {
-        themes: true
-      }
+        themes: true,
+      },
     });
 
     if (!existing) {
       return {
         status: 'not_processed',
-        message: 'This video has not been processed yet. Please upload the video file.'
+        message:
+          'This video has not been processed yet. Please upload the video file.',
       };
     }
 
@@ -284,7 +317,7 @@ export class InstagramManualService {
       status: 'processed',
       transcriptId: existing.id,
       themeCount: existing.themes?.length || 0,
-      processedAt: existing.processedAt
+      processedAt: existing.processedAt,
     };
   }
 
@@ -298,7 +331,7 @@ export class InstagramManualService {
     // Check file size
     if (upload.fileSize > this.maxFileSize) {
       throw new BadRequestException(
-        `File size exceeds maximum allowed (${this.maxFileSize / 1024 / 1024} MB)`
+        `File size exceeds maximum allowed (${this.maxFileSize / 1024 / 1024} MB)`,
       );
     }
 
@@ -306,7 +339,7 @@ export class InstagramManualService {
     const ext = path.extname(upload.fileName).toLowerCase();
     if (!this.allowedExtensions.includes(ext)) {
       throw new BadRequestException(
-        `Invalid file type. Allowed types: ${this.allowedExtensions.join(', ')}`
+        `Invalid file type. Allowed types: ${this.allowedExtensions.join(', ')}`,
       );
     }
 
@@ -314,7 +347,9 @@ export class InstagramManualService {
     try {
       await fs.access(upload.filePath);
     } catch (error: any) {
-      throw new BadRequestException('Uploaded file not found or not accessible');
+      throw new BadRequestException(
+        'Uploaded file not found or not accessible',
+      );
     }
   }
 
@@ -322,7 +357,9 @@ export class InstagramManualService {
    * Store uploaded file in permanent storage
    * @private
    */
-  private async storeUploadedFile(upload: InstagramVideoUpload): Promise<string> {
+  private async storeUploadedFile(
+    upload: InstagramVideoUpload,
+  ): Promise<string> {
     await fs.mkdir(this.uploadDir, { recursive: true });
 
     const uniqueName = `${Date.now()}_${upload.fileName}`;
@@ -340,7 +377,7 @@ export class InstagramManualService {
   private async transcribeUploadedVideo(
     videoPath: string,
     videoId: string,
-    upload: InstagramVideoUpload
+    upload: InstagramVideoUpload,
   ) {
     this.logger.log(`Transcribing Instagram video: ${videoId}`);
 
@@ -349,7 +386,8 @@ export class InstagramManualService {
       const audioPath = await this.extractAudioFromVideo(videoPath);
 
       // Transcribe with Whisper
-      const transcription = await this.transcriptionService['transcribeAudioFile'](audioPath);
+      const transcription =
+        await this.transcriptionService['transcribeAudioFile'](audioPath);
 
       // Calculate costs
       const duration = (transcription as any).duration || 60;
@@ -371,9 +409,9 @@ export class InstagramManualService {
           transcriptionCost,
           metadata: {
             hashtags: upload.metadata?.hashtags || [],
-            uploadedAt: upload.metadata?.uploadedAt || new Date()
-          }
-        }
+            uploadedAt: upload.metadata?.uploadedAt || new Date(),
+          },
+        },
       });
 
       // Cleanup audio file
@@ -387,12 +425,16 @@ export class InstagramManualService {
         timestampedText: saved.timestampedText,
         duration: saved.duration,
         confidence: saved.confidence,
-        cost: transcriptionCost
+        cost: transcriptionCost,
       };
-
     } catch (error: any) {
-      this.logger.error(`Instagram transcription failed: ${error.message}`, error.stack);
-      throw new InternalServerErrorException(`Failed to transcribe Instagram video: ${error.message}`);
+      this.logger.error(
+        `Instagram transcription failed: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        `Failed to transcribe Instagram video: ${error.message}`,
+      );
     }
   }
 
@@ -424,7 +466,8 @@ export class InstagramManualService {
     }
 
     // Average theme relevance
-    const avgRelevance = themes.reduce((sum, t) => sum + t.relevanceScore, 0) / themes.length;
+    const avgRelevance =
+      themes.reduce((sum, t) => sum + t.relevanceScore, 0) / themes.length;
     return Math.round(avgRelevance * 100) / 100;
   }
 
@@ -435,12 +478,12 @@ export class InstagramManualService {
   private async storeSocialMediaContent(
     videoId: string,
     transcriptId: string,
-    upload: InstagramVideoUpload
+    upload: InstagramVideoUpload,
   ) {
     try {
       await this.prisma.socialMediaContent.upsert({
         where: {
-          url: upload.url
+          url: upload.url,
         },
         create: {
           platform: 'instagram',
@@ -450,14 +493,16 @@ export class InstagramManualService {
           author: upload.metadata?.username || 'Unknown',
           publishedAt: upload.metadata?.uploadedAt || new Date(),
           transcriptId,
-          hashtags: upload.metadata?.hashtags || []
+          hashtags: upload.metadata?.hashtags || [],
         },
         update: {
-          transcriptId
-        }
+          transcriptId,
+        },
       });
     } catch (error: any) {
-      this.logger.warn(`Failed to store social media content: ${error.message}`);
+      this.logger.warn(
+        `Failed to store social media content: ${error.message}`,
+      );
     }
   }
 

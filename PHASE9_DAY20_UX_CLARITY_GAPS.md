@@ -32,7 +32,9 @@
 ### Current State Audit:
 
 #### 1. Top Panel Theme Extraction (Papers Only)
+
 **Location:** `/discover/literature/page.tsx` Line 839
+
 ```typescript
 <Button onClick={handleExtractThemes}>
   Extract Themes
@@ -40,12 +42,14 @@
 ```
 
 **What it does:**
+
 - Extracts themes from SELECTED PAPERS only
 - Uses Day 20's unified `extractUnifiedThemes()` API ✅
 - Shows results in "Themes" tab ✅
 - Works correctly ✅
 
 **Source:**
+
 ```typescript
 // Line 213-259
 const handleExtractThemes = async () => {
@@ -61,13 +65,15 @@ const handleExtractThemes = async () => {
   // Shows in UI
   setUnifiedThemes(result.themes);
   setActiveTab('themes');
-}
+};
 ```
 
 ---
 
 #### 2. Alternative Sources Theme Extraction (Videos)
+
 **Location:** `/discover/literature/page.tsx` Line 971
+
 ```typescript
 <input
   type="checkbox"
@@ -80,17 +86,19 @@ const handleExtractThemes = async () => {
 ```
 
 **What it does:**
+
 - Part of YouTube transcription options
 - Checkbox appears when "Include video transcriptions" is checked
 - Sets `transcriptionOptions.extractThemes = true`
 - **BUT WHERE DOES THIS GO?** ❌
 
 **The Problem:**
+
 ```typescript
 // State exists (Line 95-99)
 const [transcriptionOptions, setTranscriptionOptions] = useState({
   includeTranscripts: false,
-  extractThemes: false,  // <-- This is checked
+  extractThemes: false, // <-- This is checked
   maxResults: 10,
 });
 
@@ -104,6 +112,7 @@ const [transcriptionOptions, setTranscriptionOptions] = useState({
 #### 3. Where Transcriptions Go (NOWHERE!)
 
 **Expected Flow:**
+
 1. User searches YouTube videos ✅
 2. User checks "Include video transcriptions" ✅
 3. User checks "Extract themes with GPT-4" ✅
@@ -114,6 +123,7 @@ const [transcriptionOptions, setTranscriptionOptions] = useState({
 8. **Frontend displays results** ❌ **MISSING!**
 
 **Current Code:**
+
 ```typescript
 // Line 318-367: handleSearchAlternativeSources
 const handleSearchAlternativeSources = async () => {
@@ -129,10 +139,11 @@ const handleSearchAlternativeSources = async () => {
   // BUT: No transcription data displayed!
   // BUT: No themes shown!
   // BUT: No link to unified theme extraction!
-}
+};
 ```
 
 **The alternativeResults cards (Line 1048-1090):**
+
 ```typescript
 {alternativeResults.map((result) => (
   <div key={result.id}>
@@ -153,6 +164,7 @@ const handleSearchAlternativeSources = async () => {
 ## 📊 THE DISCONNECT
 
 ### Backend (Day 20) - UNIFIED ✅
+
 ```
 UnifiedThemeExtractionService
 ├── extractThemesFromSource() - Handles ANY source type
@@ -164,6 +176,7 @@ UnifiedThemeExtractionService
 ```
 
 ### Frontend UI - FRAGMENTED ❌
+
 ```
 Literature Page
 ├── Top Panel
@@ -183,10 +196,12 @@ Literature Page
 ## 🎯 REQUIRED FIXES
 
 ### Fix 1: Unify Theme Extraction UI
+
 **Problem:** Two separate "extract themes" controls
 **Solution:** One unified button for ALL sources
 
 **Implementation:**
+
 ```typescript
 // REMOVE the checkbox from transcription options (Line 967-989)
 // REPLACE with unified extraction
@@ -224,10 +239,12 @@ const handleExtractAllThemes = async () => {
 ---
 
 ### Fix 2: Show Transcription Results
+
 **Problem:** Transcriptions happen but not visible
 **Solution:** Create "Transcriptions" tab
 
 **Add new tab:**
+
 ```typescript
 <TabsList>
   <TabsTrigger value="search">Search</TabsTrigger>
@@ -280,10 +297,12 @@ const handleExtractAllThemes = async () => {
 ---
 
 ### Fix 3: Connect Backend Transcription to Frontend
+
 **Problem:** Backend transcribes but frontend doesn't receive/display
 **Solution:** Update API calls and state management
 
 **Current broken flow:**
+
 ```typescript
 // Backend does this (Day 18):
 transcriptionService.transcribeYouTubeVideo(videoId)
@@ -296,6 +315,7 @@ literatureAPI.searchAlternativeSources(query, sources)
 ```
 
 **Fix backend API response:**
+
 ```typescript
 // backend/src/modules/literature/literature.service.ts
 async searchAlternativeSources(query, sources, options) {
@@ -330,6 +350,7 @@ async searchAlternativeSources(query, sources, options) {
 ```
 
 **Update frontend API call:**
+
 ```typescript
 // frontend/lib/services/literature-api.service.ts
 async searchAlternativeSources(
@@ -365,10 +386,12 @@ setTranscribedVideos(transcribed);
 ---
 
 ### Fix 4: Unified Themes Tab Enhancement
+
 **Problem:** Themes tab only shows paper themes
 **Solution:** Show themes from ALL sources with clear attribution
 
 **Current Themes Tab:**
+
 ```typescript
 <TabsContent value="themes">
   {unifiedThemes.map(theme => (
@@ -380,6 +403,7 @@ setTranscribedVideos(transcribed);
 ```
 
 **Enhanced Themes Tab:**
+
 ```typescript
 <TabsContent value="themes">
   <div className="space-y-4">
@@ -432,15 +456,18 @@ setTranscribedVideos(transcribed);
 ## 📋 IMPLEMENTATION PLAN
 
 ### Phase 9 Day 20.5: UX Clarity Fixes (NEW)
+
 **Duration:** 3-4 hours
 **Priority:** HIGH - Fixes user confusion
 
 #### Task 1: Remove Duplicate Theme Extraction (30 min)
+
 - [ ] Remove "Extract themes" checkbox from transcription options (Line 967-989)
 - [ ] Keep only the unified "Extract Themes" button
 - [ ] Update button to show count from ALL sources
 
 #### Task 2: Create Transcriptions Tab (1 hour)
+
 - [ ] Add "Transcriptions" tab to TabsList
 - [ ] Create TranscriptionResults component
 - [ ] Display transcribed videos with:
@@ -452,18 +479,21 @@ setTranscribedVideos(transcribed);
 - [ ] Add "Add to Themes" button per video
 
 #### Task 3: Fix Backend API Integration (1 hour)
+
 - [ ] Update `searchAlternativeSources()` to accept transcription options
 - [ ] Return transcripts in API response
 - [ ] Return themes in API response (if extracted)
 - [ ] Add proper TypeScript interfaces
 
 #### Task 4: Connect Frontend to Backend (1 hour)
+
 - [ ] Pass `transcriptionOptions` to API call
 - [ ] Store `transcribedVideos` in state
 - [ ] Display in Transcriptions tab
 - [ ] Enable adding to unified themes
 
 #### Task 5: Enhance Themes Tab (30 min)
+
 - [ ] Add source summary card
 - [ ] Show theme attribution badges
 - [ ] Make provenance panel more prominent
@@ -509,6 +539,7 @@ setTranscribedVideos(transcribed);
 ## 🔄 COMPARISON: BEFORE vs AFTER
 
 ### BEFORE (Current - Confusing):
+
 ```
 Papers Search → Extract Themes → Themes Tab ✅
 YouTube Search → ??? → (themes disappear) ❌
@@ -519,6 +550,7 @@ No unified view ❌
 ```
 
 ### AFTER (Fixed - Clear):
+
 ```
 Papers Search → Select Papers → \
                                   → Extract Themes → Themes Tab ✅

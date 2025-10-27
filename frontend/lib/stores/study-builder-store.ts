@@ -235,13 +235,18 @@ export const useStudyBuilderStore = create<StudyBuilderState>()(
       updateStimulus: (id, updates) => set((state) => {
         const index = state.stimuli.findIndex(s => s.id === id);
         if (index !== -1) {
-          Object.assign(state.stimuli[index], updates);
-          state.isDirty = true;
+          const stimulus = state.stimuli[index];
+          if (stimulus) {
+            Object.assign(stimulus, updates);
+            state.isDirty = true;
+          }
         }
       }),
-      
+
       reorderStimuli: (from, to) => set((state) => {
         const item = state.stimuli[from];
+        if (!item) return;
+
         state.stimuli.splice(from, 1);
         state.stimuli.splice(to, 0, item);
         state.isDirty = true;

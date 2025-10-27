@@ -44,7 +44,15 @@ lerna-debug.log*
 Thumbs.db
 
 # IDE
-.vscode/
+# Keep workspace settings but ignore user-specific files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.vscode/settings.local.json
+
 .idea/
 *.swp
 *.swo
@@ -100,3 +108,12 @@ logs/
 # Uploaded files
 public/uploads/
 
+# Credentials and sensitive test data
+*CREDENTIALS*.md
+*TEST_ACCOUNTS*.md
+VERIFIED_LOGIN_CREDENTIALS.md
+CURRENT_TEST_CREDENTIALS.md
+
+# Development lock files
+.dev-ultimate.lock
+.dev-ultimate.pid

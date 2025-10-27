@@ -112,8 +112,8 @@ class ParticipantService {
     if (cached) return cached;
     return this.withRetry(async () => {
       const response = await apiClient.get<ApiResponse<Participant>>(`/participants/${id}`);
-      this.setCache(cacheKey, response.data);
-      return response.data;
+      this.setCache(cacheKey, response.data.data);
+      return response.data.data;
     });
   }
   async listParticipants(filter: ParticipantFilter = {}): Promise<{
@@ -132,8 +132,8 @@ class ParticipantService {
         page: number;
         pageSize: number;
       }>>('/participants', { params: filter });
-      this.setCache(cacheKey, response.data);
-      return response.data;
+      this.setCache(cacheKey, response.data.data);
+      return response.data.data;
     });
   }
   async createParticipant(data: Partial<Participant>): Promise<Participant> {
@@ -141,7 +141,7 @@ class ParticipantService {
 
     return this.withRetry(async () => {
       const response = await apiClient.post<ApiResponse<Participant>>('/participants', data);
-      return response.data;
+      return response.data.data;
     });
   }
   async updateParticipant(id: string, data: Partial<Participant>): Promise<Participant> {
@@ -149,7 +149,7 @@ class ParticipantService {
 
     return this.withRetry(async () => {
       const response = await apiClient.patch<ApiResponse<Participant>>(`/participants/${id}`, data);
-      return response.data;
+      return response.data.data;
     });
   }
   async deleteParticipant(id: string): Promise<void> {
@@ -199,10 +199,11 @@ class ParticipantService {
     this.clearCache();
 
     const formData = new FormData();
-    formData.append('file', data.file);
-    formData.append('format', data.format);
-    formData.append('mapping', JSON.stringify(data.mapping));
-    formData.append('options', JSON.stringify(data.options));
+    const uploadData = data as any;
+    formData.append('file', uploadData.file);
+    formData.append('format', uploadData.format);
+    formData.append('mapping', JSON.stringify(uploadData.mapping));
+    formData.append('options', JSON.stringify(uploadData.options));
     return this.withRetry(async () => {
       const response = await apiClient.post<ApiResponse<ImportResult>>('/participants/import', formData, {
         headers: {
@@ -216,7 +217,7 @@ class ParticipantService {
           console.log(`Upload Progress: ${percentCompleted}%`);
         }
       });
-      return response.data;
+      return response.data.data;
     });
   }
   async exportParticipants(
@@ -240,12 +241,12 @@ class ParticipantService {
     this.clearCache();
 
     return this.withRetry(async () => {
-      const response = await apiClient.post<ParticipantInvitation[]>('/participants/invite', {
+      const response = await apiClient.post<ApiResponse<ParticipantInvitation[]>>('/participants/invite', {
         participantIds,
         templateId,
         customMessage
       });
-      return response.data;
+      return response.data.data;
     });
   }
   async resendInvitation(invitationId: string): Promise<ParticipantInvitation> {
@@ -253,7 +254,7 @@ class ParticipantService {
       const response = await apiClient.post<ApiResponse<ParticipantInvitation>>(
         `/participants/invitations/${invitationId}/resend`
       );
-      return response.data;
+      return response.data.data;
     });
   }
   async trackInvitationOpen(invitationCode: string): Promise<void> {
@@ -268,7 +269,7 @@ class ParticipantService {
       const response = await apiClient.post<ApiResponse<Participant>>(
         `/participants/invitations/${invitationCode}/accept`
       );
-      return response.data;
+      return response.data.data;
     });
   }
   async declineInvitation(invitationCode: string, reason?: string): Promise<void> {
@@ -283,8 +284,8 @@ class ParticipantService {
     if (cached) return cached;
     return this.withRetry(async () => {
       const response = await apiClient.get<ApiResponse<ParticipantMetrics>>(`/participants/metrics/${studyId}`);
-      this.setCache(cacheKey, response.data);
-      return response.data;
+      this.setCache(cacheKey, response.data.data);
+      return response.data.data;
     });
   }
   async getParticipantActivity(participantId: string): Promise<{
@@ -314,14 +315,14 @@ class ParticipantService {
           value: any;
         }>;
       }>>(`/participants/${participantId}/activity`);
-      return response.data;
+      return response.data.data;
     });
   }
   // Email campaign management
   async createEmailCampaign(campaign: Partial<EmailCampaign>): Promise<EmailCampaign> {
     return this.withRetry(async () => {
       const response = await apiClient.post<ApiResponse<EmailCampaign>>('/participants/campaigns', campaign);
-      return response.data;
+      return response.data.data;
     });
   }
   async sendEmailCampaign(campaignId: string): Promise<void> {

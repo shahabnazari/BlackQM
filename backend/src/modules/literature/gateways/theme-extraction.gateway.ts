@@ -17,7 +17,14 @@ import { Logger } from '@nestjs/common';
 
 export interface ExtractionProgress {
   userId: string;
-  stage: 'analyzing' | 'papers' | 'videos' | 'social' | 'merging' | 'complete' | 'error';
+  stage:
+    | 'analyzing'
+    | 'papers'
+    | 'videos'
+    | 'social'
+    | 'merging'
+    | 'complete'
+    | 'error';
   percentage: number;
   message: string;
   details?: {
@@ -35,7 +42,9 @@ export interface ExtractionProgress {
     credentials: true,
   },
 })
-export class ThemeExtractionGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ThemeExtractionGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server!: Server;
 
@@ -76,7 +85,9 @@ export class ThemeExtractionGateway implements OnGatewayConnection, OnGatewayDis
    */
   emitProgress(progress: ExtractionProgress) {
     this.server.to(progress.userId).emit('extraction-progress', progress);
-    this.logger.debug(`Progress emitted to user ${progress.userId}: ${progress.stage} - ${progress.percentage}%`);
+    this.logger.debug(
+      `Progress emitted to user ${progress.userId}: ${progress.stage} - ${progress.percentage}%`,
+    );
   }
 
   /**
@@ -107,6 +118,8 @@ export class ThemeExtractionGateway implements OnGatewayConnection, OnGatewayDis
       },
     };
     this.server.to(userId).emit('extraction-complete', completeProgress);
-    this.logger.log(`Completion emitted to user ${userId}: ${themesCount} themes`);
+    this.logger.log(
+      `Completion emitted to user ${userId}: ${themesCount} themes`,
+    );
   }
 }

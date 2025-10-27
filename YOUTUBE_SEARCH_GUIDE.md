@@ -10,6 +10,7 @@
 **What's fixed:** Token is now properly retrieved using `await getAuthToken()` in the axios interceptor.
 
 **Try it now!** The search should work. If you still see 401 errors:
+
 1. **Log out** (click profile icon → Logout)
 2. **Log back in** with your credentials
 3. **Try YouTube search again**
@@ -21,6 +22,7 @@
 ### Step-by-Step Visual Guide
 
 #### 1. Navigate to Literature Review Page
+
 - **URL:** `http://localhost:3000/discover/literature`
 - **Path:** Dashboard → Discover → Literature
 
@@ -105,6 +107,7 @@ The literature review page has **THREE main panels**:
 ### What You Should See
 
 #### Demo Results (Current - No API Key)
+
 ```
 ┌──────────────────────────────────────────────┐
 │ climate engine - Educational Video (DEMO)     │
@@ -118,6 +121,7 @@ The literature review page has **THREE main panels**:
 ```
 
 #### Real Results (After API Key Setup)
+
 ```
 ┌──────────────────────────────────────────────┐
 │ Climate Engine: A New Tool for Climate...     │
@@ -186,6 +190,7 @@ Run through this checklist if YouTube search isn't working:
 ### Expected Console Output (Working)
 
 **Browser Console:**
+
 ```
 🔍 [Alternative Sources] Searching... {query: "climate engine", sources: ["youtube"]}
 ✅ [Alternative Sources] Results received: Array(3)
@@ -194,6 +199,7 @@ Run through this checklist if YouTube search isn't working:
 ```
 
 **Backend Logs:**
+
 ```
 🔍 [Alternative Sources] Request received - Query: "climate engine", Sources: ["youtube"], User: abc123
 ⚠️  YouTube API key not configured - returning demo results
@@ -213,13 +219,13 @@ Run through this checklist if YouTube search isn't working:
 
 ## Quick Reference
 
-| Action | Location |
-|--------|----------|
-| Enter search query | Top of page, main search box |
-| Select YouTube | Alternative Sources panel, click 🎥 YouTube badge |
-| Start search | Alternative Sources panel, click "Search These Sources Only" |
-| View results | Alternative Sources panel, scrollable list below button |
-| Open video | Click the [↗] button on any result card |
+| Action             | Location                                                     |
+| ------------------ | ------------------------------------------------------------ |
+| Enter search query | Top of page, main search box                                 |
+| Select YouTube     | Alternative Sources panel, click 🎥 YouTube badge            |
+| Start search       | Alternative Sources panel, click "Search These Sources Only" |
+| View results       | Alternative Sources panel, scrollable list below button      |
+| Open video         | Click the [↗] button on any result card                     |
 
 ## Need Help?
 

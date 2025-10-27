@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import PreScreening from '@/components/participant/PreScreening';
 import { Card } from '@/components/apple-ui/Card';
 import { Button } from '@/components/apple-ui/Button';
@@ -9,14 +9,14 @@ import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outl
 
 /**
  * Phase 8.2 Day 1: Pre-Screening Page
- * 
+ *
  * Dynamic pre-screening page that:
  * - Loads questions from the database
  * - Evaluates qualification criteria
  * - Redirects based on results
  * - Provides alternative study suggestions
  */
-export default function PreScreeningPage() {
+function PreScreeningContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -130,5 +130,24 @@ export default function PreScreeningPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PreScreeningPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="container mx-auto px-4 py-16">
+          <Card className="max-w-3xl mx-auto p-8">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <ArrowPathIcon className="h-8 w-8 animate-spin text-blue-500" />
+              <p className="text-secondary-label">Loading...</p>
+            </div>
+          </Card>
+        </div>
+      </div>
+    }>
+      <PreScreeningContent />
+    </Suspense>
   );
 }

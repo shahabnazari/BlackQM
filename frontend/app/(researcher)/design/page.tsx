@@ -1,310 +1,362 @@
 'use client';
 
-import React from 'react';
-import Link from 'next/link';
+import HypothesisBuilderPanel from '@/components/research-design/HypothesisBuilderPanel';
+import QuestionRefinementPanel from '@/components/research-design/QuestionRefinementPanel';
+import TheoryDiagramBuilder from '@/components/research-design/TheoryDiagramBuilder';
+import type {
+  GeneratedHypothesis,
+  RefinedQuestion,
+  TheoryDiagram,
+} from '@/lib/api/services/research-design-api.service';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import {
-  BookOpen,
-  HelpCircle,
-  Target,
-  FileText,
-  CheckCircle,
-  Circle,
-  ArrowRight,
-  Lightbulb,
-  FlaskConical,
-} from 'lucide-react';
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  BeakerIcon,
+  CheckCircleIcon,
+  CubeTransparentIcon,
+  LightBulbIcon,
+} from '@heroicons/react/24/outline';
+import { useState } from 'react';
 
-interface DesignTool {
-  title: string;
-  description: string;
-  href: string;
-  icon: React.ElementType;
-  status: 'completed' | 'in-progress' | 'not-started';
-  progress?: number;
-}
+/**
+ * Phase 9.5 Day 3: Research Design Intelligence - Main Page
+ *
+ * Complete workflow: Literature → Research Design → Study Creation
+ * Bridges DISCOVER (Phase 9) → DESIGN (Phase 9.5) → BUILD (Phase 10)
+ */
 
-export default function DesignPhasePage() {
-  const designTools: DesignTool[] = [
+type DesignStep = 'question' | 'hypotheses' | 'theory' | 'review';
+
+export default function ResearchDesignPage() {
+  const [currentStep, setCurrentStep] = useState<DesignStep>('question');
+  const [refinedQuestion, setRefinedQuestion] =
+    useState<RefinedQuestion | null>(null);
+  const [hypotheses, setHypotheses] = useState<GeneratedHypothesis[]>([]);
+  const [theoryDiagram, setTheoryDiagram] = useState<TheoryDiagram | null>(
+    null
+  );
+
+  // Mock literature summary (in production, this would come from Phase 9)
+  const [literatureSummary] = useState({
+    papers: [],
+    themes: [],
+    gaps: [],
+    contradictions: [],
+    trends: [],
+  });
+
+  const steps = [
     {
-      title: 'Research Questions',
-      description:
-        'Formulate and refine your research questions with AI guidance',
-      href: '/design/questions',
-      icon: HelpCircle,
-      status: 'completed',
-      progress: 100,
+      id: 'question' as const,
+      name: 'Research Question',
+      icon: LightBulbIcon,
+      completed: !!refinedQuestion,
+      description: 'Refine using SQUARE-IT framework',
     },
     {
-      title: 'Hypothesis Builder',
-      description: 'Develop testable hypotheses with power analysis',
-      href: '/design/hypothesis',
-      icon: FlaskConical,
-      status: 'in-progress',
-      progress: 60,
+      id: 'hypotheses' as const,
+      name: 'Hypotheses',
+      icon: BeakerIcon,
+      completed: hypotheses.length > 0,
+      description: 'Generate from contradictions & gaps',
     },
     {
-      title: 'Methodology Design',
-      description: 'Design your Q-methodology protocol with templates',
-      href: '/design/methodology',
-      icon: BookOpen,
-      status: 'not-started',
-      progress: 0,
+      id: 'theory' as const,
+      name: 'Theory Framework',
+      icon: CubeTransparentIcon,
+      completed: !!theoryDiagram,
+      description: 'Build conceptual framework',
     },
     {
-      title: 'Study Protocol',
-      description: 'Create comprehensive study protocol documentation',
-      href: '/design/protocol',
-      icon: FileText,
-      status: 'not-started',
-      progress: 0,
+      id: 'review' as const,
+      name: 'Review & Export',
+      icon: CheckCircleIcon,
+      completed: false,
+      description: 'Finalize and proceed to build',
     },
   ];
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'in-progress':
-        return (
-          <div className="h-5 w-5 rounded-full border-2 border-primary animate-pulse" />
-        );
-      default:
-        return <Circle className="h-5 w-5 text-muted-foreground" />;
+  const currentStepIndex = steps.findIndex(s => s.id === currentStep);
+  const canGoNext = currentStepIndex < steps.length - 1;
+  const canGoPrevious = currentStepIndex > 0;
+
+  const handleNext = () => {
+    const nextStep = steps[currentStepIndex + 1];
+    if (canGoNext && nextStep) {
+      setCurrentStep(nextStep.id);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-500';
-      case 'in-progress':
-        return 'bg-primary';
-      default:
-        return 'bg-muted';
+  const handlePrevious = () => {
+    const prevStep = steps[currentStepIndex - 1];
+    if (canGoPrevious && prevStep) {
+      setCurrentStep(prevStep.id);
     }
   };
 
-  const overallProgress =
-    designTools.reduce((acc, tool) => acc + (tool.progress || 0), 0) /
-    designTools.length;
+  const handleProceedToBuild = () => {
+    // TODO: Navigate to study creation with design outputs
+    alert('Proceeding to BUILD phase with design outputs...');
+  };
+
+  const progressPercentage = ((currentStepIndex + 1) / steps.length) * 100;
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-orange-50">
       {/* Header */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Design Phase</h1>
-            <p className="text-muted-foreground mt-2">
-              Design your research methodology and create your study protocol
-            </p>
-          </div>
-          <Badge variant="outline" className="flex items-center gap-2">
-            <Target className="h-4 w-4" />
-            Phase 2 of 10
-          </Badge>
-        </div>
-
-        {/* Overall Progress */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Overall Design Progress</span>
-                <span className="font-medium">
-                  {Math.round(overallProgress)}%
-                </span>
+      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center">
+                <LightBulbIcon className="w-7 h-7 text-white" />
               </div>
-              <Progress value={overallProgress} className="h-2" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Research Design Intelligence
+                </h1>
+                <p className="text-sm text-gray-600">
+                  AI-powered question refinement, hypothesis generation & theory
+                  building
+                </p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-600">Progress</div>
+              <div className="text-2xl font-bold text-yellow-600">
+                {Math.round(progressPercentage)}%
+              </div>
+            </div>
+          </div>
 
-      {/* Quick Tips */}
-      <Card className="bg-primary/5 border-primary/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-primary" />
-            Design Phase Best Practices
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-2 text-sm">
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span>
-                Start with clear research questions before developing hypotheses
-              </span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span>
-                Use the methodology templates for proven Q-methodology designs
-              </span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span>
-                Consider power analysis but remember Q focuses on viewpoint
-                saturation
-              </span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span>
-                Document ethical considerations early in your protocol
-              </span>
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
+          {/* Progress Bar */}
+          <div className="mb-4">
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-yellow-400 to-orange-500 transition-all duration-500"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+          </div>
 
-      {/* Design Tools Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {designTools.map(tool => {
-          const Icon = tool.icon;
-          return (
-            <Card
-              key={tool.href}
-              className="relative overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-lg ${getStatusColor(tool.status)} bg-opacity-10`}
-                    >
-                      <Icon
-                        className={`h-6 w-6 ${tool.status === 'completed' ? 'text-green-600' : tool.status === 'in-progress' ? 'text-primary' : 'text-muted-foreground'}`}
+          {/* Step Navigation */}
+          <div className="flex items-center justify-between">
+            {steps.map((step, index) => {
+              const StepIcon = step.icon;
+              const isActive = currentStep === step.id;
+              const isCompleted = step.completed;
+
+              return (
+                <div key={step.id} className="flex items-center flex-1">
+                  <button
+                    onClick={() => setCurrentStep(step.id)}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
+                      isActive
+                        ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg scale-105'
+                        : isCompleted
+                          ? 'bg-green-50 text-green-800 hover:bg-green-100'
+                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="relative">
+                      <StepIcon className="w-5 h-5" />
+                      {isCompleted && !isActive && (
+                        <CheckCircleIcon className="w-3 h-3 absolute -top-1 -right-1 text-green-600 bg-white rounded-full" />
+                      )}
+                    </div>
+                    <div className="text-left">
+                      <div className="text-sm font-medium">{step.name}</div>
+                      <div className="text-xs opacity-75">
+                        {step.description}
+                      </div>
+                    </div>
+                  </button>
+                  {index < steps.length - 1 && (
+                    <div className="flex-1 h-0.5 bg-gray-200 mx-2">
+                      <div
+                        className={`h-full ${index < currentStepIndex ? 'bg-green-500' : 'bg-gray-200'}`}
                       />
                     </div>
-                    <div>
-                      <CardTitle className="text-xl">{tool.title}</CardTitle>
-                      <CardDescription className="mt-1">
-                        {tool.description}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  {getStatusIcon(tool.status)}
+                  )}
                 </div>
-              </CardHeader>
-              <CardContent>
-                {tool.progress !== undefined && tool.progress > 0 && (
-                  <div className="mb-4">
-                    <Progress value={tool.progress} className="h-1" />
-                  </div>
-                )}
-                <Link href={tool.href}>
-                  <Button
-                    variant={
-                      tool.status === 'completed' ? 'outline' : 'default'
-                    }
-                    className="w-full"
-                  >
-                    {tool.status === 'completed'
-                      ? 'Review'
-                      : tool.status === 'in-progress'
-                        ? 'Continue'
-                        : 'Start'}
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          );
-        })}
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Workflow Steps */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recommended Design Workflow</CardTitle>
-          <CardDescription>
-            Follow these steps for a comprehensive research design
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="relative">
-            {/* Connection lines */}
-            <div className="absolute left-6 top-8 bottom-8 w-0.5 bg-border" />
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          {/* Step Content */}
+          {currentStep === 'question' && (
+            <QuestionRefinementPanel
+              literatureSummary={literatureSummary}
+              onQuestionRefined={question => {
+                setRefinedQuestion(question);
+                // Auto-advance to next step after refinement
+                setTimeout(() => handleNext(), 1000);
+              }}
+            />
+          )}
 
+          {currentStep === 'hypotheses' && (
+            <HypothesisBuilderPanel
+              researchQuestion={refinedQuestion?.refinedQuestion || ''}
+              literatureSummary={literatureSummary}
+              onHypothesesGenerated={hyp => {
+                setHypotheses(hyp);
+                // Auto-advance to next step after generation
+                setTimeout(() => handleNext(), 1000);
+              }}
+            />
+          )}
+
+          {currentStep === 'theory' && (
+            <TheoryDiagramBuilder
+              researchQuestion={refinedQuestion?.refinedQuestion || ''}
+              themes={literatureSummary.themes}
+              onDiagramGenerated={diagram => {
+                setTheoryDiagram(diagram);
+                // Auto-advance to next step after generation
+                setTimeout(() => handleNext(), 1000);
+              }}
+            />
+          )}
+
+          {currentStep === 'review' && (
             <div className="space-y-6">
-              {[
-                {
-                  step: 1,
-                  title: 'Define Research Questions',
-                  description: 'Start with clear, focused research questions',
-                },
-                {
-                  step: 2,
-                  title: 'Develop Hypotheses',
-                  description:
-                    'Create testable hypotheses based on your questions',
-                },
-                {
-                  step: 3,
-                  title: 'Design Methodology',
-                  description: 'Choose appropriate Q-methodology approach',
-                },
-                {
-                  step: 4,
-                  title: 'Create Protocol',
-                  description: 'Document your complete study protocol',
-                },
-                {
-                  step: 5,
-                  title: 'Power Analysis',
-                  description: 'Calculate required sample size',
-                },
-              ].map((step, index) => (
-                <div key={step.step} className="flex gap-4 relative">
-                  <div
-                    className={`w-12 h-12 rounded-full ${index < 2 ? 'bg-primary' : 'bg-muted'} flex items-center justify-center text-white relative z-10`}
-                  >
-                    {index < 2 ? (
-                      <CheckCircle className="h-6 w-6" />
-                    ) : (
-                      step.step
+              <div className="flex items-center space-x-3 mb-6">
+                <CheckCircleIcon className="w-10 h-10 text-green-600" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Review Your Research Design
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Summary of your refined research design outputs
+                  </p>
+                </div>
+              </div>
+
+              {/* Refined Question Summary */}
+              {refinedQuestion && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                  <h3 className="font-bold text-gray-900 mb-2">
+                    Research Question
+                  </h3>
+                  <p className="text-gray-800 mb-3">
+                    {refinedQuestion.refinedQuestion}
+                  </p>
+                  <div className="flex items-center space-x-4 text-sm">
+                    <span className="text-gray-600">
+                      Quality Score:{' '}
+                      <strong className="text-green-600">
+                        {refinedQuestion.squareitScore.overall.toFixed(1)}/10
+                      </strong>
+                    </span>
+                    {refinedQuestion.subQuestions && (
+                      <span className="text-gray-600">
+                        {refinedQuestion.subQuestions.length} sub-questions
+                      </span>
                     )}
                   </div>
-                  <div className="flex-1 pt-2">
-                    <h3 className="font-semibold">{step.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {step.description}
-                    </p>
+                </div>
+              )}
+
+              {/* Hypotheses Summary */}
+              {hypotheses.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <h3 className="font-bold text-gray-900 mb-2">
+                    Hypotheses ({hypotheses.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {hypotheses.slice(0, 3).map((hyp, idx) => (
+                      <div key={idx} className="bg-white rounded p-3 text-sm">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
+                            {hyp.type}
+                          </span>
+                          <span className="px-2 py-0.5 bg-gray-100 text-gray-800 rounded text-xs">
+                            {hyp.source}
+                          </span>
+                        </div>
+                        <p className="text-gray-800">{hyp.statement}</p>
+                      </div>
+                    ))}
+                    {hypotheses.length > 3 && (
+                      <p className="text-xs text-gray-600 italic">
+                        ... and {hypotheses.length - 3} more hypotheses
+                      </p>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              )}
 
-      {/* Navigation */}
-      <div className="flex justify-between">
-        <Link href="/discover">
-          <Button variant="outline">
-            <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
-            Back to Discover
-          </Button>
-        </Link>
-        <Link href="/build">
-          <Button>
-            Continue to Build
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        </Link>
+              {/* Theory Diagram Summary */}
+              {theoryDiagram && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                  <h3 className="font-bold text-gray-900 mb-2">
+                    Conceptual Framework
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Constructs: </span>
+                      <strong className="text-gray-900">
+                        {theoryDiagram.constructs.length}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Relationships: </span>
+                      <strong className="text-gray-900">
+                        {theoryDiagram.relationships.length}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+                <button
+                  onClick={() => setCurrentStep('question')}
+                  className="px-4 py-2 text-gray-700 hover:text-gray-900 flex items-center space-x-2"
+                >
+                  <ArrowLeftIcon className="w-4 h-4" />
+                  <span>Back to Edit</span>
+                </button>
+                <button
+                  onClick={handleProceedToBuild}
+                  className="px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-lg hover:shadow-lg transition-all flex items-center space-x-2"
+                >
+                  <span>Proceed to BUILD Phase</span>
+                  <ArrowRightIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Buttons */}
+        {currentStep !== 'review' && (
+          <div className="flex items-center justify-between mt-6">
+            <button
+              onClick={handlePrevious}
+              disabled={!canGoPrevious}
+              className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            >
+              <ArrowLeftIcon className="w-4 h-4" />
+              <span>Previous</span>
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={!canGoNext}
+              className="px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            >
+              <span>Next</span>
+              <ArrowRightIcon className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

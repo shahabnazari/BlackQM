@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { scaleLinear, scaleBand } from '@visx/scale';
 import { scaleSequential } from 'd3-scale';
-import { interpolateRdBu, interpolateViridis, interpolateSpectral } from 'd3-scale-chromatic';
+import {
+  interpolateRdBu,
+  interpolateViridis,
+  interpolateSpectral,
+} from 'd3-scale-chromatic';
 import { Group } from '@visx/group';
 import { AxisLeft, AxisTop } from '@visx/axis';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -29,7 +33,9 @@ interface ParticipantLoadingMatrixProps {
   showStats?: boolean;
 }
 
-export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> = ({
+export const ParticipantLoadingMatrix: React.FC<
+  ParticipantLoadingMatrixProps
+> = ({
   data,
   factors,
   width = 1000,
@@ -37,11 +43,15 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
   significanceThreshold = 0.4,
   colorScheme = 'diverging',
   sortBy = 'definingFactor',
-  showStats = true
+  showStats = true,
 }) => {
   const [selectedFactor, setSelectedFactor] = useState<string | null>(null);
-  const [selectedParticipant, setSelectedParticipant] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'matrix' | 'bars' | 'scatter'>('matrix');
+  const [selectedParticipant, setSelectedParticipant] = useState<string | null>(
+    null
+  );
+  const [viewMode, setViewMode] = useState<'matrix' | 'bars' | 'scatter'>(
+    'matrix'
+  );
   const [highlightSignificant, setHighlightSignificant] = useState(true);
 
   const {
@@ -51,11 +61,11 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
     tooltipOpen,
     showTooltip,
     hideTooltip,
-  } = useTooltip<{ 
-    participant: string; 
-    factor: string; 
-    loading: number; 
-    isSignificant: boolean; 
+  } = useTooltip<{
+    participant: string;
+    factor: string;
+    loading: number;
+    isSignificant: boolean;
     isDefining: boolean;
     communality: number;
   }>();
@@ -117,18 +127,26 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
   const stats = {
     totalParticipants: data.length,
     flaggedParticipants: data.filter((d: any) => d.flagged).length,
-    meanCommunality: data.reduce((sum, d) => sum + d.communality, 0) / data.length,
-    meanReliability: data.reduce((sum, d) => sum + d.reliability, 0) / data.length,
-    factorCounts: factors.reduce((acc, factor) => ({
-      ...acc,
-      [factor]: data.filter((d: any) => d.definingFactor === factor).length
-    }), {} as { [key: string]: number })
+    meanCommunality:
+      data.reduce((sum, d) => sum + d.communality, 0) / data.length,
+    meanReliability:
+      data.reduce((sum, d) => sum + d.reliability, 0) / data.length,
+    factorCounts: factors.reduce(
+      (acc, factor) => ({
+        ...acc,
+        [factor]: data.filter((d: any) => d.definingFactor === factor).length,
+      }),
+      {} as { [key: string]: number }
+    ),
   };
 
   const renderMatrixView = () => (
     <Group>
       {sortedData.map((participant, i) => (
-        <Group key={participant.participant} top={yScale(participant.participant) || 0}>
+        <Group
+          key={participant.participant}
+          top={yScale(participant.participant) || 0}
+        >
           {factors.map((factor, j) => {
             const loading = participant.loadings[factor] || 0;
             const cellX = xScale(factor) || 0;
@@ -136,17 +154,18 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
             const cellHeight = yScale.bandwidth();
             const isSignificant = Math.abs(loading) >= significanceThreshold;
             const isDefining = participant.definingFactor === factor;
-            const isHighlighted = 
+            const isHighlighted =
               (!selectedFactor || selectedFactor === factor) &&
-              (!selectedParticipant || selectedParticipant === participant.participant);
+              (!selectedParticipant ||
+                selectedParticipant === participant.participant);
 
             return (
               <motion.g
                 key={`${participant.participant}-${factor}`}
                 initial={{ opacity: 0, scale: 0 }}
-                animate={{ 
-                  opacity: isHighlighted ? 1 : 0.3, 
-                  scale: 1 
+                animate={{
+                  opacity: isHighlighted ? 1 : 0.3,
+                  scale: 1,
                 }}
                 transition={{
                   delay: (i * factors.length + j) * 0.001,
@@ -175,13 +194,22 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
                         communality: participant.communality,
                       },
                       tooltipLeft: cellX + cellWidth / 2 + margin.left,
-                      tooltipTop: yScale(participant.participant)! + cellHeight / 2 + margin.top,
+                      tooltipTop:
+                        yScale(participant.participant)! +
+                        cellHeight / 2 +
+                        margin.top,
                     });
                   }}
                   onMouseLeave={hideTooltip}
                   onClick={() => {
-                    setSelectedFactor(selectedFactor === factor ? null : factor);
-                    setSelectedParticipant(selectedParticipant === participant.participant ? null : participant.participant);
+                    setSelectedFactor(
+                      selectedFactor === factor ? null : factor
+                    );
+                    setSelectedParticipant(
+                      selectedParticipant === participant.participant
+                        ? null
+                        : participant.participant
+                    );
                   }}
                 />
 
@@ -232,8 +260,12 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
   );
 
   const renderBarsView = () => {
-    const selectedData = selectedFactor 
-      ? sortedData.map((d: any) => ({ participant: d.participant, loading: d.loadings[selectedFactor] || 0, communality: d.communality }))
+    const selectedData = selectedFactor
+      ? sortedData.map((d: any) => ({
+          participant: d.participant,
+          loading: d.loadings[selectedFactor] || 0,
+          communality: d.communality,
+        }))
       : [];
 
     if (!selectedFactor) {
@@ -263,7 +295,8 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
         {selectedData.map((item, index) => {
           const barY = yScale(item.participant) || 0;
           const barHeight = yScale.bandwidth();
-          const barX = item.loading >= 0 ? barXScale(0) : barXScale(item.loading);
+          const barX =
+            item.loading >= 0 ? barXScale(0) : barXScale(item.loading);
           const barWidth = Math.abs(barXScale(item.loading) - barXScale(0));
           const isSignificant = Math.abs(item.loading) >= significanceThreshold;
 
@@ -273,7 +306,9 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
               initial={{ scaleX: 0, opacity: 0 }}
               animate={{ scaleX: 1, opacity: 1 }}
               transition={{ delay: index * 0.02, duration: 0.4 }}
-              style={{ transformOrigin: `${barXScale(0)}px ${barY + barHeight/2}px` }}
+              style={{
+                transformOrigin: `${barXScale(0)}px ${barY + barHeight / 2}px`,
+              }}
             >
               <rect
                 x={barX}
@@ -391,7 +426,9 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
           const py = scatterYScale(x2Loading) || 0;
           const isDefining1 = participant.definingFactor === factor1;
           const isDefining2 = participant.definingFactor === factor2;
-          const isSignificant = Math.abs(x1Loading) >= significanceThreshold || Math.abs(x2Loading) >= significanceThreshold;
+          const isSignificant =
+            Math.abs(x1Loading) >= significanceThreshold ||
+            Math.abs(x2Loading) >= significanceThreshold;
 
           return (
             <motion.g
@@ -404,7 +441,9 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
                 cx={px}
                 cy={py}
                 r={4 + participant.communality * 4}
-                fill={isDefining1 ? '#007AFF' : isDefining2 ? '#34C759' : '#8E8E93'}
+                fill={
+                  isDefining1 ? '#007AFF' : isDefining2 ? '#34C759' : '#8E8E93'
+                }
                 stroke={isSignificant ? 'white' : 'none'}
                 strokeWidth={2}
                 opacity={0.8}
@@ -493,7 +532,9 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
                 y={0}
                 width={70}
                 height={30}
-                fill={viewMode === mode ? '#007AFF' : 'rgba(255, 255, 255, 0.8)'}
+                fill={
+                  viewMode === mode ? '#007AFF' : 'rgba(255, 255, 255, 0.8)'
+                }
                 stroke="#007AFF"
                 strokeWidth={1}
                 rx={8}
@@ -529,7 +570,11 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
                   y={0}
                   width={75}
                   height={30}
-                  fill={colorScheme === scheme ? '#34C759' : 'rgba(255, 255, 255, 0.8)'}
+                  fill={
+                    colorScheme === scheme
+                      ? '#34C759'
+                      : 'rgba(255, 255, 255, 0.8)'
+                  }
                   stroke="#34C759"
                   strokeWidth={1}
                   rx={8}
@@ -560,7 +605,9 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
                 y={0}
                 width={120}
                 height={30}
-                fill={highlightSignificant ? '#FF9500' : 'rgba(255, 255, 255, 0.8)'}
+                fill={
+                  highlightSignificant ? '#FF9500' : 'rgba(255, 255, 255, 0.8)'
+                }
                 stroke="#FF9500"
                 strokeWidth={1}
                 rx={8}
@@ -608,12 +655,18 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
                   y={-15}
                   width={50}
                   height={25}
-                  fill={selectedFactor === factor ? '#5856D6' : 'rgba(255, 255, 255, 0.8)'}
+                  fill={
+                    selectedFactor === factor
+                      ? '#5856D6'
+                      : 'rgba(255, 255, 255, 0.8)'
+                  }
                   stroke="#5856D6"
                   strokeWidth={1}
                   rx={6}
                   style={{ cursor: 'pointer' }}
-                  onClick={() => setSelectedFactor(selectedFactor === factor ? null : factor)}
+                  onClick={() =>
+                    setSelectedFactor(selectedFactor === factor ? null : factor)
+                  }
                 />
                 <text
                   x={25}
@@ -685,9 +738,18 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
         {viewMode === 'matrix' && (
           <Group top={innerHeight + 20}>
             <defs>
-              <linearGradient id="matrixColorLegend" x1="0%" y1="0%" x2="100%" y2="0%">
+              <linearGradient
+                id="matrixColorLegend"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="0%"
+              >
                 {Array.from({ length: 21 }, (_, i) => {
-                  const value = (loadingExtent[0] || -1) + (i / 20) * ((loadingExtent[1] || 1) - (loadingExtent[0] || -1));
+                  const value =
+                    (loadingExtent[0] || -1) +
+                    (i / 20) *
+                      ((loadingExtent[1] || 1) - (loadingExtent[0] || -1));
                   return (
                     <stop
                       key={i}
@@ -829,40 +891,59 @@ export const ParticipantLoadingMatrix: React.FC<ParticipantLoadingMatrixProps> =
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
-        <TooltipWithBounds
-          left={tooltipLeft}
-          top={tooltipTop}
-          style={{
-            ...defaultStyles,
-            backgroundColor: 'rgba(255, 255, 255, 0.98)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            borderRadius: '12px',
-            padding: '12px 16px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
-          }}
-        >
-          <div style={{ fontFamily: '-apple-system', fontSize: '12px' }}>
-            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>
-              {tooltipData.participant}
+      {tooltipOpen &&
+        tooltipData &&
+        tooltipLeft !== undefined &&
+        tooltipTop !== undefined && (
+          <TooltipWithBounds
+            left={tooltipLeft}
+            top={tooltipTop}
+            style={{
+              ...defaultStyles,
+              backgroundColor: 'rgba(255, 255, 255, 0.98)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+            }}
+          >
+            <div style={{ fontFamily: '-apple-system', fontSize: '12px' }}>
+              <div
+                style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  marginBottom: '6px',
+                }}
+              >
+                {tooltipData.participant}
+              </div>
+              <div style={{ marginBottom: '4px' }}>
+                {tooltipData.factor}:{' '}
+                <span
+                  style={{
+                    fontWeight: '600',
+                    color: tooltipData.loading > 0 ? '#007AFF' : '#FF3B30',
+                  }}
+                >
+                  {tooltipData.loading.toFixed(3)}
+                </span>
+              </div>
+              <div
+                style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}
+              >
+                <div>
+                  {tooltipData.isSignificant ? '✓' : '✗'} Significant loading
+                </div>
+                <div>
+                  {tooltipData.isDefining ? '⭐' : ''}{' '}
+                  {tooltipData.isDefining ? 'Defining factor' : ''}
+                </div>
+                <div>Communality: {tooltipData.communality.toFixed(3)}</div>
+              </div>
             </div>
-            <div style={{ marginBottom: '4px' }}>
-              {tooltipData.factor}: <span style={{ 
-                fontWeight: '600',
-                color: tooltipData.loading > 0 ? '#007AFF' : '#FF3B30'
-              }}>
-                {tooltipData.loading.toFixed(3)}
-              </span>
-            </div>
-            <div style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}>
-              <div>{tooltipData.isSignificant ? '✓' : '✗'} Significant loading</div>
-              <div>{tooltipData.isDefining ? '⭐' : ''} {tooltipData.isDefining ? 'Defining factor' : ''}</div>
-              <div>Communality: {tooltipData.communality.toFixed(3)}</div>
-            </div>
-          </div>
-        </TooltipWithBounds>
-      )}
+          </TooltipWithBounds>
+        )}
     </>
   );
 };

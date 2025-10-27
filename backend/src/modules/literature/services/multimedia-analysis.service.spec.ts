@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/common/prisma.service';
-import { MultiMediaAnalysisService, ExtractedTheme, ExtractedCitation } from './multimedia-analysis.service';
+import {
+  MultiMediaAnalysisService,
+  ExtractedTheme,
+  ExtractedCitation,
+} from './multimedia-analysis.service';
 
 describe('MultiMediaAnalysisService', () => {
   let service: MultiMediaAnalysisService;
@@ -117,7 +121,9 @@ describe('MultiMediaAnalysisService', () => {
         },
       ];
 
-      mockPrismaService.multimediaCitation.findMany.mockResolvedValue(mockCitations);
+      mockPrismaService.multimediaCitation.findMany.mockResolvedValue(
+        mockCitations,
+      );
 
       const result = await service.getCitationsForTranscript('transcript-123');
 
@@ -125,7 +131,9 @@ describe('MultiMediaAnalysisService', () => {
       expect(result[0].citedWork).toBe('Smith et al. (2020)');
       expect(result[0].citationType).toBe('citation');
       expect(result[0].confidence).toBe(0.9);
-      expect(mockPrismaService.multimediaCitation.findMany).toHaveBeenCalledWith({
+      expect(
+        mockPrismaService.multimediaCitation.findMany,
+      ).toHaveBeenCalledWith({
         where: { transcriptId: 'transcript-123' },
         orderBy: { timestamp: 'asc' },
       });
@@ -204,7 +212,7 @@ describe('MultiMediaAnalysisService', () => {
       mockPrismaService.videoTranscript.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.extractThemesFromTranscript('nonexistent-id', 'test context')
+        service.extractThemesFromTranscript('nonexistent-id', 'test context'),
       ).rejects.toThrow('Transcript not found: nonexistent-id');
     });
   });
@@ -214,7 +222,7 @@ describe('MultiMediaAnalysisService', () => {
       mockPrismaService.videoTranscript.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.extractCitationsFromTranscript('nonexistent-id')
+        service.extractCitationsFromTranscript('nonexistent-id'),
       ).rejects.toThrow('Transcript not found: nonexistent-id');
     });
   });

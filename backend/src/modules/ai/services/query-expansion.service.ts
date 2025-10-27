@@ -24,12 +24,15 @@ export interface ExpandedQuery {
   narrowingQuestions: string[];
   confidence: number; // 0-1
   relatedTerms: string[];
+  correctedQuery?: string; // NEW: Spell-corrected version of original query
+  hadSpellingErrors?: boolean; // NEW: Flag if corrections were made
 }
 
 @Injectable()
 export class QueryExpansionService {
   private readonly logger = new Logger(QueryExpansionService.name);
-  private cache: Map<string, { result: ExpandedQuery; timestamp: number }> = new Map();
+  private cache: Map<string, { result: ExpandedQuery; timestamp: number }> =
+    new Map();
   private readonly CACHE_TTL = 1 * 60 * 60 * 1000; // 1 hour
 
   constructor(private readonly openaiService: OpenAIService) {}
@@ -83,7 +86,10 @@ export class QueryExpansionService {
   /**
    * Suggest related academic terms
    */
-  async suggestTerms(query: string, field?: string): Promise<{
+  async suggestTerms(
+    query: string,
+    field?: string,
+  ): Promise<{
     terms: string[];
     confidence: number[];
   }> {
@@ -118,7 +124,9 @@ Return JSON: {"terms": ["term1", "term2", ...], "confidence": [0.9, 0.8, ...]}`;
         confidence: parsed.confidence || parsed.terms.map(() => 0.7),
       };
     } catch (error: any) {
-      this.logger.error(`Failed to suggest terms for "${query}": ${error.message}`);
+      this.logger.error(
+        `Failed to suggest terms for "${query}": ${error.message}`,
+      );
       return { terms: [], confidence: [] };
     }
   }
@@ -178,29 +186,48 @@ User query: "${query}"
 Context: Academic research literature search
 Goal: Find research videos, papers, and methodology discussions
 
+**CRITICAL: First check for spelling errors in the query.**
+Common research term misspellings to check:
+- "litterature" → "literature"
+- "reserach" → "research"
+- "methology" → "methodology"
+- "anaylsis" → "analysis"
+- "qualitatve" → "qualitative"
+- "quantitave" → "quantitative"
+- "vqmethod" → "Q-methodology"
+- "qmethod" → "Q-methodology"
+- And any other obvious typos
+
 Analyze this query:
-1. If too broad (single word like "climate", "health"):
+1. **FIRST: Check for spelling errors and correct them**
+   - If spelling errors found, set "hadSpellingErrors": true and "correctedQuery": "<corrected version>"
+   - If no errors, set "hadSpellingErrors": false and omit "correctedQuery"
+
+2. If too broad (single word like "climate", "health"):
    - Flag as vague
    - Suggest 3 specific research angles
    - Expand with methodology keywords
 
-2. If already specific:
+3. If already specific:
    - Expand with related academic terms
    - Add common research methods
    - Include theoretical frameworks
 
 Examples:
-- "climate" → "climate change impacts on agriculture and food security research methods"
-- "health" → "public health research methods OR mental health interventions OR healthcare policy"
+- "climat change" → corrected to "climate change impacts on agriculture and food security research methods"
+- "health care reserach" → corrected to "healthcare research methods OR health services research OR clinical research"
+- "litterature review" → corrected to "literature review methodology OR systematic review OR meta-analysis"
 
 Return JSON:
 {
-  "expanded": "<expanded query>",
+  "expanded": "<expanded query with corrections>",
   "suggestions": ["<suggestion1>", "<suggestion2>", "<suggestion3>"],
   "isTooVague": <true|false>,
   "narrowingQuestions": ["<question1>", ...],
   "confidence": <0-1>,
-  "relatedTerms": ["<term1>", "<term2>", ...]
+  "relatedTerms": ["<term1>", "<term2>", ...],
+  "correctedQuery": "<corrected query if spelling errors found, otherwise omit>",
+  "hadSpellingErrors": <true|false>
 }`;
   }
 
@@ -223,6 +250,8 @@ Return JSON:
         narrowingQuestions: parsed.narrowingQuestions || [],
         confidence: parsed.confidence || 0.7,
         relatedTerms: parsed.relatedTerms || [],
+        correctedQuery: parsed.correctedQuery || undefined,
+        hadSpellingErrors: parsed.hadSpellingErrors || false,
       };
     } catch (error: any) {
       this.logger.warn(`Failed to parse expansion response: ${error.message}`);
@@ -233,6 +262,7 @@ Return JSON:
         narrowingQuestions: [],
         confidence: 0.5,
         relatedTerms: [],
+        hadSpellingErrors: false,
       };
     }
   }

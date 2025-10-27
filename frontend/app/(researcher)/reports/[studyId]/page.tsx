@@ -89,7 +89,10 @@ interface ReportResponse {
   updatedAt: string;
 }
 
-const SECTION_LABELS: Record<ReportSection, { label: string; icon: React.ElementType; description: string }> = {
+const SECTION_LABELS: Record<
+  ReportSection,
+  { label: string; icon: React.ElementType; description: string }
+> = {
   [ReportSection.EXECUTIVE_SUMMARY]: {
     label: 'Executive Summary',
     icon: FileText,
@@ -148,7 +151,9 @@ export default function ReportBuilderPage() {
   const studyId = params.studyId as string;
 
   // State
-  const [templateType, setTemplateType] = useState<TemplateType>(TemplateType.APA);
+  const [templateType, setTemplateType] = useState<TemplateType>(
+    TemplateType.APA
+  );
   const [selectedSections, setSelectedSections] = useState<ReportSection[]>(
     Object.values(ReportSection)
   );
@@ -174,11 +179,14 @@ export default function ReportBuilderPage() {
         return;
       }
 
-      const response = await fetch(`http://localhost:4000/api/reports/study/${studyId}?pageSize=1`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        `http://localhost:4000/api/reports/study/${studyId}?pageSize=1`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) throw new Error('Failed to load reports');
 
@@ -203,20 +211,23 @@ export default function ReportBuilderPage() {
         return;
       }
 
-      const response = await fetch('http://localhost:4000/api/reports/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          studyId,
-          templateType,
-          includeSections: selectedSections,
-          format,
-          includeProvenance,
-        }),
-      });
+      const response = await fetch(
+        'http://localhost:4000/api/reports/generate',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            studyId,
+            templateType,
+            includeSections: selectedSections,
+            format,
+            includeProvenance,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -229,7 +240,10 @@ export default function ReportBuilderPage() {
       // Generate preview
       if (data.sections && data.sections.length > 0) {
         const html = data.sections
-          .map(section => `<div class="section"><h2>${section.title}</h2>${section.content}</div>`)
+          .map(
+            section =>
+              `<div class="section"><h2>${section.title}</h2>${section.content}</div>`
+          )
           .join('\n');
         setPreviewHtml(html);
       }
@@ -284,7 +298,8 @@ export default function ReportBuilderPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Report Builder</h1>
         <p className="text-muted-foreground">
-          Generate comprehensive academic reports with full Phase 9 → 9.5 → 10 pipeline integration
+          Generate comprehensive academic reports with full Phase 9 → 9.5 → 10
+          pipeline integration
         </p>
       </div>
 
@@ -317,7 +332,7 @@ export default function ReportBuilderPage() {
                 </label>
                 <Select
                   value={templateType}
-                  onValueChange={(v) => setTemplateType(v as TemplateType)}
+                  onValueChange={v => setTemplateType(v as TemplateType)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -325,7 +340,9 @@ export default function ReportBuilderPage() {
                   <SelectContent>
                     <SelectItem value={TemplateType.APA}>APA 7th</SelectItem>
                     <SelectItem value={TemplateType.MLA}>MLA</SelectItem>
-                    <SelectItem value={TemplateType.CHICAGO}>Chicago</SelectItem>
+                    <SelectItem value={TemplateType.CHICAGO}>
+                      Chicago
+                    </SelectItem>
                     <SelectItem value={TemplateType.THESIS}>Thesis</SelectItem>
                     <SelectItem value={TemplateType.CUSTOM}>Custom</SelectItem>
                   </SelectContent>
@@ -339,7 +356,7 @@ export default function ReportBuilderPage() {
                 </label>
                 <Select
                   value={format}
-                  onValueChange={(v) => setFormat(v as ReportFormat)}
+                  onValueChange={v => setFormat(v as ReportFormat)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -347,9 +364,13 @@ export default function ReportBuilderPage() {
                   <SelectContent>
                     <SelectItem value={ReportFormat.HTML}>HTML</SelectItem>
                     <SelectItem value={ReportFormat.PDF}>PDF</SelectItem>
-                    <SelectItem value={ReportFormat.WORD}>Word (.docx)</SelectItem>
+                    <SelectItem value={ReportFormat.WORD}>
+                      Word (.docx)
+                    </SelectItem>
                     <SelectItem value={ReportFormat.LATEX}>LaTeX</SelectItem>
-                    <SelectItem value={ReportFormat.MARKDOWN}>Markdown</SelectItem>
+                    <SelectItem value={ReportFormat.MARKDOWN}>
+                      Markdown
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -359,7 +380,9 @@ export default function ReportBuilderPage() {
                 <Checkbox
                   id="provenance"
                   checked={includeProvenance}
-                  onCheckedChange={(checked) => setIncludeProvenance(checked as boolean)}
+                  onCheckedChange={checked =>
+                    setIncludeProvenance(checked as boolean)
+                  }
                 />
                 <label
                   htmlFor="provenance"
@@ -435,27 +458,31 @@ export default function ReportBuilderPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {Object.entries(SECTION_LABELS).map(([key, { label, icon: Icon, description }]) => (
-                <div
-                  key={key}
-                  className="flex items-start space-x-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer"
-                  onClick={() => toggleSection(key as ReportSection)}
-                >
-                  <Checkbox
-                    checked={selectedSections.includes(key as ReportSection)}
-                    onCheckedChange={() => toggleSection(key as ReportSection)}
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{label}</span>
+              {Object.entries(SECTION_LABELS).map(
+                ([key, { label, icon: Icon, description }]) => (
+                  <div
+                    key={key}
+                    className="flex items-start space-x-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer"
+                    onClick={() => toggleSection(key as ReportSection)}
+                  >
+                    <Checkbox
+                      checked={selectedSections.includes(key as ReportSection)}
+                      onCheckedChange={() =>
+                        toggleSection(key as ReportSection)
+                      }
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">{label}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {description}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {description}
-                    </p>
                   </div>
-                </div>
-              ))}
+                )
+              )}
             </CardContent>
           </Card>
         </div>
@@ -496,10 +523,13 @@ export default function ReportBuilderPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center h-96 text-center">
                   <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Report Generated</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    No Report Generated
+                  </h3>
                   <p className="text-sm text-muted-foreground max-w-md">
-                    Configure your report settings and click "Generate Report" to create a comprehensive
-                    academic report with full pipeline integration.
+                    Configure your report settings and click "Generate Report"
+                    to create a comprehensive academic report with full pipeline
+                    integration.
                   </p>
                 </div>
               )}
@@ -525,7 +555,8 @@ export default function ReportBuilderPage() {
               <div>
                 <h4 className="font-semibold text-sm">Phase 9: Literature</h4>
                 <p className="text-xs text-muted-foreground">
-                  Auto-populated references, literature review from YouTube/papers
+                  Auto-populated references, literature review from
+                  YouTube/papers
                 </p>
               </div>
             </div>
@@ -534,7 +565,9 @@ export default function ReportBuilderPage() {
                 <Sparkles className="h-5 w-5 text-purple-600 dark:text-purple-300" />
               </div>
               <div>
-                <h4 className="font-semibold text-sm">Phase 9.5: Research Design</h4>
+                <h4 className="font-semibold text-sm">
+                  Phase 9.5: Research Design
+                </h4>
                 <p className="text-xs text-muted-foreground">
                   Research questions, hypotheses in introduction/methods
                 </p>
@@ -547,7 +580,8 @@ export default function ReportBuilderPage() {
               <div>
                 <h4 className="font-semibold text-sm">Phase 10: Report</h4>
                 <p className="text-xs text-muted-foreground">
-                  Complete provenance: paper → gap → question → statement → factor
+                  Complete provenance: paper → gap → question → statement →
+                  factor
                 </p>
               </div>
             </div>

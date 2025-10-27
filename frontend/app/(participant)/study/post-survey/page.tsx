@@ -1,34 +1,34 @@
 'use client';
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { PostSurveyQuestionnaire } from '@/components/questionnaire/PostSurveyQuestionnaire';
 import PostSurvey from '@/components/participant/PostSurvey';
 import { Card } from '@/components/apple-ui/Card';
 import { Button } from '@/components/apple-ui/Button';
 import { Alert } from '@/components/ui/alert';
-import { 
-  CheckCircleIcon, 
+import {
+  CheckCircleIcon,
   ExclamationTriangleIcon,
   DocumentCheckIcon
 } from '@heroicons/react/24/outline';
 
 /**
  * Post-Survey Page - Phase 8.2 Day 2
- * 
+ *
  * Dynamic post-survey page that:
  * - Loads context-aware questions based on Q-sort behavior
  * - Supports both dynamic and fallback static questions
  * - Saves responses with quality scoring
  * - Integrates with analysis pipeline
- * 
+ *
  * @world-class Features:
  * - Seamless transition from Q-sort
  * - Adaptive questioning based on engagement
  * - Real-time quality assessment
  * - Experience feedback collection
  */
-export default function PostSurveyPage() {
+function PostSurveyContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -278,5 +278,26 @@ export default function PostSurveyPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PostSurveyPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-3xl mx-auto px-4">
+          <Card>
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+                <p className="text-secondary-label">Loading...</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    }>
+      <PostSurveyContent />
+    </Suspense>
   );
 }

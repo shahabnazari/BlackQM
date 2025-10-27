@@ -371,7 +371,10 @@ describe('UnifiedThemeExtractionService', () => {
   describe('calculateSimilarity', () => {
     it('should return 1.0 for identical strings', () => {
       // @ts-ignore - Testing private method
-      const similarity = service.calculateSimilarity('climate change', 'climate change');
+      const similarity = service.calculateSimilarity(
+        'climate change',
+        'climate change',
+      );
 
       expect(similarity).toBe(1.0);
     });
@@ -512,9 +515,7 @@ describe('UnifiedThemeExtractionService', () => {
 
   describe('error handling', () => {
     it('should handle database errors gracefully', async () => {
-      mockPrisma.paper.findMany.mockRejectedValue(
-        new Error('Database error'),
-      );
+      mockPrisma.paper.findMany.mockRejectedValue(new Error('Database error'));
 
       await expect(
         service.extractThemesFromSource('paper', ['paper-1'], {}),
@@ -527,7 +528,11 @@ describe('UnifiedThemeExtractionService', () => {
       const sources = Array.from({ length: 50 }, (_, i) => `source-${i}`);
       mockPrisma.paper.findMany.mockResolvedValue([]);
 
-      const result = await service.extractThemesFromSource('paper', sources, {});
+      const result = await service.extractThemesFromSource(
+        'paper',
+        sources,
+        {},
+      );
 
       expect(result).toEqual([]);
       expect(mockPrisma.paper.findMany).toHaveBeenCalled();

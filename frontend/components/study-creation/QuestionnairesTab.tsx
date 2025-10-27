@@ -1,36 +1,27 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/apple-ui/Card';
-import { Button } from '@/components/apple-ui/Button';
 import { Badge } from '@/components/apple-ui/Badge';
-import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/apple-ui/Button';
+import { Card } from '@/components/apple-ui/Card';
+import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
 import InfoTooltip from '@/components/tooltips/InfoTooltipV2';
+import { Alert } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
+import { questionAPIService } from '@/lib/services/question-api.service';
+import { Question, QuestionType } from '@/lib/types/questionnaire';
 import {
-  DocumentTextIcon,
-  PlusIcon,
-  TrashIcon,
-  PencilIcon,
-  ExclamationTriangleIcon,
-  SparklesIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   ClipboardDocumentCheckIcon,
   ClipboardDocumentListIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
+  DocumentTextIcon,
+  ExclamationTriangleIcon,
+  PencilIcon,
+  PlusIcon,
+  SparklesIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
-import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
-import { questionAPIService } from '@/lib/services/question-api.service';
-
-interface Question {
-  id: string;
-  text: string;
-  type: string;
-  required: boolean;
-  options?: any[];
-  validation?: any;
-  skipLogic?: any;
-  metadata?: any;
-}
+import { useEffect, useState } from 'react';
 
 interface QuestionnairesTabProps {
   studyId?: string;
@@ -87,8 +78,8 @@ export function QuestionnairesTab({
   const [qualificationRules, _setQualificationRules] = useState(
     initialData?.preScreening?.qualificationRules || []
   );
-  const [contextAwareEnabled, setContextAwareEnabled] = useState(
-    initialData?.postSurvey?.contextAware || true
+  const [contextAwareEnabled, setContextAwareEnabled] = useState<boolean>(
+    initialData?.postSurvey?.contextAware ?? true
   );
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [showEditor, setShowEditor] = useState(false);
@@ -210,27 +201,23 @@ export function QuestionnairesTab({
   };
 
   // Save question from editor
-  const saveQuestion = (question: Question) => {
+  const saveQuestion = (updated: Partial<Question>) => {
+    if (!editingQuestion) return;
+
+    const updatedQuestion = { ...editingQuestion, ...updated };
+
     if (activeTab === 'pre-screening') {
-      if (editingQuestion) {
-        setPreScreeningQuestions(
-          preScreeningQuestions.map(q =>
-            q.id === editingQuestion.id ? question : q
-          )
-        );
-      } else {
-        setPreScreeningQuestions([...preScreeningQuestions, question]);
-      }
+      setPreScreeningQuestions(
+        preScreeningQuestions.map(q =>
+          q.id === editingQuestion.id ? updatedQuestion : q
+        )
+      );
     } else {
-      if (editingQuestion) {
-        setPostSurveyQuestions(
-          postSurveyQuestions.map(q =>
-            q.id === editingQuestion.id ? question : q
-          )
-        );
-      } else {
-        setPostSurveyQuestions([...postSurveyQuestions, question]);
-      }
+      setPostSurveyQuestions(
+        postSurveyQuestions.map(q =>
+          q.id === editingQuestion.id ? updatedQuestion : q
+        )
+      );
     }
     setShowEditor(false);
     setEditingQuestion(null);
@@ -339,26 +326,28 @@ export function QuestionnairesTab({
       // Save pre-screening questions
       if (preScreeningEnabled) {
         await Promise.all(
-          preScreeningQuestions.map(q =>
-            questionAPIService.createQuestion({
-              ...q,
-              studyId,
-              metadata: { ...q.metadata, type: 'pre-screening' },
-            })
-          )
+          preScreeningQuestions.map((q, index) => {
+            const { id: _id, ...questionData } = q;
+            return questionAPIService.createQuestion({
+              ...questionData,
+              surveyId: studyId,
+              order: index,
+            });
+          })
         );
       }
 
       // Save post-survey questions
       if (postSurveyEnabled) {
         await Promise.all(
-          postSurveyQuestions.map(q =>
-            questionAPIService.createQuestion({
-              ...q,
-              studyId,
-              metadata: { ...q.metadata, type: 'post-survey' },
-            })
-          )
+          postSurveyQuestions.map((q, index) => {
+            const { id: _id, ...questionData } = q;
+            return questionAPIService.createQuestion({
+              ...questionData,
+              surveyId: studyId,
+              order: index,
+            });
+          })
         );
       }
     } catch (error: any) {
@@ -452,7 +441,10 @@ export function QuestionnairesTab({
                   />
                   <label className="text-sm text-label">
                     Context-aware questions
-                    <InfoTooltip content="Automatically add questions based on Q-sort behavior" />
+                    <InfoTooltip
+                      title="Context-Aware Questions"
+                      content="Automatically add questions based on Q-sort behavior"
+                    />
                   </label>
                 </div>
               )}
@@ -479,21 +471,17 @@ export function QuestionnairesTab({
             {/* Toolbar */}
             <div className="flex justify-between items-center mb-4">
               <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  icon={<PlusIcon className="h-4 w-4" />}
-                  onClick={addCustomQuestion}
-                >
+                <Button variant="primary" size="sm" onClick={addCustomQuestion}>
+                  <PlusIcon className="h-4 w-4 mr-2" />
                   Add Question
                 </Button>
                 <Button
                   variant="secondary"
                   size="sm"
-                  icon={<SparklesIcon className="h-4 w-4" />}
                   onClick={generateAISuggestions}
                   loading={loading}
                 >
+                  <SparklesIcon className="h-4 w-4 mr-2" />
                   AI Suggestions
                 </Button>
                 <Button variant="secondary" size="sm" onClick={importQuestions}>
@@ -604,15 +592,17 @@ export function QuestionnairesTab({
                         <Button
                           variant="tertiary"
                           size="sm"
-                          icon={<PencilIcon className="h-4 w-4" />}
                           onClick={() => editQuestion(question)}
-                        />
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="tertiary"
                           size="sm"
-                          icon={<TrashIcon className="h-4 w-4" />}
                           onClick={() => deleteQuestion(question.id)}
-                        />
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </Card>
@@ -659,7 +649,7 @@ export function QuestionnairesTab({
       </div>
 
       {/* Question Editor Modal */}
-      {showEditor && (
+      {showEditor && editingQuestion && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <QuestionEditor
@@ -669,6 +659,17 @@ export function QuestionnairesTab({
                 setShowEditor(false);
                 setEditingQuestion(null);
               }}
+              onDelete={() => {
+                if (editingQuestion) {
+                  deleteQuestion(editingQuestion.id);
+                  setShowEditor(false);
+                  setEditingQuestion(null);
+                }
+              }}
+              questionTypes={Object.values(QuestionType)}
+              existingQuestions={preScreeningQuestions.concat(
+                postSurveyQuestions
+              )}
             />
           </div>
         </div>

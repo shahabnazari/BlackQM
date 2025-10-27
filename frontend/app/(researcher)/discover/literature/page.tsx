@@ -6,58 +6,66 @@
 
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Search,
-  BookOpen,
-  Download,
-  Star,
-  Filter,
-  Calendar,
-  ExternalLink,
-  ChevronRight,
-  Sparkles,
-  Database,
-  TrendingUp,
-  GitBranch,
-  Loader2,
-  Check,
-  X,
-  MessageSquare,
-  Video,
-  AlertCircle,
-  Info,
-  ArrowRight,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AcademicInstitutionLogin } from '@/components/literature/AcademicInstitutionLogin';
+import { getAcademicIcon } from '@/components/literature/AcademicSourceIcons';
+import { CostCalculator } from '@/components/literature/CostCalculator';
+import { CrossPlatformDashboard } from '@/components/literature/CrossPlatformDashboard';
+import DatabaseSourcesInfo from '@/components/literature/DatabaseSourcesInfo';
+import { ThemeExtractionProgress } from '@/components/literature/progress/ThemeExtractionProgress';
+import { ThemeCard } from '@/components/literature/ThemeCard';
+import { VideoSelectionPanel } from '@/components/literature/VideoSelectionPanel';
+import { YouTubeChannelBrowser } from '@/components/literature/YouTubeChannelBrowser';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { authService } from '@/lib/api/auth';
+import * as QueryExpansionAPI from '@/lib/api/services/query-expansion-api.service';
+import {
+  SourceContent,
+  UnifiedTheme,
+  useUnifiedThemeAPI,
+} from '@/lib/api/services/unified-theme-api.service';
 import {
   literatureAPI,
   Paper,
   ResearchGap,
 } from '@/lib/services/literature-api.service';
-import DatabaseSourcesInfo from '@/components/literature/DatabaseSourcesInfo';
-import { ThemeCard } from '@/components/literature/ThemeCard';
-import { CrossPlatformDashboard } from '@/components/literature/CrossPlatformDashboard';
-import { VideoSelectionPanel } from '@/components/literature/VideoSelectionPanel';
-import { YouTubeChannelBrowser } from '@/components/literature/YouTubeChannelBrowser';
-import { AISearchAssistant } from '@/components/literature/AISearchAssistant';
-import { AcademicInstitutionLogin } from '@/components/literature/AcademicInstitutionLogin';
-import { CostCalculator } from '@/components/literature/CostCalculator';
+import { cn } from '@/lib/utils';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  useUnifiedThemeAPI,
-  UnifiedTheme,
-  SourceContent,
-} from '@/lib/api/services/unified-theme-api.service';
+  AlertCircle,
+  ArrowRight,
+  BookOpen,
+  Calendar,
+  Check,
+  ChevronRight,
+  Database,
+  Download,
+  ExternalLink,
+  Filter,
+  GitBranch,
+  Info,
+  Loader2,
+  MessageSquare,
+  Search,
+  Sparkles,
+  Star,
+  TrendingUp,
+  Video,
+  X,
+} from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useCallback, useEffect, useState, Suspense } from 'react';
+import { toast } from 'sonner';
 
-export default function LiteratureSearchPage() {
+function LiteratureSearchContent() {
+  // PHASE 10 DAY 1: URL state management for bookmarkable searches
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   // Search state
   const [query, setQuery] = useState('');
   const [papers, setPapers] = useState<Paper[]>([]);
@@ -65,20 +73,208 @@ export default function LiteratureSearchPage() {
   const [totalResults, setTotalResults] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
-  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [queryCorrectionMessage, setQueryCorrectionMessage] = useState<{
+    original: string;
+    corrected: string;
+  } | null>(null);
   // const [selectedView, setSelectedView] = useState<'list' | 'grid'>('list');
 
-  // Advanced filters
-  const [filters, setFilters] = useState({
-    yearFrom: 2020 as number | undefined,
-    yearTo: new Date().getFullYear() as number | undefined,
-    sources: ['semantic_scholar', 'crossref', 'pubmed', 'arxiv'],
-    sortBy: 'relevance' as 'relevance' | 'date' | 'citations',
+  // AI inline suggestions state
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const suggestionTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const searchContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Default filter values (sources managed separately via academicDatabases state)
+  const defaultFilters: {
+    yearFrom: number | undefined;
+    yearTo: number | undefined;
+    sortBy: 'relevance' | 'date' | 'citations';
+    citationMin: number;
+    minCitations: number | undefined;
+    publicationType: 'all' | 'journal' | 'conference' | 'preprint';
+    author: string;
+    authorSearchMode: 'contains' | 'exact' | 'fuzzy';
+    includeAIMode: boolean;
+  } = {
+    yearFrom: 2020,
+    yearTo: new Date().getFullYear(),
+    sortBy: 'relevance',
     citationMin: 0,
-    minCitations: undefined as number | undefined,
-    publicationType: 'all' as 'all' | 'journal' | 'conference' | 'preprint',
+    minCitations: undefined,
+    publicationType: 'all',
+    author: '',
+    authorSearchMode: 'contains',
     includeAIMode: true,
-  });
+  };
+
+  // Filters being configured (in the filter panel)
+  const [filters, setFilters] = useState(defaultFilters);
+
+  // Applied filters (actually used for search)
+  const [appliedFilters, setAppliedFilters] = useState(defaultFilters);
+
+  // PHASE 10 DAY 1: Saved filter presets
+  const [savedPresets, setSavedPresets] = useState<
+    Array<{
+      id: string;
+      name: string;
+      filters: typeof filters;
+    }>
+  >([]);
+  const [showPresets, setShowPresets] = useState(false);
+  const [presetName, setPresetName] = useState('');
+
+  // Load presets from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('filterPresets');
+      if (stored) {
+        setSavedPresets(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Failed to load filter presets:', error);
+    }
+  }, []);
+
+  // PHASE 10 DAY 1: Load filters from URL params on mount
+  useEffect(() => {
+    const q = searchParams.get('q');
+    const yearFrom = searchParams.get('yearFrom');
+    const yearTo = searchParams.get('yearTo');
+    const minCitations = searchParams.get('minCitations');
+    const publicationType = searchParams.get('type');
+    const sortBy = searchParams.get('sort');
+
+    if (q) setQuery(q);
+
+    const urlFilters = {
+      ...defaultFilters,
+      ...(yearFrom && { yearFrom: parseInt(yearFrom) }),
+      ...(yearTo && { yearTo: parseInt(yearTo) }),
+      ...(minCitations && { minCitations: parseInt(minCitations) }),
+      ...(publicationType &&
+        publicationType !== 'all' && {
+          publicationType: publicationType as any,
+        }),
+      ...(sortBy && sortBy !== 'relevance' && { sortBy: sortBy as any }),
+    };
+
+    setFilters(urlFilters);
+    setAppliedFilters(urlFilters);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Update URL when filters change
+  const updateURL = useCallback(
+    (newFilters: typeof filters, searchQuery?: string) => {
+      const params = new URLSearchParams();
+
+      if (searchQuery || query) params.set('q', searchQuery || query);
+      if (newFilters.yearFrom !== defaultFilters.yearFrom)
+        params.set('yearFrom', newFilters.yearFrom!.toString());
+      if (newFilters.yearTo !== defaultFilters.yearTo)
+        params.set('yearTo', newFilters.yearTo!.toString());
+      if (newFilters.minCitations)
+        params.set('minCitations', newFilters.minCitations.toString());
+      if (newFilters.publicationType !== 'all')
+        params.set('type', newFilters.publicationType);
+      if (newFilters.sortBy !== 'relevance')
+        params.set('sort', newFilters.sortBy);
+
+      const url = params.toString()
+        ? `?${params.toString()}`
+        : '/discover/literature';
+      router.replace(url, { scroll: false });
+    },
+    [query, router]
+  );
+
+  // Save preset to localStorage
+  const handleSavePreset = () => {
+    if (!presetName.trim()) {
+      toast.error('Please enter a preset name');
+      return;
+    }
+
+    const preset = {
+      id: Date.now().toString(),
+      name: presetName.trim(),
+      filters: appliedFilters,
+    };
+
+    const updated = [...savedPresets, preset];
+    setSavedPresets(updated);
+    localStorage.setItem('filterPresets', JSON.stringify(updated));
+    setPresetName('');
+    setShowPresets(false);
+    toast.success(`Preset "${preset.name}" saved!`);
+  };
+
+  // Load preset
+  const handleLoadPreset = (preset: (typeof savedPresets)[0]) => {
+    setFilters(preset.filters);
+    setAppliedFilters(preset.filters);
+    setShowPresets(false);
+    toast.success(`Loaded preset "${preset.name}"`);
+  };
+
+  // Delete preset
+  const handleDeletePreset = (presetId: string) => {
+    const updated = savedPresets.filter(p => p.id !== presetId);
+    setSavedPresets(updated);
+    localStorage.setItem('filterPresets', JSON.stringify(updated));
+    toast.success('Preset deleted');
+  };
+
+  // Count applied filters (filters that differ from defaults)
+  const getAppliedFilterCount = () => {
+    let count = 0;
+    if (appliedFilters.yearFrom !== defaultFilters.yearFrom) count++;
+    if (appliedFilters.yearTo !== defaultFilters.yearTo) count++;
+    if (appliedFilters.minCitations && appliedFilters.minCitations > 0) count++;
+    if (appliedFilters.publicationType !== 'all') count++;
+    if (appliedFilters.sortBy !== 'relevance') count++;
+    if (appliedFilters.author && appliedFilters.author.trim().length > 0)
+      count++;
+    return count;
+  };
+
+  const appliedFilterCount = getAppliedFilterCount();
+
+  // Apply filters (copy from filters to appliedFilters)
+  const handleApplyFilters = () => {
+    // Auto-correct any invalid filter values before applying
+    const correctedFilters = { ...filters };
+
+    // Auto-correct year range if needed
+    if (correctedFilters.yearFrom && correctedFilters.yearTo) {
+      if (correctedFilters.yearFrom > correctedFilters.yearTo) {
+        correctedFilters.yearTo = correctedFilters.yearFrom;
+      }
+    }
+
+    setAppliedFilters(correctedFilters);
+    setFilters(correctedFilters);
+    setShowFilters(false);
+
+    // PHASE 10 DAY 1: Update URL for bookmarkable search
+    updateURL(correctedFilters);
+
+    // Count the filters we're about to apply
+    let count = 0;
+    if (filters.yearFrom !== defaultFilters.yearFrom) count++;
+    if (filters.yearTo !== defaultFilters.yearTo) count++;
+    if (filters.minCitations && filters.minCitations > 0) count++;
+    if (filters.publicationType !== 'all') count++;
+    if (filters.sortBy !== 'relevance') count++;
+    if (filters.author && filters.author.trim().length > 0) count++;
+    if (count > 0) {
+      toast.success(`${count} filter${count === 1 ? '' : 's'} applied`);
+    } else {
+      toast.info('Using default filters');
+    }
+  };
 
   // Analysis state
   const [selectedPapers, setSelectedPapers] = useState<Set<string>>(new Set());
@@ -86,6 +282,7 @@ export default function LiteratureSearchPage() {
   const [gaps, setGaps] = useState<ResearchGap[]>([]);
   const [analyzingThemes, setAnalyzingThemes] = useState(false);
   const [analyzingGaps, setAnalyzingGaps] = useState(false);
+  const [showThemeProgress, setShowThemeProgress] = useState(false);
 
   // Phase 9 Day 20: Unified theme extraction hook
   const { extractThemes: extractUnifiedThemes } = useUnifiedThemeAPI();
@@ -116,24 +313,30 @@ export default function LiteratureSearchPage() {
   });
 
   // PHASE 9 DAY 20.5: Transcribed videos state
-  const [transcribedVideos, setTranscribedVideos] = useState<{
-    id: string;
-    title: string;
-    sourceId: string; // YouTube video ID
-    url: string;
-    channel?: string;
-    duration: number; // in seconds
-    cost: number; // transcription cost
-    transcript: string;
-    themes?: any[];
-    extractedAt: string;
-    cached: boolean; // whether this was cached (no cost)
-  }[]>([]);
+  const [transcribedVideos, setTranscribedVideos] = useState<
+    {
+      id: string;
+      title: string;
+      sourceId: string; // YouTube video ID
+      url: string;
+      channel?: string;
+      duration: number; // in seconds
+      cost: number; // transcription cost
+      transcript: string;
+      themes?: any[];
+      extractedAt: string;
+      cached: boolean; // whether this was cached (no cost)
+    }[]
+  >([]);
 
   // PHASE 9 DAY 24: UX Reorganization - Panel and tab navigation state
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null); // Which panel section is expanded
-  const [activeResultsSubTab, setActiveResultsSubTab] = useState<'papers' | 'videos' | 'library'>('papers');
-  const [activeAnalysisSubTab, setActiveAnalysisSubTab] = useState<'themes' | 'gaps' | 'synthesis'>('themes');
+  const [activeResultsSubTab, setActiveResultsSubTab] = useState<
+    'papers' | 'videos' | 'library'
+  >('papers');
+  const [activeAnalysisSubTab, setActiveAnalysisSubTab] = useState<
+    'themes' | 'gaps' | 'synthesis'
+  >('themes');
 
   // PHASE 9 DAY 25: Academic categorization - New state for institution auth and database selection
   const [academicDatabases, setAcademicDatabases] = useState<string[]>([
@@ -171,6 +374,71 @@ export default function LiteratureSearchPage() {
     }
   };
 
+  // AI-powered inline suggestions while typing
+  useEffect(() => {
+    // Clear previous timer
+    if (suggestionTimerRef.current) {
+      clearTimeout(suggestionTimerRef.current);
+    }
+
+    // Only fetch suggestions if query is at least 3 characters
+    if (query && query.trim().length >= 3) {
+      setLoadingSuggestions(true);
+
+      suggestionTimerRef.current = setTimeout(async () => {
+        try {
+          const result = await QueryExpansionAPI.expandQuery(query, 'general');
+
+          // Get up to 4 refined query suggestions
+          const suggestions = [
+            result.expanded,
+            ...result.suggestions.slice(0, 3),
+          ].filter(s => s && s !== query); // Remove duplicates and original query
+
+          setAiSuggestions(suggestions);
+          setShowSuggestions(suggestions.length > 0);
+        } catch (error) {
+          console.error('Failed to fetch AI suggestions:', error);
+          setAiSuggestions([]);
+          setShowSuggestions(false);
+        } finally {
+          setLoadingSuggestions(false);
+        }
+      }, 800); // 800ms debounce
+    } else {
+      setAiSuggestions([]);
+      setShowSuggestions(false);
+      setLoadingSuggestions(false);
+    }
+
+    // Cleanup
+    return () => {
+      if (suggestionTimerRef.current) {
+        clearTimeout(suggestionTimerRef.current);
+      }
+    };
+  }, [query]);
+
+  // Click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    if (showSuggestions) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSuggestions]);
+
   const handleSearch = useCallback(async () => {
     if (!query.trim()) {
       toast.error('Please enter a search query');
@@ -179,24 +447,69 @@ export default function LiteratureSearchPage() {
 
     setLoading(true);
     try {
-      console.log('🔍 Starting search with query:', query);
-      console.log('📊 Filters:', filters);
+      console.log('='.repeat(80));
+      console.log('🔍 SEARCH START');
+      console.log('Query:', query);
+      console.log('Applied Filters:', appliedFilters);
+      console.log('Selected Sources (academicDatabases):', academicDatabases);
+      console.log('Sources count:', academicDatabases.length);
 
-      const result = await literatureAPI.searchLiterature({
+      const searchParams = {
         query,
-        sources: filters.sources,
-        ...(filters.yearFrom && { yearFrom: filters.yearFrom }),
-        ...(filters.yearTo && { yearTo: filters.yearTo }),
-        ...(filters.minCitations && { minCitations: filters.minCitations }),
-        sortBy: filters.sortBy,
+        sources: academicDatabases,
+        ...(appliedFilters.yearFrom && { yearFrom: appliedFilters.yearFrom }),
+        ...(appliedFilters.yearTo && { yearTo: appliedFilters.yearTo }),
+        ...(appliedFilters.minCitations !== undefined && {
+          minCitations: appliedFilters.minCitations,
+        }),
+        ...(appliedFilters.publicationType !== 'all'
+          ? { publicationType: appliedFilters.publicationType }
+          : {}),
+        ...(appliedFilters.author &&
+          appliedFilters.author.trim().length > 0 && {
+            author: appliedFilters.author.trim(),
+            authorSearchMode: appliedFilters.authorSearchMode,
+          }),
+        sortBy: appliedFilters.sortBy,
         page: currentPage,
         limit: 20,
         includeCitations: true,
-      });
+      };
+
+      console.log('📤 Sending search params:', searchParams);
+
+      const result = await literatureAPI.searchLiterature(searchParams);
 
       console.log('✅ Search result received:', result);
       console.log('📚 Papers array:', result.papers);
+      console.log('📚 Papers count:', result.papers?.length);
       console.log('📈 Total results:', result.total);
+      console.log('='.repeat(80));
+
+      // Google-like: Check if query was auto-corrected
+      if ((result as any).correctedQuery && (result as any).originalQuery) {
+        setQueryCorrectionMessage({
+          original: (result as any).originalQuery,
+          corrected: (result as any).correctedQuery,
+        });
+      } else {
+        setQueryCorrectionMessage(null);
+      }
+
+      // Check if filters are too restrictive
+      if (result.total === 0 && appliedFilterCount > 0) {
+        const hasStrictFilters =
+          (appliedFilters.minCitations && appliedFilters.minCitations > 0) ||
+          (appliedFilters.yearFrom &&
+            appliedFilters.yearFrom >= new Date().getFullYear() - 2);
+
+        if (hasStrictFilters) {
+          toast.warning(
+            'No papers found with current filters. Try removing the citation filter or expanding the year range.',
+            { duration: 6000 }
+          );
+        }
+      }
 
       if (result.papers && result.papers.length > 0) {
         setPapers(result.papers);
@@ -210,7 +523,7 @@ export default function LiteratureSearchPage() {
         );
         console.log('📑 Active tab set to:', 'results');
         toast.success(
-          `Found ${result.total} papers across ${filters.sources.length} databases`
+          `Found ${result.total} papers across ${academicDatabases.length} databases`
         );
       } else {
         console.warn('⚠️ No papers in result');
@@ -218,7 +531,37 @@ export default function LiteratureSearchPage() {
         setTotalResults(0);
         setActiveTab('results'); // PHASE 9 DAY 24: Switch to results tab
         setActiveResultsSubTab('papers'); // Show papers sub-tab
-        toast.info('No papers found. Try adjusting your search terms.');
+
+        // More helpful message based on filters
+        if (appliedFilterCount > 0) {
+          const filterHints = [];
+          if (appliedFilters.minCitations && appliedFilters.minCitations > 0) {
+            filterHints.push(
+              `citation filter (≥${appliedFilters.minCitations})`
+            );
+          }
+          if (
+            appliedFilters.yearFrom &&
+            appliedFilters.yearFrom >= new Date().getFullYear() - 2
+          ) {
+            filterHints.push(
+              `recent year filter (${appliedFilters.yearFrom}+)`
+            );
+          }
+
+          if (filterHints.length > 0) {
+            toast.info(
+              `No papers found. Your ${filterHints.join(' and ')} may be too restrictive. Try removing filters or adjusting the year range.`,
+              { duration: 7000 }
+            );
+          } else {
+            toast.info(
+              'No papers found with current filters. Try removing some filters.'
+            );
+          }
+        } else {
+          toast.info('No papers found. Try adjusting your search terms.');
+        }
       }
     } catch (error) {
       toast.error('Search failed. Please try again.');
@@ -226,7 +569,7 @@ export default function LiteratureSearchPage() {
     } finally {
       setLoading(false);
     }
-  }, [query, filters, currentPage]);
+  }, [query, appliedFilters, academicDatabases, currentPage]);
 
   const handleSavePaper = async (paper: Paper) => {
     try {
@@ -281,12 +624,23 @@ export default function LiteratureSearchPage() {
       return;
     }
 
+    // PHASE 9 DAY 28: Real-time progress (ready for backend integration)
+    // Note: Backend API needs to be updated to accept userId and emit WebSocket progress
+    const user = authService.getUser();
+    if (user?.id) {
+      setShowThemeProgress(true); // Show progress component when backend supports it
+    }
+
     setAnalyzingThemes(true);
     try {
       const paperIds = Array.from(selectedPapers);
+      console.log('🎯 Starting theme extraction...');
+      console.log('   Selected paper IDs:', paperIds);
+      console.log('   Total sources:', totalSources);
 
       // Get selected paper objects
       const selectedPaperObjects = papers.filter(p => selectedPapers.has(p.id));
+      console.log('   Found paper objects:', selectedPaperObjects.length);
 
       // Convert papers to SourceContent format for unified theme extraction
       const paperSources: SourceContent[] = selectedPaperObjects.map(paper => ({
@@ -318,14 +672,25 @@ export default function LiteratureSearchPage() {
 
       // Combine all sources
       const allSources = [...paperSources, ...videoSources];
+      console.log('   Paper sources:', paperSources.length);
+      console.log('   Video sources:', videoSources.length);
+      console.log('   Total sources for API:', allSources.length);
+      console.log('   First source sample:', allSources[0]);
 
       // Phase 9 Day 20: Use unified theme extraction with full provenance
+      // TODO Day 28: Add userId to options when backend supports it
+      console.log('📡 Calling extractUnifiedThemes API...');
       const result = await extractUnifiedThemes(allSources, {
         maxThemes: 15,
         minConfidence: 0.5,
+        // userId: user?.id, // Uncomment when backend accepts userId
       });
+      console.log('📡 API call completed');
+
+      console.log('🔍 Theme extraction result:', result);
 
       if (result && result.themes) {
+        console.log(`✅ Successfully extracted ${result.themes.length} themes`);
         setUnifiedThemes(result.themes);
         setActiveTab('analysis'); // PHASE 9 DAY 24: Switch to analysis tab
         setActiveAnalysisSubTab('themes'); // Show themes sub-tab
@@ -333,12 +698,26 @@ export default function LiteratureSearchPage() {
           `Extracted ${result.themes.length} themes with full provenance from ${paperIds.length} papers`
         );
       } else {
-        toast.error('Theme extraction failed');
+        console.error(
+          '❌ Theme extraction failed: No themes in result',
+          result
+        );
+        toast.error('Theme extraction failed: No themes returned');
       }
-    } catch (error) {
-      toast.error('Theme extraction failed');
+    } catch (error: any) {
+      console.error('❌ Theme extraction error:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      if (error.response) {
+        console.error('API Response status:', error.response.status);
+        console.error('API Response data:', error.response.data);
+      }
+      toast.error(
+        `Theme extraction failed: ${error.message || 'Unknown error'}`
+      );
     } finally {
       setAnalyzingThemes(false);
+      setShowThemeProgress(false); // Hide progress component
     }
   };
 
@@ -411,17 +790,21 @@ export default function LiteratureSearchPage() {
 
       // Store statements in session storage for study creation page
       sessionStorage.setItem('generatedStatements', JSON.stringify(statements));
-      sessionStorage.setItem('statementSource', JSON.stringify({
-        type: 'themes',
-        query,
-        themeCount: unifiedThemes.length,
-        timestamp: new Date().toISOString(),
-      }));
+      sessionStorage.setItem(
+        'statementSource',
+        JSON.stringify({
+          type: 'themes',
+          query,
+          themeCount: unifiedThemes.length,
+          timestamp: new Date().toISOString(),
+        })
+      );
 
       toast.success(`Generated ${statements.length} Q-statements from themes`);
 
       // Navigate to study creation page with generated statements
-      window.location.href = '/create/study?from=literature&statementsReady=true';
+      window.location.href =
+        '/create/study?from=literature&statementsReady=true';
     } catch (error) {
       toast.error('Statement generation failed');
     }
@@ -452,20 +835,25 @@ export default function LiteratureSearchPage() {
           );
 
         // PHASE 9 DAY 20.5: Store transcribed videos separately
-        if (youtubeResults.transcripts && youtubeResults.transcripts.length > 0) {
-          const newTranscriptions = youtubeResults.transcripts.map((transcript: any) => ({
-            id: transcript.id || transcript.videoId,
-            title: transcript.title || 'Untitled Video',
-            sourceId: transcript.videoId,
-            url: `https://www.youtube.com/watch?v=${transcript.videoId}`,
-            channel: transcript.channel,
-            duration: transcript.duration || 0,
-            cost: transcript.cost || 0,
-            transcript: transcript.transcript || transcript.text || '',
-            themes: transcript.themes || [],
-            extractedAt: transcript.extractedAt || new Date().toISOString(),
-            cached: transcript.cached || false,
-          }));
+        if (
+          youtubeResults.transcripts &&
+          youtubeResults.transcripts.length > 0
+        ) {
+          const newTranscriptions = youtubeResults.transcripts.map(
+            (transcript: any) => ({
+              id: transcript.id || transcript.videoId,
+              title: transcript.title || 'Untitled Video',
+              sourceId: transcript.videoId,
+              url: `https://www.youtube.com/watch?v=${transcript.videoId}`,
+              channel: transcript.channel,
+              duration: transcript.duration || 0,
+              cost: transcript.cost || 0,
+              transcript: transcript.transcript || transcript.text || '',
+              themes: transcript.themes || [],
+              extractedAt: transcript.extractedAt || new Date().toISOString(),
+              cached: transcript.cached || false,
+            })
+          );
 
           setTranscribedVideos(prev => [...prev, ...newTranscriptions]);
 
@@ -508,7 +896,9 @@ export default function LiteratureSearchPage() {
 
         // Extract YouTube videos if present
         if (alternativeSources.includes('youtube')) {
-          const youtubeResults = results.filter((r: any) => r.source === 'youtube');
+          const youtubeResults = results.filter(
+            (r: any) => r.source === 'youtube'
+          );
           if (youtubeResults.length > 0) {
             setYoutubeVideos(youtubeResults);
           }
@@ -588,7 +978,7 @@ export default function LiteratureSearchPage() {
       return;
     }
 
-    const hasMainSources = filters.sources.length > 0;
+    const hasMainSources = academicDatabases.length > 0;
     const hasAltSources = alternativeSources.length > 0;
     const hasSocialSources = socialPlatforms.length > 0;
 
@@ -615,7 +1005,7 @@ export default function LiteratureSearchPage() {
     await Promise.allSettled(searchPromises);
 
     const totalSources =
-      (hasMainSources ? filters.sources.length : 0) +
+      (hasMainSources ? academicDatabases.length : 0) +
       (hasAltSources ? alternativeSources.length : 0) +
       (hasSocialSources ? socialPlatforms.length : 0);
 
@@ -660,9 +1050,25 @@ export default function LiteratureSearchPage() {
                 {isSelected && <Check className="w-3 h-3 text-white" />}
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-lg leading-tight">
-                  {paper.title}
-                </h3>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold text-lg leading-tight flex-1">
+                    {paper.title}
+                  </h3>
+                  {paper.source && (() => {
+                    const SourceIcon = getAcademicIcon(
+                      paper.source.toLowerCase().replace(/ /g, '_')
+                    );
+                    return (
+                      <Badge
+                        variant="secondary"
+                        className="flex items-center gap-1 shrink-0 px-2 py-1"
+                      >
+                        <SourceIcon className="w-3 h-3" />
+                        <span className="text-xs">{paper.source}</span>
+                      </Badge>
+                    );
+                  })()}
+                </div>
                 <p className="text-sm text-gray-600 mt-1">
                   {paper.authors?.slice(0, 3).join(', ')}
                   {paper.authors?.length > 3 &&
@@ -679,12 +1085,12 @@ export default function LiteratureSearchPage() {
                       {paper.venue}
                     </span>
                   )}
-                  {paper.citationCount !== undefined && (
-                    <span className="flex items-center gap-1">
-                      <GitBranch className="w-3 h-3" />
-                      {paper.citationCount} citations
-                    </span>
-                  )}
+                  <span className="flex items-center gap-1">
+                    <GitBranch className="w-3 h-3" />
+                    {paper.citationCount === null || paper.citationCount === undefined
+                      ? 'No citation info'
+                      : `${paper.citationCount} citation${paper.citationCount === 1 ? '' : 's'}`}
+                  </span>
                 </div>
                 {paper.abstract && (
                   <p className="mt-3 text-sm text-gray-700 line-clamp-3">
@@ -776,24 +1182,110 @@ export default function LiteratureSearchPage() {
         <CardContent className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Search className="w-5 h-5 text-blue-600" />
-            <h3 className="font-semibold text-gray-900">
-              Universal Search
-            </h3>
+            <h3 className="font-semibold text-gray-900">Universal Search</h3>
             <Badge variant="secondary" className="bg-blue-100 text-blue-700">
               Searches all selected sources below
             </Badge>
           </div>
 
           <div className="flex gap-2">
-            <div className="relative flex-1">
+            <div ref={searchContainerRef} className="relative flex-1">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-6 h-6" />
               <Input
                 placeholder="Search across academic databases, alternative sources, and social media..."
                 value={query}
-                onChange={e => setQuery(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSearchAllSources()}
+                onChange={e => {
+                  setQuery(e.target.value);
+                  setShowSuggestions(true); // Show suggestions when user starts typing
+                  // Clear query correction message when user types
+                  if (queryCorrectionMessage) {
+                    setQueryCorrectionMessage(null);
+                  }
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    setShowSuggestions(false);
+                    handleSearchAllSources();
+                  } else if (e.key === 'Escape') {
+                    setShowSuggestions(false);
+                  }
+                }}
+                onFocus={() =>
+                  aiSuggestions.length > 0 && setShowSuggestions(true)
+                }
                 className="pl-14 pr-4 h-14 text-lg border-2 focus:border-blue-500"
               />
+
+              {/* AI-Powered Inline Suggestions Dropdown */}
+              <AnimatePresence>
+                {showSuggestions &&
+                  (aiSuggestions.length > 0 || loadingSuggestions) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-purple-200 rounded-lg shadow-xl z-50 overflow-hidden"
+                    >
+                      <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-purple-100 flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm font-semibold text-purple-900">
+                          AI-Refined Questions (GPT-4)
+                        </span>
+                        {loadingSuggestions && (
+                          <Loader2 className="w-3 h-3 animate-spin text-purple-600 ml-auto" />
+                        )}
+                      </div>
+
+                      {loadingSuggestions ? (
+                        <div className="p-4 text-center text-gray-500 text-sm">
+                          Generating refined queries...
+                        </div>
+                      ) : (
+                        <div className="max-h-64 overflow-y-auto">
+                          {aiSuggestions.map((suggestion, index) => (
+                            <button
+                              key={index}
+                              onClick={() => {
+                                setQuery(suggestion);
+                                setShowSuggestions(false);
+                                // Clear any previous query correction message
+                                setQueryCorrectionMessage(null);
+                              }}
+                              className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0 group"
+                            >
+                              <div className="flex items-start gap-3">
+                                <Badge
+                                  variant="outline"
+                                  className="mt-0.5 bg-purple-100 text-purple-700 border-purple-300 flex-shrink-0"
+                                >
+                                  {index === 0 ? '✨ Best' : `${index + 1}`}
+                                </Badge>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm text-gray-900 group-hover:text-purple-900 font-medium break-words">
+                                    {suggestion}
+                                  </p>
+                                </div>
+                                <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 flex-shrink-0 mt-0.5" />
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="p-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-600 text-center">
+                        Press{' '}
+                        <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded text-xs">
+                          Enter
+                        </kbd>{' '}
+                        to search •{' '}
+                        <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded text-xs">
+                          Esc
+                        </kbd>{' '}
+                        to close
+                      </div>
+                    </motion.div>
+                  )}
+              </AnimatePresence>
             </div>
             <Button
               onClick={handleSearchAllSources}
@@ -812,23 +1304,16 @@ export default function LiteratureSearchPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => setShowAIAssistant(!showAIAssistant)}
-              className={cn(
-                'h-14 px-6 border-2',
-                showAIAssistant && 'bg-purple-100 border-purple-500'
-              )}
-            >
-              <Sparkles className="w-5 h-5 mr-2 text-purple-600" />
-              AI Assistant
-              {showAIAssistant && <Check className="w-4 h-4 ml-2 text-purple-600" />}
-            </Button>
-            <Button
-              variant="outline"
               onClick={() => setShowFilters(!showFilters)}
-              className="h-14 px-6 border-2"
+              className="h-14 px-6 border-2 relative"
             >
               <Filter className="w-5 h-5 mr-2" />
               Filters
+              {appliedFilterCount > 0 && (
+                <Badge className="ml-2 bg-purple-600 text-white">
+                  {appliedFilterCount}
+                </Badge>
+              )}
               {showFilters ? (
                 <X className="w-4 h-4 ml-2" />
               ) : (
@@ -855,27 +1340,148 @@ export default function LiteratureSearchPage() {
                 {socialPlatforms.length} Social Media
               </Badge>
             )}
-            {academicDatabases.length === 0 && alternativeSources.length === 0 && socialPlatforms.length === 0 && (
-              <span className="text-orange-600">⚠️ No sources selected - please select sources below</span>
-            )}
+            {academicDatabases.length === 0 &&
+              alternativeSources.length === 0 &&
+              socialPlatforms.length === 0 && (
+                <span className="text-orange-600">
+                  ⚠️ No sources selected - please select sources below
+                </span>
+              )}
           </div>
 
-          {/* AI Assistant Panel */}
-          <AnimatePresence>
-            {showAIAssistant && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="mt-4 pt-4 border-t"
+          {/* Active Filters Chips - Only show APPLIED filters */}
+          {appliedFilterCount > 0 && (
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <span className="text-sm font-medium text-gray-700">
+                Active filters:
+              </span>
+              {appliedFilters.yearFrom !== defaultFilters.yearFrom && (
+                <Badge
+                  variant="secondary"
+                  className="bg-purple-100 text-purple-700 flex items-center gap-1 cursor-pointer hover:bg-purple-200"
+                  onClick={() => {
+                    const newFilters = {
+                      ...appliedFilters,
+                      yearFrom: defaultFilters.yearFrom,
+                    };
+                    setAppliedFilters(newFilters);
+                    setFilters(newFilters);
+                  }}
+                >
+                  Year from: {appliedFilters.yearFrom}
+                  <X className="w-3 h-3" />
+                </Badge>
+              )}
+              {appliedFilters.yearTo !== defaultFilters.yearTo && (
+                <Badge
+                  variant="secondary"
+                  className="bg-purple-100 text-purple-700 flex items-center gap-1 cursor-pointer hover:bg-purple-200"
+                  onClick={() => {
+                    const newFilters = {
+                      ...appliedFilters,
+                      yearTo: defaultFilters.yearTo,
+                    };
+                    setAppliedFilters(newFilters);
+                    setFilters(newFilters);
+                  }}
+                >
+                  Year to: {appliedFilters.yearTo}
+                  <X className="w-3 h-3" />
+                </Badge>
+              )}
+              {appliedFilters.minCitations &&
+                appliedFilters.minCitations > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-purple-100 text-purple-700 flex items-center gap-1 cursor-pointer hover:bg-purple-200"
+                    onClick={() => {
+                      const newFilters = {
+                        ...appliedFilters,
+                        minCitations: undefined,
+                      };
+                      setAppliedFilters(newFilters);
+                      setFilters(newFilters);
+                    }}
+                  >
+                    Min citations: {appliedFilters.minCitations}
+                    <X className="w-3 h-3" />
+                  </Badge>
+                )}
+              {appliedFilters.publicationType !== 'all' && (
+                <Badge
+                  variant="secondary"
+                  className="bg-purple-100 text-purple-700 flex items-center gap-1 cursor-pointer hover:bg-purple-200"
+                  onClick={() => {
+                    const newFilters = {
+                      ...appliedFilters,
+                      publicationType: 'all' as const,
+                    };
+                    setAppliedFilters(newFilters);
+                    setFilters(newFilters);
+                  }}
+                >
+                  Type:{' '}
+                  {appliedFilters.publicationType === 'journal'
+                    ? 'Journal'
+                    : appliedFilters.publicationType === 'conference'
+                      ? 'Conference'
+                      : 'Preprint'}
+                  <X className="w-3 h-3" />
+                </Badge>
+              )}
+              {appliedFilters.sortBy !== 'relevance' && (
+                <Badge
+                  variant="secondary"
+                  className="bg-purple-100 text-purple-700 flex items-center gap-1 cursor-pointer hover:bg-purple-200"
+                  onClick={() => {
+                    const newFilters = {
+                      ...appliedFilters,
+                      sortBy: 'relevance' as const,
+                    };
+                    setAppliedFilters(newFilters);
+                    setFilters(newFilters);
+                  }}
+                >
+                  Sort:{' '}
+                  {appliedFilters.sortBy === 'citations'
+                    ? 'Citations'
+                    : appliedFilters.sortBy === 'date'
+                      ? 'Date'
+                      : 'Relevance'}
+                  <X className="w-3 h-3" />
+                </Badge>
+              )}
+              {appliedFilters.author &&
+                appliedFilters.author.trim().length > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-purple-100 text-purple-700 flex items-center gap-1 cursor-pointer hover:bg-purple-200"
+                    onClick={() => {
+                      const newFilters = {
+                        ...appliedFilters,
+                        author: '',
+                      };
+                      setAppliedFilters(newFilters);
+                      setFilters(newFilters);
+                    }}
+                  >
+                    Author: {appliedFilters.author}
+                    <X className="w-3 h-3" />
+                  </Badge>
+                )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setAppliedFilters(defaultFilters);
+                  setFilters(defaultFilters);
+                }}
+                className="text-xs h-6 text-gray-600 hover:text-gray-900"
               >
-                <AISearchAssistant
-                  initialQuery={query}
-                  onQueryChange={setQuery}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+                Clear all filters
+              </Button>
+            </div>
+          )}
 
           {/* Advanced Filters */}
           <AnimatePresence>
@@ -886,53 +1492,114 @@ export default function LiteratureSearchPage() {
                 exit={{ height: 0, opacity: 0 }}
                 className="space-y-4 pt-4 border-t mt-4"
               >
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-5 gap-4">
                   <div>
                     <label className="text-sm font-medium">Year Range</label>
                     <div className="flex gap-2 mt-1">
                       <Input
                         type="number"
                         placeholder="From"
-                        value={filters.yearFrom}
-                        onChange={e =>
+                        min="1900"
+                        max={new Date().getFullYear()}
+                        value={filters.yearFrom ?? ''}
+                        onChange={e => {
+                          let val = parseInt(e.target.value);
+                          if (!isNaN(val)) {
+                            // Auto-correct: ensure from is not after to
+                            if (filters.yearTo && val > filters.yearTo) {
+                              val = filters.yearTo;
+                            }
+                            // Auto-correct: limit to valid range
+                            if (val < 1900) val = 1900;
+                            if (val > new Date().getFullYear())
+                              val = new Date().getFullYear();
+                          }
                           setFilters({
                             ...filters,
-                            yearFrom: parseInt(e.target.value) || undefined,
-                          })
-                        }
+                            yearFrom: isNaN(val) ? undefined : val,
+                          });
+                        }}
                         className="w-full"
                       />
                       <Input
                         type="number"
                         placeholder="To"
-                        value={filters.yearTo}
-                        onChange={e =>
+                        min="1900"
+                        max={new Date().getFullYear()}
+                        value={filters.yearTo ?? ''}
+                        onChange={e => {
+                          let val = parseInt(e.target.value);
+                          if (!isNaN(val)) {
+                            // Auto-correct: ensure to is not before from
+                            if (filters.yearFrom && val < filters.yearFrom) {
+                              val = filters.yearFrom;
+                            }
+                            // Auto-correct: limit to valid range
+                            if (val < 1900) val = 1900;
+                            if (val > new Date().getFullYear())
+                              val = new Date().getFullYear();
+                          }
                           setFilters({
                             ...filters,
-                            yearTo: parseInt(e.target.value) || undefined,
-                          })
-                        }
+                            yearTo: isNaN(val) ? undefined : val,
+                          });
+                        }}
                         className="w-full"
                       />
                     </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Author</label>
+                    <Input
+                      type="text"
+                      placeholder="e.g., Smith"
+                      value={filters.author}
+                      onChange={e =>
+                        setFilters({
+                          ...filters,
+                          author: e.target.value,
+                        })
+                      }
+                      className="mt-1"
+                    />
+                    <select
+                      value={filters.authorSearchMode}
+                      onChange={e =>
+                        setFilters({
+                          ...filters,
+                          authorSearchMode: e.target.value as
+                            | 'contains'
+                            | 'exact'
+                            | 'fuzzy',
+                        })
+                      }
+                      className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="contains">Contains (partial match)</option>
+                      <option value="fuzzy">Fuzzy (typo-tolerant)</option>
+                      <option value="exact">Exact match</option>
+                    </select>
                   </div>
                   <div>
                     <label className="text-sm font-medium">Min Citations</label>
                     <Input
                       type="number"
                       placeholder="e.g., 10"
-                      value={filters.minCitations}
-                      onChange={e =>
+                      value={filters.minCitations ?? ''}
+                      onChange={e => {
+                        const val = parseInt(e.target.value);
                         setFilters({
                           ...filters,
-                          minCitations: parseInt(e.target.value) || undefined,
-                        })
-                      }
+                          minCitations: isNaN(val) ? undefined : val,
+                        });
+                      }}
                       className="mt-1"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Publication Type</label>
+                    <label className="text-sm font-medium">
+                      Publication Type
+                    </label>
                     <select
                       value={filters.publicationType}
                       onChange={e =>
@@ -968,27 +1635,98 @@ export default function LiteratureSearchPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      setFilters({
-                        yearFrom: 2020,
-                        yearTo: new Date().getFullYear(),
-                        sources: ['semantic_scholar', 'crossref', 'pubmed', 'arxiv'],
-                        sortBy: 'relevance',
-                        citationMin: 0,
-                        minCitations: undefined,
-                        publicationType: 'all',
-                        includeAIMode: true,
-                      })
-                    }
-                  >
-                    Reset Filters
-                  </Button>
-                  <Button onClick={handleSearchAllSources}>
-                    Apply Filters
-                  </Button>
+                <div className="space-y-3">
+                  {/* Saved Presets Section */}
+                  {savedPresets.length > 0 && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        📁 Saved Presets
+                      </label>
+                      <div className="flex gap-2 flex-wrap">
+                        {savedPresets.map(preset => (
+                          <div
+                            key={preset.id}
+                            className="flex items-center gap-1 bg-purple-50 border border-purple-200 rounded-lg px-3 py-1.5 text-sm"
+                          >
+                            <button
+                              onClick={() => handleLoadPreset(preset)}
+                              className="hover:text-purple-700 font-medium"
+                            >
+                              {preset.name}
+                            </button>
+                            <button
+                              onClick={() => handleDeletePreset(preset.id)}
+                              className="text-gray-400 hover:text-red-600"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Save Preset Form */}
+                  {showPresets && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="flex gap-2 items-end"
+                    >
+                      <div className="flex-1">
+                        <label className="text-sm font-medium">
+                          Preset Name
+                        </label>
+                        <Input
+                          placeholder="e.g., Recent AI Papers"
+                          value={presetName}
+                          onChange={e => setPresetName(e.target.value)}
+                          onKeyDown={e =>
+                            e.key === 'Enter' && handleSavePreset()
+                          }
+                          className="mt-1"
+                        />
+                      </div>
+                      <Button onClick={handleSavePreset} variant="outline">
+                        Save
+                      </Button>
+                      <Button
+                        onClick={() => setShowPresets(false)}
+                        variant="ghost"
+                      >
+                        Cancel
+                      </Button>
+                    </motion.div>
+                  )}
+
+                  <div className="flex justify-between gap-2 mt-4">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setFilters(defaultFilters)}
+                      >
+                        Reset Filters
+                      </Button>
+                      {appliedFilterCount > 0 && !showPresets && (
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowPresets(true)}
+                          className="border-purple-300 text-purple-700 hover:bg-purple-50"
+                        >
+                          <Star className="w-4 h-4 mr-2" />
+                          Save as Preset
+                        </Button>
+                      )}
+                    </div>
+                    <Button
+                      onClick={handleApplyFilters}
+                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      Apply Filters
+                    </Button>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -1009,7 +1747,8 @@ export default function LiteratureSearchPage() {
             </Badge>
           </CardTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Search peer-reviewed academic literature from leading scholarly databases
+            Search peer-reviewed academic literature from leading scholarly
+            databases
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1021,46 +1760,152 @@ export default function LiteratureSearchPage() {
             <div className="flex gap-2 flex-wrap">
               {[
                 // Free & Open Access
-                { id: 'pubmed', label: 'PubMed', icon: '🏥', desc: 'Medical/life sciences - FREE', category: 'Free' },
-                { id: 'pmc', label: 'PubMed Central', icon: '📖', desc: 'Free full-text articles', category: 'Free' },
-                { id: 'arxiv', label: 'ArXiv', icon: '📐', desc: 'Physics/Math/CS preprints - FREE', category: 'Free' },
-                { id: 'biorxiv', label: 'bioRxiv', icon: '🧬', desc: 'Biology preprints - FREE', category: 'Free' },
-                { id: 'semantic_scholar', label: 'Semantic Scholar', icon: '🎓', desc: 'CS/interdisciplinary - FREE', category: 'Free' },
+                {
+                  id: 'pubmed',
+                  label: 'PubMed',
+                  icon: '🏥',
+                  desc: 'Medical/life sciences - FREE',
+                  category: 'Free',
+                },
+                {
+                  id: 'pmc',
+                  label: 'PubMed Central',
+                  icon: '📖',
+                  desc: 'Free full-text articles',
+                  category: 'Free',
+                },
+                {
+                  id: 'arxiv',
+                  label: 'ArXiv',
+                  icon: '📐',
+                  desc: 'Physics/Math/CS preprints - FREE',
+                  category: 'Free',
+                },
+                {
+                  id: 'biorxiv',
+                  label: 'bioRxiv',
+                  icon: '🧬',
+                  desc: 'Biology preprints - FREE',
+                  category: 'Free',
+                },
+                {
+                  id: 'semantic_scholar',
+                  label: 'Semantic Scholar',
+                  icon: '🎓',
+                  desc: 'CS/interdisciplinary - FREE',
+                  category: 'Free',
+                },
 
                 // Multidisciplinary Premium
-                { id: 'web_of_science', label: 'Web of Science', icon: '🌐', desc: 'Multidisciplinary citation index', category: 'Premium' },
-                { id: 'scopus', label: 'Scopus', icon: '🔬', desc: 'Multidisciplinary abstract/citation', category: 'Premium' },
-                { id: 'crossref', label: 'CrossRef', icon: '🔗', desc: 'DOI database registry', category: 'Free' },
+                {
+                  id: 'web_of_science',
+                  label: 'Web of Science',
+                  icon: '🌐',
+                  desc: 'Multidisciplinary citation index',
+                  category: 'Premium',
+                },
+                {
+                  id: 'scopus',
+                  label: 'Scopus',
+                  icon: '🔬',
+                  desc: 'Multidisciplinary abstract/citation',
+                  category: 'Premium',
+                },
+                {
+                  id: 'crossref',
+                  label: 'CrossRef',
+                  icon: '🔗',
+                  desc: 'DOI database registry',
+                  category: 'Free',
+                },
 
                 // Subject-Specific
-                { id: 'ieee', label: 'IEEE Xplore', icon: '⚡', desc: 'Engineering/tech/CS', category: 'Premium' },
-                { id: 'jstor', label: 'JSTOR', icon: '📚', desc: 'Humanities/social sciences', category: 'Premium' },
-                { id: 'springer', label: 'SpringerLink', icon: '📕', desc: 'STM & social sciences', category: 'Premium' },
-                { id: 'nature', label: 'Nature', icon: '🔬', desc: 'Science journals', category: 'Premium' },
-                { id: 'wiley', label: 'Wiley Online', icon: '📘', desc: 'Multidisciplinary', category: 'Premium' },
-                { id: 'elsevier', label: 'ScienceDirect', icon: '🔵', desc: 'Elsevier journals', category: 'Premium' },
-                { id: 'psycinfo', label: 'PsycINFO', icon: '🧠', desc: 'Psychology/behavioral sciences', category: 'Premium' },
-                { id: 'eric', label: 'ERIC', icon: '🎓', desc: 'Education research - FREE', category: 'Free' },
-              ].map(source => (
-                <Badge
-                  key={source.id}
-                  variant={academicDatabases.includes(source.id) ? 'default' : 'outline'}
-                  className="cursor-pointer py-2 px-4 text-sm hover:scale-105 transition-transform"
-                  onClick={() => {
-                    const newDatabases = academicDatabases.includes(source.id)
-                      ? academicDatabases.filter(s => s !== source.id)
-                      : [...academicDatabases, source.id];
-                    setAcademicDatabases(newDatabases);
-                  }}
-                  title={source.desc}
-                >
-                  <span className="mr-2">{source.icon}</span>
-                  {source.label}
-                </Badge>
-              ))}
+                {
+                  id: 'ieee',
+                  label: 'IEEE Xplore',
+                  icon: '⚡',
+                  desc: 'Engineering/tech/CS',
+                  category: 'Premium',
+                },
+                {
+                  id: 'jstor',
+                  label: 'JSTOR',
+                  icon: '📚',
+                  desc: 'Humanities/social sciences',
+                  category: 'Premium',
+                },
+                {
+                  id: 'springer',
+                  label: 'SpringerLink',
+                  icon: '📕',
+                  desc: 'STM & social sciences',
+                  category: 'Premium',
+                },
+                {
+                  id: 'nature',
+                  label: 'Nature',
+                  icon: '🔬',
+                  desc: 'Science journals',
+                  category: 'Premium',
+                },
+                {
+                  id: 'wiley',
+                  label: 'Wiley Online',
+                  icon: '📘',
+                  desc: 'Multidisciplinary',
+                  category: 'Premium',
+                },
+                {
+                  id: 'elsevier',
+                  label: 'ScienceDirect',
+                  icon: '🔵',
+                  desc: 'Elsevier journals',
+                  category: 'Premium',
+                },
+                {
+                  id: 'psycinfo',
+                  label: 'PsycINFO',
+                  icon: '🧠',
+                  desc: 'Psychology/behavioral sciences',
+                  category: 'Premium',
+                },
+                {
+                  id: 'eric',
+                  label: 'ERIC',
+                  icon: '🎓',
+                  desc: 'Education research - FREE',
+                  category: 'Free',
+                },
+              ].map(source => {
+                const IconComponent = getAcademicIcon(source.id);
+                return (
+                  <Badge
+                    key={source.id}
+                    variant={
+                      academicDatabases.includes(source.id)
+                        ? 'default'
+                        : 'outline'
+                    }
+                    className="cursor-pointer py-2 px-4 text-sm hover:scale-105 transition-transform flex items-center gap-2"
+                    onClick={() => {
+                      const newDatabases = academicDatabases.includes(
+                        source.id
+                      )
+                        ? academicDatabases.filter(s => s !== source.id)
+                        : [...academicDatabases, source.id];
+                      setAcademicDatabases(newDatabases);
+                    }}
+                    title={source.desc}
+                  >
+                    <IconComponent className="w-4 h-4 flex-shrink-0" />
+                    <span>{source.label}</span>
+                  </Badge>
+                );
+              })}
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              {academicDatabases.length} database{academicDatabases.length !== 1 ? 's' : ''} selected
+              {academicDatabases.length} database
+              {academicDatabases.length !== 1 ? 's' : ''} selected
               {academicDatabases.length === 0 && ' (select at least one)'}
             </p>
           </div>
@@ -1087,7 +1932,10 @@ export default function LiteratureSearchPage() {
             <Button
               variant="outline"
               onClick={handleExtractThemes}
-              disabled={(selectedPapers.size === 0 && transcribedVideos.length === 0) || analyzingThemes}
+              disabled={
+                (selectedPapers.size === 0 && transcribedVideos.length === 0) ||
+                analyzingThemes
+              }
               className="flex items-center gap-2"
             >
               {analyzingThemes ? (
@@ -1104,7 +1952,10 @@ export default function LiteratureSearchPage() {
                     </Badge>
                   )}
                   {transcribedVideos.length > 0 && (
-                    <Badge variant="secondary" className="text-xs bg-purple-100 dark:bg-purple-900">
+                    <Badge
+                      variant="secondary"
+                      className="text-xs bg-purple-100 dark:bg-purple-900"
+                    >
                       {transcribedVideos.length} videos
                     </Badge>
                   )}
@@ -1138,6 +1989,25 @@ export default function LiteratureSearchPage() {
               </Button>
             )}
           </div>
+
+          {/* PHASE 9 DAY 28: Real-time Progress (ready for backend integration) */}
+          {showThemeProgress && authService.getUser()?.id && (
+            <div className="mt-4">
+              <ThemeExtractionProgress
+                userId={authService.getUser()!.id}
+                onComplete={themesCount => {
+                  setShowThemeProgress(false);
+                  toast.success(
+                    `Successfully extracted ${themesCount} themes!`
+                  );
+                }}
+                onError={error => {
+                  setShowThemeProgress(false);
+                  toast.error(`Theme extraction failed: ${error}`);
+                }}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -1157,7 +2027,8 @@ export default function LiteratureSearchPage() {
             </Badge>
           </CardTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Discover expert knowledge beyond traditional academic databases: podcasts, technical documentation, and community expertise
+            Discover expert knowledge beyond traditional academic databases:
+            podcasts, technical documentation, and community expertise
             <span className="block mt-1 text-xs font-medium text-indigo-600">
               💡 All sources are free and open-access
             </span>
@@ -1170,10 +2041,30 @@ export default function LiteratureSearchPage() {
             </label>
             <div className="flex gap-2 flex-wrap">
               {[
-                { id: 'podcasts', label: 'Podcasts', icon: '🎙️', desc: 'Expert interviews & discussions' },
-                { id: 'github', label: 'GitHub', icon: '💻', desc: 'Code & datasets' },
-                { id: 'stackoverflow', label: 'StackOverflow', icon: '📚', desc: 'Technical Q&A' },
-                { id: 'medium', label: 'Medium', icon: '📝', desc: 'Practitioner insights' },
+                {
+                  id: 'podcasts',
+                  label: 'Podcasts',
+                  icon: '🎙️',
+                  desc: 'Expert interviews & discussions',
+                },
+                {
+                  id: 'github',
+                  label: 'GitHub',
+                  icon: '💻',
+                  desc: 'Code & datasets',
+                },
+                {
+                  id: 'stackoverflow',
+                  label: 'StackOverflow',
+                  icon: '📚',
+                  desc: 'Technical Q&A',
+                },
+                {
+                  id: 'medium',
+                  label: 'Medium',
+                  icon: '📝',
+                  desc: 'Practitioner insights',
+                },
               ].map(source => (
                 <Badge
                   key={source.id}
@@ -1204,11 +2095,13 @@ export default function LiteratureSearchPage() {
                 🎙️ Podcast Search
               </h4>
               <p className="text-xs text-gray-600 mb-2">
-                Search for research podcasts, expert interviews, and academic discussions
+                Search for research podcasts, expert interviews, and academic
+                discussions
               </p>
               <Input placeholder="Search podcasts..." className="mb-2" />
               <p className="text-xs text-gray-500">
-                Coming soon: Integration with Apple Podcasts, Spotify, and Google Podcasts
+                Coming soon: Integration with Apple Podcasts, Spotify, and
+                Google Podcasts
               </p>
             </div>
           )}
@@ -1223,7 +2116,8 @@ export default function LiteratureSearchPage() {
               </p>
               <Input placeholder="Search repositories..." className="mb-2" />
               <p className="text-xs text-gray-500">
-                Coming soon: GitHub API integration for code search and dataset discovery
+                Coming soon: GitHub API integration for code search and dataset
+                discovery
               </p>
             </div>
           )}
@@ -1238,7 +2132,8 @@ export default function LiteratureSearchPage() {
               </p>
               <Input placeholder="Search questions..." className="mb-2" />
               <p className="text-xs text-gray-500">
-                Coming soon: StackOverflow API integration for technical problem-solving
+                Coming soon: StackOverflow API integration for technical
+                problem-solving
               </p>
             </div>
           )}
@@ -1337,7 +2232,8 @@ export default function LiteratureSearchPage() {
             </Badge>
           </CardTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Research social media platforms for trends, public opinion, and content analysis. Each platform unlocks specific research tools.
+            Research social media platforms for trends, public opinion, and
+            content analysis. Each platform unlocks specific research tools.
             <span className="block mt-1 text-xs font-medium text-pink-600">
               💡 Select a platform below to see available research options
             </span>
@@ -1351,9 +2247,19 @@ export default function LiteratureSearchPage() {
             <div className="flex gap-2 flex-wrap">
               {[
                 { id: 'youtube', label: 'YouTube', icon: '🎥', color: 'red' },
-                { id: 'instagram', label: 'Instagram', icon: '📸', color: 'pink' },
+                {
+                  id: 'instagram',
+                  label: 'Instagram',
+                  icon: '📸',
+                  color: 'pink',
+                },
                 { id: 'tiktok', label: 'TikTok', icon: '🎵', color: 'cyan' },
-                { id: 'twitter', label: 'Twitter/X', icon: '🐦', color: 'blue' },
+                {
+                  id: 'twitter',
+                  label: 'Twitter/X',
+                  icon: '🐦',
+                  color: 'blue',
+                },
               ].map(platform => (
                 <Badge
                   key={platform.id}
@@ -1383,7 +2289,10 @@ export default function LiteratureSearchPage() {
               <h4 className="text-sm font-semibold flex items-center gap-2">
                 <Video className="w-4 h-4 text-red-600" />
                 🎥 YouTube Video Research & Transcription
-                <Badge variant="secondary" className="ml-auto bg-red-100 text-red-700">
+                <Badge
+                  variant="secondary"
+                  className="ml-auto bg-red-100 text-red-700"
+                >
                   AI-Powered
                 </Badge>
               </h4>
@@ -1428,17 +2337,25 @@ export default function LiteratureSearchPage() {
               <div className="pt-2 border-t border-red-200">
                 <Button
                   variant="ghost"
-                  onClick={() => setExpandedPanel(expandedPanel === 'youtube-browser' ? null : 'youtube-browser')}
+                  onClick={() =>
+                    setExpandedPanel(
+                      expandedPanel === 'youtube-browser'
+                        ? null
+                        : 'youtube-browser'
+                    )
+                  }
                   className="w-full justify-between hover:bg-red-100"
                 >
                   <span className="flex items-center gap-2 text-sm">
                     <Video className="w-4 h-4 text-red-600" />
                     Browse YouTube Channels
                   </span>
-                  <ChevronRight className={cn(
-                    "w-4 h-4 transition-transform",
-                    expandedPanel === 'youtube-browser' && "rotate-90"
-                  )} />
+                  <ChevronRight
+                    className={cn(
+                      'w-4 h-4 transition-transform',
+                      expandedPanel === 'youtube-browser' && 'rotate-90'
+                    )}
+                  />
                 </Button>
                 <AnimatePresence>
                   {expandedPanel === 'youtube-browser' && (
@@ -1449,15 +2366,23 @@ export default function LiteratureSearchPage() {
                       className="mt-2"
                     >
                       <YouTubeChannelBrowser
-                        onVideosSelected={(videos) => {
+                        onVideosSelected={videos => {
                           setYoutubeVideos(prev => {
-                            const existingIds = new Set(prev.map((v: any) => v.videoId || v.id));
-                            const newVideos = videos.filter(v => !existingIds.has(v.videoId));
+                            const existingIds = new Set(
+                              prev.map((v: any) => v.videoId || v.id)
+                            );
+                            const newVideos = videos.filter(
+                              v => !existingIds.has(v.videoId)
+                            );
                             if (newVideos.length === 0) {
-                              toast.info('All selected videos are already in the queue');
+                              toast.info(
+                                'All selected videos are already in the queue'
+                              );
                               return prev;
                             }
-                            toast.success(`Added ${newVideos.length} videos to selection queue`);
+                            toast.success(
+                              `Added ${newVideos.length} videos to selection queue`
+                            );
                             setExpandedPanel('video-selection');
                             return [...prev, ...newVideos];
                           });
@@ -1473,7 +2398,13 @@ export default function LiteratureSearchPage() {
               <div className="pt-2 border-t border-red-200">
                 <Button
                   variant="ghost"
-                  onClick={() => setExpandedPanel(expandedPanel === 'video-selection' ? null : 'video-selection')}
+                  onClick={() =>
+                    setExpandedPanel(
+                      expandedPanel === 'video-selection'
+                        ? null
+                        : 'video-selection'
+                    )
+                  }
                   className="w-full justify-between hover:bg-red-100"
                 >
                   <span className="flex items-center gap-2 text-sm">
@@ -1485,10 +2416,12 @@ export default function LiteratureSearchPage() {
                       </Badge>
                     )}
                   </span>
-                  <ChevronRight className={cn(
-                    "w-4 h-4 transition-transform",
-                    expandedPanel === 'video-selection' && "rotate-90"
-                  )} />
+                  <ChevronRight
+                    className={cn(
+                      'w-4 h-4 transition-transform',
+                      expandedPanel === 'video-selection' && 'rotate-90'
+                    )}
+                  />
                 </Button>
                 <AnimatePresence>
                   {expandedPanel === 'video-selection' && (
@@ -1504,50 +2437,81 @@ export default function LiteratureSearchPage() {
                             videoId: video.videoId || video.id,
                             title: video.title,
                             description: video.description || '',
-                            channelName: video.channelName || video.channel || '',
+                            channelName:
+                              video.channelName || video.channel || '',
                             channelId: video.channelId || '',
-                            thumbnailUrl: video.thumbnailUrl || video.thumbnail || 'https://via.placeholder.com/320x180',
+                            thumbnailUrl:
+                              video.thumbnailUrl ||
+                              video.thumbnail ||
+                              'https://via.placeholder.com/320x180',
                             duration: video.duration || 0,
                             viewCount: video.viewCount || video.views || 0,
-                            publishedAt: video.publishedAt ? new Date(video.publishedAt) : new Date(),
+                            publishedAt: video.publishedAt
+                              ? new Date(video.publishedAt)
+                              : new Date(),
                             relevanceScore: video.relevanceScore,
                             isTranscribed: video.isTranscribed || false,
-                            transcriptionStatus: video.transcriptionStatus || 'not_started',
+                            transcriptionStatus:
+                              video.transcriptionStatus || 'not_started',
                             cachedTranscript: video.cachedTranscript || false,
                           }))}
                           researchContext={query}
-                          onTranscribe={async (videoIds) => {
+                          onTranscribe={async videoIds => {
                             try {
-                              toast.info(`Starting transcription for ${videoIds.length} videos...`);
-                              const result = await literatureAPI.searchYouTubeWithTranscription(query, {
-                                ...transcriptionOptions,
-                                includeTranscripts: true,
-                                maxResults: videoIds.length,
-                              });
-                              if (result.transcripts && result.transcripts.length > 0) {
-                                const newTranscriptions = result.transcripts.map((transcript: any) => ({
-                                  id: transcript.id || transcript.videoId,
-                                  title: transcript.title || 'Untitled Video',
-                                  sourceId: transcript.videoId,
-                                  url: `https://www.youtube.com/watch?v=${transcript.videoId}`,
-                                  channel: transcript.channel,
-                                  duration: transcript.duration || 0,
-                                  cost: transcript.cost || 0,
-                                  transcript: transcript.transcript || transcript.text || '',
-                                  themes: transcript.themes || [],
-                                  extractedAt: transcript.extractedAt || new Date().toISOString(),
-                                  cached: transcript.cached || false,
-                                }));
-                                setTranscribedVideos(prev => [...prev, ...newTranscriptions]);
-                                toast.success(`Successfully transcribed ${result.transcripts.length} videos`);
+                              toast.info(
+                                `Starting transcription for ${videoIds.length} videos...`
+                              );
+                              const result =
+                                await literatureAPI.searchYouTubeWithTranscription(
+                                  query,
+                                  {
+                                    ...transcriptionOptions,
+                                    includeTranscripts: true,
+                                    maxResults: videoIds.length,
+                                  }
+                                );
+                              if (
+                                result.transcripts &&
+                                result.transcripts.length > 0
+                              ) {
+                                const newTranscriptions =
+                                  result.transcripts.map((transcript: any) => ({
+                                    id: transcript.id || transcript.videoId,
+                                    title: transcript.title || 'Untitled Video',
+                                    sourceId: transcript.videoId,
+                                    url: `https://www.youtube.com/watch?v=${transcript.videoId}`,
+                                    channel: transcript.channel,
+                                    duration: transcript.duration || 0,
+                                    cost: transcript.cost || 0,
+                                    transcript:
+                                      transcript.transcript ||
+                                      transcript.text ||
+                                      '',
+                                    themes: transcript.themes || [],
+                                    extractedAt:
+                                      transcript.extractedAt ||
+                                      new Date().toISOString(),
+                                    cached: transcript.cached || false,
+                                  }));
+                                setTranscribedVideos(prev => [
+                                  ...prev,
+                                  ...newTranscriptions,
+                                ]);
+                                toast.success(
+                                  `Successfully transcribed ${result.transcripts.length} videos`
+                                );
                                 setActiveTab('results');
                                 setActiveResultsSubTab('videos');
                               } else {
-                                toast.error('Transcription failed - no results returned');
+                                toast.error(
+                                  'Transcription failed - no results returned'
+                                );
                               }
                             } catch (error) {
                               console.error('Transcription error:', error);
-                              toast.error('Failed to transcribe videos. Please try again.');
+                              toast.error(
+                                'Failed to transcribe videos. Please try again.'
+                              );
                             }
                           }}
                           isLoading={loadingAlternative}
@@ -1556,7 +2520,9 @@ export default function LiteratureSearchPage() {
                         <div className="text-center py-6 text-gray-500 border border-dashed rounded-lg bg-white">
                           <Video className="w-6 h-6 mx-auto mb-2 text-gray-300" />
                           <p className="text-xs">No videos in queue</p>
-                          <p className="text-xs mt-1">Browse channels to add videos</p>
+                          <p className="text-xs mt-1">
+                            Browse channels to add videos
+                          </p>
                         </div>
                       )}
                     </motion.div>
@@ -1601,7 +2567,10 @@ export default function LiteratureSearchPage() {
             <div className="text-center py-12 text-gray-500 border-2 border-dashed rounded-lg">
               <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
               <p className="font-medium mb-2">Select a platform above</p>
-              <p className="text-sm">Choose YouTube, Instagram, TikTok, or Twitter to see research options</p>
+              <p className="text-sm">
+                Choose YouTube, Instagram, TikTok, or Twitter to see research
+                options
+              </p>
             </div>
           )}
 
@@ -1817,8 +2786,10 @@ export default function LiteratureSearchPage() {
               </div>
 
               <p className="text-sm text-gray-600 mb-4">
-                Extract cross-cutting research themes from academic papers, YouTube videos, Instagram posts, and alternative sources.
-                AI analyzes all selected content to identify patterns, key concepts, and emerging trends with full provenance tracking.
+                Extract cross-cutting research themes from academic papers,
+                YouTube videos, Instagram posts, and alternative sources. AI
+                analyzes all selected content to identify patterns, key
+                concepts, and emerging trends with full provenance tracking.
               </p>
 
               {/* Visual Workflow */}
@@ -1827,15 +2798,24 @@ export default function LiteratureSearchPage() {
                   1. Select Papers
                 </Badge>
                 <ArrowRight className="w-3 h-3 text-gray-400" />
-                <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                <Badge
+                  variant="outline"
+                  className="bg-purple-50 text-purple-700"
+                >
                   2. Transcribe Videos
                 </Badge>
                 <ArrowRight className="w-3 h-3 text-gray-400" />
-                <Badge variant="outline" className="bg-indigo-50 text-indigo-700">
+                <Badge
+                  variant="outline"
+                  className="bg-indigo-50 text-indigo-700"
+                >
                   3. Add Alt Sources
                 </Badge>
                 <ArrowRight className="w-3 h-3 text-gray-400" />
-                <Badge variant="outline" className="bg-green-50 text-green-700 font-semibold">
+                <Badge
+                  variant="outline"
+                  className="bg-green-50 text-green-700 font-semibold"
+                >
                   4. Extract Themes
                 </Badge>
               </div>
@@ -1845,9 +2825,13 @@ export default function LiteratureSearchPage() {
                 <div className="flex items-start gap-2">
                   <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                   <div className="text-xs text-gray-600">
-                    <span className="font-semibold text-gray-900">How it works:</span> AI combines content from all sources →
-                    Analyzes text using NLP → Identifies recurring concepts → Groups related ideas into themes →
-                    Tracks which sources contributed to each theme → Generates confidence scores and evidence citations.
+                    <span className="font-semibold text-gray-900">
+                      How it works:
+                    </span>{' '}
+                    AI combines content from all sources → Analyzes text using
+                    NLP → Identifies recurring concepts → Groups related ideas
+                    into themes → Tracks which sources contributed to each theme
+                    → Generates confidence scores and evidence citations.
                   </div>
                 </div>
               </div>
@@ -1855,11 +2839,15 @@ export default function LiteratureSearchPage() {
               {/* Stats */}
               <div className="flex items-center gap-4 mb-4 flex-wrap">
                 <div className="text-sm">
-                  <span className="font-semibold text-blue-600">{selectedPapers.size}</span>
+                  <span className="font-semibold text-blue-600">
+                    {selectedPapers.size}
+                  </span>
                   <span className="text-gray-500 ml-1">papers selected</span>
                 </div>
                 <div className="text-sm">
-                  <span className="font-semibold text-purple-600">{transcribedVideos.length}</span>
+                  <span className="font-semibold text-purple-600">
+                    {transcribedVideos.length}
+                  </span>
                   <span className="text-gray-500 ml-1">videos transcribed</span>
                 </div>
               </div>
@@ -1869,7 +2857,11 @@ export default function LiteratureSearchPage() {
                 <Button
                   size="lg"
                   onClick={handleExtractThemes}
-                  disabled={(selectedPapers.size === 0 && transcribedVideos.length === 0) || analyzingThemes}
+                  disabled={
+                    (selectedPapers.size === 0 &&
+                      transcribedVideos.length === 0) ||
+                    analyzingThemes
+                  }
                   className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white"
                 >
                   {analyzingThemes ? (
@@ -1880,23 +2872,28 @@ export default function LiteratureSearchPage() {
                   ) : (
                     <>
                       <Sparkles className="w-5 h-5 mr-2" />
-                      Extract Themes from {selectedPapers.size + transcribedVideos.length} Sources
+                      Extract Themes from{' '}
+                      {selectedPapers.size + transcribedVideos.length} Sources
                     </>
                   )}
                 </Button>
 
                 {unifiedThemes.length > 0 && (
-                  <Badge variant="outline" className="bg-green-100 text-green-700">
+                  <Badge
+                    variant="outline"
+                    className="bg-green-100 text-green-700"
+                  >
                     ✓ {unifiedThemes.length} themes extracted
                   </Badge>
                 )}
               </div>
 
-              {(selectedPapers.size === 0 && transcribedVideos.length === 0) && (
+              {selectedPapers.size === 0 && transcribedVideos.length === 0 && (
                 <Alert className="mt-4 border-amber-200 bg-amber-50">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
                   <AlertDescription className="text-amber-800">
-                    Select papers from search results above or transcribe YouTube videos to begin theme extraction
+                    Select papers from search results above or transcribe
+                    YouTube videos to begin theme extraction
                   </AlertDescription>
                 </Alert>
               )}
@@ -1917,9 +2914,11 @@ export default function LiteratureSearchPage() {
               <BookOpen className="w-4 h-4" />
               Results & Library
             </span>
-            {(papers.length + transcribedVideos.length + savedPapers.length) > 0 && (
+            {papers.length + transcribedVideos.length + savedPapers.length >
+              0 && (
               <Badge className="mt-1" variant="secondary">
-                {papers.length + transcribedVideos.length + savedPapers.length} total
+                {papers.length + transcribedVideos.length + savedPapers.length}{' '}
+                total
               </Badge>
             )}
           </TabsTrigger>
@@ -1928,7 +2927,7 @@ export default function LiteratureSearchPage() {
               <TrendingUp className="w-4 h-4" />
               Analysis & Insights
             </span>
-            {(unifiedThemes.length + gaps.length) > 0 && (
+            {unifiedThemes.length + gaps.length > 0 && (
               <Badge className="mt-1" variant="secondary">
                 {unifiedThemes.length + gaps.length} insights
               </Badge>
@@ -1993,12 +2992,69 @@ export default function LiteratureSearchPage() {
           {/* Papers sub-tab */}
           {activeResultsSubTab === 'papers' && (
             <>
+              {/* Google-like "Showing results for..." message */}
+              {queryCorrectionMessage && (
+                <Alert className="mb-4 bg-blue-50 border-blue-200">
+                  <AlertDescription className="text-sm">
+                    Showing results for{' '}
+                    <span className="font-semibold">
+                      {queryCorrectionMessage.corrected}
+                    </span>
+                    <br />
+                    <span className="text-gray-600">
+                      Search instead for:{' '}
+                      <button
+                        className="text-blue-600 hover:underline"
+                        onClick={() => {
+                          const originalQueryText = queryCorrectionMessage.original;
+                          setQuery(originalQueryText);
+                          setQueryCorrectionMessage(null);
+                          // Immediately search with the original query
+                          setTimeout(() => handleSearch(), 100);
+                        }}
+                      >
+                        {queryCorrectionMessage.original}
+                      </button>
+                    </span>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {loading ? (
                 <div className="flex justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
                 </div>
               ) : papers.length > 0 ? (
                 <div className="space-y-4">
+                  {/* Final Query Display - Shows the actual query used for search */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-start gap-3">
+                      <Search className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-blue-900 mb-1">
+                          Search Query Used
+                        </p>
+                        <p className="text-lg font-semibold text-gray-900 break-words">
+                          {queryCorrectionMessage?.corrected || query}
+                        </p>
+                        {queryCorrectionMessage && (
+                          <p className="text-xs text-gray-600 mt-2">
+                            <span className="inline-flex items-center gap-1">
+                              <span className="w-1 h-1 bg-blue-500 rounded-full"></span>
+                              Auto-corrected from: "{queryCorrectionMessage.original}"
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0">
+                        <Badge variant="outline" className="bg-white">
+                          {totalResults} {totalResults === 1 ? 'result' : 'results'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Papers List */}
                   {papers.map(paper => (
                     <PaperCard key={paper.id} paper={paper} />
                   ))}
@@ -2006,7 +3062,9 @@ export default function LiteratureSearchPage() {
               ) : (
                 <div className="text-center py-12 text-gray-500">
                   <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>No papers found. Try adjusting your search query or filters.</p>
+                  <p>
+                    No papers found. Try adjusting your search query or filters.
+                  </p>
                 </div>
               )}
             </>
@@ -2022,13 +3080,25 @@ export default function LiteratureSearchPage() {
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <CardTitle className="text-lg font-semibold">{video.title}</CardTitle>
+                            <CardTitle className="text-lg font-semibold">
+                              {video.title}
+                            </CardTitle>
                             <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
                               {video.channel && <span>{video.channel}</span>}
-                              <span>{Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, '0')} min</span>
+                              <span>
+                                {Math.floor(video.duration / 60)}:
+                                {(video.duration % 60)
+                                  .toString()
+                                  .padStart(2, '0')}{' '}
+                                min
+                              </span>
                             </div>
                           </div>
-                          <Button variant="outline" size="sm" onClick={() => window.open(video.url, '_blank')}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(video.url, '_blank')}
+                          >
                             <ExternalLink className="w-4 h-4" />
                           </Button>
                         </div>
@@ -2049,11 +3119,16 @@ export default function LiteratureSearchPage() {
           {activeResultsSubTab === 'library' && (
             <>
               {savedPapers.length > 0 ? (
-                savedPapers.map(paper => <PaperCard key={paper.id} paper={paper} />)
+                savedPapers.map(paper => (
+                  <PaperCard key={paper.id} paper={paper} />
+                ))
               ) : (
                 <div className="text-center py-12 text-gray-500">
                   <Star className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>No saved papers yet. Star papers from search results to add them here.</p>
+                  <p>
+                    No saved papers yet. Star papers from search results to add
+                    them here.
+                  </p>
                 </div>
               )}
             </>
@@ -2080,7 +3155,10 @@ export default function LiteratureSearchPage() {
                         Total Cost
                       </p>
                       <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        ${transcribedVideos.reduce((sum, v) => sum + v.cost, 0).toFixed(2)}
+                        $
+                        {transcribedVideos
+                          .reduce((sum, v) => sum + v.cost, 0)
+                          .toFixed(2)}
                       </p>
                     </div>
                     <div>
@@ -2104,12 +3182,18 @@ export default function LiteratureSearchPage() {
                         <CardTitle className="text-lg font-semibold flex items-center gap-2">
                           {video.title}
                           {video.cached && (
-                            <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                            <Badge
+                              variant="secondary"
+                              className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                            >
                               🟣 Cached ($0.00)
                             </Badge>
                           )}
                           {!video.cached && (
-                            <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                            <Badge
+                              variant="secondary"
+                              className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                            >
                               🟢 ${video.cost.toFixed(2)}
                             </Badge>
                           )}
@@ -2123,7 +3207,9 @@ export default function LiteratureSearchPage() {
                           )}
                           <span className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            {Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, '0')} min
+                            {Math.floor(video.duration / 60)}:
+                            {(video.duration % 60).toString().padStart(2, '0')}{' '}
+                            min
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
@@ -2162,7 +3248,11 @@ export default function LiteratureSearchPage() {
                         </h4>
                         <div className="flex flex-wrap gap-2">
                           {video.themes.map((theme: any, idx: number) => (
-                            <Badge key={idx} variant="outline" className="bg-purple-50 dark:bg-purple-950/20">
+                            <Badge
+                              key={idx}
+                              variant="outline"
+                              className="bg-purple-50 dark:bg-purple-950/20"
+                            >
                               {theme.label || theme}
                             </Badge>
                           ))}
@@ -2177,8 +3267,12 @@ export default function LiteratureSearchPage() {
                         size="sm"
                         onClick={() => {
                           // Add this video to unified themes extraction
-                          setSelectedPapers(new Set([...Array.from(selectedPapers), video.id]));
-                          toast.success('Video added to theme extraction queue');
+                          setSelectedPapers(
+                            new Set([...Array.from(selectedPapers), video.id])
+                          );
+                          toast.success(
+                            'Video added to theme extraction queue'
+                          );
                         }}
                       >
                         <Sparkles className="w-4 h-4 mr-1" />
@@ -2194,7 +3288,8 @@ export default function LiteratureSearchPage() {
               <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
               <p className="text-lg font-medium mb-2">No transcriptions yet</p>
               <p className="text-sm text-gray-400">
-                Enable &quot;Include video transcriptions&quot; when searching YouTube to transcribe videos
+                Enable &quot;Include video transcriptions&quot; when searching
+                YouTube to transcribe videos
               </p>
             </div>
           )}
@@ -2231,7 +3326,9 @@ export default function LiteratureSearchPage() {
               )}
             </Button>
             <Button
-              variant={activeAnalysisSubTab === 'synthesis' ? 'default' : 'ghost'}
+              variant={
+                activeAnalysisSubTab === 'synthesis' ? 'default' : 'ghost'
+              }
               size="sm"
               onClick={() => setActiveAnalysisSubTab('synthesis')}
             >
@@ -2243,231 +3340,273 @@ export default function LiteratureSearchPage() {
           {/* Themes sub-tab */}
           {activeAnalysisSubTab === 'themes' && (
             <div className="space-y-4">
-          {unifiedThemes.length > 0 ? (
-            <div className="space-y-4">
-              {/* PHASE 9 DAY 20.5: Source Summary Card */}
-              <Card className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-950/20 dark:to-teal-950/20 border-green-200 dark:border-green-800">
-                <CardContent className="p-4">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    Theme Sources Summary
-                  </h3>
-                  <div className="flex items-center gap-6">
-                    {/* Count themes by source type */}
-                    {(() => {
-                      const sourceCounts = {
-                        papers: 0,
-                        youtube: 0,
-                        podcasts: 0,
-                        social: 0,
-                      };
+              {unifiedThemes.length > 0 ? (
+                <div className="space-y-4">
+                  {/* PHASE 9 DAY 20.5: Source Summary Card */}
+                  <Card className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-950/20 dark:to-teal-950/20 border-green-200 dark:border-green-800">
+                    <CardContent className="p-4">
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                        Theme Sources Summary
+                      </h3>
+                      <div className="flex items-center gap-6">
+                        {/* Count themes by source type */}
+                        {(() => {
+                          const sourceCounts = {
+                            papers: 0,
+                            youtube: 0,
+                            podcasts: 0,
+                            social: 0,
+                          };
 
-                      unifiedThemes.forEach(theme => {
-                        theme.sources?.forEach(source => {
-                          if (source.sourceType === 'paper') sourceCounts.papers++;
-                          else if (source.sourceType === 'youtube') sourceCounts.youtube++;
-                          else if (source.sourceType === 'podcast') sourceCounts.podcasts++;
-                          else if (source.sourceType === 'tiktok' || source.sourceType === 'instagram') sourceCounts.social++;
-                        });
-                      });
+                          unifiedThemes.forEach(theme => {
+                            theme.sources?.forEach(source => {
+                              if (source.sourceType === 'paper')
+                                sourceCounts.papers++;
+                              else if (source.sourceType === 'youtube')
+                                sourceCounts.youtube++;
+                              else if (source.sourceType === 'podcast')
+                                sourceCounts.podcasts++;
+                              else if (
+                                source.sourceType === 'tiktok' ||
+                                source.sourceType === 'instagram'
+                              )
+                                sourceCounts.social++;
+                            });
+                          });
 
-                      return (
-                        <>
-                          {sourceCounts.papers > 0 && (
-                            <div className="flex items-center gap-2">
-                              <Badge className="bg-blue-500">Papers</Badge>
-                              <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                {sourceCounts.papers}
-                              </span>
-                            </div>
-                          )}
-                          {sourceCounts.youtube > 0 && (
-                            <div className="flex items-center gap-2">
-                              <Badge className="bg-purple-500">Videos</Badge>
-                              <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                                {sourceCounts.youtube}
-                              </span>
-                            </div>
-                          )}
-                          {sourceCounts.podcasts > 0 && (
-                            <div className="flex items-center gap-2">
-                              <Badge className="bg-orange-500">Podcasts</Badge>
-                              <span className="text-lg font-bold text-orange-600 dark:text-orange-400">
-                                {sourceCounts.podcasts}
-                              </span>
-                            </div>
-                          )}
-                          {sourceCounts.social > 0 && (
-                            <div className="flex items-center gap-2">
-                              <Badge className="bg-pink-500">Social</Badge>
-                              <span className="text-lg font-bold text-pink-600 dark:text-pink-400">
-                                {sourceCounts.social}
-                              </span>
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                    ✨ Themes extracted from {unifiedThemes.length} sources with full provenance tracking
+                          return (
+                            <>
+                              {sourceCounts.papers > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <Badge className="bg-blue-500">Papers</Badge>
+                                  <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                    {sourceCounts.papers}
+                                  </span>
+                                </div>
+                              )}
+                              {sourceCounts.youtube > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <Badge className="bg-purple-500">
+                                    Videos
+                                  </Badge>
+                                  <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                                    {sourceCounts.youtube}
+                                  </span>
+                                </div>
+                              )}
+                              {sourceCounts.podcasts > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <Badge className="bg-orange-500">
+                                    Podcasts
+                                  </Badge>
+                                  <span className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                                    {sourceCounts.podcasts}
+                                  </span>
+                                </div>
+                              )}
+                              {sourceCounts.social > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <Badge className="bg-pink-500">Social</Badge>
+                                  <span className="text-lg font-bold text-pink-600 dark:text-pink-400">
+                                    {sourceCounts.social}
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                        ✨ Themes extracted from {unifiedThemes.length} sources
+                        with full provenance tracking
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Theme Cards */}
+                  {unifiedThemes.map(theme => (
+                    <ThemeCard
+                      key={theme.id}
+                      theme={theme}
+                      showProvenanceButton={true}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <Sparkles className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg font-medium mb-2">
+                    No themes extracted yet
                   </p>
-                </CardContent>
-              </Card>
-
-              {/* Theme Cards */}
-              {unifiedThemes.map(theme => (
-                <ThemeCard
-                  key={theme.id}
-                  theme={theme}
-                  showProvenanceButton={true}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 text-gray-500">
-              <Sparkles className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium mb-2">No themes extracted yet</p>
-              <p className="text-sm text-gray-400">
-                Select papers and/or transcribe videos, then click &quot;Extract Themes from All Sources&quot; to identify research themes with full provenance tracking
-              </p>
-            </div>
-          )}
+                  <p className="text-sm text-gray-400">
+                    Select papers and/or transcribe videos, then click
+                    &quot;Extract Themes from All Sources&quot; to identify
+                    research themes with full provenance tracking
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
           {/* Gaps sub-tab */}
           {activeAnalysisSubTab === 'gaps' && (
             <div className="space-y-4">
-          {gaps.length > 0 ? (
-            gaps.map(gap => (
-              <Card key={gap.id} className="border-l-4 border-l-orange-500">
-                <CardContent className="pt-6">
-                  <h3 className="font-semibold text-lg">{gap.title}</h3>
-                  <p className="text-gray-700 mt-2">{gap.description}</p>
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div>
-                      <span className="text-sm font-medium text-gray-500">
-                        Opportunity Score
-                      </span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="flex-1 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-gradient-to-r from-orange-400 to-orange-600 h-2 rounded-full"
-                            style={{ width: `${gap.opportunityScore * 100}%` }}
-                          />
+              {gaps.length > 0 ? (
+                gaps.map(gap => (
+                  <Card key={gap.id} className="border-l-4 border-l-orange-500">
+                    <CardContent className="pt-6">
+                      <h3 className="font-semibold text-lg">{gap.title}</h3>
+                      <p className="text-gray-700 mt-2">{gap.description}</p>
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <span className="text-sm font-medium text-gray-500">
+                            Opportunity Score
+                          </span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex-1 bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-gradient-to-r from-orange-400 to-orange-600 h-2 rounded-full"
+                                style={{
+                                  width: `${gap.opportunityScore * 100}%`,
+                                }}
+                              />
+                            </div>
+                            <span className="text-sm font-semibold">
+                              {Math.round(gap.opportunityScore * 100)}%
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-sm font-semibold">
-                          {Math.round(gap.opportunityScore * 100)}%
-                        </span>
+                        <div>
+                          <span className="text-sm font-medium text-gray-500">
+                            Impact
+                          </span>
+                          <p className="text-sm mt-1">{gap.potentialImpact}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-500">
-                        Impact
-                      </span>
-                      <p className="text-sm mt-1">{gap.potentialImpact}</p>
-                    </div>
-                  </div>
-                  {gap.suggestedMethods && gap.suggestedMethods.length > 0 && (
-                    <div className="mt-4">
-                      <span className="text-sm font-medium text-gray-500">
-                        Suggested Methods
-                      </span>
-                      <div className="flex gap-2 mt-2 flex-wrap">
-                        {gap.suggestedMethods.map(method => (
-                          <Badge key={method} variant="outline">
-                            {method}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {gap.fundingOpportunities &&
-                    gap.fundingOpportunities.length > 0 && (
-                      <div className="mt-4">
-                        <span className="text-sm font-medium text-gray-500">
-                          Funding Opportunities
-                        </span>
-                        <ul className="list-disc list-inside text-sm mt-2 text-gray-700">
-                          {gap.fundingOpportunities.map(funding => (
-                            <li key={funding}>{funding}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <div className="text-center py-12 text-gray-500">
-              <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>
-                Click "Find Research Gaps" to identify opportunities in your
-                field.
-              </p>
-            </div>
-          )}
+                      {gap.suggestedMethods &&
+                        gap.suggestedMethods.length > 0 && (
+                          <div className="mt-4">
+                            <span className="text-sm font-medium text-gray-500">
+                              Suggested Methods
+                            </span>
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                              {gap.suggestedMethods.map(method => (
+                                <Badge key={method} variant="outline">
+                                  {method}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      {gap.fundingOpportunities &&
+                        gap.fundingOpportunities.length > 0 && (
+                          <div className="mt-4">
+                            <span className="text-sm font-medium text-gray-500">
+                              Funding Opportunities
+                            </span>
+                            <ul className="list-disc list-inside text-sm mt-2 text-gray-700">
+                              {gap.fundingOpportunities.map(funding => (
+                                <li key={funding}>{funding}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>
+                    Click "Find Research Gaps" to identify opportunities in your
+                    field.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
           {/* Synthesis sub-tab */}
           {activeAnalysisSubTab === 'synthesis' && (
             <div className="space-y-4">
-          {query ? (
-            <CrossPlatformDashboard
-              query={query}
-              maxResults={10}
-              timeWindow={90}
-            />
-          ) : (
-            <div className="text-center py-12 text-gray-500">
-              <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>
-                Enter a search query above, then switch to this tab to view
-                cross-platform research synthesis across papers, YouTube,
-                podcasts, TikTok, and Instagram.
-              </p>
-            </div>
-          )}
+              {query ? (
+                <CrossPlatformDashboard
+                  query={query}
+                  maxResults={10}
+                  timeWindow={90}
+                />
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>
+                    Enter a search query above, then switch to this tab to view
+                    cross-platform research synthesis across papers, YouTube,
+                    podcasts, TikTok, and Instagram.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </TabsContent>
       </Tabs>
 
       {/* Pagination */}
-      {totalResults > 20 && activeTab === 'results' && activeResultsSubTab === 'papers' && (
-        <div className="flex justify-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentPage(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </Button>
-          <div className="flex items-center gap-2">
-            {Array.from(
-              { length: Math.min(5, Math.ceil(totalResults / 20)) },
-              (_, i) => i + 1
-            ).map(page => (
-              <Button
-                key={page}
-                variant={currentPage === page ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setCurrentPage(page)}
-              >
-                {page}
-              </Button>
-            ))}
+      {totalResults > 20 &&
+        activeTab === 'results' &&
+        activeResultsSubTab === 'papers' && (
+          <div className="flex justify-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <div className="flex items-center gap-2">
+              {Array.from(
+                { length: Math.min(5, Math.ceil(totalResults / 20)) },
+                (_, i) => i + 1
+              ).map(page => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage >= Math.ceil(totalResults / 20)}
+            >
+              Next
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage >= Math.ceil(totalResults / 20)}
-          >
-            Next
-          </Button>
-        </div>
-      )}
+        )}
     </div>
+  );
+}
+
+export default function LiteratureSearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <Card>
+            <CardContent className="p-8">
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mr-4" />
+                <p className="text-gray-600">Loading literature search...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    }>
+      <LiteratureSearchContent />
+    </Suspense>
   );
 }

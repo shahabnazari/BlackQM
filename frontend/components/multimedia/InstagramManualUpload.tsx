@@ -1,7 +1,13 @@
 'use client';
 
 import React, { useState, useCallback, useRef } from 'react';
-import { Upload, AlertCircle, CheckCircle, Info, ExternalLink } from 'lucide-react';
+import {
+  Upload,
+  AlertCircle,
+  CheckCircle,
+  Info,
+  ExternalLink,
+} from 'lucide-react';
 
 /**
  * Instagram Manual Upload Component
@@ -27,7 +33,13 @@ interface InstagramManualUploadProps {
 }
 
 interface UploadStatus {
-  step: 'url_input' | 'download_instructions' | 'file_upload' | 'processing' | 'complete' | 'error';
+  step:
+    | 'url_input'
+    | 'download_instructions'
+    | 'file_upload'
+    | 'processing'
+    | 'complete'
+    | 'error';
   message: string;
   progress?: number;
   data?: any;
@@ -36,12 +48,12 @@ interface UploadStatus {
 export default function InstagramManualUpload({
   onAnalysisComplete,
   researchContext,
-  className = ''
+  className = '',
 }: InstagramManualUploadProps) {
   const [instagramUrl, setInstagramUrl] = useState('');
   const [status, setStatus] = useState<UploadStatus>({
     step: 'url_input',
-    message: 'Enter Instagram video URL to begin'
+    message: 'Enter Instagram video URL to begin',
   });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
@@ -54,7 +66,7 @@ export default function InstagramManualUpload({
     if (!instagramUrl.trim()) {
       setStatus({
         step: 'error',
-        message: 'Please enter a valid Instagram URL'
+        message: 'Please enter a valid Instagram URL',
       });
       return;
     }
@@ -62,14 +74,14 @@ export default function InstagramManualUpload({
     setStatus({
       step: 'processing',
       message: 'Validating Instagram URL...',
-      progress: 25
+      progress: 25,
     });
 
     try {
       const response = await fetch('/api/literature/instagram/validate-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: instagramUrl })
+        body: JSON.stringify({ url: instagramUrl }),
       });
 
       const data = await response.json();
@@ -82,7 +94,7 @@ export default function InstagramManualUpload({
         setStatus({
           step: 'complete',
           message: 'This video has already been processed!',
-          data: data
+          data: data,
         });
         setAnalysisResult(data);
         if (onAnalysisComplete) {
@@ -92,13 +104,13 @@ export default function InstagramManualUpload({
         setStatus({
           step: 'download_instructions',
           message: 'URL validated. Please download the video manually.',
-          data: data
+          data: data,
         });
       }
     } catch (error: any) {
       setStatus({
         step: 'error',
-        message: error.message || 'Failed to validate URL'
+        message: error.message || 'Failed to validate URL',
       });
     }
   }, [instagramUrl, onAnalysisComplete]);
@@ -109,42 +121,45 @@ export default function InstagramManualUpload({
     setIsDragging(false);
 
     const files = Array.from(e.dataTransfer.files);
-    const videoFile = files.find(f =>
-      f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|avi|mkv)$/i)
+    const videoFile = files.find(
+      f => f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|avi|mkv)$/i)
     );
 
     if (videoFile) {
       setUploadedFile(videoFile);
       setStatus({
         step: 'file_upload',
-        message: `File ready: ${videoFile.name} (${(videoFile.size / 1024 / 1024).toFixed(2)} MB)`
+        message: `File ready: ${videoFile.name} (${(videoFile.size / 1024 / 1024).toFixed(2)} MB)`,
       });
     } else {
       setStatus({
         step: 'error',
-        message: 'Please upload a valid video file (.mp4, .mov, .avi, .mkv)'
+        message: 'Please upload a valid video file (.mp4, .mov, .avi, .mkv)',
       });
     }
   }, []);
 
   // Handle file selection
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploadedFile(file);
-      setStatus({
-        step: 'file_upload',
-        message: `File ready: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`
-      });
-    }
-  }, []);
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        setUploadedFile(file);
+        setStatus({
+          step: 'file_upload',
+          message: `File ready: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`,
+        });
+      }
+    },
+    []
+  );
 
   // Handle file upload and processing
   const handleFileUpload = useCallback(async () => {
     if (!uploadedFile || !acceptedDisclaimer) {
       setStatus({
         step: 'error',
-        message: 'Please accept the legal disclaimer before uploading'
+        message: 'Please accept the legal disclaimer before uploading',
       });
       return;
     }
@@ -152,7 +167,7 @@ export default function InstagramManualUpload({
     setStatus({
       step: 'processing',
       message: 'Uploading and processing video...',
-      progress: 0
+      progress: 0,
     });
 
     try {
@@ -166,13 +181,13 @@ export default function InstagramManualUpload({
       // Upload file with progress tracking
       const xhr = new XMLHttpRequest();
 
-      xhr.upload.addEventListener('progress', (e) => {
+      xhr.upload.addEventListener('progress', e => {
         if (e.lengthComputable) {
           const percentComplete = (e.loaded / e.total) * 50; // Upload is 50% of progress
           setStatus(prev => ({
             ...prev,
             message: 'Uploading video...',
-            progress: percentComplete
+            progress: percentComplete,
           }));
         }
       });
@@ -184,14 +199,16 @@ export default function InstagramManualUpload({
             step: 'complete',
             message: 'Analysis complete!',
             progress: 100,
-            data: result
+            data: result,
           });
           setAnalysisResult(result);
           if (onAnalysisComplete) {
             onAnalysisComplete(result);
           }
         } else {
-          throw new Error(JSON.parse(xhr.responseText).message || 'Upload failed');
+          throw new Error(
+            JSON.parse(xhr.responseText).message || 'Upload failed'
+          );
         }
       });
 
@@ -204,32 +221,46 @@ export default function InstagramManualUpload({
 
       // Update status to transcription after upload
       setTimeout(() => {
-        if (status.step === 'processing' && status.progress && status.progress < 100) {
+        if (
+          status.step === 'processing' &&
+          status.progress &&
+          status.progress < 100
+        ) {
           setStatus(prev => ({
             ...prev,
             message: 'Transcribing audio with OpenAI Whisper...',
-            progress: 60
+            progress: 60,
           }));
         }
       }, 2000);
 
       setTimeout(() => {
-        if (status.step === 'processing' && status.progress && status.progress < 100) {
+        if (
+          status.step === 'processing' &&
+          status.progress &&
+          status.progress < 100
+        ) {
           setStatus(prev => ({
             ...prev,
             message: 'Extracting themes with GPT-4...',
-            progress: 80
+            progress: 80,
           }));
         }
       }, 5000);
-
     } catch (error: any) {
       setStatus({
         step: 'error',
-        message: error.message || 'Failed to process video'
+        message: error.message || 'Failed to process video',
       });
     }
-  }, [uploadedFile, instagramUrl, researchContext, acceptedDisclaimer, onAnalysisComplete, status]);
+  }, [
+    uploadedFile,
+    instagramUrl,
+    researchContext,
+    acceptedDisclaimer,
+    onAnalysisComplete,
+    status,
+  ]);
 
   // Reset to start
   const handleReset = useCallback(() => {
@@ -239,7 +270,7 @@ export default function InstagramManualUpload({
     setAcceptedDisclaimer(false);
     setStatus({
       step: 'url_input',
-      message: 'Enter Instagram video URL to begin'
+      message: 'Enter Instagram video URL to begin',
     });
   }, []);
 
@@ -287,10 +318,10 @@ export default function InstagramManualUpload({
             <input
               type="url"
               value={instagramUrl}
-              onChange={(e) => setInstagramUrl(e.target.value)}
+              onChange={e => setInstagramUrl(e.target.value)}
               placeholder="https://www.instagram.com/p/ABC123/"
               className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800"
-              onKeyPress={(e) => e.key === 'Enter' && handleUrlSubmit()}
+              onKeyPress={e => e.key === 'Enter' && handleUrlSubmit()}
             />
             <button
               onClick={handleUrlSubmit}
@@ -316,28 +347,37 @@ export default function InstagramManualUpload({
 
             <div className="space-y-4">
               <div>
-                <p className="font-medium mb-2">{status.data.instructions.step2}</p>
-                {status.data.instructions.tools.map((tool: any, idx: number) => (
-                  <div key={idx} className="ml-4 mb-3 p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                    <p className="font-medium">{tool.name}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{tool.description}</p>
-                    {tool.chrome && (
-                      <a
-                        href={tool.chrome}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-500 hover:underline flex items-center gap-1"
-                      >
-                        Chrome Web Store <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                    {tool.examples && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Examples: {tool.examples.join(', ')}
+                <p className="font-medium mb-2">
+                  {status.data.instructions.step2}
+                </p>
+                {status.data.instructions.tools.map(
+                  (tool: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="ml-4 mb-3 p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700"
+                    >
+                      <p className="font-medium">{tool.name}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        {tool.description}
                       </p>
-                    )}
-                  </div>
-                ))}
+                      {tool.chrome && (
+                        <a
+                          href={tool.chrome}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-500 hover:underline flex items-center gap-1"
+                        >
+                          Chrome Web Store <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      {tool.examples && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Examples: {tool.examples.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  )
+                )}
               </div>
 
               <p className="font-medium">{status.data.instructions.step3}</p>
@@ -346,7 +386,12 @@ export default function InstagramManualUpload({
 
           {/* Move to file upload */}
           <button
-            onClick={() => setStatus({ step: 'file_upload', message: 'Ready to upload video file' })}
+            onClick={() =>
+              setStatus({
+                step: 'file_upload',
+                message: 'Ready to upload video file',
+              })
+            }
             className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
           >
             I've Downloaded the Video - Ready to Upload
@@ -359,19 +404,24 @@ export default function InstagramManualUpload({
         <div className="space-y-4">
           {/* Legal Disclaimer */}
           <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <h4 className="font-semibold mb-2 text-red-900 dark:text-red-100">Legal Notice</h4>
+            <h4 className="font-semibold mb-2 text-red-900 dark:text-red-100">
+              Legal Notice
+            </h4>
             <p className="text-sm text-red-800 dark:text-red-200 mb-3">
-              By uploading a video, you confirm that you have the legal right to use this content for research purposes
-              and will comply with Instagram's Terms of Service and all applicable copyright laws.
+              By uploading a video, you confirm that you have the legal right to
+              use this content for research purposes and will comply with
+              Instagram's Terms of Service and all applicable copyright laws.
             </p>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={acceptedDisclaimer}
-                onChange={(e) => setAcceptedDisclaimer(e.target.checked)}
+                onChange={e => setAcceptedDisclaimer(e.target.checked)}
                 className="w-4 h-4"
               />
-              <span className="text-sm font-medium">I accept the legal disclaimer</span>
+              <span className="text-sm font-medium">
+                I accept the legal disclaimer
+              </span>
             </label>
           </div>
 
@@ -382,7 +432,10 @@ export default function InstagramManualUpload({
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                 : 'border-gray-300 dark:border-gray-600'
             }`}
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragOver={e => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
           >
@@ -390,7 +443,9 @@ export default function InstagramManualUpload({
             {uploadedFile ? (
               <div>
                 <p className="font-medium mb-1">{uploadedFile.name}</p>
-                <p className="text-sm text-gray-500">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                <p className="text-sm text-gray-500">
+                  {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                </p>
                 <button
                   onClick={() => setUploadedFile(null)}
                   className="mt-2 text-sm text-red-500 hover:underline"
@@ -414,7 +469,9 @@ export default function InstagramManualUpload({
                   onChange={handleFileSelect}
                   className="hidden"
                 />
-                <p className="mt-2 text-sm text-gray-500">Max file size: 500 MB</p>
+                <p className="mt-2 text-sm text-gray-500">
+                  Max file size: 500 MB
+                </p>
               </div>
             )}
           </div>
@@ -442,20 +499,37 @@ export default function InstagramManualUpload({
             </h3>
             <div className="grid grid-cols-2 gap-4 mt-4">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Video ID</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Video ID
+                </p>
                 <p className="font-mono">{analysisResult.videoId}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Themes Extracted</p>
-                <p className="font-semibold">{analysisResult.themes?.length || 0}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Themes Extracted
+                </p>
+                <p className="font-semibold">
+                  {analysisResult.themes?.length || 0}
+                </p>
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Transcript Confidence</p>
-                <p className="font-semibold">{((analysisResult.transcript?.confidence || 0) * 100).toFixed(1)}%</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Transcript Confidence
+                </p>
+                <p className="font-semibold">
+                  {((analysisResult.transcript?.confidence || 0) * 100).toFixed(
+                    1
+                  )}
+                  %
+                </p>
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Relevance Score</p>
-                <p className="font-semibold">{(analysisResult.relevanceScore || 0).toFixed(2)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Relevance Score
+                </p>
+                <p className="font-semibold">
+                  {(analysisResult.relevanceScore || 0).toFixed(2)}
+                </p>
               </div>
             </div>
           </div>

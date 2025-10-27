@@ -17,7 +17,10 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { QueryExpansionService, ExpandedQuery } from './query-expansion.service';
+import {
+  QueryExpansionService,
+  ExpandedQuery,
+} from './query-expansion.service';
 import { OpenAIService } from './openai.service';
 
 describe('QueryExpansionService', () => {
@@ -26,7 +29,8 @@ describe('QueryExpansionService', () => {
 
   const mockExpansionResponse = {
     content: JSON.stringify({
-      expanded: 'climate change impacts on agriculture and food security research methods',
+      expanded:
+        'climate change impacts on agriculture and food security research methods',
       suggestions: [
         'agricultural adaptation to climate change',
         'food security and climate variability',
@@ -59,7 +63,11 @@ describe('QueryExpansionService', () => {
         'What time scale are you considering (short-term vs long-term)?',
       ],
       confidence: 0.6,
-      relatedTerms: ['biodiversity', 'ecosystem services', 'ecological resilience'],
+      relatedTerms: [
+        'biodiversity',
+        'ecosystem services',
+        'ecological resilience',
+      ],
     }),
   };
 
@@ -92,7 +100,7 @@ describe('QueryExpansionService', () => {
 
       const result = await service.expandQuery(
         'climate change agriculture',
-        'general'
+        'general',
       );
 
       expect(result).toMatchObject({
@@ -110,12 +118,14 @@ describe('QueryExpansionService', () => {
         expect.objectContaining({
           model: 'fast',
           temperature: 0.4,
-        })
+        }),
       );
     });
 
     it('should detect vague queries and provide narrowing questions', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockVagueQueryResponse);
+      openaiService.generateCompletion.mockResolvedValue(
+        mockVagueQueryResponse,
+      );
 
       const result = await service.expandQuery('climate', 'general');
 
@@ -199,7 +209,7 @@ describe('QueryExpansionService', () => {
 
     it('should handle OpenAI service failure gracefully', async () => {
       openaiService.generateCompletion.mockRejectedValue(
-        new Error('OpenAI API error')
+        new Error('OpenAI API error'),
       );
 
       const result = await service.expandQuery('climate', 'general');
@@ -252,7 +262,7 @@ describe('QueryExpansionService', () => {
 
       const result = await service.suggestTerms(
         'climate change',
-        'environmental science'
+        'environmental science',
       );
 
       expect(result.terms).toHaveLength(5);
@@ -311,7 +321,7 @@ describe('QueryExpansionService', () => {
 
     it('should handle API errors gracefully', async () => {
       openaiService.generateCompletion.mockRejectedValue(
-        new Error('API error')
+        new Error('API error'),
       );
 
       const result = await service.suggestTerms('climate');
@@ -349,7 +359,9 @@ describe('QueryExpansionService', () => {
 
       const result = await service.narrowQuery('health');
 
-      expect(result.narrowed.some((q) => q.includes('quantitative'))).toBe(true);
+      expect(result.narrowed.some((q) => q.includes('quantitative'))).toBe(
+        true,
+      );
       expect(result.narrowed.some((q) => q.includes('qualitative'))).toBe(true);
     });
 
@@ -366,7 +378,7 @@ describe('QueryExpansionService', () => {
 
     it('should handle API errors gracefully', async () => {
       openaiService.generateCompletion.mockRejectedValue(
-        new Error('API error')
+        new Error('API error'),
       );
 
       const result = await service.narrowQuery('climate');
@@ -422,7 +434,9 @@ describe('QueryExpansionService', () => {
 
   describe('edge cases', () => {
     it('should handle single-word queries', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockVagueQueryResponse);
+      openaiService.generateCompletion.mockResolvedValue(
+        mockVagueQueryResponse,
+      );
 
       const result = await service.expandQuery('climate');
 
@@ -441,7 +455,7 @@ describe('QueryExpansionService', () => {
       expect(result.expanded).toBeTruthy();
       expect(openaiService.generateCompletion).toHaveBeenCalledWith(
         expect.stringContaining(longQuery),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -450,7 +464,7 @@ describe('QueryExpansionService', () => {
 
       const result = await service.expandQuery(
         'climate & health: impact?',
-        'general'
+        'general',
       );
 
       expect(result.expanded).toBeTruthy();

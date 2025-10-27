@@ -40,7 +40,7 @@ export interface GenerateQuestionsRequest {
     title: string;
     category?: string;
     existingQuestions?: any;
-  }
+  };
   mode: 'smart' | 'comprehensive' | 'targeted';
   customPrompt?: string;
   count?: number;
@@ -53,7 +53,7 @@ export interface GeneratedQuestion {
   rationale: string;
   confidence: number;
   category: string;
-  options?: Array<{ text: string; value: string }>
+  options?: Array<{ text: string; value: string }>;
   validation?: any;
   skipLogic?: any;
   config?: any;
@@ -62,7 +62,10 @@ export interface GeneratedQuestion {
 class QuestionnaireService {
   async createQuestion(data: CreateQuestionRequest): Promise<any> {
     try {
-      const response = await apiClient.post<ApiResponse<any>>('/questionnaire/questions', data);
+      const response = await apiClient.post<ApiResponse<any>>(
+        '/questionnaire/questions',
+        data
+      );
       return response.data;
     } catch (error: any) {
       console.error('Error creating question:', error);
@@ -70,9 +73,15 @@ class QuestionnaireService {
     }
   }
 
-  async updateQuestion(questionId: string, data: UpdateQuestionRequest): Promise<any> {
+  async updateQuestion(
+    questionId: string,
+    data: UpdateQuestionRequest
+  ): Promise<any> {
     try {
-      const response = await apiClient.put<ApiResponse<any>>(`/questionnaire/questions/${questionId}`, data);
+      const response = await apiClient.put<ApiResponse<any>>(
+        `/questionnaire/questions/${questionId}`,
+        data
+      );
       return response.data;
     } catch (error: any) {
       console.error('Error updating question:', error);
@@ -82,7 +91,9 @@ class QuestionnaireService {
 
   async deleteQuestion(questionId: string): Promise<any> {
     try {
-      const response = await apiClient.delete<ApiResponse<any>>(`/questionnaire/questions/${questionId}`);
+      const response = await apiClient.delete<ApiResponse<any>>(
+        `/questionnaire/questions/${questionId}`
+      );
       return response.data;
     } catch (error: any) {
       console.error('Error deleting question:', error);
@@ -90,11 +101,17 @@ class QuestionnaireService {
     }
   }
 
-  async reorderQuestions(surveyId: string, questionIds: string[]): Promise<any> {
+  async reorderQuestions(
+    surveyId: string,
+    questionIds: string[]
+  ): Promise<any> {
     try {
-      const response = await apiClient.post<ApiResponse<any>>(`/questionnaire/surveys/${surveyId}/reorder`, {
-        questionIds
-      })
+      const response = await apiClient.post<ApiResponse<any>>(
+        `/questionnaire/surveys/${surveyId}/reorder`,
+        {
+          questionIds,
+        }
+      );
       return response.data;
     } catch (error: any) {
       console.error('Error reordering questions:', error);
@@ -104,7 +121,9 @@ class QuestionnaireService {
 
   async getQuestions(surveyId: string): Promise<any> {
     try {
-      const response = await apiClient.get<ApiResponse<any>>(`/questionnaire/surveys/${surveyId}/questions`);
+      const response = await apiClient.get<ApiResponse<any>>(
+        `/questionnaire/surveys/${surveyId}/questions`
+      );
       return response.data;
     } catch (error: any) {
       console.error('Error fetching questions:', error);
@@ -114,7 +133,9 @@ class QuestionnaireService {
 
   async duplicateQuestion(questionId: string): Promise<any> {
     try {
-      const response = await apiClient.post<ApiResponse<any>>(`/questionnaire/questions/${questionId}/duplicate`);
+      const response = await apiClient.post<ApiResponse<any>>(
+        `/questionnaire/questions/${questionId}/duplicate`
+      );
       return response.data;
     } catch (error: any) {
       console.error('Error duplicating question:', error);
@@ -122,20 +143,26 @@ class QuestionnaireService {
     }
   }
 
-  async generateQuestions(request: GenerateQuestionsRequest): Promise<GeneratedQuestion[]> {
+  async generateQuestions(
+    request: GenerateQuestionsRequest
+  ): Promise<GeneratedQuestion[]> {
     try {
       console.log('Generating AI questions with request:', request);
-      const response = await apiClient.post<ApiResponse<{ questions: GeneratedQuestion[] }>>('/questionnaire/ai/generate-questions', request);
+      const response = await apiClient.post<
+        ApiResponse<{ questions: GeneratedQuestion[] }>
+      >('/questionnaire/ai/generate-questions', request);
       console.log('AI Response received:', response);
 
       // Handle both wrapped and unwrapped responses
-      const questions = response.data?.questions || [];
+      const questions = response.data?.data?.questions || [];
 
       if (questions.length > 0) {
         console.log(`Successfully generated ${questions.length} AI questions`);
         return questions;
       } else {
-        console.warn('No questions generated from AI, falling back to mock data');
+        console.warn(
+          'No questions generated from AI, falling back to mock data'
+        );
         return this.generateEnhancedMockQuestions(request);
       }
     } catch (error: any) {
@@ -147,7 +174,9 @@ class QuestionnaireService {
     }
   }
 
-  private generateEnhancedMockQuestions(request: GenerateQuestionsRequest): GeneratedQuestion[] {
+  private generateEnhancedMockQuestions(
+    request: GenerateQuestionsRequest
+  ): GeneratedQuestion[] {
     const { mode, customPrompt, count = 8 } = request;
     const questions: GeneratedQuestion[] = [];
 
@@ -158,7 +187,8 @@ class QuestionnaireService {
           id: 'ai-1',
           text: 'How satisfied are you with the overall experience?',
           type: 'likert_scale',
-          rationale: 'Essential baseline satisfaction metric for comprehensive analysis',
+          rationale:
+            'Essential baseline satisfaction metric for comprehensive analysis',
           confidence: 95,
           category: 'Satisfaction',
           options: [
@@ -166,11 +196,11 @@ class QuestionnaireService {
             { text: 'Disagree', value: '2' },
             { text: 'Neutral', value: '3' },
             { text: 'Agree', value: '4' },
-            { text: 'Strongly Agree', value: '5' }
+            { text: 'Strongly Agree', value: '5' },
           ],
           validation: {
-            required: true
-          }
+            required: true,
+          },
         },
         {
           id: 'ai-2',
@@ -185,8 +215,8 @@ class QuestionnaireService {
             { text: 'Reporting Tools', value: 'reporting' },
             { text: 'Collaboration Features', value: 'collaboration' },
             { text: 'API Integration', value: 'api' },
-            { text: 'Mobile App', value: 'mobile' }
-          ]
+            { text: 'Mobile App', value: 'mobile' },
+          ],
         },
         {
           id: 'ai-3',
@@ -200,15 +230,16 @@ class QuestionnaireService {
             max: 10,
             labels: {
               0: 'Not at all likely',
-              10: 'Extremely likely'
-            }
-          }
+              10: 'Extremely likely',
+            },
+          },
         },
         {
           id: 'ai-4',
           text: 'Please rank the following aspects in order of importance to you:',
           type: 'ranking',
-          rationale: 'Understanding user priorities helps guide product development',
+          rationale:
+            'Understanding user priorities helps guide product development',
           confidence: 87,
           category: 'Priorities',
           options: [
@@ -217,8 +248,8 @@ class QuestionnaireService {
             { text: 'Feature Set', value: 'features' },
             { text: 'Customer Support', value: 'support' },
             { text: 'Pricing & Value', value: 'pricing' },
-            { text: 'Security & Privacy', value: 'security' }
-          ]
+            { text: 'Security & Privacy', value: 'security' },
+          ],
         },
         {
           id: 'ai-5',
@@ -235,9 +266,9 @@ class QuestionnaireService {
             labels: {
               1: 'Very Difficult',
               5: 'Neutral',
-              10: 'Very Easy'
-            }
-          }
+              10: 'Very Easy',
+            },
+          },
         },
         {
           id: 'ai-6',
@@ -252,7 +283,7 @@ class QuestionnaireService {
             { text: 'User Experience Research', value: 'ux' },
             { text: 'Social Science Research', value: 'social' },
             { text: 'Internal Surveys', value: 'internal' },
-            { text: 'Other', value: 'other' }
+            { text: 'Other', value: 'other' },
           ],
           skipLogic: {
             conditions: [
@@ -261,22 +292,23 @@ class QuestionnaireService {
                 operator: 'equals',
                 value: 'other',
                 action: 'show',
-                targetQuestion: 'ai-6-other'
-              }
-            ]
-          }
+                targetQuestion: 'ai-6-other',
+              },
+            ],
+          },
         },
         {
           id: 'ai-7',
           text: 'Please describe any specific improvements or features you would like to see:',
           type: 'text_long',
-          rationale: 'Open-ended feedback captures insights structured questions might miss',
+          rationale:
+            'Open-ended feedback captures insights structured questions might miss',
           confidence: 85,
           category: 'Feedback',
           validation: {
             minLength: 20,
-            maxLength: 500
-          }
+            maxLength: 500,
+          },
         },
         {
           id: 'ai-8',
@@ -290,16 +322,16 @@ class QuestionnaireService {
               { text: 'Response Time', value: 'response_time' },
               { text: 'Feature Quality', value: 'feature_quality' },
               { text: 'Documentation', value: 'documentation' },
-              { text: 'Support Quality', value: 'support' }
+              { text: 'Support Quality', value: 'support' },
             ],
             columns: [
               { text: 'Poor', value: '1' },
               { text: 'Fair', value: '2' },
               { text: 'Good', value: '3' },
               { text: 'Very Good', value: '4' },
-              { text: 'Excellent', value: '5' }
-            ]
-          }
+              { text: 'Excellent', value: '5' },
+            ],
+          },
         }
       );
     } else if (mode === 'targeted' && customPrompt) {
@@ -315,9 +347,9 @@ class QuestionnaireService {
         category: 'Targeted',
         config: {
           maxRating: 5,
-          ratingType: 'star'
-        }
-      })
+          ratingType: 'star',
+        },
+      });
     } else {
       // Smart mode - balanced mix
       questions.push(
@@ -330,8 +362,8 @@ class QuestionnaireService {
           category: 'Experience',
           config: {
             maxRating: 5,
-            ratingType: 'star'
-          }
+            ratingType: 'star',
+          },
         },
         {
           id: 'smart-2',
@@ -345,8 +377,8 @@ class QuestionnaireService {
             { text: 'Features', value: 'features' },
             { text: 'Performance', value: 'performance' },
             { text: 'Design', value: 'design' },
-            { text: 'Support', value: 'support' }
-          ]
+            { text: 'Support', value: 'support' },
+          ],
         },
         {
           id: 'smart-3',
@@ -356,8 +388,8 @@ class QuestionnaireService {
           confidence: 85,
           category: 'Feedback',
           validation: {
-            maxLength: 200
-          }
+            maxLength: 200,
+          },
         }
       );
     }
@@ -367,7 +399,9 @@ class QuestionnaireService {
 
   async validateQuestions(...args: any[]): Promise<any> {
     try {
-      const response = await apiClient.post('/questionnaire/validate', { questions: args[0] });
+      const response = await apiClient.post('/questionnaire/validate', {
+        questions: args[0],
+      });
       return (response as any).data;
     } catch (error: any) {
       console.error('Error validating questions:', error);
@@ -377,9 +411,12 @@ class QuestionnaireService {
 
   async saveQuestionnaire(...args: any[]): Promise<any> {
     try {
-      const response = await apiClient.post(`/questionnaire/surveys/${args[0]}/save`, {
-        questions: args[1]
-      });
+      const response = await apiClient.post(
+        `/questionnaire/surveys/${args[0]}/save`,
+        {
+          questions: args[1],
+        }
+      );
       return (response as any).data;
     } catch (error: any) {
       console.error('Error saving questionnaire:', error);

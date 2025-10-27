@@ -199,6 +199,79 @@ export class AuthService {
     return { message: 'Logged out successfully' };
   }
 
+  /**
+   * Find or create user from ORCID OAuth
+   * Day 27: ORCID Authentication Implementation
+   */
+  async findOrCreateOrcidUser(orcidData: {
+    orcid: string;
+    name: string;
+    email?: string;
+    institution?: string;
+    accessToken: string;
+    refreshToken: string;
+  }) {
+    // Check if user exists with this ORCID
+    let user = await this.prisma.user.findFirst({
+      where: { orcidId: orcidData.orcid },
+    });
+
+    if (user) {
+      // Update ORCID tokens for existing user
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          orcidAccessToken: orcidData.accessToken,
+          orcidRefreshToken: orcidData.refreshToken,
+          lastLogin: new Date(),
+        },
+      });
+
+      // Log ORCID login
+      await this.auditService.log({
+        userId: user.id,
+        action: 'ORCID_LOGIN',
+        resource: 'User',
+        resourceId: user.id,
+      });
+
+      return user;
+    }
+
+    // Create new user from ORCID
+    const email = orcidData.email || `${orcidData.orcid}@orcid.local`;
+
+    // Generate random password for OAuth users (they won't use it)
+    const randomPassword = crypto.randomBytes(32).toString('hex');
+    const saltRounds = parseInt(this.configService.get<string>('BCRYPT_ROUNDS', '12'), 10);
+    const hashedPassword = await bcrypt.hash(randomPassword, saltRounds);
+
+    user = await this.prisma.user.create({
+      data: {
+        email,
+        name: orcidData.name,
+        password: hashedPassword,
+        orcidId: orcidData.orcid,
+        orcidAccessToken: orcidData.accessToken,
+        orcidRefreshToken: orcidData.refreshToken,
+        institution: orcidData.institution,
+        role: 'RESEARCHER',
+        isActive: true,
+        lastLogin: new Date(),
+      },
+    });
+
+    // Log ORCID registration
+    await this.auditService.log({
+      userId: user.id,
+      action: 'ORCID_REGISTERED',
+      resource: 'User',
+      resourceId: user.id,
+    });
+
+    return user;
+  }
+
   async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
     const { currentPassword, newPassword } = changePasswordDto;
 
@@ -246,9 +319,17 @@ export class AuthService {
     return { message: 'Password changed successfully' };
   }
 
+  /**
+   * Generate JWT tokens for OAuth users (public method)
+   * Day 27: ORCID OAuth
+   */
+  async generateOAuthTokens(userId: string) {
+    return this.generateTokens(userId, false);
+  }
+
   private async generateTokens(userId: string, rememberMe = false) {
     // Add a unique identifier to prevent duplicate tokens
-    const payload = { 
+    const payload = {
       sub: userId,
       jti: `${Date.now()}-${Math.random().toString(36).substring(7)}`
     };
@@ -356,7 +437,7 @@ export class AuthService {
     // Send reset email
     try {
       await this.emailService.sendPasswordResetEmail(email, resetToken);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to send password reset email:', error);
       // Don't throw error to prevent information disclosure
     }

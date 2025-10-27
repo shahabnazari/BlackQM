@@ -25,26 +25,26 @@ describe('InstagramManualService', () => {
   const mockPrismaService = {
     videoTranscript: {
       findFirst: jest.fn(),
-      create: jest.fn()
+      create: jest.fn(),
     },
     socialMediaContent: {
-      upsert: jest.fn()
-    }
+      upsert: jest.fn(),
+    },
   };
 
   const mockTranscriptionService = {
-    transcribeAudioFile: jest.fn()
+    transcribeAudioFile: jest.fn(),
   };
 
   const mockMultimediaAnalysisService = {
-    extractThemesFromTranscript: jest.fn()
+    extractThemesFromTranscript: jest.fn(),
   };
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
       if (key === 'INSTAGRAM_UPLOAD_DIR') return '/tmp/test-instagram-uploads';
       return null;
-    })
+    }),
   };
 
   beforeEach(async () => {
@@ -53,15 +53,21 @@ describe('InstagramManualService', () => {
         InstagramManualService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: TranscriptionService, useValue: mockTranscriptionService },
-        { provide: MultiMediaAnalysisService, useValue: mockMultimediaAnalysisService },
-        { provide: ConfigService, useValue: mockConfigService }
+        {
+          provide: MultiMediaAnalysisService,
+          useValue: mockMultimediaAnalysisService,
+        },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
     service = module.get<InstagramManualService>(InstagramManualService);
     prisma = module.get<PrismaService>(PrismaService);
-    transcriptionService = module.get<TranscriptionService>(TranscriptionService);
-    multimediaAnalysisService = module.get<MultiMediaAnalysisService>(MultiMediaAnalysisService);
+    transcriptionService =
+      module.get<TranscriptionService>(TranscriptionService);
+    multimediaAnalysisService = module.get<MultiMediaAnalysisService>(
+      MultiMediaAnalysisService,
+    );
     configService = module.get<ConfigService>(ConfigService);
   });
 
@@ -92,52 +98,90 @@ describe('InstagramManualService', () => {
 
   describe('isValidInstagramUrl', () => {
     it('should validate standard Instagram post URL', () => {
-      expect(service.isValidInstagramUrl('https://www.instagram.com/p/ABC123/')).toBe(true);
-      expect(service.isValidInstagramUrl('https://instagram.com/p/ABC123/')).toBe(true);
-      expect(service.isValidInstagramUrl('http://www.instagram.com/p/ABC123/')).toBe(true);
+      expect(
+        service.isValidInstagramUrl('https://www.instagram.com/p/ABC123/'),
+      ).toBe(true);
+      expect(
+        service.isValidInstagramUrl('https://instagram.com/p/ABC123/'),
+      ).toBe(true);
+      expect(
+        service.isValidInstagramUrl('http://www.instagram.com/p/ABC123/'),
+      ).toBe(true);
     });
 
     it('should validate Instagram reel URL', () => {
-      expect(service.isValidInstagramUrl('https://www.instagram.com/reel/XYZ789/')).toBe(true);
-      expect(service.isValidInstagramUrl('https://instagram.com/reel/XYZ789/')).toBe(true);
+      expect(
+        service.isValidInstagramUrl('https://www.instagram.com/reel/XYZ789/'),
+      ).toBe(true);
+      expect(
+        service.isValidInstagramUrl('https://instagram.com/reel/XYZ789/'),
+      ).toBe(true);
     });
 
     it('should validate Instagram TV URL', () => {
-      expect(service.isValidInstagramUrl('https://www.instagram.com/tv/DEF456/')).toBe(true);
+      expect(
+        service.isValidInstagramUrl('https://www.instagram.com/tv/DEF456/'),
+      ).toBe(true);
     });
 
     it('should validate URL with username', () => {
-      expect(service.isValidInstagramUrl('https://www.instagram.com/testuser/p/ABC123/')).toBe(true);
-      expect(service.isValidInstagramUrl('https://www.instagram.com/testuser/reel/XYZ789/')).toBe(true);
+      expect(
+        service.isValidInstagramUrl(
+          'https://www.instagram.com/testuser/p/ABC123/',
+        ),
+      ).toBe(true);
+      expect(
+        service.isValidInstagramUrl(
+          'https://www.instagram.com/testuser/reel/XYZ789/',
+        ),
+      ).toBe(true);
     });
 
     it('should validate URL with query parameters', () => {
-      expect(service.isValidInstagramUrl('https://www.instagram.com/p/ABC123/?utm_source=ig_web')).toBe(true);
+      expect(
+        service.isValidInstagramUrl(
+          'https://www.instagram.com/p/ABC123/?utm_source=ig_web',
+        ),
+      ).toBe(true);
     });
 
     it('should reject invalid Instagram URLs', () => {
-      expect(service.isValidInstagramUrl('https://www.tiktok.com/video/123')).toBe(false);
-      expect(service.isValidInstagramUrl('https://www.instagram.com/')).toBe(false);
+      expect(
+        service.isValidInstagramUrl('https://www.tiktok.com/video/123'),
+      ).toBe(false);
+      expect(service.isValidInstagramUrl('https://www.instagram.com/')).toBe(
+        false,
+      );
       expect(service.isValidInstagramUrl('not-a-url')).toBe(false);
-      expect(service.isValidInstagramUrl('https://www.instagram.com/testuser/')).toBe(false);
+      expect(
+        service.isValidInstagramUrl('https://www.instagram.com/testuser/'),
+      ).toBe(false);
     });
   });
 
   describe('extractVideoId', () => {
     it('should extract video ID from post URL', () => {
-      expect(service.extractVideoId('https://www.instagram.com/p/ABC123/')).toBe('ABC123');
+      expect(
+        service.extractVideoId('https://www.instagram.com/p/ABC123/'),
+      ).toBe('ABC123');
     });
 
     it('should extract video ID from reel URL', () => {
-      expect(service.extractVideoId('https://www.instagram.com/reel/XYZ789/')).toBe('XYZ789');
+      expect(
+        service.extractVideoId('https://www.instagram.com/reel/XYZ789/'),
+      ).toBe('XYZ789');
     });
 
     it('should extract video ID from TV URL', () => {
-      expect(service.extractVideoId('https://www.instagram.com/tv/DEF456/')).toBe('DEF456');
+      expect(
+        service.extractVideoId('https://www.instagram.com/tv/DEF456/'),
+      ).toBe('DEF456');
     });
 
     it('should extract video ID from URL with username', () => {
-      expect(service.extractVideoId('https://www.instagram.com/testuser/p/ABC123/')).toBe('ABC123');
+      expect(
+        service.extractVideoId('https://www.instagram.com/testuser/p/ABC123/'),
+      ).toBe('ABC123');
     });
 
     it('should return null for invalid URL', () => {
@@ -148,17 +192,31 @@ describe('InstagramManualService', () => {
 
   describe('extractUsername', () => {
     it('should extract username when present', () => {
-      expect(service.extractUsername('https://www.instagram.com/testuser/p/ABC123/')).toBe('testuser');
-      expect(service.extractUsername('https://www.instagram.com/another_user/reel/XYZ789/')).toBe('another_user');
+      expect(
+        service.extractUsername('https://www.instagram.com/testuser/p/ABC123/'),
+      ).toBe('testuser');
+      expect(
+        service.extractUsername(
+          'https://www.instagram.com/another_user/reel/XYZ789/',
+        ),
+      ).toBe('another_user');
     });
 
     it('should return null when username is not present', () => {
-      expect(service.extractUsername('https://www.instagram.com/p/ABC123/')).toBeNull();
-      expect(service.extractUsername('https://www.instagram.com/reel/XYZ789/')).toBeNull();
+      expect(
+        service.extractUsername('https://www.instagram.com/p/ABC123/'),
+      ).toBeNull();
+      expect(
+        service.extractUsername('https://www.instagram.com/reel/XYZ789/'),
+      ).toBeNull();
     });
 
     it('should handle usernames with dots and underscores', () => {
-      expect(service.extractUsername('https://www.instagram.com/user.name_123/p/ABC123/')).toBe('user.name_123');
+      expect(
+        service.extractUsername(
+          'https://www.instagram.com/user.name_123/p/ABC123/',
+        ),
+      ).toBe('user.name_123');
     });
   });
 
@@ -166,16 +224,16 @@ describe('InstagramManualService', () => {
     const validUrl = 'https://www.instagram.com/p/ABC123/';
 
     it('should reject invalid Instagram URL', async () => {
-      await expect(service.processInstagramUrl('https://www.tiktok.com/video/123'))
-        .rejects
-        .toThrow(BadRequestException);
+      await expect(
+        service.processInstagramUrl('https://www.tiktok.com/video/123'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should return already_processed status if video exists in database', async () => {
       mockPrismaService.videoTranscript.findFirst.mockResolvedValue({
         id: 'existing-transcript',
         sourceUrl: validUrl,
-        sourceType: 'instagram'
+        sourceType: 'instagram',
       });
 
       const result = await service.processInstagramUrl(validUrl);
@@ -217,8 +275,8 @@ describe('InstagramManualService', () => {
       metadata: {
         username: 'testuser',
         caption: 'Test caption',
-        hashtags: ['test', 'research']
-      }
+        hashtags: ['test', 'research'],
+      },
     };
 
     const mockThemes = [
@@ -228,24 +286,30 @@ describe('InstagramManualService', () => {
         keywords: ['climate', 'change'],
         summary: 'Discussion about climate change',
         timestamps: [],
-        quotes: []
-      }
+        quotes: [],
+      },
     ];
 
     it('should process uploaded video successfully', async () => {
       // Mock file validation (will be skipped in this test)
-      jest.spyOn(service as any, 'validateUploadedFile').mockResolvedValue(undefined);
-      jest.spyOn(service as any, 'storeUploadedFile').mockResolvedValue('/tmp/stored-video.mp4');
+      jest
+        .spyOn(service as any, 'validateUploadedFile')
+        .mockResolvedValue(undefined);
+      jest
+        .spyOn(service as any, 'storeUploadedFile')
+        .mockResolvedValue('/tmp/stored-video.mp4');
 
       // Mock transcription
       jest.spyOn(service as any, 'transcribeUploadedVideo').mockResolvedValue({
         id: 'transcript-123',
         transcript: 'Test transcript',
-        confidence: 0.9
+        confidence: 0.9,
       });
 
       // Mock theme extraction
-      mockMultimediaAnalysisService.extractThemesFromTranscript.mockResolvedValue(mockThemes);
+      mockMultimediaAnalysisService.extractThemesFromTranscript.mockResolvedValue(
+        mockThemes,
+      );
 
       // Mock social media content storage
       mockPrismaService.socialMediaContent.upsert.mockResolvedValue({});
@@ -253,7 +317,10 @@ describe('InstagramManualService', () => {
       // Mock cleanup
       jest.spyOn(service as any, 'cleanupFile').mockResolvedValue(undefined);
 
-      const result = await service.processUploadedVideo(mockUpload, 'climate change research');
+      const result = await service.processUploadedVideo(
+        mockUpload,
+        'climate change research',
+      );
 
       expect(result.videoId).toBe('ABC123');
       expect(result.transcript?.id).toBe('transcript-123');
@@ -264,13 +331,13 @@ describe('InstagramManualService', () => {
     });
 
     it('should handle video processing errors', async () => {
-      jest.spyOn(service as any, 'validateUploadedFile').mockRejectedValue(
-        new Error('Validation failed')
-      );
+      jest
+        .spyOn(service as any, 'validateUploadedFile')
+        .mockRejectedValue(new Error('Validation failed'));
 
-      await expect(service.processUploadedVideo(mockUpload))
-        .rejects
-        .toThrow('Failed to process Instagram video');
+      await expect(service.processUploadedVideo(mockUpload)).rejects.toThrow(
+        'Failed to process Instagram video',
+      );
     });
   });
 
@@ -290,10 +357,12 @@ describe('InstagramManualService', () => {
       const mockTranscript = {
         id: 'transcript-123',
         processedAt: new Date(),
-        themes: [{ id: '1' }, { id: '2' }]
+        themes: [{ id: '1' }, { id: '2' }],
       };
 
-      mockPrismaService.videoTranscript.findFirst.mockResolvedValue(mockTranscript);
+      mockPrismaService.videoTranscript.findFirst.mockResolvedValue(
+        mockTranscript,
+      );
 
       const result = await service.getProcessingStatus(url);
 
@@ -308,7 +377,7 @@ describe('InstagramManualService', () => {
     it('should calculate relevance score correctly', () => {
       const themes = [
         { relevanceScore: 0.9 } as any,
-        { relevanceScore: 0.8 } as any
+        { relevanceScore: 0.8 } as any,
       ];
 
       const score = service['calculateRelevanceScore'](themes);
@@ -361,14 +430,16 @@ describe('InstagramManualService', () => {
         filePath: '/tmp/test.mp4',
         fileName: 'test.mp4',
         fileSize: 100 * 1024 * 1024, // 100 MB - valid
-        url: 'https://www.instagram.com/p/ABC123/'
+        url: 'https://www.instagram.com/p/ABC123/',
       };
 
       // Mock file access
       const fs = require('fs/promises');
       jest.spyOn(fs, 'access').mockResolvedValue(undefined);
 
-      await expect(service['validateUploadedFile'](upload as any)).resolves.not.toThrow();
+      await expect(
+        service['validateUploadedFile'](upload as any),
+      ).resolves.not.toThrow();
     });
 
     it('should reject file exceeding size limit', async () => {
@@ -376,12 +447,12 @@ describe('InstagramManualService', () => {
         filePath: '/tmp/test.mp4',
         fileName: 'test.mp4',
         fileSize: 600 * 1024 * 1024, // 600 MB - exceeds 500 MB limit
-        url: 'https://www.instagram.com/p/ABC123/'
+        url: 'https://www.instagram.com/p/ABC123/',
       };
 
-      await expect(service['validateUploadedFile'](upload as any))
-        .rejects
-        .toThrow('File size exceeds maximum');
+      await expect(
+        service['validateUploadedFile'](upload as any),
+      ).rejects.toThrow('File size exceeds maximum');
     });
 
     it('should reject invalid file extension', async () => {
@@ -389,12 +460,12 @@ describe('InstagramManualService', () => {
         filePath: '/tmp/test.txt',
         fileName: 'test.txt',
         fileSize: 10 * 1024 * 1024,
-        url: 'https://www.instagram.com/p/ABC123/'
+        url: 'https://www.instagram.com/p/ABC123/',
       };
 
-      await expect(service['validateUploadedFile'](upload as any))
-        .rejects
-        .toThrow('Invalid file type');
+      await expect(
+        service['validateUploadedFile'](upload as any),
+      ).rejects.toThrow('Invalid file type');
     });
   });
 
@@ -404,34 +475,40 @@ describe('InstagramManualService', () => {
         url: 'https://www.instagram.com/p/ABC123/',
         filePath: '/tmp/test.mp4',
         fileName: 'test.mp4',
-        fileSize: 10 * 1024 * 1024
+        fileSize: 10 * 1024 * 1024,
       };
 
-      jest.spyOn(service as any, 'validateUploadedFile').mockResolvedValue(undefined);
-      jest.spyOn(service as any, 'storeUploadedFile').mockRejectedValue(
-        new Error('Storage failed')
-      );
+      jest
+        .spyOn(service as any, 'validateUploadedFile')
+        .mockResolvedValue(undefined);
+      jest
+        .spyOn(service as any, 'storeUploadedFile')
+        .mockRejectedValue(new Error('Storage failed'));
 
-      await expect(service.processUploadedVideo(upload as any))
-        .rejects
-        .toThrow('Failed to process Instagram video');
+      await expect(service.processUploadedVideo(upload as any)).rejects.toThrow(
+        'Failed to process Instagram video',
+      );
     });
 
     it('should log warnings on social media content storage failure', async () => {
       mockPrismaService.socialMediaContent.upsert.mockRejectedValue(
-        new Error('Database error')
+        new Error('Database error'),
       );
 
       // This should not throw, just log a warning
       await expect(
-        service['storeSocialMediaContent']('video123', 'transcript123', {} as any)
+        service['storeSocialMediaContent'](
+          'video123',
+          'transcript123',
+          {} as any,
+        ),
       ).resolves.not.toThrow();
     });
 
     it('should log warnings on cleanup failure', async () => {
       // This should not throw, just log a warning
       await expect(
-        service['cleanupFile']('/nonexistent/file.mp4')
+        service['cleanupFile']('/nonexistent/file.mp4'),
       ).resolves.not.toThrow();
     });
   });

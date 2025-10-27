@@ -42,14 +42,16 @@ export default defineConfig({
     // Retry configuration
     retry: 1, // Retry failed tests once
     // Reporter configuration for CI
-    reporters: process.env.CI 
-      ? ['verbose', 'junit'] 
+    reporters: process.env.CI
+      ? ['verbose', 'junit']
       : ['verbose'],
-    outputFile: process.env.CI
+    ...(process.env.CI
       ? {
-          junit: './test-results/junit.xml',
+          outputFile: {
+            junit: './test-results/junit.xml',
+          },
         }
-      : undefined,
+      : {}),
   },
   resolve: {
     alias: {

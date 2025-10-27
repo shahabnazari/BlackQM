@@ -76,27 +76,47 @@ export class GapAnalyzerService {
   async analyzeResearchGaps(paperIds: string[]): Promise<ResearchGap[]> {
     this.logger.log(`Analyzing research gaps for ${paperIds.length} papers`);
 
-    // Fetch papers with all metadata
-    const papers = await this.fetchPapersWithMetadata(paperIds);
+    // Validate input
+    if (!paperIds || paperIds.length === 0) {
+      this.logger.warn('No papers provided for gap analysis');
+      return [];
+    }
 
-    // Extract keywords from all papers
-    const keywordAnalysis = await this.extractAndAnalyzeKeywords(papers);
+    try {
+      // Fetch papers with all metadata
+      const papers = await this.fetchPapersWithMetadata(paperIds);
 
-    // Perform topic modeling
-    const topicModels = await this.performTopicModeling(papers);
+      if (papers.length === 0) {
+        this.logger.warn('No valid papers found for gap analysis');
+        return [];
+      }
 
-    // Detect trends
-    const trends = await this.detectTrends(papers, keywordAnalysis);
+      // Extract keywords from all papers
+      const keywordAnalysis = await this.extractAndAnalyzeKeywords(papers);
 
-    // Identify gaps using AI
-    const gaps = await this.identifyGapsWithAI(papers, topicModels, trends);
+      // Perform topic modeling
+      const topicModels = await this.performTopicModeling(papers);
 
-    // Score and rank gaps
-    const scoredGaps = await this.scoreGaps(gaps, trends);
+      // Detect trends
+      const trends = await this.detectTrends(papers, keywordAnalysis);
 
-    this.logger.log(`Identified ${scoredGaps.length} research gaps`);
+      // Identify gaps using AI
+      const gaps = await this.identifyGapsWithAI(papers, topicModels, trends);
 
-    return scoredGaps;
+      // Score and rank gaps
+      const scoredGaps = await this.scoreGaps(gaps, trends);
+
+      this.logger.log(`Identified ${scoredGaps.length} research gaps`);
+
+      return scoredGaps;
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to analyze research gaps: ${error.message}`,
+        error.stack,
+      );
+      // Return empty array instead of throwing to prevent 500 errors
+      return [];
+    }
   }
 
   /**

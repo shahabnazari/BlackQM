@@ -35,7 +35,7 @@ class AnalyzeBiasDto {
   includeRecommendations?: boolean;
 }
 
-class ExtractThemesDto {
+class ExtractStudyThemesDto {
   method?: 'ai-powered' | 'statistical';
   minOccurrence?: number;
   includeQuotes?: boolean;
@@ -121,7 +121,7 @@ export class InterpretationController {
   })
   async extractThemes(
     @Param('studyId') studyId: string,
-    @Body() options: ExtractThemesDto,
+    @Body() options: ExtractStudyThemesDto,
   ) {
     return await this.interpretationService.extractThemes(studyId, options);
   }

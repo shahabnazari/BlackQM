@@ -75,7 +75,8 @@ export function NavigationProvider({
       try {
         const params = studyId ? `?studyId=${studyId}` : '';
         // Get token from correct localStorage key
-        const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+        const token =
+          localStorage.getItem('access_token') || localStorage.getItem('token');
         const response = await fetch(`/api/navigation/state${params}`, {
           headers: {
             Authorization: token ? `Bearer ${token}` : '',

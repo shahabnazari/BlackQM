@@ -42,11 +42,16 @@ describe('CrossPlatformSynthesisService', () => {
         { provide: TikTokResearchService, useValue: mockTikTokService },
         { provide: InstagramManualService, useValue: mockInstagramService },
         { provide: TranscriptionService, useValue: mockTranscriptionService },
-        { provide: MultiMediaAnalysisService, useValue: mockMultimediaAnalysisService },
+        {
+          provide: MultiMediaAnalysisService,
+          useValue: mockMultimediaAnalysisService,
+        },
       ],
     }).compile();
 
-    service = module.get<CrossPlatformSynthesisService>(CrossPlatformSynthesisService);
+    service = module.get<CrossPlatformSynthesisService>(
+      CrossPlatformSynthesisService,
+    );
     literatureService = module.get<LiteratureService>(LiteratureService);
     tiktokService = module.get<TikTokResearchService>(TikTokResearchService);
   });
@@ -116,9 +121,12 @@ describe('CrossPlatformSynthesisService', () => {
       mockLiteratureService.searchYouTube.mockResolvedValue(mockYouTubeVideos);
       mockTikTokService.searchTikTokVideos.mockResolvedValue(mockTikTokResults);
 
-      const result = await service.synthesizeMultiPlatformResearch('climate change', {
-        maxResults: 10,
-      });
+      const result = await service.synthesizeMultiPlatformResearch(
+        'climate change',
+        {
+          maxResults: 10,
+        },
+      );
 
       expect(result.query).toBe('climate change');
       expect(result.sources.length).toBeGreaterThan(0);
@@ -129,11 +137,14 @@ describe('CrossPlatformSynthesisService', () => {
     });
 
     it('should handle platform search failures gracefully', async () => {
-      mockLiteratureService.searchLiterature.mockRejectedValue(new Error('API Error'));
+      mockLiteratureService.searchLiterature.mockRejectedValue(
+        new Error('API Error'),
+      );
       mockLiteratureService.searchYouTube.mockResolvedValue(mockYouTubeVideos);
       mockTikTokService.searchTikTokVideos.mockResolvedValue(mockTikTokResults);
 
-      const result = await service.synthesizeMultiPlatformResearch('test query');
+      const result =
+        await service.synthesizeMultiPlatformResearch('test query');
 
       expect(result.sources.length).toBe(2); // YouTube + TikTok only
     });
@@ -148,7 +159,16 @@ describe('CrossPlatformSynthesisService', () => {
         author: 'Researcher',
         publishedAt: new Date('2023-01-01'),
         url: 'test.com',
-        themes: [{ theme: 'Climate Change', relevanceScore: 0.9, timestamps: [], keywords: [], summary: '', quotes: [] }],
+        themes: [
+          {
+            theme: 'Climate Change',
+            relevanceScore: 0.9,
+            timestamps: [],
+            keywords: [],
+            summary: '',
+            quotes: [],
+          },
+        ],
         relevanceScore: 0.9,
         engagement: { citations: 50 },
       },
@@ -159,7 +179,16 @@ describe('CrossPlatformSynthesisService', () => {
         author: 'Educator',
         publishedAt: new Date('2024-01-01'),
         url: 'youtube.com',
-        themes: [{ theme: 'Climate Change', relevanceScore: 0.8, timestamps: [], keywords: [], summary: '', quotes: [] }],
+        themes: [
+          {
+            theme: 'Climate Change',
+            relevanceScore: 0.8,
+            timestamps: [],
+            keywords: [],
+            summary: '',
+            quotes: [],
+          },
+        ],
         relevanceScore: 0.8,
         engagement: { views: 10000 },
       },
@@ -170,7 +199,16 @@ describe('CrossPlatformSynthesisService', () => {
         author: 'Influencer',
         publishedAt: new Date('2025-01-01'),
         url: 'tiktok.com',
-        themes: [{ theme: 'Climate Change', relevanceScore: 0.7, timestamps: [], keywords: [], summary: '', quotes: [] }],
+        themes: [
+          {
+            theme: 'Climate Change',
+            relevanceScore: 0.7,
+            timestamps: [],
+            keywords: [],
+            summary: '',
+            quotes: [],
+          },
+        ],
         relevanceScore: 0.7,
         engagement: { views: 5000, likes: 200 },
       },
@@ -180,14 +218,28 @@ describe('CrossPlatformSynthesisService', () => {
       {
         theme: 'Climate Change',
         totalSources: 3,
-        sources: { papers: 1, youtube: 1, podcasts: 0, tiktok: 1, instagram: 0 },
+        sources: {
+          papers: 1,
+          youtube: 1,
+          podcasts: 0,
+          tiktok: 1,
+          instagram: 0,
+        },
         averageRelevance: 0.8,
-        platformSpecificLanguage: { academic: [], popularScience: [], socialMedia: [] },
+        platformSpecificLanguage: {
+          academic: [],
+          popularScience: [],
+          socialMedia: [],
+        },
       },
     ];
 
     it('should trace dissemination paths over time', async () => {
-      const paths = await service.traceDisseminationPaths(mockClusters, mockSources, 90);
+      const paths = await service.traceDisseminationPaths(
+        mockClusters,
+        mockSources,
+        90,
+      );
 
       expect(paths.length).toBeGreaterThan(0);
       expect(paths[0].theme).toBe('Climate Change');
@@ -196,13 +248,21 @@ describe('CrossPlatformSynthesisService', () => {
     });
 
     it('should calculate dissemination velocity correctly', async () => {
-      const paths = await service.traceDisseminationPaths(mockClusters, mockSources, 90);
+      const paths = await service.traceDisseminationPaths(
+        mockClusters,
+        mockSources,
+        90,
+      );
 
       expect(paths[0].disseminationVelocity).toBeGreaterThan(0);
     });
 
     it('should calculate total reach across platforms', async () => {
-      const paths = await service.traceDisseminationPaths(mockClusters, mockSources, 90);
+      const paths = await service.traceDisseminationPaths(
+        mockClusters,
+        mockSources,
+        90,
+      );
 
       expect(paths[0].totalReach).toBeGreaterThan(0);
     });
@@ -211,16 +271,27 @@ describe('CrossPlatformSynthesisService', () => {
   describe('identifyEmergingTopics', () => {
     const mockSources = [
       // Social media sources (recent)
-      ...Array(15).fill(null).map((_, i) => ({
-        type: 'tiktok' as const,
-        id: `tiktok${i}`,
-        title: 'Sustainable Fashion',
-        author: 'Creator',
-        publishedAt: new Date(Date.now() - i * 24 * 60 * 60 * 1000),
-        url: 'test.com',
-        themes: [{ theme: 'Sustainable Fashion', relevanceScore: 0.8, timestamps: [], keywords: [], summary: '', quotes: [] }],
-        relevanceScore: 0.8,
-      })),
+      ...Array(15)
+        .fill(null)
+        .map((_, i) => ({
+          type: 'tiktok' as const,
+          id: `tiktok${i}`,
+          title: 'Sustainable Fashion',
+          author: 'Creator',
+          publishedAt: new Date(Date.now() - i * 24 * 60 * 60 * 1000),
+          url: 'test.com',
+          themes: [
+            {
+              theme: 'Sustainable Fashion',
+              relevanceScore: 0.8,
+              timestamps: [],
+              keywords: [],
+              summary: '',
+              quotes: [],
+            },
+          ],
+          relevanceScore: 0.8,
+        })),
       // Academic sources (few)
       {
         type: 'paper' as const,
@@ -229,13 +300,25 @@ describe('CrossPlatformSynthesisService', () => {
         author: 'Researcher',
         publishedAt: new Date('2023-01-01'),
         url: 'test.com',
-        themes: [{ theme: 'Sustainable Fashion', relevanceScore: 0.9, timestamps: [], keywords: [], summary: '', quotes: [] }],
+        themes: [
+          {
+            theme: 'Sustainable Fashion',
+            relevanceScore: 0.9,
+            timestamps: [],
+            keywords: [],
+            summary: '',
+            quotes: [],
+          },
+        ],
         relevanceScore: 0.9,
       },
     ];
 
     it('should identify emerging topics with high social mentions and low academic coverage', async () => {
-      const emergingTopics = await service.identifyEmergingTopics(mockSources, 90);
+      const emergingTopics = await service.identifyEmergingTopics(
+        mockSources,
+        90,
+      );
 
       expect(emergingTopics.length).toBeGreaterThan(0);
       expect(emergingTopics[0].topic).toContain('sustainable fashion');
@@ -244,14 +327,20 @@ describe('CrossPlatformSynthesisService', () => {
     });
 
     it('should calculate trend scores correctly', async () => {
-      const emergingTopics = await service.identifyEmergingTopics(mockSources, 90);
+      const emergingTopics = await service.identifyEmergingTopics(
+        mockSources,
+        90,
+      );
 
       expect(emergingTopics[0].trendScore).toBeGreaterThan(0);
       expect(emergingTopics[0].trendScore).toBeLessThanOrEqual(100);
     });
 
     it('should provide recommendations based on trend score', async () => {
-      const emergingTopics = await service.identifyEmergingTopics(mockSources, 90);
+      const emergingTopics = await service.identifyEmergingTopics(
+        mockSources,
+        90,
+      );
 
       expect(emergingTopics[0].recommendation).toBeDefined();
       expect(emergingTopics[0].recommendation.length).toBeGreaterThan(0);
@@ -259,19 +348,33 @@ describe('CrossPlatformSynthesisService', () => {
 
     it('should identify potential research gaps', async () => {
       const mockGapSources = [
-        ...Array(12).fill(null).map((_, i) => ({
-          type: 'youtube' as const,
-          id: `youtube${i}`,
-          title: 'New Topic',
-          author: 'Creator',
-          publishedAt: new Date(),
-          url: 'test.com',
-          themes: [{ theme: 'New Topic', relevanceScore: 0.8, timestamps: [], keywords: [], summary: '', quotes: [] }],
-          relevanceScore: 0.8,
-        })),
+        ...Array(12)
+          .fill(null)
+          .map((_, i) => ({
+            type: 'youtube' as const,
+            id: `youtube${i}`,
+            title: 'New Topic',
+            author: 'Creator',
+            publishedAt: new Date(),
+            url: 'test.com',
+            themes: [
+              {
+                theme: 'New Topic',
+                relevanceScore: 0.8,
+                timestamps: [],
+                keywords: [],
+                summary: '',
+                quotes: [],
+              },
+            ],
+            relevanceScore: 0.8,
+          })),
       ];
 
-      const emergingTopics = await service.identifyEmergingTopics(mockGapSources, 90);
+      const emergingTopics = await service.identifyEmergingTopics(
+        mockGapSources,
+        90,
+      );
 
       expect(emergingTopics[0].potentialGap).toBe(true);
     });
@@ -287,8 +390,22 @@ describe('CrossPlatformSynthesisService', () => {
         publishedAt: new Date(),
         url: 'test.com',
         themes: [
-          { theme: 'Machine Learning', relevanceScore: 0.9, timestamps: [], keywords: [], summary: '', quotes: [] },
-          { theme: 'Neural Networks', relevanceScore: 0.8, timestamps: [], keywords: [], summary: '', quotes: [] },
+          {
+            theme: 'Machine Learning',
+            relevanceScore: 0.9,
+            timestamps: [],
+            keywords: [],
+            summary: '',
+            quotes: [],
+          },
+          {
+            theme: 'Neural Networks',
+            relevanceScore: 0.8,
+            timestamps: [],
+            keywords: [],
+            summary: '',
+            quotes: [],
+          },
         ],
         relevanceScore: 0.9,
         engagement: { citations: 100 },
@@ -301,7 +418,14 @@ describe('CrossPlatformSynthesisService', () => {
         publishedAt: new Date(),
         url: 'youtube.com',
         themes: [
-          { theme: 'Machine Learning', relevanceScore: 0.7, timestamps: [], keywords: [], summary: '', quotes: [] },
+          {
+            theme: 'Machine Learning',
+            relevanceScore: 0.7,
+            timestamps: [],
+            keywords: [],
+            summary: '',
+            quotes: [],
+          },
         ],
         relevanceScore: 0.7,
         engagement: { views: 50000, likes: 2000 },
@@ -312,31 +436,50 @@ describe('CrossPlatformSynthesisService', () => {
       {
         theme: 'Machine Learning',
         totalSources: 2,
-        sources: { papers: 1, youtube: 1, podcasts: 0, tiktok: 0, instagram: 0 },
+        sources: {
+          papers: 1,
+          youtube: 1,
+          podcasts: 0,
+          tiktok: 0,
+          instagram: 0,
+        },
         averageRelevance: 0.8,
-        platformSpecificLanguage: { academic: [], popularScience: [], socialMedia: [] },
+        platformSpecificLanguage: {
+          academic: [],
+          popularScience: [],
+          socialMedia: [],
+        },
       },
     ];
 
     it('should analyze platform-specific differences', () => {
-      const insights = service.analyzePlatformDifferences(mockSources, mockClusters);
+      const insights = service.analyzePlatformDifferences(
+        mockSources,
+        mockClusters,
+      );
 
       expect(insights.length).toBeGreaterThan(0);
-      expect(insights.find(i => i.platform === 'paper')).toBeDefined();
-      expect(insights.find(i => i.platform === 'youtube')).toBeDefined();
+      expect(insights.find((i) => i.platform === 'paper')).toBeDefined();
+      expect(insights.find((i) => i.platform === 'youtube')).toBeDefined();
     });
 
     it('should calculate average engagement by platform', () => {
-      const insights = service.analyzePlatformDifferences(mockSources, mockClusters);
+      const insights = service.analyzePlatformDifferences(
+        mockSources,
+        mockClusters,
+      );
 
-      const youtubeInsight = insights.find(i => i.platform === 'youtube');
+      const youtubeInsight = insights.find((i) => i.platform === 'youtube');
       expect(youtubeInsight?.averageEngagement).toBeGreaterThan(0);
     });
 
     it('should identify top themes per platform', () => {
-      const insights = service.analyzePlatformDifferences(mockSources, mockClusters);
+      const insights = service.analyzePlatformDifferences(
+        mockSources,
+        mockClusters,
+      );
 
-      const paperInsight = insights.find(i => i.platform === 'paper');
+      const paperInsight = insights.find((i) => i.platform === 'paper');
       expect(paperInsight?.topThemes).toContain('Machine Learning');
     });
   });
@@ -351,8 +494,22 @@ describe('CrossPlatformSynthesisService', () => {
         publishedAt: new Date(),
         url: 'test.com',
         themes: [
-          { theme: 'AI', relevanceScore: 0.9, timestamps: [], keywords: [], summary: '', quotes: [] },
-          { theme: 'ML', relevanceScore: 0.8, timestamps: [], keywords: [], summary: '', quotes: [] },
+          {
+            theme: 'AI',
+            relevanceScore: 0.9,
+            timestamps: [],
+            keywords: [],
+            summary: '',
+            quotes: [],
+          },
+          {
+            theme: 'ML',
+            relevanceScore: 0.8,
+            timestamps: [],
+            keywords: [],
+            summary: '',
+            quotes: [],
+          },
         ],
         relevanceScore: 0.9,
       },
@@ -364,7 +521,14 @@ describe('CrossPlatformSynthesisService', () => {
         publishedAt: new Date(),
         url: 'youtube.com',
         themes: [
-          { theme: 'AI', relevanceScore: 0.7, timestamps: [], keywords: [], summary: '', quotes: [] },
+          {
+            theme: 'AI',
+            relevanceScore: 0.7,
+            timestamps: [],
+            keywords: [],
+            summary: '',
+            quotes: [],
+          },
         ],
         relevanceScore: 0.7,
       },
@@ -396,9 +560,18 @@ describe('CrossPlatformSynthesisService', () => {
 
   describe('Private Helper Methods', () => {
     it('should determine if themes are similar', () => {
-      const similar1 = service['areThemesSimilar']('Climate Change', 'climate change');
-      const similar2 = service['areThemesSimilar']('Climate Change', 'Global Warming');
-      const different = service['areThemesSimilar']('Climate Change', 'Artificial Intelligence');
+      const similar1 = service['areThemesSimilar'](
+        'Climate Change',
+        'climate change',
+      );
+      const similar2 = service['areThemesSimilar'](
+        'Climate Change',
+        'Global Warming',
+      );
+      const different = service['areThemesSimilar'](
+        'Climate Change',
+        'Artificial Intelligence',
+      );
 
       expect(similar1).toBe(true);
       expect(different).toBe(false);

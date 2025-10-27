@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Question } from '@/lib/stores/questionnaire.store';
+import { Question } from '@/lib/types/questionnaire';
 
 interface SkipLogicBuilderProps {
   questions: Question[];

@@ -13,11 +13,11 @@ import {
   ArrowTrendingUpIcon,
   PresentationChartLineIcon,
   Squares2X2Icon,
-  DocumentTextIcon
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
 // Widget types and configurations
-export type WidgetType = 
+export type WidgetType =
   | 'eigenvalue-scree'
   | 'correlation-heatmap'
   | 'factor-loading'
@@ -69,7 +69,8 @@ const widgetCatalog: WidgetDefinition[] = [
   {
     type: 'eigenvalue-scree',
     title: 'Eigenvalue Scree Plot',
-    description: 'Determine optimal number of factors to extract based on eigenvalue magnitude',
+    description:
+      'Determine optimal number of factors to extract based on eigenvalue magnitude',
     icon: ArrowTrendingUpIcon,
     category: 'analysis',
     difficulty: 'beginner',
@@ -78,12 +79,13 @@ const widgetCatalog: WidgetDefinition[] = [
     tags: ['factor-extraction', 'eigenvalues', 'scree-plot'],
     preview: 'Line chart showing eigenvalue drop-off',
     minWidth: 300,
-    minHeight: 250
+    minHeight: 250,
   },
   {
     type: 'correlation-heatmap',
     title: 'Participant Correlation Matrix',
-    description: 'Visualize correlations between participant Q-sorts to identify groupings',
+    description:
+      'Visualize correlations between participant Q-sorts to identify groupings',
     icon: Squares2X2Icon,
     category: 'visualization',
     difficulty: 'intermediate',
@@ -92,12 +94,13 @@ const widgetCatalog: WidgetDefinition[] = [
     tags: ['correlation', 'heatmap', 'participant-similarity'],
     preview: 'Color-coded correlation matrix',
     minWidth: 400,
-    minHeight: 400
+    minHeight: 400,
   },
   {
     type: 'factor-loading',
     title: 'Factor Loadings Chart',
-    description: 'Show how strongly each participant loads on extracted factors',
+    description:
+      'Show how strongly each participant loads on extracted factors',
     icon: DocumentChartBarIcon,
     category: 'analysis',
     difficulty: 'intermediate',
@@ -106,12 +109,13 @@ const widgetCatalog: WidgetDefinition[] = [
     tags: ['factor-loadings', 'participant-clustering', 'scatter-plot'],
     preview: 'Scatter plot of factor loadings',
     minWidth: 400,
-    minHeight: 350
+    minHeight: 350,
   },
   {
     type: 'q-sort-distribution',
     title: 'Q-Sort Distribution',
-    description: 'Display the distribution of statement rankings across the Q-sort grid',
+    description:
+      'Display the distribution of statement rankings across the Q-sort grid',
     icon: ChartBarIcon,
     category: 'visualization',
     difficulty: 'beginner',
@@ -120,12 +124,13 @@ const widgetCatalog: WidgetDefinition[] = [
     tags: ['distribution', 'q-sort', 'histogram'],
     preview: 'Histogram of statement placements',
     minWidth: 350,
-    minHeight: 250
+    minHeight: 250,
   },
   {
     type: 'distinguishing-statements',
     title: 'Distinguishing Statements',
-    description: 'Highlight statements that significantly differentiate between factors',
+    description:
+      'Highlight statements that significantly differentiate between factors',
     icon: BoltIcon,
     category: 'analysis',
     difficulty: 'advanced',
@@ -134,14 +139,15 @@ const widgetCatalog: WidgetDefinition[] = [
     tags: ['distinguishing', 'statements', 'factor-differences'],
     preview: 'Table of significant statements',
     minWidth: 500,
-    minHeight: 400
+    minHeight: 400,
   },
-  
+
   // Advanced Analysis
   {
     type: 'factor-comparison',
     title: 'Factor Comparison Chart',
-    description: 'Side-by-side comparison of factor arrays and their defining statements',
+    description:
+      'Side-by-side comparison of factor arrays and their defining statements',
     icon: PresentationChartLineIcon,
     category: 'analysis',
     difficulty: 'advanced',
@@ -150,12 +156,13 @@ const widgetCatalog: WidgetDefinition[] = [
     tags: ['factor-comparison', 'side-by-side', 'interpretation'],
     preview: 'Parallel coordinates chart',
     minWidth: 600,
-    minHeight: 400
+    minHeight: 400,
   },
   {
     type: 'participant-clustering',
     title: 'Participant Clustering',
-    description: 'Cluster participants based on their Q-sort patterns using machine learning',
+    description:
+      'Cluster participants based on their Q-sort patterns using machine learning',
     icon: CircleStackIcon,
     category: 'analysis',
     difficulty: 'advanced',
@@ -164,12 +171,13 @@ const widgetCatalog: WidgetDefinition[] = [
     tags: ['clustering', 'machine-learning', 'participant-groups'],
     preview: 'Dendrogram or cluster visualization',
     minWidth: 450,
-    minHeight: 400
+    minHeight: 400,
   },
   {
     type: 'consensus-statements',
     title: 'Consensus Statements',
-    description: 'Identify statements with high agreement across all participants',
+    description:
+      'Identify statements with high agreement across all participants',
     icon: StarIcon,
     category: 'analysis',
     difficulty: 'intermediate',
@@ -178,14 +186,15 @@ const widgetCatalog: WidgetDefinition[] = [
     tags: ['consensus', 'agreement', 'shared-views'],
     preview: 'Ranked list with agreement scores',
     minWidth: 400,
-    minHeight: 350
+    minHeight: 350,
   },
-  
+
   // Utility Widgets
   {
     type: 'metric-card',
     title: 'Key Metrics',
-    description: 'Display important statistical measures and summary information',
+    description:
+      'Display important statistical measures and summary information',
     icon: DocumentTextIcon,
     category: 'utility',
     difficulty: 'beginner',
@@ -193,7 +202,7 @@ const widgetCatalog: WidgetDefinition[] = [
     tags: ['metrics', 'summary', 'statistics'],
     preview: 'Card with key numbers',
     minWidth: 200,
-    minHeight: 150
+    minHeight: 150,
   },
   {
     type: 'data-table',
@@ -206,7 +215,7 @@ const widgetCatalog: WidgetDefinition[] = [
     tags: ['table', 'data-exploration', 'export'],
     preview: 'Sortable data table',
     minWidth: 400,
-    minHeight: 300
+    minHeight: 300,
   },
   {
     type: 'text-widget',
@@ -219,8 +228,8 @@ const widgetCatalog: WidgetDefinition[] = [
     tags: ['text', 'annotations', 'insights'],
     preview: 'Rich text editor',
     minWidth: 250,
-    minHeight: 200
-  }
+    minHeight: 200,
+  },
 ];
 
 // AI-powered recommendations based on current context
@@ -228,52 +237,74 @@ const generateRecommendations = (
   dataContext: DataContext,
   currentWidgets: WidgetType[]
 ): { widget: WidgetDefinition; reason: string; confidence: number }[] => {
-  const recommendations: { widget: WidgetDefinition; reason: string; confidence: number }[] = [];
-  
+  const recommendations: {
+    widget: WidgetDefinition;
+    reason: string;
+    confidence: number;
+  }[] = [];
+
   // Basic analysis flow recommendations
-  if (!currentWidgets.includes('eigenvalue-scree') && dataContext.hasEigenvalues) {
+  if (
+    !currentWidgets.includes('eigenvalue-scree') &&
+    dataContext.hasEigenvalues
+  ) {
     recommendations.push({
       widget: widgetCatalog.find(w => w.type === 'eigenvalue-scree')!,
       reason: 'Essential first step: Determine optimal number of factors',
-      confidence: 0.95
+      confidence: 0.95,
     });
   }
-  
-  if (currentWidgets.includes('eigenvalue-scree') && !currentWidgets.includes('factor-loading') && dataContext.hasFactorLoadings) {
+
+  if (
+    currentWidgets.includes('eigenvalue-scree') &&
+    !currentWidgets.includes('factor-loading') &&
+    dataContext.hasFactorLoadings
+  ) {
     recommendations.push({
       widget: widgetCatalog.find(w => w.type === 'factor-loading')!,
       reason: 'Next step: Examine how participants load on factors',
-      confidence: 0.9
+      confidence: 0.9,
     });
   }
-  
-  if (currentWidgets.includes('factor-loading') && !currentWidgets.includes('distinguishing-statements')) {
+
+  if (
+    currentWidgets.includes('factor-loading') &&
+    !currentWidgets.includes('distinguishing-statements')
+  ) {
     recommendations.push({
       widget: widgetCatalog.find(w => w.type === 'distinguishing-statements')!,
       reason: 'Identify statements that differentiate your factors',
-      confidence: 0.85
+      confidence: 0.85,
     });
   }
-  
+
   // Correlation analysis
-  if (dataContext.participantCount > 10 && !currentWidgets.includes('correlation-heatmap')) {
+  if (
+    dataContext.participantCount > 10 &&
+    !currentWidgets.includes('correlation-heatmap')
+  ) {
     recommendations.push({
       widget: widgetCatalog.find(w => w.type === 'correlation-heatmap')!,
       reason: 'Large sample: Visualize participant relationships',
-      confidence: 0.8
+      confidence: 0.8,
     });
   }
-  
+
   // Advanced analysis suggestions
-  if (currentWidgets.length >= 3 && !currentWidgets.includes('factor-comparison')) {
+  if (
+    currentWidgets.length >= 3 &&
+    !currentWidgets.includes('factor-comparison')
+  ) {
     recommendations.push({
       widget: widgetCatalog.find(w => w.type === 'factor-comparison')!,
       reason: 'Ready for interpretation: Compare factor perspectives',
-      confidence: 0.75
+      confidence: 0.75,
     });
   }
-  
-  return recommendations.sort((a, b) => b.confidence - a.confidence).slice(0, 5);
+
+  return recommendations
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 5);
 };
 
 const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
@@ -286,10 +317,10 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
     hasQSorts: true,
     hasStatements: true,
     participantCount: 30,
-    factorCount: 3
+    factorCount: 3,
   },
   currentWidgets = [],
-  className = ""
+  className = '',
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -297,21 +328,27 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
   const [showRecommendations, setShowRecommendations] = useState(true);
 
   // Generate AI recommendations
-  const recommendations = useMemo(() => 
-    generateRecommendations(dataContext, currentWidgets),
+  const recommendations = useMemo(
+    () => generateRecommendations(dataContext, currentWidgets),
     [dataContext, currentWidgets]
   );
 
   // Filter widgets based on search and filters
   const filteredWidgets = useMemo(() => {
     return widgetCatalog.filter((widget: any) => {
-      const matchesSearch = widget.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           widget.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           widget.tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-      
-      const matchesCategory = selectedCategory === 'all' || widget.category === selectedCategory;
-      const matchesDifficulty = selectedDifficulty === 'all' || widget.difficulty === selectedDifficulty;
-      
+      const matchesSearch =
+        widget.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        widget.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        widget.tags.some((tag: string) =>
+          tag.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+      const matchesCategory =
+        selectedCategory === 'all' || widget.category === selectedCategory;
+      const matchesDifficulty =
+        selectedDifficulty === 'all' ||
+        widget.difficulty === selectedDifficulty;
+
       return matchesSearch && matchesCategory && matchesDifficulty;
     });
   }, [searchQuery, selectedCategory, selectedDifficulty]);
@@ -328,21 +365,24 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
     return groups;
   }, [filteredWidgets]);
 
-  const handleAddWidget = useCallback((widgetType: WidgetType) => {
-    onAddWidget(widgetType);
-  }, [onAddWidget]);
+  const handleAddWidget = useCallback(
+    (widgetType: WidgetType) => {
+      onAddWidget(widgetType);
+    },
+    [onAddWidget]
+  );
 
   const categoryIcons: Record<string, React.ComponentType<any>> = {
     analysis: DocumentChartBarIcon,
     visualization: ChartBarIcon,
     table: TableCellsIcon,
-    utility: AdjustmentsHorizontalIcon
+    utility: AdjustmentsHorizontalIcon,
   };
 
   const difficultyColors: Record<string, string> = {
     beginner: 'bg-green-100 text-green-800',
     intermediate: 'bg-yellow-100 text-yellow-800',
-    advanced: 'bg-red-100 text-red-800'
+    advanced: 'bg-red-100 text-red-800',
   };
 
   return (
@@ -394,7 +434,7 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
             <option value="table">Tables</option>
             <option value="utility">Utilities</option>
           </select>
-          
+
           <select
             value={selectedDifficulty}
             onChange={(e: any) => setSelectedDifficulty(e.target.value)}
@@ -422,7 +462,9 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
                   <LightBulbIcon className="w-4 h-4 mr-2 text-blue-600" />
-                  <h3 className="font-semibold text-sm text-blue-900">AI Recommendations</h3>
+                  <h3 className="font-semibold text-sm text-blue-900">
+                    AI Recommendations
+                  </h3>
                 </div>
                 <button
                   onClick={() => setShowRecommendations(false)}
@@ -431,7 +473,7 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
                   Dismiss
                 </button>
               </div>
-              
+
               <div className="space-y-2">
                 {recommendations.slice(0, 3).map((rec, index) => (
                   <motion.button
@@ -445,8 +487,12 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
                     <div className="flex items-start">
                       <rec.widget.icon className="w-4 h-4 mt-0.5 mr-3 text-blue-600 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm text-gray-900">{rec.widget.title}</h4>
-                        <p className="text-xs text-blue-700 mt-1">{rec.reason}</p>
+                        <h4 className="font-medium text-sm text-gray-900">
+                          {rec.widget.title}
+                        </h4>
+                        <p className="text-xs text-blue-700 mt-1">
+                          {rec.reason}
+                        </p>
                         <div className="flex items-center mt-1">
                           <div className="flex items-center mr-2">
                             {Array.from({ length: 5 }).map((_, i) => (
@@ -478,15 +524,15 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
           <div key={category}>
             <div className="flex items-center mb-3">
               {React.createElement(categoryIcons[category] || ChartBarIcon, {
-                className: "w-4 h-4 mr-2 text-gray-600"
+                className: 'w-4 h-4 mr-2 text-gray-600',
               })}
               <h3 className="font-semibold text-sm text-gray-900 capitalize">
                 {category} ({widgets.length})
               </h3>
             </div>
-            
+
             <div className="grid gap-3">
-              {widgets.map((widget) => (
+              {widgets.map(widget => (
                 <motion.button
                   key={widget.type}
                   whileHover={{ scale: 1.02, y: -2 }}
@@ -502,15 +548,17 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
                         <h4 className="font-medium text-sm text-gray-900 group-hover:text-blue-900">
                           {widget.title}
                         </h4>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${difficultyColors[widget.difficulty]}`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${difficultyColors[widget.difficulty]}`}
+                        >
                           {widget.difficulty}
                         </span>
                       </div>
-                      
+
                       <p className="text-xs text-gray-600 mb-2 line-clamp-2">
                         {widget.description}
                       </p>
-                      
+
                       <div className="flex items-center justify-between">
                         <div className="flex flex-wrap gap-1">
                           {widget.tags.slice(0, 2).map((tag: any) => (
@@ -527,7 +575,7 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
                             </span>
                           )}
                         </div>
-                        
+
                         {currentWidgets.includes(widget.type) && (
                           <span className="text-xs text-green-600 font-medium">
                             Added ✓
@@ -541,11 +589,13 @@ const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
             </div>
           </div>
         ))}
-        
+
         {filteredWidgets.length === 0 && (
           <div className="text-center py-8">
             <MagnifyingGlassIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-sm">No widgets found matching your criteria</p>
+            <p className="text-gray-500 text-sm">
+              No widgets found matching your criteria
+            </p>
           </div>
         )}
       </div>

@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../../common/prisma.service';
-import OpenAI from 'openai';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import OpenAI from 'openai';
+import { PrismaService } from '../../../common/prisma.service';
 
 /**
  * Unified Theme Extraction Service
@@ -118,17 +118,47 @@ export class UnifiedThemeExtractionService {
   }
 
   /**
+   * Set the WebSocket gateway for progress updates
+   * Day 28: Progress Animations
+   */
+  private themeGateway: any;
+
+  setGateway(gateway: any) {
+    this.themeGateway = gateway;
+  }
+
+  private emitProgress(
+    userId: string,
+    stage: string,
+    percentage: number,
+    message: string,
+    details?: any,
+  ) {
+    if (this.themeGateway) {
+      this.themeGateway.emitProgress({
+        userId,
+        stage,
+        percentage,
+        message,
+        details,
+      });
+    }
+  }
+
+  /**
    * Extract themes from ANY source type with full provenance tracking
    *
    * @param sourceType - Type of sources to extract from
    * @param sourceIds - IDs of sources (Paper.id, VideoTranscript.id, etc.)
    * @param options - Extraction configuration
+   * @param providedSources - Optional: Full source data to avoid database queries
    * @returns Unified themes with complete provenance
    */
   async extractThemesFromSource(
     sourceType: 'paper' | 'youtube' | 'podcast' | 'tiktok' | 'instagram',
     sourceIds: string[],
     options: ExtractionOptions = {},
+    providedSources?: SourceContent[],
   ): Promise<UnifiedTheme[]> {
     const startTime = Date.now();
     this.logger.log(
@@ -154,8 +184,18 @@ export class UnifiedThemeExtractionService {
     }
 
     try {
-      // Fetch source content
-      const sources = await this.fetchSourceContent(sourceType, sourceIds);
+      // Use provided sources if available, otherwise fetch from database
+      let sources: SourceContent[];
+      if (providedSources && providedSources.length > 0) {
+        this.logger.log(
+          'Using provided source data (no database query needed)',
+        );
+        sources = providedSources;
+      } else {
+        this.logger.log('Fetching source content from database');
+        sources = await this.fetchSourceContent(sourceType, sourceIds);
+      }
+
       if (sources.length === 0) {
         this.logger.warn('No valid sources found');
         return [];
@@ -192,10 +232,7 @@ export class UnifiedThemeExtractionService {
       return storedThemes;
     } catch (error) {
       const err = error as Error;
-      this.logger.error(
-        `Theme extraction failed: ${err.message}`,
-        err.stack,
-      );
+      this.logger.error(`Theme extraction failed: ${err.message}`, err.stack);
       throw error;
     }
   }
@@ -246,9 +283,8 @@ export class UnifiedThemeExtractionService {
 
     // Calculate provenance for merged themes
     const mergedThemes = Array.from(themeMap.values());
-    const themesWithProvenance = await this.calculateProvenanceForThemes(
-      mergedThemes,
-    );
+    const themesWithProvenance =
+      await this.calculateProvenanceForThemes(mergedThemes);
 
     this.logger.log(`Merged into ${themesWithProvenance.length} unique themes`);
     return themesWithProvenance;
@@ -339,22 +375,27 @@ export class UnifiedThemeExtractionService {
     }
 
     // Group sources by type
-    const sourcesByType = sources.reduce((acc, source) => {
-      if (!acc[source.type]) {
-        acc[source.type] = [];
-      }
-      acc[source.type].push(source);
-      return acc;
-    }, {} as Record<string, SourceContent[]>);
+    const sourcesByType = sources.reduce(
+      (acc, source) => {
+        if (!acc[source.type]) {
+          acc[source.type] = [];
+        }
+        acc[source.type].push(source);
+        return acc;
+      },
+      {} as Record<string, SourceContent[]>,
+    );
 
     // Extract themes from each source type
     const extractionPromises = Object.entries(sourcesByType).map(
       async ([type, typeSources]) => {
         const sourceIds = typeSources.map((s) => s.id);
+        // Pass the full source data to avoid database queries
         const themes = await this.extractThemesFromSource(
           type as any,
           sourceIds,
           options,
+          typeSources, // Pass the full source data
         );
         return {
           type: type as any,
@@ -370,10 +411,13 @@ export class UnifiedThemeExtractionService {
     const mergedThemes = await this.mergeThemesFromSources(extractedGroups);
 
     // Calculate overall provenance
-    const provenance = mergedThemes.reduce((acc, theme) => {
-      acc[theme.id] = theme.provenance;
-      return acc;
-    }, {} as Record<string, ThemeProvenance>);
+    const provenance = mergedThemes.reduce(
+      (acc, theme) => {
+        acc[theme.id] = theme.provenance;
+        return acc;
+      },
+      {} as Record<string, ThemeProvenance>,
+    );
 
     return {
       themes: mergedThemes,
@@ -485,17 +529,22 @@ export class UnifiedThemeExtractionService {
           provenance: true,
         },
       });
-      themesByStudy[studyId] = themes.map((t: any) => this.mapToUnifiedTheme(t));
+      themesByStudy[studyId] = themes.map((t: any) =>
+        this.mapToUnifiedTheme(t),
+      );
     }
 
     // Find common themes (similar labels across studies)
     const allThemeLabels = studyIds.flatMap((id) =>
       themesByStudy[id].map((t) => t.label),
     );
-    const labelCounts = allThemeLabels.reduce((acc, label) => {
-      acc[label] = (acc[label] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const labelCounts = allThemeLabels.reduce(
+      (acc, label) => {
+        acc[label] = (acc[label] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     const commonThemeLabels = Object.entries(labelCounts)
       .filter(([_, count]) => count > 1)
@@ -684,7 +733,11 @@ Return JSON format:
 
     let lastError: Error | null = null;
 
-    for (let attempt = 1; attempt <= ENTERPRISE_CONFIG.MAX_RETRY_ATTEMPTS; attempt++) {
+    for (
+      let attempt = 1;
+      attempt <= ENTERPRISE_CONFIG.MAX_RETRY_ATTEMPTS;
+      attempt++
+    ) {
       try {
         const response = await this.openai.chat.completions.create({
           model: 'gpt-4-turbo-preview',
@@ -702,7 +755,8 @@ Return JSON format:
         );
 
         if (attempt < ENTERPRISE_CONFIG.MAX_RETRY_ATTEMPTS) {
-          const delay = ENTERPRISE_CONFIG.RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+          const delay =
+            ENTERPRISE_CONFIG.RETRY_DELAY_MS * Math.pow(2, attempt - 1);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
@@ -1006,7 +1060,12 @@ Return JSON format:
     for (const theme of themes) {
       const sourcesByType = theme.sources.reduce(
         (acc: any, src: ThemeSource) => {
-          const type = src.sourceType === 'youtube' || src.sourceType === 'podcast' ? 'video' : src.sourceType === 'paper' ? 'paper' : 'social';
+          const type =
+            src.sourceType === 'youtube' || src.sourceType === 'podcast'
+              ? 'video'
+              : src.sourceType === 'paper'
+                ? 'paper'
+                : 'social';
           acc[type] = (acc[type] || 0) + src.influence;
           return acc;
         },
@@ -1024,10 +1083,19 @@ Return JSON format:
         videoInfluence: (Number(sourcesByType.video) || 0) / totalInfluence,
         podcastInfluence: (Number(sourcesByType.podcast) || 0) / totalInfluence,
         socialInfluence: (Number(sourcesByType.social) || 0) / totalInfluence,
-        paperCount: theme.sources.filter((s: ThemeSource) => s.sourceType === 'paper').length,
-        videoCount: theme.sources.filter((s: ThemeSource) => s.sourceType === 'youtube').length,
-        podcastCount: theme.sources.filter((s: ThemeSource) => s.sourceType === 'podcast').length,
-        socialCount: theme.sources.filter((s: ThemeSource) => s.sourceType === 'tiktok' || s.sourceType === 'instagram').length,
+        paperCount: theme.sources.filter(
+          (s: ThemeSource) => s.sourceType === 'paper',
+        ).length,
+        videoCount: theme.sources.filter(
+          (s: ThemeSource) => s.sourceType === 'youtube',
+        ).length,
+        podcastCount: theme.sources.filter(
+          (s: ThemeSource) => s.sourceType === 'podcast',
+        ).length,
+        socialCount: theme.sources.filter(
+          (s: ThemeSource) =>
+            s.sourceType === 'tiktok' || s.sourceType === 'instagram',
+        ).length,
         averageConfidence: 0.8,
         citationChain: this.buildCitationChain(theme.sources),
       };
@@ -1040,7 +1108,10 @@ Return JSON format:
    * Find similar theme by label (for deduplication)
    * @private
    */
-  private findSimilarTheme(label: string, existingLabels: string[]): string | null {
+  private findSimilarTheme(
+    label: string,
+    existingLabels: string[],
+  ): string | null {
     const labelLower = label.toLowerCase();
 
     for (const existing of existingLabels) {

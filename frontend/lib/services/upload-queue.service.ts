@@ -65,6 +65,9 @@ export class UploadQueueService {
 
   async addFile(file: File): Promise<string> {
     const [taskId] = await this.addFiles([file]);
+    if (!taskId) {
+      throw new Error('Failed to add file to upload queue');
+    }
     return taskId;
   }
 
@@ -309,14 +312,17 @@ export class UploadQueueService {
       formData.append('totalChunks', chunks.toString());
       formData.append('fileId', fileId);
       formData.append('fileName', task.file.name);
-      formData.append('fileType', task.file.type);
+      formData.append('fileType', task.file.type || 'application/octet-stream');
       
       const studyId = this.getStudyId();
-      const response = await fetch(`/api/studies/${studyId}/stimuli`, {
+      const fetchOptions: RequestInit = {
         method: 'PATCH',
         body: formData,
-        signal: task.abortController?.signal
-      });
+      };
+      if (task.abortController) {
+        fetchOptions.signal = task.abortController.signal;
+      }
+      const response = await fetch(`/api/studies/${studyId}/stimuli`, fetchOptions);
       
       if (!response.ok) {
         throw new Error(`Chunk upload failed: ${response.statusText}`);
@@ -340,8 +346,11 @@ export class UploadQueueService {
     // Get from URL or context
     const pathParts = window.location.pathname.split('/');
     const studyIndex = pathParts.indexOf('studies');
-    if (studyIndex !== -1 && pathParts[studyIndex + 1]) {
-      return pathParts[studyIndex + 1];
+    if (studyIndex !== -1) {
+      const studyId = pathParts[studyIndex + 1];
+      if (studyId) {
+        return studyId;
+      }
     }
     return 'default';
   }

@@ -25,7 +25,7 @@ export const CorrelationHeatmap: React.FC<CorrelationHeatmapProps> = ({
   data,
   participants,
   width = 800,
-  height = 800
+  height = 800,
 }) => {
   const {
     tooltipData,
@@ -59,8 +59,9 @@ export const CorrelationHeatmap: React.FC<CorrelationHeatmapProps> = ({
   // Helper to get correlation value
   const getCorrelation = (p1: string, p2: string) => {
     const item = data.find(
-      d => (d.participant1 === p1 && d.participant2 === p2) ||
-           (d.participant1 === p2 && d.participant2 === p1)
+      d =>
+        (d.participant1 === p1 && d.participant2 === p2) ||
+        (d.participant1 === p2 && d.participant2 === p1)
     );
     return item ? item.correlation : p1 === p2 ? 1 : 0;
   };
@@ -164,7 +165,7 @@ export const CorrelationHeatmap: React.FC<CorrelationHeatmapProps> = ({
         <defs>
           <linearGradient id="colorLegend" x1="0%" y1="0%" x2="100%" y2="0%">
             {Array.from({ length: 21 }, (_, i) => {
-              const value = -1 + (i / 10);
+              const value = -1 + i / 10;
               return (
                 <stop
                   key={i}
@@ -222,40 +223,56 @@ export const CorrelationHeatmap: React.FC<CorrelationHeatmapProps> = ({
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
-        <TooltipWithBounds
-          left={tooltipLeft}
-          top={tooltipTop}
-          style={{
-            ...defaultStyles,
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            borderRadius: '8px',
-            padding: '8px 12px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-          }}
-        >
-          <div style={{ fontFamily: '-apple-system', fontSize: '12px' }}>
-            <strong>Correlation</strong>
-            <div style={{ marginTop: '4px' }}>
-              {tooltipData.participant1} ↔ {tooltipData.participant2}
+      {tooltipOpen &&
+        tooltipData &&
+        tooltipLeft !== undefined &&
+        tooltipTop !== undefined && (
+          <TooltipWithBounds
+            left={tooltipLeft}
+            top={tooltipTop}
+            style={{
+              ...defaultStyles,
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '8px',
+              padding: '8px 12px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            }}
+          >
+            <div style={{ fontFamily: '-apple-system', fontSize: '12px' }}>
+              <strong>Correlation</strong>
+              <div style={{ marginTop: '4px' }}>
+                {tooltipData.participant1} ↔ {tooltipData.participant2}
+              </div>
+              <div
+                style={{
+                  marginTop: '4px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                }}
+              >
+                <span
+                  style={{
+                    color: tooltipData.correlation > 0 ? '#007AFF' : '#FF3B30',
+                  }}
+                >
+                  {tooltipData.correlation.toFixed(3)}
+                </span>
+              </div>
+              <div
+                style={{ marginTop: '2px', fontSize: '10px', color: '#666' }}
+              >
+                {Math.abs(tooltipData.correlation) >= 0.7
+                  ? 'Strong'
+                  : Math.abs(tooltipData.correlation) >= 0.4
+                    ? 'Moderate'
+                    : 'Weak'}{' '}
+                correlation
+              </div>
             </div>
-            <div style={{ marginTop: '4px', fontSize: '14px', fontWeight: '600' }}>
-              <span style={{ 
-                color: tooltipData.correlation > 0 ? '#007AFF' : '#FF3B30' 
-              }}>
-                {tooltipData.correlation.toFixed(3)}
-              </span>
-            </div>
-            <div style={{ marginTop: '2px', fontSize: '10px', color: '#666' }}>
-              {Math.abs(tooltipData.correlation) >= 0.7 ? 'Strong' :
-               Math.abs(tooltipData.correlation) >= 0.4 ? 'Moderate' :
-               'Weak'} correlation
-            </div>
-          </div>
-        </TooltipWithBounds>
-      )}
+          </TooltipWithBounds>
+        )}
     </>
   );
 };

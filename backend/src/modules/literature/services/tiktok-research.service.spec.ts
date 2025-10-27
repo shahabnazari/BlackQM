@@ -28,24 +28,24 @@ describe('TikTokResearchService', () => {
     videoTranscript: {
       findUnique: jest.fn(),
       create: jest.fn(),
-      findFirst: jest.fn()
+      findFirst: jest.fn(),
     },
     socialMediaContent: {
-      upsert: jest.fn()
-    }
+      upsert: jest.fn(),
+    },
   };
 
   const mockHttpService = {
     post: jest.fn(),
-    get: jest.fn()
+    get: jest.fn(),
   };
 
   const mockTranscriptionService = {
-    transcribeAudioFile: jest.fn()
+    transcribeAudioFile: jest.fn(),
   };
 
   const mockMultimediaAnalysisService = {
-    extractThemesFromTranscript: jest.fn()
+    extractThemesFromTranscript: jest.fn(),
   };
 
   const mockConfigService = {
@@ -53,7 +53,7 @@ describe('TikTokResearchService', () => {
       if (key === 'TIKTOK_RESEARCH_API_KEY') return 'test-api-key';
       if (key === 'TIKTOK_CLIENT_SECRET') return 'test-secret';
       return null;
-    })
+    }),
   };
 
   beforeEach(async () => {
@@ -63,16 +63,22 @@ describe('TikTokResearchService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: HttpService, useValue: mockHttpService },
         { provide: TranscriptionService, useValue: mockTranscriptionService },
-        { provide: MultiMediaAnalysisService, useValue: mockMultimediaAnalysisService },
-        { provide: ConfigService, useValue: mockConfigService }
+        {
+          provide: MultiMediaAnalysisService,
+          useValue: mockMultimediaAnalysisService,
+        },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
     service = module.get<TikTokResearchService>(TikTokResearchService);
     prisma = module.get<PrismaService>(PrismaService);
     httpService = module.get<HttpService>(HttpService);
-    transcriptionService = module.get<TranscriptionService>(TranscriptionService);
-    multimediaAnalysisService = module.get<MultiMediaAnalysisService>(MultiMediaAnalysisService);
+    transcriptionService =
+      module.get<TranscriptionService>(TranscriptionService);
+    multimediaAnalysisService = module.get<MultiMediaAnalysisService>(
+      MultiMediaAnalysisService,
+    );
     configService = module.get<ConfigService>(ConfigService);
   });
 
@@ -98,12 +104,17 @@ describe('TikTokResearchService', () => {
           { provide: PrismaService, useValue: mockPrismaService },
           { provide: HttpService, useValue: mockHttpService },
           { provide: TranscriptionService, useValue: mockTranscriptionService },
-          { provide: MultiMediaAnalysisService, useValue: mockMultimediaAnalysisService },
-          { provide: ConfigService, useValue: mockConfigService }
+          {
+            provide: MultiMediaAnalysisService,
+            useValue: mockMultimediaAnalysisService,
+          },
+          { provide: ConfigService, useValue: mockConfigService },
         ],
       }).compile();
 
-      const serviceWithoutApi = module.get<TikTokResearchService>(TikTokResearchService);
+      const serviceWithoutApi = module.get<TikTokResearchService>(
+        TikTokResearchService,
+      );
       expect(serviceWithoutApi['hasResearchApiAccess']).toBe(false);
     });
   });
@@ -126,25 +137,23 @@ describe('TikTokResearchService', () => {
                 like_count: 100,
                 share_count: 50,
                 comment_count: 25,
-                hashtag_names: ['test', 'research']
-              }
+                hashtag_names: ['test', 'research'],
+              },
             ],
             total: 1,
             has_more: false,
-            cursor: null
-          }
-        }
+            cursor: null,
+          },
+        },
       };
 
       // Mock access token request
       mockHttpService.post.mockReturnValueOnce(
-        of({ data: { access_token: mockAccessToken } })
+        of({ data: { access_token: mockAccessToken } }),
       );
 
       // Mock search request
-      mockHttpService.post.mockReturnValueOnce(
-        of(mockSearchResponse)
-      );
+      mockHttpService.post.mockReturnValueOnce(of(mockSearchResponse));
 
       const result = await service.searchTikTokVideos('climate change', 10);
 
@@ -156,19 +165,19 @@ describe('TikTokResearchService', () => {
     });
 
     it('should throw error when maxResults exceeds 100', async () => {
-      await expect(service.searchTikTokVideos('test', 150))
-        .rejects
-        .toThrow('Maximum 100 results per search');
+      await expect(service.searchTikTokVideos('test', 150)).rejects.toThrow(
+        'Maximum 100 results per search',
+      );
     });
 
     it('should handle API errors gracefully', async () => {
       mockHttpService.post.mockReturnValueOnce(
-        throwError(() => new Error('API Error'))
+        throwError(() => new Error('API Error')),
       );
 
-      await expect(service.searchTikTokVideos('test', 10))
-        .rejects
-        .toThrow('Failed to search TikTok');
+      await expect(service.searchTikTokVideos('test', 10)).rejects.toThrow(
+        'Failed to search TikTok',
+      );
     });
 
     it('should use fallback when Research API is not available', async () => {
@@ -192,10 +201,12 @@ describe('TikTokResearchService', () => {
         transcript: 'Cached transcript',
         timestampedText: [],
         duration: 60,
-        confidence: 0.95
+        confidence: 0.95,
       };
 
-      mockPrismaService.videoTranscript.findUnique.mockResolvedValue(mockCachedTranscript);
+      mockPrismaService.videoTranscript.findUnique.mockResolvedValue(
+        mockCachedTranscript,
+      );
 
       const result = await service.transcribeTikTokVideo(mockVideoId);
 
@@ -212,10 +223,12 @@ describe('TikTokResearchService', () => {
         segments: [],
         language: 'en',
         confidence: 0.9,
-        duration: 60
+        duration: 60,
       };
 
-      mockTranscriptionService.transcribeAudioFile.mockResolvedValue(mockTranscriptionResult);
+      mockTranscriptionService.transcribeAudioFile.mockResolvedValue(
+        mockTranscriptionResult,
+      );
 
       const mockSavedTranscript = {
         id: 'new-transcript-123',
@@ -225,16 +238,18 @@ describe('TikTokResearchService', () => {
         transcript: 'Test transcript',
         timestampedText: [],
         duration: 60,
-        confidence: 0.9
+        confidence: 0.9,
       };
 
-      mockPrismaService.videoTranscript.create.mockResolvedValue(mockSavedTranscript);
+      mockPrismaService.videoTranscript.create.mockResolvedValue(
+        mockSavedTranscript,
+      );
 
       // Note: This test will require mocking file system operations
       // For now, we'll expect it to throw since we can't actually download videos in tests
-      await expect(service.transcribeTikTokVideo(mockVideoId))
-        .rejects
-        .toThrow();
+      await expect(
+        service.transcribeTikTokVideo(mockVideoId),
+      ).rejects.toThrow();
     });
   });
 
@@ -248,7 +263,7 @@ describe('TikTokResearchService', () => {
       timestampedText: [],
       duration: 60,
       confidence: 0.95,
-      cost: 0
+      cost: 0,
     };
 
     const mockThemes = [
@@ -258,16 +273,20 @@ describe('TikTokResearchService', () => {
         keywords: ['climate', 'change', 'warming'],
         summary: 'Discussion about climate change impacts',
         timestamps: [],
-        quotes: []
-      }
+        quotes: [],
+      },
     ];
 
     it('should analyze TikTok content successfully', async () => {
       // Mock transcription
-      jest.spyOn(service, 'transcribeTikTokVideo').mockResolvedValue(mockTranscript);
+      jest
+        .spyOn(service, 'transcribeTikTokVideo')
+        .mockResolvedValue(mockTranscript);
 
       // Mock theme extraction
-      mockMultimediaAnalysisService.extractThemesFromTranscript.mockResolvedValue(mockThemes);
+      mockMultimediaAnalysisService.extractThemesFromTranscript.mockResolvedValue(
+        mockThemes,
+      );
 
       // Mock metadata
       jest.spyOn(service as any, 'getTikTokMetadata').mockResolvedValue({
@@ -279,12 +298,15 @@ describe('TikTokResearchService', () => {
         shares: 50,
         comments: 25,
         hashtags: ['climate', 'science'],
-        trends: []
+        trends: [],
       });
 
       mockPrismaService.socialMediaContent.upsert.mockResolvedValue({});
 
-      const result = await service.analyzeTikTokContent(mockVideoId, 'climate change research');
+      const result = await service.analyzeTikTokContent(
+        mockVideoId,
+        'climate change research',
+      );
 
       expect(result.videoId).toBe(mockVideoId);
       expect(result.transcript?.id).toBe('transcript-123');
@@ -299,7 +321,7 @@ describe('TikTokResearchService', () => {
         views: 1000,
         likes: 100,
         shares: 50,
-        comments: 25
+        comments: 25,
       };
 
       const engagement = service['calculateEngagement'](metadata);
@@ -316,7 +338,7 @@ describe('TikTokResearchService', () => {
         views: 5000,
         likes: 500,
         shares: 200,
-        comments: 100
+        comments: 100,
       });
 
       const result = await service.analyzeEngagementMetrics('video123');
@@ -332,7 +354,7 @@ describe('TikTokResearchService', () => {
   describe('extractHashtags', () => {
     it('should extract hashtags from video', async () => {
       jest.spyOn(service as any, 'getTikTokMetadata').mockResolvedValue({
-        hashtags: ['climate', 'science', 'research']
+        hashtags: ['climate', 'science', 'research'],
       });
 
       const result = await service.extractHashtags('video123');
@@ -344,7 +366,7 @@ describe('TikTokResearchService', () => {
   describe('identifyTrends', () => {
     it('should identify trends from video', async () => {
       jest.spyOn(service as any, 'getTikTokMetadata').mockResolvedValue({
-        trends: ['sustainability', 'green-energy']
+        trends: ['sustainability', 'green-energy'],
       });
 
       const result = await service.identifyTrends('video123');
@@ -358,14 +380,14 @@ describe('TikTokResearchService', () => {
       const themes = [
         { relevanceScore: 0.9 } as any,
         { relevanceScore: 0.8 } as any,
-        { relevanceScore: 0.7 } as any
+        { relevanceScore: 0.7 } as any,
       ];
 
       const metadata = {
         views: 1000,
         likes: 100,
         shares: 50,
-        comments: 50
+        comments: 50,
       };
 
       const score = service['calculateRelevanceScore'](themes, metadata);
@@ -388,7 +410,7 @@ describe('TikTokResearchService', () => {
         like_count: 100,
         share_count: 50,
         comment_count: 25,
-        hashtag_names: ['test']
+        hashtag_names: ['test'],
       };
 
       const parsed = service['parseResearchAPIVideo'](apiVideo);
@@ -414,23 +436,23 @@ describe('TikTokResearchService', () => {
     it('should handle transcription errors gracefully', async () => {
       mockPrismaService.videoTranscript.findUnique.mockResolvedValue(null);
 
-      jest.spyOn(service as any, 'downloadTikTokVideo').mockRejectedValue(
-        new Error('Download failed')
-      );
+      jest
+        .spyOn(service as any, 'downloadTikTokVideo')
+        .mockRejectedValue(new Error('Download failed'));
 
-      await expect(service.transcribeTikTokVideo('video123'))
-        .rejects
-        .toThrow('Failed to transcribe TikTok video');
+      await expect(service.transcribeTikTokVideo('video123')).rejects.toThrow(
+        'Failed to transcribe TikTok video',
+      );
     });
 
     it('should handle analysis errors gracefully', async () => {
-      jest.spyOn(service, 'transcribeTikTokVideo').mockRejectedValue(
-        new Error('Transcription failed')
-      );
+      jest
+        .spyOn(service, 'transcribeTikTokVideo')
+        .mockRejectedValue(new Error('Transcription failed'));
 
-      await expect(service.analyzeTikTokContent('video123'))
-        .rejects
-        .toThrow('Failed to analyze TikTok content');
+      await expect(service.analyzeTikTokContent('video123')).rejects.toThrow(
+        'Failed to analyze TikTok content',
+      );
     });
   });
 });

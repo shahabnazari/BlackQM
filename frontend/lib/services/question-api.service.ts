@@ -1,44 +1,15 @@
 import { api } from '@/lib/api';
+import { Question, QuestionType } from '@/lib/types/questionnaire';
 
 /**
  * Phase 8.2 Day 1: Question API Service
- * 
+ *
  * Frontend service for interacting with question endpoints
  * World-class error handling and type safety
  */
 
-export interface Question {
-  id: string;
-  surveyId: string;
-  type: QuestionType;
-  text: string;
-  description?: string;
-  required: boolean;
-  order: number;
-  validation?: any;
-  options?: any;
-  logic?: any;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export enum QuestionType {
-  MULTIPLE_CHOICE_SINGLE = 'MULTIPLE_CHOICE_SINGLE',
-  MULTIPLE_CHOICE_MULTI = 'MULTIPLE_CHOICE_MULTI',
-  DROPDOWN = 'DROPDOWN',
-  RATING_SCALE = 'RATING_SCALE',
-  LIKERT_SCALE = 'LIKERT_SCALE',
-  SEMANTIC_DIFFERENTIAL = 'SEMANTIC_DIFFERENTIAL',
-  TEXT_ENTRY = 'TEXT_ENTRY',
-  NUMERIC_ENTRY = 'NUMERIC_ENTRY',
-  DATE_TIME = 'DATE_TIME',
-  SLIDER = 'SLIDER',
-  RANK_ORDER = 'RANK_ORDER',
-  MATRIX_GRID = 'MATRIX_GRID',
-  FILE_UPLOAD = 'FILE_UPLOAD',
-  CONSTANT_SUM = 'CONSTANT_SUM',
-  NET_PROMOTER_SCORE = 'NET_PROMOTER_SCORE'
-}
+// Re-export Question type from questionnaire types
+export type { Question };
 
 export interface ScreeningResult {
   qualified: boolean;
@@ -59,7 +30,7 @@ export interface CreateQuestionDto {
   order: number;
   validation?: any;
   options?: any;
-  logic?: any;
+  skipLogic?: any;
 }
 
 export interface UpdateQuestionDto {
@@ -70,7 +41,7 @@ export interface UpdateQuestionDto {
   order?: number;
   validation?: any;
   options?: any;
-  logic?: any;
+  skipLogic?: any;
 }
 
 export interface ImportQuestionsDto {
@@ -105,7 +76,8 @@ class QuestionAPIService {
     }
   ): Promise<Question[]> {
     try {
-      const response = await api.get(`${this.baseUrl}/survey/${surveyId}`, { params });
+      const options = params ? { params } : undefined;
+      const response = await api.get(`${this.baseUrl}/survey/${surveyId}`, options);
       return response.data;
     } catch (error) {
       console.error('Error fetching questions:', error);
@@ -118,7 +90,9 @@ class QuestionAPIService {
    */
   async getScreeningQuestions(surveyId: string): Promise<Question[]> {
     try {
-      const response = await api.get(`${this.baseUrl}/survey/${surveyId}/screening`);
+      const response = await api.get(
+        `${this.baseUrl}/survey/${surveyId}/screening`
+      );
       return response.data;
     } catch (error) {
       console.error('Error fetching screening questions:', error);
@@ -221,7 +195,7 @@ class QuestionAPIService {
       const response = await api.post(`${this.baseUrl}/export`, {
         surveyId,
         format,
-        ...options
+        ...options,
       });
       return response.data;
     } catch (error) {
@@ -233,11 +207,14 @@ class QuestionAPIService {
   /**
    * Duplicate questions between surveys
    */
-  async duplicateQuestions(fromSurveyId: string, toSurveyId: string): Promise<Question[]> {
+  async duplicateQuestions(
+    fromSurveyId: string,
+    toSurveyId: string
+  ): Promise<Question[]> {
     try {
       const response = await api.post(`${this.baseUrl}/duplicate`, {
         fromSurveyId,
-        toSurveyId
+        toSurveyId,
       });
       return response.data;
     } catch (error) {
@@ -251,9 +228,8 @@ class QuestionAPIService {
    */
   async getTemplates(category?: string): Promise<QuestionTemplate[]> {
     try {
-      const response = await api.get(`${this.baseUrl}/templates`, {
-        params: category ? { category } : undefined
-      });
+      const options = category ? { params: { category } } : undefined;
+      const response = await api.get(`${this.baseUrl}/templates`, options);
       return response.data;
     } catch (error) {
       console.error('Error fetching templates:', error);
@@ -270,7 +246,10 @@ class QuestionAPIService {
     targetAudience?: string;
   }): Promise<CreateQuestionDto[]> {
     try {
-      const response = await api.post(`${this.baseUrl}/ai/suggestions`, context);
+      const response = await api.post(
+        `${this.baseUrl}/ai/suggestions`,
+        context
+      );
       return response.data;
     } catch (error) {
       console.error('Error getting AI suggestions:', error);
@@ -281,14 +260,17 @@ class QuestionAPIService {
   /**
    * Validate an answer
    */
-  async validateAnswer(questionId: string, value: any): Promise<{
+  async validateAnswer(
+    questionId: string,
+    value: any
+  ): Promise<{
     valid: boolean;
     errors?: string[];
   }> {
     try {
       const response = await api.post(`${this.baseUrl}/validate`, {
         questionId,
-        value
+        value,
       });
       return response.data;
     } catch (error) {
@@ -305,9 +287,12 @@ class QuestionAPIService {
     previousAnswers: Record<string, any>
   ): Promise<Question[]> {
     try {
-      const response = await api.post(`${this.baseUrl}/survey/${surveyId}/visible`, {
-        previousAnswers
-      });
+      const response = await api.post(
+        `${this.baseUrl}/survey/${surveyId}/visible`,
+        {
+          previousAnswers,
+        }
+      );
       return response.data;
     } catch (error) {
       console.error('Error getting visible questions:', error);

@@ -396,8 +396,9 @@ export function CollaborationManager() {
         a =>
           a.type === 'edit' &&
           activities[i] &&
-          Math.abs(a.timestamp.getTime() - (activities[i]?.timestamp.getTime() || 0)) <
-            timeWindow
+          Math.abs(
+            a.timestamp.getTime() - (activities[i]?.timestamp.getTime() || 0)
+          ) < timeWindow
       );
 
       if (editsInWindow.length >= 3) {

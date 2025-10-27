@@ -52,13 +52,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(currentUser);
         } else {
           console.log('[AuthProvider] No token found');
+          // Ensure storage is clean
+          authService.clearAuthData();
+          setUser(null);
         }
       } catch (error: any) {
-        console.error('[AuthProvider] Session check failed:', error);
-        // Clear invalid token
+        // Session check failed - clear all auth data
+        console.log('[AuthProvider] Session check failed, clearing auth data:', error.message || error);
         authService.clearAuthData();
         setUser(null);
       } finally {
+        // Always set loading to false
+        console.log('[AuthProvider] Session check complete');
         setIsLoading(false);
       }
     };

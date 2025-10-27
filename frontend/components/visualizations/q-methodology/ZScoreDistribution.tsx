@@ -37,10 +37,14 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
   width = 900,
   height = 600,
   showVariance = true,
-  highlightStatement
+  highlightStatement,
 }) => {
-  const [selectedStatements, setSelectedStatements] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<'individual' | 'comparison' | 'variance'>('individual');
+  const [selectedStatements, setSelectedStatements] = useState<Set<string>>(
+    new Set()
+  );
+  const [viewMode, setViewMode] = useState<
+    'individual' | 'comparison' | 'variance'
+  >('individual');
   const [sortBy, setSortBy] = useState<'id' | 'variance' | 'mean'>('variance');
 
   const {
@@ -50,7 +54,11 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
     tooltipOpen,
     showTooltip,
     hideTooltip,
-  } = useTooltip<{ statement: StatementDistribution; factor: string; zScore: number }>();
+  } = useTooltip<{
+    statement: StatementDistribution;
+    factor: string;
+    zScore: number;
+  }>();
 
   // Chart dimensions
   const margin = { top: 60, right: 40, bottom: 80, left: 80 };
@@ -70,7 +78,9 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
   });
 
   // Get Z-score range across all statements and factors
-  const allZScores = data.flatMap(s => s.distributions.map((d: any) => d.zScore));
+  const allZScores = data.flatMap(s =>
+    s.distributions.map((d: any) => d.zScore)
+  );
   const zScoreExtent = [Math.min(...allZScores), Math.max(...allZScores)];
 
   // Scales
@@ -97,9 +107,10 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
   });
 
   // Filter data based on selections
-  const displayData = selectedStatements.size > 0 
-    ? sortedData.filter((d: any) => selectedStatements.has(d.statementId))
-    : sortedData.slice(0, Math.min(20, sortedData.length)); // Limit to 20 for readability
+  const displayData =
+    selectedStatements.size > 0
+      ? sortedData.filter((d: any) => selectedStatements.has(d.statementId))
+      : sortedData.slice(0, Math.min(20, sortedData.length)); // Limit to 20 for readability
 
   const toggleStatement = (statementId: string) => {
     const newSelection = new Set(selectedStatements);
@@ -130,7 +141,9 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
                 y={0}
                 width={statementWidth}
                 height={innerHeight}
-                fill={String(varianceColorScale(statement.variance) || '#E5E5EA')}
+                fill={String(
+                  varianceColorScale(statement.variance) || '#E5E5EA'
+                )}
                 opacity={0.1}
                 style={{ transformOrigin: 'bottom' }}
               />
@@ -139,7 +152,9 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
             {/* Z-score distribution points and lines */}
             {statement.distributions.map((distribution, factorIndex) => {
               const pointY = yScale(distribution.zScore);
-              const factorX = (factorIndex / (statement.distributions.length - 1)) * statementWidth;
+              const factorX =
+                (factorIndex / (statement.distributions.length - 1)) *
+                statementWidth;
 
               return (
                 <motion.g
@@ -154,8 +169,14 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
                   {/* Connect points with lines */}
                   {factorIndex > 0 && (
                     <line
-                      x1={(factorIndex - 1) / (statement.distributions.length - 1) * statementWidth}
-                      y1={yScale(statement.distributions[factorIndex - 1]?.zScore || 0)}
+                      x1={
+                        ((factorIndex - 1) /
+                          (statement.distributions.length - 1)) *
+                        statementWidth
+                      }
+                      y1={yScale(
+                        statement.distributions[factorIndex - 1]?.zScore || 0
+                      )}
                       x2={factorX}
                       y2={pointY}
                       stroke={factorColorScale(distribution.factor)}
@@ -200,7 +221,9 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
                       fontFamily="-apple-system"
                       pointerEvents="none"
                     >
-                      {distribution.qSortValue > 0 ? `+${distribution.qSortValue}` : String(distribution.qSortValue)}
+                      {distribution.qSortValue > 0
+                        ? `+${distribution.qSortValue}`
+                        : String(distribution.qSortValue)}
                     </text>
                   )}
                 </motion.g>
@@ -246,14 +269,18 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
       );
     }
 
-    const compareData = data.filter((d: any) => selectedStatements.has(d.statementId));
-    
+    const compareData = data.filter((d: any) =>
+      selectedStatements.has(d.statementId)
+    );
+
     return (
       <Group>
         {factors.map((factor, factorIndex) => {
           const factorData = compareData.map((statement, index) => ({
             x: index,
-            y: statement.distributions.find(d => d.factor === factor)?.zScore || 0,
+            y:
+              statement.distributions.find(d => d.factor === factor)?.zScore ||
+              0,
             statement: statement.statementId,
           }));
 
@@ -273,7 +300,10 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
               {/* Factor line */}
               <LinePath
                 data={factorData}
-                x={d => (factorXScale(String(d.x)) || 0) + factorXScale.bandwidth() / 2}
+                x={d =>
+                  (factorXScale(String(d.x)) || 0) +
+                  factorXScale.bandwidth() / 2
+                }
                 y={d => yScale(d.y)}
                 stroke={factorColorScale(factor)}
                 strokeWidth={3}
@@ -282,10 +312,13 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
               />
 
               {/* Factor points */}
-              {factorData.map((point) => (
+              {factorData.map(point => (
                 <circle
                   key={`${factor}-${point.x}`}
-                  cx={(factorXScale(String(point.x)) || 0) + factorXScale.bandwidth() / 2}
+                  cx={
+                    (factorXScale(String(point.x)) || 0) +
+                    factorXScale.bandwidth() / 2
+                  }
                   cy={yScale(point.y)}
                   r={5}
                   fill={factorColorScale(factor)}
@@ -323,7 +356,9 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
       {sortedData.slice(0, 30).map((statement, index) => {
         const barX = xScale(statement.statementId) || 0;
         const barWidth = xScale.bandwidth();
-        const barHeight = (statement.variance / Math.max(...data.map((d: any) => d.variance))) * innerHeight;
+        const barHeight =
+          (statement.variance / Math.max(...data.map((d: any) => d.variance))) *
+          innerHeight;
 
         return (
           <motion.g
@@ -331,7 +366,9 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
             initial={{ scaleY: 0, opacity: 0 }}
             animate={{ scaleY: 1, opacity: 1 }}
             transition={{ delay: index * 0.02, duration: 0.5 }}
-            style={{ transformOrigin: `${barX + barWidth/2}px ${innerHeight}px` }}
+            style={{
+              transformOrigin: `${barX + barWidth / 2}px ${innerHeight}px`,
+            }}
           >
             <rect
               x={barX}
@@ -385,7 +422,9 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
                 y={0}
                 width={90}
                 height={30}
-                fill={viewMode === mode ? '#007AFF' : 'rgba(255, 255, 255, 0.8)'}
+                fill={
+                  viewMode === mode ? '#007AFF' : 'rgba(255, 255, 255, 0.8)'
+                }
                 stroke="#007AFF"
                 strokeWidth={1}
                 rx={8}
@@ -421,7 +460,9 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
                   y={0}
                   width={70}
                   height={30}
-                  fill={sortBy === sort ? '#34C759' : 'rgba(255, 255, 255, 0.8)'}
+                  fill={
+                    sortBy === sort ? '#34C759' : 'rgba(255, 255, 255, 0.8)'
+                  }
                   stroke="#34C759"
                   strokeWidth={1}
                   rx={8}
@@ -533,12 +574,7 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
             </text>
             {factors.map((factor, i) => (
               <Group key={factor} top={20 + i * 20}>
-                <circle
-                  cx={5}
-                  cy={5}
-                  r={4}
-                  fill={factorColorScale(factor)}
-                />
+                <circle cx={5} cy={5} r={4} fill={factorColorScale(factor)} />
                 <text
                   x={15}
                   y={9}
@@ -591,49 +627,70 @@ export const ZScoreDistribution: React.FC<ZScoreDistributionProps> = ({
             fontFamily="-apple-system"
             fill="#666"
           >
-            Z-Score range: [{(zScoreExtent[0] || -3).toFixed(2)}, {(zScoreExtent[1] || 3).toFixed(2)}]
+            Z-Score range: [{(zScoreExtent[0] || -3).toFixed(2)},{' '}
+            {(zScoreExtent[1] || 3).toFixed(2)}]
           </text>
         </Group>
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
-        <TooltipWithBounds
-          left={tooltipLeft}
-          top={tooltipTop}
-          style={{
-            ...defaultStyles,
-            backgroundColor: 'rgba(255, 255, 255, 0.98)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            borderRadius: '12px',
-            padding: '12px 16px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
-            maxWidth: '300px',
-          }}
-        >
-          <div style={{ fontFamily: '-apple-system', fontSize: '12px', lineHeight: 1.4 }}>
-            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '6px' }}>
-              Statement {tooltipData.statement.statementId}
-            </div>
-            <div style={{ marginBottom: '8px', color: '#333' }}>
-              {tooltipData.statement.statement}
-            </div>
-            <div style={{ fontSize: '11px', color: '#666' }}>
-              <div>
-                Factor {tooltipData.factor}: <span style={{ 
-                  fontWeight: '600', 
-                  color: factorColorScale(tooltipData.factor) 
-                }}>
-                  {tooltipData.zScore.toFixed(3)}
-                </span>
+      {tooltipOpen &&
+        tooltipData &&
+        tooltipLeft !== undefined &&
+        tooltipTop !== undefined && (
+          <TooltipWithBounds
+            left={tooltipLeft}
+            top={tooltipTop}
+            style={{
+              ...defaultStyles,
+              backgroundColor: 'rgba(255, 255, 255, 0.98)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+              maxWidth: '300px',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: '-apple-system',
+                fontSize: '12px',
+                lineHeight: 1.4,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  marginBottom: '6px',
+                }}
+              >
+                Statement {tooltipData.statement.statementId}
               </div>
-              <div>Variance: {tooltipData.statement.variance.toFixed(3)}</div>
-              <div>Mean Z-Score: {tooltipData.statement.meanZScore.toFixed(3)}</div>
+              <div style={{ marginBottom: '8px', color: '#333' }}>
+                {tooltipData.statement.statement}
+              </div>
+              <div style={{ fontSize: '11px', color: '#666' }}>
+                <div>
+                  Factor {tooltipData.factor}:{' '}
+                  <span
+                    style={{
+                      fontWeight: '600',
+                      color: factorColorScale(tooltipData.factor),
+                    }}
+                  >
+                    {tooltipData.zScore.toFixed(3)}
+                  </span>
+                </div>
+                <div>Variance: {tooltipData.statement.variance.toFixed(3)}</div>
+                <div>
+                  Mean Z-Score: {tooltipData.statement.meanZScore.toFixed(3)}
+                </div>
+              </div>
             </div>
-          </div>
-        </TooltipWithBounds>
-      )}
+          </TooltipWithBounds>
+        )}
     </>
   );
 };

@@ -32,9 +32,11 @@ export const FactorLoadingChart: React.FC<FactorLoadingChartProps> = ({
   width = 900,
   height = 500,
   significanceThreshold = 0.4,
-  show3D = false
+  show3D = false,
 }) => {
-  const [selectedParticipant, setSelectedParticipant] = useState<string | null>(null);
+  const [selectedParticipant, setSelectedParticipant] = useState<string | null>(
+    null
+  );
   const {
     tooltipData,
     tooltipLeft,
@@ -54,8 +56,8 @@ export const FactorLoadingChart: React.FC<FactorLoadingChartProps> = ({
     return data.map((d: any) => ({
       ...d,
       // Apply 3D perspective transformation if enabled
-      displayX: show3D && d.z !== undefined ? d.x + (d.z * 0.3) : d.x,
-      displayY: show3D && d.z !== undefined ? d.y + (d.z * 0.2) : d.y,
+      displayX: show3D && d.z !== undefined ? d.x + d.z * 0.3 : d.x,
+      displayY: show3D && d.z !== undefined ? d.y + d.z * 0.2 : d.y,
     }));
   }, [data, show3D]);
 
@@ -78,7 +80,15 @@ export const FactorLoadingChart: React.FC<FactorLoadingChartProps> = ({
 
   const colorScale = scaleOrdinal({
     domain: factors.concat(['undefined']),
-    range: ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#5856D6', '#00C7BE', '#8E8E93'],
+    range: [
+      '#007AFF',
+      '#34C759',
+      '#FF9500',
+      '#FF3B30',
+      '#5856D6',
+      '#00C7BE',
+      '#8E8E93',
+    ],
   });
 
   return (
@@ -117,16 +127,44 @@ export const FactorLoadingChart: React.FC<FactorLoadingChartProps> = ({
         />
 
         {/* Quadrant labels */}
-        <text x={xScale(0.7)} y={yScale(0.7)} fontSize={10} fontFamily="-apple-system" fill="#666" textAnchor="middle">
+        <text
+          x={xScale(0.7)}
+          y={yScale(0.7)}
+          fontSize={10}
+          fontFamily="-apple-system"
+          fill="#666"
+          textAnchor="middle"
+        >
           High F1 & F2
         </text>
-        <text x={xScale(-0.7)} y={yScale(0.7)} fontSize={10} fontFamily="-apple-system" fill="#666" textAnchor="middle">
+        <text
+          x={xScale(-0.7)}
+          y={yScale(0.7)}
+          fontSize={10}
+          fontFamily="-apple-system"
+          fill="#666"
+          textAnchor="middle"
+        >
           Low F1, High F2
         </text>
-        <text x={xScale(-0.7)} y={yScale(-0.7)} fontSize={10} fontFamily="-apple-system" fill="#666" textAnchor="middle">
+        <text
+          x={xScale(-0.7)}
+          y={yScale(-0.7)}
+          fontSize={10}
+          fontFamily="-apple-system"
+          fill="#666"
+          textAnchor="middle"
+        >
           Low F1 & F2
         </text>
-        <text x={xScale(0.7)} y={yScale(-0.7)} fontSize={10} fontFamily="-apple-system" fill="#666" textAnchor="middle">
+        <text
+          x={xScale(0.7)}
+          y={yScale(-0.7)}
+          fontSize={10}
+          fontFamily="-apple-system"
+          fill="#666"
+          textAnchor="middle"
+        >
           High F1, Low F2
         </text>
 
@@ -157,26 +195,27 @@ export const FactorLoadingChart: React.FC<FactorLoadingChartProps> = ({
             const x = xScale(participant.displayX);
             const y = yScale(participant.displayY);
             const radius = radiusScale(participant.loadingStrength);
-            const isSignificant = participant.loadingStrength >= significanceThreshold;
+            const isSignificant =
+              participant.loadingStrength >= significanceThreshold;
             const isSelected = selectedParticipant === participant.participant;
-            const bubbleColor = participant.definingFactor 
-              ? colorScale(participant.definingFactor) 
+            const bubbleColor = participant.definingFactor
+              ? colorScale(participant.definingFactor)
               : colorScale('undefined');
 
             return (
               <motion.g
                 key={participant.participant}
                 initial={{ opacity: 0, scale: 0 }}
-                animate={{ 
+                animate={{
                   opacity: isSelected || !selectedParticipant ? 1 : 0.4,
-                  scale: isSelected ? 1.2 : 1
+                  scale: isSelected ? 1.2 : 1,
                 }}
                 transition={{
                   delay: i * 0.05,
                   duration: 0.4,
-                  type: "spring",
+                  type: 'spring',
                   stiffness: 300,
-                  damping: 30
+                  damping: 30,
                 }}
               >
                 {/* 3D shadow effect */}
@@ -189,7 +228,7 @@ export const FactorLoadingChart: React.FC<FactorLoadingChartProps> = ({
                     opacity={0.3}
                   />
                 )}
-                
+
                 {/* Main bubble */}
                 <circle
                   cx={x}
@@ -208,11 +247,15 @@ export const FactorLoadingChart: React.FC<FactorLoadingChartProps> = ({
                     });
                   }}
                   onMouseLeave={hideTooltip}
-                  onClick={() => setSelectedParticipant(
-                    selectedParticipant === participant.participant ? null : participant.participant
-                  )}
+                  onClick={() =>
+                    setSelectedParticipant(
+                      selectedParticipant === participant.participant
+                        ? null
+                        : participant.participant
+                    )
+                  }
                 />
-                
+
                 {/* Participant label */}
                 <text
                   x={x}
@@ -228,7 +271,7 @@ export const FactorLoadingChart: React.FC<FactorLoadingChartProps> = ({
                 >
                   {participant.participant.substring(0, 3)}
                 </text>
-                
+
                 {/* Loading strength indicator */}
                 {isSelected && (
                   <text
@@ -251,7 +294,14 @@ export const FactorLoadingChart: React.FC<FactorLoadingChartProps> = ({
 
         {/* Legend */}
         <Group top={innerHeight + 20} left={20}>
-          <text x={0} y={0} fontSize={11} fontFamily="-apple-system" fontWeight="600" fill="#333">
+          <text
+            x={0}
+            y={0}
+            fontSize={11}
+            fontFamily="-apple-system"
+            fontWeight="600"
+            fill="#333"
+          >
             Legend:
           </text>
           {factors.map((factor, i) => (
@@ -276,64 +326,115 @@ export const FactorLoadingChart: React.FC<FactorLoadingChartProps> = ({
           ))}
           {/* Bubble size legend */}
           <Group top={35}>
-            <text x={0} y={0} fontSize={9} fontFamily="-apple-system" fill="#666">
+            <text
+              x={0}
+              y={0}
+              fontSize={9}
+              fontFamily="-apple-system"
+              fill="#666"
+            >
               Bubble size = Loading strength
             </text>
             <circle cx={10} cy={15} r={4} fill="#007AFF" opacity={0.5} />
-            <text x={20} y={18} fontSize={8} fontFamily="-apple-system" fill="#666">Weak</text>
+            <text
+              x={20}
+              y={18}
+              fontSize={8}
+              fontFamily="-apple-system"
+              fill="#666"
+            >
+              Weak
+            </text>
             <circle cx={60} cy={15} r={8} fill="#007AFF" opacity={0.8} />
-            <text x={75} y={18} fontSize={8} fontFamily="-apple-system" fill="#666">Strong</text>
+            <text
+              x={75}
+              y={18}
+              fontSize={8}
+              fontFamily="-apple-system"
+              fill="#666"
+            >
+              Strong
+            </text>
           </Group>
         </Group>
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
-        <TooltipWithBounds
-          left={tooltipLeft}
-          top={tooltipTop}
-          style={{
-            ...defaultStyles,
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            borderRadius: '8px',
-            padding: '12px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            maxWidth: '280px'
-          }}
-        >
-          <div style={{ fontFamily: '-apple-system', fontSize: '12px' }}>
-            <strong>{tooltipData.participant}</strong>
-            <div style={{ marginTop: '6px', fontSize: '11px' }}>
-              <div>Loading Strength: <span style={{ fontWeight: '600', color: '#007AFF' }}>
-                {tooltipData.loadingStrength.toFixed(3)}
-              </span></div>
-              <div style={{ marginTop: '2px' }}>Position: ({tooltipData.x.toFixed(2)}, {tooltipData.y.toFixed(2)})</div>
-              {show3D && tooltipData.z !== undefined && (
-                <div>Z-axis: {tooltipData.z.toFixed(2)}</div>
-              )}
-              {tooltipData.definingFactor && (
-                <div style={{ marginTop: '4px' }}>Defining Factor: <span style={{
-                  color: colorScale(tooltipData.definingFactor),
-                  fontWeight: '600'
-                }}>{tooltipData.definingFactor}</span></div>
-              )}
-            </div>
-            <div style={{ marginTop: '6px', fontSize: '10px', color: '#666' }}>
-              Factor Loadings:
-              {tooltipData.allLoadings.map((loading, idx) => (
-                <div key={idx} style={{ marginLeft: '8px' }}>
-                  {loading.factor}: {loading.value.toFixed(3)}
+      {tooltipOpen &&
+        tooltipData &&
+        tooltipLeft !== undefined &&
+        tooltipTop !== undefined && (
+          <TooltipWithBounds
+            left={tooltipLeft}
+            top={tooltipTop}
+            style={{
+              ...defaultStyles,
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '8px',
+              padding: '12px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              maxWidth: '280px',
+            }}
+          >
+            <div style={{ fontFamily: '-apple-system', fontSize: '12px' }}>
+              <strong>{tooltipData.participant}</strong>
+              <div style={{ marginTop: '6px', fontSize: '11px' }}>
+                <div>
+                  Loading Strength:{' '}
+                  <span style={{ fontWeight: '600', color: '#007AFF' }}>
+                    {tooltipData.loadingStrength.toFixed(3)}
+                  </span>
                 </div>
-              ))}
+                <div style={{ marginTop: '2px' }}>
+                  Position: ({tooltipData.x.toFixed(2)},{' '}
+                  {tooltipData.y.toFixed(2)})
+                </div>
+                {show3D && tooltipData.z !== undefined && (
+                  <div>Z-axis: {tooltipData.z.toFixed(2)}</div>
+                )}
+                {tooltipData.definingFactor && (
+                  <div style={{ marginTop: '4px' }}>
+                    Defining Factor:{' '}
+                    <span
+                      style={{
+                        color: colorScale(tooltipData.definingFactor),
+                        fontWeight: '600',
+                      }}
+                    >
+                      {tooltipData.definingFactor}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div
+                style={{ marginTop: '6px', fontSize: '10px', color: '#666' }}
+              >
+                Factor Loadings:
+                {tooltipData.allLoadings.map((loading, idx) => (
+                  <div key={idx} style={{ marginLeft: '8px' }}>
+                    {loading.factor}: {loading.value.toFixed(3)}
+                  </div>
+                ))}
+              </div>
+              <div
+                style={{
+                  marginTop: '4px',
+                  fontSize: '10px',
+                  color:
+                    tooltipData.loadingStrength >= significanceThreshold
+                      ? '#34C759'
+                      : '#FF9500',
+                }}
+              >
+                {tooltipData.loadingStrength >= significanceThreshold
+                  ? '✓ Significant'
+                  : '⚠ Below threshold'}
+              </div>
             </div>
-            <div style={{ marginTop: '4px', fontSize: '10px', color: tooltipData.loadingStrength >= significanceThreshold ? '#34C759' : '#FF9500' }}>
-              {tooltipData.loadingStrength >= significanceThreshold ? '✓ Significant' : '⚠ Below threshold'}
-            </div>
-          </div>
-        </TooltipWithBounds>
-      )}
+          </TooltipWithBounds>
+        )}
     </>
   );
 };

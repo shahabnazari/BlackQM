@@ -13,11 +13,15 @@ import { TikTokResearchService } from './services/tiktok-research.service';
 import { InstagramManualService } from './services/instagram-manual.service';
 import { CrossPlatformSynthesisService } from './services/cross-platform-synthesis.service';
 import { UnifiedThemeExtractionService } from './services/unified-theme-extraction.service';
+import { SearchCoalescerService } from './services/search-coalescer.service';
+import { APIQuotaMonitorService } from './services/api-quota-monitor.service';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
+import { ThemeExtractionGateway } from './gateways/theme-extraction.gateway';
 import { HttpModule } from '@nestjs/axios';
 import { CacheModule } from '@nestjs/cache-manager';
 import { PrismaModule } from '../../common/prisma.module';
+import { CacheService } from '../../common/cache.service';
 import { AIModule } from '../ai/ai.module';
 
 @Module({
@@ -35,6 +39,7 @@ import { AIModule } from '../ai/ai.module';
   providers: [
     LiteratureService,
     LiteratureGateway,
+    ThemeExtractionGateway, // Phase 9 Day 28
     ReferenceService,
     ThemeExtractionService,
     GapAnalyzerService,
@@ -47,6 +52,9 @@ import { AIModule } from '../ai/ai.module';
     InstagramManualService, // Phase 9 Day 19
     CrossPlatformSynthesisService, // Phase 9 Day 19
     UnifiedThemeExtractionService, // Phase 9 Day 20
+    SearchCoalescerService, // Phase 10 Days 2-3 - Request deduplication
+    CacheService, // Phase 10 Days 2-3 - Enhanced multi-tier cache
+    APIQuotaMonitorService, // Phase 10 Days 2-3 - API quota monitoring
   ],
   exports: [
     LiteratureService,

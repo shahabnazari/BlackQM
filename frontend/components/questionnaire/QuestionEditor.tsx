@@ -1,9 +1,8 @@
 'use client';
 
-import React from 'react';
+import { Question, QuestionType } from '@/lib/types/questionnaire';
 import { X } from 'lucide-react';
-import { Question } from '@/lib/stores/questionnaire.store';
-import { QuestionType } from '@/lib/types/questionnaire';
+import React from 'react';
 
 interface QuestionEditorProps {
   question: Question;
@@ -20,9 +19,10 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   onCancel,
   onDelete,
   questionTypes,
-  existingQuestions: _existingQuestions  // For future skip logic validation
+  existingQuestions: _existingQuestions, // For future skip logic validation
 }) => {
-  const [editedQuestion, setEditedQuestion] = React.useState<Question>(question);
+  const [editedQuestion, setEditedQuestion] =
+    React.useState<Question>(question);
 
   const handleSave = () => {
     onSave(editedQuestion);
@@ -51,7 +51,9 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
             </label>
             <textarea
               value={editedQuestion.text}
-              onChange={(e: any) => setEditedQuestion({ ...editedQuestion, text: e.target.value })}
+              onChange={(e: any) =>
+                setEditedQuestion({ ...editedQuestion, text: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
               rows={3}
             />
@@ -64,7 +66,12 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
             </label>
             <select
               value={editedQuestion.type}
-              onChange={(e: any) => setEditedQuestion({ ...editedQuestion, type: e.target.value as QuestionType })}
+              onChange={(e: any) =>
+                setEditedQuestion({
+                  ...editedQuestion,
+                  type: e.target.value as QuestionType,
+                })
+              }
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
             >
               {questionTypes.map((type: any) => (
@@ -81,7 +88,12 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
               <input
                 type="checkbox"
                 checked={editedQuestion.required}
-                onChange={(e: any) => setEditedQuestion({ ...editedQuestion, required: e.target.checked })}
+                onChange={(e: any) =>
+                  setEditedQuestion({
+                    ...editedQuestion,
+                    required: e.target.checked,
+                  })
+                }
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -108,7 +120,10 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                         const newOptions = [...(editedQuestion.options || [])];
                         if (newOptions[index]) {
                           newOptions[index].text = e.target.value;
-                          setEditedQuestion({ ...editedQuestion, options: newOptions });
+                          setEditedQuestion({
+                            ...editedQuestion,
+                            options: newOptions,
+                          });
                         }
                       }}
                       className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
@@ -116,8 +131,14 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                     />
                     <button
                       onClick={() => {
-                        const newOptions = editedQuestion.options?.filter((_, i) => i !== index) || [];
-                        setEditedQuestion({ ...editedQuestion, options: newOptions });
+                        const newOptions =
+                          editedQuestion.options?.filter(
+                            (_, i) => i !== index
+                          ) || [];
+                        setEditedQuestion({
+                          ...editedQuestion,
+                          options: newOptions,
+                        });
                       }}
                       className="px-3 py-2 bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     >
@@ -127,8 +148,19 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 ))}
                 <button
                   onClick={() => {
-                    const newOptions = [...(editedQuestion.options || []), { text: '', value: '' }];
-                    setEditedQuestion({ ...editedQuestion, options: newOptions });
+                    const newOptions = [
+                      ...(editedQuestion.options || []),
+                      {
+                        id: `option-${Date.now()}-${Math.random()}`,
+                        text: '',
+                        value: '',
+                        order: (editedQuestion.options || []).length,
+                      },
+                    ];
+                    setEditedQuestion({
+                      ...editedQuestion,
+                      options: newOptions,
+                    });
                   }}
                   className="w-full px-3 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors"
                 >

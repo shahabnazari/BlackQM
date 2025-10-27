@@ -186,7 +186,7 @@ export const useFeatureFlags = create<FeatureFlagsState>()(
           ? localStorage.getItem('userId') ||
             Math.random().toString(36).substring(7)
           : 'server',
-      overrides: {},
+      overrides: {} as Record<FeatureFlag, boolean>,
 
       isEnabled: (flag: FeatureFlag): boolean => {
         const state = get();
@@ -260,20 +260,29 @@ export const useFeatureFlags = create<FeatureFlagsState>()(
       clearOverride: (flag: FeatureFlag) => {
         set(state => {
           const { [flag]: _, ...rest } = state.overrides;
-          return { overrides: rest };
+          return {
+            ...state,
+            overrides: rest as Record<FeatureFlag, boolean>,
+          };
         });
       },
 
       clearAllOverrides: () => {
-        set({ overrides: {} });
+        set(state => ({
+          flags: state.flags,
+          userGroup: state.userGroup,
+          userId: state.userId,
+          overrides: {} as Record<FeatureFlag, boolean>,
+        }));
       },
 
       resetToDefaults: () => {
-        set({
+        set(state => ({
           flags: DEFAULT_FLAGS,
-          overrides: {},
           userGroup: 'default',
-        });
+          userId: state.userId,
+          overrides: {} as Record<FeatureFlag, boolean>,
+        }));
       },
     }),
     {

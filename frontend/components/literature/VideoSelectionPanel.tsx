@@ -95,7 +95,9 @@ const calculateTranscriptionCost = (durationSeconds: number): number => {
   return (durationSeconds / 60) * 0.006;
 };
 
-const getStatusColor = (status?: 'not_started' | 'processing' | 'completed' | 'failed'): string => {
+const getStatusColor = (
+  status?: 'not_started' | 'processing' | 'completed' | 'failed'
+): string => {
   switch (status) {
     case 'completed':
       return 'bg-green-500';
@@ -120,18 +122,24 @@ const getStatusLabel = (video: VideoMetadata): string => {
 
 export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
   videos,
-  researchContext,
+  researchContext: _researchContext,
   onTranscribe,
   onScoreRelevance,
   isLoading = false,
   className = '',
 }) => {
-  const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
+  const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(
+    new Set()
+  );
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [sortBy, setSortBy] = useState<'relevance' | 'date' | 'views' | 'duration'>('relevance');
+  const [sortBy, setSortBy] = useState<
+    'relevance' | 'date' | 'views' | 'duration'
+  >('relevance');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'transcribed' | 'not_transcribed'>('all');
+  const [filterStatus, setFilterStatus] = useState<
+    'all' | 'transcribed' | 'not_transcribed'
+  >('all');
   const [scoringVideos, setScoringVideos] = useState(false);
 
   // ==================== COMPUTED VALUES ====================
@@ -141,9 +149,13 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
 
     // Apply status filter
     if (filterStatus === 'transcribed') {
-      filtered = filtered.filter(v => v.isTranscribed || v.transcriptionStatus === 'completed');
+      filtered = filtered.filter(
+        v => v.isTranscribed || v.transcriptionStatus === 'completed'
+      );
     } else if (filterStatus === 'not_transcribed') {
-      filtered = filtered.filter(v => !v.isTranscribed && v.transcriptionStatus !== 'completed');
+      filtered = filtered.filter(
+        v => !v.isTranscribed && v.transcriptionStatus !== 'completed'
+      );
     }
 
     // Apply sorting
@@ -155,7 +167,9 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
           compareValue = (b.relevanceScore || 0) - (a.relevanceScore || 0);
           break;
         case 'date':
-          compareValue = new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+          compareValue =
+            new Date(b.publishedAt).getTime() -
+            new Date(a.publishedAt).getTime();
           break;
         case 'views':
           compareValue = b.viewCount - a.viewCount;
@@ -174,7 +188,8 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
   const costBreakdown: CostBreakdown[] = useMemo(() => {
     return Array.from(selectedVideoIds).map(videoId => {
       const video = videos.find(v => v.videoId === videoId)!;
-      const isCached = video.cachedTranscript || video.transcriptionStatus === 'completed';
+      const isCached =
+        video.cachedTranscript || video.transcriptionStatus === 'completed';
       return {
         videoId,
         title: video.title,
@@ -251,7 +266,10 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4 items-center justify-between">
             <div className="flex gap-2">
-              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+              <Select
+                value={sortBy}
+                onValueChange={(value: any) => setSortBy(value)}
+              >
                 <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
@@ -266,19 +284,30 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                onClick={() =>
+                  setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+                }
               >
-                {sortOrder === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
+                {sortOrder === 'asc' ? (
+                  <SortAsc className="w-4 h-4" />
+                ) : (
+                  <SortDesc className="w-4 h-4" />
+                )}
               </Button>
 
-              <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
+              <Select
+                value={filterStatus}
+                onValueChange={(value: any) => setFilterStatus(value)}
+              >
                 <SelectTrigger className="w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Videos</SelectItem>
                   <SelectItem value="transcribed">Transcribed Only</SelectItem>
-                  <SelectItem value="not_transcribed">Not Transcribed</SelectItem>
+                  <SelectItem value="not_transcribed">
+                    Not Transcribed
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -289,7 +318,9 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={handleScoreRelevance}
-                  disabled={scoringVideos || sortedAndFilteredVideos.length === 0}
+                  disabled={
+                    scoringVideos || sortedAndFilteredVideos.length === 0
+                  }
                 >
                   {scoringVideos ? (
                     <>
@@ -327,7 +358,9 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
                   <>
                     <Download className="w-4 h-4 mr-2" />
                     Transcribe Selected ({selectedVideoIds.size})
-                    {totalCost > 0 && <span className="ml-2">${totalCost.toFixed(2)}</span>}
+                    {totalCost > 0 && (
+                      <span className="ml-2">${totalCost.toFixed(2)}</span>
+                    )}
                   </>
                 )}
               </Button>
@@ -338,7 +371,8 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">
-                  {selectedVideoIds.size} video{selectedVideoIds.size !== 1 ? 's' : ''} selected
+                  {selectedVideoIds.size} video
+                  {selectedVideoIds.size !== 1 ? 's' : ''} selected
                 </span>
                 <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                   Total Cost: ${totalCost.toFixed(2)}
@@ -367,9 +401,11 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {sortedAndFilteredVideos.map(video => {
             const isSelected = selectedVideoIds.has(video.videoId);
-            const cost = video.cachedTranscript || video.transcriptionStatus === 'completed'
-              ? 0
-              : calculateTranscriptionCost(video.duration);
+            const cost =
+              video.cachedTranscript ||
+              video.transcriptionStatus === 'completed'
+                ? 0
+                : calculateTranscriptionCost(video.duration);
 
             return (
               <Card
@@ -390,8 +426,10 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
                     <div className="absolute top-2 right-2">
                       <Checkbox
                         checked={isSelected}
-                        onCheckedChange={() => toggleVideoSelection(video.videoId)}
-                        onClick={(e) => e.stopPropagation()}
+                        onCheckedChange={() =>
+                          toggleVideoSelection(video.videoId)
+                        }
+                        onClick={e => e.stopPropagation()}
                         className="bg-white"
                       />
                     </div>
@@ -399,7 +437,9 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
                       {formatDuration(video.duration)}
                     </div>
                     <div className="absolute top-2 left-2">
-                      <div className={`w-3 h-3 rounded-full ${getStatusColor(video.transcriptionStatus)}`} />
+                      <div
+                        className={`w-3 h-3 rounded-full ${getStatusColor(video.transcriptionStatus)}`}
+                      />
                     </div>
                   </div>
 
@@ -425,7 +465,9 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
                     </Badge>
                     {video.relevanceScore !== undefined && (
                       <Badge
-                        variant={video.relevanceScore >= 70 ? 'default' : 'secondary'}
+                        variant={
+                          video.relevanceScore >= 70 ? 'default' : 'secondary'
+                        }
                         className="text-xs"
                       >
                         <TrendingUp className="w-3 h-3 mr-1" />
@@ -436,11 +478,13 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
 
                   {/* Status & Cost */}
                   <div className="flex items-center justify-between pt-3 border-t">
-                    <span className="text-xs font-medium">{getStatusLabel(video)}</span>
+                    <span className="text-xs font-medium">
+                      {getStatusLabel(video)}
+                    </span>
                     {cost > 0 && (
                       <Badge variant="outline" className="text-xs">
-                        <DollarSign className="w-3 h-3 mr-1" />
-                        ${cost.toFixed(3)}
+                        <DollarSign className="w-3 h-3 mr-1" />$
+                        {cost.toFixed(3)}
                       </Badge>
                     )}
                   </div>
@@ -457,8 +501,9 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
           <DialogHeader>
             <DialogTitle>Confirm Transcription</DialogTitle>
             <DialogDescription>
-              You are about to transcribe {selectedVideoIds.size} video{selectedVideoIds.size !== 1 ? 's' : ''}.
-              Please review the cost breakdown below.
+              You are about to transcribe {selectedVideoIds.size} video
+              {selectedVideoIds.size !== 1 ? 's' : ''}. Please review the cost
+              breakdown below.
             </DialogDescription>
           </DialogHeader>
 
@@ -482,7 +527,9 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
                         </Badge>
                       )}
                     </td>
-                    <td className="text-right p-2">{formatDuration(item.duration)}</td>
+                    <td className="text-right p-2">
+                      {formatDuration(item.duration)}
+                    </td>
                     <td className="text-right p-2 font-semibold">
                       ${item.cost.toFixed(3)}
                     </td>
@@ -491,7 +538,9 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
               </tbody>
               <tfoot className="bg-gray-50 dark:bg-gray-800 sticky bottom-0">
                 <tr className="border-t-2 border-gray-300 dark:border-gray-600">
-                  <td colSpan={2} className="p-2 font-bold">Total</td>
+                  <td colSpan={2} className="p-2 font-bold">
+                    Total
+                  </td>
                   <td className="text-right p-2 font-bold text-lg text-blue-600 dark:text-blue-400">
                     ${totalCost.toFixed(2)}
                   </td>
@@ -501,10 +550,16 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={confirmTranscription} className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              onClick={confirmTranscription}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               Confirm & Transcribe
             </Button>
           </DialogFooter>

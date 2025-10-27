@@ -87,7 +87,9 @@ describe('YouTube Integration Tests', () => {
         },
       };
 
-      jest.spyOn(httpService, 'get').mockReturnValue(of(mockYouTubeResponse as any));
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of(mockYouTubeResponse as any));
 
       const results = await service.searchAlternativeSources(
         'machine learning',
@@ -107,9 +109,11 @@ describe('YouTube Integration Tests', () => {
     });
 
     it('should handle YouTube API errors gracefully', async () => {
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        throwError(() => new Error('YouTube API quota exceeded'))
-      );
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(
+          throwError(() => new Error('YouTube API quota exceeded')),
+        );
 
       const results = await service.searchAlternativeSources(
         'machine learning',
@@ -153,7 +157,9 @@ describe('YouTube Integration Tests', () => {
         },
       ];
 
-      jest.spyOn(service, 'searchAlternativeSources').mockResolvedValue(mockResults);
+      jest
+        .spyOn(service, 'searchAlternativeSources')
+        .mockResolvedValue(mockResults);
 
       const user = { id: 'test-user', email: 'test@example.com' };
       const result = await controller.getAlternativeSources(
@@ -184,7 +190,11 @@ describe('YouTube Integration Tests', () => {
       );
 
       // Test with array
-      await controller.getAlternativeSources('test', ['youtube', 'github'], user);
+      await controller.getAlternativeSources(
+        'test',
+        ['youtube', 'github'],
+        user,
+      );
       expect(service.searchAlternativeSources).toHaveBeenCalledWith(
         'test',
         ['youtube', 'github'],
@@ -193,14 +203,14 @@ describe('YouTube Integration Tests', () => {
     });
 
     it('should handle errors and propagate them', async () => {
-      jest.spyOn(service, 'searchAlternativeSources').mockRejectedValue(
-        new Error('Service error')
-      );
+      jest
+        .spyOn(service, 'searchAlternativeSources')
+        .mockRejectedValue(new Error('Service error'));
 
       const user = { id: 'test-user', email: 'test@example.com' };
 
       await expect(
-        controller.getAlternativeSources('test', 'youtube', user)
+        controller.getAlternativeSources('test', 'youtube', user),
       ).rejects.toThrow('Service error');
     });
   });
@@ -209,23 +219,31 @@ describe('YouTube Integration Tests', () => {
     it('should construct proper YouTube API URL', async () => {
       const mockResponse = {
         data: {
-          items: [{
-            id: { videoId: 'test' },
-            snippet: {
-              title: 'Test',
-              channelTitle: 'Channel',
-              publishedAt: '2024-01-01',
-              description: 'Desc',
-              channelId: 'ch123',
-              thumbnails: {},
+          items: [
+            {
+              id: { videoId: 'test' },
+              snippet: {
+                title: 'Test',
+                channelTitle: 'Channel',
+                publishedAt: '2024-01-01',
+                description: 'Desc',
+                channelId: 'ch123',
+                thumbnails: {},
+              },
             },
-          }],
+          ],
         },
       };
 
-      const getSpy = jest.spyOn(httpService, 'get').mockReturnValue(of(mockResponse as any));
+      const getSpy = jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(of(mockResponse as any));
 
-      await service.searchAlternativeSources('test query', ['youtube'], 'user1');
+      await service.searchAlternativeSources(
+        'test query',
+        ['youtube'],
+        'user1',
+      );
 
       expect(getSpy).toHaveBeenCalled();
       const callArgs = getSpy.mock.calls[0];
@@ -247,7 +265,10 @@ describe('YouTube Integration Tests', () => {
   describe('Authentication Requirements', () => {
     it('should require JWT authentication for /alternative endpoint', () => {
       // This test verifies the endpoint has @UseGuards(JwtAuthGuard)
-      const metadata = Reflect.getMetadata('__guards__', controller.getAlternativeSources);
+      const metadata = Reflect.getMetadata(
+        '__guards__',
+        controller.getAlternativeSources,
+      );
       expect(metadata).toBeDefined();
       // In actual implementation, this would check for JwtAuthGuard
     });
@@ -257,9 +278,9 @@ describe('YouTube Integration Tests', () => {
     it('should log errors when YouTube API fails', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      jest.spyOn(httpService, 'get').mockReturnValue(
-        throwError(() => new Error('API Error'))
-      );
+      jest
+        .spyOn(httpService, 'get')
+        .mockReturnValue(throwError(() => new Error('API Error')));
 
       await service.searchAlternativeSources('test', ['youtube'], 'user1');
 

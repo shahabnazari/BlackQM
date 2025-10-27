@@ -30,10 +30,13 @@ async function testGetLibrary() {
 
     // Try to JSON.stringify the result (like NestJS does)
     console.log('Testing JSON serialization...');
-    const serialized = JSON.stringify({ papers, total: papers.length }, null, 2);
+    const serialized = JSON.stringify(
+      { papers, total: papers.length },
+      null,
+      2,
+    );
     console.log('✅ JSON serialization successful');
     console.log('Response size:', serialized.length, 'bytes');
-
   } catch (error: any) {
     console.error('❌ ERROR:', error.message);
     console.error('Stack:', error.stack);

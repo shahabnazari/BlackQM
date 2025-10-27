@@ -1,7 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FileText, Video, Podcast, Share2, Eye, TrendingUp, AlertCircle } from 'lucide-react';
+import {
+  FileText,
+  Video,
+  Podcast,
+  Share2,
+  Eye,
+  TrendingUp,
+  AlertCircle,
+} from 'lucide-react';
 import { ThemeProvenancePanel } from './ThemeProvenancePanel';
 import type { UnifiedTheme } from '@/lib/api/services/unified-theme-api.service';
 
@@ -50,15 +58,17 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({
       type: 'podcasts',
       count: theme.provenance.podcastCount,
       icon: Podcast,
-      color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+      color:
+        'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
     },
     {
       type: 'social',
       count: theme.provenance.socialCount,
       icon: Share2,
-      color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+      color:
+        'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
     },
-  ].filter((badge) => badge.count > 0);
+  ].filter(badge => badge.count > 0);
 
   // Get confidence color
   const getConfidenceColor = (confidence: number) => {
@@ -123,7 +133,7 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({
         {/* Source Badges */}
         {sourceBadges.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
-            {sourceBadges.map((badge) => {
+            {sourceBadges.map(badge => {
               const Icon = badge.icon;
               return (
                 <div
@@ -141,12 +151,16 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({
         {/* Confidence & Weight */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Confidence:</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Confidence:
+            </span>
             <div className="flex items-center gap-1">
               <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
                   className={`h-full ${getConfidenceColor(theme.provenance.averageConfidence)} transition-all`}
-                  style={{ width: `${theme.provenance.averageConfidence * 100}%` }}
+                  style={{
+                    width: `${theme.provenance.averageConfidence * 100}%`,
+                  }}
                 />
               </div>
               <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -166,7 +180,7 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({
         {/* View Sources Button */}
         {showProvenanceButton && theme.sources.length > 0 && (
           <button
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               setShowProvenance(true);
             }}
@@ -186,9 +200,12 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({
         >
           <div
             className="max-w-6xl w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
-            <ThemeProvenancePanel theme={theme} onClose={() => setShowProvenance(false)} />
+            <ThemeProvenancePanel
+              theme={theme}
+              onClose={() => setShowProvenance(false)}
+            />
           </div>
         </div>
       )}

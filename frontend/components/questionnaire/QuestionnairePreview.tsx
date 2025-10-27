@@ -1,13 +1,15 @@
 'use client';
 
+import { Question } from '@/lib/types/questionnaire';
 import React from 'react';
-import { Question } from '@/lib/stores/questionnaire.store';
 
 interface QuestionnairePreviewProps {
   questions: Question[];
 }
 
-export const QuestionnairePreview: React.FC<QuestionnairePreviewProps> = ({ questions }) => {
+export const QuestionnairePreview: React.FC<QuestionnairePreviewProps> = ({
+  questions,
+}) => {
   return (
     <div className="p-4">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
@@ -15,7 +17,10 @@ export const QuestionnairePreview: React.FC<QuestionnairePreviewProps> = ({ ques
       </h3>
       <div className="space-y-4">
         {questions.map((question, index) => (
-          <div key={question.id} className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+          <div
+            key={question.id}
+            className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg"
+          >
             <div className="flex items-start gap-2">
               <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
                 {index + 1}.
@@ -27,9 +32,7 @@ export const QuestionnairePreview: React.FC<QuestionnairePreviewProps> = ({ ques
                     <span className="ml-1 text-red-500">*</span>
                   )}
                 </p>
-                <div className="mt-2">
-                  {renderQuestionInput(question)}
-                </div>
+                <div className="mt-2">{renderQuestionInput(question)}</div>
               </div>
             </div>
           </div>
@@ -62,7 +65,7 @@ function renderQuestionInput(question: Question) {
     case 'multiple_choice_single':
       return (
         <div className="space-y-2">
-          {question.options?.map((option, idx) => (
+          {question.options?.map((option: any, idx: number) => (
             <label key={idx} className="flex items-center gap-2">
               <input
                 type="radio"
@@ -80,13 +83,9 @@ function renderQuestionInput(question: Question) {
     case 'multiple_choice_multi':
       return (
         <div className="space-y-2">
-          {question.options?.map((option, idx) => (
+          {question.options?.map((option: any, idx: number) => (
             <label key={idx} className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                disabled
-                className="h-4 w-4"
-              />
+              <input type="checkbox" disabled className="h-4 w-4" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 {option.text}
               </span>
@@ -101,7 +100,7 @@ function renderQuestionInput(question: Question) {
           disabled
         >
           <option>Select an option...</option>
-          {question.options?.map((option, idx) => (
+          {question.options?.map((option: any, idx: number) => (
             <option key={idx} value={option.value}>
               {option.text}
             </option>

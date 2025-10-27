@@ -259,7 +259,11 @@ const databaseSources: DatabaseSource[] = [
       'Influence scoring',
       'Trending topics',
     ],
-    limitations: ['API authentication required', 'Rate limits apply', '⚠️ DEMO MODE: Mock data for testing'],
+    limitations: [
+      'API authentication required',
+      'Rate limits apply',
+      '⚠️ DEMO MODE: Mock data for testing',
+    ],
   },
   {
     id: 'reddit-scholar',
@@ -292,7 +296,11 @@ const databaseSources: DatabaseSource[] = [
       'Engagement metrics',
       'Credibility scoring',
     ],
-    limitations: ['OAuth 2.0 required', 'Limited public data', '⚠️ DEMO MODE: Mock data for testing'],
+    limitations: [
+      'OAuth 2.0 required',
+      'Limited public data',
+      '⚠️ DEMO MODE: Mock data for testing',
+    ],
   },
   {
     id: 'facebook',
@@ -309,7 +317,11 @@ const databaseSources: DatabaseSource[] = [
       'Sentiment tracking',
       'Community insights',
     ],
-    limitations: ['App review needed', 'Limited public access', '⚠️ DEMO MODE: Mock data for testing'],
+    limitations: [
+      'App review needed',
+      'Limited public access',
+      '⚠️ DEMO MODE: Mock data for testing',
+    ],
   },
   {
     id: 'instagram',
@@ -326,7 +338,11 @@ const databaseSources: DatabaseSource[] = [
       'Engagement metrics',
       'Save tracking',
     ],
-    limitations: ['OAuth required', 'Public accounts only', '⚠️ DEMO MODE: Mock data for testing'],
+    limitations: [
+      'OAuth required',
+      'Public accounts only',
+      '⚠️ DEMO MODE: Mock data for testing',
+    ],
   },
   {
     id: 'tiktok',
@@ -343,7 +359,11 @@ const databaseSources: DatabaseSource[] = [
       'View metrics',
       'Engagement scoring',
     ],
-    limitations: ['Partnership required', 'Limited historical data', '⚠️ DEMO MODE: Mock data for testing'],
+    limitations: [
+      'Partnership required',
+      'Limited historical data',
+      '⚠️ DEMO MODE: Mock data for testing',
+    ],
   },
 
   // Premium/Subscription Sources (Future)

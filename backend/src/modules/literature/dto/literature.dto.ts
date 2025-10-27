@@ -1,15 +1,16 @@
-import {
-  IsString,
-  IsArray,
-  IsOptional,
-  IsNumber,
-  IsEnum,
-  IsBoolean,
-  ValidateNested,
-  IsObject,
-} from 'class-validator';
-import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
 export enum ExportFormat {
   BIBTEX = 'bibtex',
@@ -48,6 +49,33 @@ export class SearchLiteratureDto {
   @IsNumber()
   @IsOptional()
   yearTo?: number;
+
+  @ApiPropertyOptional({ description: 'Minimum citation count' })
+  @IsNumber()
+  @IsOptional()
+  minCitations?: number;
+
+  @ApiPropertyOptional({
+    description: 'Publication type filter',
+    enum: ['all', 'journal', 'conference', 'preprint'],
+  })
+  @IsString()
+  @IsOptional()
+  publicationType?: 'all' | 'journal' | 'conference' | 'preprint';
+
+  @ApiPropertyOptional({ description: 'Author name filter' })
+  @IsString()
+  @IsOptional()
+  author?: string;
+
+  @ApiPropertyOptional({
+    description: 'Author search mode',
+    enum: ['contains', 'exact', 'fuzzy'],
+    default: 'contains',
+  })
+  @IsString()
+  @IsOptional()
+  authorSearchMode?: 'contains' | 'exact' | 'fuzzy';
 
   @ApiPropertyOptional({ description: 'Field of study filter' })
   @IsString()
@@ -282,6 +310,26 @@ export class SourceContentDto {
   @IsOptional()
   keywords?: string[];
 
+  @ApiPropertyOptional({ description: 'DOI identifier (for papers)' })
+  @IsString()
+  @IsOptional()
+  doi?: string;
+
+  @ApiPropertyOptional({ description: 'Authors (for papers)', type: [String] })
+  @IsArray()
+  @IsOptional()
+  authors?: string[];
+
+  @ApiPropertyOptional({ description: 'Publication year (for papers)' })
+  @IsNumber()
+  @IsOptional()
+  year?: number;
+
+  @ApiPropertyOptional({ description: 'Source URL' })
+  @IsString()
+  @IsOptional()
+  url?: string;
+
   @ApiPropertyOptional({ description: 'Additional metadata' })
   @IsObject()
   @IsOptional()
@@ -311,14 +359,27 @@ export class ExtractionOptionsDto {
   @IsBoolean()
   @IsOptional()
   includeProvenance?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Maximum number of themes to extract',
+    minimum: 1,
+    maximum: 50,
+  })
+  @IsNumber()
+  @IsOptional()
+  maxThemes?: number;
 }
 
 export class ExtractUnifiedThemesDto {
   @ApiProperty({
-    description: 'Sources to extract themes from',
+    description: 'Sources to extract themes from (at least 1 required)',
     type: [SourceContentDto],
+    minItems: 1,
   })
   @IsArray()
+  @ArrayMinSize(1, {
+    message: 'At least one source is required for theme extraction',
+  })
   @ValidateNested({ each: true })
   @Type(() => SourceContentDto)
   sources!: SourceContentDto[];
@@ -340,4 +401,164 @@ export class CompareStudyThemesDto {
   })
   @IsArray()
   studyIds!: string[];
+}
+
+// ==================== CROSS-PLATFORM SYNTHESIS DTOs (Phase 9 Day 22) ====================
+
+export class CrossPlatformSynthesisDto {
+  @ApiProperty({
+    description: 'Research query to synthesize across platforms',
+    example: 'climate change adaptation strategies',
+  })
+  @IsString()
+  query!: string;
+
+  @ApiPropertyOptional({
+    description: 'Maximum results per platform',
+    minimum: 1,
+    maximum: 50,
+    default: 10,
+  })
+  @IsNumber()
+  @IsOptional()
+  maxResults?: number;
+
+  @ApiPropertyOptional({
+    description: 'Include full transcripts for video content',
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  includeTranscripts?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Time window in days for analysis',
+    minimum: 1,
+    maximum: 365,
+    default: 90,
+  })
+  @IsNumber()
+  @IsOptional()
+  timeWindow?: number;
+}
+
+export class PlatformFilterDto {
+  @ApiPropertyOptional({
+    description: 'Filter by specific platforms',
+    type: [String],
+    example: ['paper', 'youtube', 'tiktok'],
+  })
+  @IsArray()
+  @IsOptional()
+  platforms?: ('paper' | 'youtube' | 'podcast' | 'tiktok' | 'instagram')[];
+
+  @ApiPropertyOptional({
+    description: 'Minimum relevance score (0-1)',
+    minimum: 0,
+    maximum: 1,
+  })
+  @IsNumber()
+  @IsOptional()
+  minRelevance?: number;
+}
+
+// ==================== YOUTUBE ENHANCEMENT DTOs (Phase 9 Day 21) ====================
+
+export class ScoreVideoRelevanceDto {
+  @ApiProperty({
+    description: 'YouTube video ID',
+    example: 'dQw4w9WgXcQ',
+  })
+  @IsString()
+  videoId!: string;
+
+  @ApiProperty({
+    description: 'Video title',
+  })
+  @IsString()
+  title!: string;
+
+  @ApiProperty({
+    description: 'Video description',
+  })
+  @IsString()
+  description!: string;
+
+  @ApiProperty({
+    description: 'Channel name',
+  })
+  @IsString()
+  channelName!: string;
+
+  @ApiProperty({
+    description: 'Duration in seconds',
+  })
+  @IsNumber()
+  duration!: number;
+
+  @ApiProperty({
+    description: 'Research context for relevance scoring',
+    example: 'climate change adaptation strategies',
+  })
+  @IsString()
+  researchContext!: string;
+}
+
+export class BatchScoreVideosDto {
+  @ApiProperty({
+    description: 'Array of video metadata',
+    type: [ScoreVideoRelevanceDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ScoreVideoRelevanceDto)
+  videos!: ScoreVideoRelevanceDto[];
+
+  @ApiProperty({
+    description: 'Research context',
+  })
+  @IsString()
+  researchContext!: string;
+}
+
+export class AISelectVideosDto {
+  @ApiProperty({
+    description: 'Array of video metadata',
+    type: [ScoreVideoRelevanceDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ScoreVideoRelevanceDto)
+  videos!: ScoreVideoRelevanceDto[];
+
+  @ApiProperty({
+    description: 'Research context',
+  })
+  @IsString()
+  researchContext!: string;
+
+  @ApiPropertyOptional({
+    description: 'Number of top videos to select',
+    default: 5,
+  })
+  @IsNumber()
+  @IsOptional()
+  topN?: number;
+}
+
+export class ExpandQueryDto {
+  @ApiProperty({
+    description: 'User query to expand',
+    example: 'climate',
+  })
+  @IsString()
+  query!: string;
+
+  @ApiPropertyOptional({
+    description: 'Research domain',
+    enum: ['climate', 'health', 'education', 'general'],
+  })
+  @IsString()
+  @IsOptional()
+  domain?: 'climate' | 'health' | 'education' | 'general';
 }

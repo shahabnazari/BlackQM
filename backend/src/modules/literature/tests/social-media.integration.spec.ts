@@ -43,7 +43,11 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
     const testQuery = 'Q-methodology research';
 
     it('should search Twitter/X for research content', async () => {
-      const results = await service.searchSocialMedia(testQuery, ['twitter'], 'test-user');
+      const results = await service.searchSocialMedia(
+        testQuery,
+        ['twitter'],
+        'test-user',
+      );
 
       expect(Array.isArray(results)).toBe(true);
       expect(results.length).toBeGreaterThan(0);
@@ -59,7 +63,11 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
     }, 10000); // 10 second timeout
 
     it('should search Reddit for academic discussions', async () => {
-      const results = await service.searchSocialMedia(testQuery, ['reddit'], 'test-user');
+      const results = await service.searchSocialMedia(
+        testQuery,
+        ['reddit'],
+        'test-user',
+      );
 
       expect(Array.isArray(results)).toBe(true);
       expect(results.length).toBeGreaterThan(0);
@@ -75,7 +83,11 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
     }, 10000);
 
     it('should search LinkedIn for professional content', async () => {
-      const results = await service.searchSocialMedia(testQuery, ['linkedin'], 'test-user');
+      const results = await service.searchSocialMedia(
+        testQuery,
+        ['linkedin'],
+        'test-user',
+      );
 
       expect(Array.isArray(results)).toBe(true);
       expect(results.length).toBeGreaterThan(0);
@@ -87,7 +99,11 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
     }, 10000);
 
     it('should search Facebook for group discussions', async () => {
-      const results = await service.searchSocialMedia(testQuery, ['facebook'], 'test-user');
+      const results = await service.searchSocialMedia(
+        testQuery,
+        ['facebook'],
+        'test-user',
+      );
 
       expect(Array.isArray(results)).toBe(true);
       expect(results.length).toBeGreaterThan(0);
@@ -98,7 +114,11 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
     }, 10000);
 
     it('should search Instagram for visual content', async () => {
-      const results = await service.searchSocialMedia(testQuery, ['instagram'], 'test-user');
+      const results = await service.searchSocialMedia(
+        testQuery,
+        ['instagram'],
+        'test-user',
+      );
 
       expect(Array.isArray(results)).toBe(true);
       expect(results.length).toBeGreaterThan(0);
@@ -110,7 +130,11 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
     }, 10000);
 
     it('should search TikTok for trending content', async () => {
-      const results = await service.searchSocialMedia(testQuery, ['tiktok'], 'test-user');
+      const results = await service.searchSocialMedia(
+        testQuery,
+        ['tiktok'],
+        'test-user',
+      );
 
       expect(Array.isArray(results)).toBe(true);
       expect(results.length).toBeGreaterThan(0);
@@ -124,18 +148,29 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
 
   describe('Multi-Platform Search', () => {
     it('should search across all 6 platforms simultaneously', async () => {
-      const platforms = ['twitter', 'reddit', 'linkedin', 'facebook', 'instagram', 'tiktok'];
-      const results = await service.searchSocialMedia('qualitative research', platforms, 'test-user');
+      const platforms = [
+        'twitter',
+        'reddit',
+        'linkedin',
+        'facebook',
+        'instagram',
+        'tiktok',
+      ];
+      const results = await service.searchSocialMedia(
+        'qualitative research',
+        platforms,
+        'test-user',
+      );
 
       expect(Array.isArray(results)).toBe(true);
       expect(results.length).toBeGreaterThan(0);
 
       // Should have results from multiple platforms
-      const platformsFound = new Set(results.map(r => r.platform));
+      const platformsFound = new Set(results.map((r) => r.platform));
       expect(platformsFound.size).toBeGreaterThan(1);
 
       // All results should have required fields
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result).toHaveProperty('platform');
         expect(result).toHaveProperty('sentiment');
         expect(result).toHaveProperty('weights');
@@ -143,53 +178,83 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
     }, 15000);
 
     it('should handle empty platform array gracefully', async () => {
-      const results = await service.searchSocialMedia('test query', [], 'test-user');
+      const results = await service.searchSocialMedia(
+        'test query',
+        [],
+        'test-user',
+      );
       expect(Array.isArray(results)).toBe(true);
       expect(results.length).toBe(0);
     });
 
     it('should handle invalid platform names gracefully', async () => {
-      const results = await service.searchSocialMedia('test query', ['invalid-platform'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'test query',
+        ['invalid-platform'],
+        'test-user',
+      );
       expect(Array.isArray(results)).toBe(true);
     });
   });
 
   describe('Sentiment Analysis', () => {
     it('should analyze sentiment for all posts', async () => {
-      const results = await service.searchSocialMedia('research', ['twitter', 'reddit'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'research',
+        ['twitter', 'reddit'],
+        'test-user',
+      );
 
       expect(results.length).toBeGreaterThan(0);
 
       // All results should have sentiment analysis
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.sentiment).toBeDefined();
         expect(result.sentiment).toHaveProperty('label');
         expect(result.sentiment).toHaveProperty('score');
         expect(result.sentiment).toHaveProperty('confidence');
-        expect(['positive', 'negative', 'neutral']).toContain(result.sentiment.label);
+        expect(['positive', 'negative', 'neutral']).toContain(
+          result.sentiment.label,
+        );
         expect(result.sentiment.score).toBeGreaterThanOrEqual(-1);
         expect(result.sentiment.score).toBeLessThanOrEqual(1);
       });
     });
 
     it('should detect positive sentiment correctly', async () => {
-      const results = await service.searchSocialMedia('excellent research', ['twitter'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'excellent research',
+        ['twitter'],
+        'test-user',
+      );
 
-      const positiveResults = results.filter(r => r.sentiment?.label === 'positive');
+      const positiveResults = results.filter(
+        (r) => r.sentiment?.label === 'positive',
+      );
       expect(positiveResults.length).toBeGreaterThan(0);
     });
 
     it('should calculate sentiment distribution', async () => {
-      const results = await service.searchSocialMedia('research methodology', ['twitter', 'reddit'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'research methodology',
+        ['twitter', 'reddit'],
+        'test-user',
+      );
       const insights = await service.generateSocialMediaInsights(results);
 
       expect(insights).toHaveProperty('sentimentDistribution');
       expect(insights.sentimentDistribution).toHaveProperty('positive');
       expect(insights.sentimentDistribution).toHaveProperty('negative');
       expect(insights.sentimentDistribution).toHaveProperty('neutral');
-      expect(insights.sentimentDistribution).toHaveProperty('positivePercentage');
-      expect(insights.sentimentDistribution).toHaveProperty('negativePercentage');
-      expect(insights.sentimentDistribution).toHaveProperty('neutralPercentage');
+      expect(insights.sentimentDistribution).toHaveProperty(
+        'positivePercentage',
+      );
+      expect(insights.sentimentDistribution).toHaveProperty(
+        'negativePercentage',
+      );
+      expect(insights.sentimentDistribution).toHaveProperty(
+        'neutralPercentage',
+      );
 
       // Percentages should sum to 100
       const total =
@@ -202,9 +267,13 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
 
   describe('Engagement-Weighted Synthesis', () => {
     it('should calculate engagement weights for all posts', async () => {
-      const results = await service.searchSocialMedia('research', ['twitter', 'reddit'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'research',
+        ['twitter', 'reddit'],
+        'test-user',
+      );
 
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.weights).toBeDefined();
         expect(result.weights).toHaveProperty('engagement');
         expect(result.weights).toHaveProperty('credibility');
@@ -221,7 +290,11 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
     });
 
     it('should rank results by influence score', async () => {
-      const results = await service.searchSocialMedia('research', ['twitter', 'reddit'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'research',
+        ['twitter', 'reddit'],
+        'test-user',
+      );
 
       // Results should be sorted by influence (descending)
       for (let i = 1; i < results.length; i++) {
@@ -232,12 +305,18 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
     });
 
     it('should boost verified accounts in credibility scoring', async () => {
-      const results = await service.searchSocialMedia('research', ['twitter', 'linkedin'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'research',
+        ['twitter', 'linkedin'],
+        'test-user',
+      );
 
-      const verifiedResults = results.filter(r => r.isVerified || r.authorVerified);
+      const verifiedResults = results.filter(
+        (r) => r.isVerified || r.authorVerified,
+      );
       if (verifiedResults.length > 0) {
         // Verified accounts should have higher credibility
-        verifiedResults.forEach(result => {
+        verifiedResults.forEach((result) => {
           expect(result.weights.credibility).toBeGreaterThan(0.5);
         });
       }
@@ -246,16 +325,26 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
 
   describe('Aggregated Insights', () => {
     it('should generate platform distribution', async () => {
-      const results = await service.searchSocialMedia('research', ['twitter', 'reddit', 'linkedin'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'research',
+        ['twitter', 'reddit', 'linkedin'],
+        'test-user',
+      );
       const insights = await service.generateSocialMediaInsights(results);
 
       expect(insights).toHaveProperty('platformDistribution');
       expect(typeof insights.platformDistribution).toBe('object');
-      expect(Object.keys(insights.platformDistribution).length).toBeGreaterThan(0);
+      expect(Object.keys(insights.platformDistribution).length).toBeGreaterThan(
+        0,
+      );
     });
 
     it('should identify top influencers', async () => {
-      const results = await service.searchSocialMedia('research', ['twitter', 'reddit'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'research',
+        ['twitter', 'reddit'],
+        'test-user',
+      );
       const insights = await service.generateSocialMediaInsights(results);
 
       expect(insights).toHaveProperty('topInfluencers');
@@ -273,7 +362,11 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
     });
 
     it('should calculate engagement statistics', async () => {
-      const results = await service.searchSocialMedia('research', ['twitter', 'reddit'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'research',
+        ['twitter', 'reddit'],
+        'test-user',
+      );
       const insights = await service.generateSocialMediaInsights(results);
 
       expect(insights).toHaveProperty('engagementStats');
@@ -287,7 +380,11 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
     });
 
     it('should generate time distribution', async () => {
-      const results = await service.searchSocialMedia('research', ['twitter', 'reddit'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'research',
+        ['twitter', 'reddit'],
+        'test-user',
+      );
       const insights = await service.generateSocialMediaInsights(results);
 
       expect(insights).toHaveProperty('timeDistribution');
@@ -308,7 +405,14 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
   describe('Performance & Error Handling', () => {
     it('should complete search within 10 seconds for 6 platforms', async () => {
       const startTime = Date.now();
-      const platforms = ['twitter', 'reddit', 'linkedin', 'facebook', 'instagram', 'tiktok'];
+      const platforms = [
+        'twitter',
+        'reddit',
+        'linkedin',
+        'facebook',
+        'instagram',
+        'tiktok',
+      ];
 
       await service.searchSocialMedia('research', platforms, 'test-user');
 
@@ -318,18 +422,37 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
 
     it('should handle API failures gracefully', async () => {
       // Even if some APIs fail, should return partial results
-      const results = await service.searchSocialMedia('test', ['twitter', 'reddit'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'test',
+        ['twitter', 'reddit'],
+        'test-user',
+      );
       expect(Array.isArray(results)).toBe(true);
     });
 
     it('should handle empty query string', async () => {
-      const results = await service.searchSocialMedia('', ['twitter'], 'test-user');
+      const results = await service.searchSocialMedia(
+        '',
+        ['twitter'],
+        'test-user',
+      );
       expect(Array.isArray(results)).toBe(true);
     });
 
     it('should process large result sets efficiently', async () => {
-      const platforms = ['twitter', 'reddit', 'linkedin', 'facebook', 'instagram', 'tiktok'];
-      const results = await service.searchSocialMedia('research', platforms, 'test-user');
+      const platforms = [
+        'twitter',
+        'reddit',
+        'linkedin',
+        'facebook',
+        'instagram',
+        'tiktok',
+      ];
+      const results = await service.searchSocialMedia(
+        'research',
+        platforms,
+        'test-user',
+      );
 
       // Should handle sentiment analysis for all results quickly
       const startTime = Date.now();
@@ -343,9 +466,13 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
 
   describe('Data Quality & Validation', () => {
     it('should return valid engagement metrics for all posts', async () => {
-      const results = await service.searchSocialMedia('research', ['twitter', 'reddit'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'research',
+        ['twitter', 'reddit'],
+        'test-user',
+      );
 
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.engagement).toBeDefined();
         expect(result.engagement).toHaveProperty('totalScore');
         expect(result.engagement.totalScore).toBeGreaterThanOrEqual(0);
@@ -353,18 +480,26 @@ describe('Phase 9 Day 13: Social Media Intelligence Integration', () => {
     });
 
     it('should include timestamps for all posts', async () => {
-      const results = await service.searchSocialMedia('research', ['twitter', 'reddit'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'research',
+        ['twitter', 'reddit'],
+        'test-user',
+      );
 
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result).toHaveProperty('timestamp');
         expect(new Date(result.timestamp)).toBeInstanceOf(Date);
       });
     });
 
     it('should include author information for all posts', async () => {
-      const results = await service.searchSocialMedia('research', ['twitter', 'reddit'], 'test-user');
+      const results = await service.searchSocialMedia(
+        'research',
+        ['twitter', 'reddit'],
+        'test-user',
+      );
 
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result).toHaveProperty('author');
         expect(typeof result.author).toBe('string');
         expect(result.author.length).toBeGreaterThan(0);

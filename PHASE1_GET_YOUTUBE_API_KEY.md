@@ -9,6 +9,7 @@
 ## Step-by-Step Instructions
 
 ### Step 1: Go to Google Cloud Console
+
 1. Open your web browser
 2. Go to: https://console.cloud.google.com/
 3. Sign in with your Google account (Gmail)
@@ -19,6 +20,7 @@
 ### Step 2: Create a New Project (or Select Existing)
 
 **If this is your FIRST TIME:**
+
 1. You'll see a screen that says "Select a project" at the top
 2. Click on the dropdown that says "Select a project"
 3. Click "NEW PROJECT" button (top right of the popup)
@@ -29,6 +31,7 @@
 8. You'll see a notification when it's ready
 
 **If you ALREADY HAVE projects:**
+
 1. Click the project dropdown at the top of the page
 2. Either select an existing project OR click "NEW PROJECT" to create one
 3. Make sure the correct project name is showing at the top
@@ -46,6 +49,7 @@
 7. You should see "API enabled" notification
 
 **Alternative way:**
+
 1. Click on the "☰" menu (hamburger menu) on the top left
 2. Scroll down and click "APIs & Services"
 3. Click "Enable APIs and Services" (big blue button)
@@ -94,6 +98,7 @@ YOUTUBE_API_KEY=paste-your-key-here
 ```
 
 **Your key will look something like:**
+
 ```
 YOUTUBE_API_KEY=AIzaSyD1234567890abcdefghijklmnopqrstuvw
 ```
@@ -103,17 +108,21 @@ YOUTUBE_API_KEY=AIzaSyD1234567890abcdefghijklmnopqrstuvw
 ## Common Issues & Solutions
 
 ### Issue 1: "You need to enable billing"
+
 - **Solution:** YouTube Data API v3 is FREE for 10,000 requests/day
 - You might need to enable billing but won't be charged unless you go over the free quota
 - Click "Enable Billing" and add a payment method (it won't charge you)
 
 ### Issue 2: "Project already exists"
+
 - **Solution:** That's fine! Just select the existing project and continue
 
 ### Issue 3: "Cannot find YouTube Data API v3"
+
 - **Solution:** Make sure you're typing exactly: `YouTube Data API v3` (with capital Y and D)
 
 ### Issue 4: "API key not working"
+
 - **Solution:** Wait 1-2 minutes after creating the key for it to activate
 - Make sure you restricted it to "YouTube Data API v3" only
 
@@ -122,6 +131,7 @@ YOUTUBE_API_KEY=AIzaSyD1234567890abcdefghijklmnopqrstuvw
 ## What Happens Next?
 
 After you give me your API key:
+
 1. ✅ I'll add it to your backend/.env file
 2. ✅ I'll restart the backend server
 3. ✅ We'll test YouTube search with a real query

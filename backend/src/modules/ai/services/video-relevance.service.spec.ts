@@ -17,7 +17,11 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { VideoRelevanceService, VideoMetadata, RelevanceScore } from './video-relevance.service';
+import {
+  VideoRelevanceService,
+  VideoMetadata,
+  RelevanceScore,
+} from './video-relevance.service';
 import { OpenAIService } from './openai.service';
 
 describe('VideoRelevanceService', () => {
@@ -27,7 +31,8 @@ describe('VideoRelevanceService', () => {
   const mockVideoMetadata: VideoMetadata = {
     videoId: 'test-video-123',
     title: 'Climate Change Research Methods: A Comprehensive Guide',
-    description: 'Exploring quantitative and qualitative research methodologies for climate science',
+    description:
+      'Exploring quantitative and qualitative research methodologies for climate science',
     channelName: 'Academic Research Channel',
     duration: 1200, // 20 minutes
     publishedAt: new Date('2024-01-15'),
@@ -37,7 +42,8 @@ describe('VideoRelevanceService', () => {
   const mockAIResponse = {
     content: JSON.stringify({
       score: 85,
-      reasoning: 'Highly relevant academic content discussing research methodologies',
+      reasoning:
+        'Highly relevant academic content discussing research methodologies',
       topics: ['climate change', 'research methods', 'quantitative analysis'],
       isAcademic: true,
       confidence: 0.9,
@@ -75,7 +81,7 @@ describe('VideoRelevanceService', () => {
 
       const result = await service.scoreVideoRelevance(
         mockVideoMetadata,
-        'climate change research methods'
+        'climate change research methods',
       );
 
       expect(result).toMatchObject({
@@ -96,7 +102,7 @@ describe('VideoRelevanceService', () => {
         expect.objectContaining({
           model: 'smart',
           temperature: 0.3,
-        })
+        }),
       );
     });
 
@@ -106,13 +112,13 @@ describe('VideoRelevanceService', () => {
       // First call
       const result1 = await service.scoreVideoRelevance(
         mockVideoMetadata,
-        'climate change'
+        'climate change',
       );
 
       // Second call with same parameters
       const result2 = await service.scoreVideoRelevance(
         mockVideoMetadata,
-        'climate change'
+        'climate change',
       );
 
       expect(result1).toEqual(result2);
@@ -127,7 +133,7 @@ describe('VideoRelevanceService', () => {
 
       const result = await service.scoreVideoRelevance(
         mockVideoMetadata,
-        'climate change'
+        'climate change',
       );
 
       expect(result.score).toBe(85);
@@ -141,7 +147,7 @@ describe('VideoRelevanceService', () => {
 
       const result = await service.scoreVideoRelevance(
         mockVideoMetadata,
-        'climate change'
+        'climate change',
       );
 
       expect(result).toMatchObject({
@@ -160,12 +166,12 @@ describe('VideoRelevanceService', () => {
 
     it('should return error fallback on OpenAI service failure', async () => {
       openaiService.generateCompletion.mockRejectedValue(
-        new Error('OpenAI API error')
+        new Error('OpenAI API error'),
       );
 
       const result = await service.scoreVideoRelevance(
         mockVideoMetadata,
-        'climate change'
+        'climate change',
       );
 
       expect(result).toMatchObject({
@@ -197,7 +203,7 @@ describe('VideoRelevanceService', () => {
 
       const result = await service.scoreVideoRelevance(
         mockVideoMetadata,
-        'climate change'
+        'climate change',
       );
 
       expect(result.score).toBe(100); // Clamped to 100
@@ -219,7 +225,7 @@ describe('VideoRelevanceService', () => {
 
       const result = await service.scoreVideoRelevance(
         mockVideoMetadata,
-        'climate change'
+        'climate change',
       );
 
       expect(result.recommendations.transcribe).toBe(true);
@@ -248,7 +254,7 @@ describe('VideoRelevanceService', () => {
 
         const result = await service.scoreVideoRelevance(
           mockVideoMetadata,
-          'test query'
+          'test query',
         );
 
         expect(result.recommendations.priority).toBe(testCase.expectedPriority);
@@ -267,10 +273,7 @@ describe('VideoRelevanceService', () => {
 
       openaiService.generateCompletion.mockResolvedValue(mockAIResponse);
 
-      const results = await service.batchScoreVideos(
-        videos,
-        'climate change'
-      );
+      const results = await service.batchScoreVideos(videos, 'climate change');
 
       expect(results).toHaveLength(3);
       expect(results[0].videoId).toBe('video-1');
@@ -289,10 +292,7 @@ describe('VideoRelevanceService', () => {
         .mockResolvedValueOnce(mockAIResponse)
         .mockRejectedValueOnce(new Error('API error'));
 
-      const results = await service.batchScoreVideos(
-        videos,
-        'climate change'
-      );
+      const results = await service.batchScoreVideos(videos, 'climate change');
 
       expect(results).toHaveLength(2);
       expect(results[0].score).toBe(85); // Success
@@ -310,19 +310,28 @@ describe('VideoRelevanceService', () => {
 
       openaiService.generateCompletion
         .mockResolvedValueOnce({
-          content: JSON.stringify({ ...JSON.parse(mockAIResponse.content), score: 90 }),
+          content: JSON.stringify({
+            ...JSON.parse(mockAIResponse.content),
+            score: 90,
+          }),
         })
         .mockResolvedValueOnce({
-          content: JSON.stringify({ ...JSON.parse(mockAIResponse.content), score: 70 }),
+          content: JSON.stringify({
+            ...JSON.parse(mockAIResponse.content),
+            score: 70,
+          }),
         })
         .mockResolvedValueOnce({
-          content: JSON.stringify({ ...JSON.parse(mockAIResponse.content), score: 80 }),
+          content: JSON.stringify({
+            ...JSON.parse(mockAIResponse.content),
+            score: 80,
+          }),
         });
 
       const result = await service.selectTopVideos(
         videos,
         'climate change',
-        2 // Select top 2
+        2, // Select top 2
       );
 
       expect(result.selectedVideos).toHaveLength(2);
@@ -339,17 +348,19 @@ describe('VideoRelevanceService', () => {
 
       openaiService.generateCompletion
         .mockResolvedValueOnce({
-          content: JSON.stringify({ ...JSON.parse(mockAIResponse.content), score: 90 }),
+          content: JSON.stringify({
+            ...JSON.parse(mockAIResponse.content),
+            score: 90,
+          }),
         })
         .mockResolvedValueOnce({
-          content: JSON.stringify({ ...JSON.parse(mockAIResponse.content), score: 85 }),
+          content: JSON.stringify({
+            ...JSON.parse(mockAIResponse.content),
+            score: 85,
+          }),
         });
 
-      const result = await service.selectTopVideos(
-        videos,
-        'climate change',
-        2
-      );
+      const result = await service.selectTopVideos(videos, 'climate change', 2);
 
       // Total: (10 * 0.006) + (20 * 0.006) = 0.18
       expect(result.totalCost).toBeCloseTo(0.18, 2);
@@ -361,14 +372,14 @@ describe('VideoRelevanceService', () => {
       ];
 
       openaiService.generateCompletion.mockResolvedValue({
-        content: JSON.stringify({ ...JSON.parse(mockAIResponse.content), score: 90, isAcademic: true }),
+        content: JSON.stringify({
+          ...JSON.parse(mockAIResponse.content),
+          score: 90,
+          isAcademic: true,
+        }),
       });
 
-      const result = await service.selectTopVideos(
-        videos,
-        'climate change',
-        1
-      );
+      const result = await service.selectTopVideos(videos, 'climate change', 1);
 
       expect(result.reasoning).toContain('1 videos');
       expect(result.reasoning).toContain('90%');
@@ -408,7 +419,7 @@ describe('VideoRelevanceService', () => {
       expect(calledPrompt).toContain(mockVideoMetadata.description);
       expect(calledPrompt).toContain(mockVideoMetadata.channelName);
       expect(calledPrompt).toContain('20 minutes'); // Duration in minutes
-      expect(calledPrompt).toContain('Score this video\'s relevance');
+      expect(calledPrompt).toContain("Score this video's relevance");
       expect(calledPrompt).toContain('0-100');
       expect(calledPrompt).toContain('Academic vs entertainment');
     });
@@ -425,7 +436,7 @@ describe('VideoRelevanceService', () => {
 
       const result = await service.scoreVideoRelevance(
         videoWithoutViews,
-        'climate change'
+        'climate change',
       );
 
       expect(result.score).toBe(85);

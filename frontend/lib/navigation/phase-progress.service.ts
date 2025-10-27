@@ -543,7 +543,7 @@ export class PhaseProgressService {
 
     // Determine next recommended phase
     studyProgress.nextRecommendedPhase =
-      this.getNextRecommendedPhase(studyProgress);
+      this.getNextRecommendedPhase(studyProgress) || 'build';
 
     return studyProgress.overallProgress;
   }
@@ -673,15 +673,15 @@ export class PhaseProgressService {
       if (phase) {
         phase.progress = phaseData.progress;
         phase.tasks = phaseData.tasks;
-        phase.startedAt = phaseData.startedAt
-          ? new Date(phaseData.startedAt)
-          : undefined;
-        phase.completedAt = phaseData.completedAt
-          ? new Date(phaseData.completedAt)
-          : undefined;
-        phase.lastActivity = phaseData.lastActivity
-          ? new Date(phaseData.lastActivity)
-          : undefined;
+        if (phaseData.startedAt) {
+          phase.startedAt = new Date(phaseData.startedAt);
+        }
+        if (phaseData.completedAt) {
+          phase.completedAt = new Date(phaseData.completedAt);
+        }
+        if (phaseData.lastActivity) {
+          phase.lastActivity = new Date(phaseData.lastActivity);
+        }
       }
     });
 

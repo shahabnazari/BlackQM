@@ -134,7 +134,7 @@ export class CrossPlatformSynthesisAPI {
    */
   static async synthesizeMultiPlatform(
     query: string,
-    options?: CrossPlatformSynthesisOptions,
+    options?: CrossPlatformSynthesisOptions
   ): Promise<CrossPlatformSynthesisResult> {
     const response = await apiClient.post(`${this.BASE_PATH}/multi-platform`, {
       query,
@@ -151,7 +151,7 @@ export class CrossPlatformSynthesisAPI {
    */
   static async getEmergingTopics(
     query: string,
-    timeWindow?: number,
+    timeWindow?: number
   ): Promise<{
     success: boolean;
     query: string;
@@ -168,7 +168,7 @@ export class CrossPlatformSynthesisAPI {
     }
 
     const response = await apiClient.get(
-      `${this.BASE_PATH}/emerging-topics?${params.toString()}`,
+      `${this.BASE_PATH}/emerging-topics?${params.toString()}`
     );
 
     return response.data;
@@ -180,7 +180,7 @@ export class CrossPlatformSynthesisAPI {
   static async getThemeDissemination(
     theme: string,
     query: string,
-    timeWindow?: number,
+    timeWindow?: number
   ): Promise<{
     success: boolean;
     theme: string;
@@ -201,7 +201,7 @@ export class CrossPlatformSynthesisAPI {
     }
 
     const response = await apiClient.get(
-      `${this.BASE_PATH}/dissemination/${encodeURIComponent(theme)}?${params.toString()}`,
+      `${this.BASE_PATH}/dissemination/${encodeURIComponent(theme)}?${params.toString()}`
     );
 
     return response.data;
@@ -212,7 +212,7 @@ export class CrossPlatformSynthesisAPI {
    */
   static async getPlatformInsights(
     query: string,
-    platforms?: string[],
+    platforms?: string[]
   ): Promise<{
     success: boolean;
     query: string;
@@ -229,7 +229,7 @@ export class CrossPlatformSynthesisAPI {
     }
 
     const response = await apiClient.get(
-      `${this.BASE_PATH}/platform-insights?${params.toString()}`,
+      `${this.BASE_PATH}/platform-insights?${params.toString()}`
     );
 
     return response.data;
@@ -245,7 +245,7 @@ export function useCrossPlatformSynthesis() {
 
   const synthesize = async (
     query: string,
-    options?: CrossPlatformSynthesisOptions,
+    options?: CrossPlatformSynthesisOptions
   ): Promise<CrossPlatformSynthesisResult | null> => {
     setLoading(true);
     setError(null);
@@ -253,7 +253,7 @@ export function useCrossPlatformSynthesis() {
     try {
       const result = await CrossPlatformSynthesisAPI.synthesizeMultiPlatform(
         query,
-        options,
+        options
       );
       return result;
     } catch (err: any) {
@@ -275,7 +275,7 @@ export function useCrossPlatformSynthesis() {
     try {
       const result = await CrossPlatformSynthesisAPI.getEmergingTopics(
         query,
-        timeWindow,
+        timeWindow
       );
       return result;
     } catch (err: any) {
@@ -293,7 +293,7 @@ export function useCrossPlatformSynthesis() {
   const getThemeDissemination = async (
     theme: string,
     query: string,
-    timeWindow?: number,
+    timeWindow?: number
   ) => {
     setLoading(true);
     setError(null);
@@ -302,7 +302,7 @@ export function useCrossPlatformSynthesis() {
       const result = await CrossPlatformSynthesisAPI.getThemeDissemination(
         theme,
         query,
-        timeWindow,
+        timeWindow
       );
       return result;
     } catch (err: any) {
@@ -324,7 +324,7 @@ export function useCrossPlatformSynthesis() {
     try {
       const result = await CrossPlatformSynthesisAPI.getPlatformInsights(
         query,
-        platforms,
+        platforms
       );
       return result;
     } catch (err: any) {

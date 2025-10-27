@@ -108,7 +108,7 @@ export interface ProvenanceResponse {
  */
 export class UnifiedThemeAPIService {
   private static instance: UnifiedThemeAPIService;
-  private baseUrl = '/api/literature/themes';
+  private baseUrl = '/literature/themes';
 
   private constructor() {}
 
@@ -129,14 +129,35 @@ export class UnifiedThemeAPIService {
     options?: ExtractionOptions
   ): Promise<ExtractionResponse> {
     try {
+      console.log('🟢 UnifiedThemeAPI.extractFromMultipleSources called');
+      console.log('   URL:', `${this.baseUrl}/unified-extract`);
+      console.log('   Sources:', sources.length);
+      console.log('   Payload:', { sources: sources.slice(0, 1), options }); // Log first source as sample
+
+      // Note: apiClient.post() returns ApiResponse<T> which has structure { data: T, message?, meta? }
+      // So we need to access response.data to get the actual ExtractionResponse
       const response = await apiClient.post<ExtractionResponse>(
         `${this.baseUrl}/unified-extract`,
         { sources, options }
       );
+
+      console.log('🟢 API Response received:');
+      console.log('   Response type:', typeof response);
+      console.log('   Response keys:', response ? Object.keys(response) : 'null');
+      console.log('   Has data?', response && 'data' in response);
+      console.log('   Themes count:', response.data?.themes?.length);
+      console.log('   Total sources:', response.data?.totalSources);
+      console.log('   Processing time:', response.data?.processingTime, 'ms');
+
       return response.data;
-    } catch (error) {
-      console.error('[UnifiedThemeAPI] Extract failed:', error);
-      throw new Error('Failed to extract themes from sources');
+    } catch (error: any) {
+      console.error('🔴 [UnifiedThemeAPI] Extract failed:', error);
+      console.error('   Error response:', error.response?.data);
+      console.error('   Error status:', error.response?.status);
+      console.error('   Error message:', error.message);
+      throw new Error(
+        `Failed to extract themes from sources: ${error.message}`
+      );
     }
   }
 
@@ -259,10 +280,13 @@ export const unifiedThemeAPI = UnifiedThemeAPIService.getInstance();
 /**
  * React Hook for unified theme API with loading states
  */
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 interface UseUnifiedThemeAPIReturn {
-  extractThemes: (sources: SourceContent[], options?: ExtractionOptions) => Promise<ExtractionResponse | null>;
+  extractThemes: (
+    sources: SourceContent[],
+    options?: ExtractionOptions
+  ) => Promise<ExtractionResponse | null>;
   getProvenance: (themeId: string) => Promise<ProvenanceResponse | null>;
   filterThemes: (
     studyId: string,
@@ -281,10 +305,26 @@ export function useUnifiedThemeAPI(): UseUnifiedThemeAPIReturn {
     async (sources: SourceContent[], options?: ExtractionOptions) => {
       setLoading(true);
       setError(null);
+      console.log('🔵 useUnifiedThemeAPI.extractThemes called');
+      console.log('   Sources count:', sources.length);
+      console.log('   Options:', options);
       try {
-        const result = await unifiedThemeAPI.extractFromMultipleSources(sources, options);
+        console.log('🔵 Calling unifiedThemeAPI.extractFromMultipleSources...');
+        const result = await unifiedThemeAPI.extractFromMultipleSources(
+          sources,
+          options
+        );
+        console.log('🔵 API returned result:', result);
+        console.log('   Result type:', typeof result);
+        console.log('   Result has themes?', result?.themes ? 'YES' : 'NO');
         return result;
       } catch (err) {
+        console.error('🔴 Error in extractThemes:', err);
+        console.error('   Error type:', typeof err);
+        console.error(
+          '   Error message:',
+          err instanceof Error ? err.message : 'Unknown'
+        );
         setError(err instanceof Error ? err.message : 'Unknown error');
         return null;
       } finally {
@@ -317,7 +357,11 @@ export function useUnifiedThemeAPI(): UseUnifiedThemeAPIReturn {
       setLoading(true);
       setError(null);
       try {
-        const result = await unifiedThemeAPI.getThemesBySources(studyId, sourceType, minInfluence);
+        const result = await unifiedThemeAPI.getThemesBySources(
+          studyId,
+          sourceType,
+          minInfluence
+        );
         return result;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');

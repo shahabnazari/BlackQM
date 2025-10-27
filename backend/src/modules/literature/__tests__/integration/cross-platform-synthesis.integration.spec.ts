@@ -339,9 +339,9 @@ describe('Cross-Platform Synthesis Integration Tests (Phase 9 Day 22)', () => {
         insightsResponse.body.summary?.totalSources || 0;
 
       // Sources should match or be close (slight variation acceptable due to caching)
-      expect(Math.abs(totalSourcesFromSynthesis - totalSourcesFromInsights)).toBeLessThan(
-        5,
-      );
+      expect(
+        Math.abs(totalSourcesFromSynthesis - totalSourcesFromInsights),
+      ).toBeLessThan(5);
     });
   });
 

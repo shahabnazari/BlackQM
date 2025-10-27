@@ -22,14 +22,14 @@ class AuthServicee {
     if (typeof window !== 'undefined') {
       const storedTokens = localStorage.getItem('auth_tokens');
       if (storedTokens) {
-        this.tokens = JSON.parse(storedTokens)
+        this.tokens = JSON.parse(storedTokens);
       }
     }
   }
 
   static getInstance(): AuthServicee {
     if (!AuthServicee.instance) {
-      AuthServicee.instance = new AuthServicee()
+      AuthServicee.instance = new AuthServicee();
     }
     return AuthServicee.instance;
   }
@@ -43,18 +43,18 @@ class AuthServicee {
   }
 
   setTokens(tokens: AuthTokens): void {
-    this.tokens = tokens
+    this.tokens = tokens;
     if (typeof window !== 'undefined') {
-      localStorage.setItem('auth_tokens', JSON.stringify(tokens))
+      localStorage.setItem('auth_tokens', JSON.stringify(tokens));
     }
   }
 
   clearTokens(): void {
     this.tokens = null;
-    this.user = null
+    this.user = null;
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth_tokens')
-      localStorage.removeItem('user')
+      localStorage.removeItem('auth_tokens');
+      localStorage.removeItem('user');
     }
   }
 
@@ -63,9 +63,9 @@ class AuthServicee {
   }
 
   setUser(user: User): void {
-    this.user = user
+    this.user = user;
     if (typeof window !== 'undefined') {
-      localStorage.setItem('user', JSON.stringify(user))
+      localStorage.setItem('user', JSON.stringify(user));
     }
   }
 
@@ -97,7 +97,7 @@ export const authService = AuthServicee.getInstance();
 
 export function getAuthHeaders(): Record<string, string> {
   const token = authService.getAccessToken();
-  return token ? { Authorization: `Bearer ${token}` } : {}
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export function getAuthToken(): string | null {

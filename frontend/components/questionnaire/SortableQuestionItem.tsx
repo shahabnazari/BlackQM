@@ -1,11 +1,11 @@
 'use client';
 
-import React from 'react';
+import { Question } from '@/lib/types/questionnaire';
+import { cn } from '@/lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Edit, Copy, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Question } from '@/lib/stores/questionnaire.store';
+import { Copy, Edit, GripVertical, Trash2 } from 'lucide-react';
+import React from 'react';
 
 interface SortableQuestionItemProps {
   question: Question;
@@ -26,7 +26,7 @@ export const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
   onEdit,
   onDuplicate,
   onDelete,
-  viewMode
+  viewMode,
 }) => {
   const {
     attributes,
@@ -34,13 +34,13 @@ export const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
     setNodeRef,
     transform,
     transition,
-    isDragging
+    isDragging,
   } = useSortable({ id: question.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1
+    opacity: isDragging ? 0.5 : 1,
   };
 
   return (
@@ -49,8 +49,8 @@ export const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
       style={style}
       className={cn(
         'bg-white dark:bg-gray-800 rounded-lg border transition-all',
-        isSelected 
-          ? 'border-blue-500 shadow-lg shadow-blue-500/10' 
+        isSelected
+          ? 'border-blue-500 shadow-lg shadow-blue-500/10'
           : 'border-gray-200 dark:border-gray-700 hover:border-gray-300',
         isDragging && 'cursor-grabbing',
         viewMode === 'grid' && 'h-full'
@@ -109,14 +109,16 @@ export const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
                 Options:
               </p>
               <div className="flex flex-wrap gap-1">
-                {question.options.slice(0, 3).map((option, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2 py-0.5 text-xs bg-gray-50 dark:bg-gray-900 rounded"
-                  >
-                    {option.text}
-                  </span>
-                ))}
+                {question.options
+                  .slice(0, 3)
+                  .map((option: any, idx: number) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-0.5 text-xs bg-gray-50 dark:bg-gray-900 rounded"
+                    >
+                      {option.text}
+                    </span>
+                  ))}
                 {question.options.length > 3 && (
                   <span className="px-2 py-0.5 text-xs text-gray-500">
                     +{question.options.length - 3} more

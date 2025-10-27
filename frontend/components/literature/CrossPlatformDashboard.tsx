@@ -109,8 +109,11 @@ export function CrossPlatformDashboard({
   const { themeClusters, emergingTopics, platformInsights } = synthesisResult;
 
   // Prepare data for theme cluster chart
-  const themeClusterData = themeClusters.slice(0, 10).map((cluster) => ({
-    name: cluster.theme.length > 30 ? cluster.theme.substring(0, 30) + '...' : cluster.theme,
+  const themeClusterData = themeClusters.slice(0, 10).map(cluster => ({
+    name:
+      cluster.theme.length > 30
+        ? cluster.theme.substring(0, 30) + '...'
+        : cluster.theme,
     papers: cluster.sources.papers,
     youtube: cluster.sources.youtube,
     podcasts: cluster.sources.podcasts,
@@ -123,30 +126,36 @@ export function CrossPlatformDashboard({
   const platformDistributionData = [
     {
       name: 'Papers',
-      value: platformInsights.find((p) => p.platform === 'paper')?.sourceCount || 0,
+      value:
+        platformInsights.find(p => p.platform === 'paper')?.sourceCount || 0,
       color: PLATFORM_COLORS.papers,
     },
     {
       name: 'YouTube',
-      value: platformInsights.find((p) => p.platform === 'youtube')?.sourceCount || 0,
+      value:
+        platformInsights.find(p => p.platform === 'youtube')?.sourceCount || 0,
       color: PLATFORM_COLORS.youtube,
     },
     {
       name: 'Podcasts',
-      value: platformInsights.find((p) => p.platform === 'podcast')?.sourceCount || 0,
+      value:
+        platformInsights.find(p => p.platform === 'podcast')?.sourceCount || 0,
       color: PLATFORM_COLORS.podcasts,
     },
     {
       name: 'TikTok',
-      value: platformInsights.find((p) => p.platform === 'tiktok')?.sourceCount || 0,
+      value:
+        platformInsights.find(p => p.platform === 'tiktok')?.sourceCount || 0,
       color: PLATFORM_COLORS.tiktok,
     },
     {
       name: 'Instagram',
-      value: platformInsights.find((p) => p.platform === 'instagram')?.sourceCount || 0,
+      value:
+        platformInsights.find(p => p.platform === 'instagram')?.sourceCount ||
+        0,
       color: PLATFORM_COLORS.instagram,
     },
-  ].filter((item) => item.value > 0);
+  ].filter(item => item.value > 0);
 
   return (
     <div className="space-y-6">
@@ -156,36 +165,49 @@ export function CrossPlatformDashboard({
           Cross-Platform Research Synthesis
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Query: <span className="font-semibold text-gray-900 dark:text-white">{query}</span>
+          Query:{' '}
+          <span className="font-semibold text-gray-900 dark:text-white">
+            {query}
+          </span>
         </p>
         {synthesisResult.metadata && (
           <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Sources</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Total Sources
+              </p>
               <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {synthesisResult.metadata.totalSources}
               </p>
             </div>
             <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Theme Clusters</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Theme Clusters
+              </p>
               <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                 {synthesisResult.metadata.totalThemeClusters}
               </p>
             </div>
             <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Dissemination Paths</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Dissemination Paths
+              </p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                 {synthesisResult.metadata.totalDisseminationPaths}
               </p>
             </div>
             <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Emerging Topics</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Emerging Topics
+              </p>
               <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                 {synthesisResult.metadata.totalEmergingTopics}
               </p>
             </div>
             <div className="bg-pink-50 dark:bg-pink-900/20 rounded-lg p-3">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Platforms</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Platforms
+              </p>
               <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">
                 {synthesisResult.metadata.platformCount}
               </p>
@@ -204,7 +226,7 @@ export function CrossPlatformDashboard({
               { id: 'dissemination', label: 'Dissemination', icon: '📈' },
               { id: 'emerging', label: 'Emerging Topics', icon: '🔥' },
               { id: 'platforms', label: 'Platform Insights', icon: '🌐' },
-            ].map((tab) => (
+            ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
@@ -308,15 +330,45 @@ export function CrossPlatformDashboard({
               <ResponsiveContainer width="100%" height={400}>
                 <BarChart data={themeClusterData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                  <XAxis
+                    dataKey="name"
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                  />
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="papers" stackId="a" fill={PLATFORM_COLORS.papers} name="Papers" />
-                  <Bar dataKey="youtube" stackId="a" fill={PLATFORM_COLORS.youtube} name="YouTube" />
-                  <Bar dataKey="podcasts" stackId="a" fill={PLATFORM_COLORS.podcasts} name="Podcasts" />
-                  <Bar dataKey="tiktok" stackId="a" fill={PLATFORM_COLORS.tiktok} name="TikTok" />
-                  <Bar dataKey="instagram" stackId="a" fill={PLATFORM_COLORS.instagram} name="Instagram" />
+                  <Bar
+                    dataKey="papers"
+                    stackId="a"
+                    fill={PLATFORM_COLORS.papers}
+                    name="Papers"
+                  />
+                  <Bar
+                    dataKey="youtube"
+                    stackId="a"
+                    fill={PLATFORM_COLORS.youtube}
+                    name="YouTube"
+                  />
+                  <Bar
+                    dataKey="podcasts"
+                    stackId="a"
+                    fill={PLATFORM_COLORS.podcasts}
+                    name="Podcasts"
+                  />
+                  <Bar
+                    dataKey="tiktok"
+                    stackId="a"
+                    fill={PLATFORM_COLORS.tiktok}
+                    name="TikTok"
+                  />
+                  <Bar
+                    dataKey="instagram"
+                    stackId="a"
+                    fill={PLATFORM_COLORS.instagram}
+                    name="Instagram"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -383,7 +435,10 @@ export function CrossPlatformDashboard({
               </h3>
               <div className="grid gap-6">
                 {platformInsights.map((insight, index) => (
-                  <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                  <div
+                    key={index}
+                    className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4"
+                  >
                     <div className="flex justify-between items-start mb-3">
                       <h4 className="font-semibold text-gray-900 dark:text-white capitalize">
                         {insight.platform}

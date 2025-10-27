@@ -1,47 +1,55 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Plus,
-  ChevronRight,
-  Save,
-  Eye,
-  Undo,
-  Redo,
-  Copy,
-  Trash2,
-  Grid3x3,
-  List,
-  ChevronLeft,
-  Search,
-  Library,
-  FileText,
-  Sparkles,
-  GitBranch,
-  Database,
-  Package,
-  Maximize2,
-  Minimize2
-} from 'lucide-react';
-import { DndContext, DragEndEvent, DragOverlay, closestCenter } from '@dnd-kit/core';
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { motion, AnimatePresence } from 'framer-motion';
+import { questionTypesByCategory } from '@/lib/data/question-types';
+import { getTemplateQuestions } from '@/lib/data/questionnaire-templates';
 import { useQuestionnaireStore } from '@/lib/stores/questionnaire.store';
 import { QuestionType } from '@/lib/types/questionnaire';
-import { getTemplateQuestions } from '@/lib/data/questionnaire-templates';
-import { questionTypesByCategory } from '@/lib/data/question-types';
 import { cn } from '@/lib/utils';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  closestCenter,
+} from '@dnd-kit/core';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Database,
+  Eye,
+  FileText,
+  GitBranch,
+  Grid3x3,
+  Library,
+  List,
+  Maximize2,
+  Minimize2,
+  Package,
+  Plus,
+  Redo,
+  Save,
+  Search,
+  Sparkles,
+  Trash2,
+  Undo,
+} from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 // Import sub-components (we'll create stubs for these)
-import { SortableQuestionItem } from './SortableQuestionItem';
+import { AIQuestionSuggestions } from './AIQuestionSuggestions';
+import { ImportExportModal } from './ImportExportModal';
+import { QuestionBankPanel } from './QuestionBankPanel';
 import { QuestionEditor } from './QuestionEditor';
 import { QuestionnairePreview } from './QuestionnairePreview';
 import { SkipLogicBuilder } from './SkipLogicBuilder';
-import { QuestionBankPanel } from './QuestionBankPanel';
+import { SortableQuestionItem } from './SortableQuestionItem';
 import { TemplateLibrary } from './TemplateLibrary';
-import { ImportExportModal } from './ImportExportModal';
-import { AIQuestionSuggestions } from './AIQuestionSuggestions';
 
 interface QuestionnaireBuilderEnhancedProps {
   surveyId: string;
@@ -49,11 +57,9 @@ interface QuestionnaireBuilderEnhancedProps {
   onPublish?: () => void;
 }
 
-export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhancedProps> = ({
-  surveyId: _surveyId,
-  onSave,
-  onPublish
-}) => {
+export const QuestionnaireBuilderEnhanced: React.FC<
+  QuestionnaireBuilderEnhancedProps
+> = ({ surveyId: _surveyId, onSave, onPublish }) => {
   const {
     questions,
     selectedQuestionIds,
@@ -71,22 +77,30 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
     copyQuestions,
     undo,
     redo,
-    importQuestions
+    importQuestions,
   } = useQuestionnaireStore();
 
   // Panel visibility states
-  const [leftPanelView, setLeftPanelView] = useState<'library' | 'templates' | 'bank'>('library');
+  const [leftPanelView, setLeftPanelView] = useState<
+    'library' | 'templates' | 'bank'
+  >('library');
   const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(true);
-  const [rightPanelView, setRightPanelView] = useState<'preview' | 'logic' | 'ai'>('ai');
+  const [rightPanelView, setRightPanelView] = useState<
+    'preview' | 'logic' | 'ai'
+  >('ai');
 
   // UI states
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
+    null
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [showImportExport, setShowImportExport] = useState(false);
-  const [selectedQuestionForLogic, setSelectedQuestionForLogic] = useState<string | null>(null);
+  const [selectedQuestionForLogic, setSelectedQuestionForLogic] = useState<
+    string | null
+  >(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [useOverlayMode, setUseOverlayMode] = useState(false);
 
@@ -106,25 +120,25 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
   // Add a new question
   const handleAddQuestion = (type: QuestionType, data?: any) => {
     const newQuestion = addQuestion(type);
-    
+
     // If data is provided (from AI suggestions), update the question
     if (data) {
       updateQuestion(newQuestion.id, {
         text: data.text || 'New Question',
         options: data.options,
-        settings: data.settings,
+        config: data.settings,
         validation: data.validation,
-        logic: data.logic
+        skipLogic: data.logic,
       });
     }
-    
+
     setEditingQuestionId(newQuestion.id);
   };
 
   // Add questions from template
   const handleAddFromTemplate = (template: any) => {
     const templateQuestions = getTemplateQuestions(template.id);
-    
+
     if (templateQuestions.length === 0) {
       // Fallback to template.questions if no predefined questions
       if (template.questions && template.questions.length > 0) {
@@ -143,8 +157,8 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
           text: q.text,
           required: q.required,
           options: q.options,
-          settings: q.settings,
-          validation: q.validation
+          config: q.settings,
+          validation: q.validation,
         });
       });
     }
@@ -159,7 +173,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
   // Handle bulk actions
   const handleBulkAction = (action: 'delete' | 'copy' | 'export') => {
     const selectedIds = Array.from(selectedQuestionIds);
-    
+
     switch (action) {
       case 'delete':
         if (confirm(`Delete ${selectedIds.length} question(s)?`)) {
@@ -180,24 +194,31 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
   // Filter question types based on search and category
   const filteredQuestionTypes = useCallback(() => {
     let types = Object.entries(questionTypesByCategory);
-    
+
     if (selectedCategory) {
       types = types.filter(([category]) => category === selectedCategory);
     }
-    
+
     if (searchQuery) {
       types = types
-        .map(([category, items]) => [
-          category,
-          items.filter(
-            item =>
-              item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              item.description.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-        ] as [string, typeof items])
+        .map(
+          ([category, items]) =>
+            [
+              category,
+              items.filter(
+                item =>
+                  item.label
+                    .toLowerCase()
+                    .includes(searchQuery.toLowerCase()) ||
+                  item.description
+                    .toLowerCase()
+                    .includes(searchQuery.toLowerCase())
+              ),
+            ] as [string, typeof items]
+        )
         .filter(([_, items]) => items.length > 0);
     }
-    
+
     return types;
   }, [selectedCategory, searchQuery]);
 
@@ -210,7 +231,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
         setShowRightPanel(false);
       }
     };
-    
+
     checkViewport();
     window.addEventListener('resize', checkViewport);
     return () => window.removeEventListener('resize', checkViewport);
@@ -263,7 +284,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400" />
                   )}
                 </button>
-                
+
                 <button
                   onClick={() => setLeftPanelView('templates')}
                   className={cn(
@@ -281,7 +302,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400" />
                   )}
                 </button>
-                
+
                 <button
                   onClick={() => setLeftPanelView('bank')}
                   className={cn(
@@ -318,7 +339,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                         className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
                       />
                     </div>
-                    
+
                     {/* Category Filter */}
                     <div className="mt-3 flex flex-wrap gap-1">
                       <button
@@ -332,20 +353,22 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                       >
                         All
                       </button>
-                      {Object.keys(questionTypesByCategory).map((category: any) => (
-                        <button
-                          key={category}
-                          onClick={() => setSelectedCategory(category)}
-                          className={cn(
-                            'px-2 py-1 text-xs rounded-md transition-colors',
-                            selectedCategory === category
-                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400'
-                          )}
-                        >
-                          {category}
-                        </button>
-                      ))}
+                      {Object.keys(questionTypesByCategory).map(
+                        (category: any) => (
+                          <button
+                            key={category}
+                            onClick={() => setSelectedCategory(category)}
+                            className={cn(
+                              'px-2 py-1 text-xs rounded-md transition-colors',
+                              selectedCategory === category
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400'
+                            )}
+                          >
+                            {category}
+                          </button>
+                        )
+                      )}
                     </div>
                   </div>
 
@@ -363,7 +386,9 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                               onClick={() => handleAddQuestion(item.type)}
                               className="w-full flex items-start space-x-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
                             >
-                              <span className="text-xl mt-0.5">{item.icon}</span>
+                              <span className="text-xl mt-0.5">
+                                {item.icon}
+                              </span>
                               <div className="flex-1">
                                 <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                   {item.label}
@@ -381,11 +406,11 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                   </div>
                 </>
               )}
-              
+
               {leftPanelView === 'templates' && (
                 <TemplateLibrary onSelectTemplate={handleAddFromTemplate} />
               )}
-              
+
               {leftPanelView === 'bank' && (
                 <QuestionBankPanel onSelectQuestion={handleAddFromBank} />
               )}
@@ -395,7 +420,10 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
       </AnimatePresence>
 
       {/* CENTER PANEL - Canvas */}
-      <div className="flex-1 flex flex-col overflow-hidden" style={{ minWidth: '800px' }}>
+      <div
+        className="flex-1 flex flex-col overflow-hidden"
+        style={{ minWidth: '800px' }}
+      >
         {/* Toolbar */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 relative z-30">
           <div className="flex items-center justify-between">
@@ -411,9 +439,9 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                   <ChevronRight className="w-5 h-5" />
                 )}
               </button>
-              
+
               <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
-              
+
               <button
                 onClick={() => undo()}
                 disabled={undoStack.length === 0}
@@ -422,7 +450,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
               >
                 <Undo className="w-5 h-5" />
               </button>
-              
+
               <button
                 onClick={() => redo()}
                 disabled={redoStack.length === 0}
@@ -431,11 +459,13 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
               >
                 <Redo className="w-5 h-5" />
               </button>
-              
+
               <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
-              
+
               <button
-                onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+                onClick={() =>
+                  setViewMode(viewMode === 'list' ? 'grid' : 'list')
+                }
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 title={`Switch to ${viewMode === 'list' ? 'Grid' : 'List'} View`}
               >
@@ -445,7 +475,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                   <List className="w-5 h-5" />
                 )}
               </button>
-              
+
               {selectedQuestionIds.size > 0 && (
                 <>
                   <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
@@ -469,7 +499,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                 </>
               )}
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowImportExport(true)}
@@ -478,9 +508,9 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                 <Package className="w-5 h-5" />
                 <span className="text-sm">Import/Export</span>
               </button>
-              
+
               <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
-              
+
               <button
                 onClick={() => setShowRightPanel(!showRightPanel)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -492,7 +522,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                   <ChevronLeft className="w-5 h-5" />
                 )}
               </button>
-              
+
               <button
                 onClick={() => {
                   setIsFullScreen(!isFullScreen);
@@ -510,9 +540,9 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                   <Maximize2 className="w-5 h-5" />
                 )}
               </button>
-              
+
               <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
-              
+
               <button
                 onClick={onSave}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -520,7 +550,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                 <Save className="w-5 h-5" />
                 <span className="text-sm">Save</span>
               </button>
-              
+
               <button
                 onClick={onPublish}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
@@ -537,9 +567,12 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
             <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm">
                 <Plus className="w-12 h-12 mb-4 mx-auto" />
-                <p className="text-lg font-medium text-center">Start Building Your Questionnaire</p>
+                <p className="text-lg font-medium text-center">
+                  Start Building Your Questionnaire
+                </p>
                 <p className="text-sm mt-2 text-center max-w-sm">
-                  Choose from the question library, select a template, or use AI suggestions to get started
+                  Choose from the question library, select a template, or use AI
+                  suggestions to get started
                 </p>
                 <div className="flex flex-col space-y-2 mt-6">
                   <button
@@ -580,9 +613,13 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                   items={questions.map((q: any) => q.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  <div className={cn(
-                    viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : 'space-y-3'
-                  )}>
+                  <div
+                    className={cn(
+                      viewMode === 'grid'
+                        ? 'grid grid-cols-1 lg:grid-cols-2 gap-4'
+                        : 'space-y-3'
+                    )}
+                  >
                     {questions.map((question, index) => (
                       <div key={question.id} className="relative group">
                         <SortableQuestionItem
@@ -602,19 +639,20 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                           viewMode={viewMode}
                         />
                         {/* Skip Logic Indicator */}
-                        {question.logic && Object.keys(question.logic).length > 0 && (
-                          <button
-                            onClick={() => {
-                              setSelectedQuestionForLogic(question.id);
-                              setRightPanelView('logic');
-                              setShowRightPanel(true);
-                            }}
-                            className="absolute top-2 right-12 p-1.5 bg-purple-100 text-purple-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="Edit Skip Logic"
-                          >
-                            <GitBranch className="w-4 h-4" />
-                          </button>
-                        )}
+                        {question.skipLogic &&
+                          Object.keys(question.skipLogic).length > 0 && (
+                            <button
+                              onClick={() => {
+                                setSelectedQuestionForLogic(question.id);
+                                setRightPanelView('logic');
+                                setShowRightPanel(true);
+                              }}
+                              className="absolute top-2 right-12 p-1.5 bg-purple-100 text-purple-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Edit Skip Logic"
+                            >
+                              <GitBranch className="w-4 h-4" />
+                            </button>
+                          )}
                       </div>
                     ))}
                   </div>
@@ -662,7 +700,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400" />
                   )}
                 </button>
-                
+
                 <button
                   onClick={() => setRightPanelView('logic')}
                   className={cn(
@@ -680,7 +718,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400" />
                   )}
                 </button>
-                
+
                 <button
                   onClick={() => setRightPanelView('ai')}
                   className={cn(
@@ -708,7 +746,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                   <QuestionnairePreview questions={questions} />
                 </div>
               )}
-              
+
               {rightPanelView === 'logic' && (
                 <SkipLogicBuilder
                   questions={questions}
@@ -716,19 +754,22 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
                   onUpdateLogic={(questionId, logic) => {
                     const question = questions.find(q => q.id === questionId);
                     if (question) {
-                      updateQuestion(questionId, { ...question, logic });
+                      updateQuestion(questionId, {
+                        ...question,
+                        skipLogic: logic,
+                      });
                     }
                   }}
                 />
               )}
-              
+
               {rightPanelView === 'ai' && (
                 <div className="h-full overflow-y-auto">
                   <AIQuestionSuggestions
                     surveyContext={{
                       title: 'Survey Title',
                       existingQuestions: questions,
-                      category: selectedCategory
+                      category: selectedCategory,
                     }}
                     onAddQuestion={handleAddQuestion}
                   />
@@ -755,7 +796,7 @@ export const QuestionnaireBuilderEnhanced: React.FC<QuestionnaireBuilderEnhanced
         <div className="fixed inset-0 z-50">
           <QuestionEditor
             question={questions.find(q => q.id === editingQuestionId)!}
-            onSave={(updated) => {
+            onSave={updated => {
               updateQuestion(editingQuestionId, updated);
               setEditingQuestionId(null);
             }}

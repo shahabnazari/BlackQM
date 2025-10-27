@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 /**
@@ -16,7 +16,7 @@ export enum ParticipantFlowStage {
   Q_SORT = 'Q_SORT',
   POST_SURVEY = 'POST_SURVEY',
   COMPLETED = 'COMPLETED',
-  ABANDONED = 'ABANDONED'
+  ABANDONED = 'ABANDONED',
 }
 
 export interface FlowState {
@@ -78,7 +78,7 @@ const STAGE_ROUTES: Record<ParticipantFlowStage, string> = {
   [ParticipantFlowStage.Q_SORT]: '/study/q-sort',
   [ParticipantFlowStage.POST_SURVEY]: '/study/post-survey',
   [ParticipantFlowStage.COMPLETED]: '/study/thank-you',
-  [ParticipantFlowStage.ABANDONED]: '/study/abandoned'
+  [ParticipantFlowStage.ABANDONED]: '/study/abandoned',
 };
 
 export function useParticipantFlow({
@@ -88,15 +88,16 @@ export function useParticipantFlow({
   autoSaveInterval = 60000, // 1 minute
   onStageComplete,
   onFlowComplete,
-  onFlowAbandoned
+  onFlowAbandoned,
 }: UseParticipantFlowOptions) {
   const router = useRouter();
   const [flowState, setFlowState] = useState<FlowState | null>(null);
-  const [navigationGuards, setNavigationGuards] = useState<NavigationGuards | null>(null);
+  const [navigationGuards, setNavigationGuards] =
+    useState<NavigationGuards | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
   const lastSaveRef = useRef<Date>(new Date());
   const activityRef = useRef<NodeJS.Timeout | null>(null);
@@ -115,7 +116,7 @@ export function useParticipantFlow({
         browser: detectBrowser(),
         screenResolution: `${window.screen.width}x${window.screen.height}`,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        language: navigator.language
+        language: navigator.language,
       };
 
       const response = await fetch('/api/participant-flow/initialize', {
@@ -125,8 +126,8 @@ export function useParticipantFlow({
           surveyId,
           participantId: participantId || generateParticipantId(),
           sessionId: generateSessionId(),
-          metadata
-        })
+          metadata,
+        }),
       });
 
       if (!response.ok) {
@@ -135,18 +136,22 @@ export function useParticipantFlow({
 
       const state = await response.json();
       setFlowState(state);
-      
+
       // Navigate to current stage
-      const route = STAGE_ROUTES[state.currentStage];
+      const route =
+        state.currentStage in STAGE_ROUTES
+          ? STAGE_ROUTES[state.currentStage as ParticipantFlowStage]
+          : undefined;
       if (route && window.location.pathname !== route) {
         router.push(route);
       }
 
       // Load navigation guards
       await loadNavigationGuards(state.surveyId, state.participantId);
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to initialize flow');
+      setError(
+        err instanceof Error ? err.message : 'Failed to initialize flow'
+      );
       console.error('Flow initialization error:', err);
     } finally {
       setIsLoading(false);
@@ -156,114 +161,123 @@ export function useParticipantFlow({
   /**
    * Transition to next stage with validation
    */
-  const transitionToStage = useCallback(async (
-    targetStage: ParticipantFlowStage,
-    stageData?: any
-  ) => {
-    if (!flowState) return;
+  const transitionToStage = useCallback(
+    async (targetStage: ParticipantFlowStage, stageData?: any) => {
+      if (!flowState) return;
 
-    try {
-      setIsLoading(true);
-      
-      // Check navigation guards first
-      if (navigationGuards && !navigationGuards.canProceed) {
-        toast.error('Cannot proceed', {
-          description: navigationGuards.blockers.join(', ')
-        });
-        return;
-      }
+      try {
+        setIsLoading(true);
 
-      const response = await fetch(
-        `/api/participant-flow/${flowState.surveyId}/${flowState.participantId}/transition`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ targetStage, stageData })
+        // Check navigation guards first
+        if (navigationGuards && !navigationGuards.canProceed) {
+          toast.error('Cannot proceed', {
+            description: navigationGuards.blockers.join(', '),
+          });
+          return;
         }
-      );
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Transition failed');
+        const response = await fetch(
+          `/api/participant-flow/${flowState.surveyId}/${flowState.participantId}/transition`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetStage, stageData }),
+          }
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Transition failed');
+        }
+
+        const newState = await response.json();
+        setFlowState(newState);
+
+        // Navigate to new stage
+        const route = STAGE_ROUTES[targetStage];
+        router.push(route);
+
+        // Trigger callbacks
+        if (
+          onStageComplete &&
+          flowState.currentStage !== ParticipantFlowStage.NOT_STARTED
+        ) {
+          onStageComplete(flowState.currentStage);
+        }
+
+        if (targetStage === ParticipantFlowStage.COMPLETED && onFlowComplete) {
+          onFlowComplete();
+        }
+
+        // Update guards for new stage
+        await loadNavigationGuards(newState.surveyId, newState.participantId);
+
+        toast.success('Progress saved');
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Transition failed';
+        setError(message);
+        toast.error('Navigation failed', { description: message });
+      } finally {
+        setIsLoading(false);
       }
-
-      const newState = await response.json();
-      setFlowState(newState);
-
-      // Navigate to new stage
-      const route = STAGE_ROUTES[targetStage];
-      router.push(route);
-
-      // Trigger callbacks
-      if (onStageComplete && flowState.currentStage !== ParticipantFlowStage.NOT_STARTED) {
-        onStageComplete(flowState.currentStage);
-      }
-
-      if (targetStage === ParticipantFlowStage.COMPLETED && onFlowComplete) {
-        onFlowComplete();
-      }
-
-      // Update guards for new stage
-      await loadNavigationGuards(newState.surveyId, newState.participantId);
-
-      toast.success('Progress saved');
-      
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Transition failed';
-      setError(message);
-      toast.error('Navigation failed', { description: message });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [flowState, navigationGuards, router, onStageComplete, onFlowComplete]);
+    },
+    [flowState, navigationGuards, router, onStageComplete, onFlowComplete]
+  );
 
   /**
    * Save current progress
    */
-  const saveProgress = useCallback(async (data: any, isPartial = false) => {
-    if (!flowState || isSaving) return;
+  const saveProgress = useCallback(
+    async (data: any, isPartial = false) => {
+      if (!flowState || isSaving) return;
 
-    try {
-      setIsSaving(true);
-      
-      const response = await fetch(
-        `/api/participant-flow/${flowState.surveyId}/${flowState.participantId}/save`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data, isPartial })
+      try {
+        setIsSaving(true);
+
+        const response = await fetch(
+          `/api/participant-flow/${flowState.surveyId}/${flowState.participantId}/save`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data, isPartial }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to save progress');
         }
-      );
 
-      if (!response.ok) {
-        throw new Error('Failed to save progress');
-      }
+        const savePoint = await response.json();
+        lastSaveRef.current = new Date();
 
-      const savePoint = await response.json();
-      lastSaveRef.current = new Date();
-      
-      // Update local state
-      setFlowState(prev => prev ? {
-        ...prev,
-        stageData: {
-          ...prev.stageData,
-          [`${prev.currentStage}_savepoint`]: savePoint
+        // Update local state
+        setFlowState(prev =>
+          prev
+            ? {
+                ...prev,
+                stageData: {
+                  ...prev.stageData,
+                  [`${prev.currentStage}_savepoint`]: savePoint,
+                },
+              }
+            : null
+        );
+
+        if (!isPartial) {
+          toast.success('Progress saved');
         }
-      } : null);
 
-      if (!isPartial) {
-        toast.success('Progress saved');
+        return savePoint;
+      } catch (err) {
+        console.error('Save progress error:', err);
+        toast.error('Failed to save progress');
+      } finally {
+        setIsSaving(false);
       }
-      
-      return savePoint;
-      
-    } catch (err) {
-      console.error('Save progress error:', err);
-      toast.error('Failed to save progress');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [flowState, isSaving]);
+    },
+    [flowState, isSaving]
+  );
 
   /**
    * Resume from saved progress
@@ -273,13 +287,13 @@ export function useParticipantFlow({
 
     try {
       setIsLoading(true);
-      
+
       const response = await fetch(
         `/api/participant-flow/${flowState.surveyId}/${flowState.participantId}/resume`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: flowState.sessionId })
+          body: JSON.stringify({ sessionId: flowState.sessionId }),
         }
       );
 
@@ -289,13 +303,17 @@ export function useParticipantFlow({
 
       const resumedState = await response.json();
       setFlowState(resumedState);
-      
+
       // Navigate to resumed stage
-      const route = STAGE_ROUTES[resumedState.currentStage];
-      router.push(route);
-      
+      const route =
+        resumedState.currentStage in STAGE_ROUTES
+          ? STAGE_ROUTES[resumedState.currentStage as ParticipantFlowStage]
+          : undefined;
+      if (route) {
+        router.push(route);
+      }
+
       toast.success('Progress restored');
-      
     } catch (err) {
       setError('Failed to resume progress');
       console.error('Resume error:', err);
@@ -319,14 +337,17 @@ export function useParticipantFlow({
   /**
    * Navigate to next stage
    */
-  const goNext = useCallback(async (stageData?: any) => {
-    if (!flowState || !navigationGuards?.canProceed) return;
+  const goNext = useCallback(
+    async (stageData?: any) => {
+      if (!flowState || !navigationGuards?.canProceed) return;
 
-    const nextStage = flowState.navigation.nextStage;
-    if (nextStage) {
-      await transitionToStage(nextStage, stageData);
-    }
-  }, [flowState, navigationGuards, transitionToStage]);
+      const nextStage = flowState.navigation.nextStage;
+      if (nextStage) {
+        await transitionToStage(nextStage, stageData);
+      }
+    },
+    [flowState, navigationGuards, transitionToStage]
+  );
 
   /**
    * Skip current stage if allowed
@@ -343,72 +364,80 @@ export function useParticipantFlow({
   /**
    * Handle flow abandonment
    */
-  const abandonFlow = useCallback(async (reason?: string) => {
-    if (!flowState) return;
+  const abandonFlow = useCallback(
+    async (reason?: string) => {
+      if (!flowState) return;
 
-    try {
-      await fetch(
-        `/api/participant-flow/${flowState.surveyId}/${flowState.participantId}/abandon`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason })
+      try {
+        await fetch(
+          `/api/participant-flow/${flowState.surveyId}/${flowState.participantId}/abandon`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason }),
+          }
+        );
+
+        if (onFlowAbandoned) {
+          onFlowAbandoned(reason || 'User abandoned flow');
         }
-      );
 
-      if (onFlowAbandoned) {
-        onFlowAbandoned(reason || 'User abandoned flow');
+        router.push('/study/abandoned');
+      } catch (err) {
+        console.error('Abandon flow error:', err);
       }
-
-      router.push('/study/abandoned');
-      
-    } catch (err) {
-      console.error('Abandon flow error:', err);
-    }
-  }, [flowState, router, onFlowAbandoned]);
+    },
+    [flowState, router, onFlowAbandoned]
+  );
 
   /**
    * Track stage metrics
    */
-  const trackMetrics = useCallback(async (metrics: {
-    interactions?: number;
-    errors?: number;
-    helperUsage?: boolean;
-    deviceChanges?: boolean;
-  }) => {
-    if (!flowState) return;
+  const trackMetrics = useCallback(
+    async (metrics: {
+      interactions?: number;
+      errors?: number;
+      helperUsage?: boolean;
+      deviceChanges?: boolean;
+    }) => {
+      if (!flowState) return;
 
-    try {
-      await fetch(
-        `/api/participant-flow/${flowState.surveyId}/${flowState.participantId}/metrics`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(metrics)
-        }
-      );
-    } catch (err) {
-      console.error('Track metrics error:', err);
-    }
-  }, [flowState]);
+      try {
+        await fetch(
+          `/api/participant-flow/${flowState.surveyId}/${flowState.participantId}/metrics`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(metrics),
+          }
+        );
+      } catch (err) {
+        console.error('Track metrics error:', err);
+      }
+    },
+    [flowState]
+  );
 
   /**
    * Load navigation guards for current stage
    */
-  const loadNavigationGuards = useCallback(async (surveyId: string, participantId: string) => {
-    try {
-      const response = await fetch(
-        `/api/participant-flow/${surveyId}/${participantId}/guards`
-      );
+  const loadNavigationGuards = useCallback(
+    async (surveyId: string, participantId: string) => {
+      try {
+        const response = await fetch(
+          `/api/participant-flow/${surveyId}/${participantId}/guards`
+        );
 
-      if (response.ok) {
-        const guards = await response.json();
-        setNavigationGuards(guards);
+        if (response.ok) {
+          const guards = await response.json();
+          setNavigationGuards(guards);
+        }
+      } catch (err) {
+        console.error('Load guards error:', err);
       }
-    } catch (err) {
-      console.error('Load guards error:', err);
-    }
-  }, []);
+    },
+    []
+  );
 
   /**
    * Set up auto-save interval
@@ -469,11 +498,14 @@ export function useParticipantFlow({
     if (!flowState) return;
 
     beforeUnloadRef.current = (e: BeforeUnloadEvent) => {
-      if (flowState.currentStage !== ParticipantFlowStage.COMPLETED &&
-          flowState.currentStage !== ParticipantFlowStage.NOT_STARTED) {
+      if (
+        flowState.currentStage !== ParticipantFlowStage.COMPLETED &&
+        flowState.currentStage !== ParticipantFlowStage.NOT_STARTED
+      ) {
         e.preventDefault();
-        e.returnValue = 'Your progress will be saved. Are you sure you want to leave?';
-        
+        e.returnValue =
+          'Your progress will be saved. Are you sure you want to leave?';
+
         // Save progress before leaving
         saveProgress(flowState.stageData, true);
       }
@@ -502,7 +534,9 @@ export function useParticipantFlow({
     const checkSavePoints = async () => {
       const hasSavePoint = localStorage.getItem(`flow_savepoint_${surveyId}`);
       if (hasSavePoint && flowState) {
-        const shouldResume = confirm('You have saved progress. Would you like to continue where you left off?');
+        const shouldResume = confirm(
+          'You have saved progress. Would you like to continue where you left off?'
+        );
         if (shouldResume) {
           await resumeFromSavePoint();
         }
@@ -543,7 +577,7 @@ export function useParticipantFlow({
     canSkip: navigationGuards?.canSkip || false,
     progress: flowState?.progress,
     currentStage: flowState?.currentStage,
-    completedStages: flowState?.completedStages || []
+    completedStages: flowState?.completedStages || [],
   };
 }
 

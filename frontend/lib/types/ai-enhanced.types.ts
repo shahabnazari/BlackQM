@@ -4,6 +4,8 @@
  * Replaces all 'any' types with proper interfaces
  */
 
+import { QuestionType } from './questionnaire';
+
 // Participant AI Types
 export type ParticipantStage = 'consent' | 'prescreening' | 'presorting' | 'qsort' | 'postsurvey';
 

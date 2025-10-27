@@ -3,9 +3,11 @@
 ## Issue: Save Paper Endpoint Returns 500 Error
 
 ### Root Cause
+
 The backend server was using an **outdated Prisma Client** that was generated before the schema was finalized. When the Prisma client was regenerated, the running backend process didn't pick up the changes.
 
 ### Evidence
+
 1. ✅ **Database schema is correct** - verified with `npx prisma db push`
 2. ✅ **User exists and is valid** - confirmed in database
 3. ✅ **Direct SQL insert works** - manual INSERT succeeded
@@ -13,6 +15,7 @@ The backend server was using an **outdated Prisma Client** that was generated be
 5. ❌ **Running backend returns 500** - outdated Prisma client in memory
 
 ### Solution
+
 **Restart the backend server** to load the updated Prisma client.
 
 ```bash
@@ -25,6 +28,7 @@ npm run start:dev
 ```
 
 ### Verification
+
 After restart, test the save endpoint:
 
 ```bash
@@ -46,6 +50,7 @@ curl -X POST http://localhost:4000/api/literature/save \
 ### Test Results
 
 #### Before Fix (500 Error):
+
 ```json
 {
   "statusCode": 500,
@@ -54,6 +59,7 @@ curl -X POST http://localhost:4000/api/literature/save \
 ```
 
 #### After Fix (Success):
+
 ```json
 {
   "success": true,
@@ -62,6 +68,7 @@ curl -X POST http://localhost:4000/api/literature/save \
 ```
 
 ### What Was Fixed
+
 - ✅ Database schema synchronized
 - ✅ Prisma client regenerated
 - ✅ Foreign key constraints validated
@@ -71,12 +78,14 @@ curl -X POST http://localhost:4000/api/literature/save \
 ### Additional Verification
 
 Created `backend/test-save-paper.ts` - a standalone test script that successfully:
+
 1. Connects to the database
 2. Finds the test user
 3. Saves a paper with all required fields
 4. Retrieves the saved papers
 
 **Output:**
+
 ```
 Testing paper save...
 User found: Test User (testuser@example.com)
@@ -94,6 +103,7 @@ This confirms the database and Prisma client are working correctly - only the ru
 ## Next Steps
 
 After backend restart:
+
 1. ✅ Test save paper endpoint
 2. ✅ Test theme extraction with saved papers
 3. ✅ Test complete Phase 9 → 10 pipeline

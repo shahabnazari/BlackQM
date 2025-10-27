@@ -1,47 +1,38 @@
-import { create } from 'zustand';
-import { QuestionType } from '@/lib/types/questionnaire';
+import { Question, QuestionType } from '@/lib/types/questionnaire';
 import { v4 as uuidv4 } from 'uuid';
-
-export interface Question {
-  id: string;
-  type: QuestionType;
-  text: string;
-  description?: string;
-  required: boolean;
-  options?: Array<{ text: string; value: string }>;
-  settings?: Record<string, any>;
-  validation?: Record<string, any>;
-  logic?: Record<string, any>;
-  order: number;
-}
+import { create } from 'zustand';
 
 interface QuestionnaireState {
   questions: Question[];
   selectedQuestionIds: Set<string>;
   undoStack: Question[][];
   redoStack: Question[][];
-  
+
   // Actions
-  addQuestion: (type: QuestionType, index?: number, data?: Partial<Question>) => Question;
+  addQuestion: (
+    type: QuestionType,
+    index?: number,
+    data?: Partial<Question>
+  ) => Question;
   updateQuestion: (id: string, updates: Partial<Question>) => void;
   deleteQuestion: (id: string) => void;
   duplicateQuestion: (id: string) => void;
   reorderQuestions: (fromIndex: number, toIndex: number) => void;
-  
+
   // Selection
   selectQuestion: (id: string) => void;
   deselectQuestion: (id: string) => void;
   clearSelection: () => void;
-  
+
   // Bulk operations
   bulkDeleteQuestions: (ids: string[]) => void;
   copyQuestions: (ids: string[]) => void;
   importQuestions: (questions: Question[]) => void;
-  
+
   // Undo/Redo
   undo: () => void;
   redo: () => void;
-  
+
   // Utilities
   saveSnapshot: () => void;
 }
@@ -51,197 +42,216 @@ export const useQuestionnaireStore = create<QuestionnaireState>((set, get) => ({
   selectedQuestionIds: new Set(),
   undoStack: [],
   redoStack: [],
-  
+
   saveSnapshot: () => {
     const { questions, undoStack } = get();
     set({
       undoStack: [...undoStack.slice(-19), [...questions]],
-      redoStack: []
+      redoStack: [],
     });
   },
-  
+
   addQuestion: (type, index, data) => {
     const { questions, saveSnapshot } = get();
     saveSnapshot();
-    
-    const newQuestion: Question = {
-      id: uuidv4(),
+
+    const now = new Date();
+    const newQuestion = {
+      id: data?.id || uuidv4(),
+      surveyId: data?.surveyId || '',
       type,
       text: data?.text || 'New Question',
-      description: data?.description || '',
+      description: data?.description,
       required: data?.required || false,
-      options: data?.options || [],
-      settings: data?.settings || {},
-      validation: data?.validation || {},
-      logic: data?.logic || {},
       order: index !== undefined ? index : questions.length,
-      ...data
-    };
-    
+      layout: data?.layout || 'vertical',
+      theme: data?.theme || 'default',
+      animations: data?.animations !== undefined ? data.animations : false,
+      version: data?.version || 1,
+      isActive: data?.isActive !== undefined ? data.isActive : true,
+      createdAt: data?.createdAt || now,
+      updatedAt: data?.updatedAt || now,
+      options: data?.options,
+      validation: data?.validation,
+      skipLogic: data?.skipLogic,
+      config: data?.config,
+      helpText: data?.helpText,
+      tags: data?.tags,
+      category: data?.category,
+      difficulty: data?.difficulty,
+      estimatedTime: data?.estimatedTime,
+      analytics: data?.analytics,
+    } as Question;
+
     const newQuestions = [...questions];
     if (index !== undefined) {
       newQuestions.splice(index, 0, newQuestion);
       // Update order for subsequent questions
       for (let i = index + 1; i < newQuestions.length; i++) {
-        newQuestions[i].order = i;
+        const question = newQuestions[i];
+        if (question) {
+          question.order = i;
+        }
       }
     } else {
       newQuestions.push(newQuestion);
     }
-    
+
     set({ questions: newQuestions });
     return newQuestion;
   },
-  
+
   updateQuestion: (id, updates) => {
     const { questions, saveSnapshot } = get();
     saveSnapshot();
-    
+
     set({
-      questions: questions.map((q: any) => 
+      questions: questions.map((q: any) =>
         q.id === id ? { ...q, ...updates } : q
-      )
+      ),
     });
   },
-  
-  deleteQuestion: (id) => {
+
+  deleteQuestion: id => {
     const { questions, saveSnapshot, selectedQuestionIds } = get();
     saveSnapshot();
-    
+
     const newQuestions = questions.filter((q: any) => q.id !== id);
     // Update order
     newQuestions.forEach((q, index) => {
       q.order = index;
     });
-    
+
     const newSelectedIds = new Set(selectedQuestionIds);
     newSelectedIds.delete(id);
-    
-    set({ 
+
+    set({
       questions: newQuestions,
-      selectedQuestionIds: newSelectedIds
+      selectedQuestionIds: newSelectedIds,
     });
   },
-  
-  duplicateQuestion: (id) => {
+
+  duplicateQuestion: id => {
     const { questions, addQuestion } = get();
     const question = questions.find(q => q.id === id);
     if (!question) return;
-    
+
+    const { id: _id, ...questionData } = question;
     const duplicatedQuestion = {
-      ...question,
+      ...questionData,
       text: `${question.text} (Copy)`,
-      id: undefined // Will be generated by addQuestion
     };
-    
+
     addQuestion(question.type, question.order + 1, duplicatedQuestion);
   },
-  
+
   reorderQuestions: (fromIndex, toIndex) => {
     const { questions, saveSnapshot } = get();
     if (fromIndex === toIndex) return;
-    
+
     saveSnapshot();
-    
+
     const newQuestions = [...questions];
     const [movedQuestion] = newQuestions.splice(fromIndex, 1);
+    if (!movedQuestion) return;
+
     newQuestions.splice(toIndex, 0, movedQuestion);
-    
+
     // Update order
     newQuestions.forEach((q, index) => {
       q.order = index;
     });
-    
+
     set({ questions: newQuestions });
   },
-  
-  selectQuestion: (id) => {
+
+  selectQuestion: id => {
     const { selectedQuestionIds } = get();
     const newSelectedIds = new Set(selectedQuestionIds);
     newSelectedIds.add(id);
     set({ selectedQuestionIds: newSelectedIds });
   },
-  
-  deselectQuestion: (id) => {
+
+  deselectQuestion: id => {
     const { selectedQuestionIds } = get();
     const newSelectedIds = new Set(selectedQuestionIds);
     newSelectedIds.delete(id);
     set({ selectedQuestionIds: newSelectedIds });
   },
-  
+
   clearSelection: () => {
     set({ selectedQuestionIds: new Set() });
   },
-  
-  bulkDeleteQuestions: (ids) => {
+
+  bulkDeleteQuestions: ids => {
     const { questions, saveSnapshot } = get();
     saveSnapshot();
-    
+
     const newQuestions = questions.filter((q: any) => !ids.includes(q.id));
     // Update order
     newQuestions.forEach((q, index) => {
       q.order = index;
     });
-    
-    set({ 
+
+    set({
       questions: newQuestions,
-      selectedQuestionIds: new Set()
+      selectedQuestionIds: new Set(),
     });
   },
-  
-  copyQuestions: (ids) => {
+
+  copyQuestions: ids => {
     const { questions, addQuestion } = get();
     const questionsToCopy = questions.filter((q: any) => ids.includes(q.id));
-    
+
     questionsToCopy.forEach((question, index) => {
+      const { id: _id, ...questionData } = question;
       const copiedQuestion = {
-        ...question,
+        ...questionData,
         text: `${question.text} (Copy)`,
-        id: undefined // Will be generated by addQuestion
       };
-      
-      addQuestion(
-        question.type, 
-        questions.length + index, 
-        copiedQuestion
-      );
+
+      addQuestion(question.type, questions.length + index, copiedQuestion);
     });
   },
-  
-  importQuestions: (newQuestions) => {
+
+  importQuestions: newQuestions => {
     const { questions, saveSnapshot } = get();
     saveSnapshot();
-    
+
     const importedQuestions = newQuestions.map((q, index) => ({
       ...q,
       id: uuidv4(),
-      order: questions.length + index
+      order: questions.length + index,
     }));
-    
+
     set({ questions: [...questions, ...importedQuestions] });
   },
-  
+
   undo: () => {
     const { undoStack, redoStack, questions } = get();
     if (undoStack.length === 0) return;
-    
+
     const previousState = undoStack[undoStack.length - 1];
+    if (!previousState) return;
+
     set({
       questions: previousState,
       undoStack: undoStack.slice(0, -1),
-      redoStack: [...redoStack, questions]
+      redoStack: [...redoStack, questions],
     });
   },
-  
+
   redo: () => {
     const { undoStack, redoStack, questions } = get();
     if (redoStack.length === 0) return;
-    
+
     const nextState = redoStack[redoStack.length - 1];
+    if (!nextState) return;
+
     set({
       questions: nextState,
       undoStack: [...undoStack, questions],
-      redoStack: redoStack.slice(0, -1)
+      redoStack: redoStack.slice(0, -1),
     });
-  }
+  },
 }));

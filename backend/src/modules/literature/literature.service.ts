@@ -1,10 +1,9 @@
 import { HttpService } from '@nestjs/axios';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
-import { Cache } from 'cache-manager';
 import Parser from 'rss-parser';
 import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../../common/prisma.service';
+import { CacheService } from '../../common/cache.service';
 import {
   CitationNetwork,
   ExportCitationsDto,
@@ -19,6 +18,8 @@ import {
 } from './dto/literature.dto';
 import { MultiMediaAnalysisService } from './services/multimedia-analysis.service';
 import { TranscriptionService } from './services/transcription.service';
+import { SearchCoalescerService } from './services/search-coalescer.service';
+import { APIQuotaMonitorService } from './services/api-quota-monitor.service';
 
 @Injectable()
 export class LiteratureService {
@@ -28,20 +29,46 @@ export class LiteratureService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly cacheService: CacheService,
     @Inject(forwardRef(() => TranscriptionService))
     private readonly transcriptionService: TranscriptionService,
     @Inject(forwardRef(() => MultiMediaAnalysisService))
     private readonly multimediaAnalysisService: MultiMediaAnalysisService,
+    private readonly searchCoalescer: SearchCoalescerService,
+    private readonly quotaMonitor: APIQuotaMonitorService,
   ) {}
 
   async searchLiterature(
     searchDto: SearchLiteratureDto,
     userId: string,
-  ): Promise<{ papers: Paper[]; total: number; page: number }> {
+  ): Promise<{
+    papers: Paper[];
+    total: number;
+    page: number;
+    isCached?: boolean;
+    cacheAge?: number;
+    isStale?: boolean;
+    isArchive?: boolean;
+    correctedQuery?: string;
+    originalQuery?: string;
+  }> {
     const cacheKey = `literature:search:${JSON.stringify(searchDto)}`;
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) return cached as any;
+
+    // Phase 10 Days 2-3: Check cache with staleness metadata
+    const cacheResult = await this.cacheService.getWithMetadata<any>(cacheKey);
+    if (cacheResult.isFresh && cacheResult.data) {
+      this.logger.log(`✅ [Cache] Serving fresh cached results (age: ${Math.floor(cacheResult.age / 60)} min)`);
+      return { ...(cacheResult.data as any), isCached: true, cacheAge: cacheResult.age };
+    }
+
+    // Preprocess and expand query for better results
+    const originalQuery = searchDto.query;
+    const expandedQuery = this.preprocessAndExpandQuery(searchDto.query);
+    this.logger.log(`Original query: "${originalQuery}"`);
+    this.logger.log(`Expanded query: "${expandedQuery}"`);
+
+    // Create an enhanced search DTO with expanded query
+    const enhancedSearchDto = { ...searchDto, query: expandedQuery };
 
     const sources = searchDto.sources || [
       LiteratureSource.SEMANTIC_SCHOLAR,
@@ -50,23 +77,230 @@ export class LiteratureService {
     ];
 
     const searchPromises = sources.map((source) =>
-      this.searchBySource(source, searchDto),
+      this.searchBySource(source, enhancedSearchDto),
     );
 
     const results = await Promise.allSettled(searchPromises);
     const papers: Paper[] = [];
 
-    for (const result of results) {
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      const source = sources[i];
       if (result.status === 'fulfilled' && result.value) {
+        this.logger.log(`✓ ${source}: Returned ${result.value.length} papers`);
         papers.push(...result.value);
+      } else if (result.status === 'rejected') {
+        this.logger.error(`✗ ${source}: Failed - ${result.reason}`);
       }
     }
 
+    this.logger.log(
+      `📊 Total papers collected from all sources: ${papers.length}`,
+    );
+
     // Deduplicate papers by DOI or title
     const uniquePapers = this.deduplicatePapers(papers);
+    this.logger.log(
+      `📊 After deduplication: ${papers.length} → ${uniquePapers.length} unique papers`,
+    );
 
-    // Sort papers
-    const sortedPapers = this.sortPapers(uniquePapers, searchDto.sortBy);
+    // Apply filters
+    let filteredPapers = uniquePapers;
+    this.logger.log(`📊 Starting filters with ${filteredPapers.length} papers`);
+
+    // Filter by minimum citations
+    // IMPORTANT: Only filter papers that HAVE citation data
+    // Papers with null citationCount (e.g., from PubMed) are INCLUDED in results
+    if (searchDto.minCitations !== undefined && searchDto.minCitations > 0) {
+      const beforeCitationFilter = filteredPapers.length;
+      filteredPapers = filteredPapers.filter((paper) => {
+        // If paper has no citation data, include it (don't filter based on unknown data)
+        if (paper.citationCount === null || paper.citationCount === undefined) {
+          return true;
+        }
+        // If paper has citation data, apply the filter
+        return paper.citationCount >= searchDto.minCitations!;
+      });
+      this.logger.log(
+        `📊 Citation filter (min: ${searchDto.minCitations}): ${beforeCitationFilter} → ${filteredPapers.length} papers`,
+      );
+    }
+
+    // Filter by author with multiple search modes
+    if (searchDto.author && searchDto.author.trim().length > 0) {
+      const authorQuery = searchDto.author.trim();
+      const authorLower = authorQuery.toLowerCase();
+      const searchMode = searchDto.authorSearchMode || 'contains';
+
+      filteredPapers = filteredPapers.filter((paper) => {
+        return paper.authors.some((author) => {
+          const authorNameLower = author.toLowerCase();
+
+          switch (searchMode) {
+            case 'exact':
+              // Exact match (case-insensitive)
+              return authorNameLower === authorLower;
+
+            case 'fuzzy':
+              // Fuzzy match using Levenshtein distance
+              // Split by spaces and check if any word matches closely
+              const queryWords = authorLower.split(/\s+/);
+              const authorWords = authorNameLower.split(/\s+/);
+
+              return queryWords.some((qWord) =>
+                authorWords.some((aWord) => {
+                  const distance = this.levenshteinDistance(qWord, aWord);
+                  const threshold = Math.max(2, Math.floor(qWord.length * 0.3)); // 30% tolerance
+                  return distance <= threshold;
+                }),
+              );
+
+            case 'contains':
+            default:
+              // Partial match (default)
+              return authorNameLower.includes(authorLower);
+          }
+        });
+      });
+    }
+
+    // Filter by publication type (basic implementation based on venue)
+    if (searchDto.publicationType && searchDto.publicationType !== 'all') {
+      filteredPapers = filteredPapers.filter((paper) => {
+        const venue = (paper.venue || '').toLowerCase();
+        switch (searchDto.publicationType) {
+          case 'journal':
+            return venue.includes('journal');
+          case 'conference':
+            return (
+              venue.includes('conference') ||
+              venue.includes('proceedings') ||
+              venue.includes('symposium')
+            );
+          case 'preprint':
+            return venue.includes('arxiv') || venue.includes('preprint');
+          default:
+            return true;
+        }
+      });
+    }
+
+    this.logger.log(
+      `📊 After all basic filters: ${filteredPapers.length} papers`,
+    );
+
+    // PHASE 10 DAY 1: Add relevance scoring to improve search quality
+    // Score papers by relevance to the ORIGINAL query (not expanded)
+    const papersWithScore = filteredPapers.map((paper) => ({
+      ...paper,
+      relevanceScore: this.calculateRelevanceScore(paper, originalQuery),
+    }));
+
+    this.logger.log(
+      `📊 Relevance scores calculated for all ${papersWithScore.length} papers`,
+    );
+
+    // PHASE 10 DAY 1 CRITICAL TERMS: Identify critical/unique terms and penalize papers without them
+    const criticalTerms = this.identifyCriticalTerms(originalQuery);
+    if (criticalTerms.length > 0) {
+      this.logger.log(
+        `Critical terms detected: ${criticalTerms.join(', ')} (papers without these will be heavily penalized)`,
+      );
+    }
+
+    // Apply HEAVY penalty to papers without critical terms (rather than filtering them out)
+    const papersWithCriticalTermPenalty = papersWithScore.map((paper) => {
+      if (criticalTerms.length === 0) return paper; // No critical terms, no penalty
+
+      const titleLower = (paper.title || '').toLowerCase();
+      const abstractLower = (paper.abstract || '').toLowerCase();
+      const keywordsLower = (paper.keywords || []).join(' ').toLowerCase();
+      const combinedText = `${titleLower} ${abstractLower} ${keywordsLower}`;
+
+      // Check if paper contains at least one critical term
+      const hasCriticalTerm = criticalTerms.some((term) =>
+        combinedText.includes(term.toLowerCase()),
+      );
+
+      if (!hasCriticalTerm) {
+        // Apply MASSIVE penalty (90% score reduction) for missing critical terms
+        const originalScore = paper.relevanceScore || 0;
+        const penalizedScore = Math.round(originalScore * 0.1); // Keep only 10% of original score
+        this.logger.debug(
+          `Critical term penalty: "${paper.title.substring(0, 50)}..." (${originalScore} → ${penalizedScore})`,
+        );
+        return { ...paper, relevanceScore: penalizedScore };
+      }
+
+      return paper; // Has critical term, no penalty
+    });
+
+    const penalizedCount = papersWithCriticalTermPenalty.filter((p) => {
+      const hasCriticalTerm = criticalTerms.some((term) => {
+        const titleLower = (p.title || '').toLowerCase();
+        const abstractLower = (p.abstract || '').toLowerCase();
+        return (
+          titleLower.includes(term.toLowerCase()) ||
+          abstractLower.includes(term.toLowerCase())
+        );
+      });
+      return !hasCriticalTerm;
+    }).length;
+
+    if (criticalTerms.length > 0) {
+      this.logger.log(
+        `📊 Critical terms check: ${papersWithCriticalTermPenalty.length - penalizedCount} papers have critical terms, ${penalizedCount} papers penalized (score reduced by 90%)`,
+      );
+    }
+
+    // PHASE 10 DAY 1 ENHANCEMENT: Filter out papers with low relevance scores
+    // This prevents broad, irrelevant results from appearing
+    const MIN_RELEVANCE_SCORE = 15; // Requires at least some keyword matches
+    const relevantPapers = papersWithCriticalTermPenalty.filter((paper) => {
+      const score = paper.relevanceScore || 0;
+      if (score < MIN_RELEVANCE_SCORE) {
+        this.logger.debug(
+          `Filtered out paper (score ${score}): "${paper.title.substring(0, 60)}..."`,
+        );
+        return false;
+      }
+      return true;
+    });
+
+    this.logger.log(
+      `Relevance filtering: ${papersWithScore.length} papers → ${relevantPapers.length} papers (min score: ${MIN_RELEVANCE_SCORE})`,
+    );
+
+    // Log top 5 scores for debugging
+    const topScored = relevantPapers
+      .sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
+      .slice(0, 5);
+    if (topScored.length > 0) {
+      this.logger.log(
+        `Top 5 scores: ${topScored.map((p) => `"${p.title.substring(0, 40)}..." (${p.relevanceScore})`).join(' | ')}`,
+      );
+    }
+
+    // Log bottom 3 scores to see borderline cases
+    const bottomScored = relevantPapers
+      .sort((a, b) => (a.relevanceScore || 0) - (b.relevanceScore || 0))
+      .slice(0, 3);
+    if (bottomScored.length > 0) {
+      this.logger.log(
+        `Bottom 3 scores: ${bottomScored.map((p) => `"${p.title.substring(0, 40)}..." (${p.relevanceScore})`).join(' | ')}`,
+      );
+    }
+
+    // Sort by relevance if sortBy is 'relevance', otherwise use the specified sort
+    let sortedPapers: any[];
+    if (searchDto.sortBy === 'relevance' || !searchDto.sortBy) {
+      // Sort by relevance score first
+      sortedPapers = relevantPapers.sort(
+        (a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0),
+      );
+    } else {
+      sortedPapers = this.sortPapers(relevantPapers, searchDto.sortBy);
+    }
 
     // Paginate results
     const page = searchDto.page || 1;
@@ -74,13 +308,37 @@ export class LiteratureService {
     const start = (page - 1) * limit;
     const paginatedPapers = sortedPapers.slice(start, start + limit);
 
+    // Phase 10 Days 2-3: Fallback to stale/archive cache if no results (possible rate limit)
+    if (papers.length === 0) {
+      this.logger.warn(`⚠️  [API] All sources returned 0 results - checking stale cache`);
+      const staleResult = await this.cacheService.getStaleOrArchive<any>(cacheKey);
+      if (staleResult.data) {
+        this.logger.log(
+          `🔄 [Cache] Serving ${staleResult.isStale ? 'stale' : 'archive'} results due to API unavailability`
+        );
+        return {
+          ...(staleResult.data as any),
+          isCached: true,
+          cacheAge: staleResult.age,
+          isStale: staleResult.isStale,
+          isArchive: staleResult.isArchive,
+        };
+      }
+    }
+
     const result = {
       papers: paginatedPapers,
       total: sortedPapers.length,
       page,
+      // Return corrected query for "Did you mean?" feature (Google-like)
+      ...(originalQuery !== expandedQuery && {
+        correctedQuery: expandedQuery,
+        originalQuery: originalQuery,
+      }),
     };
 
-    await this.cacheManager.set(cacheKey, result, this.CACHE_TTL);
+    // Phase 10 Days 2-3: Use enhanced cache service
+    await this.cacheService.set(cacheKey, result, this.CACHE_TTL);
 
     // Log search for analytics
     await this.logSearch(searchDto, userId);
@@ -109,207 +367,368 @@ export class LiteratureService {
   private async searchSemanticScholar(
     searchDto: SearchLiteratureDto,
   ): Promise<Paper[]> {
-    try {
-      const url = 'https://api.semanticscholar.org/graph/v1/paper/search';
-      const params: any = {
-        query: searchDto.query,
-        fields:
-          'paperId,title,authors,year,abstract,citationCount,url,venue,fieldsOfStudy',
-        limit: searchDto.limit || 20,
-      };
-
-      if (searchDto.yearFrom || searchDto.yearTo) {
-        params['year'] =
-          `${searchDto.yearFrom || 1900}-${searchDto.yearTo || new Date().getFullYear()}`;
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `semantic-scholar:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('semantic-scholar')) {
+        this.logger.warn(`🚫 [Semantic Scholar] Quota exceeded - using cache instead`);
+        return [];
       }
 
-      const response = await firstValueFrom(
-        this.httpService.get(url, { params }),
-      );
+      try {
+        this.logger.log(
+          `[Semantic Scholar] Searching with query: "${searchDto.query}"`,
+        );
+        const url = 'https://api.semanticscholar.org/graph/v1/paper/search';
+        const params: any = {
+          query: searchDto.query,
+          fields:
+            'paperId,title,authors,year,abstract,citationCount,url,venue,fieldsOfStudy',
+          limit: searchDto.limit || 20,
+        };
 
-      return response.data.data.map((paper: any) => ({
-        id: paper.paperId,
-        title: paper.title,
-        authors: paper.authors?.map((a: any) => a.name) || [],
-        year: paper.year,
-        abstract: paper.abstract,
-        url: paper.url,
-        venue: paper.venue,
-        citationCount: paper.citationCount,
-        fieldsOfStudy: paper.fieldsOfStudy,
-        source: LiteratureSource.SEMANTIC_SCHOLAR,
-      }));
-    } catch (error: any) {
-      this.logger.error(`Semantic Scholar search failed: ${error.message}`);
-      return [];
-    }
+        if (searchDto.yearFrom || searchDto.yearTo) {
+          params['year'] =
+            `${searchDto.yearFrom || 1900}-${searchDto.yearTo || new Date().getFullYear()}`;
+        }
+
+        const response = await firstValueFrom(
+          this.httpService.get(url, { params }),
+        );
+
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('semantic-scholar');
+
+        const papers = response.data.data.map((paper: any) => ({
+          id: paper.paperId,
+          title: paper.title,
+          authors: paper.authors?.map((a: any) => a.name) || [],
+          year: paper.year,
+          abstract: paper.abstract,
+          url: paper.url,
+          venue: paper.venue,
+          citationCount: paper.citationCount,
+          fieldsOfStudy: paper.fieldsOfStudy,
+          source: LiteratureSource.SEMANTIC_SCHOLAR,
+        }));
+
+        this.logger.log(`[Semantic Scholar] Returned ${papers.length} papers`);
+        return papers;
+      } catch (error: any) {
+        if (error.response?.status === 429) {
+          this.logger.error(
+            `[Semantic Scholar] ⚠️  RATE LIMITED (429) - Too many requests. Results will be cached.`,
+          );
+        } else {
+          this.logger.error(
+            `[Semantic Scholar] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
+          );
+        }
+        return [];
+      }
+    });
   }
 
   private async searchCrossRef(
     searchDto: SearchLiteratureDto,
   ): Promise<Paper[]> {
-    try {
-      const url = 'https://api.crossref.org/works';
-      const params: any = {
-        query: searchDto.query,
-        rows: searchDto.limit || 20,
-      };
-
-      if (searchDto.yearFrom) {
-        params['filter'] = `from-pub-date:${searchDto.yearFrom}`;
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `crossref:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('crossref')) {
+        this.logger.warn(`🚫 [CrossRef] Quota exceeded - using cache instead`);
+        return [];
       }
 
-      const response = await firstValueFrom(
-        this.httpService.get(url, { params }),
-      );
+      try {
+        const url = 'https://api.crossref.org/works';
+        const params: any = {
+          query: searchDto.query,
+          rows: searchDto.limit || 20,
+        };
 
-      return response.data.message.items.map((item: any) => ({
-        id: item.DOI,
-        title: item.title?.[0] || '',
-        authors: item.author?.map((a: any) => `${a.given} ${a.family}`) || [],
-        year: item.published?.['date-parts']?.[0]?.[0],
-        abstract: item.abstract,
-        doi: item.DOI,
-        url: item.URL,
-        venue: item['container-title']?.[0],
-        citationCount: item['is-referenced-by-count'],
-        source: LiteratureSource.CROSSREF,
-      }));
-    } catch (error: any) {
-      this.logger.error(`CrossRef search failed: ${error.message}`);
-      return [];
-    }
+        if (searchDto.yearFrom) {
+          params['filter'] = `from-pub-date:${searchDto.yearFrom}`;
+        }
+
+        const response = await firstValueFrom(
+          this.httpService.get(url, { params }),
+        );
+
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('crossref');
+
+        const papers = response.data.message.items.map((item: any) => ({
+          id: item.DOI,
+          title: item.title?.[0] || '',
+          authors: item.author?.map((a: any) => `${a.given} ${a.family}`) || [],
+          year: item.published?.['date-parts']?.[0]?.[0],
+          abstract: item.abstract,
+          doi: item.DOI,
+          url: item.URL,
+          venue: item['container-title']?.[0],
+          citationCount: item['is-referenced-by-count'],
+          source: LiteratureSource.CROSSREF,
+        }));
+
+        this.logger.log(`[CrossRef] Returned ${papers.length} papers`);
+        return papers;
+      } catch (error: any) {
+        if (error.response?.status === 429) {
+          this.logger.error(
+            `[CrossRef] ⚠️  RATE LIMITED (429) - Too many requests. Results will be cached.`,
+          );
+        } else {
+          this.logger.error(
+            `[CrossRef] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
+          );
+        }
+        return [];
+      }
+    });
   }
 
   private async searchPubMed(searchDto: SearchLiteratureDto): Promise<Paper[]> {
-    try {
-      // First, search for IDs
-      const searchUrl =
-        'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi';
-      const searchParams = {
-        db: 'pubmed',
-        term: searchDto.query,
-        retmode: 'json',
-        retmax: searchDto.limit || 20,
-      };
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `pubmed:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('pubmed')) {
+        this.logger.warn(`🚫 [PubMed] Quota exceeded - using cache instead`);
+        return [];
+      }
 
-      const searchResponse = await firstValueFrom(
-        this.httpService.get(searchUrl, { params: searchParams }),
-      );
+      try {
+        // First, search for IDs
+        const searchUrl =
+          'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi';
+        const searchParams = {
+          db: 'pubmed',
+          term: searchDto.query,
+          retmode: 'json',
+          retmax: searchDto.limit || 20,
+        };
 
-      const ids = searchResponse.data.esearchresult.idlist;
-      if (!ids || ids.length === 0) return [];
+        const searchResponse = await firstValueFrom(
+          this.httpService.get(searchUrl, { params: searchParams }),
+        );
 
-      // Then, fetch details
-      const fetchUrl =
-        'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
-      const fetchParams = {
-        db: 'pubmed',
-        id: ids.join(','),
-        retmode: 'xml',
-        rettype: 'abstract',
-      };
+        const ids = searchResponse.data.esearchresult.idlist;
+        if (!ids || ids.length === 0) {
+          this.quotaMonitor.recordRequest('pubmed'); // Record even if no results
+          return [];
+        }
 
-      const fetchResponse = await firstValueFrom(
-        this.httpService.get(fetchUrl, { params: fetchParams }),
-      );
+        // Then, fetch details
+        const fetchUrl =
+          'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
+        const fetchParams = {
+          db: 'pubmed',
+          id: ids.join(','),
+          retmode: 'xml',
+          rettype: 'abstract',
+        };
 
-      // Parse PubMed XML response using regex (lightweight approach)
-      const xmlData = fetchResponse.data;
-      const articles =
-        xmlData.match(/<PubmedArticle>[\s\S]*?<\/PubmedArticle>/g) || [];
+        const fetchResponse = await firstValueFrom(
+          this.httpService.get(fetchUrl, { params: fetchParams }),
+        );
 
-      return articles.map((article: string) => {
-        const pmid = article.match(/<PMID[^>]*>(.*?)<\/PMID>/)?.[1] || '';
-        const title =
-          article.match(/<ArticleTitle>(.*?)<\/ArticleTitle>/)?.[1] || '';
-        const abstractText =
-          article.match(/<AbstractText[^>]*>(.*?)<\/AbstractText>/)?.[1] || '';
-        const year =
-          article.match(/<PubDate>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] ||
-          article.match(/<DateCompleted>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] ||
-          null;
+        // Parse PubMed XML response using regex (lightweight approach)
+        const xmlData = fetchResponse.data;
+        const articles =
+          xmlData.match(/<PubmedArticle>[\s\S]*?<\/PubmedArticle>/g) || [];
 
-        // Extract authors
-        const authorMatches =
-          article.match(/<Author[^>]*>[\s\S]*?<\/Author>/g) || [];
-        const authors = authorMatches.map((author: string) => {
-          const lastName =
-            author.match(/<LastName>(.*?)<\/LastName>/)?.[1] || '';
-          const foreName =
-            author.match(/<ForeName>(.*?)<\/ForeName>/)?.[1] || '';
-          return `${foreName} ${lastName}`.trim();
+        const papers = articles.map((article: string) => {
+          const pmid = article.match(/<PMID[^>]*>(.*?)<\/PMID>/)?.[1] || '';
+          const title =
+            article.match(/<ArticleTitle>(.*?)<\/ArticleTitle>/)?.[1] || '';
+          const abstractText =
+            article.match(/<AbstractText[^>]*>(.*?)<\/AbstractText>/)?.[1] || '';
+          const year =
+            article.match(/<PubDate>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] ||
+            article.match(/<DateCompleted>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] ||
+            null;
+
+          // Extract authors
+          const authorMatches =
+            article.match(/<Author[^>]*>[\s\S]*?<\/Author>/g) || [];
+          const authors = authorMatches.map((author: string) => {
+            const lastName =
+              author.match(/<LastName>(.*?)<\/LastName>/)?.[1] || '';
+            const foreName =
+              author.match(/<ForeName>(.*?)<\/ForeName>/)?.[1] || '';
+            return `${foreName} ${lastName}`.trim();
+          });
+
+          // Extract DOI if available
+          const doi =
+            article.match(/<ArticleId IdType="doi">(.*?)<\/ArticleId>/)?.[1] ||
+            null;
+
+          return {
+            id: pmid,
+            title: title.trim(),
+            authors,
+            year: year ? parseInt(year) : null,
+            abstract: abstractText.trim(),
+            url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
+            source: 'PubMed',
+            doi,
+            citationCount: null,
+          };
         });
 
-        // Extract DOI if available
-        const doi =
-          article.match(/<ArticleId IdType="doi">(.*?)<\/ArticleId>/)?.[1] ||
-          null;
+        // Enrich citation counts from OpenAlex for papers with DOIs
+        this.logger.log(
+          `Enriching ${papers.length} PubMed papers with citation data from OpenAlex...`,
+        );
+        const enrichedPapers = await this.enrichCitationsFromOpenAlex(papers);
+        const enrichedCount = enrichedPapers.filter(
+          (p) => p.citationCount !== null,
+        ).length;
+        this.logger.log(
+          `[PubMed] Successfully enriched ${enrichedCount}/${papers.length} papers with citation counts`,
+        );
+        this.logger.log(`[PubMed] Returned ${enrichedPapers.length} papers`);
 
-        return {
-          id: pmid,
-          title: title.trim(),
-          authors,
-          year: year ? parseInt(year) : null,
-          abstract: abstractText.trim(),
-          url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
-          source: 'PubMed',
-          doi,
-          citationCount: null,
-        };
-      });
-    } catch (error: any) {
-      this.logger.error(`PubMed search failed: ${error.message}`);
-      return [];
-    }
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('pubmed');
+
+        return enrichedPapers;
+      } catch (error: any) {
+        if (error.response?.status === 429) {
+          this.logger.error(
+            `[PubMed] ⚠️  RATE LIMITED (429) - Too many requests. Results will be cached.`,
+          );
+        } else {
+          this.logger.error(
+            `[PubMed] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
+          );
+        }
+        return [];
+      }
+    });
   }
 
   private async searchArxiv(searchDto: SearchLiteratureDto): Promise<Paper[]> {
-    try {
-      const url = 'http://export.arxiv.org/api/query';
-      const params = {
-        search_query: `all:${searchDto.query}`,
-        max_results: searchDto.limit || 20,
-        sortBy: 'relevance',
-        sortOrder: 'descending',
-      };
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `arxiv:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('arxiv')) {
+        this.logger.warn(`🚫 [arXiv] Quota exceeded - using cache instead`);
+        return [];
+      }
 
-      const response = await firstValueFrom(
-        this.httpService.get(url, { params }),
-      );
-
-      // Parse XML response using regex (lightweight approach)
-      const data = response.data;
-      const entries = data.match(/<entry>[\s\S]*?<\/entry>/g) || [];
-
-      return entries.map((entry: string) => {
-        const title = entry.match(/<title>(.*?)<\/title>/)?.[1] || '';
-        const summary = entry.match(/<summary>(.*?)<\/summary>/)?.[1] || '';
-        const id = entry.match(/<id>(.*?)<\/id>/)?.[1] || '';
-        const published =
-          entry.match(/<published>(.*?)<\/published>/)?.[1] || '';
-        const authors =
-          entry
-            .match(/<author>[\s\S]*?<name>(.*?)<\/name>/g)
-            ?.map((a: string) => a.match(/<name>(.*?)<\/name>/)?.[1] || '') ||
-          [];
-
-        return {
-          id,
-          title: title.trim(),
-          authors,
-          year: published ? new Date(published).getFullYear() : null,
-          abstract: summary.trim(),
-          url: id,
-          source: 'arXiv',
-          doi: null,
-          citationCount: null,
+      try {
+        const url = 'http://export.arxiv.org/api/query';
+        const params = {
+          search_query: `all:${searchDto.query}`,
+          max_results: searchDto.limit || 20,
+          sortBy: 'relevance',
+          sortOrder: 'descending',
         };
-      });
-    } catch (error: any) {
-      this.logger.error(`arXiv search failed: ${error.message}`);
-      return [];
-    }
+
+        const response = await firstValueFrom(
+          this.httpService.get(url, { params }),
+        );
+
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('arxiv');
+
+        // Parse XML response using regex (lightweight approach)
+        const data = response.data;
+        const entries = data.match(/<entry>[\s\S]*?<\/entry>/g) || [];
+
+        const papers = entries.map((entry: string) => {
+          const title = entry.match(/<title>(.*?)<\/title>/)?.[1] || '';
+          const summary = entry.match(/<summary>(.*?)<\/summary>/)?.[1] || '';
+          const id = entry.match(/<id>(.*?)<\/id>/)?.[1] || '';
+          const published =
+            entry.match(/<published>(.*?)<\/published>/)?.[1] || '';
+          const authors =
+            entry
+              .match(/<author>[\s\S]*?<name>(.*?)<\/name>/g)
+              ?.map((a: string) => a.match(/<name>(.*?)<\/name>/)?.[1] || '') ||
+            [];
+
+          return {
+            id,
+            title: title.trim(),
+            authors,
+            year: published ? new Date(published).getFullYear() : null,
+            abstract: summary.trim(),
+            url: id,
+            source: 'arXiv',
+            doi: null,
+            citationCount: null,
+          };
+        });
+
+        this.logger.log(`[arXiv] Returned ${papers.length} papers`);
+        return papers;
+      } catch (error: any) {
+        if (error.response?.status === 429) {
+          this.logger.error(
+            `[arXiv] ⚠️  RATE LIMITED (429) - Too many requests. Results will be cached.`,
+          );
+        } else {
+          this.logger.error(
+            `[arXiv] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
+          );
+        }
+        return [];
+      }
+    });
+  }
+
+  /**
+   * Enriches papers with citation counts from OpenAlex API
+   * Particularly useful for PubMed papers which don't provide citation data
+   */
+  private async enrichCitationsFromOpenAlex(papers: Paper[]): Promise<Paper[]> {
+    const enrichedPapers = await Promise.all(
+      papers.map(async (paper) => {
+        // Only enrich if paper has DOI but no citation count
+        if (!paper.doi || paper.citationCount !== null) {
+          return paper;
+        }
+
+        try {
+          const url = `https://api.openalex.org/works/https://doi.org/${paper.doi}`;
+          const response = await firstValueFrom(
+            this.httpService.get(url, {
+              headers: {
+                'User-Agent': 'BlackQMethod-Research-Platform',
+              },
+              timeout: 3000, // 3 second timeout per request
+            }),
+          );
+
+          const citedByCount = response.data?.cited_by_count;
+          if (typeof citedByCount === 'number') {
+            this.logger.log(
+              `Enriched citation count for "${paper.title.substring(0, 50)}...": ${citedByCount}`,
+            );
+            return {
+              ...paper,
+              citationCount: citedByCount,
+            };
+          }
+        } catch (error: any) {
+          // Silently fail - don't block on enrichment errors
+          this.logger.debug(
+            `Failed to enrich citations for DOI ${paper.doi}: ${error.message}`,
+          );
+        }
+
+        return paper;
+      }),
+    );
+
+    return enrichedPapers;
   }
 
   private deduplicatePapers(papers: Paper[]): Paper[] {
@@ -320,6 +739,226 @@ export class LiteratureService {
       seen.add(key);
       return true;
     });
+  }
+
+  /**
+   * PHASE 10 DAY 1: Calculate relevance score for a paper based on query
+   * Uses TF-IDF-like scoring to rank papers by relevance
+   */
+  private calculateRelevanceScore(paper: Paper, query: string): number {
+    if (!query || query.trim().length === 0) return 0;
+
+    const queryLower = query.toLowerCase();
+    const queryTerms = queryLower
+      .split(/\s+/)
+      .filter((term) => term.length > 2); // Ignore short words
+
+    if (queryTerms.length === 0) return 0;
+
+    let score = 0;
+    let matchedTermsCount = 0;
+
+    // Title matching (highest weight)
+    const titleLower = (paper.title || '').toLowerCase();
+
+    // Exact phrase match in title (VERY high score)
+    if (titleLower.includes(queryLower)) {
+      score += 80; // Increased from 50
+      matchedTermsCount = queryTerms.length; // All terms matched
+    } else {
+      // Individual term matching
+      queryTerms.forEach((term) => {
+        if (titleLower.includes(term)) {
+          score += 15; // Increased from 10
+          matchedTermsCount++;
+          // Bonus for term at start of title
+          if (titleLower.startsWith(term)) {
+            score += 8; // Increased from 5
+          }
+        }
+      });
+    }
+
+    // Abstract matching (medium weight)
+    const abstractLower = (paper.abstract || '').toLowerCase();
+    if (abstractLower.length > 0) {
+      // Exact phrase match in abstract
+      if (abstractLower.includes(queryLower)) {
+        score += 25; // Increased from 20
+      }
+      // Individual term matches
+      queryTerms.forEach((term) => {
+        if (abstractLower.includes(term)) {
+          const termCount = (abstractLower.match(new RegExp(term, 'g')) || [])
+            .length;
+          score += Math.min(termCount * 2, 10); // Cap at 10 points per term
+        }
+      });
+    }
+
+    // Author matching (low-medium weight)
+    if (paper.authors && paper.authors.length > 0) {
+      const authorsLower = paper.authors.join(' ').toLowerCase();
+      queryTerms.forEach((term) => {
+        if (authorsLower.includes(term)) {
+          score += 3;
+        }
+      });
+    }
+
+    // Venue/journal matching (low weight)
+    const venueLower = (paper.venue || '').toLowerCase();
+    queryTerms.forEach((term) => {
+      if (venueLower.includes(term)) {
+        score += 2;
+      }
+    });
+
+    // Keywords matching (medium weight - increased importance)
+    if (paper.keywords && Array.isArray(paper.keywords)) {
+      const keywordsLower = paper.keywords.join(' ').toLowerCase();
+      queryTerms.forEach((term) => {
+        if (keywordsLower.includes(term)) {
+          score += 8; // Increased from 5
+        }
+      });
+    }
+
+    // PHASE 10 DAY 1: Penalize papers that match too few query terms
+    // This prevents broad matches where only 1 out of 5 terms match
+    const termMatchRatio = matchedTermsCount / queryTerms.length;
+    if (termMatchRatio < 0.4) {
+      // Less than 40% of terms matched
+      score *= 0.5; // Cut score in half
+      this.logger.debug(
+        `Paper penalized for low term match ratio (${Math.round(termMatchRatio * 100)}%): "${paper.title.substring(0, 50)}..."`,
+      );
+    } else if (termMatchRatio >= 0.7) {
+      // 70% or more terms matched - bonus!
+      score *= 1.2;
+    }
+
+    // Recency bonus (papers from last 3 years get a small boost)
+    const currentYear = new Date().getFullYear();
+    if (paper.year && paper.year >= currentYear - 3) {
+      score += 3;
+    }
+
+    // Citation bonus (highly cited papers get a small boost)
+    if (paper.citationCount && paper.citationCount > 100) {
+      score += Math.log10(paper.citationCount) * 2; // Logarithmic scaling
+    }
+
+    return Math.round(score); // Return rounded score for cleaner logs
+  }
+
+  /**
+   * PHASE 10 DAY 1: Identify critical/unique terms in query
+   * These terms MUST be present in papers for them to be relevant
+   */
+  private identifyCriticalTerms(query: string): string[] {
+    if (!query || query.trim().length === 0) return [];
+
+    const queryLower = query.toLowerCase();
+    const criticalTerms: string[] = [];
+
+    // Define patterns for critical terms
+    const criticalPatterns = [
+      // Q-methodology variants (HIGHEST PRIORITY)
+      {
+        patterns: [
+          /\bq-method/i,
+          /\bqmethod/i,
+          /\bvqmethod/i,
+          /\bq method/i,
+          /\bq-sort/i,
+          /\bqsort/i,
+        ],
+        term: 'Q-methodology',
+      },
+      // Specific methodologies
+      {
+        patterns: [/\bgrounded theory\b/i],
+        term: 'grounded theory',
+      },
+      {
+        patterns: [/\bethnography\b/i, /\bethnographic\b/i],
+        term: 'ethnography',
+      },
+      {
+        patterns: [/\bphenomenology\b/i, /\bphenomenological\b/i],
+        term: 'phenomenology',
+      },
+      {
+        patterns: [/\bcase study\b/i, /\bcase studies\b/i],
+        term: 'case study',
+      },
+      {
+        patterns: [/\bmixed methods\b/i, /\bmixed-methods\b/i],
+        term: 'mixed methods',
+      },
+      // Specific techniques/tools
+      {
+        patterns: [/\bmachine learning\b/i],
+        term: 'machine learning',
+      },
+      {
+        patterns: [/\bdeep learning\b/i],
+        term: 'deep learning',
+      },
+      {
+        patterns: [/\bneural network/i],
+        term: 'neural network',
+      },
+      // Specific domains (only if combined with specific methodology)
+      // Skip generic terms like "psychology", "research", "applications"
+    ];
+
+    // Check each pattern
+    for (const { patterns, term } of criticalPatterns) {
+      if (patterns.some((pattern) => pattern.test(queryLower))) {
+        criticalTerms.push(term);
+      }
+    }
+
+    // Generic terms that should NOT be critical (even if in query)
+    const nonCriticalTerms = [
+      'research',
+      'study',
+      'studies',
+      'analysis',
+      'method',
+      'methods',
+      'methodology',
+      'application',
+      'applications',
+      'psychology',
+      'social',
+      'health',
+      'clinical',
+      'education',
+      'systematic',
+      'review',
+      'literature',
+      'meta-analysis',
+      'survey',
+      'interview',
+      'data',
+      'qualitative',
+      'quantitative',
+      'approach',
+      'technique',
+      'framework',
+      'theory',
+      'practice',
+      'evidence',
+      'empirical',
+    ];
+
+    // Filter out non-critical terms
+    return criticalTerms.filter(
+      (term) => !nonCriticalTerms.includes(term.toLowerCase()),
+    );
   }
 
   private sortPapers(papers: Paper[], sortBy?: string): Paper[] {
@@ -333,6 +972,323 @@ export class LiteratureService {
       default:
         return papers; // Keep original order for relevance
     }
+  }
+
+  /**
+   * Calculates Levenshtein distance between two strings
+   * Used for fuzzy author name matching
+   */
+  private levenshteinDistance(str1: string, str2: string): number {
+    const len1 = str1.length;
+    const len2 = str2.length;
+
+    // Create a 2D array for dynamic programming
+    const dp: number[][] = Array(len1 + 1)
+      .fill(null)
+      .map(() => Array(len2 + 1).fill(0));
+
+    // Initialize first row and column
+    for (let i = 0; i <= len1; i++) dp[i][0] = i;
+    for (let j = 0; j <= len2; j++) dp[0][j] = j;
+
+    // Fill the dp table
+    for (let i = 1; i <= len1; i++) {
+      for (let j = 1; j <= len2; j++) {
+        if (str1[i - 1] === str2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1]; // No operation needed
+        } else {
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1, // Deletion
+            dp[i][j - 1] + 1, // Insertion
+            dp[i - 1][j - 1] + 1, // Substitution
+          );
+        }
+      }
+    }
+
+    return dp[len1][len2];
+  }
+
+  /**
+   * Preprocess and expand search query for better results
+   * Handles typos, acronyms, and domain-specific terminology
+   */
+  private preprocessAndExpandQuery(query: string): string {
+    // Normalize whitespace
+    let processed = query.trim().replace(/\s+/g, ' ');
+
+    // Domain-specific term corrections (typos → correct term)
+    // Focus on most common and unambiguous corrections only
+    const termCorrections: Record<string, string> = {
+      // Q-methodology variants (common typos) - HIGH PRIORITY
+      // IMPORTANT: Keep Q-methodology as-is (don't modify it)
+      'Q-methodology': 'Q-methodology', // Preserve correct spelling
+      'Q-method': 'Q-methodology', // Variant
+      'q-methodology': 'Q-methodology', // Lowercase variant
+      vqmethod: 'Q-methodology',
+      qmethod: 'Q-methodology',
+      qmethodology: 'Q-methodology',
+      'q method': 'Q-methodology',
+      'q-method': 'Q-methodology',
+
+      // Common misspellings
+      litterature: 'literature',
+      methology: 'methodology',
+      reserach: 'research',
+      anaylsis: 'analysis',
+      analysus: 'analysis',
+      analisis: 'analysis',
+
+      // Common phrase typos (handle context-aware corrections FIRST)
+      'as sswe': 'as well', // Context-aware: "as sswe" → "as well" (not "as as well")
+      aswell: 'as well',
+      wellknown: 'well-known',
+      wellestablished: 'well-established',
+
+      // Research method typos
+      qualitatve: 'qualitative',
+      quantitave: 'quantitative',
+      statistcal: 'statistical',
+      emperical: 'empirical',
+      theoritical: 'theoretical',
+      hypotheis: 'hypothesis',
+      hypotheses: 'hypothesis',
+
+      // Academic term typos
+      publcation: 'publication',
+      publsihed: 'published',
+      jouranl: 'journal',
+      conferance: 'conference',
+      procedings: 'proceedings',
+      reveiwed: 'reviewed',
+      reveiew: 'review',
+      citaiton: 'citation',
+      referance: 'reference',
+      bibliograpy: 'bibliography',
+    };
+
+    // Apply term corrections (case-insensitive)
+    // Process each correction
+    for (const [typo, correction] of Object.entries(termCorrections)) {
+      // Create regex with word boundaries for whole words, or simple replace for partials
+      const hasSpace = typo.includes(' ');
+      const regex = hasSpace
+        ? new RegExp(typo.trim(), 'gi')
+        : new RegExp(`\\b${typo.trim()}\\b`, 'gi');
+
+      const before = processed;
+      processed = processed.replace(regex, correction.trim());
+
+      if (before !== processed) {
+        this.logger.log(
+          `Query correction applied: "${typo.trim()}" → "${correction.trim()}"`,
+        );
+        this.logger.log(`Before: "${before}"`);
+        this.logger.log(`After: "${processed}"`);
+      }
+    }
+
+    // PHASE 10: Intelligent spell-checking for unknown words
+    // Check each word for potential typos using edit distance
+    const words = processed.split(/\s+/);
+    const correctedWords = words.map((word) => {
+      // Skip short words, numbers, or words with special characters
+      if (word.length <= 2 || /^\d+$/.test(word) || /[^a-zA-Z-]/.test(word)) {
+        return word;
+      }
+
+      // Common research/academic words dictionary
+      const commonWords = [
+        // CRITICAL: Add Q-methodology variants to prevent spell-check
+        'Q-methodology',
+        'q-methodology',
+        'Q-method',
+        'q-method',
+        'qmethod',
+        'Q-sort',
+        'q-sort',
+        'research',
+        'method',
+        'methods', // Add plural
+        'methodology',
+        'methodologies', // Add plural
+        'analysis',
+        'analyses', // Add plural
+        'video', // Add media terms
+        'videos',
+        'audio',
+        'image',
+        'images',
+        'text',
+        'texts',
+        'study',
+        'data',
+        'results',
+        'findings',
+        'conclusion',
+        'literature',
+        'review',
+        'systematic',
+        'meta',
+        'qualitative',
+        'quantitative',
+        'statistical',
+        'hypothesis',
+        'theory',
+        'practice',
+        'evidence',
+        'empirical',
+        'theoretical',
+        'framework',
+        'model',
+        'approach',
+        'technique',
+        'tool',
+        'instrument',
+        'measure',
+        'assessment',
+        'evaluation',
+        'intervention',
+        'treatment',
+        'control',
+        'experiment',
+        'trial',
+        'survey',
+        'interview',
+        'observation',
+        'case',
+        'cohort',
+        'sample',
+        'population',
+        'participant',
+        'patient',
+        'subject',
+        'variable',
+        'factor',
+        'correlation',
+        'regression',
+        'significance',
+        'effect',
+        'outcome',
+        'impact',
+        'influence',
+        'relationship',
+        'association',
+        'comparison',
+        'difference',
+        'change',
+        'trend',
+        'pattern',
+        'theme',
+        'category',
+        'concept',
+        'construct',
+        'dimension',
+        'perspective',
+        'view',
+        'understanding',
+        'knowledge',
+        'information',
+        'insight',
+        'implication',
+        'recommendation',
+        'future',
+        'limitation',
+        'strength',
+        'weakness',
+        'challenge',
+        'opportunity',
+        'social',
+        'science',
+        'health',
+        'healthcare',
+        'medical',
+        'clinical',
+        'policy',
+        'education',
+        'psychology',
+        'sociology',
+        'anthropology',
+        'economics',
+        'political',
+        'public',
+        'community',
+        'individual',
+        'group',
+        'organization',
+        'institution',
+        'society',
+        'culture',
+        'behavior',
+        'attitude',
+        'perception',
+        'belief',
+        'value',
+        'norm',
+        'standard',
+        'guideline',
+        'protocol',
+        'procedure',
+        'process',
+        'system',
+        'structure',
+        'function',
+        'role',
+        'relationship',
+        'interaction',
+        'communication',
+        'collaboration',
+        'cooperation',
+        'conflict',
+        'agreement',
+        'consensus',
+        'debate',
+        'discussion',
+        'dialogue',
+        'well',
+        'assess',
+      ];
+
+      const wordLower = word.toLowerCase();
+
+      // If word is already a common word, keep it
+      if (commonWords.includes(wordLower)) {
+        return word;
+      }
+
+      // Find closest match using Levenshtein distance
+      let bestMatch = word;
+      let minDistance = Infinity;
+
+      for (const commonWord of commonWords) {
+        const distance = this.levenshteinDistance(wordLower, commonWord);
+        // Only suggest if distance is small (1-2 characters different)
+        // and the words are similar length
+        const lengthDiff = Math.abs(word.length - commonWord.length);
+        if (distance <= 2 && lengthDiff <= 2 && distance < minDistance) {
+          minDistance = distance;
+          bestMatch = commonWord;
+        }
+      }
+
+      // Only apply correction if we found a good match
+      // Be conservative: only correct if distance is 1 or (distance is 2 and word is long enough)
+      const shouldCorrect =
+        minDistance === 1 || (minDistance === 2 && word.length >= 6);
+
+      if (shouldCorrect && minDistance < word.length / 2) {
+        this.logger.log(
+          `Smart spell-check: "${word}" → "${bestMatch}" (distance: ${minDistance})`,
+        );
+        return bestMatch;
+      }
+
+      return word;
+    });
+
+    processed = correctedWords.join(' ');
+
+    return processed.trim();
   }
 
   async savePaper(
@@ -450,7 +1406,9 @@ export class LiteratureService {
         this.logger.error(`Prisma Error Code: ${error.code}`);
       }
       if (error.meta) {
-        this.logger.error(`Prisma Meta: ${JSON.stringify(error.meta, null, 2)}`);
+        this.logger.error(
+          `Prisma Meta: ${JSON.stringify(error.meta, null, 2)}`,
+        );
       }
       throw error;
     }
@@ -1611,7 +2569,7 @@ ER  -`;
 
       // Check cache first to protect against rate limits (60/min)
       const cacheKey = `reddit_search:${query}`;
-      const cachedResults = await this.cacheManager.get<any[]>(cacheKey);
+      const cachedResults = await this.cacheService.get(cacheKey);
 
       if (cachedResults) {
         this.logger.log('✨ Reddit results retrieved from cache');
@@ -1666,7 +2624,7 @@ ER  -`;
       }
 
       // Cache results for 5 minutes (300 seconds) to protect against rate limiting
-      await this.cacheManager.set(cacheKey, results, 300000);
+      await this.cacheService.set(cacheKey, results, 300);
       this.logger.log(
         `💾 Cached ${results.length} Reddit results for 5 minutes`,
       );

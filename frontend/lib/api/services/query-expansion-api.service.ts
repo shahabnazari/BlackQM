@@ -48,14 +48,15 @@ export async function expandQuery(
   domain?: 'climate' | 'health' | 'education' | 'general'
 ): Promise<ExpandedQuery> {
   try {
+    // Use public endpoint for development (no auth required)
     const response = await apiClient.post<QueryExpansionResponse>(
-      '/ai/query/expand',
+      '/ai/query/expand/public',
       { query, domain: domain || 'general' }
     );
 
     // apiClient.post returns the unwrapped response data directly
     // Backend returns: { success: true, expanded: {...} }
-    const data = response.data || response as any;
+    const data = response.data || (response as any);
 
     if (data?.success && data?.expanded) {
       return data.expanded;
@@ -100,7 +101,7 @@ export async function suggestTerms(
       { query, field }
     );
 
-    const data = response.data || response as any;
+    const data = response.data || (response as any);
 
     if (data?.success && data?.terms) {
       // Convert to SuggestedTerm format
@@ -132,7 +133,7 @@ export async function narrowQuery(query: string): Promise<{
       { query }
     );
 
-    const data = response.data || response as any;
+    const data = response.data || (response as any);
 
     if (data?.success) {
       return {

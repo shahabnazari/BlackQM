@@ -5402,5 +5402,722 @@ See PHASE_TRACKER_PART2.md for complete Day 21 implementation details.
 
 ---
 
-**Phase 9 Updated Status:** Days 0-11, 14-15, 17-20 ✅ Complete | Days 20.5-21 🔴 PLANNED
+## 🌐 PHASE 9 DAY 22: CROSS-PLATFORM SOCIAL MEDIA SYNTHESIS DASHBOARD
+
+**Date:** October 4, 2025
+**Status:** 🔴 PLANNED (Gap Identified)
+**Priority:** HIGH - Completes Day 19 social media integration
+**Dependencies:** Day 19 services complete ✅
+**Duration:** 45 minutes
+
+### Gap Analysis
+The sophisticated `CrossPlatformSynthesisService` (21,851 bytes) exists from Day 19 but is not exposed via API endpoints. Users can search individual platforms but cannot access unified cross-platform insights, comparative analytics, or consensus detection.
+
+### Technical Implementation Details
+
+#### 1. Backend Controller Endpoints (15 min)
+
+**File:** `/backend/src/modules/literature/literature.controller.ts`
+
+**Endpoints to Add:**
+
+```typescript
+@Post('social/synthesize')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@HttpCode(HttpStatus.OK)
+@ApiOperation({
+  summary: 'Synthesize cross-platform social media insights',
+  description: 'Aggregate and analyze data from multiple social platforms'
+})
+async synthesizeCrossPlatform(
+  @Body() dto: SynthesizeCrossPlatformDto,
+  @CurrentUser() user: any,
+) {
+  return await this.crossPlatformSynthesisService.synthesize(
+    dto.platformResults,
+    dto.options
+  );
+}
+
+@Get('social/platform-comparison')
+@UseGuards(JwtAuthGuard)
+async comparePlatformMetrics(
+  @Query('platforms') platforms: string[],
+  @Query('query') query: string,
+) {
+  return await this.crossPlatformSynthesisService.compareMetrics(
+    platforms,
+    query
+  );
+}
+
+@Get('social/trend-analysis')
+@UseGuards(JwtAuthGuard)
+async analyzeCrossPlatformTrends(
+  @Query('query') query: string,
+  @Query('platforms') platforms: string[],
+  @Query('timeRange') timeRange?: string,
+) {
+  return await this.crossPlatformSynthesisService.analyzeTrends(
+    query,
+    platforms,
+    timeRange
+  );
+}
+
+@Post('social/consensus-detection')
+@UseGuards(JwtAuthGuard)
+async detectConsensusThemes(
+  @Body() dto: ConsensusDetectionDto,
+) {
+  return await this.crossPlatformSynthesisService.detectConsensus(
+    dto.platformResults,
+    dto.threshold
+  );
+}
+```
+
+**DTOs to Add:**
+
+```typescript
+// File: /backend/src/modules/literature/dto/social-synthesis.dto.ts
+
+export class SynthesizeCrossPlatformDto {
+  @ApiProperty({ description: 'Results from individual platform searches' })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PlatformResultDto)
+  platformResults!: PlatformResultDto[];
+
+  @ApiPropertyOptional({ description: 'Synthesis options' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SynthesisOptionsDto)
+  options?: SynthesisOptionsDto;
+}
+
+export class PlatformResultDto {
+  @IsString()
+  platform!: string;
+
+  @IsArray()
+  posts!: any[];
+
+  @IsObject()
+  @IsOptional()
+  sentiment?: SentimentDistribution;
+
+  @IsNumber()
+  @IsOptional()
+  totalPosts?: number;
+}
+
+export class SynthesisOptionsDto {
+  @IsNumber()
+  @IsOptional()
+  consensusThreshold?: number; // Default: 0.7 (70% agreement)
+
+  @IsBoolean()
+  @IsOptional()
+  includeTrends?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  detectControversy?: boolean;
+}
+
+export class ConsensusDetectionDto {
+  @IsArray()
+  platformResults!: PlatformResultDto[];
+
+  @IsNumber()
+  @IsOptional()
+  threshold?: number; // Default: 0.7
+}
+```
+
+**Response Interfaces:**
+
+```typescript
+// Synthesis Response
+interface CrossPlatformSynthesisResponse {
+  summary: {
+    totalPlatforms: number;
+    totalPosts: number;
+    overallSentiment: SentimentDistribution;
+    consensusLevel: number; // 0-1
+  };
+  platformComparison: PlatformMetrics[];
+  consensusThemes: ConsensusTheme[];
+  controversialThemes: ControversialTheme[];
+  trends: CrossPlatformTrend[];
+  recommendations: string[];
+}
+
+interface PlatformMetrics {
+  platform: string;
+  postCount: number;
+  sentiment: SentimentDistribution;
+  engagementRate: number;
+  healthScore: number; // 0-100
+  uniqueThemes: string[];
+  dominantTopics: string[];
+}
+
+interface ConsensusTheme {
+  theme: string;
+  agreementScore: number; // 0-1
+  platforms: string[]; // Platforms where this theme appears
+  supportingEvidence: {
+    platform: string;
+    excerpts: string[];
+  }[];
+  researchImplication: string;
+}
+
+interface ControversialTheme {
+  theme: string;
+  controversyScore: number; // 0-1
+  platformPositions: {
+    platform: string;
+    sentiment: 'positive' | 'negative' | 'neutral';
+    strength: number;
+  }[];
+  nuance: string;
+}
+
+interface CrossPlatformTrend {
+  keyword: string;
+  frequency: number;
+  platforms: string[];
+  emergingScore: number; // 0-1
+  trajectory: 'rising' | 'stable' | 'declining';
+}
+```
+
+---
+
+#### 2. Frontend API Service (10 min)
+
+**File:** `/frontend/lib/services/literature-api.service.ts`
+
+**Methods to Add:**
+
+```typescript
+/**
+ * PHASE 9 DAY 22: Cross-Platform Social Media Synthesis
+ */
+
+async synthesizeCrossPlatform(
+  platformResults: PlatformResult[],
+  options?: SynthesisOptions
+): Promise<CrossPlatformSynthesisResponse> {
+  try {
+    const response = await this.api.post('/literature/social/synthesize', {
+      platformResults,
+      options: options || {
+        consensusThreshold: 0.7,
+        includeTrends: true,
+        detectControversy: true,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to synthesize cross-platform data:', error);
+    // Fallback: basic client-side synthesis
+    return this.basicSynthesis(platformResults);
+  }
+}
+
+async comparePlatformMetrics(
+  platforms: string[],
+  query: string
+): Promise<PlatformMetrics[]> {
+  try {
+    const response = await this.api.get('/literature/social/platform-comparison', {
+      params: { platforms, query },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to compare platform metrics:', error);
+    throw error;
+  }
+}
+
+async analyzeCrossPlatformTrends(
+  query: string,
+  platforms: string[],
+  timeRange?: string
+): Promise<CrossPlatformTrend[]> {
+  try {
+    const response = await this.api.get('/literature/social/trend-analysis', {
+      params: { query, platforms, timeRange },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to analyze trends:', error);
+    return [];
+  }
+}
+
+async detectConsensusThemes(
+  platformResults: PlatformResult[],
+  threshold: number = 0.7
+): Promise<ConsensusTheme[]> {
+  try {
+    const response = await this.api.post('/literature/social/consensus-detection', {
+      platformResults,
+      threshold,
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to detect consensus:', error);
+    return [];
+  }
+}
+
+// Fallback synthesis for offline/error scenarios
+private basicSynthesis(platformResults: PlatformResult[]): CrossPlatformSynthesisResponse {
+  // Client-side aggregation logic
+  const totalPosts = platformResults.reduce((sum, p) => sum + (p.posts?.length || 0), 0);
+  const platforms = platformResults.map(p => p.platform);
+
+  return {
+    summary: {
+      totalPlatforms: platforms.length,
+      totalPosts,
+      overallSentiment: this.aggregateSentiment(platformResults),
+      consensusLevel: 0,
+    },
+    platformComparison: [],
+    consensusThemes: [],
+    controversialThemes: [],
+    trends: [],
+    recommendations: ['Synthesis service unavailable - basic aggregation only'],
+  };
+}
+
+private aggregateSentiment(results: PlatformResult[]): SentimentDistribution {
+  // Simple aggregation logic
+  let positive = 0, negative = 0, neutral = 0, total = 0;
+
+  results.forEach(result => {
+    if (result.sentiment) {
+      positive += result.sentiment.positive || 0;
+      negative += result.sentiment.negative || 0;
+      neutral += result.sentiment.neutral || 0;
+      total += result.posts?.length || 0;
+    }
+  });
+
+  return total > 0 ? {
+    positive: positive / total,
+    negative: negative / total,
+    neutral: neutral / total,
+    positivePercentage: (positive / total) * 100,
+    negativePercentage: (negative / total) * 100,
+    neutralPercentage: (neutral / total) * 100,
+  } : { positive: 0, negative: 0, neutral: 0, positivePercentage: 0, negativePercentage: 0, neutralPercentage: 0 };
+}
+```
+
+---
+
+#### 3. Dashboard Component (20 min)
+
+**File:** `/frontend/components/literature/CrossPlatformSynthesisDashboard.tsx`
+
+**Component Structure:**
+
+```typescript
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis,
+  CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
+import { Download, TrendingUp, MessageSquare, AlertCircle } from 'lucide-react';
+import { literatureAPI } from '@/lib/services/literature-api.service';
+
+interface CrossPlatformSynthesisDashboardProps {
+  platformResults: PlatformResult[];
+  query: string;
+  onClose?: () => void;
+}
+
+export function CrossPlatformSynthesisDashboard({
+  platformResults,
+  query,
+  onClose,
+}: CrossPlatformSynthesisDashboardProps) {
+  const [synthesis, setSynthesis] = useState<CrossPlatformSynthesisResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadSynthesis();
+  }, [platformResults]);
+
+  const loadSynthesis = async () => {
+    try {
+      setLoading(true);
+      const result = await literatureAPI.synthesizeCrossPlatform(platformResults, {
+        consensusThreshold: 0.7,
+        includeTrends: true,
+        detectControversy: true,
+      });
+      setSynthesis(result);
+    } catch (error) {
+      console.error('Synthesis failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportReport = () => {
+    const report = {
+      query,
+      timestamp: new Date().toISOString(),
+      synthesis,
+    };
+
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cross-platform-synthesis-${Date.now()}.json`;
+    a.click();
+  };
+
+  if (loading) return <div>Loading synthesis...</div>;
+  if (!synthesis) return <div>No synthesis data available</div>;
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+  return (
+    <div className="space-y-6 p-6 bg-white rounded-lg shadow-lg">
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-bold">Cross-Platform Synthesis</h2>
+          <p className="text-gray-600">Query: {query}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={exportReport} variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-2" />
+            Export Report
+          </Button>
+          {onClose && (
+            <Button onClick={onClose} variant="ghost" size="sm">Close</Button>
+          )}
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total Platforms</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{synthesis.summary.totalPlatforms}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total Posts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{synthesis.summary.totalPosts}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Consensus Level</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {(synthesis.summary.consensusLevel * 100).toFixed(0)}%
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Overall Sentiment</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Badge variant="default" className="bg-green-500">
+                {synthesis.summary.overallSentiment.positivePercentage?.toFixed(0)}%
+              </Badge>
+              <Badge variant="secondary">
+                {synthesis.summary.overallSentiment.neutralPercentage?.toFixed(0)}%
+              </Badge>
+              <Badge variant="destructive">
+                {synthesis.summary.overallSentiment.negativePercentage?.toFixed(0)}%
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Platform Comparison */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart className="w-5 h-5" />
+            Platform Comparison
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={synthesis.platformComparison}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="platform" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="postCount" fill="#8884d8" name="Posts" />
+              <Bar dataKey="healthScore" fill="#82ca9d" name="Health Score" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Consensus Themes */}
+      {synthesis.consensusThemes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Consensus Themes ({synthesis.consensusThemes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {synthesis.consensusThemes.map((theme, idx) => (
+                <div key={idx} className="border-l-4 border-green-500 pl-4 py-2">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold">{theme.theme}</h4>
+                    <Badge variant="outline">
+                      {(theme.agreementScore * 100).toFixed(0)}% agreement
+                    </Badge>
+                  </div>
+                  <div className="flex gap-2 mb-2">
+                    {theme.platforms.map(platform => (
+                      <Badge key={platform} variant="secondary">{platform}</Badge>
+                    ))}
+                  </div>
+                  <p className="text-sm text-gray-600">{theme.researchImplication}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Controversial Themes */}
+      {synthesis.controversialThemes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              Controversial Themes ({synthesis.controversialThemes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {synthesis.controversialThemes.map((theme, idx) => (
+                <div key={idx} className="border-l-4 border-orange-500 pl-4 py-2">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold">{theme.theme}</h4>
+                    <Badge variant="outline" className="bg-orange-100">
+                      {(theme.controversyScore * 100).toFixed(0)}% controversy
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    {theme.platformPositions.map(pos => (
+                      <div key={pos.platform} className="flex items-center gap-2">
+                        <Badge variant="secondary">{pos.platform}</Badge>
+                        <Badge
+                          variant={
+                            pos.sentiment === 'positive' ? 'default' :
+                            pos.sentiment === 'negative' ? 'destructive' :
+                            'outline'
+                          }
+                        >
+                          {pos.sentiment} ({(pos.strength * 100).toFixed(0)}%)
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">{theme.nuance}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Trends */}
+      {synthesis.trends.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Emerging Trends ({synthesis.trends.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              {synthesis.trends.map((trend, idx) => (
+                <div key={idx} className="border rounded-lg p-3">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold">{trend.keyword}</h4>
+                    <Badge
+                      variant={
+                        trend.trajectory === 'rising' ? 'default' :
+                        trend.trajectory === 'declining' ? 'destructive' :
+                        'outline'
+                      }
+                    >
+                      {trend.trajectory}
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Frequency: {trend.frequency} | Score: {(trend.emergingScore * 100).toFixed(0)}%
+                  </div>
+                  <div className="flex gap-1 mt-2">
+                    {trend.platforms.map(p => (
+                      <Badge key={p} variant="outline" className="text-xs">{p}</Badge>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recommendations */}
+      {synthesis.recommendations.length > 0 && (
+        <Card className="bg-blue-50">
+          <CardHeader>
+            <CardTitle>Research Recommendations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc list-inside space-y-2">
+              {synthesis.recommendations.map((rec, idx) => (
+                <li key={idx} className="text-sm">{rec}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+```
+
+**Integration in Literature Page:**
+
+```typescript
+// In /frontend/app/(researcher)/discover/literature/page.tsx
+
+const [showSynthesisDashboard, setShowSynthesisDashboard] = useState(false);
+const [platformResultsForSynthesis, setPlatformResultsForSynthesis] = useState<any[]>([]);
+
+// After social media search completes
+const handleSearchSocialMedia = async () => {
+  // ... existing search logic ...
+
+  setSocialResults(results);
+
+  // Store for synthesis
+  setPlatformResultsForSynthesis(prev => [
+    ...prev,
+    {
+      platform: socialPlatforms.join(','),
+      posts: results,
+      sentiment: insights?.sentimentDistribution,
+      totalPosts: results.length,
+    }
+  ]);
+};
+
+// Add button to trigger synthesis
+{platformResultsForSynthesis.length >= 2 && (
+  <Button
+    onClick={() => setShowSynthesisDashboard(true)}
+    variant="default"
+    className="mt-4"
+  >
+    <TrendingUp className="w-4 h-4 mr-2" />
+    Synthesize Cross-Platform Insights ({platformResultsForSynthesis.length} platforms)
+  </Button>
+)}
+
+// Modal with dashboard
+{showSynthesisDashboard && (
+  <Dialog open={showSynthesisDashboard} onOpenChange={setShowSynthesisDashboard}>
+    <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <CrossPlatformSynthesisDashboard
+        platformResults={platformResultsForSynthesis}
+        query={query}
+        onClose={() => setShowSynthesisDashboard(false)}
+      />
+    </DialogContent>
+  </Dialog>
+)}
+```
+
+---
+
+### Testing Checklist
+
+**Backend:**
+- [ ] Controller endpoints respond correctly
+- [ ] DTOs validate input properly
+- [ ] CrossPlatformSynthesisService integration works
+- [ ] Authentication guards enforce access control
+- [ ] Swagger documentation generated
+
+**Frontend:**
+- [ ] API service methods call correct endpoints
+- [ ] Dashboard renders with mock data
+- [ ] Export functionality works
+- [ ] Error handling displays gracefully
+- [ ] Loading states show appropriately
+
+**Integration:**
+- [ ] Single platform shows "add more platforms" message
+- [ ] 2+ platforms trigger synthesis button
+- [ ] Dashboard displays accurate metrics
+- [ ] Consensus detection works correctly
+- [ ] Controversial themes highlighted properly
+
+**Performance:**
+- [ ] Synthesis <1s for 100 posts
+- [ ] Dashboard render <2s
+- [ ] Export <3s
+- [ ] No UI blocking during calculation
+
+---
+
+### Success Criteria
+- ✅ CrossPlatformSynthesisService accessible via API
+- ✅ Dashboard provides actionable research insights
+- ✅ Consensus and controversy clearly visualized
+- ✅ Export functionality for research documentation
+- ✅ Completes Day 19 social media vision (100%)
+
+---
+
+**Phase 9 Updated Status:** Days 0-11, 14-15, 17-20 ✅ Complete | Days 20.5-22 🔴 PLANNED
 

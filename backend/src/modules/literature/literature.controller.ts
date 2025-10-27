@@ -82,7 +82,10 @@ export class LiteratureController {
     @Body() searchDto: SearchLiteratureDto,
     @CurrentUser() user: any,
   ) {
-    return await this.literatureService.searchLiterature(searchDto, user.userId);
+    return await this.literatureService.searchLiterature(
+      searchDto,
+      user.userId,
+    );
   }
 
   // Temporary public endpoint for testing
@@ -206,7 +209,11 @@ export class LiteratureController {
     const pageNum = Number(page) || 1;
     const limitNum = Number(limit) || 20;
 
-    return await this.literatureService.getUserLibrary(user.userId, pageNum, limitNum);
+    return await this.literatureService.getUserLibrary(
+      user.userId,
+      pageNum,
+      limitNum,
+    );
   }
 
   @Delete('library/:paperId')
@@ -1859,7 +1866,7 @@ export class LiteratureController {
       `Batch scoring ${dto.videos.length} videos (User: ${user.userId})`,
     );
 
-    const videoMetadata = dto.videos.map(v => ({
+    const videoMetadata = dto.videos.map((v) => ({
       videoId: v.videoId,
       title: v.title,
       description: v.description,
@@ -1873,13 +1880,10 @@ export class LiteratureController {
       dto.researchContext,
     );
 
-    const totalCost = scores.reduce(
-      (sum, score) => {
-        const video = dto.videos.find(v => v.videoId === score.videoId);
-        return sum + (video ? (video.duration / 60) * 0.006 : 0);
-      },
-      0,
-    );
+    const totalCost = scores.reduce((sum, score) => {
+      const video = dto.videos.find((v) => v.videoId === score.videoId);
+      return sum + (video ? (video.duration / 60) * 0.006 : 0);
+    }, 0);
 
     return {
       success: true,
@@ -1911,7 +1915,7 @@ export class LiteratureController {
       `AI selecting top ${dto.topN || 5} videos from ${dto.videos.length} (User: ${user.userId})`,
     );
 
-    const videoMetadata = dto.videos.map(v => ({
+    const videoMetadata = dto.videos.map((v) => ({
       videoId: v.videoId,
       title: v.title,
       description: v.description,

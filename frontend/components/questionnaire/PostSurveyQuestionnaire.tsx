@@ -1,33 +1,23 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card } from '@/components/apple-ui/Card';
-import { Button } from '@/components/apple-ui/Button';
-import { TextField } from '@/components/apple-ui/TextField';
-import { Slider } from '@/components/ui/slider';
-import { Progress } from '@/components/ui/progress';
-import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/apple-ui/Badge';
-import { 
-  ChevronLeftIcon, 
-  ChevronRightIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  SparklesIcon,
-  InformationCircleIcon
-} from '@heroicons/react/24/outline';
+import { Button } from '@/components/apple-ui/Button';
+import { Card } from '@/components/apple-ui/Card';
+import { TextField } from '@/components/apple-ui/TextField';
+import { Alert } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
+import { Slider } from '@/components/ui/slider';
 import { questionAPIService } from '@/lib/services/question-api.service';
-
-interface Question {
-  id: string;
-  text: string;
-  type: string;
-  required?: boolean;
-  options?: Array<{ value: string; label: string }>;
-  validation?: any;
-  metadata?: any;
-  skipLogic?: any;
-}
+import { Question, QuestionType } from '@/lib/types/questionnaire';
+import {
+  CheckCircleIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  InformationCircleIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline';
+import React, { useCallback, useEffect, useState } from 'react';
 
 interface PostSurveyQuestionnaireProps {
   surveyId: string;
@@ -47,14 +37,14 @@ interface PostSurveyQuestionnaireProps {
 
 /**
  * PostSurveyQuestionnaire Component - Phase 8.2 Day 2
- * 
+ *
  * World-class implementation with:
  * - Context-aware dynamic questions based on Q-sort behavior
  * - Adaptive question ordering based on engagement
  * - Real-time validation and quality scoring
  * - Progressive disclosure for better UX
  * - Automatic insight extraction
- * 
+ *
  * @world-class Features:
  * - Intelligent question selection based on Q-sort patterns
  * - Time tracking per question
@@ -67,7 +57,7 @@ export function PostSurveyQuestionnaire({
   participantId,
   qsortData,
   onComplete,
-  onBack
+  onBack,
 }: PostSurveyQuestionnaireProps) {
   // State management
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -75,11 +65,15 @@ export function PostSurveyQuestionnaire({
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [timeSpent, setTimeSpent] = useState<Record<string, number>>({});
-  const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
+  const [questionStartTime, setQuestionStartTime] = useState<number>(
+    Date.now()
+  );
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [qualityScore, setQualityScore] = useState(0);
-  const [engagementLevel, setEngagementLevel] = useState<'high' | 'medium' | 'low'>('medium');
+  const [engagementLevel, setEngagementLevel] = useState<
+    'high' | 'medium' | 'low'
+  >('medium');
 
   // Determine engagement level from Q-sort data
   useEffect(() => {
@@ -103,20 +97,24 @@ export function PostSurveyQuestionnaire({
     setLoading(true);
     try {
       // Get context-aware questions from backend
-      const response = await fetch(`/api/post-survey/${surveyId}/questions/${participantId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qsortData })
-      });
-      
+      const response = await fetch(
+        `/api/post-survey/${surveyId}/questions/${participantId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qsortData }),
+        }
+      );
+
       if (response.ok) {
         const dynamicQuestions = await response.json();
         setQuestions(dynamicQuestions);
       } else {
         // Fallback to standard post-survey questions
-        const standardQuestions = await questionAPIService.getQuestions(surveyId);
-        const postSurveyQuestions = standardQuestions.filter((q: any) => 
-          q.metadata?.category === 'post-survey'
+        const standardQuestions =
+          await questionAPIService.getQuestions(surveyId);
+        const postSurveyQuestions = standardQuestions.filter(
+          (q: any) => q.metadata?.category === 'post-survey'
         );
         setQuestions(postSurveyQuestions);
       }
@@ -131,74 +129,149 @@ export function PostSurveyQuestionnaire({
 
   // Default questions if API fails
   const getDefaultQuestions = (): Question[] => {
+    const now = new Date();
     const defaults: Question[] = [
       {
         id: 'exp-1',
+        surveyId: surveyId,
         text: 'How would you rate your overall experience with this Q-sort study?',
-        type: 'RATING',
+        type: QuestionType.RATING_SCALE,
         required: true,
-        validation: { min: 1, max: 5 },
-        metadata: { category: 'experience' }
+        order: 0,
+        layout: 'vertical',
+        theme: 'default',
+        animations: false,
+        version: 1,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+        validation: [
+          { type: 'min', value: 1 },
+          { type: 'max', value: 5 },
+        ],
+        category: 'experience',
       },
       {
         id: 'exp-2',
+        surveyId: surveyId,
         text: 'What aspects of the study did you find most challenging?',
-        type: 'TEXTAREA',
+        type: QuestionType.TEXT_LONG,
         required: false,
-        validation: { maxLength: 500 },
-        metadata: { category: 'experience' }
+        order: 1,
+        layout: 'vertical',
+        theme: 'default',
+        animations: false,
+        version: 1,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+        validation: [{ type: 'maxLength', value: 500 }],
+        category: 'experience',
       },
       {
         id: 'demo-1',
+        surveyId: surveyId,
         text: 'What is your age range?',
-        type: 'SELECT',
+        type: QuestionType.DROPDOWN,
         required: true,
+        order: 2,
+        layout: 'vertical',
+        theme: 'default',
+        animations: false,
+        version: 1,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
         options: [
-          { value: '18-24', label: '18-24' },
-          { value: '25-34', label: '25-34' },
-          { value: '35-44', label: '35-44' },
-          { value: '45-54', label: '45-54' },
-          { value: '55-64', label: '55-64' },
-          { value: '65+', label: '65+' }
+          { id: '1', text: '18-24', value: '18-24', order: 0 },
+          { id: '2', text: '25-34', value: '25-34', order: 1 },
+          { id: '3', text: '35-44', value: '35-44', order: 2 },
+          { id: '4', text: '45-54', value: '45-54', order: 3 },
+          { id: '5', text: '55-64', value: '55-64', order: 4 },
+          { id: '6', text: '65+', value: '65+', order: 5 },
         ],
-        metadata: { category: 'demographic' }
-      }
+        category: 'demographic',
+      },
     ];
 
     // Add context-aware questions based on Q-sort behavior
     if (qsortData) {
+      let orderCounter = defaults.length;
+
       if (qsortData.changesCount > 20) {
         defaults.push({
           id: 'context-1',
+          surveyId: surveyId,
           text: 'You made many changes during sorting. What made the decision-making difficult?',
-          type: 'TEXTAREA',
+          type: QuestionType.TEXT_LONG,
           required: false,
-          metadata: { category: 'context', trigger: 'high-changes' }
+          order: orderCounter++,
+          layout: 'vertical',
+          theme: 'default',
+          animations: false,
+          version: 1,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+          category: 'context',
         });
       }
 
       if (qsortData.extremeStatements.mostAgree.length > 0) {
         defaults.push({
           id: 'context-2',
+          surveyId: surveyId,
           text: 'What made you strongly agree with your top-ranked statements?',
-          type: 'TEXTAREA',
+          type: QuestionType.TEXT_LONG,
           required: false,
-          metadata: { category: 'context', trigger: 'extreme-positions' }
+          order: orderCounter++,
+          layout: 'vertical',
+          theme: 'default',
+          animations: false,
+          version: 1,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+          category: 'context',
         });
       }
 
       if (qsortData.timeSpent < 300) {
         defaults.push({
           id: 'context-3',
+          surveyId: surveyId,
           text: 'You completed the sort quickly. Did you feel you had enough time to consider all statements?',
-          type: 'RADIO',
+          type: QuestionType.MULTIPLE_CHOICE_SINGLE,
           required: false,
+          order: orderCounter++,
+          layout: 'vertical',
+          theme: 'default',
+          animations: false,
+          version: 1,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
           options: [
-            { value: 'yes', label: 'Yes, I made quick but confident decisions' },
-            { value: 'no', label: 'No, I would have preferred more time' },
-            { value: 'unsure', label: 'Not sure' }
+            {
+              id: 'opt-1',
+              text: 'Yes, I made quick but confident decisions',
+              value: 'yes',
+              order: 0,
+            },
+            {
+              id: 'opt-2',
+              text: 'No, I would have preferred more time',
+              value: 'no',
+              order: 1,
+            },
+            {
+              id: 'opt-3',
+              text: 'Not sure',
+              value: 'unsure',
+              order: 2,
+            },
           ],
-          metadata: { category: 'context', trigger: 'quick-sort' }
+          category: 'context',
         });
       }
     }
@@ -208,27 +281,33 @@ export function PostSurveyQuestionnaire({
 
   // Current question
   const currentQuestion = questions[currentQuestionIndex];
-  const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
+  const progress =
+    questions.length > 0
+      ? ((currentQuestionIndex + 1) / questions.length) * 100
+      : 0;
 
   // Handle response change
-  const handleResponseChange = useCallback((value: any) => {
-    if (!currentQuestion) return;
+  const handleResponseChange = useCallback(
+    (value: any) => {
+      if (!currentQuestion) return;
 
-    setResponses(prev => ({
-      ...prev,
-      [currentQuestion.id]: value
-    }));
+      setResponses(prev => ({
+        ...prev,
+        [currentQuestion.id]: value,
+      }));
 
-    // Clear error for this question
-    setErrors(prev => {
-      const newErrors = { ...prev };
-      delete newErrors[currentQuestion.id];
-      return newErrors;
-    });
+      // Clear error for this question
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[currentQuestion.id];
+        return newErrors;
+      });
 
-    // Calculate running quality score
-    updateQualityScore(currentQuestion.id, value);
-  }, [currentQuestion]);
+      // Calculate running quality score
+      updateQualityScore(currentQuestion.id, value);
+    },
+    [currentQuestion]
+  );
 
   // Update quality score based on response
   const updateQualityScore = (_questionId: string, value: any) => {
@@ -255,25 +334,31 @@ export function PostSurveyQuestionnaire({
     if (currentQuestion.required && !response) {
       setErrors(prev => ({
         ...prev,
-        [currentQuestion.id]: 'This question is required'
+        [currentQuestion.id]: 'This question is required',
       }));
       return false;
     }
 
     // Type-specific validation
     if (validation && response) {
-      if (currentQuestion.type === 'TEXT' || currentQuestion.type === 'TEXTAREA') {
-        if (validation.minLength && response.length < validation.minLength) {
+      if (
+        currentQuestion.type === QuestionType.TEXT_SHORT ||
+        currentQuestion.type === QuestionType.TEXT_LONG
+      ) {
+        const minLengthRule = validation.find(rule => rule.type === 'minLength');
+        const maxLengthRule = validation.find(rule => rule.type === 'maxLength');
+
+        if (minLengthRule && minLengthRule.value && response.length < minLengthRule.value) {
           setErrors(prev => ({
             ...prev,
-            [currentQuestion.id]: `Minimum ${validation.minLength} characters required`
+            [currentQuestion.id]: `Minimum ${minLengthRule.value} characters required`,
           }));
           return false;
         }
-        if (validation.maxLength && response.length > validation.maxLength) {
+        if (maxLengthRule && maxLengthRule.value && response.length > maxLengthRule.value) {
           setErrors(prev => ({
             ...prev,
-            [currentQuestion.id]: `Maximum ${validation.maxLength} characters allowed`
+            [currentQuestion.id]: `Maximum ${maxLengthRule.value} characters allowed`,
           }));
           return false;
         }
@@ -289,10 +374,12 @@ export function PostSurveyQuestionnaire({
 
     // Track time spent on current question
     if (currentQuestion) {
-      const timeOnQuestion = Math.floor((Date.now() - questionStartTime) / 1000);
+      const timeOnQuestion = Math.floor(
+        (Date.now() - questionStartTime) / 1000
+      );
       setTimeSpent(prev => ({
         ...prev,
-        [currentQuestion.id]: timeOnQuestion
+        [currentQuestion.id]: timeOnQuestion,
       }));
     }
 
@@ -300,7 +387,13 @@ export function PostSurveyQuestionnaire({
       setCurrentQuestionIndex(prev => prev + 1);
       setQuestionStartTime(Date.now());
     }
-  }, [currentQuestionIndex, questions.length, validateQuestion, currentQuestion, questionStartTime]);
+  }, [
+    currentQuestionIndex,
+    questions.length,
+    validateQuestion,
+    currentQuestion,
+    questionStartTime,
+  ]);
 
   // Navigate to previous question
   const handlePrevious = useCallback(() => {
@@ -318,32 +411,39 @@ export function PostSurveyQuestionnaire({
 
     // Track time for last question
     if (currentQuestion) {
-      const timeOnQuestion = Math.floor((Date.now() - questionStartTime) / 1000);
+      const timeOnQuestion = Math.floor(
+        (Date.now() - questionStartTime) / 1000
+      );
       timeSpent[currentQuestion.id] = timeOnQuestion;
     }
 
     // Prepare responses with metadata
-    const formattedResponses = Object.entries(responses).map(([questionId, answer]) => ({
-      questionId,
-      answer,
-      timeSpent: timeSpent[questionId] || 0,
-      metadata: {
-        qualityScore,
-        engagementLevel,
-        qsortContext: qsortData
-      }
-    }));
+    const formattedResponses = Object.entries(responses).map(
+      ([questionId, answer]) => ({
+        questionId,
+        answer,
+        timeSpent: timeSpent[questionId] || 0,
+        metadata: {
+          qualityScore,
+          engagementLevel,
+          qsortContext: qsortData,
+        },
+      })
+    );
 
     try {
       // Save responses to backend
-      const response = await fetch(`/api/post-survey/${surveyId}/responses/${participantId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          responses: formattedResponses,
-          qsortData
-        })
-      });
+      const response = await fetch(
+        `/api/post-survey/${surveyId}/responses/${participantId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            responses: formattedResponses,
+            qsortData,
+          }),
+        }
+      );
 
       if (response.ok) {
         const result = await response.json();
@@ -368,11 +468,11 @@ export function PostSurveyQuestionnaire({
     const error = errors[currentQuestion.id];
 
     switch (currentQuestion.type) {
-      case 'TEXT':
+      case QuestionType.TEXT_SHORT:
         return (
           <TextField
             value={value || ''}
-            onChange={(e) => handleResponseChange(e.target.value)}
+            onChange={e => handleResponseChange(e.target.value)}
             placeholder="Type your answer..."
             error={error || ''}
             helperText={error || ''}
@@ -380,46 +480,55 @@ export function PostSurveyQuestionnaire({
           />
         );
 
-      case 'TEXTAREA':
+      case QuestionType.TEXT_LONG:
+        const maxLengthRule = currentQuestion.validation?.find(rule => rule.type === 'maxLength');
         return (
           <div className="space-y-2">
             <textarea
               value={value || ''}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleResponseChange(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                handleResponseChange(e.target.value)
+              }
               placeholder="Please provide details..."
               rows={4}
-              maxLength={currentQuestion.validation?.maxLength}
+              maxLength={maxLengthRule?.value as number | undefined}
               className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {error && <p className="text-sm text-red-600">{error}</p>}
           </div>
         );
 
-      case 'RADIO':
-      case 'SELECT':
+      case QuestionType.MULTIPLE_CHOICE_SINGLE:
+      case QuestionType.DROPDOWN:
         return (
           <div className="space-y-3">
-            {(currentQuestion.options || []).map((option) => (
-              <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+            {(currentQuestion.options || []).map(option => (
+              <label
+                key={option.value}
+                className="flex items-center space-x-2 cursor-pointer"
+              >
                 <input
                   type="radio"
                   value={option.value}
                   checked={value === option.value}
-                  onChange={(e) => handleResponseChange(e.target.value)}
+                  onChange={e => handleResponseChange(e.target.value)}
                   className="w-4 h-4 text-blue-600 focus:ring-blue-500"
                 />
-                <span>{option.label}</span>
+                <span>{option.text}</span>
               </label>
             ))}
             {error && <p className="text-sm text-red-600">{error}</p>}
           </div>
         );
 
-      case 'CHECKBOX':
+      case QuestionType.CHECKBOX:
         return (
           <div className="space-y-2">
-            {currentQuestion.options?.map((option) => (
-              <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+            {currentQuestion.options?.map(option => (
+              <label
+                key={option.value}
+                className="flex items-center space-x-2 cursor-pointer"
+              >
                 <input
                   type="checkbox"
                   checked={value?.includes(option.value) || false}
@@ -428,24 +537,26 @@ export function PostSurveyQuestionnaire({
                     if (e.target.checked) {
                       handleResponseChange([...currentValues, option.value]);
                     } else {
-                      handleResponseChange(currentValues.filter((v: string) => v !== option.value));
+                      handleResponseChange(
+                        currentValues.filter((v: string) => v !== option.value)
+                      );
                     }
                   }}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                 />
-                <span>{option.label}</span>
+                <span>{option.text}</span>
               </label>
             ))}
-            {error && (
-              <p className="text-sm text-red-500 mt-1">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
           </div>
         );
 
-      case 'RATING':
-      case 'LIKERT':
-        const min = currentQuestion.validation?.min || 1;
-        const max = currentQuestion.validation?.max || 5;
+      case QuestionType.RATING_SCALE:
+      case QuestionType.LIKERT_SCALE:
+        const minRule = currentQuestion.validation?.find(rule => rule.type === 'min');
+        const maxRule = currentQuestion.validation?.find(rule => rule.type === 'max');
+        const min = (minRule?.value as number) || 1;
+        const max = (maxRule?.value as number) || 5;
         return (
           <div className="space-y-4">
             <div className="flex justify-between text-sm text-secondary-label">
@@ -464,9 +575,7 @@ export function PostSurveyQuestionnaire({
             <div className="text-center text-lg font-semibold">
               {value || 'Not rated'}
             </div>
-            {error && (
-              <p className="text-sm text-red-500">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-500">{error}</p>}
           </div>
         );
 
@@ -486,7 +595,9 @@ export function PostSurveyQuestionnaire({
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <ClockIcon className="h-12 w-12 text-secondary-label mx-auto mb-4 animate-pulse" />
-            <p className="text-secondary-label">Loading post-survey questions...</p>
+            <p className="text-secondary-label">
+              Loading post-survey questions...
+            </p>
           </div>
         </div>
       </Card>
@@ -502,7 +613,8 @@ export function PostSurveyQuestionnaire({
           <div>
             <h3 className="font-semibold">No post-survey questions</h3>
             <p className="text-sm mt-1">
-              Thank you for completing the Q-sort. No additional questions are required.
+              Thank you for completing the Q-sort. No additional questions are
+              required.
             </p>
           </div>
         </Alert>
@@ -523,17 +635,23 @@ export function PostSurveyQuestionnaire({
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold text-label">Post-Study Survey</h1>
             <div className="flex items-center gap-4">
-              <Badge variant={engagementLevel === 'high' ? 'success' : engagementLevel === 'low' ? 'warning' : 'default'}>
+              <Badge
+                variant={
+                  engagementLevel === 'high'
+                    ? 'success'
+                    : engagementLevel === 'low'
+                      ? 'warning'
+                      : 'default'
+                }
+              >
                 {engagementLevel} engagement
               </Badge>
               {qualityScore > 0 && (
-                <Badge variant="default">
-                  Quality: {qualityScore}%
-                </Badge>
+                <Badge variant="default">Quality: {qualityScore}%</Badge>
               )}
             </div>
           </div>
-          
+
           <Progress value={progress} className="mb-2" />
           <p className="text-sm text-secondary-label">
             Question {currentQuestionIndex + 1} of {questions.length}
@@ -541,12 +659,13 @@ export function PostSurveyQuestionnaire({
         </div>
 
         {/* Context alert for dynamic questions */}
-        {currentQuestion?.metadata?.trigger && (
+        {currentQuestion?.category === 'context' && (
           <Alert variant="default" className="bg-blue-50 border-blue-200">
             <SparklesIcon className="h-5 w-5 text-blue-600" />
             <div>
               <p className="text-sm">
-                This question was added based on your Q-sort behavior to better understand your perspective.
+                This question was added based on your Q-sort behavior to better
+                understand your perspective.
               </p>
             </div>
           </Alert>
@@ -559,9 +678,7 @@ export function PostSurveyQuestionnaire({
               {currentQuestion?.text}
             </h2>
             {currentQuestion?.required && (
-              <p className="text-sm text-secondary-label">
-                * Required
-              </p>
+              <p className="text-sm text-secondary-label">* Required</p>
             )}
           </div>
 
@@ -572,20 +689,12 @@ export function PostSurveyQuestionnaire({
         <div className="flex justify-between items-center pt-6 border-t">
           <div className="flex gap-2">
             {onBack && currentQuestionIndex === 0 && (
-              <Button
-                onClick={onBack}
-                variant="secondary"
-                size="md"
-              >
+              <Button onClick={onBack} variant="secondary" size="md">
                 Back to Q-Sort
               </Button>
             )}
             {currentQuestionIndex > 0 && (
-              <Button
-                onClick={handlePrevious}
-                variant="secondary"
-                size="md"
-              >
+              <Button onClick={handlePrevious} variant="secondary" size="md">
                 <ChevronLeftIcon className="h-5 w-5 mr-2" />
                 Previous
               </Button>
@@ -594,11 +703,7 @@ export function PostSurveyQuestionnaire({
 
           <div className="flex gap-2">
             {currentQuestionIndex < questions.length - 1 ? (
-              <Button
-                onClick={handleNext}
-                variant="primary"
-                size="md"
-              >
+              <Button onClick={handleNext} variant="primary" size="md">
                 Next
                 <ChevronRightIcon className="h-5 w-5 ml-2" />
               </Button>

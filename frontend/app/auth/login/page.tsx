@@ -9,7 +9,7 @@ import {
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState, Suspense } from 'react';
 
 import { Button } from '@/components/apple-ui/Button/Button';
 import { Card } from '@/components/apple-ui/Card/Card';
@@ -43,7 +43,7 @@ const validatePassword = (password: string): boolean => {
   return password.length >= 8;
 };
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, isLoading, error: authError, clearError } = useLogin();
@@ -74,6 +74,24 @@ export default function LoginPage() {
     router.prefetch('/auth/forgot-password');
     router.prefetch('/auth/register');
   }, [router]);
+
+  // Clear any stale auth data when visiting login page
+  // This ensures a clean state for login attempts
+  useEffect(() => {
+    // Always clear stale tokens when login page loads to prevent interference
+    if (typeof window !== 'undefined') {
+      const hasStaleTokens =
+        localStorage.getItem('access_token') ||
+        localStorage.getItem('refresh_token');
+
+      if (hasStaleTokens) {
+        console.log('[LoginPage] Clearing stale auth tokens');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+      }
+    }
+  }, []);
 
   // Detect institutional email for SSO suggestion
   useEffect(() => {
@@ -346,5 +364,26 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gray-50 dark:bg-gray-900">
+        <div className="w-full max-w-md">
+          <Card className="bg-white dark:bg-gray-800 shadow-lg">
+            <div className="p-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

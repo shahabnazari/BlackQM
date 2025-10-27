@@ -1,8 +1,8 @@
 'use client';
 
+import { Question } from '@/lib/types/questionnaire';
+import { Download, Upload, X } from 'lucide-react';
 import React from 'react';
-import { X, Download, Upload } from 'lucide-react';
-import { Question } from '@/lib/stores/questionnaire.store';
 
 interface ImportExportModalProps {
   questions: Question[];
@@ -13,10 +13,12 @@ interface ImportExportModalProps {
 export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   questions,
   onImport,
-  onClose
+  onClose,
 }) => {
   const [importText, setImportText] = React.useState('');
-  const [activeTab, setActiveTab] = React.useState<'import' | 'export'>('export');
+  const [activeTab, setActiveTab] = React.useState<'import' | 'export'>(
+    'export'
+  );
 
   const handleExport = () => {
     const jsonString = JSON.stringify(questions, null, 2);
@@ -81,7 +83,8 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
           {activeTab === 'export' ? (
             <div className="space-y-4">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Export your questionnaire as a JSON file. You can later import this file to restore your questions.
+                Export your questionnaire as a JSON file. You can later import
+                this file to restore your questions.
               </p>
               <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">

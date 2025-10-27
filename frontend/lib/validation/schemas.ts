@@ -458,7 +458,7 @@ export const validate = {
   parse: <T extends z.ZodTypeAny>(
     schema: T,
     data: unknown
-  ): { success: true; data: z.infer<T> } | { success: false; errors: ValidationError } => {
+  ): { success: true; data: z.infer<T> } | { success: false; errors: ValidationError[] } => {
     try {
       const result = schema.parse(data);
       return { success: true, data: result }

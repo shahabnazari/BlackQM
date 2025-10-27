@@ -28,14 +28,14 @@ export async function verifyAuth(req: NextRequest): Promise<{
   try {
     // Try to get session first (for server components)
     const session = await getServerSession();
-    
+
     if (session && session.user) {
       return {
         authenticated: true,
-        user: session.user
+        user: session.user,
       };
     }
-    
+
     // Try JWT token (for API routes)
     const secret = process.env.NEXTAUTH_SECRET;
     if (!secret) {
@@ -44,20 +44,20 @@ export async function verifyAuth(req: NextRequest): Promise<{
 
     const token = await getToken({
       req,
-      secret
+      secret,
     });
-    
+
     if (token) {
       return {
         authenticated: true,
         user: {
           id: token.sub,
           email: token.email as string,
-          name: token.name as string
-        }
+          name: token.name as string,
+        },
       };
     }
-    
+
     // Check for API key authentication (for service-to-service calls)
     const apiKey = req.headers.get('x-api-key');
     if (apiKey && apiKey === process.env.INTERNAL_API_KEY) {
@@ -66,21 +66,20 @@ export async function verifyAuth(req: NextRequest): Promise<{
         user: {
           id: 'system',
           email: 'system@vqmethod.com',
-          role: 'system'
-        }
+          role: 'system',
+        },
       };
     }
-    
+
     return {
       authenticated: false,
-      error: 'No valid authentication found'
+      error: 'No valid authentication found',
     };
-    
   } catch (error) {
     console.error('Auth verification error:', error);
     return {
       authenticated: false,
-      error: 'Authentication verification failed'
+      error: 'Authentication verification failed',
     };
   }
 }
@@ -93,20 +92,20 @@ export function withAuth(
 ) {
   return async (req: NextRequest, context?: any): Promise<NextResponse> => {
     const auth = await verifyAuth(req);
-    
+
     if (!auth.authenticated) {
       return NextResponse.json(
-        { 
+        {
           error: 'Authentication required',
-          message: auth.error 
+          message: auth.error,
         },
         { status: 401 }
       );
     }
-    
+
     // Add user to request for handler use
     (req as any).user = auth.user;
-    
+
     return handler(req, context);
   };
 }
@@ -116,31 +115,31 @@ export function withAuth(
  */
 export function requireRole(role: string | string[]) {
   const roles = Array.isArray(role) ? role : [role];
-  
-  return function(
+
+  return function (
     handler: (req: NextRequest, context?: any) => Promise<NextResponse>
   ) {
     return withAuth(async (req: NextRequest, context?: any) => {
       const user = (req as any).user;
-      
+
       if (!user || !user.role) {
         return NextResponse.json(
           { error: 'Insufficient permissions' },
           { status: 403 }
         );
       }
-      
+
       if (!roles.includes(user.role)) {
         return NextResponse.json(
-          { 
+          {
             error: 'Insufficient permissions',
             required: roles,
-            current: user.role 
+            current: user.role,
           },
           { status: 403 }
         );
       }
-      
+
       return handler(req, context);
     });
   };
@@ -151,47 +150,48 @@ export function requireRole(role: string | string[]) {
  */
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
-export function rateLimit(options: {
-  requests: number;
-  windowMs: number;
-} = { requests: 10, windowMs: 60000 }) {
-  
-  return function(
+export function rateLimit(
+  options: {
+    requests: number;
+    windowMs: number;
+  } = { requests: 10, windowMs: 60000 }
+) {
+  return function (
     handler: (req: NextRequest, context?: any) => Promise<NextResponse>
   ) {
     return withAuth(async (req: NextRequest, context?: any) => {
       const user = (req as any).user;
       const userId = user?.id || 'anonymous';
       const now = Date.now();
-      
+
       const userLimit = rateLimitMap.get(userId);
-      
+
       if (!userLimit || now > userLimit.resetTime) {
         rateLimitMap.set(userId, {
           count: 1,
-          resetTime: now + options.windowMs
+          resetTime: now + options.windowMs,
         });
       } else {
         if (userLimit.count >= options.requests) {
           const retryAfter = Math.ceil((userLimit.resetTime - now) / 1000);
-          
+
           return NextResponse.json(
-            { 
+            {
               error: 'Rate limit exceeded',
-              retryAfter 
+              retryAfter,
             },
-            { 
+            {
               status: 429,
               headers: {
-                'Retry-After': retryAfter.toString()
-              }
+                'Retry-After': retryAfter.toString(),
+              },
             }
           );
         }
-        
+
         userLimit.count++;
       }
-      
+
       return handler(req, context);
     });
   };

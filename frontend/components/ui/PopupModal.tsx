@@ -3,13 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/apple-ui/Button';
-import { 
-  CheckCircle, 
-  AlertCircle, 
-  XCircle, 
+import {
+  CheckCircle,
+  AlertCircle,
+  XCircle,
   Info,
   X,
-  AlertTriangle
+  AlertTriangle,
 } from 'lucide-react';
 
 export type PopupType = 'success' | 'error' | 'warning' | 'info' | 'confirm';
@@ -110,25 +110,27 @@ export default function PopupModal({
   };
 
   const modalContent = (
-    <div 
+    <div
       className={`fixed inset-0 z-[9999] flex ${positionClasses[position]} transition-opacity duration-200 ${
         isAnimating ? 'opacity-100' : 'opacity-0'
       }`}
     >
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={type !== 'confirm' ? handleClose : undefined}
       />
-      
+
       {/* Modal */}
-      <div className={`
+      <div
+        className={`
         relative bg-color-bg rounded-2xl shadow-2xl 
         min-w-[320px] max-w-md mx-4
         max-h-[90vh] overflow-hidden flex flex-col
         transform transition-all duration-200
         ${isAnimating ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}
-      `}>
+      `}
+      >
         {/* Close button for non-confirm modals */}
         {type !== 'confirm' && (
           <button
@@ -139,25 +141,23 @@ export default function PopupModal({
             <X className="w-5 h-5 text-color-text-secondary" />
           </button>
         )}
-        
+
         {/* Content */}
         <div className="p-6 overflow-y-auto flex-1">
           {/* Icon */}
-          <div className="flex justify-center mb-4">
-            {iconMap[type]}
-          </div>
-          
+          <div className="flex justify-center mb-4">{iconMap[type]}</div>
+
           {/* Title */}
           <h3 className="text-xl font-semibold text-center text-color-text mb-2">
             {title || titleMap[type]}
           </h3>
-          
+
           {/* Message - Support multiline and long content */}
           <div className="text-center text-color-text-secondary leading-relaxed whitespace-pre-wrap max-w-full">
             {message}
           </div>
         </div>
-        
+
         {/* Actions */}
         <div className="px-6 pb-6">
           {type === 'confirm' ? (
@@ -239,10 +239,14 @@ export function usePopup() {
     popupState,
     showPopup,
     closePopup,
-    showSuccess: (message: string, title?: string) => showPopup('success', message, title ? { title } : {}),
-    showError: (message: string, title?: string) => showPopup('error', message, title ? { title } : {}),
-    showWarning: (message: string, title?: string) => showPopup('warning', message, title ? { title } : {}),
-    showInfo: (message: string, title?: string) => showPopup('info', message, title ? { title } : {}),
+    showSuccess: (message: string, title?: string) =>
+      showPopup('success', message, title ? { title } : {}),
+    showError: (message: string, title?: string) =>
+      showPopup('error', message, title ? { title } : {}),
+    showWarning: (message: string, title?: string) =>
+      showPopup('warning', message, title ? { title } : {}),
+    showInfo: (message: string, title?: string) =>
+      showPopup('info', message, title ? { title } : {}),
     showConfirm: (
       message: string,
       onConfirm: () => void,

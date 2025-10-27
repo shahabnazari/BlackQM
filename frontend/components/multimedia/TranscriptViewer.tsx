@@ -48,7 +48,7 @@ export function TranscriptViewer({
 
   const exportTranscript = () => {
     const text = transcript.timestampedText
-      .map((seg) => `[${formatTime(seg.timestamp)}] ${seg.text}`)
+      .map(seg => `[${formatTime(seg.timestamp)}] ${seg.text}`)
       .join('\n\n');
 
     const blob = new Blob([text], { type: 'text/plain' });
@@ -60,9 +60,12 @@ export function TranscriptViewer({
     URL.revokeObjectURL(url);
   };
 
-  const isTimestampInTheme = (timestamp: number, theme: TranscriptTheme): boolean => {
+  const isTimestampInTheme = (
+    timestamp: number,
+    theme: TranscriptTheme
+  ): boolean => {
     return theme.timestamps.some(
-      (range) => timestamp >= range.start && timestamp <= range.end
+      range => timestamp >= range.start && timestamp <= range.end
     );
   };
 
@@ -110,10 +113,12 @@ export function TranscriptViewer({
             <div className="flex flex-wrap gap-2">
               {themes
                 .sort((a, b) => b.relevanceScore - a.relevanceScore)
-                .map((theme) => (
+                .map(theme => (
                   <Badge
                     key={theme.theme}
-                    variant={selectedTheme === theme.theme ? 'default' : 'outline'}
+                    variant={
+                      selectedTheme === theme.theme ? 'default' : 'outline'
+                    }
                     className="cursor-pointer"
                     onClick={() =>
                       setSelectedTheme(
@@ -149,7 +154,7 @@ export function TranscriptViewer({
           <div className="h-[600px] pr-4 overflow-y-auto">
             <div className="space-y-4">
               {transcript.timestampedText.map((segment, index) => {
-                const highlightedTheme = themes?.find((theme) =>
+                const highlightedTheme = themes?.find(theme =>
                   selectedTheme === theme.theme
                     ? isTimestampInTheme(segment.timestamp, theme)
                     : false
@@ -159,7 +164,9 @@ export function TranscriptViewer({
                   <div
                     key={index}
                     className={`group ${
-                      highlightedTheme ? 'bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded' : ''
+                      highlightedTheme
+                        ? 'bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded'
+                        : ''
                     }`}
                   >
                     <div className="flex gap-3">

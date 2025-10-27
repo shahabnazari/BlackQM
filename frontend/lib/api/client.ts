@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import { toast } from 'sonner';
 
 // Types
@@ -46,10 +46,17 @@ class ApiClient {
     // Request interceptor
     this.client.interceptors.request.use(
       config => {
-        // Add auth token if available
-        const token = this.getToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // Skip auth header for login/register endpoints
+        const isAuthEndpoint =
+          config.url?.includes('/auth/login') ||
+          config.url?.includes('/auth/register');
+
+        // Add auth token if available and not an auth endpoint
+        if (!isAuthEndpoint) {
+          const token = this.getToken();
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
         }
 
         // Add CSRF token if available
@@ -81,8 +88,20 @@ class ApiClient {
           _retry?: boolean;
         };
 
+        // Skip retry logic for auth endpoints to prevent infinite loops
+        const isRefreshRequest = originalRequest.url?.includes('/auth/refresh');
+        const isLoginRequest = originalRequest.url?.includes('/auth/login');
+        const isRegisterRequest =
+          originalRequest.url?.includes('/auth/register');
+
         // Handle 401 Unauthorized
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (
+          error.response?.status === 401 &&
+          !originalRequest._retry &&
+          !isRefreshRequest &&
+          !isLoginRequest &&
+          !isRegisterRequest
+        ) {
           originalRequest._retry = true;
 
           // Try to refresh token
@@ -105,6 +124,11 @@ class ApiClient {
             this.handleAuthError();
             return Promise.reject(refreshError);
           }
+        }
+
+        // If refresh endpoint itself fails, clear auth immediately
+        if (error.response?.status === 401 && isRefreshRequest) {
+          this.handleAuthError();
         }
 
         // Handle other errors
@@ -162,9 +186,16 @@ class ApiClient {
 
   private handleAuthError(): void {
     this.removeToken();
+    // Don't show toast or redirect on initial load - let AuthProvider handle it
+    // Only redirect if user is on a protected page
     if (typeof window !== 'undefined') {
-      toast.error('Session expired. Please login again.');
-      window.location.href = '/login';
+      const isProtectedPage = window.location.pathname.match(
+        /^\/(dashboard|studies|discover|design|build|collect|interpret|visualize|report)/
+      );
+      if (isProtectedPage) {
+        toast.error('Session expired. Please login again.');
+        window.location.href = '/auth/login';
+      }
     }
   }
 
@@ -172,6 +203,11 @@ class ApiClient {
     if (error.response) {
       const message = error.response.data?.message || 'An error occurred';
       const statusCode = error.response.status;
+
+      // Don't show toast for 401 errors - they're handled by auth interceptor
+      if (statusCode === 401) {
+        return;
+      }
 
       switch (statusCode) {
         case 400:
@@ -327,4 +363,4 @@ class ApiClient {
 export const apiClient = new ApiClient();
 
 // Export types
-export type { AxiosInstance, AxiosError, AxiosRequestConfig };
+export type { AxiosError, AxiosInstance, AxiosRequestConfig };

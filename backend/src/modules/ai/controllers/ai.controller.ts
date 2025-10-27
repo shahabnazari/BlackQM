@@ -13,12 +13,14 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { Public } from '../../auth/decorators/public.decorator';
 import { Throttle } from '@nestjs/throttler';
 import { OpenAIService } from '../services/openai.service';
 import { AICostService } from '../services/ai-cost.service';
 import { StatementGeneratorService } from '../services/statement-generator.service';
 import { GridRecommendationService } from '../services/grid-recommendation.service';
 import { QuestionnaireGeneratorService } from '../services/questionnaire-generator.service';
+import { QueryExpansionService } from '../services/query-expansion.service';
 import {
   GridRecommendationDto,
   GenerateQuestionnaireDto,
@@ -75,6 +77,7 @@ export class AIController {
     private readonly statementGenerator: StatementGeneratorService,
     private readonly gridRecommendation: GridRecommendationService,
     private readonly questionnaireGenerator: QuestionnaireGeneratorService,
+    private readonly queryExpansion: QueryExpansionService,
   ) {}
 
   @Post('generate-statements')
@@ -562,6 +565,163 @@ export class AIController {
       this.logger.error('Failed to generate statement variations:', error);
       throw new HttpException(
         'Failed to generate statement variations',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // Query Expansion Endpoints (Day 26)
+  @Post('query/expand')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  async expandQuery(
+    @Body() dto: { query: string; domain?: 'climate' | 'health' | 'education' | 'general' },
+    @Req() req: any,
+  ) {
+    try {
+      this.logger.log(`Expanding query: ${dto.query}`);
+
+      if (!dto.query || dto.query.trim().length < 2) {
+        throw new HttpException(
+          'Query must be at least 2 characters',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const result = await this.queryExpansion.expandQuery(
+        dto.query,
+        dto.domain || 'general',
+      );
+
+      return {
+        success: true,
+        expanded: result,
+      };
+    } catch (error: any) {
+      this.logger.error('Failed to expand query:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to expand query',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // Public Query Expansion (for development/testing)
+  @Public()
+  @Post('query/expand/public')
+  @Throttle({ default: { limit: 50, ttl: 60000 } })
+  async expandQueryPublic(
+    @Body() dto: { query: string; domain?: 'climate' | 'health' | 'education' | 'general' },
+  ) {
+    try {
+      this.logger.log(`[PUBLIC] Expanding query: ${dto.query}`);
+
+      if (!dto.query || dto.query.trim().length < 2) {
+        throw new HttpException(
+          'Query must be at least 2 characters',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const result = await this.queryExpansion.expandQuery(
+        dto.query,
+        dto.domain || 'general',
+      );
+
+      return {
+        success: true,
+        expanded: result,
+      };
+    } catch (error: any) {
+      this.logger.error('[PUBLIC] Failed to expand query:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to expand query',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('query/suggest-terms')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  async suggestTerms(
+    @Body() dto: { query: string; field?: string },
+    @Req() req: any,
+  ) {
+    try {
+      this.logger.log(`Suggesting terms for: ${dto.query}`);
+
+      if (!dto.query || dto.query.trim().length < 2) {
+        throw new HttpException(
+          'Query must be at least 2 characters',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const result = await this.queryExpansion.suggestTerms(
+        dto.query,
+        dto.field,
+      );
+
+      return {
+        success: true,
+        terms: result.terms,
+        confidence: result.confidence,
+      };
+    } catch (error: any) {
+      this.logger.error('Failed to suggest terms:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to suggest terms',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('query/narrow')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async narrowQuery(
+    @Body() dto: { query: string },
+    @Req() req: any,
+  ) {
+    try {
+      this.logger.log(`Narrowing query: ${dto.query}`);
+
+      if (!dto.query || dto.query.trim().length < 2) {
+        throw new HttpException(
+          'Query must be at least 2 characters',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const result = await this.queryExpansion.narrowQuery(dto.query);
+
+      return {
+        success: true,
+        narrowed: result.narrowed,
+        reasoning: result.reasoning,
+      };
+    } catch (error: any) {
+      this.logger.error('Failed to narrow query:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to narrow query',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

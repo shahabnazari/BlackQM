@@ -20,6 +20,7 @@ Implement real SSO authentication using ORCID OAuth 2.0 to replace simulated ins
 **File:** `backend/src/modules/auth/services/auth.service.ts`
 
 Added `findOrCreateOrcidUser()` method (72 lines):
+
 - ✅ Check if user exists by ORCID ID
 - ✅ Update existing user tokens
 - ✅ Create new user from ORCID data
@@ -28,6 +29,7 @@ Added `findOrCreateOrcidUser()` method (72 lines):
 - ✅ Full error handling
 
 Added `generateOAuthTokens()` public method:
+
 - ✅ Exposes JWT token generation for OAuth flows
 - ✅ Delegates to private `generateTokens()` method
 
@@ -38,11 +40,13 @@ Added `generateOAuthTokens()` public method:
 Added 2 ORCID OAuth endpoints:
 
 **GET /api/auth/orcid** - Initiate OAuth flow
+
 - ✅ Protected by `AuthGuard('orcid')`
 - ✅ Redirects to ORCID for authentication
 - ✅ Passport handles the redirect automatically
 
 **GET /api/auth/orcid/callback** - Handle OAuth callback
+
 - ✅ Protected by `AuthGuard('orcid')`
 - ✅ Receives authenticated user from strategy
 - ✅ Generates JWT tokens via `generateOAuthTokens()`
@@ -54,6 +58,7 @@ Added 2 ORCID OAuth endpoints:
 **File:** `backend/src/modules/auth/strategies/orcid.strategy.ts`
 
 Created Passport ORCID strategy (60 lines):
+
 - ✅ Extends PassportStrategy with 'orcid' name
 - ✅ Configures ORCID OAuth with client ID/secret
 - ✅ Supports sandbox mode for development
@@ -63,6 +68,7 @@ Created Passport ORCID strategy (60 lines):
 - ✅ Enterprise error handling
 
 **Type Safety:**
+
 - ✅ Used `: any` type for passport-orcid compatibility
 - ✅ Added `: any` to catch blocks (safe pattern)
 - ✅ No automated regex fixes applied
@@ -72,6 +78,7 @@ Created Passport ORCID strategy (60 lines):
 **File:** `backend/src/modules/auth/auth.module.ts`
 
 Updated module configuration:
+
 - ✅ Imported `OrcidStrategy`
 - ✅ Added to providers array
 - ✅ Enabled Passport to use ORCID strategy
@@ -81,6 +88,7 @@ Updated module configuration:
 **File:** `backend/prisma/schema.prisma`
 
 Added ORCID OAuth fields to User model:
+
 ```prisma
 orcidId               String?   @unique
 orcidAccessToken      String?
@@ -99,6 +107,7 @@ lastLogin             DateTime?
 **File:** `backend/.env`
 
 Added ORCID configuration:
+
 ```env
 ORCID_CLIENT_ID=your-orcid-client-id
 ORCID_CLIENT_SECRET=your-orcid-client-secret
@@ -111,6 +120,7 @@ FRONTEND_URL=http://localhost:3000
 **File:** `frontend/app/auth/orcid/success/page.tsx`
 
 Created OAuth callback handler (104 lines):
+
 - ✅ Extracts tokens and user data from URL params
 - ✅ Stores access_token and refresh_token in localStorage
 - ✅ Stores user data in localStorage
@@ -125,6 +135,7 @@ Created OAuth callback handler (104 lines):
 **File:** `frontend/components/literature/AcademicInstitutionLogin.tsx`
 
 Already updated in Day 26:
+
 - ✅ Single "Sign in with ORCID" button
 - ✅ Redirects to `/api/auth/orcid`
 - ✅ Loading states implemented
@@ -193,6 +204,7 @@ Following strict "NO automated fixes" guidelines:
 ## 🔐 Security Features
 
 ### Authentication
+
 - ✅ OAuth 2.0 standard compliance
 - ✅ Secure token storage in database
 - ✅ Random password generation for OAuth users
@@ -200,12 +212,14 @@ Following strict "NO automated fixes" guidelines:
 - ✅ Sandbox mode for development
 
 ### Authorization
+
 - ✅ JWT tokens generated for sessions
 - ✅ Refresh tokens with 7-day expiration
 - ✅ Session tracking in database
 - ✅ Audit logging for all ORCID actions
 
 ### Data Protection
+
 - ✅ No ORCID passwords stored
 - ✅ OAuth tokens stored securely
 - ✅ User consent via ORCID
@@ -257,6 +271,7 @@ Following strict "NO automated fixes" guidelines:
 ### Step 2: Configure Environment
 
 Update `backend/.env`:
+
 ```env
 ORCID_CLIENT_ID=APP-XXXXXXXXX
 ORCID_CLIENT_SECRET=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
@@ -290,37 +305,41 @@ npm run start:dev
 
 ## 🎯 Success Metrics
 
-| Metric | Target | Actual | Status |
-|--------|--------|--------|--------|
-| Implementation Time | <8h | 4h | ✅ Exceeded |
-| TypeScript Errors | 0 | 0 | ✅ Perfect |
-| Manual Audit | Complete | Complete | ✅ Done |
-| Backend Files | 5 | 5 | ✅ Met |
-| Frontend Files | 2 | 2 | ✅ Met |
-| OAuth Flow Steps | 11 | 11 | ✅ Complete |
-| Security Features | 8+ | 10 | ✅ Exceeded |
+| Metric              | Target   | Actual   | Status      |
+| ------------------- | -------- | -------- | ----------- |
+| Implementation Time | <8h      | 4h       | ✅ Exceeded |
+| TypeScript Errors   | 0        | 0        | ✅ Perfect  |
+| Manual Audit        | Complete | Complete | ✅ Done     |
+| Backend Files       | 5        | 5        | ✅ Met      |
+| Frontend Files      | 2        | 2        | ✅ Met      |
+| OAuth Flow Steps    | 11       | 11       | ✅ Complete |
+| Security Features   | 8+       | 10       | ✅ Exceeded |
 
 ---
 
 ## 🏆 Enterprise Features
 
 ### Scalability
+
 - ✅ Database-backed sessions
 - ✅ Stateless JWT authentication
 - ✅ Horizontal scaling ready
 
 ### Reliability
+
 - ✅ Error handling at every step
 - ✅ Graceful fallbacks
 - ✅ Audit trail for debugging
 
 ### Maintainability
+
 - ✅ Clean separation of concerns
 - ✅ Well-documented code
 - ✅ TypeScript type safety
 - ✅ No technical debt
 
 ### Compliance
+
 - ✅ OAuth 2.0 standard
 - ✅ ORCID terms of service
 - ✅ Data minimization
@@ -331,6 +350,7 @@ npm run start:dev
 ## 📋 Testing Checklist
 
 ### Backend
+
 - [ ] POST to /auth/orcid initiates redirect
 - [ ] ORCID callback receives user data
 - [ ] User created in database with ORCID fields
@@ -338,6 +358,7 @@ npm run start:dev
 - [ ] Audit logs created
 
 ### Frontend
+
 - [ ] ORCID button redirects correctly
 - [ ] Success page receives tokens
 - [ ] Tokens stored in localStorage
@@ -345,6 +366,7 @@ npm run start:dev
 - [ ] Error states display correctly
 
 ### Integration
+
 - [ ] End-to-end OAuth flow completes
 - [ ] New user registration works
 - [ ] Existing user login works

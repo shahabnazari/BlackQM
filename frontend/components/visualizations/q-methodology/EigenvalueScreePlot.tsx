@@ -21,10 +21,10 @@ interface EigenvalueScreePlotProps {
   height?: number;
 }
 
-export const EigenvalueScreePlot: React.FC<EigenvalueScreePlotProps> = ({ 
-  data, 
-  width = 800, 
-  height = 400 
+export const EigenvalueScreePlot: React.FC<EigenvalueScreePlotProps> = ({
+  data,
+  width = 800,
+  height = 400,
 }) => {
   const {
     tooltipData,
@@ -126,7 +126,10 @@ export const EigenvalueScreePlot: React.FC<EigenvalueScreePlotProps> = ({
         {/* Scree plot line */}
         <motion.path
           d={`M ${data
-            .map((d: any) => `${(xScale(d.factor) ?? 0) + xScale.bandwidth() / 2},${yScale(d.eigenvalue)}`)
+            .map(
+              (d: any) =>
+                `${(xScale(d.factor) ?? 0) + xScale.bandwidth() / 2},${yScale(d.eigenvalue)}`
+            )
             .join(' L ')}`}
           fill="none"
           stroke="url(#appleBlue)"
@@ -155,7 +158,10 @@ export const EigenvalueScreePlot: React.FC<EigenvalueScreePlotProps> = ({
               onMouseEnter={(_e: any) => {
                 showTooltip({
                   tooltipData: d,
-                  tooltipLeft: (xScale(d.factor) ?? 0) + xScale.bandwidth() / 2 + margin.left,
+                  tooltipLeft:
+                    (xScale(d.factor) ?? 0) +
+                    xScale.bandwidth() / 2 +
+                    margin.left,
                   tooltipTop: yScale(d.eigenvalue) + margin.top,
                 });
               }}
@@ -180,7 +186,10 @@ export const EigenvalueScreePlot: React.FC<EigenvalueScreePlotProps> = ({
         {/* Cumulative variance line (secondary) */}
         <motion.path
           d={`M ${data
-            .map((d: any) => `${(xScale(d.factor) ?? 0) + xScale.bandwidth() / 2},${percentScale(d.cumulativeVariance)}`)
+            .map(
+              (d: any) =>
+                `${(xScale(d.factor) ?? 0) + xScale.bandwidth() / 2},${percentScale(d.cumulativeVariance)}`
+            )
             .join(' L ')}`}
           fill="none"
           stroke="url(#appleGreen)"
@@ -201,46 +210,58 @@ export const EigenvalueScreePlot: React.FC<EigenvalueScreePlotProps> = ({
             fontSize: 12,
             fontFamily: '-apple-system',
             textAnchor: 'middle',
-            fill: '#34C759'
+            fill: '#34C759',
           }}
           tickLabelProps={() => ({
             fontSize: 10,
             fontFamily: '-apple-system',
             textAnchor: 'start',
-            fill: '#34C759'
+            fill: '#34C759',
           })}
         />
       </BaseChart>
 
       {/* Tooltip */}
-      {tooltipOpen && tooltipData && tooltipLeft !== undefined && tooltipTop !== undefined && (
-        <TooltipWithBounds
-          left={tooltipLeft}
-          top={tooltipTop}
-          style={{
-            ...defaultStyles,
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            borderRadius: '8px',
-            padding: '8px 12px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-          }}
-        >
-          <div style={{ fontFamily: '-apple-system', fontSize: '12px' }}>
-            <strong>Factor {tooltipData.factor}</strong>
-            <div style={{ marginTop: '4px' }}>
-              Eigenvalue: <span style={{ color: '#007AFF' }}>{tooltipData.eigenvalue.toFixed(3)}</span>
+      {tooltipOpen &&
+        tooltipData &&
+        tooltipLeft !== undefined &&
+        tooltipTop !== undefined && (
+          <TooltipWithBounds
+            left={tooltipLeft}
+            top={tooltipTop}
+            style={{
+              ...defaultStyles,
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: '8px',
+              padding: '8px 12px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            }}
+          >
+            <div style={{ fontFamily: '-apple-system', fontSize: '12px' }}>
+              <strong>Factor {tooltipData.factor}</strong>
+              <div style={{ marginTop: '4px' }}>
+                Eigenvalue:{' '}
+                <span style={{ color: '#007AFF' }}>
+                  {tooltipData.eigenvalue.toFixed(3)}
+                </span>
+              </div>
+              <div>
+                Variance:{' '}
+                <span style={{ color: '#34C759' }}>
+                  {tooltipData.varianceExplained.toFixed(1)}%
+                </span>
+              </div>
+              <div>
+                Cumulative:{' '}
+                <span style={{ color: '#34C759' }}>
+                  {tooltipData.cumulativeVariance.toFixed(1)}%
+                </span>
+              </div>
             </div>
-            <div>
-              Variance: <span style={{ color: '#34C759' }}>{tooltipData.varianceExplained.toFixed(1)}%</span>
-            </div>
-            <div>
-              Cumulative: <span style={{ color: '#34C759' }}>{tooltipData.cumulativeVariance.toFixed(1)}%</span>
-            </div>
-          </div>
-        </TooltipWithBounds>
-      )}
+          </TooltipWithBounds>
+        )}
     </>
   );
 };

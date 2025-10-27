@@ -1,7 +1,12 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import {
+  useQuery,
+  useQueryClient,
+  UseQueryOptions,
+} from '@tanstack/react-query';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-interface RealtimeDataOptions<T> extends Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'> {
+interface RealtimeDataOptions<T>
+  extends Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'> {
   websocketUrl?: string;
   channel?: string;
   refetchInterval?: number;
@@ -69,24 +74,29 @@ export function useRealtimeData<T = any>(
 
         // Subscribe to channel
         if (channel) {
-          ws.send(JSON.stringify({
-            type: 'subscribe',
-            channel,
-          }));
+          ws.send(
+            JSON.stringify({
+              type: 'subscribe',
+              channel,
+            })
+          );
         }
       };
 
       ws.onmessage = (event: any) => {
         try {
           const message: WebSocketMessage<T> = JSON.parse(event.data);
-          
-          if (message.channel === channel || message.channel === `data:${endpoint}`) {
+
+          if (
+            message.channel === channel ||
+            message.channel === `data:${endpoint}`
+          ) {
             const newData = message.data;
             setData(newData);
-            
+
             // Update React Query cache
             queryClient.setQueryData([endpoint], newData);
-            
+
             // Call update callback if provided
             if (onUpdate) {
               onUpdate(newData);
@@ -109,9 +119,12 @@ export function useRealtimeData<T = any>(
 
         // Implement exponential backoff for reconnection
         if (reconnectAttemptsRef.current < 5) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+          const delay = Math.min(
+            1000 * Math.pow(2, reconnectAttemptsRef.current),
+            30000
+          );
           reconnectAttemptsRef.current++;
-          
+
           reconnectTimeoutRef.current = setTimeout(() => {
             connectWebSocket();
           }, delay);
@@ -179,17 +192,19 @@ export function useRealtimeData<T = any>(
  */
 export function useMultiChannelRealtimeData<T = any>(
   channels: string[],
-  options: Omit<RealtimeDataOptions<T>, 'channel'> = { queryKey: ['multi-channel'] }
+  options: Omit<RealtimeDataOptions<T>, 'channel'> = {
+    queryKey: ['multi-channel'],
+  }
 ) {
   const [channelData, setChannelData] = useState<Record<string, T>>({});
-  const results = channels.map((channel: any) => 
+  const results = channels.map((channel: any) =>
     useRealtimeData<T>(channel, { ...options, channel })
   );
 
   useEffect(() => {
     const newData: Record<string, T> = {};
     channels.forEach((channel, index) => {
-      if (results[index].data) {
+      if (results[index]?.data) {
         newData[channel] = results[index].data;
       }
     });
@@ -213,8 +228,8 @@ export function useDashboardMetrics(
   aggregateFunction?: (data: any[]) => any
 ) {
   const { data, isLoading, isError } = useMultiChannelRealtimeData(endpoints);
-  
-  const aggregatedData = aggregateFunction 
+
+  const aggregatedData = aggregateFunction
     ? aggregateFunction(Object.values(data))
     : data;
 

@@ -38,7 +38,9 @@ export class TranscriptionService {
   ) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
     if (!apiKey || apiKey === 'your-openai-api-key-here') {
-      this.logger.warn('OpenAI API key not configured - transcription will not work');
+      this.logger.warn(
+        'OpenAI API key not configured - transcription will not work',
+      );
     }
     this.openai = new OpenAI({ apiKey });
   }
@@ -57,7 +59,9 @@ export class TranscriptionService {
     });
 
     if (existing) {
-      this.logger.log(`Using cached transcription for ${sourceType}:${sourceId}`);
+      this.logger.log(
+        `Using cached transcription for ${sourceType}:${sourceId}`,
+      );
       return {
         id: existing.id,
         sourceId: existing.sourceId,
@@ -92,7 +96,9 @@ export class TranscriptionService {
   /**
    * Transcribe YouTube video using OpenAI Whisper
    */
-  async transcribeYouTubeVideo(videoId: string): Promise<TranscriptWithTimestamps> {
+  async transcribeYouTubeVideo(
+    videoId: string,
+  ): Promise<TranscriptWithTimestamps> {
     this.logger.log(`Transcribing YouTube video: ${videoId}`);
 
     try {
@@ -106,7 +112,7 @@ export class TranscriptionService {
       if (metadata.duration > this.maxDuration) {
         throw new Error(
           `Video duration (${metadata.duration}s) exceeds maximum (${this.maxDuration}s). ` +
-          `Estimated cost: $${((metadata.duration / 60) * 0.006).toFixed(2)}`
+            `Estimated cost: $${((metadata.duration / 60) * 0.006).toFixed(2)}`,
         );
       }
 
@@ -149,7 +155,10 @@ export class TranscriptionService {
         cost: stored.transcriptionCost || 0,
       };
     } catch (error: any) {
-      this.logger.error(`Failed to transcribe YouTube video ${videoId}:`, error);
+      this.logger.error(
+        `Failed to transcribe YouTube video ${videoId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -170,7 +179,10 @@ export class TranscriptionService {
 
       return outputPath;
     } catch (error: any) {
-      this.logger.error(`Failed to extract audio from YouTube video ${videoId}:`, error);
+      this.logger.error(
+        `Failed to extract audio from YouTube video ${videoId}:`,
+        error,
+      );
       throw new Error('Failed to extract audio from YouTube video');
     }
   }
@@ -183,12 +195,15 @@ export class TranscriptionService {
 
     if (!apiKey || apiKey === 'your-youtube-api-key-here') {
       // Fallback: use yt-dlp to get metadata
-      const info = await youtubedl(`https://www.youtube.com/watch?v=${videoId}`, {
-        dumpSingleJson: true,
-        noWarnings: true,
-        callHome: false,
-        preferFreeFormats: true,
-      }) as any;
+      const info = (await youtubedl(
+        `https://www.youtube.com/watch?v=${videoId}`,
+        {
+          dumpSingleJson: true,
+          noWarnings: true,
+          callHome: false,
+          preferFreeFormats: true,
+        },
+      )) as any;
 
       return {
         title: info.title,
@@ -209,7 +224,7 @@ export class TranscriptionService {
           id: videoId,
           part: 'snippet,contentDetails',
         },
-      })
+      }),
     );
 
     const video = response.data.items[0];
@@ -260,16 +275,18 @@ export class TranscriptionService {
       });
 
       // Process segments with timestamps
-      const segments = (transcription as any).segments?.map((seg: any) => ({
-        timestamp: Math.floor(seg.start),
-        text: seg.text.trim(),
-      })) || [];
+      const segments =
+        (transcription as any).segments?.map((seg: any) => ({
+          timestamp: Math.floor(seg.start),
+          text: seg.text.trim(),
+        })) || [];
 
       // Calculate average confidence (if available)
-      const avgConfidence = (transcription as any).segments?.reduce(
-        (sum: number, seg: any) => sum + (seg.confidence || 0.9),
-        0
-      ) / ((transcription as any).segments?.length || 1);
+      const avgConfidence =
+        (transcription as any).segments?.reduce(
+          (sum: number, seg: any) => sum + (seg.confidence || 0.9),
+          0,
+        ) / ((transcription as any).segments?.length || 1);
 
       return {
         text: transcription.text,
@@ -291,7 +308,7 @@ export class TranscriptionService {
       title?: string;
       showName?: string;
       episodeNumber?: number;
-    }
+    },
   ): Promise<TranscriptWithTimestamps> {
     this.logger.log(`Transcribing podcast: ${podcastUrl}`);
 
@@ -303,7 +320,9 @@ export class TranscriptionService {
 
     if (duration > this.maxDuration) {
       await fs.unlink(audioPath);
-      throw new Error(`Podcast duration (${duration}s) exceeds maximum (${this.maxDuration}s)`);
+      throw new Error(
+        `Podcast duration (${duration}s) exceeds maximum (${this.maxDuration}s)`,
+      );
     }
 
     // 3. Transcribe
@@ -353,7 +372,7 @@ export class TranscriptionService {
     const outputPath = path.join(this.tempDir, filename);
 
     const response = await firstValueFrom(
-      this.httpService.get(url, { responseType: 'arraybuffer' })
+      this.httpService.get(url, { responseType: 'arraybuffer' }),
     );
 
     await fs.writeFile(outputPath, Buffer.from(response.data));
@@ -380,15 +399,19 @@ export class TranscriptionService {
    * NOTE: Implementation delegated to TikTokResearchService
    * This method exists for interface compatibility
    */
-  async transcribeTikTokVideo(videoId: string): Promise<TranscriptWithTimestamps> {
+  async transcribeTikTokVideo(
+    videoId: string,
+  ): Promise<TranscriptWithTimestamps> {
     // This is now handled by TikTokResearchService.transcribeTikTokVideo()
     // Keep this method for backward compatibility
-    this.logger.log(`TikTok transcription request delegated to TikTokResearchService: ${videoId}`);
+    this.logger.log(
+      `TikTok transcription request delegated to TikTokResearchService: ${videoId}`,
+    );
 
     throw new Error(
       'TikTok transcription is now handled by TikTokResearchService. ' +
-      'Please use TikTokResearchService.transcribeTikTokVideo() instead. ' +
-      'See Phase 9 Day 19 Task 1 implementation.'
+        'Please use TikTokResearchService.transcribeTikTokVideo() instead. ' +
+        'See Phase 9 Day 19 Task 1 implementation.',
     );
   }
 
@@ -397,15 +420,19 @@ export class TranscriptionService {
    * NOTE: Implementation delegated to InstagramManualService
    * This method exists for interface compatibility
    */
-  async transcribeInstagramVideo(url: string): Promise<TranscriptWithTimestamps> {
+  async transcribeInstagramVideo(
+    url: string,
+  ): Promise<TranscriptWithTimestamps> {
     // This is now handled by InstagramManualService.processUploadedVideo()
     // Keep this method for backward compatibility
-    this.logger.log(`Instagram transcription request delegated to InstagramManualService: ${url}`);
+    this.logger.log(
+      `Instagram transcription request delegated to InstagramManualService: ${url}`,
+    );
 
     throw new Error(
       'Instagram transcription is now handled by InstagramManualService. ' +
-      'Please use InstagramManualService.processInstagramUrl() and processUploadedVideo() instead. ' +
-      'See Phase 9 Day 19 Task 2 implementation.'
+        'Please use InstagramManualService.processInstagramUrl() and processUploadedVideo() instead. ' +
+        'See Phase 9 Day 19 Task 2 implementation.',
     );
   }
 
@@ -414,7 +441,7 @@ export class TranscriptionService {
    */
   async estimateTranscriptionCost(
     sourceId: string,
-    sourceType: 'youtube' | 'podcast'
+    sourceType: 'youtube' | 'podcast',
   ): Promise<{ duration: number; estimatedCost: number }> {
     let duration: number;
 

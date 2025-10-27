@@ -23,9 +23,14 @@ Created WebSocket gateway for real-time progress updates:
 ```typescript
 @WebSocketGateway({
   namespace: '/theme-extraction',
-  cors: { origin: process.env.FRONTEND_URL || 'http://localhost:3000', credentials: true },
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  },
 })
-export class ThemeExtractionGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ThemeExtractionGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server!: Server;
 
@@ -71,6 +76,7 @@ export class ThemeExtractionGateway implements OnGatewayConnection, OnGatewayDis
 ```
 
 **Features**:
+
 - User-specific rooms for isolated progress updates
 - Room join/leave event handling
 - Three event types: progress, complete, error
@@ -93,7 +99,14 @@ export class UnifiedThemeExtractionService {
 
   private emitProgress(
     userId: string,
-    stage: 'analyzing' | 'papers' | 'videos' | 'social' | 'merging' | 'complete' | 'error',
+    stage:
+      | 'analyzing'
+      | 'papers'
+      | 'videos'
+      | 'social'
+      | 'merging'
+      | 'complete'
+      | 'error',
     percentage: number,
     message: string,
     details?: {
@@ -135,7 +148,11 @@ export class UnifiedThemeExtractionService {
         const percentage = 10 + ((i + 1) / sourceIds.length) * 30;
         this.emitProgress(
           userId,
-          sourceType === 'paper' ? 'papers' : sourceType === 'video' ? 'videos' : 'social',
+          sourceType === 'paper'
+            ? 'papers'
+            : sourceType === 'video'
+              ? 'videos'
+              : 'social',
           percentage,
           `Processing ${sourceType} ${i + 1} of ${sourceIds.length}`,
           {
@@ -154,6 +171,7 @@ export class UnifiedThemeExtractionService {
 ```
 
 **Progress Stages**:
+
 1. **Analyzing** (0-10%): Initial setup and validation
 2. **Papers** (10-40%): Processing academic papers
 3. **Videos** (40-70%): Processing YouTube videos
@@ -261,6 +279,7 @@ export function ThemeExtractionProgress({ userId, onComplete, onError }: ThemeEx
 ```
 
 **UI Features**:
+
 - Real-time connection status indicator
 - 5 animated stage indicators (analyzing, papers, videos, social, merging)
 - Progress bar with percentage
@@ -359,10 +378,12 @@ npx tsc --noEmit
 ## Files Modified/Created
 
 ### New Files (2)
+
 1. `backend/src/modules/literature/gateways/theme-extraction.gateway.ts` (137 lines)
 2. `frontend/components/literature/progress/ThemeExtractionProgress.tsx` (223 lines)
 
 ### Modified Files (2)
+
 1. `backend/src/modules/literature/services/unified-theme-extraction.service.ts`
    - Added `themeGateway` property
    - Added `setGateway()` method
@@ -373,6 +394,7 @@ npx tsc --noEmit
    - Added `ThemeExtractionGateway` to providers array
 
 **Total Changes**:
+
 - 360 lines added
 - 0 lines removed
 - 2 new files
@@ -399,6 +421,7 @@ npx tsc --noEmit
 ## Environment Configuration
 
 No additional environment variables required. WebSocket uses existing:
+
 - `FRONTEND_URL` (for CORS, defaults to http://localhost:3000)
 - `NEXT_PUBLIC_API_URL` (for frontend connection, defaults to http://localhost:4000)
 

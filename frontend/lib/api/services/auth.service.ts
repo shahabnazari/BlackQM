@@ -90,6 +90,9 @@ class AuthService {
   // Authentication
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
+      // Clear any existing auth data before login to prevent stale token interference
+      this.clearAuthData();
+
       // The apiClient.post method returns the raw axios response
       const response = await apiClient
         .getClient()
@@ -196,6 +199,12 @@ class AuthService {
 
       return formattedUser;
     } catch (error: any) {
+      // Silently handle 401 (expected when token is expired)
+      if (error.response?.status === 401) {
+        this.clearAuthData();
+        throw new Error('Session expired');
+      }
+
       const fallbackUser = this.getUser();
       if (fallbackUser) {
         return fallbackUser;

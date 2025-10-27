@@ -142,7 +142,9 @@ export class PredictiveGapService {
    *
    * Algorithm: Weighted ensemble of ML models + expert rules
    */
-  async scoreResearchOpportunities(gapIds: string[]): Promise<ResearchOpportunity[]> {
+  async scoreResearchOpportunities(
+    gapIds: string[],
+  ): Promise<ResearchOpportunity[]> {
     this.logger.log(`💎 Scoring ${gapIds.length} research opportunities...`);
 
     const opportunities: ResearchOpportunity[] = [];
@@ -160,7 +162,7 @@ export class PredictiveGapService {
 
       // Factor 1: Novelty Score (how unexplored)
       const relatedPapers = gap.incomingEdges.length;
-      const novelty = Math.max(0, 1 - (relatedPapers / 50)); // Fewer papers = more novel
+      const novelty = Math.max(0, 1 - relatedPapers / 50); // Fewer papers = more novel
 
       // Factor 2: Feasibility Score
       const feasibility = await this.predictFeasibility(gap);
@@ -264,7 +266,11 @@ Return JSON: { "probability": 0.X, "reasoning": "...", "suggestedGrants": ["NSF 
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4',
         messages: [
-          { role: 'system', content: 'You are a research funding expert analyzing grant potential.' },
+          {
+            role: 'system',
+            content:
+              'You are a research funding expert analyzing grant potential.',
+          },
           { role: 'user', content: prompt },
         ],
         temperature: 0.3,
@@ -272,7 +278,9 @@ Return JSON: { "probability": 0.X, "reasoning": "...", "suggestedGrants": ["NSF 
         response_format: { type: 'json_object' },
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{"probability": 0.5}');
+      const result = JSON.parse(
+        response.choices[0].message.content || '{"probability": 0.5}',
+      );
       return result.probability || 0.5;
     } catch (error) {
       this.logger.error('Funding prediction failed:', error);
@@ -280,8 +288,12 @@ Return JSON: { "probability": 0.X, "reasoning": "...", "suggestedGrants": ["NSF 
     }
   }
 
-  async getFundingOpportunities(gapIds: string[]): Promise<FundingOpportunity[]> {
-    this.logger.log(`💰 Analyzing funding opportunities for ${gapIds.length} gaps...`);
+  async getFundingOpportunities(
+    gapIds: string[],
+  ): Promise<FundingOpportunity[]> {
+    this.logger.log(
+      `💰 Analyzing funding opportunities for ${gapIds.length} gaps...`,
+    );
 
     const opportunities: FundingOpportunity[] = [];
 
@@ -294,8 +306,11 @@ Return JSON: { "probability": 0.X, "reasoning": "...", "suggestedGrants": ["NSF 
 
       const fundingProbability = await this.predictFundingProbability(gap);
       const competitionLevel: 'LOW' | 'MEDIUM' | 'HIGH' =
-        gap.citationCount < 10 ? 'LOW' :
-        gap.citationCount < 50 ? 'MEDIUM' : 'HIGH';
+        gap.citationCount < 10
+          ? 'LOW'
+          : gap.citationCount < 50
+            ? 'MEDIUM'
+            : 'HIGH';
 
       opportunities.push({
         gapId: gap.id,
@@ -307,7 +322,9 @@ Return JSON: { "probability": 0.X, "reasoning": "...", "suggestedGrants": ["NSF 
       });
     }
 
-    return opportunities.sort((a, b) => b.fundingProbability - a.fundingProbability);
+    return opportunities.sort(
+      (a, b) => b.fundingProbability - a.fundingProbability,
+    );
   }
 
   // ============================================================================
@@ -338,7 +355,10 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4',
         messages: [
-          { role: 'system', content: 'You are a research collaboration expert.' },
+          {
+            role: 'system',
+            content: 'You are a research collaboration expert.',
+          },
           { role: 'user', content: prompt },
         ],
         temperature: 0.4,
@@ -346,17 +366,21 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
         response_format: { type: 'json_object' },
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{"expertiseAreas": []}');
+      const result = JSON.parse(
+        response.choices[0].message.content || '{"expertiseAreas": []}',
+      );
       const expertiseAreas = result.expertiseAreas || [];
 
       // Map expertise to potential collaborators
-      const collaborators: Collaborator[] = expertiseAreas.map((expertise: string, index: number) => ({
-        name: `Researcher with ${expertise}`, // In production, match real researchers
-        institution: 'TBD',
-        expertise: [expertise],
-        collaborationScore: 1 - (index * 0.1), // Declining priority
-        reasoning: `Essential expertise: ${expertise}`,
-      }));
+      const collaborators: Collaborator[] = expertiseAreas.map(
+        (expertise: string, index: number) => ({
+          name: `Researcher with ${expertise}`, // In production, match real researchers
+          institution: 'TBD',
+          expertise: [expertise],
+          collaborationScore: 1 - index * 0.1, // Declining priority
+          reasoning: `Essential expertise: ${expertise}`,
+        }),
+      );
 
       return collaborators;
     } catch (error) {
@@ -396,7 +420,7 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
 
     // Adjust based on gap complexity
     const complexityMultiplier = (gap.citationCount || 10) > 50 ? 1.3 : 1.0;
-    const adjustedPhases = basePhases.map(phase => ({
+    const adjustedPhases = basePhases.map((phase) => ({
       ...phase,
       duration: Math.round(phase.duration * complexityMultiplier),
     }));
@@ -406,8 +430,12 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
     return { phases: adjustedPhases, totalMonths };
   }
 
-  async getTimelineOptimizations(gapIds: string[]): Promise<TimelineOptimization[]> {
-    this.logger.log(`⏱️ Optimizing timelines for ${gapIds.length} research gaps...`);
+  async getTimelineOptimizations(
+    gapIds: string[],
+  ): Promise<TimelineOptimization[]> {
+    this.logger.log(
+      `⏱️ Optimizing timelines for ${gapIds.length} research gaps...`,
+    );
 
     const timelines: TimelineOptimization[] = [];
 
@@ -425,11 +453,17 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
         recommendedPhases: baseTimeline.phases.map((phase, i) => ({
           phase: phase.name,
           duration: phase.duration,
-          parallelizable: phase.name.includes('Recruitment') || phase.name.includes('Analysis'),
+          parallelizable:
+            phase.name.includes('Recruitment') ||
+            phase.name.includes('Analysis'),
           dependencies: i > 0 ? [baseTimeline.phases[i - 1].name] : [],
         })),
         totalDuration: baseTimeline.totalMonths,
-        criticalPath: ['Literature Review', 'Q-Set Development', 'Data Collection'],
+        criticalPath: [
+          'Literature Review',
+          'Q-Set Development',
+          'Data Collection',
+        ],
         accelerationOpportunities: [
           'Parallel recruitment during Q-set refinement',
           'Pre-register analysis plan to save time',
@@ -461,12 +495,15 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
     const trendingFactor = gap.trendingScore || 0.5;
     const feasibilityFactor = 0.7; // Assume Q-methodology is feasible
 
-    const impactScore = (noveltyFactor + trendingFactor + feasibilityFactor) / 3;
+    const impactScore =
+      (noveltyFactor + trendingFactor + feasibilityFactor) / 3;
     return impactScore;
   }
 
   async getImpactPredictions(gapIds: string[]): Promise<ImpactPrediction[]> {
-    this.logger.log(`📊 Predicting research impact for ${gapIds.length} gaps...`);
+    this.logger.log(
+      `📊 Predicting research impact for ${gapIds.length} gaps...`,
+    );
 
     const predictions: ImpactPrediction[] = [];
 
@@ -488,10 +525,14 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
           upper: Math.round(predictedCitations * 1.3),
         },
         impactCategory:
-          predictedCitations > 100 ? 'TRANSFORMATIVE' :
-          predictedCitations > 50 ? 'HIGH' :
-          predictedCitations > 20 ? 'MODERATE' : 'LOW',
-        reasoning: `Based on topic novelty (${((gap.citationCount || 0) < 20 ? 'high' : 'moderate')}) and trending score`,
+          predictedCitations > 100
+            ? 'TRANSFORMATIVE'
+            : predictedCitations > 50
+              ? 'HIGH'
+              : predictedCitations > 20
+                ? 'MODERATE'
+                : 'LOW',
+        reasoning: `Based on topic novelty (${(gap.citationCount || 0) < 20 ? 'high' : 'moderate'}) and trending score`,
         comparablePapers: [],
       });
     }
@@ -526,7 +567,9 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
         },
         include: {
           incomingEdges: {
-            include: { fromNode: { select: { createdAt: true, metadata: true } } },
+            include: {
+              fromNode: { select: { createdAt: true, metadata: true } },
+            },
           },
         },
       });
@@ -535,36 +578,55 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
 
       // Analyze growth pattern
       const recentActivity = concepts.reduce((sum, c) => {
-        const recent = c.incomingEdges.filter(e => {
-          const daysAgo = (Date.now() - e.fromNode.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+        const recent = c.incomingEdges.filter((e) => {
+          const daysAgo =
+            (Date.now() - e.fromNode.createdAt.getTime()) /
+            (1000 * 60 * 60 * 24);
           return daysAgo < 365;
         }).length;
         return sum + recent;
       }, 0);
 
       const olderActivity = concepts.reduce((sum, c) => {
-        const older = c.incomingEdges.filter(e => {
-          const daysAgo = (Date.now() - e.fromNode.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+        const older = c.incomingEdges.filter((e) => {
+          const daysAgo =
+            (Date.now() - e.fromNode.createdAt.getTime()) /
+            (1000 * 60 * 60 * 24);
           return daysAgo >= 365 && daysAgo < 730;
         }).length;
         return sum + older;
       }, 0);
 
-      const growthRate = olderActivity > 0 ? (recentActivity - olderActivity) / olderActivity : 0;
+      const growthRate =
+        olderActivity > 0
+          ? (recentActivity - olderActivity) / olderActivity
+          : 0;
 
       forecasts.push({
         topic,
         currentTrend:
-          growthRate > 1 ? 'EMERGING' :
-          growthRate > 0.3 ? 'GROWING' :
-          growthRate > -0.3 ? 'STABLE' : 'DECLINING',
+          growthRate > 1
+            ? 'EMERGING'
+            : growthRate > 0.3
+              ? 'GROWING'
+              : growthRate > -0.3
+                ? 'STABLE'
+                : 'DECLINING',
         predictedTrend:
-          growthRate > 1 ? 'EXPONENTIAL' :
-          growthRate > 0.3 ? 'LINEAR' :
-          growthRate > -0.3 ? 'PLATEAU' : 'DECLINE',
+          growthRate > 1
+            ? 'EXPONENTIAL'
+            : growthRate > 0.3
+              ? 'LINEAR'
+              : growthRate > -0.3
+                ? 'PLATEAU'
+                : 'DECLINE',
         timeHorizon: 24, // 24 months
-        confidence: Math.min(0.7 + (concepts.length / 20), 0.95),
-        keyDrivers: ['Citation growth', 'New researchers entering field', 'Funding availability'],
+        confidence: Math.min(0.7 + concepts.length / 20, 0.95),
+        keyDrivers: [
+          'Citation growth',
+          'New researchers entering field',
+          'Funding availability',
+        ],
       });
     }
 
@@ -583,12 +645,18 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
 
     // Q-methodology is ideal for:
     const idealKeywords = [
-      'perspective', 'viewpoint', 'opinion', 'subjectivity',
-      'discourse', 'belief', 'attitude', 'subjective',
+      'perspective',
+      'viewpoint',
+      'opinion',
+      'subjectivity',
+      'discourse',
+      'belief',
+      'attitude',
+      'subjective',
     ];
 
-    const matchCount = idealKeywords.filter(keyword =>
-      description.includes(keyword)
+    const matchCount = idealKeywords.filter((keyword) =>
+      description.includes(keyword),
     ).length;
 
     return Math.min(matchCount / idealKeywords.length, 1);
@@ -643,7 +711,10 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
     return grants.length > 0 ? grants : ['General Research Grant'];
   }
 
-  private estimateFundingRange(probability: number): { min: number; max: number } {
+  private estimateFundingRange(probability: number): {
+    min: number;
+    max: number;
+  } {
     if (probability > 0.7) {
       return { min: 300000, max: 750000 }; // High confidence = larger grants
     } else if (probability > 0.5) {

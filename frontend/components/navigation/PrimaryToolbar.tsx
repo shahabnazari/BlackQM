@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import {
   BookOpenIcon,
   LightBulbIcon,
@@ -52,6 +53,20 @@ interface PhaseConfig {
   gradientTo: string;
   borderColor: string;
 }
+
+// First tool path for each phase - for navigation
+const phaseFirstTools: Record<ResearchPhase, string> = {
+  discover: '/discover/literature',
+  design: '/design/questions',
+  build: '/build/study',
+  recruit: '/recruit/participants',
+  collect: '/collect/sessions',
+  analyze: '/analyze/hub',
+  visualize: '/visualize/arrays',
+  interpret: '/interpret/factors',
+  report: '/report/generator',
+  archive: '/archive/studies',
+};
 
 const phaseConfigs: PhaseConfig[] = [
   {
@@ -187,6 +202,7 @@ const phaseConfigs: PhaseConfig[] = [
 ];
 
 export function PrimaryToolbar() {
+  const router = useRouter();
   const {
     currentPhase,
     setCurrentPhase,
@@ -297,6 +313,12 @@ export function PrimaryToolbar() {
     setCurrentPhase(phase);
     // Always keep a phase expanded to show secondary toolbar
     setExpandedPhase(phase);
+
+    // Navigate to the first tool of the phase
+    const firstToolPath = phaseFirstTools[phase];
+    if (firstToolPath) {
+      router.push(firstToolPath);
+    }
   };
 
   return (

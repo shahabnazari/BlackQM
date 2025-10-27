@@ -5,18 +5,14 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useReducedMotion } from 'framer-motion';
-import {
-  getAnimationDuration,
-  raf,
-  cancelRaf
-} from '@/lib/animations/utils';
+import { getAnimationDuration, raf, cancelRaf } from '@/lib/animations/utils';
 import { ANIMATION_TIMING, SPRING_PHYSICS } from '@/lib/animations/constants';
 
 interface UseAnimationOptions {
   duration?: number;
   delay?: number;
   easing?: string;
-  spring?: typeof SPRING_PHYSICS[keyof typeof SPRING_PHYSICS];
+  spring?: (typeof SPRING_PHYSICS)[keyof typeof SPRING_PHYSICS];
   respectReducedMotion?: boolean;
   autoStart?: boolean;
 }
@@ -50,15 +46,16 @@ export const useAnimation = (
   const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isReversed, setIsReversed] = useState(false);
-  
+
   const animationRef = useRef<number>();
   const startTimeRef = useRef<number>();
   const pausedTimeRef = useRef<number>();
   const shouldReduceMotion = useReducedMotion();
 
-  const animationDuration = respectReducedMotion && shouldReduceMotion 
-    ? getAnimationDuration(duration)
-    : duration;
+  const animationDuration =
+    respectReducedMotion && shouldReduceMotion
+      ? getAnimationDuration(duration)
+      : duration;
 
   const animate = useCallback(() => {
     if (!startTimeRef.current) {
@@ -68,8 +65,10 @@ export const useAnimation = (
     const currentTime = performance.now();
     const elapsed = currentTime - startTimeRef.current;
     const normalizedProgress = Math.min(elapsed / animationDuration, 1);
-    
-    const finalProgress = isReversed ? 1 - normalizedProgress : normalizedProgress;
+
+    const finalProgress = isReversed
+      ? 1 - normalizedProgress
+      : normalizedProgress;
     setProgress(finalProgress);
 
     if (normalizedProgress < 1 && !isPaused) {
@@ -131,7 +130,8 @@ export const useAnimation = (
     if (isAnimating) {
       const currentProgress = progress;
       setProgress(1 - currentProgress);
-      startTimeRef.current = performance.now() - (1 - currentProgress) * animationDuration;
+      startTimeRef.current =
+        performance.now() - (1 - currentProgress) * animationDuration;
     }
   }, [isReversed, isAnimating, progress, animationDuration]);
 
@@ -141,7 +141,7 @@ export const useAnimation = (
     if (autoStart) {
       start();
     }
-    
+
     return () => {
       if (animationRef.current) {
         cancelRaf(animationRef.current);
