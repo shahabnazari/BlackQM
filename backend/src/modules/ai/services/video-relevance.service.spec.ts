@@ -50,6 +50,10 @@ describe('VideoRelevanceService', () => {
       transcribe: true,
       priority: 'high',
     }),
+    tokens: 150,
+    responseTime: 500,
+    cached: false,
+    cost: 0.001,
   };
 
   beforeEach(async () => {
@@ -128,6 +132,10 @@ describe('VideoRelevanceService', () => {
     it('should handle AI response with markdown code blocks', async () => {
       const responseWithMarkdown = {
         content: '```json\n' + mockAIResponse.content + '\n```',
+        tokens: 150,
+        responseTime: 500,
+        cached: false,
+        cost: 0.001,
       };
       openaiService.generateCompletion.mockResolvedValue(responseWithMarkdown);
 
@@ -143,6 +151,10 @@ describe('VideoRelevanceService', () => {
     it('should return safe defaults when AI response is invalid', async () => {
       openaiService.generateCompletion.mockResolvedValue({
         content: 'Invalid response without JSON',
+        tokens: 10,
+        responseTime: 100,
+        cached: false,
+        cost: 0.0001,
       });
 
       const result = await service.scoreVideoRelevance(
@@ -199,6 +211,10 @@ describe('VideoRelevanceService', () => {
           transcribe: true,
           priority: 'high',
         }),
+        tokens: 100,
+        responseTime: 300,
+        cached: false,
+        cost: 0.0008,
       });
 
       const result = await service.scoreVideoRelevance(
@@ -221,6 +237,10 @@ describe('VideoRelevanceService', () => {
           // transcribe field missing - should auto-set based on score
           priority: 'medium',
         }),
+        tokens: 120,
+        responseTime: 400,
+        cached: false,
+        cost: 0.0009,
       });
 
       const result = await service.scoreVideoRelevance(
@@ -234,9 +254,9 @@ describe('VideoRelevanceService', () => {
 
     it('should auto-set priority based on score when not provided', async () => {
       const testCases = [
-        { score: 85, expectedPriority: 'high' },
-        { score: 70, expectedPriority: 'medium' },
-        { score: 50, expectedPriority: 'low' },
+        { score: 85, expectedPriority: 'high', videoId: 'video-test-85' },
+        { score: 70, expectedPriority: 'medium', videoId: 'video-test-70' },
+        { score: 50, expectedPriority: 'low', videoId: 'video-test-50' },
       ];
 
       for (const testCase of testCases) {
@@ -250,10 +270,14 @@ describe('VideoRelevanceService', () => {
             transcribe: false,
             // priority missing - should auto-set based on score
           }),
+          tokens: 100,
+          responseTime: 300,
+          cached: false,
+          cost: 0.0008,
         });
 
         const result = await service.scoreVideoRelevance(
-          mockVideoMetadata,
+          { ...mockVideoMetadata, videoId: testCase.videoId },
           'test query',
         );
 
@@ -314,18 +338,30 @@ describe('VideoRelevanceService', () => {
             ...JSON.parse(mockAIResponse.content),
             score: 90,
           }),
+          tokens: 150,
+          responseTime: 500,
+          cached: false,
+          cost: 0.001,
         })
         .mockResolvedValueOnce({
           content: JSON.stringify({
             ...JSON.parse(mockAIResponse.content),
             score: 70,
           }),
+          tokens: 150,
+          responseTime: 500,
+          cached: false,
+          cost: 0.001,
         })
         .mockResolvedValueOnce({
           content: JSON.stringify({
             ...JSON.parse(mockAIResponse.content),
             score: 80,
           }),
+          tokens: 150,
+          responseTime: 500,
+          cached: false,
+          cost: 0.001,
         });
 
       const result = await service.selectTopVideos(
@@ -352,12 +388,20 @@ describe('VideoRelevanceService', () => {
             ...JSON.parse(mockAIResponse.content),
             score: 90,
           }),
+          tokens: 150,
+          responseTime: 500,
+          cached: false,
+          cost: 0.001,
         })
         .mockResolvedValueOnce({
           content: JSON.stringify({
             ...JSON.parse(mockAIResponse.content),
             score: 85,
           }),
+          tokens: 150,
+          responseTime: 500,
+          cached: false,
+          cost: 0.001,
         });
 
       const result = await service.selectTopVideos(videos, 'climate change', 2);
@@ -377,6 +421,10 @@ describe('VideoRelevanceService', () => {
           score: 90,
           isAcademic: true,
         }),
+        tokens: 150,
+        responseTime: 500,
+        cached: false,
+        cost: 0.001,
       });
 
       const result = await service.selectTopVideos(videos, 'climate change', 1);

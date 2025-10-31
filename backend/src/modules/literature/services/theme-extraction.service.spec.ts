@@ -18,6 +18,13 @@ describe('ThemeExtractionService', () => {
 
   const mockOpenAIService = {
     generateText: jest.fn(),
+    generateCompletion: jest.fn().mockResolvedValue({
+      content: 'Test statement',
+      tokens: 50,
+      responseTime: 100,
+      cached: false,
+      cost: 0.001,
+    }),
   };
 
   const mockStatementGeneratorService = {
@@ -276,7 +283,7 @@ describe('ThemeExtractionService', () => {
 
       expect(statements).toBeDefined();
       expect(Array.isArray(statements)).toBe(true);
-      expect(statements.length).toBeGreaterThan(0);
+      expect(statements.statements.length).toBeGreaterThan(0);
       expect(mockStatementGeneratorService.refineStatement).toHaveBeenCalled();
     });
 
@@ -303,7 +310,7 @@ describe('ThemeExtractionService', () => {
         studyContext,
       );
 
-      expect(statements.length).toBeLessThanOrEqual(60); // Q-sort limit
+      expect(statements.statements.length).toBeLessThanOrEqual(60); // Q-sort limit
     });
   });
 

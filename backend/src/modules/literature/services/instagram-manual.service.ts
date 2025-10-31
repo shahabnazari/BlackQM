@@ -116,7 +116,10 @@ export class InstagramManualService {
    * @returns Video ID or null if invalid
    */
   extractVideoId(url: string): string | null {
-    const match = url.match(/instagram\.com\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
+    // Match both patterns:
+    // 1. instagram.com/p/ABC123/
+    // 2. instagram.com/username/p/ABC123/
+    const match = url.match(/instagram\.com\/(?:[A-Za-z0-9._]+\/)?(p|reel|tv)\/([A-Za-z0-9_-]+)/);
     return match ? match[2] : null;
   }
 

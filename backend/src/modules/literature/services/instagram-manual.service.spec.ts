@@ -251,9 +251,9 @@ describe('InstagramManualService', () => {
       expect(result.status).toBe('awaiting_upload');
       expect(result.videoId).toBe('ABC123');
       expect(result.instructions).toBeDefined();
-      expect(result.instructions.step1).toContain('manually download');
-      expect(result.instructions.tools).toBeInstanceOf(Array);
-      expect(result.instructions.legal_notice).toContain('IMPORTANT');
+      expect(result.instructions?.step1).toContain('manually download');
+      expect(result.instructions?.tools).toBeInstanceOf(Array);
+      expect(result.instructions?.legal_notice).toContain('IMPORTANT');
     });
 
     it('should include username when present in URL', async () => {
