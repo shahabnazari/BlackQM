@@ -253,7 +253,9 @@ export class InterpretationController {
    * Day 9: Calculate SHAP-inspired feature importance for factors
    */
   @Get(':studyId/explainability/feature-importance')
-  @ApiOperation({ summary: 'Get statement feature importance for all factors (SHAP-inspired)' })
+  @ApiOperation({
+    summary: 'Get statement feature importance for all factors (SHAP-inspired)',
+  })
   @ApiParam({ name: 'studyId', description: 'Study ID' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -290,7 +292,9 @@ export class InterpretationController {
    * Day 9: Multi-dimensional bias audit
    */
   @Get(':studyId/explainability/bias-audit')
-  @ApiOperation({ summary: 'Perform multi-dimensional bias audit for study quality' })
+  @ApiOperation({
+    summary: 'Perform multi-dimensional bias audit for study quality',
+  })
   @ApiParam({ name: 'studyId', description: 'Study ID' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -304,7 +308,9 @@ export class InterpretationController {
    * Day 10: Calculate certainty score for interpretations
    */
   @Get(':studyId/explainability/certainty-score')
-  @ApiOperation({ summary: 'Calculate certainty score for factor interpretations' })
+  @ApiOperation({
+    summary: 'Calculate certainty score for factor interpretations',
+  })
   @ApiParam({ name: 'studyId', description: 'Study ID' })
   @ApiQuery({ name: 'factorNumber', required: false, type: Number })
   @ApiResponse({
@@ -325,7 +331,9 @@ export class InterpretationController {
    * Day 10: Generate alternative explanations for factors
    */
   @Get(':studyId/explainability/alternative-explanations/:factorNumber')
-  @ApiOperation({ summary: 'Generate alternative interpretations for a factor' })
+  @ApiOperation({
+    summary: 'Generate alternative interpretations for a factor',
+  })
   @ApiParam({ name: 'studyId', description: 'Study ID' })
   @ApiParam({ name: 'factorNumber', description: 'Factor number' })
   @ApiQuery({ name: 'count', required: false, type: Number })

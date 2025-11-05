@@ -75,7 +75,8 @@ export function useIncrementalExtraction() {
       console.error('Failed to load corpus data:', error);
       setState(prev => ({
         ...prev,
-        corpusError: error instanceof Error ? error.message : 'Failed to load corpus data',
+        corpusError:
+          error instanceof Error ? error.message : 'Failed to load corpus data',
         isLoadingCorpuses: false,
       }));
     }
@@ -120,7 +121,11 @@ export function useIncrementalExtraction() {
   }, []);
 
   const performIncrementalExtraction = useCallback(
-    async (request: Parameters<typeof incrementalExtractionApi.extractThemesIncremental>[0]) => {
+    async (
+      request: Parameters<
+        typeof incrementalExtractionApi.extractThemesIncremental
+      >[0]
+    ) => {
       setState(prev => ({
         ...prev,
         isExtracting: true,
@@ -144,13 +149,14 @@ export function useIncrementalExtraction() {
                 prev.extractionProgress < 30
                   ? 'Fetching cached content...'
                   : prev.extractionProgress < 60
-                  ? 'Extracting themes from new sources...'
-                  : 'Analyzing theme evolution...',
+                    ? 'Extracting themes from new sources...'
+                    : 'Analyzing theme evolution...',
             };
           });
         }, 500);
 
-        const result = await incrementalExtractionApi.extractThemesIncremental(request);
+        const result =
+          await incrementalExtractionApi.extractThemesIncremental(request);
 
         clearInterval(progressInterval);
 
@@ -183,7 +189,8 @@ export function useIncrementalExtraction() {
           ...prev,
           isExtracting: false,
           extractionProgress: 0,
-          extractionError: error instanceof Error ? error.message : 'Extraction failed',
+          extractionError:
+            error instanceof Error ? error.message : 'Extraction failed',
         }));
         throw error;
       }
@@ -194,7 +201,11 @@ export function useIncrementalExtraction() {
   const createCorpus = useCallback(
     async (name: string, purpose: string, paperIds: string[]) => {
       try {
-        const newCorpus = await incrementalExtractionApi.createCorpus(name, purpose as any, paperIds);
+        const newCorpus = await incrementalExtractionApi.createCorpus(
+          name,
+          purpose as any,
+          paperIds
+        );
         await loadCorpusData();
         return newCorpus;
       } catch (error) {
@@ -208,7 +219,10 @@ export function useIncrementalExtraction() {
   const updateCorpus = useCallback(
     async (corpusId: string, updates: { name?: string; purpose?: string }) => {
       try {
-        const updatedCorpus = await incrementalExtractionApi.updateCorpus(corpusId, updates);
+        const updatedCorpus = await incrementalExtractionApi.updateCorpus(
+          corpusId,
+          updates
+        );
         await loadCorpusData();
         return updatedCorpus;
       } catch (error) {
@@ -228,7 +242,8 @@ export function useIncrementalExtraction() {
         // Clear selected corpus if it was deleted
         setState(prev => ({
           ...prev,
-          selectedCorpus: prev.selectedCorpus?.id === corpusId ? null : prev.selectedCorpus,
+          selectedCorpus:
+            prev.selectedCorpus?.id === corpusId ? null : prev.selectedCorpus,
         }));
       } catch (error) {
         console.error('Failed to delete corpus:', error);

@@ -22,39 +22,48 @@ Successfully resolved Q-statement generation authentication and navigation error
 ## Problem Timeline
 
 ### Issue 1: 401 Unauthorized Error
+
 **Problem:** Q-statement generation endpoint required JWT authentication, failing in development
 
 **Solution:**
+
 - Created public endpoint: `POST /api/literature/statements/generate/public`
 - Follows same pattern as existing theme extraction public endpoint
 - Environment check: Only works in development mode
 
 ### Issue 2: 404 Not Found Error
+
 **Problem:** Navigation to `/build/study` failed because page doesn't exist
 
 **Root Cause:**
+
 - Route consolidation map redirects `/studies/create` → `/build/study`
 - But `/build/study/page.tsx` was never created
 - Actual page exists at `/studies/create/page.tsx`
 
 **Solution:**
+
 - Navigate directly to `/studies/create` (the actual existing route)
 
 ### Issue 3: 500 Internal Server Error
+
 **Problem:** Foreign key constraint violation in database
 
 **Error:**
+
 ```
 Foreign key constraint violated on the foreign key
 at this.prisma.aIRateLimit.create()
 ```
 
 **Root Cause:**
+
 - Rate limiting tried to create record with `userId: 'dev-user'`
 - `aIRateLimit` table has foreign key to `User` table
 - 'dev-user' doesn't exist → constraint violation
 
 **Solution:**
+
 1. Made `userId` parameter optional in all services
 2. Modified `checkRateLimit()` to skip rate limiting if `userId` is undefined
 3. Public endpoint now passes `undefined` instead of 'dev-user'
@@ -107,6 +116,7 @@ at this.prisma.aIRateLimit.create()
 ## Files Modified
 
 ### Backend (3 files)
+
 1. **`backend/src/modules/literature/literature.controller.ts`**
    - Lines 722-786: Added public Q-statement endpoint
    - Added comprehensive error handling
@@ -121,6 +131,7 @@ at this.prisma.aIRateLimit.create()
    - Line 2602: Updated logging to handle undefined userId
 
 ### Frontend (2 files)
+
 1. **`frontend/lib/services/literature-api.service.ts`**
    - Line 903: Updated to use public endpoint
    - Lines 905-913: Enhanced logging
@@ -129,6 +140,7 @@ at this.prisma.aIRateLimit.create()
    - Line 1968: Fixed navigation to use `/studies/create`
 
 ### Testing (1 file)
+
 1. **`backend/test-q-statement-endpoint.ts`** (NEW)
    - Comprehensive 4-test suite
    - All edge cases covered
@@ -154,13 +166,13 @@ at this.prisma.aIRateLimit.create()
 
 ## Code Quality
 
-| Metric | Score |
-|--------|-------|
-| TypeScript Compilation | ✅ 0 errors |
-| Unit Tests | ✅ 4/4 passing |
-| Error Handling | ✅ Comprehensive |
-| Security | ✅ Production-ready |
-| Documentation | ✅ Complete |
+| Metric                 | Score               |
+| ---------------------- | ------------------- |
+| TypeScript Compilation | ✅ 0 errors         |
+| Unit Tests             | ✅ 4/4 passing      |
+| Error Handling         | ✅ Comprehensive    |
+| Security               | ✅ Production-ready |
+| Documentation          | ✅ Complete         |
 
 ---
 

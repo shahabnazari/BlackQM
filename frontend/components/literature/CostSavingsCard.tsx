@@ -14,7 +14,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { incrementalExtractionApi, type CorpusStats } from '@/lib/api/services/incremental-extraction-api.service';
+import {
+  incrementalExtractionApi,
+  type CorpusStats,
+} from '@/lib/api/services/incremental-extraction-api.service';
 import { DollarSign, TrendingDown, Database, BarChart3 } from 'lucide-react';
 
 export function CostSavingsCard() {
@@ -33,7 +36,9 @@ export function CostSavingsCard() {
       const data = await incrementalExtractionApi.getCorpusStats();
       setStats(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load cost savings');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load cost savings'
+      );
       console.error('Error loading corpus stats:', err);
     } finally {
       setLoading(false);
@@ -71,9 +76,10 @@ export function CostSavingsCard() {
   }
 
   const hasSavings = stats.estimatedCostSaved > 0;
-  const cacheEfficiency = stats.totalPapers > 0
-    ? Math.round((stats.cachedCount / stats.totalPapers) * 100)
-    : 0;
+  const cacheEfficiency =
+    stats.totalPapers > 0
+      ? Math.round((stats.cachedCount / stats.totalPapers) * 100)
+      : 0;
 
   return (
     <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg shadow-sm border border-green-200 dark:border-green-700 p-6">
@@ -109,20 +115,26 @@ export function CostSavingsCard() {
           <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
               <Database className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Cache Hits</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                Cache Hits
+              </span>
             </div>
             <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {stats.cachedCount} <span className="text-sm font-normal text-gray-500">papers</span>
+              {stats.cachedCount}{' '}
+              <span className="text-sm font-normal text-gray-500">papers</span>
             </p>
           </div>
 
           <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
               <BarChart3 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Efficiency</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                Efficiency
+              </span>
             </div>
             <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {cacheEfficiency}<span className="text-sm font-normal text-gray-500">%</span>
+              {cacheEfficiency}
+              <span className="text-sm font-normal text-gray-500">%</span>
             </p>
           </div>
         </div>
@@ -131,16 +143,22 @@ export function CostSavingsCard() {
       {/* Breakdown */}
       {hasSavings && (
         <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3 mb-4">
-          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Savings Breakdown</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+            Savings Breakdown
+          </p>
           <div className="space-y-1">
             <div className="flex justify-between text-xs">
-              <span className="text-gray-700 dark:text-gray-300">Embeddings saved</span>
+              <span className="text-gray-700 dark:text-gray-300">
+                Embeddings saved
+              </span>
               <span className="font-medium text-gray-900 dark:text-gray-100">
                 ${(stats.averageReuse * 0.0001).toFixed(4)}
               </span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-gray-700 dark:text-gray-300">Completions saved</span>
+              <span className="text-gray-700 dark:text-gray-300">
+                Completions saved
+              </span>
               <span className="font-medium text-gray-900 dark:text-gray-100">
                 ${(stats.averageReuse * 0.015).toFixed(4)}
               </span>
@@ -153,8 +171,9 @@ export function CostSavingsCard() {
       {!hasSavings ? (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
           <p className="text-xs text-blue-700 dark:text-blue-300">
-            <strong>New!</strong> Use iterative extraction to add papers incrementally.
-            Content and embeddings are cached automatically, reducing costs by 50-70%.
+            <strong>New!</strong> Use iterative extraction to add papers
+            incrementally. Content and embeddings are cached automatically,
+            reducing costs by 50-70%.
           </p>
         </div>
       ) : (
@@ -163,9 +182,12 @@ export function CostSavingsCard() {
             <p className="mb-1">
               <strong className="text-gray-900 dark:text-gray-100">
                 {stats.totalExtractions}
-              </strong> total extractions across <strong className="text-gray-900 dark:text-gray-100">
+              </strong>{' '}
+              total extractions across{' '}
+              <strong className="text-gray-900 dark:text-gray-100">
                 {stats.totalPapers}
-              </strong> papers
+              </strong>{' '}
+              papers
             </p>
             <p className="text-gray-500 dark:text-gray-500">
               Avg {stats.averageReuse.toFixed(1)}× reuse per paper
@@ -177,7 +199,8 @@ export function CostSavingsCard() {
       {/* Research Note */}
       <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-700">
         <p className="text-xs text-gray-500 dark:text-gray-500 italic">
-          💡 Iterative theme extraction supports best practices (Braun & Clarke 2019: Reflexive Thematic Analysis)
+          💡 Iterative theme extraction supports best practices (Braun & Clarke
+          2019: Reflexive Thematic Analysis)
         </p>
       </div>
     </div>

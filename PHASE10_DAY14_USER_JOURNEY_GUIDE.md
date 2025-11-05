@@ -21,6 +21,7 @@
 **File:** `frontend/app/(researcher)/discover/literature/page.tsx`
 
 **What You See:**
+
 ```
 ┌─────────────────────────────────────────────────┐
 │  Literature Search & Discovery                   │
@@ -42,11 +43,13 @@
 **Button Text:** "Extract Themes from All Sources"
 
 **What Happens When You Click:**
+
 1. ✅ Validates you have selected papers
 2. ✅ Analyzes content (full-text vs abstract)
 3. ✅ Opens Purpose Selection Wizard modal
 
 **Code Location:**
+
 ```typescript
 // Line 3640: frontend/app/(researcher)/discover/literature/page.tsx
 <Button
@@ -60,6 +63,7 @@
 ```
 
 **Visual:**
+
 ```
 ┌─────────────────────────────────────────────────┐
 │  📄 Selected Papers (5 papers)                   │
@@ -80,6 +84,7 @@
 **Location:** Modal overlay (Lines 6178-6184)
 
 **What You See:**
+
 ```
 ┌──────────────────────────────────────────────────┐
 │  What's Your Research Purpose?                    │
@@ -105,6 +110,7 @@
 **Component:** `PurposeSelectionWizard.tsx`
 
 **What Happens Next:**
+
 1. ✅ You select a research purpose (e.g., "Qualitative Analysis")
 2. ✅ Wizard validates content requirements
 3. ✅ Calls backend API with purpose parameter
@@ -117,6 +123,7 @@
 **Location:** Modal overlay (Lines 6186-6190)
 
 **What You See (Day 14 Enhancement):**
+
 ```
 ┌──────────────────────────────────────────────────┐
 │  Theme Extraction Progress                        │
@@ -149,12 +156,14 @@
 **Component:** `ThemeExtractionProgressModal.tsx` → `EnhancedThemeExtractionProgress.tsx`
 
 **Day 14 Features:**
+
 - ✅ 4-part transparent messaging (Stage, What, Why, Stats)
 - ✅ 6-stage Braun & Clarke process visualization
 - ✅ Progressive disclosure (Novice/Researcher/Expert modes)
 - ✅ Real-time WebSocket updates
 
 **Stages You'll See:**
+
 1. Stage 1: Familiarization (0-20%)
 2. Stage 2: Initial Coding (20-30%)
 3. Stage 3: Theme Generation (30-50%)
@@ -169,6 +178,7 @@
 **Location:** Automatically triggers after extraction (Line 1565)
 
 **When It Happens:**
+
 ```
 Theme extraction completes
   ↓
@@ -180,6 +190,7 @@ Success toast message (Line 1573)
 ```
 
 **Code:**
+
 ```typescript
 // Line 1565: frontend/app/(researcher)/discover/literature/page.tsx
 confetti({
@@ -191,6 +202,7 @@ confetti({
 ```
 
 **What You See:**
+
 ```
 Screen: Colorful confetti particles falling from top
 Toast: ✨ Extracted 12 themes using Qualitative Analysis methodology!
@@ -203,13 +215,15 @@ Toast: ✨ Extracted 12 themes using Qualitative Analysis methodology!
 **Location:** Analysis & Insights tab → Themes sub-tab (Line 5152)
 
 **Auto-Navigation Code:**
+
 ```typescript
 // Lines 1560-1562
-setActiveTab('analysis');           // Switch to Analysis tab
-setActiveAnalysisSubTab('themes');  // Switch to Themes sub-tab
+setActiveTab('analysis'); // Switch to Analysis tab
+setActiveAnalysisSubTab('themes'); // Switch to Themes sub-tab
 ```
 
 **Tab Structure:**
+
 ```
 ┌─────────────────────────────────────────────────┐
 │  Tab 1: Results   | Tab 2: Analysis | Tab 3: ... │
@@ -303,6 +317,7 @@ Within Analysis tab:
 ```
 
 **Day 14 Component Location:**
+
 ```typescript
 // Line 5269: frontend/app/(researcher)/discover/literature/page.tsx
 
@@ -311,6 +326,7 @@ Within Analysis tab:
 ```
 
 **Why This Placement?**
+
 - ✅ Appears BEFORE individual theme cards
 - ✅ Educates users about the methodology
 - ✅ Provides scientific backing (Braun & Clarke)
@@ -324,6 +340,7 @@ Within Analysis tab:
 ### Backend Implementation
 
 **Main Service:**
+
 ```
 backend/src/modules/literature/services/unified-theme-extraction.service.ts
 ├─ Line 1824: extractThemesAcademic() - 6-stage process
@@ -332,6 +349,7 @@ backend/src/modules/literature/services/unified-theme-extraction.service.ts
 ```
 
 **API Controller:**
+
 ```
 backend/src/modules/literature/literature.controller.ts
 ├─ Line 2622: @Post('/themes/extract-themes-v2') - Authenticated
@@ -341,6 +359,7 @@ backend/src/modules/literature/literature.controller.ts
 ### Frontend Implementation
 
 **Main Page:**
+
 ```
 frontend/app/(researcher)/discover/literature/page.tsx
 ├─ Line 77: import confetti
@@ -353,6 +372,7 @@ frontend/app/(researcher)/discover/literature/page.tsx
 ```
 
 **Components:**
+
 ```
 frontend/components/literature/
 ├─ ThemeMethodologyExplainer.tsx (330 lines) - NEW IN DAY 14
@@ -370,6 +390,7 @@ frontend/components/literature/
 ### Quick Test (5 minutes)
 
 1. **Start the application:**
+
    ```bash
    # Terminal 1: Backend
    cd backend
@@ -414,12 +435,14 @@ frontend/components/literature/
 ### What to Look For (Day 14 Additions)
 
 **1. Confetti Animation:**
+
 - ✅ Triggers after extraction
 - ✅ Brand colors (green, blue, purple, pink)
 - ✅ 100 particles, 70° spread
 - ✅ Originates from center-bottom (y: 0.6)
 
 **2. ThemeMethodologyExplainer:**
+
 - ✅ Blue-purple gradient card
 - ✅ "Research-Grade" badge
 - ✅ Braun & Clarke citations
@@ -429,6 +452,7 @@ frontend/components/literature/
 - ✅ Expandable academic references
 
 **3. Purpose-Adaptive Extraction:**
+
 - ✅ Different algorithms per purpose
 - ✅ Content validation (e.g., 10+ full-text for Literature Synthesis)
 - ✅ Purpose-specific theme counts
@@ -439,39 +463,50 @@ frontend/components/literature/
 ## Common Questions
 
 ### Q1: Where do I click to start theme extraction?
+
 **A:** Go to Literature page → Search for papers → Select papers (checkboxes) → Scroll to bottom → Click blue button "Extract Themes from All Sources"
 
 ### Q2: Where is the confetti animation?
+
 **A:** It triggers automatically after theme extraction completes. You'll see it on the screen before the themes tab appears.
 
 ### Q3: Where is the ThemeMethodologyExplainer component?
+
 **A:** After extraction completes, go to Analysis tab → Themes sub-tab → Scroll down. It appears between "Theme Count Guidance" and the first theme card.
 
 ### Q4: How do I see the new 6-stage progress?
+
 **A:** During extraction, the progress modal shows 6 stages. Each stage displays:
+
 - Stage name + percentage
 - "What we're doing" (plain English)
 - "Why it matters" (scientific rationale)
 - Live statistics (sources, codes, themes)
 
 ### Q5: What's different from before Day 14?
+
 **Before Day 14:**
+
 - Simple progress: "Processing 1/2..."
 - No confetti
 - No methodology explainer
 - One algorithm for all purposes
 
 **After Day 14:**
+
 - 6-stage transparent progress with 4-part messages
 - 🎊 Confetti celebration
 - Educational methodology explainer
 - 5 purpose-specific algorithms
 
 ### Q6: Can I use the old extraction method?
+
 **A:** No, the system automatically uses the new V2 method (extractThemesV2) which is scientifically correct (holistic corpus-based) per Braun & Clarke (2019).
 
 ### Q7: What if I don't see the ThemeMethodologyExplainer?
+
 **Check:**
+
 1. Are you on the correct tab? (Analysis → Themes)
 2. Do you have extracted themes? (Must have themes to see it)
 3. Scroll down - it appears before the theme cards
@@ -481,9 +516,11 @@ frontend/components/literature/
 ## URL Routes
 
 **Main Page:**
+
 - Literature Search: `/(researcher)/discover/literature`
 
 **API Endpoints:**
+
 - Theme Extraction V2: `POST /literature/themes/extract-themes-v2`
 - Public Endpoint: `POST /literature/themes/extract-themes-v2/public`
 
@@ -492,6 +529,7 @@ frontend/components/literature/
 ## Screenshots Guide (What You Should See)
 
 ### 1. Literature Page - Initial State
+
 ```
 [Search Bar]
 [Filter Options]
@@ -501,6 +539,7 @@ frontend/components/literature/
 ```
 
 ### 2. Purpose Selection Modal
+
 ```
 Modal overlay with 5 research purpose cards:
 - Q-Methodology (40-80 statements)
@@ -511,6 +550,7 @@ Modal overlay with 5 research purpose cards:
 ```
 
 ### 3. Progress Modal (New 6-Stage Process)
+
 ```
 Stage indicator: ● ● ● ○ ○ ○ (Stage 3/6)
 Progress bar: ━━━━━━━━━░░░░░ 50%
@@ -522,12 +562,14 @@ Progress bar: ━━━━━━━━━░░░░░ 50%
 ```
 
 ### 4. Confetti Animation
+
 ```
 [Colorful particles falling across screen]
 [Toast message: "✨ Extracted 12 themes using..."]
 ```
 
 ### 5. Themes Tab - Final State
+
 ```
 ┌─ Source Summary Card
 ├─ Theme Count Guidance
@@ -544,18 +586,21 @@ Progress bar: ━━━━━━━━━░░░░░ 50%
 ### Code Comments to Look For
 
 **Day 14 markers in code:**
+
 ```typescript
 // Phase 10 Day 14: Celebration animation on extraction complete
 // Phase 10 Day 14: Theme Methodology Explainer - Educational transparency
 ```
 
 **Related phases:**
+
 ```typescript
 // Phase 10 Day 5.13: V2 purpose-driven extraction
 // Phase 10 Day 5.8: Theme Extraction Methodology Explainer (created)
 ```
 
 ### File Size Stats
+
 - Main page: 6,305 lines
 - ThemeMethodologyExplainer: 330 lines
 - Total Day 14 additions: ~350 lines
@@ -566,21 +611,27 @@ Progress bar: ━━━━━━━━━░░░░░ 50%
 ## Troubleshooting
 
 ### Issue: Button is disabled
+
 **Solution:** Ensure you have selected at least 1 paper (checkbox)
 
 ### Issue: No confetti appears
+
 **Check:**
+
 1. Is extraction completing successfully?
 2. Browser console for errors
 3. Is `canvas-confetti` installed?
 
 ### Issue: ThemeMethodologyExplainer not visible
+
 **Check:**
+
 1. Are you on Analysis tab?
 2. Have themes been extracted?
 3. Is `unifiedThemes.length > 0`?
 
 ### Issue: Old progress modal shows
+
 **Solution:** Clear browser cache or hard refresh (Cmd+Shift+R)
 
 ---
@@ -595,6 +646,7 @@ Progress bar: ━━━━━━━━━░░░░░ 50%
 4. **ThemeMethodologyExplainer:** Between guidance and theme cards (Line 5269)
 
 **Navigation Path:**
+
 ```
 Literature Page
   → "Extract Themes" button

@@ -22,39 +22,45 @@ Systematically identified and resolved ALL authentication errors in the literatu
 ## Problem 4: Corpus Endpoints 401 Unauthorized
 
 ### Root Cause
+
 Token key mismatch:
+
 - Auth service stores: `'access_token'` ✅
 - getAuthHeaders() looked for: `'auth_token'` ❌
 - Result: Token not found → Empty headers → 401 Unauthorized
 
 ### Solution
+
 Fixed `frontend/lib/api/utils/auth-headers.ts` to check correct key:
 
 ```typescript
-const token = localStorage.getItem('access_token') || localStorage.getItem('auth_token');
+const token =
+  localStorage.getItem('access_token') || localStorage.getItem('auth_token');
 ```
 
 ---
 
 ## All Issues Fixed
 
-| # | Issue | Solution | Status |
-|---|-------|----------|--------|
-| 1 | Q-statement 401 | Created public endpoint | ✅ FIXED |
-| 2 | Q-statement 404 | Use /studies/create | ✅ FIXED |
-| 3 | Q-statement 500 | Make userId optional | ✅ FIXED |
-| 4 | Corpus 401 | Fix token key | ✅ FIXED |
+| #   | Issue           | Solution                | Status   |
+| --- | --------------- | ----------------------- | -------- |
+| 1   | Q-statement 401 | Created public endpoint | ✅ FIXED |
+| 2   | Q-statement 404 | Use /studies/create     | ✅ FIXED |
+| 3   | Q-statement 500 | Make userId optional    | ✅ FIXED |
+| 4   | Corpus 401      | Fix token key           | ✅ FIXED |
 
 ---
 
 ## Files Modified
 
 ### Backend (3 files)
+
 1. `backend/src/modules/literature/literature.controller.ts` - Public Q-statement endpoint
 2. `backend/src/modules/ai/services/openai.service.ts` - Optional userId
 3. `backend/src/modules/literature/literature.service.ts` - Optional userId
 
 ### Frontend (3 files)
+
 1. `frontend/lib/api/utils/auth-headers.ts` - **Fixed token key** ⭐
 2. `frontend/lib/services/literature-api.service.ts` - Public endpoint
 3. `frontend/app/(researcher)/discover/literature/page.tsx` - Navigation fix

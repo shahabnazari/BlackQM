@@ -460,7 +460,9 @@ export default function PurposeSelectionWizard({
                           ) : (
                             <>
                               Abstract-only content (~
-                              {Math.round(contentAnalysis.avgContentLength)}{' '}
+                              {Math.round(
+                                contentAnalysis.avgContentLength
+                              )}{' '}
                               characters average) provides less context than
                               full-text papers. The system has automatically
                               activated{' '}

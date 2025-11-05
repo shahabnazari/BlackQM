@@ -61,7 +61,7 @@ psql -d vqmethod_db -c "SELECT title, array_length(authors, 1) as author_count F
 
 - [ ] Rating: \_\_\_
 - [ ] Screenshot attached
-- [ ] Notes: ************\_\_\_************
+- [ ] Notes: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
 
 ---
 
@@ -118,7 +118,7 @@ curl -X POST http://localhost:4000/api/literature/themes/unified-extract \
 **Result:**
 
 - [ ] Rating: \_\_\_
-- [ ] Error logs: ************\_\_\_************
+- [ ] Error logs: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
 
 ---
 
@@ -163,8 +163,8 @@ curl -X POST http://localhost:4000/api/literature/themes/unified-extract \
 **Result:**
 
 - [ ] Rating: \_\_\_
-- [ ] Memory snapshot: ************\_\_\_************
-- [ ] Performance profile: ************\_\_\_************
+- [ ] Memory snapshot: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
+- [ ] Performance profile: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
 
 ---
 
@@ -220,7 +220,7 @@ curl -X POST http://localhost:4000/api/literature/themes/unified-extract \
 
 - [ ] Rating: \_\_\_
 - [ ] Theme count: \_\_\_
-- [ ] Theme quality: ************\_\_\_************
+- [ ] Theme quality: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
 
 ---
 
@@ -272,7 +272,7 @@ curl -X POST http://localhost:4000/api/literature/themes/unified-extract-batch \
 
 - [ ] Rating: \_\_\_
 - [ ] Processing time: \_\_\_
-- [ ] Issues encountered: ************\_\_\_************
+- [ ] Issues encountered: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
 
 ---
 
@@ -312,7 +312,7 @@ curl -X POST http://localhost:4000/api/literature/themes/unified-extract-batch \
 **Result:**
 
 - [ ] Rating: \_\_\_
-- [ ] Video support status: ************\_\_\_************
+- [ ] Video support status: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
 
 ---
 
@@ -370,8 +370,8 @@ it('should handle network disconnect during search', async () => {
 **Result:**
 
 - [ ] Rating: \_\_\_
-- [ ] Error message: ************\_\_\_************
-- [ ] Recovery method: ************\_\_\_************
+- [ ] Error message: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
+- [ ] Recovery method: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
 
 ---
 
@@ -517,7 +517,7 @@ export const extractThemes = (data) => {
 
 - [ ] Rating: \_\_\_
 - [ ] Current timeout setting: \_\_\_
-- [ ] Recommended change: ************\_\_\_************
+- [ ] Recommended change: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
 
 ---
 
@@ -565,7 +565,7 @@ export const extractThemes = (data) => {
 - [ ] Rating: \_\_\_
 - [ ] Completion time tab 1: \_\_\_
 - [ ] Completion time tab 2: \_\_\_
-- [ ] Issues: ************\_\_\_************
+- [ ] Issues: \***\*\*\*\*\*\*\***\_\_\_\***\*\*\*\*\*\*\***
 
 ---
 

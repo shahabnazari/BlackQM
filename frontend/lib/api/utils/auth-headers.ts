@@ -12,7 +12,8 @@ export function getAuthHeaders(): Record<string, string> {
 
   // Phase 10 Day 14: Check 'access_token' (primary) and 'auth_token' (legacy)
   // Auth service stores token as 'access_token', not 'auth_token'
-  const token = localStorage.getItem('access_token') || localStorage.getItem('auth_token');
+  const token =
+    localStorage.getItem('access_token') || localStorage.getItem('auth_token');
 
   if (!token) {
     console.warn('[Auth Headers] No token found in localStorage');

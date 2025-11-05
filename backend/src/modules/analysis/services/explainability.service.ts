@@ -191,7 +191,10 @@ export class ExplainabilityService {
       );
 
       // Get certainty score (Day 10 feature)
-      const certaintyScore = await this.calculateCertaintyScore(studyId, factorNum);
+      const certaintyScore = await this.calculateCertaintyScore(
+        studyId,
+        factorNum,
+      );
 
       factorExplanations.push({
         factorNumber: factorNum,
@@ -203,14 +206,20 @@ export class ExplainabilityService {
         topNegativeStatements: importances
           .filter((s) => s.contribution === 'negative')
           .slice(0, 10),
-        neutralStatements: importances.filter((s) => s.contribution === 'neutral'),
+        neutralStatements: importances.filter(
+          (s) => s.contribution === 'neutral',
+        ),
         explainedVariance: factorArray.explainedVariance || 0,
         certaintyScore: certaintyScore.overall,
         confidenceInterval: certaintyScore.confidenceInterval,
       });
     }
 
-    await this.cacheService.set(cacheKey, { factors: factorExplanations }, 3600);
+    await this.cacheService.set(
+      cacheKey,
+      { factors: factorExplanations },
+      3600,
+    );
     return { factors: factorExplanations };
   }
 
@@ -256,16 +265,26 @@ export class ExplainabilityService {
         contribution,
         zScore: stmt.zScore,
         rank: stmt.rank,
-        explanation: this.generateImportanceExplanation(stmt.zScore, stmt.rank, isDistinguishing),
+        explanation: this.generateImportanceExplanation(
+          stmt.zScore,
+          stmt.rank,
+          isDistinguishing,
+        ),
       };
     });
   }
 
-  private generateImportanceExplanation(zScore: number, rank: number, isDistinguishing: boolean): string {
+  private generateImportanceExplanation(
+    zScore: number,
+    rank: number,
+    isDistinguishing: boolean,
+  ): string {
     const parts: string[] = [];
 
     if (Math.abs(zScore) > 1.5) {
-      parts.push(`Strong ${zScore > 0 ? 'agreement' : 'disagreement'} (z=${zScore.toFixed(2)})`);
+      parts.push(
+        `Strong ${zScore > 0 ? 'agreement' : 'disagreement'} (z=${zScore.toFixed(2)})`,
+      );
     } else {
       parts.push(`Moderate position (z=${zScore.toFixed(2)})`);
     }
@@ -304,17 +323,24 @@ export class ExplainabilityService {
     const scenarioCount = options.scenarioCount || 3;
 
     // Scenario 1: Remove top 3 distinguishing statements
-    const topDistinguishing = (results.distinguishingStatements || []).slice(0, 3);
+    const topDistinguishing = (results.distinguishingStatements || []).slice(
+      0,
+      3,
+    );
     if (topDistinguishing.length > 0) {
       counterfactuals.push({
         scenarioName: 'Remove Top Distinguishing Statements',
-        description: 'What if the 3 most distinguishing statements were removed from the study?',
+        description:
+          'What if the 3 most distinguishing statements were removed from the study?',
         modifiedStatements: topDistinguishing.map((ds: any) => ({
           statementId: ds.statementId,
           action: 'removed' as const,
           originalRank: ds.factor1, // Using factor1 score as proxy
         })),
-        predictedImpact: this.predictImpactOfRemoval(results, topDistinguishing),
+        predictedImpact: this.predictImpactOfRemoval(
+          results,
+          topDistinguishing,
+        ),
       });
     }
 
@@ -323,7 +349,8 @@ export class ExplainabilityService {
     if (consensusStmts.length > 0) {
       counterfactuals.push({
         scenarioName: 'Remove Consensus Statements',
-        description: 'What if statements with high consensus across factors were removed?',
+        description:
+          'What if statements with high consensus across factors were removed?',
         modifiedStatements: consensusStmts.map((cs: any) => ({
           statementId: cs.statementId,
           action: 'removed' as const,
@@ -336,20 +363,24 @@ export class ExplainabilityService {
     if (counterfactuals.length < scenarioCount) {
       counterfactuals.push({
         scenarioName: 'Add Extreme Viewpoint Statements',
-        description: 'What if 2-3 additional strongly-worded statements were added to capture extreme viewpoints?',
+        description:
+          'What if 2-3 additional strongly-worded statements were added to capture extreme viewpoints?',
         modifiedStatements: [
           {
             statementId: 'hypothetical_1',
             action: 'added' as const,
           },
         ],
-        predictedImpact: [{
-          factorNumber: 1,
-          currentVariance: results.factorArrays[0]?.explainedVariance || 0,
-          predictedVariance: (results.factorArrays[0]?.explainedVariance || 0) * 1.05,
-          varianceChange: 5,
-          confidenceLevel: 'medium' as const,
-        }],
+        predictedImpact: [
+          {
+            factorNumber: 1,
+            currentVariance: results.factorArrays[0]?.explainedVariance || 0,
+            predictedVariance:
+              (results.factorArrays[0]?.explainedVariance || 0) * 1.05,
+            varianceChange: 5,
+            confidenceLevel: 'medium' as const,
+          },
+        ],
       });
     }
 
@@ -357,7 +388,10 @@ export class ExplainabilityService {
     return { counterfactuals };
   }
 
-  private predictImpactOfRemoval(results: any, removedStatements: any[]): any[] {
+  private predictImpactOfRemoval(
+    results: any,
+    removedStatements: any[],
+  ): any[] {
     return (results.factorArrays || []).map((fa: any, idx: number) => ({
       factorNumber: fa.factorNumber,
       currentVariance: fa.explainedVariance || 0,
@@ -367,7 +401,10 @@ export class ExplainabilityService {
     }));
   }
 
-  private predictConsensusImpact(results: any, consensusStatements: any[]): any[] {
+  private predictConsensusImpact(
+    results: any,
+    consensusStatements: any[],
+  ): any[] {
     return (results.factorArrays || []).map((fa: any) => ({
       factorNumber: fa.factorNumber,
       currentVariance: fa.explainedVariance || 0,
@@ -405,7 +442,9 @@ export class ExplainabilityService {
     // Calculate bias dimensions
     const statementBalance = this.analyzeStatementBalance(survey.statements);
     const factorBalance = this.analyzeFactorBalance(results.factorArrays || []);
-    const demographicRep = await this.analyzeDemographicRepresentation(survey.responses);
+    const demographicRep = await this.analyzeDemographicRepresentation(
+      survey.responses,
+    );
     const viewpointDiversity = this.analyzeViewpointDiversity(results);
     const extremityBias = this.analyzeExtremityBias(results.factorArrays || []);
 
@@ -423,14 +462,22 @@ export class ExplainabilityService {
         factorBalance.score +
         demographicRep.score +
         viewpointDiversity.score +
-        extremityBias.score) / 5,
+        extremityBias.score) /
+        5,
     );
 
     // Generate recommendations
-    const recommendations = this.generateBiasRecommendations(dimensions, overallBiasScore);
+    const recommendations = this.generateBiasRecommendations(
+      dimensions,
+      overallBiasScore,
+    );
 
     // Determine compliance level
-    let complianceLevel: 'excellent' | 'good' | 'acceptable' | 'needs_improvement';
+    let complianceLevel:
+      | 'excellent'
+      | 'good'
+      | 'acceptable'
+      | 'needs_improvement';
     if (overallBiasScore <= 20) complianceLevel = 'excellent';
     else if (overallBiasScore <= 40) complianceLevel = 'good';
     else if (overallBiasScore <= 60) complianceLevel = 'acceptable';
@@ -449,11 +496,13 @@ export class ExplainabilityService {
 
   private analyzeStatementBalance(statements: any[]): BiasDimension {
     // Check for balance in statement sentiment and length
-    const avgLength = statements.reduce((sum, s) => sum + s.text.length, 0) / statements.length;
-    const lengthVariance = statements.reduce(
-      (sum, s) => sum + Math.pow(s.text.length - avgLength, 2),
-      0,
-    ) / statements.length;
+    const avgLength =
+      statements.reduce((sum, s) => sum + s.text.length, 0) / statements.length;
+    const lengthVariance =
+      statements.reduce(
+        (sum, s) => sum + Math.pow(s.text.length - avgLength, 2),
+        0,
+      ) / statements.length;
 
     const cvLength = Math.sqrt(lengthVariance) / avgLength; // Coefficient of variation
 
@@ -469,7 +518,9 @@ export class ExplainabilityService {
       evidence: [
         `Average statement length: ${Math.round(avgLength)} characters`,
         `Coefficient of variation: ${(cvLength * 100).toFixed(1)}%`,
-        statements.length < 20 ? 'Statement count below recommended 30-40' : 'Statement count adequate',
+        statements.length < 20
+          ? 'Statement count below recommended 30-40'
+          : 'Statement count adequate',
       ],
       correctiveActions:
         level !== 'low'
@@ -519,7 +570,9 @@ export class ExplainabilityService {
         `${factorArrays.length} factors extracted`,
         `Total variance explained: ${(totalVariance * 100).toFixed(1)}%`,
         `Variance distribution Gini: ${(gini * 100).toFixed(1)}%`,
-        variances[0] > avgVariance * 1.5 ? 'First factor dominates (consider rotation)' : 'Variance well-distributed',
+        variances[0] > avgVariance * 1.5
+          ? 'First factor dominates (consider rotation)'
+          : 'Variance well-distributed',
       ],
       correctiveActions:
         level !== 'low'
@@ -532,7 +585,9 @@ export class ExplainabilityService {
     };
   }
 
-  private async analyzeDemographicRepresentation(responses: any[]): Promise<BiasDimension> {
+  private async analyzeDemographicRepresentation(
+    responses: any[],
+  ): Promise<BiasDimension> {
     // For simplicity, check response count balance
     // In real implementation, would analyze participant metadata
     const responseCount = responses.length;
@@ -558,7 +613,9 @@ export class ExplainabilityService {
       description: 'Assesses participant sample adequacy and balance',
       evidence: [
         `Total participants: ${responseCount}`,
-        responseCount < 20 ? 'Sample size below recommended minimum (20-30)' : 'Sample size adequate',
+        responseCount < 20
+          ? 'Sample size below recommended minimum (20-30)'
+          : 'Sample size adequate',
         'Demographic metadata analysis not yet implemented',
       ],
       correctiveActions:
@@ -577,7 +634,8 @@ export class ExplainabilityService {
     const distinguishing = results.distinguishingStatements || [];
     const consensus = results.consensusStatements || [];
 
-    const diversityRatio = distinguishing.length / (distinguishing.length + consensus.length + 0.01);
+    const diversityRatio =
+      distinguishing.length / (distinguishing.length + consensus.length + 0.01);
     const score = Math.round((1 - diversityRatio) * 100);
     const level = score < 40 ? 'low' : score < 60 ? 'medium' : 'high';
 
@@ -590,7 +648,9 @@ export class ExplainabilityService {
         `${distinguishing.length} distinguishing statements`,
         `${consensus.length} consensus statements`,
         `Diversity ratio: ${(diversityRatio * 100).toFixed(1)}%`,
-        diversityRatio > 0.5 ? 'Good factor differentiation' : 'Factors may be too similar',
+        diversityRatio > 0.5
+          ? 'Good factor differentiation'
+          : 'Factors may be too similar',
       ],
       correctiveActions:
         level !== 'low'
@@ -617,7 +677,8 @@ export class ExplainabilityService {
       }
     }
 
-    const extremityRatio = Math.abs(totalPositiveExtreme - totalNegativeExtreme) / totalStatements;
+    const extremityRatio =
+      Math.abs(totalPositiveExtreme - totalNegativeExtreme) / totalStatements;
     const score = Math.round(extremityRatio * 100);
     const level = score < 15 ? 'low' : score < 30 ? 'medium' : 'high';
 
@@ -625,7 +686,8 @@ export class ExplainabilityService {
       name: 'Extremity Bias',
       score,
       level,
-      description: 'Checks for imbalance in strongly positive vs negative statements',
+      description:
+        'Checks for imbalance in strongly positive vs negative statements',
       evidence: [
         `Positive extremes: ${totalPositiveExtreme} statements`,
         `Negative extremes: ${totalNegativeExtreme} statements`,
@@ -677,13 +739,15 @@ export class ExplainabilityService {
         priority: 'critical',
         category: 'Overall Study Quality',
         issue: `Overall bias score is high (${overallScore}/100)`,
-        recommendation: 'Conduct comprehensive study redesign focusing on top bias dimensions',
+        recommendation:
+          'Conduct comprehensive study redesign focusing on top bias dimensions',
         actionItems: [
           'Address all high-priority recommendations first',
           'Consider pilot study to test improvements',
           'Document all changes for transparency',
         ],
-        expectedImpact: 'Improve study methodological rigor and publication readiness',
+        expectedImpact:
+          'Improve study methodological rigor and publication readiness',
       });
     }
 
@@ -728,7 +792,10 @@ export class ExplainabilityService {
       : factorArrays[0];
 
     const distinguishingCount = (results.distinguishingStatements || []).filter(
-      (ds: any) => factorNumber ? (ds.factor1 === factorNumber || ds.factor2 === factorNumber) : true,
+      (ds: any) =>
+        factorNumber
+          ? ds.factor1 === factorNumber || ds.factor2 === factorNumber
+          : true,
     ).length;
 
     const interpretabilityClarity = Math.min(1, distinguishingCount / 10); // 10+ distinguishing = high clarity
@@ -754,16 +821,18 @@ export class ExplainabilityService {
     // Determine reliability level
     let reliability: 'very_high' | 'high' | 'moderate' | 'low';
     if (overall >= 0.85) reliability = 'very_high';
-    else if (overall >= 0.70) reliability = 'high';
+    else if (overall >= 0.7) reliability = 'high';
     else if (overall >= 0.55) reliability = 'moderate';
     else reliability = 'low';
 
     return {
       overall: Math.round(overall * 100) / 100,
       components: {
-        statisticalSignificance: Math.round(statisticalSignificance * 100) / 100,
+        statisticalSignificance:
+          Math.round(statisticalSignificance * 100) / 100,
         factorStability: Math.round(factorStability * 100) / 100,
-        interpretabilityClarity: Math.round(interpretabilityClarity * 100) / 100,
+        interpretabilityClarity:
+          Math.round(interpretabilityClarity * 100) / 100,
         convergenceQuality: Math.round(convergenceQuality * 100) / 100,
       },
       confidenceInterval: [
@@ -772,7 +841,12 @@ export class ExplainabilityService {
       ],
       reliability,
       explanation: this.generateCertaintyExplanation(
-        { statisticalSignificance, factorStability, interpretabilityClarity, convergenceQuality },
+        {
+          statisticalSignificance,
+          factorStability,
+          interpretabilityClarity,
+          convergenceQuality,
+        },
         reliability,
       ),
     };
@@ -782,19 +856,29 @@ export class ExplainabilityService {
     components: CertaintyScore['components'],
     reliability: string,
   ): string {
-    const parts: string[] = [`Overall reliability: ${reliability.replace('_', ' ')}.`];
+    const parts: string[] = [
+      `Overall reliability: ${reliability.replace('_', ' ')}.`,
+    ];
 
     if (components.statisticalSignificance < 0.5) {
-      parts.push('Low statistical significance - consider extracting fewer factors.');
+      parts.push(
+        'Low statistical significance - consider extracting fewer factors.',
+      );
     }
     if (components.factorStability < 0.7) {
-      parts.push('Factor stability uncertain - bootstrap analysis recommended.');
+      parts.push(
+        'Factor stability uncertain - bootstrap analysis recommended.',
+      );
     }
     if (components.interpretabilityClarity < 0.5) {
-      parts.push('Limited distinguishing statements - interpretation may be ambiguous.');
+      parts.push(
+        'Limited distinguishing statements - interpretation may be ambiguous.',
+      );
     }
     if (components.convergenceQuality < 0.8) {
-      parts.push('Rotation did not fully converge - try different rotation method.');
+      parts.push(
+        'Rotation did not fully converge - try different rotation method.',
+      );
     }
 
     if (parts.length === 1) {
@@ -863,7 +947,10 @@ Format as JSON with keys: narrative, keyDifferences, supportingEvidence, strengt
           maxTokens: 800,
         });
 
-        const responseText = typeof response === 'string' ? response : (response as any).content || JSON.stringify(response);
+        const responseText =
+          typeof response === 'string'
+            ? response
+            : (response as any).content || JSON.stringify(response);
 
         let parsed: any;
         try {

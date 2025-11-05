@@ -742,8 +742,7 @@ export class LiteratureController {
       throw new ForbiddenException({
         success: false,
         error: 'Public endpoint disabled in production',
-        message:
-          'Please use the authenticated endpoint /statements/generate',
+        message: 'Please use the authenticated endpoint /statements/generate',
       });
     }
 
@@ -779,7 +778,8 @@ export class LiteratureController {
       throw new BadRequestException({
         success: false,
         error: 'Statement generation failed',
-        message: error?.message || 'Failed to generate Q-statements from themes',
+        message:
+          error?.message || 'Failed to generate Q-statements from themes',
         details:
           process.env.NODE_ENV === 'development' ? error?.stack : undefined,
       });
@@ -2982,7 +2982,8 @@ export class LiteratureController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Incrementally extract themes from new papers added to existing corpus',
+    summary:
+      'Incrementally extract themes from new papers added to existing corpus',
     description: `
       Preserves existing themes while processing new sources. Only fetches/processes new papers.
 
@@ -3000,7 +3001,8 @@ export class LiteratureController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Incremental extraction complete with merged themes and statistics',
+    description:
+      'Incremental extraction complete with merged themes and statistics',
   })
   async extractThemesIncremental(
     @CurrentUser() user: any,
@@ -3009,7 +3011,9 @@ export class LiteratureController {
     const startTime = Date.now();
 
     try {
-      this.logger.log(`Starting incremental extraction for user ${user.userId}: ${dto.newPaperIds.length} new papers`);
+      this.logger.log(
+        `Starting incremental extraction for user ${user.userId}: ${dto.newPaperIds.length} new papers`,
+      );
 
       // TODO: Implement incremental extraction logic
       // For now, return a basic response structure
@@ -3038,7 +3042,8 @@ export class LiteratureController {
           embeddingsSaved: 0,
           completionsSaved: 0,
           estimatedDollarsSaved: 0,
-          totalPapersProcessed: dto.newPaperIds.length + dto.existingPaperIds.length,
+          totalPapersProcessed:
+            dto.newPaperIds.length + dto.existingPaperIds.length,
           newPapersProcessed: dto.newPaperIds.length,
           cachedPapersReused: dto.existingPaperIds.length,
         },
@@ -3048,7 +3053,9 @@ export class LiteratureController {
       };
     } catch (error) {
       this.logger.error(`Error in incremental extraction:`, error);
-      throw new InternalServerErrorException('Failed to perform incremental extraction');
+      throw new InternalServerErrorException(
+        'Failed to perform incremental extraction',
+      );
     }
   }
 
@@ -3061,7 +3068,8 @@ export class LiteratureController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get all research corpuses for current user',
-    description: 'Retrieve list of all corpuses with metadata for corpus management',
+    description:
+      'Retrieve list of all corpuses with metadata for corpus management',
   })
   async getCorpusList(@CurrentUser() user: any): Promise<any[]> {
     try {
@@ -3105,14 +3113,14 @@ export class LiteratureController {
   })
   async createCorpus(
     @CurrentUser() user: any,
-    @Body() dto: { name: string; purpose: string; paperIds: string[] }
+    @Body() dto: { name: string; purpose: string; paperIds: string[] },
   ): Promise<any> {
     try {
       return await this.literatureCacheService.saveCorpus(
         user.userId,
         dto.paperIds,
         dto.purpose,
-        dto.name
+        dto.name,
       );
     } catch (error) {
       this.logger.error(`Error creating corpus:`, error);
@@ -3131,10 +3139,15 @@ export class LiteratureController {
     summary: 'Get corpus by ID',
     description: 'Retrieve detailed information about a specific corpus',
   })
-  async getCorpus(@CurrentUser() user: any, @Param('id') corpusId: string): Promise<any> {
+  async getCorpus(
+    @CurrentUser() user: any,
+    @Param('id') corpusId: string,
+  ): Promise<any> {
     try {
-      const corpuses = await this.literatureCacheService.getUserCorpuses(user.userId);
-      const corpus = corpuses.find(c => c.id === corpusId);
+      const corpuses = await this.literatureCacheService.getUserCorpuses(
+        user.userId,
+      );
+      const corpus = corpuses.find((c) => c.id === corpusId);
       if (!corpus) {
         throw new NotFoundException('Corpus not found');
       }
@@ -3162,12 +3175,14 @@ export class LiteratureController {
   async updateCorpus(
     @CurrentUser() user: any,
     @Param('id') corpusId: string,
-    @Body() updates: { name?: string; purpose?: string }
+    @Body() updates: { name?: string; purpose?: string },
   ): Promise<any> {
     try {
       // First verify corpus belongs to user
-      const corpuses = await this.literatureCacheService.getUserCorpuses(user.userId);
-      const corpus = corpuses.find(c => c.id === corpusId);
+      const corpuses = await this.literatureCacheService.getUserCorpuses(
+        user.userId,
+      );
+      const corpus = corpuses.find((c) => c.id === corpusId);
       if (!corpus) {
         throw new NotFoundException('Corpus not found');
       }
@@ -3202,11 +3217,16 @@ export class LiteratureController {
     summary: 'Delete a research corpus',
     description: 'Permanently delete a corpus and its cached data',
   })
-  async deleteCorpus(@CurrentUser() user: any, @Param('id') corpusId: string): Promise<void> {
+  async deleteCorpus(
+    @CurrentUser() user: any,
+    @Param('id') corpusId: string,
+  ): Promise<void> {
     try {
       // First verify corpus belongs to user
-      const corpuses = await this.literatureCacheService.getUserCorpuses(user.userId);
-      const corpus = corpuses.find(c => c.id === corpusId);
+      const corpuses = await this.literatureCacheService.getUserCorpuses(
+        user.userId,
+      );
+      const corpus = corpuses.find((c) => c.id === corpusId);
       if (!corpus) {
         throw new NotFoundException('Corpus not found');
       }

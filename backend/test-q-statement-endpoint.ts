@@ -29,19 +29,22 @@ async function testPublicEndpointExists(): Promise<TestResult> {
         themes: ['Theme 1', 'Theme 2', 'Theme 3'],
         studyContext: {
           topic: 'impact of social media on political campaigns',
-          purpose: 'Q-Methodology Study'
-        }
+          purpose: 'Q-Methodology Study',
+        },
       },
       {
         headers: {
           'Content-Type': 'application/json',
         },
-      }
+      },
     );
 
     console.log('✅ Response status:', response.status);
     console.log('✅ Response data type:', typeof response.data);
-    console.log('✅ Statements generated:', Array.isArray(response.data) ? response.data.length : 'N/A');
+    console.log(
+      '✅ Statements generated:',
+      Array.isArray(response.data) ? response.data.length : 'N/A',
+    );
 
     return {
       testName: 'Public endpoint exists and responds',
@@ -73,10 +76,10 @@ async function testRequiresThemes(): Promise<TestResult> {
       `${BASE_URL}/literature/statements/generate/public`,
       {
         studyContext: {
-          topic: 'test'
-        }
+          topic: 'test',
+        },
         // Missing themes
-      }
+      },
     );
 
     // Should not reach here - should fail validation
@@ -88,13 +91,20 @@ async function testRequiresThemes(): Promise<TestResult> {
     };
   } catch (error: any) {
     // Expected to fail with validation error
-    const is400Error = error.response?.status === 400 || error.response?.status === 500;
-    console.log(is400Error ? '✅' : '❌', 'Validation error received:', error.response?.status);
+    const is400Error =
+      error.response?.status === 400 || error.response?.status === 500;
+    console.log(
+      is400Error ? '✅' : '❌',
+      'Validation error received:',
+      error.response?.status,
+    );
 
     return {
       testName: 'Endpoint validates required fields',
       passed: is400Error,
-      error: is400Error ? undefined : 'Expected 400/500 but got: ' + error.response?.status,
+      error: is400Error
+        ? undefined
+        : 'Expected 400/500 but got: ' + error.response?.status,
     };
   }
 }
@@ -110,12 +120,15 @@ async function testMinimalData(): Promise<TestResult> {
       `${BASE_URL}/literature/statements/generate/public`,
       {
         themes: ['Single Theme'],
-        studyContext: {}
-      }
+        studyContext: {},
+      },
     );
 
     console.log('✅ Response status:', response.status);
-    console.log('✅ Statements generated:', Array.isArray(response.data) ? response.data.length : 'N/A');
+    console.log(
+      '✅ Statements generated:',
+      Array.isArray(response.data) ? response.data.length : 'N/A',
+    );
 
     return {
       testName: 'Works with minimal valid data',
@@ -141,7 +154,10 @@ async function testRealisticThemeCount(): Promise<TestResult> {
   try {
     console.log('\n🧪 Test 4: Works with realistic theme count (35 themes)');
 
-    const themes = Array.from({ length: 35 }, (_, i) => `Theme ${i + 1}: Social media impact aspect ${i + 1}`);
+    const themes = Array.from(
+      { length: 35 },
+      (_, i) => `Theme ${i + 1}: Social media impact aspect ${i + 1}`,
+    );
 
     const response = await axios.post(
       `${BASE_URL}/literature/statements/generate/public`,
@@ -150,20 +166,26 @@ async function testRealisticThemeCount(): Promise<TestResult> {
         studyContext: {
           topic: 'impact of social media on political campaigns',
           purpose: 'Q-Methodology Study',
-          targetStatements: 40
-        }
-      }
+          targetStatements: 40,
+        },
+      },
     );
 
     console.log('✅ Response status:', response.status);
-    console.log('✅ Statements generated:', Array.isArray(response.data) ? response.data.length : 'N/A');
+    console.log(
+      '✅ Statements generated:',
+      Array.isArray(response.data) ? response.data.length : 'N/A',
+    );
     if (Array.isArray(response.data) && response.data.length > 0) {
       console.log('✅ Sample statement:', response.data[0]);
     }
 
     return {
       testName: 'Works with realistic theme count (35 themes)',
-      passed: response.status === 200 && Array.isArray(response.data) && response.data.length > 0,
+      passed:
+        response.status === 200 &&
+        Array.isArray(response.data) &&
+        response.data.length > 0,
       response: `Generated ${response.data?.length || 0} statements from 35 themes`,
     };
   } catch (error: any) {
@@ -193,7 +215,9 @@ async function runAllTests() {
     await axios.get(`${BASE_URL}/health`);
     console.log('✅ Backend is running\n');
   } catch {
-    console.error('❌ Backend is not running! Please start the backend server.');
+    console.error(
+      '❌ Backend is not running! Please start the backend server.',
+    );
     console.error('   Run: cd backend && npm run start:dev\n');
     process.exit(1);
   }
@@ -209,8 +233,8 @@ async function runAllTests() {
   console.log('   TEST SUMMARY');
   console.log('═══════════════════════════════════════════════════════\n');
 
-  const passed = results.filter(r => r.passed).length;
-  const failed = results.filter(r => !r.passed).length;
+  const passed = results.filter((r) => r.passed).length;
+  const failed = results.filter((r) => !r.passed).length;
 
   results.forEach((result, index) => {
     const icon = result.passed ? '✅' : '❌';
@@ -224,7 +248,9 @@ async function runAllTests() {
   console.log(`${failed}/${results.length} tests failed\n`);
 
   if (failed === 0) {
-    console.log('🎉 All tests passed! Q-Statement endpoint is working correctly.\n');
+    console.log(
+      '🎉 All tests passed! Q-Statement endpoint is working correctly.\n',
+    );
   } else {
     console.log('⚠️  Some tests failed. Please review the errors above.\n');
   }
@@ -235,7 +261,7 @@ async function runAllTests() {
 }
 
 // Run tests
-runAllTests().catch(error => {
+runAllTests().catch((error) => {
   console.error('Fatal error running tests:', error);
   process.exit(1);
 });

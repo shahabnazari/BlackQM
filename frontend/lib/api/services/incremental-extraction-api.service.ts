@@ -46,7 +46,11 @@ export interface SaturationAnalysis {
   confidenceLevel: number; // 0-1
   newThemesFound: number;
   existingThemesStrengthened: number;
-  recommendation: 'add_more_sources' | 'saturation_reached' | 'refine_search' | 'continue_extraction';
+  recommendation:
+    | 'add_more_sources'
+    | 'saturation_reached'
+    | 'refine_search'
+    | 'continue_extraction';
   rationale: string;
 }
 
@@ -119,7 +123,9 @@ export interface CorpusStats {
 export class IncrementalExtractionApiService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') {
+  constructor(
+    baseUrl: string = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+  ) {
     this.baseUrl = baseUrl;
   }
 
@@ -137,18 +143,23 @@ export class IncrementalExtractionApiService {
   async extractThemesIncremental(
     request: IncrementalExtractionRequest
   ): Promise<IncrementalExtractionResponse> {
-    const response = await fetch(`${this.baseUrl}/literature/themes/extract-incremental`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders(),
-      },
-      body: JSON.stringify(request),
-    });
+    const response = await fetch(
+      `${this.baseUrl}/literature/themes/extract-incremental`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify(request),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || 'Failed to extract themes incrementally');
+      throw new Error(
+        error.message || 'Failed to extract themes incrementally'
+      );
     }
 
     return response.json();
@@ -239,14 +250,17 @@ export class IncrementalExtractionApiService {
     corpusId: string,
     updates: Partial<Pick<CorpusInfo, 'name' | 'purpose'>>
   ): Promise<CorpusInfo> {
-    const response = await fetch(`${this.baseUrl}/literature/corpus/${corpusId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders(),
-      },
-      body: JSON.stringify(updates),
-    });
+    const response = await fetch(
+      `${this.baseUrl}/literature/corpus/${corpusId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify(updates),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -262,13 +276,16 @@ export class IncrementalExtractionApiService {
    * @param corpusId Corpus ID to delete
    */
   async deleteCorpus(corpusId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/literature/corpus/${corpusId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders(),
-      },
-    });
+    const response = await fetch(
+      `${this.baseUrl}/literature/corpus/${corpusId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -283,13 +300,16 @@ export class IncrementalExtractionApiService {
    * @returns Corpus information with full details
    */
   async getCorpus(corpusId: string): Promise<CorpusInfo> {
-    const response = await fetch(`${this.baseUrl}/literature/corpus/${corpusId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders(),
-      },
-    });
+    const response = await fetch(
+      `${this.baseUrl}/literature/corpus/${corpusId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();

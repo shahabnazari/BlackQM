@@ -113,12 +113,7 @@ describe('Form Input - Accessibility', () => {
       <form>
         <label htmlFor="username">
           Username
-          <input
-            id="username"
-            type="text"
-            name="username"
-            required
-          />
+          <input id="username" type="text" name="username" required />
         </label>
       </form>
     );
@@ -136,11 +131,7 @@ describe('Form Input - Accessibility', () => {
 describe('Modal Dialog - Accessibility', () => {
   it('should have proper ARIA role and label', () => {
     render(
-      <div
-        role="dialog"
-        aria-labelledby="dialog-title"
-        aria-modal="true"
-      >
+      <div role="dialog" aria-labelledby="dialog-title" aria-modal="true">
         <h2 id="dialog-title">Confirm Action</h2>
         <p>Are you sure you want to delete this item?</p>
         <button type="button">Cancel</button>
@@ -156,9 +147,15 @@ describe('Modal Dialog - Accessibility', () => {
   it('should trap focus within modal', () => {
     render(
       <div role="dialog" aria-modal="true">
-        <button type="button" data-testid="first-button">First</button>
-        <button type="button" data-testid="second-button">Second</button>
-        <button type="button" data-testid="last-button">Last</button>
+        <button type="button" data-testid="first-button">
+          First
+        </button>
+        <button type="button" data-testid="second-button">
+          Second
+        </button>
+        <button type="button" data-testid="last-button">
+          Last
+        </button>
       </div>
     );
 
@@ -202,9 +199,15 @@ describe('Navigation Menu - Accessibility', () => {
     render(
       <nav aria-label="Main navigation">
         <ul>
-          <li><a href="/home">Home</a></li>
-          <li><a href="/about">About</a></li>
-          <li><a href="/contact">Contact</a></li>
+          <li>
+            <a href="/home">Home</a>
+          </li>
+          <li>
+            <a href="/about">About</a>
+          </li>
+          <li>
+            <a href="/contact">Contact</a>
+          </li>
         </ul>
       </nav>
     );
@@ -222,12 +225,17 @@ describe('Navigation Menu - Accessibility', () => {
               Home
             </a>
           </li>
-          <li><a href="/about">About</a></li>
+          <li>
+            <a href="/about">About</a>
+          </li>
         </ul>
       </nav>
     );
 
-    const currentLink = screen.getByRole('link', { name: 'Home', current: 'page' });
+    const currentLink = screen.getByRole('link', {
+      name: 'Home',
+      current: 'page',
+    });
     expect(currentLink).toBeInTheDocument();
   });
 
@@ -235,8 +243,12 @@ describe('Navigation Menu - Accessibility', () => {
     const { container } = render(
       <nav aria-label="Primary">
         <ul role="list">
-          <li><a href="/">Home</a></li>
-          <li><a href="/about">About</a></li>
+          <li>
+            <a href="/">Home</a>
+          </li>
+          <li>
+            <a href="/about">About</a>
+          </li>
         </ul>
       </nav>
     );
@@ -265,13 +277,7 @@ describe('Image - Accessibility', () => {
   });
 
   it('should use empty alt for decorative images', () => {
-    render(
-      <img
-        src="/decoration.png"
-        alt=""
-        role="presentation"
-      />
-    );
+    render(<img src="/decoration.png" alt="" role="presentation" />);
 
     const img = screen.getByRole('presentation');
     expect(img).toHaveAttribute('alt', '');

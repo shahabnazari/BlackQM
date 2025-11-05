@@ -30,21 +30,21 @@ module.exports = {
 
   // Coverage reporters
   coverageReporters: [
-    'text',           // Console output
-    'text-summary',   // Summary in console
-    'html',           // HTML report
-    'lcov',           // For CI tools like Codecov
-    'json',           // JSON format
-    'json-summary',   // Summary JSON
+    'text', // Console output
+    'text-summary', // Summary in console
+    'html', // HTML report
+    'lcov', // For CI tools like Codecov
+    'json', // JSON format
+    'json-summary', // Summary JSON
   ],
 
   // Coverage thresholds (Phase 1 target: 40%, Phase 2: 60%, Phase 3: 75%)
   coverageThresholds: {
     global: {
-      statements: 40,    // Current: 21%, Target: 75%
-      branches: 35,      // Current: 14%, Target: 70%
-      functions: 40,     // Current: 22%, Target: 75%
-      lines: 40,         // Current: 20%, Target: 75%
+      statements: 40, // Current: 21%, Target: 75%
+      branches: 35, // Current: 14%, Target: 70%
+      functions: 40, // Current: 22%, Target: 75%
+      lines: 40, // Current: 20%, Target: 75%
     },
     // Module-specific thresholds
     'backend/src/modules/analysis/**/*.ts': {
@@ -54,7 +54,7 @@ module.exports = {
       lines: 50,
     },
     'backend/src/modules/report/**/*.ts': {
-      statements: 30,    // New module, lower threshold
+      statements: 30, // New module, lower threshold
       branches: 25,
       functions: 30,
       lines: 30,
@@ -66,7 +66,7 @@ module.exports = {
       lines: 35,
     },
     'frontend/components/**/*.{ts,tsx}': {
-      statements: 60,    // UI components should be well-tested
+      statements: 60, // UI components should be well-tested
       branches: 50,
       functions: 60,
       lines: 60,

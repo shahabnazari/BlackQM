@@ -19,9 +19,17 @@ import {
   type CorpusInfo,
   type IncrementalExtractionResponse,
   ResearchPurpose,
-  UserExpertiseLevel
+  UserExpertiseLevel,
 } from '@/lib/api/services/incremental-extraction-api.service';
-import { X, Plus, FileText, TrendingDown, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
+import {
+  X,
+  Plus,
+  FileText,
+  TrendingDown,
+  Loader2,
+  CheckCircle,
+  AlertTriangle,
+} from 'lucide-react';
 
 interface Paper {
   id: string;
@@ -45,12 +53,22 @@ export function IncrementalExtractionModal({
   availablePapers,
   existingCorpus,
 }: IncrementalExtractionModalProps) {
-  const [step, setStep] = useState<'select-corpus' | 'select-papers' | 'configure' | 'extracting'>('select-corpus');
-  const [selectedCorpus, setSelectedCorpus] = useState<CorpusInfo | null>(existingCorpus || null);
+  const [step, setStep] = useState<
+    'select-corpus' | 'select-papers' | 'configure' | 'extracting'
+  >('select-corpus');
+  const [selectedCorpus, setSelectedCorpus] = useState<CorpusInfo | null>(
+    existingCorpus || null
+  );
   const [corpuses, setCorpuses] = useState<CorpusInfo[]>([]);
-  const [selectedPaperIds, setSelectedPaperIds] = useState<Set<string>>(new Set());
-  const [purpose, setPurpose] = useState<ResearchPurpose>(ResearchPurpose.EXPLORATORY);
-  const [expertiseLevel, setExpertiseLevel] = useState<UserExpertiseLevel>(UserExpertiseLevel.INTERMEDIATE);
+  const [selectedPaperIds, setSelectedPaperIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [purpose, setPurpose] = useState<ResearchPurpose>(
+    ResearchPurpose.EXPLORATORY
+  );
+  const [expertiseLevel, setExpertiseLevel] = useState<UserExpertiseLevel>(
+    UserExpertiseLevel.INTERMEDIATE
+  );
   const [corpusName, setCorpusName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +145,8 @@ export function IncrementalExtractionModal({
         requestPayload.corpusName = corpusName;
       }
 
-      const result = await incrementalExtractionApi.extractThemesIncremental(requestPayload);
+      const result =
+        await incrementalExtractionApi.extractThemesIncremental(requestPayload);
 
       onComplete(result);
       resetModal();
@@ -159,7 +178,9 @@ export function IncrementalExtractionModal({
   if (!isOpen) return null;
 
   const existingPaperIds = new Set(selectedCorpus?.paperIds || []);
-  const availableNewPapers = availablePapers.filter(p => !existingPaperIds.has(p.id));
+  const availableNewPapers = availablePapers.filter(
+    p => !existingPaperIds.has(p.id)
+  );
   const estimatedSavings = existingPaperIds.size * 0.015; // Rough estimate
 
   return (
@@ -172,7 +193,9 @@ export function IncrementalExtractionModal({
               Incremental Theme Extraction
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Add papers to {selectedCorpus ? `"${selectedCorpus.name}"` : 'a corpus'} and merge themes
+              Add papers to{' '}
+              {selectedCorpus ? `"${selectedCorpus.name}"` : 'a corpus'} and
+              merge themes
             </p>
           </div>
           <button
@@ -195,7 +218,7 @@ export function IncrementalExtractionModal({
 
               {corpuses.length > 0 && (
                 <div className="space-y-2 mb-6">
-                  {corpuses.map((corpus) => (
+                  {corpuses.map(corpus => (
                     <button
                       key={corpus.id}
                       onClick={() => {
@@ -205,9 +228,12 @@ export function IncrementalExtractionModal({
                       }}
                       className="w-full text-left p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                     >
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{corpus.name}</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                        {corpus.name}
+                      </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {corpus.paperIds.length} papers • {corpus.themeCount} themes • {corpus.totalExtractions} extractions
+                        {corpus.paperIds.length} papers • {corpus.themeCount}{' '}
+                        themes • {corpus.totalExtractions} extractions
                       </p>
                     </button>
                   ))}
@@ -221,7 +247,7 @@ export function IncrementalExtractionModal({
                 <input
                   type="text"
                   value={corpusName}
-                  onChange={(e) => setCorpusName(e.target.value)}
+                  onChange={e => setCorpusName(e.target.value)}
                   placeholder="Enter corpus name..."
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -275,7 +301,7 @@ export function IncrementalExtractionModal({
                 </div>
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {availableNewPapers.map((paper) => (
+                  {availableNewPapers.map(paper => (
                     <label
                       key={paper.id}
                       className="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900/50 cursor-pointer transition-colors"
@@ -293,7 +319,8 @@ export function IncrementalExtractionModal({
                         {paper.authors && paper.authors.length > 0 && (
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                             {paper.authors.slice(0, 3).join(', ')}
-                            {paper.authors.length > 3 && ` +${paper.authors.length - 3} more`}
+                            {paper.authors.length > 3 &&
+                              ` +${paper.authors.length - 3} more`}
                           </p>
                         )}
                       </div>
@@ -313,10 +340,12 @@ export function IncrementalExtractionModal({
                   <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                      Adding {selectedPaperIds.size} new papers to {existingPaperIds.size} existing papers
+                      Adding {selectedPaperIds.size} new papers to{' '}
+                      {existingPaperIds.size} existing papers
                     </p>
                     <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                      Total corpus size: {existingPaperIds.size + selectedPaperIds.size} papers
+                      Total corpus size:{' '}
+                      {existingPaperIds.size + selectedPaperIds.size} papers
                     </p>
                   </div>
                 </div>
@@ -332,7 +361,8 @@ export function IncrementalExtractionModal({
                         Estimated savings: ${estimatedSavings.toFixed(2)}
                       </p>
                       <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                        {existingPaperIds.size} papers will be retrieved from cache
+                        {existingPaperIds.size} papers will be retrieved from
+                        cache
                       </p>
                     </div>
                   </div>
@@ -346,14 +376,20 @@ export function IncrementalExtractionModal({
                 </label>
                 <select
                   value={purpose}
-                  onChange={(e) => setPurpose(e.target.value as ResearchPurpose)}
+                  onChange={e => setPurpose(e.target.value as ResearchPurpose)}
                   disabled={!!selectedCorpus}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <option value={ResearchPurpose.EXPLORATORY}>Exploratory</option>
-                  <option value={ResearchPurpose.EXPLANATORY}>Explanatory</option>
+                  <option value={ResearchPurpose.EXPLORATORY}>
+                    Exploratory
+                  </option>
+                  <option value={ResearchPurpose.EXPLANATORY}>
+                    Explanatory
+                  </option>
                   <option value={ResearchPurpose.EVALUATIVE}>Evaluative</option>
-                  <option value={ResearchPurpose.DESCRIPTIVE}>Descriptive</option>
+                  <option value={ResearchPurpose.DESCRIPTIVE}>
+                    Descriptive
+                  </option>
                 </select>
                 {selectedCorpus && (
                   <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
@@ -369,11 +405,15 @@ export function IncrementalExtractionModal({
                 </label>
                 <select
                   value={expertiseLevel}
-                  onChange={(e) => setExpertiseLevel(e.target.value as UserExpertiseLevel)}
+                  onChange={e =>
+                    setExpertiseLevel(e.target.value as UserExpertiseLevel)
+                  }
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value={UserExpertiseLevel.NOVICE}>Novice</option>
-                  <option value={UserExpertiseLevel.INTERMEDIATE}>Intermediate</option>
+                  <option value={UserExpertiseLevel.INTERMEDIATE}>
+                    Intermediate
+                  </option>
                   <option value={UserExpertiseLevel.ADVANCED}>Advanced</option>
                   <option value={UserExpertiseLevel.EXPERT}>Expert</option>
                 </select>
@@ -383,7 +423,9 @@ export function IncrementalExtractionModal({
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+                    <p className="text-sm text-red-700 dark:text-red-300">
+                      {error}
+                    </p>
                   </div>
                 </div>
               )}
@@ -398,7 +440,8 @@ export function IncrementalExtractionModal({
                 Extracting Themes Incrementally...
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Merging {selectedPaperIds.size} new papers with {existingPaperIds.size} existing papers
+                Merging {selectedPaperIds.size} new papers with{' '}
+                {existingPaperIds.size} existing papers
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-500 italic">
                 Retrieving cached content to save costs...

@@ -14,15 +14,31 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { incrementalExtractionApi, type CorpusInfo } from '@/lib/api/services/incremental-extraction-api.service';
-import { Plus, Edit2, Trash2, FileText, Calendar, TrendingUp, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  incrementalExtractionApi,
+  type CorpusInfo,
+} from '@/lib/api/services/incremental-extraction-api.service';
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  FileText,
+  Calendar,
+  TrendingUp,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
 
 interface CorpusManagementPanelProps {
   onSelectCorpus?: (corpus: CorpusInfo) => void;
   onCreateCorpus?: () => void;
 }
 
-export function CorpusManagementPanel({ onSelectCorpus, onCreateCorpus }: CorpusManagementPanelProps) {
+export function CorpusManagementPanel({
+  onSelectCorpus,
+  onCreateCorpus,
+}: CorpusManagementPanelProps) {
   const [corpuses, setCorpuses] = useState<CorpusInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +53,13 @@ export function CorpusManagementPanel({ onSelectCorpus, onCreateCorpus }: Corpus
       setLoading(true);
       setError(null);
       const data = await incrementalExtractionApi.getCorpusList();
-      setCorpuses(data.sort((a, b) => new Date(b.lastExtractedAt).getTime() - new Date(a.lastExtractedAt).getTime()));
+      setCorpuses(
+        data.sort(
+          (a, b) =>
+            new Date(b.lastExtractedAt).getTime() -
+            new Date(a.lastExtractedAt).getTime()
+        )
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load corpuses');
       console.error('Error loading corpuses:', err);
@@ -47,7 +69,9 @@ export function CorpusManagementPanel({ onSelectCorpus, onCreateCorpus }: Corpus
   };
 
   const handleDelete = async (corpusId: string, corpusName: string) => {
-    if (!confirm(`Delete corpus "${corpusName}"? This action cannot be undone.`)) {
+    if (
+      !confirm(`Delete corpus "${corpusName}"? This action cannot be undone.`)
+    ) {
       return;
     }
 
@@ -164,19 +188,28 @@ export function CorpusManagementPanel({ onSelectCorpus, onCreateCorpus }: Corpus
         {corpuses.length > 0 && (
           <div className="grid grid-cols-3 gap-4 mt-4">
             <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
-              <p className="text-xs text-gray-600 dark:text-gray-400">Total Corpuses</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Total Corpuses
+              </p>
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
                 {corpuses.length}
               </p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
-              <p className="text-xs text-gray-600 dark:text-gray-400">Active Research</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Active Research
+              </p>
               <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
-                {corpuses.filter(c => !c.isSaturated && c.totalExtractions > 1).length}
+                {
+                  corpuses.filter(c => !c.isSaturated && c.totalExtractions > 1)
+                    .length
+                }
               </p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
-              <p className="text-xs text-gray-600 dark:text-gray-400">Total Saved</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Total Saved
+              </p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
                 ${corpuses.reduce((sum, c) => sum + c.costSaved, 0).toFixed(2)}
               </p>
@@ -205,7 +238,7 @@ export function CorpusManagementPanel({ onSelectCorpus, onCreateCorpus }: Corpus
             </button>
           </div>
         ) : (
-          corpuses.map((corpus) => {
+          corpuses.map(corpus => {
             const status = getStatusInfo(corpus);
             const StatusIcon = status.icon;
 
@@ -222,7 +255,9 @@ export function CorpusManagementPanel({ onSelectCorpus, onCreateCorpus }: Corpus
                       <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
                         {corpus.name}
                       </h4>
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${status.bgColor} ${status.color} border ${status.borderColor}`}>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${status.bgColor} ${status.color} border ${status.borderColor}`}
+                      >
                         <StatusIcon className="w-3 h-3" />
                         {status.label}
                       </span>
@@ -230,31 +265,42 @@ export function CorpusManagementPanel({ onSelectCorpus, onCreateCorpus }: Corpus
 
                     {/* Purpose */}
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                      Purpose: <span className="font-medium text-gray-700 dark:text-gray-300">{getPurposeLabel(corpus.purpose)}</span>
+                      Purpose:{' '}
+                      <span className="font-medium text-gray-700 dark:text-gray-300">
+                        {getPurposeLabel(corpus.purpose)}
+                      </span>
                     </p>
 
                     {/* Metadata Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                       <div>
-                        <p className="text-gray-500 dark:text-gray-500">Papers</p>
+                        <p className="text-gray-500 dark:text-gray-500">
+                          Papers
+                        </p>
                         <p className="font-medium text-gray-900 dark:text-gray-100 mt-0.5">
                           {corpus.paperIds.length}
                         </p>
                       </div>
                       <div>
-                        <p className="text-gray-500 dark:text-gray-500">Themes</p>
+                        <p className="text-gray-500 dark:text-gray-500">
+                          Themes
+                        </p>
                         <p className="font-medium text-gray-900 dark:text-gray-100 mt-0.5">
                           {corpus.themeCount}
                         </p>
                       </div>
                       <div>
-                        <p className="text-gray-500 dark:text-gray-500">Extractions</p>
+                        <p className="text-gray-500 dark:text-gray-500">
+                          Extractions
+                        </p>
                         <p className="font-medium text-gray-900 dark:text-gray-100 mt-0.5">
                           {corpus.totalExtractions}
                         </p>
                       </div>
                       <div>
-                        <p className="text-gray-500 dark:text-gray-500">Cost Saved</p>
+                        <p className="text-gray-500 dark:text-gray-500">
+                          Cost Saved
+                        </p>
                         <p className="font-medium text-green-600 dark:text-green-400 mt-0.5">
                           ${corpus.costSaved.toFixed(2)}
                         </p>
@@ -271,7 +317,7 @@ export function CorpusManagementPanel({ onSelectCorpus, onCreateCorpus }: Corpus
                   {/* Actions */}
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation();
                         // TODO: Implement edit modal
                         alert('Edit functionality coming soon');
@@ -282,7 +328,7 @@ export function CorpusManagementPanel({ onSelectCorpus, onCreateCorpus }: Corpus
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation();
                         handleDelete(corpus.id, corpus.name);
                       }}
@@ -308,7 +354,8 @@ export function CorpusManagementPanel({ onSelectCorpus, onCreateCorpus }: Corpus
       {corpuses.length > 0 && (
         <div className="p-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
           <p className="text-xs text-gray-500 dark:text-gray-500 italic">
-            💡 Iterative corpus building supports theoretical saturation (Glaser & Strauss 1967) and meta-ethnography (Noblit & Hare 1988)
+            💡 Iterative corpus building supports theoretical saturation (Glaser
+            & Strauss 1967) and meta-ethnography (Noblit & Hare 1988)
           </p>
         </div>
       )}

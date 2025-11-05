@@ -4,7 +4,15 @@
  * Data Transfer Objects for incremental theme extraction with caching
  */
 
-import { IsArray, IsEnum, IsOptional, IsString, IsNumber, Min, Max } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsNumber,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export enum ResearchPurpose {
@@ -116,7 +124,11 @@ export interface SaturationAnalysis {
   confidenceLevel: number; // 0-1
   newThemesFound: number;
   existingThemesStrengthened: number;
-  recommendation: 'add_more_sources' | 'saturation_reached' | 'refine_search' | 'continue_extraction';
+  recommendation:
+    | 'add_more_sources'
+    | 'saturation_reached'
+    | 'refine_search'
+    | 'continue_extraction';
   rationale: string;
 }
 

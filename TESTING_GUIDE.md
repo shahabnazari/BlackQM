@@ -7,6 +7,7 @@
 ## Overview
 
 VQMethod has comprehensive testing infrastructure across backend and frontend:
+
 - **Backend:** Jest with 850 tests (659 passing, 191 to fix)
 - **Frontend:** Vitest + React Testing Library + Playwright
 - **Accessibility:** axe-core + WCAG 2.1 AA compliance
@@ -275,12 +276,14 @@ describe('Example Accessibility', () => {
 ### Required Standards
 
 #### 1. **Keyboard Navigation**
+
 - All interactive elements accessible via Tab/Shift+Tab
 - Enter/Space to activate buttons/links
 - Arrow keys for dropdown menus and sliders
 - Escape to close modals/menus
 
 **Test:**
+
 ```typescript
 it('supports keyboard navigation', () => {
   render(<Component />);
@@ -293,12 +296,14 @@ it('supports keyboard navigation', () => {
 ```
 
 #### 2. **ARIA Labels**
+
 - All dynamic content has aria-live regions
 - Form inputs have aria-label or aria-labelledby
 - Buttons have aria-label when text unclear
 - aria-hidden for decorative elements
 
 **Test:**
+
 ```typescript
 it('has proper ARIA labels', () => {
   const { getByLabelText } = render(<Form />);
@@ -308,22 +313,26 @@ it('has proper ARIA labels', () => {
 ```
 
 #### 3. **Color Contrast**
+
 - Minimum 4.5:1 for normal text
 - Minimum 3:1 for large text (18pt+)
 - Minimum 3:1 for UI components
 
 **Test:**
+
 ```bash
 # Automated check via axe-core
 npm run a11y:check
 ```
 
 #### 4. **Focus Indicators**
+
 - Visible focus outline (at least 2px)
 - High contrast focus indicator
 - Not removed via CSS
 
 **Test:**
+
 ```typescript
 it('shows focus indicator', () => {
   const { getByRole } = render(<Button />);
@@ -334,12 +343,14 @@ it('shows focus indicator', () => {
 ```
 
 #### 5. **Screen Reader Support**
+
 - Semantic HTML elements
 - Proper heading hierarchy (h1 → h2 → h3)
 - Alt text for images
 - aria-describedby for complex widgets
 
 **Test:**
+
 ```bash
 # Manual test with screen reader
 # macOS: VoiceOver (Cmd+F5)
@@ -352,28 +363,31 @@ it('shows focus indicator', () => {
 
 ### Current Status (January 2025)
 
-| Module | Coverage | Target | Status |
-|--------|----------|--------|--------|
-| Overall | 21% | 75% | 🔴 |
-| app.controller | 86% | 80% | ✅ |
-| Analysis Module | 35% | 75% | 🔴 |
-| Literature Module | 15% | 75% | 🔴 |
-| Report Module | 5% | 75% | 🔴 |
-| Auth Module | 45% | 80% | 🔴 |
+| Module            | Coverage | Target | Status |
+| ----------------- | -------- | ------ | ------ |
+| Overall           | 21%      | 75%    | 🔴     |
+| app.controller    | 86%      | 80%    | ✅     |
+| Analysis Module   | 35%      | 75%    | 🔴     |
+| Literature Module | 15%      | 75%    | 🔴     |
+| Report Module     | 5%       | 75%    | 🔴     |
+| Auth Module       | 45%      | 80%    | 🔴     |
 
 ### Improvement Plan
 
 **Phase 1: Critical Path (Weeks 1-2)** - Target 40%
+
 - Fix 191 failing tests
 - Add missing unit tests for new services (Days 5.8-5.17)
 - Cover report generation critical path
 
 **Phase 2: Integration (Weeks 3-4)** - Target 60%
+
 - Add E2E tests for complete workflows
 - Add integration tests for Phase 9 → Phase 10 pipeline
 - Cover error handling paths
 
 **Phase 3: Edge Cases (Weeks 5-6)** - Target 75%
+
 - Add edge case tests
 - Add performance regression tests
 - Add accessibility test coverage
@@ -459,16 +473,19 @@ jobs:
 ### Failing Tests (191 total)
 
 **Priority 1: Service Tests (85 failures)**
+
 - PDF queue service retry logic (3 tests)
 - Theme extraction service timeouts (12 tests)
 - OpenAI service rate limiting (8 tests)
 
 **Priority 2: Integration Tests (56 failures)**
+
 - Database connection issues in CI
 - Missing test fixtures
 - Async timing issues
 
 **Priority 3: E2E Tests (50 failures)**
+
 - Flaky tests due to network conditions
 - Authentication state issues
 - Browser-specific rendering differences
@@ -512,6 +529,7 @@ jobs:
 ## Support
 
 **Questions?** Check the test files for examples:
+
 - Backend: `backend/src/modules/*/tests/*.spec.ts`
 - Frontend: `frontend/components/*/__tests__/*.test.tsx`
 - E2E: `frontend/e2e/*.spec.ts`

@@ -65,7 +65,7 @@ export class LiteratureCacheService {
   async cacheFullText(
     paperId: string,
     userId: string,
-    content: string
+    content: string,
   ): Promise<void> {
     const hash = this.generateContentHash(content);
     const wordCount = this.countWords(content);
@@ -94,9 +94,14 @@ export class LiteratureCacheService {
         },
       });
 
-      this.logger.log(`Cached full-text for paper ${paperId} (${wordCount} words)`);
+      this.logger.log(
+        `Cached full-text for paper ${paperId} (${wordCount} words)`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to cache full-text for paper ${paperId}:`, error);
+      this.logger.error(
+        `Failed to cache full-text for paper ${paperId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -106,7 +111,7 @@ export class LiteratureCacheService {
    */
   async getCachedFullText(
     paperId: string,
-    userId: string
+    userId: string,
   ): Promise<string | null> {
     try {
       const cached = await this.prisma.processedLiterature.findUnique({
@@ -129,7 +134,10 @@ export class LiteratureCacheService {
       this.logger.debug(`Cache MISS for paper ${paperId}`);
       return null;
     } catch (error) {
-      this.logger.error(`Error retrieving cached content for paper ${paperId}:`, error);
+      this.logger.error(
+        `Error retrieving cached content for paper ${paperId}:`,
+        error,
+      );
       return null;
     }
   }
@@ -140,7 +148,7 @@ export class LiteratureCacheService {
   async cacheEmbeddings(
     paperId: string,
     userId: string,
-    embeddings: number[]
+    embeddings: number[],
   ): Promise<void> {
     try {
       const existing = await this.prisma.processedLiterature.findUnique({
@@ -161,9 +169,14 @@ export class LiteratureCacheService {
         },
       });
 
-      this.logger.log(`Cached embeddings for paper ${paperId} (${embeddings.length} dimensions)`);
+      this.logger.log(
+        `Cached embeddings for paper ${paperId} (${embeddings.length} dimensions)`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to cache embeddings for paper ${paperId}:`, error);
+      this.logger.error(
+        `Failed to cache embeddings for paper ${paperId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -173,7 +186,7 @@ export class LiteratureCacheService {
    */
   async getCachedEmbeddings(
     paperId: string,
-    userId: string
+    userId: string,
   ): Promise<number[] | null> {
     try {
       const cached = await this.prisma.processedLiterature.findUnique({
@@ -191,7 +204,10 @@ export class LiteratureCacheService {
       this.logger.debug(`Embeddings cache MISS for paper ${paperId}`);
       return null;
     } catch (error) {
-      this.logger.error(`Error retrieving cached embeddings for paper ${paperId}:`, error);
+      this.logger.error(
+        `Error retrieving cached embeddings for paper ${paperId}:`,
+        error,
+      );
       return null;
     }
   }
@@ -209,7 +225,10 @@ export class LiteratureCacheService {
       });
       return count > 0;
     } catch (error) {
-      this.logger.error(`Error checking if paper ${paperId} is processed:`, error);
+      this.logger.error(
+        `Error checking if paper ${paperId} is processed:`,
+        error,
+      );
       return false;
     }
   }
@@ -230,7 +249,10 @@ export class LiteratureCacheService {
 
       const totalPapers = cached.length;
       const cachedCount = cached.length;
-      const totalExtractions = cached.reduce((sum, c) => sum + c.extractionCount, 0);
+      const totalExtractions = cached.reduce(
+        (sum, c) => sum + c.extractionCount,
+        0,
+      );
       const averageReuse = totalPapers > 0 ? totalExtractions / totalPapers : 0;
 
       // Calculate estimated cost saved
@@ -238,9 +260,11 @@ export class LiteratureCacheService {
       cached.forEach((c) => {
         if (c.extractionCount > 1) {
           const reuses = c.extractionCount - 1; // Subtract initial processing
-          const tokens = (c.wordCount / this.AVG_WORDS_PER_TOKEN);
-          const embeddingCost = (tokens / 1000) * this.COST_PER_1K_TOKENS_EMBEDDING;
-          const completionCost = (tokens / 1000) * this.COST_PER_1K_TOKENS_COMPLETION;
+          const tokens = c.wordCount / this.AVG_WORDS_PER_TOKEN;
+          const embeddingCost =
+            (tokens / 1000) * this.COST_PER_1K_TOKENS_EMBEDDING;
+          const completionCost =
+            (tokens / 1000) * this.COST_PER_1K_TOKENS_COMPLETION;
           costSaved += reuses * (embeddingCost + completionCost);
         }
       });
@@ -253,7 +277,10 @@ export class LiteratureCacheService {
         averageReuse: Math.round(averageReuse * 10) / 10,
       };
     } catch (error) {
-      this.logger.error(`Error calculating corpus stats for user ${userId}:`, error);
+      this.logger.error(
+        `Error calculating corpus stats for user ${userId}:`,
+        error,
+      );
       return {
         totalPapers: 0,
         cachedCount: 0,
@@ -272,7 +299,7 @@ export class LiteratureCacheService {
     paperIds: string[],
     purpose: string,
     name?: string,
-    themeCount?: number
+    themeCount?: number,
   ): Promise<CorpusInfo> {
     try {
       // Check if corpus with same papers exists
@@ -331,7 +358,7 @@ export class LiteratureCacheService {
         orderBy: { lastExtractedAt: 'desc' },
       });
 
-      return corpuses.map(c => ({
+      return corpuses.map((c) => ({
         id: c.id,
         userId: c.userId,
         name: c.name,
@@ -356,7 +383,7 @@ export class LiteratureCacheService {
   async updateSaturationStatus(
     corpusId: string,
     isSaturated: boolean,
-    confidence: number
+    confidence: number,
   ): Promise<void> {
     try {
       await this.prisma.extractionCorpus.update({
@@ -367,9 +394,14 @@ export class LiteratureCacheService {
         },
       });
 
-      this.logger.log(`Updated saturation status for corpus ${corpusId}: ${isSaturated} (confidence: ${confidence})`);
+      this.logger.log(
+        `Updated saturation status for corpus ${corpusId}: ${isSaturated} (confidence: ${confidence})`,
+      );
     } catch (error) {
-      this.logger.error(`Error updating saturation status for corpus ${corpusId}:`, error);
+      this.logger.error(
+        `Error updating saturation status for corpus ${corpusId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -377,7 +409,10 @@ export class LiteratureCacheService {
   /**
    * Update cost savings for corpus
    */
-  async updateCostSavings(corpusId: string, additionalSavings: number): Promise<void> {
+  async updateCostSavings(
+    corpusId: string,
+    additionalSavings: number,
+  ): Promise<void> {
     try {
       await this.prisma.extractionCorpus.update({
         where: { id: corpusId },
@@ -386,7 +421,10 @@ export class LiteratureCacheService {
         },
       });
     } catch (error) {
-      this.logger.error(`Error updating cost savings for corpus ${corpusId}:`, error);
+      this.logger.error(
+        `Error updating cost savings for corpus ${corpusId}:`,
+        error,
+      );
     }
   }
 
@@ -406,7 +444,9 @@ export class LiteratureCacheService {
         },
       });
 
-      this.logger.log(`Cleaned up ${result.count} old cache entries (>${daysOld} days)`);
+      this.logger.log(
+        `Cleaned up ${result.count} old cache entries (>${daysOld} days)`,
+      );
       return result.count;
     } catch (error) {
       this.logger.error(`Error cleaning up old cache:`, error);

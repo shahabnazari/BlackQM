@@ -907,7 +907,9 @@ class LiteratureAPIService {
         themes,
         studyContext,
       });
-      console.log(`✅ [Q-Statements] Generated ${response.data?.length || 0} statements`);
+      console.log(
+        `✅ [Q-Statements] Generated ${response.data?.length || 0} statements`
+      );
       return response.data;
     } catch (error) {
       console.error('❌ [Q-Statements] Generation failed:', error);
