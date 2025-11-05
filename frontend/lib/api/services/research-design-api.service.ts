@@ -97,7 +97,11 @@ export interface TheoryDiagram {
 }
 
 export interface MethodologyRecommendation {
-  methodology: 'q-methodology' | 'mixed-methods' | 'qualitative' | 'quantitative';
+  methodology:
+    | 'q-methodology'
+    | 'mixed-methods'
+    | 'qualitative'
+    | 'quantitative';
   suitabilityScore: number;
   reasoning: string;
   qMethodologyOptimization?: {
@@ -121,7 +125,11 @@ export interface QuestionAnalysisRequest {
     gaps: any[];
   };
   domain?: string;
-  methodology?: 'q-methodology' | 'mixed-methods' | 'qualitative' | 'quantitative';
+  methodology?:
+    | 'q-methodology'
+    | 'mixed-methods'
+    | 'qualitative'
+    | 'quantitative';
 }
 
 export interface HypothesisGenerationRequest {
@@ -140,16 +148,26 @@ class ResearchDesignAPIService {
   /**
    * Refine research question using SQUARE-IT framework
    */
-  async refineQuestion(request: QuestionAnalysisRequest): Promise<RefinedQuestion> {
-    const response = await apiClient.post('/research-design/refine-question', request);
+  async refineQuestion(
+    request: QuestionAnalysisRequest
+  ): Promise<RefinedQuestion> {
+    const response = await apiClient.post(
+      '/research-design/refine-question',
+      request
+    );
     return response.data;
   }
 
   /**
    * Generate hypotheses from contradictions, gaps, and trends
    */
-  async generateHypotheses(request: HypothesisGenerationRequest): Promise<GeneratedHypothesis[]> {
-    const response = await apiClient.post('/research-design/generate-hypotheses', request);
+  async generateHypotheses(
+    request: HypothesisGenerationRequest
+  ): Promise<GeneratedHypothesis[]> {
+    const response = await apiClient.post(
+      '/research-design/generate-hypotheses',
+      request
+    );
     return response.data;
   }
 
@@ -161,7 +179,10 @@ class ResearchDesignAPIService {
     themes: any[];
     knowledgeGraphData?: any;
   }): Promise<TheoryDiagram> {
-    const response = await apiClient.post('/research-design/build-theory-diagram', request);
+    const response = await apiClient.post(
+      '/research-design/build-theory-diagram',
+      request
+    );
     return response.data;
   }
 
@@ -173,7 +194,10 @@ class ResearchDesignAPIService {
     hypotheses: GeneratedHypothesis[];
     themes: any[];
   }): Promise<MethodologyRecommendation> {
-    const response = await apiClient.post('/research-design/recommend-methodology', request);
+    const response = await apiClient.post(
+      '/research-design/recommend-methodology',
+      request
+    );
     return response.data;
   }
 }

@@ -264,7 +264,9 @@ export class ReportCollaborationService {
       },
     });
 
-    return collaborator ? (collaborator.role as 'editor' | 'reviewer' | 'viewer') : null;
+    return collaborator
+      ? (collaborator.role as 'editor' | 'reviewer' | 'viewer')
+      : null;
   }
 
   /**

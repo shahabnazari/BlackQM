@@ -315,5 +315,4 @@ export class ReportVersionService {
 
     return changes;
   }
-
 }

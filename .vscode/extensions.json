@@ -5,34 +5,34 @@
     "dbaeumer.vscode-eslint",
     "bradlc.vscode-tailwindcss",
     "prisma.prisma",
-    
+
     // TypeScript and React
     "ms-vscode.vscode-typescript-next",
     "dsznajder.es7-react-js-snippets",
     "burkeholland.simple-react-snippets",
-    
+
     // File organization helpers
     "christian-kohler.path-intellisense",
     "naumovs.color-highlight",
     "streetsidesoftware.code-spell-checker",
-    
+
     // Git helpers
     "eamodio.gitlens",
     "mhutchie.git-graph",
-    
+
     // Testing
     "orta.vscode-jest",
     "ms-playwright.playwright",
-    
+
     // Documentation
     "yzhang.markdown-all-in-one",
     "davidanson.vscode-markdownlint",
-    
+
     // File templates
     "cantonios.project-templates",
     "denco.file-template"
   ],
-  
+
   "unwantedRecommendations": [
     // Extensions that might conflict with our standards
     "ms-vscode.vscode-typescript-tslint-plugin", // We use ESLint

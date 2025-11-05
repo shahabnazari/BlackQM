@@ -574,7 +574,11 @@ export class AIController {
   @Post('query/expand')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   async expandQuery(
-    @Body() dto: { query: string; domain?: 'climate' | 'health' | 'education' | 'general' },
+    @Body()
+    dto: {
+      query: string;
+      domain?: 'climate' | 'health' | 'education' | 'general';
+    },
     @Req() req: any,
   ) {
     try {
@@ -615,7 +619,11 @@ export class AIController {
   @Post('query/expand/public')
   @Throttle({ default: { limit: 50, ttl: 60000 } })
   async expandQueryPublic(
-    @Body() dto: { query: string; domain?: 'climate' | 'health' | 'education' | 'general' },
+    @Body()
+    dto: {
+      query: string;
+      domain?: 'climate' | 'health' | 'education' | 'general';
+    },
   ) {
     try {
       this.logger.log(`[PUBLIC] Expanding query: ${dto.query}`);
@@ -692,10 +700,7 @@ export class AIController {
 
   @Post('query/narrow')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
-  async narrowQuery(
-    @Body() dto: { query: string },
-    @Req() req: any,
-  ) {
+  async narrowQuery(@Body() dto: { query: string }, @Req() req: any) {
     try {
       this.logger.log(`Narrowing query: ${dto.query}`);
 

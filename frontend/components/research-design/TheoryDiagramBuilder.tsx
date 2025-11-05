@@ -7,7 +7,10 @@ import {
   ArrowDownTrayIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline';
-import { researchDesignAPI, TheoryDiagram } from '@/lib/api/services/research-design-api.service';
+import {
+  researchDesignAPI,
+  TheoryDiagram,
+} from '@/lib/api/services/research-design-api.service';
 
 /**
  * Phase 9.5 Day 3: Theory Diagram Builder
@@ -44,12 +47,14 @@ export default function TheoryDiagramBuilder({
   researchQuestion,
   themes = [],
   knowledgeGraphData,
-  onDiagramGenerated
+  onDiagramGenerated,
 }: TheoryDiagramBuilderProps) {
   const [diagram, setDiagram] = useState<TheoryDiagram | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedConstruct, setSelectedConstruct] = useState<string | null>(null);
+  const [selectedConstruct, setSelectedConstruct] = useState<string | null>(
+    null
+  );
 
   const handleGenerateDiagram = async () => {
     if (!researchQuestion.trim()) {
@@ -102,8 +107,12 @@ export default function TheoryDiagramBuilder({
             <CubeTransparentIcon className="w-6 h-6 text-purple-600" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Theory Framework Builder</h2>
-            <p className="text-sm text-gray-600">Conceptual framework from themes</p>
+            <h2 className="text-xl font-bold text-gray-900">
+              Theory Framework Builder
+            </h2>
+            <p className="text-sm text-gray-600">
+              Conceptual framework from themes
+            </p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
@@ -153,26 +162,40 @@ export default function TheoryDiagramBuilder({
               <div className="space-y-8">
                 {/* Constructs */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {diagram.constructs.map((construct) => (
+                  {diagram.constructs.map(construct => (
                     <button
                       key={construct.id}
-                      onClick={() => setSelectedConstruct(construct.id === selectedConstruct ? null : construct.id)}
+                      onClick={() =>
+                        setSelectedConstruct(
+                          construct.id === selectedConstruct
+                            ? null
+                            : construct.id
+                        )
+                      }
                       className={`p-4 rounded-lg border-2 transition-all ${
                         selectedConstruct === construct.id
                           ? 'border-purple-500 bg-purple-50 shadow-lg'
                           : 'border-gray-300 bg-white hover:border-purple-300 hover:shadow-md'
                       }`}
                     >
-                      <div className="text-sm font-bold text-gray-900 mb-1">{construct.name}</div>
-                      <div className="text-xs text-gray-600 line-clamp-2">{construct.definition}</div>
-                      <div className="text-xs text-purple-600 mt-2">{construct.sources.length} sources</div>
+                      <div className="text-sm font-bold text-gray-900 mb-1">
+                        {construct.name}
+                      </div>
+                      <div className="text-xs text-gray-600 line-clamp-2">
+                        {construct.definition}
+                      </div>
+                      <div className="text-xs text-purple-600 mt-2">
+                        {construct.sources.length} sources
+                      </div>
                     </button>
                   ))}
                 </div>
 
                 {/* Relationships */}
                 <div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-sm font-medium text-gray-900 mb-4">Relationships</h3>
+                  <h3 className="text-sm font-medium text-gray-900 mb-4">
+                    Relationships
+                  </h3>
                   <div className="space-y-3">
                     {diagram.relationships.map((rel, idx) => {
                       const fromConstruct = getConstructById(rel.from);
@@ -186,14 +209,22 @@ export default function TheoryDiagramBuilder({
                         >
                           <div className="flex-1 flex items-center space-x-3">
                             <div className="px-3 py-1 bg-white rounded border border-gray-300">
-                              <span className="text-sm font-medium text-gray-900">{fromConstruct?.name}</span>
+                              <span className="text-sm font-medium text-gray-900">
+                                {fromConstruct?.name}
+                              </span>
                             </div>
                             <div className="flex flex-col items-center">
-                              <span className={`text-xs font-medium ${relType.color}`}>{relType.label}</span>
+                              <span
+                                className={`text-xs font-medium ${relType.color}`}
+                              >
+                                {relType.label}
+                              </span>
                               <span className="text-2xl">{relType.arrow}</span>
                             </div>
                             <div className="px-3 py-1 bg-white rounded border border-gray-300">
-                              <span className="text-sm font-medium text-gray-900">{toConstruct?.name}</span>
+                              <span className="text-sm font-medium text-gray-900">
+                                {toConstruct?.name}
+                              </span>
                             </div>
                           </div>
                           <div className="text-xs text-gray-600">
@@ -217,8 +248,12 @@ export default function TheoryDiagramBuilder({
 
                 return (
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">{construct.name}</h3>
-                    <p className="text-sm text-gray-700 mb-4">{construct.definition}</p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">
+                      {construct.name}
+                    </h3>
+                    <p className="text-sm text-gray-700 mb-4">
+                      {construct.definition}
+                    </p>
                     <div>
                       <p className="text-sm font-medium text-gray-900 mb-2">
                         Evidence from {construct.sources.length} sources:
@@ -244,12 +279,16 @@ export default function TheoryDiagramBuilder({
 
           {/* Legend */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Relationship Types</h3>
+            <h3 className="text-sm font-medium text-gray-900 mb-3">
+              Relationship Types
+            </h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {Object.entries(RELATIONSHIP_TYPES).map(([key, value]) => (
                 <div key={key} className="flex items-center space-x-2">
                   <span className="text-xl">{value.arrow}</span>
-                  <span className={`text-xs font-medium ${value.color}`}>{value.label}</span>
+                  <span className={`text-xs font-medium ${value.color}`}>
+                    {value.label}
+                  </span>
                 </div>
               ))}
             </div>
@@ -277,12 +316,16 @@ export default function TheoryDiagramBuilder({
       {!diagram && !isGenerating && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
           <CubeTransparentIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Theory Diagram Yet</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No Theory Diagram Yet
+          </h3>
           <p className="text-sm text-gray-600 mb-4">
-            Click "Generate Diagram" to build a conceptual framework from your themes
+            Click "Generate Diagram" to build a conceptual framework from your
+            themes
           </p>
           <p className="text-xs text-gray-500">
-            We'll identify constructs and their relationships based on your literature review
+            We'll identify constructs and their relationships based on your
+            literature review
           </p>
         </div>
       )}

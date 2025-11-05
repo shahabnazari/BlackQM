@@ -2,8 +2,9 @@ import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import Parser from 'rss-parser';
 import { firstValueFrom } from 'rxjs';
-import { PrismaService } from '../../common/prisma.service';
 import { CacheService } from '../../common/cache.service';
+import { PrismaService } from '../../common/prisma.service';
+import { StatementGeneratorService } from '../ai/services/statement-generator.service';
 import {
   CitationNetwork,
   ExportCitationsDto,
@@ -16,10 +17,16 @@ import {
   SearchLiteratureDto,
   Theme,
 } from './dto/literature.dto';
-import { MultiMediaAnalysisService } from './services/multimedia-analysis.service';
-import { TranscriptionService } from './services/transcription.service';
-import { SearchCoalescerService } from './services/search-coalescer.service';
 import { APIQuotaMonitorService } from './services/api-quota-monitor.service';
+import { MultiMediaAnalysisService } from './services/multimedia-analysis.service';
+import { SearchCoalescerService } from './services/search-coalescer.service';
+import { TranscriptionService } from './services/transcription.service';
+import { calculateQualityScore } from './utils/paper-quality.util';
+import {
+  calculateAbstractWordCount,
+  calculateComprehensiveWordCount,
+  isPaperEligible,
+} from './utils/word-count.util';
 
 @Injectable()
 export class LiteratureService {
@@ -36,6 +43,8 @@ export class LiteratureService {
     private readonly multimediaAnalysisService: MultiMediaAnalysisService,
     private readonly searchCoalescer: SearchCoalescerService,
     private readonly quotaMonitor: APIQuotaMonitorService,
+    @Inject(forwardRef(() => StatementGeneratorService))
+    private readonly statementGenerator: StatementGeneratorService,
   ) {}
 
   async searchLiterature(
@@ -57,8 +66,14 @@ export class LiteratureService {
     // Phase 10 Days 2-3: Check cache with staleness metadata
     const cacheResult = await this.cacheService.getWithMetadata<any>(cacheKey);
     if (cacheResult.isFresh && cacheResult.data) {
-      this.logger.log(`✅ [Cache] Serving fresh cached results (age: ${Math.floor(cacheResult.age / 60)} min)`);
-      return { ...(cacheResult.data as any), isCached: true, cacheAge: cacheResult.age };
+      this.logger.log(
+        `✅ [Cache] Serving fresh cached results (age: ${Math.floor(cacheResult.age / 60)} min)`,
+      );
+      return {
+        ...(cacheResult.data as any),
+        isCached: true,
+        cacheAge: cacheResult.age,
+      };
     }
 
     // Preprocess and expand query for better results
@@ -123,6 +138,41 @@ export class LiteratureService {
       });
       this.logger.log(
         `📊 Citation filter (min: ${searchDto.minCitations}): ${beforeCitationFilter} → ${filteredPapers.length} papers`,
+      );
+    }
+
+    // Phase 10 Day 5.13+: Filter by minimum word count (academic eligibility)
+    // Default: 1000 words (academic standard for substantive content)
+    if (searchDto.minWordCount !== undefined) {
+      const beforeWordCountFilter = filteredPapers.length;
+      const minWords = searchDto.minWordCount;
+      filteredPapers = filteredPapers.filter((paper) => {
+        // If paper has no word count data, include it (conservative approach)
+        if (paper.wordCount === null || paper.wordCount === undefined) {
+          return true;
+        }
+        // Apply word count threshold
+        return paper.wordCount >= minWords;
+      });
+      this.logger.log(
+        `📊 Word count filter (min: ${minWords} words): ${beforeWordCountFilter} → ${filteredPapers.length} papers`,
+      );
+    }
+
+    // Phase 10 Day 5.13+ Extension 2: Filter by minimum abstract length (enterprise research-grade)
+    // Default: 100 words (academic abstracts typically 150-300 words)
+    if (searchDto.minAbstractLength !== undefined) {
+      const beforeAbstractFilter = filteredPapers.length;
+      const minAbstractWords = searchDto.minAbstractLength;
+      filteredPapers = filteredPapers.filter((paper) => {
+        // Exclude papers without abstracts or with insufficient abstract length
+        if (!paper.abstractWordCount) {
+          return false; // Strict: papers must have abstracts for research-grade quality
+        }
+        return paper.abstractWordCount >= minAbstractWords;
+      });
+      this.logger.log(
+        `📊 Abstract length filter (min: ${minAbstractWords} words): ${beforeAbstractFilter} → ${filteredPapers.length} papers`,
       );
     }
 
@@ -291,15 +341,17 @@ export class LiteratureService {
       );
     }
 
-    // Sort by relevance if sortBy is 'relevance', otherwise use the specified sort
+    // Phase 10 Day 5.13+ Extension 2: Enhanced sorting with enterprise research-grade options
     let sortedPapers: any[];
-    if (searchDto.sortBy === 'relevance' || !searchDto.sortBy) {
-      // Sort by relevance score first
+    const sortOption = searchDto.sortByEnhanced || searchDto.sortBy;
+
+    if (sortOption === 'relevance' || !sortOption) {
+      // Sort by relevance score (default)
       sortedPapers = relevantPapers.sort(
         (a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0),
       );
     } else {
-      sortedPapers = this.sortPapers(relevantPapers, searchDto.sortBy);
+      sortedPapers = this.sortPapers(relevantPapers, sortOption);
     }
 
     // Paginate results
@@ -310,11 +362,14 @@ export class LiteratureService {
 
     // Phase 10 Days 2-3: Fallback to stale/archive cache if no results (possible rate limit)
     if (papers.length === 0) {
-      this.logger.warn(`⚠️  [API] All sources returned 0 results - checking stale cache`);
-      const staleResult = await this.cacheService.getStaleOrArchive<any>(cacheKey);
+      this.logger.warn(
+        `⚠️  [API] All sources returned 0 results - checking stale cache`,
+      );
+      const staleResult =
+        await this.cacheService.getStaleOrArchive<any>(cacheKey);
       if (staleResult.data) {
         this.logger.log(
-          `🔄 [Cache] Serving ${staleResult.isStale ? 'stale' : 'archive'} results due to API unavailability`
+          `🔄 [Cache] Serving ${staleResult.isStale ? 'stale' : 'archive'} results due to API unavailability`,
         );
         return {
           ...(staleResult.data as any),
@@ -372,7 +427,9 @@ export class LiteratureService {
     return await this.searchCoalescer.coalesce(coalescerKey, async () => {
       // Phase 10 Days 2-3: Check quota before making API call
       if (!this.quotaMonitor.canMakeRequest('semantic-scholar')) {
-        this.logger.warn(`🚫 [Semantic Scholar] Quota exceeded - using cache instead`);
+        this.logger.warn(
+          `🚫 [Semantic Scholar] Quota exceeded - using cache instead`,
+        );
         return [];
       }
 
@@ -384,7 +441,7 @@ export class LiteratureService {
         const params: any = {
           query: searchDto.query,
           fields:
-            'paperId,title,authors,year,abstract,citationCount,url,venue,fieldsOfStudy',
+            'paperId,title,authors,year,abstract,citationCount,url,venue,fieldsOfStudy,openAccessPdf,isOpenAccess,externalIds',
           limit: searchDto.limit || 20,
         };
 
@@ -400,18 +457,86 @@ export class LiteratureService {
         // Phase 10 Days 2-3: Record successful request
         this.quotaMonitor.recordRequest('semantic-scholar');
 
-        const papers = response.data.data.map((paper: any) => ({
-          id: paper.paperId,
-          title: paper.title,
-          authors: paper.authors?.map((a: any) => a.name) || [],
-          year: paper.year,
-          abstract: paper.abstract,
-          url: paper.url,
-          venue: paper.venue,
-          citationCount: paper.citationCount,
-          fieldsOfStudy: paper.fieldsOfStudy,
-          source: LiteratureSource.SEMANTIC_SCHOLAR,
-        }));
+        const papers = response.data.data.map((paper: any) => {
+          // Phase 10 Day 5.13+ Extension: Comprehensive word count
+          // Count ALL content: title + abstract (full-text added later in Day 5.15)
+          // Excludes: references, indexes, glossaries, appendices, acknowledgments
+          const abstractWordCount = calculateAbstractWordCount(paper.abstract);
+          const wordCount = calculateComprehensiveWordCount(
+            paper.title,
+            paper.abstract,
+          );
+          const wordCountExcludingRefs = wordCount; // Already excludes non-content sections
+
+          // Phase 10 Day 5.13+ Extension 2: Calculate quality score
+          const qualityComponents = calculateQualityScore({
+            citationCount: paper.citationCount,
+            year: paper.year,
+            wordCount,
+            venue: paper.venue,
+            source: LiteratureSource.SEMANTIC_SCHOLAR,
+            impactFactor: null, // TODO: Enrich from OpenAlex in future
+            sjrScore: null,
+            quartile: null,
+            hIndexJournal: null,
+          });
+
+          // Phase 10 Day 5.17.4+: Enhanced PDF detection with PubMed Central fallback
+          let pdfUrl = paper.openAccessPdf?.url || null;
+          let hasPdf = !!pdfUrl && pdfUrl.trim().length > 0;
+
+          // If no PDF URL but has PubMed Central ID, construct PMC PDF URL
+          if (!hasPdf && paper.externalIds?.PubMedCentral) {
+            const pmcId = paper.externalIds.PubMedCentral;
+            pdfUrl = `https://www.ncbi.nlm.nih.gov/pmc/articles/PMC${pmcId}/pdf/`;
+            hasPdf = true;
+            this.logger.log(
+              `[Semantic Scholar] Constructed PMC PDF URL for paper ${paper.paperId}: ${pdfUrl}`,
+            );
+          }
+
+          return {
+            id: paper.paperId,
+            title: paper.title,
+            authors: paper.authors?.map((a: any) => a.name) || [],
+            year: paper.year,
+            abstract: paper.abstract,
+            url: paper.url,
+            venue: paper.venue,
+            citationCount: paper.citationCount,
+            fieldsOfStudy: paper.fieldsOfStudy,
+            source: LiteratureSource.SEMANTIC_SCHOLAR,
+            wordCount, // Total: title + abstract (+ full-text in future)
+            wordCountExcludingRefs, // Same as wordCount (already excludes non-content)
+            isEligible: isPaperEligible(wordCount),
+            // Phase 10 Day 5.17.4+: PDF availability from Semantic Scholar + PMC fallback
+            pdfUrl,
+            openAccessStatus:
+              paper.isOpenAccess || hasPdf ? 'OPEN_ACCESS' : null,
+            hasPdf,
+            // Phase 10 Day 5.17.4+: Full-text availability (PDF detected = full-text available)
+            hasFullText: hasPdf, // If PDF URL exists, full-text is available
+            fullTextStatus: hasPdf ? 'available' : 'not_fetched', // 'available' = can be fetched
+            fullTextSource: hasPdf
+              ? paper.externalIds?.PubMedCentral
+                ? 'pmc'
+                : 'publisher'
+              : undefined,
+            // Phase 10 Day 5.13+ Extension 2: Enterprise quality metrics
+            abstractWordCount, // Abstract only (for 100-word filter)
+            citationsPerYear:
+              qualityComponents.citationImpact > 0
+                ? (paper.citationCount || 0) /
+                  Math.max(
+                    1,
+                    new Date().getFullYear() -
+                      (paper.year || new Date().getFullYear()),
+                  )
+                : 0,
+            qualityScore: qualityComponents.totalScore,
+            isHighQuality: qualityComponents.totalScore >= 50,
+          };
+        });
 
         this.logger.log(`[Semantic Scholar] Returned ${papers.length} papers`);
         return papers;
@@ -460,18 +585,55 @@ export class LiteratureService {
         // Phase 10 Days 2-3: Record successful request
         this.quotaMonitor.recordRequest('crossref');
 
-        const papers = response.data.message.items.map((item: any) => ({
-          id: item.DOI,
-          title: item.title?.[0] || '',
-          authors: item.author?.map((a: any) => `${a.given} ${a.family}`) || [],
-          year: item.published?.['date-parts']?.[0]?.[0],
-          abstract: item.abstract,
-          doi: item.DOI,
-          url: item.URL,
-          venue: item['container-title']?.[0],
-          citationCount: item['is-referenced-by-count'],
-          source: LiteratureSource.CROSSREF,
-        }));
+        const papers = response.data.message.items.map((item: any) => {
+          // Phase 10 Day 5.13+ Extension: Comprehensive word count (title + abstract)
+          const abstractWordCount = calculateAbstractWordCount(item.abstract);
+          const wordCount = calculateComprehensiveWordCount(
+            item.title?.[0],
+            item.abstract,
+          );
+          const wordCountExcludingRefs = wordCount;
+
+          // Phase 10 Day 5.13+ Extension 2: Calculate quality score
+          const qualityComponents = calculateQualityScore({
+            citationCount: item['is-referenced-by-count'],
+            year: item.published?.['date-parts']?.[0]?.[0],
+            wordCount,
+            venue: item['container-title']?.[0],
+            source: LiteratureSource.CROSSREF,
+            impactFactor: null,
+            sjrScore: null,
+            quartile: null,
+            hIndexJournal: null,
+          });
+
+          const year = item.published?.['date-parts']?.[0]?.[0];
+          const citationCount = item['is-referenced-by-count'] || 0;
+
+          return {
+            id: item.DOI,
+            title: item.title?.[0] || '',
+            authors:
+              item.author?.map((a: any) => `${a.given} ${a.family}`) || [],
+            year,
+            abstract: item.abstract,
+            doi: item.DOI,
+            url: item.URL,
+            venue: item['container-title']?.[0],
+            citationCount,
+            source: LiteratureSource.CROSSREF,
+            wordCount,
+            wordCountExcludingRefs: wordCount,
+            isEligible: isPaperEligible(wordCount),
+            // Phase 10 Day 5.13+ Extension 2: Enterprise quality metrics
+            abstractWordCount,
+            citationsPerYear: year
+              ? citationCount / Math.max(1, new Date().getFullYear() - year)
+              : 0,
+            qualityScore: qualityComponents.totalScore,
+            isHighQuality: qualityComponents.totalScore >= 50,
+          };
+        });
 
         this.logger.log(`[CrossRef] Returned ${papers.length} papers`);
         return papers;
@@ -545,7 +707,8 @@ export class LiteratureService {
           const title =
             article.match(/<ArticleTitle>(.*?)<\/ArticleTitle>/)?.[1] || '';
           const abstractText =
-            article.match(/<AbstractText[^>]*>(.*?)<\/AbstractText>/)?.[1] || '';
+            article.match(/<AbstractText[^>]*>(.*?)<\/AbstractText>/)?.[1] ||
+            '';
           const year =
             article.match(/<PubDate>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] ||
             article.match(/<DateCompleted>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] ||
@@ -567,16 +730,47 @@ export class LiteratureService {
             article.match(/<ArticleId IdType="doi">(.*?)<\/ArticleId>/)?.[1] ||
             null;
 
+          // Phase 10 Day 5.13+ Extension: Comprehensive word count (title + abstract)
+          const abstractWordCount = calculateAbstractWordCount(abstractText);
+          const wordCount = calculateComprehensiveWordCount(
+            title.trim(),
+            abstractText.trim(),
+          );
+          const wordCountExcludingRefs = wordCount;
+          const parsedYear = year ? parseInt(year) : null;
+
+          // Phase 10 Day 5.13+ Extension 2: Calculate quality score
+          // Note: citationCount will be enriched from OpenAlex later
+          const qualityComponents = calculateQualityScore({
+            citationCount: null, // Will be enriched from OpenAlex
+            year: parsedYear,
+            wordCount,
+            venue: null, // PubMed doesn't provide venue in basic search
+            source: 'PubMed',
+            impactFactor: null,
+            sjrScore: null,
+            quartile: null,
+            hIndexJournal: null,
+          });
+
           return {
             id: pmid,
             title: title.trim(),
             authors,
-            year: year ? parseInt(year) : null,
+            year: parsedYear,
             abstract: abstractText.trim(),
             url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
             source: 'PubMed',
             doi,
-            citationCount: null,
+            citationCount: null, // Will be enriched from OpenAlex
+            wordCount,
+            wordCountExcludingRefs: wordCount,
+            isEligible: isPaperEligible(wordCount),
+            // Phase 10 Day 5.13+ Extension 2: Enterprise quality metrics
+            abstractWordCount,
+            citationsPerYear: 0, // Will be recalculated after OpenAlex enrichment
+            qualityScore: qualityComponents.totalScore,
+            isHighQuality: qualityComponents.totalScore >= 50,
           };
         });
 
@@ -654,16 +848,46 @@ export class LiteratureService {
               ?.map((a: string) => a.match(/<name>(.*?)<\/name>/)?.[1] || '') ||
             [];
 
+          // Phase 10 Day 5.13+ Extension: Comprehensive word count (title + abstract)
+          const abstractWordCount = calculateAbstractWordCount(summary);
+          const wordCount = calculateComprehensiveWordCount(
+            title.trim(),
+            summary.trim(),
+          );
+          const wordCountExcludingRefs = wordCount;
+          const year = published ? new Date(published).getFullYear() : null;
+
+          // Phase 10 Day 5.13+ Extension 2: Calculate quality score
+          const qualityComponents = calculateQualityScore({
+            citationCount: null, // arXiv doesn't provide citation counts
+            year,
+            wordCount,
+            venue: 'arXiv', // Preprint server
+            source: 'arXiv',
+            impactFactor: null,
+            sjrScore: null,
+            quartile: null,
+            hIndexJournal: null,
+          });
+
           return {
             id,
             title: title.trim(),
             authors,
-            year: published ? new Date(published).getFullYear() : null,
+            year,
             abstract: summary.trim(),
             url: id,
             source: 'arXiv',
             doi: null,
             citationCount: null,
+            wordCount,
+            wordCountExcludingRefs: wordCount,
+            isEligible: isPaperEligible(wordCount),
+            // Phase 10 Day 5.13+ Extension 2: Enterprise quality metrics
+            abstractWordCount,
+            citationsPerYear: 0, // No citation data available from arXiv
+            qualityScore: qualityComponents.totalScore,
+            isHighQuality: qualityComponents.totalScore >= 50,
           };
         });
 
@@ -712,9 +936,31 @@ export class LiteratureService {
             this.logger.log(
               `Enriched citation count for "${paper.title.substring(0, 50)}...": ${citedByCount}`,
             );
+
+            // Phase 10 Day 5.13+ Extension 2: Recalculate quality score with enriched data
+            const citationsPerYear = paper.year
+              ? citedByCount /
+                Math.max(1, new Date().getFullYear() - paper.year)
+              : 0;
+
+            const qualityComponents = calculateQualityScore({
+              citationCount: citedByCount,
+              year: paper.year,
+              wordCount: paper.wordCount,
+              venue: paper.venue,
+              source: paper.source,
+              impactFactor: null,
+              sjrScore: null,
+              quartile: null,
+              hIndexJournal: null,
+            });
+
             return {
               ...paper,
               citationCount: citedByCount,
+              citationsPerYear,
+              qualityScore: qualityComponents.totalScore,
+              isHighQuality: qualityComponents.totalScore >= 50,
             };
           }
         } catch (error: any) {
@@ -961,6 +1207,10 @@ export class LiteratureService {
     );
   }
 
+  /**
+   * Phase 10 Day 5.13+ Extension 2: Enterprise-grade paper sorting
+   * Supports multiple quality-based sort options for research excellence
+   */
   private sortPapers(papers: Paper[], sortBy?: string): Paper[] {
     switch (sortBy) {
       case 'date':
@@ -968,6 +1218,19 @@ export class LiteratureService {
       case 'citations':
         return papers.sort(
           (a, b) => (b.citationCount || 0) - (a.citationCount || 0),
+        );
+      case 'citations_per_year':
+        // Sort by citation velocity (normalized by paper age)
+        return papers.sort(
+          (a, b) => (b.citationsPerYear || 0) - (a.citationsPerYear || 0),
+        );
+      case 'word_count':
+        // Sort by content depth (longer papers typically more comprehensive)
+        return papers.sort((a, b) => (b.wordCount || 0) - (a.wordCount || 0));
+      case 'quality_score':
+        // Sort by composite quality score (enterprise research-grade)
+        return papers.sort(
+          (a, b) => (b.qualityScore || 0) - (a.qualityScore || 0),
         );
       default:
         return papers; // Keep original order for relevance
@@ -2334,12 +2597,42 @@ ER  -`;
     studyContext: any,
     userId: string,
   ): Promise<string[]> {
-    // Generate Q-methodology statements from literature themes
-    // This would use AI to create balanced statements
-    return themes.map(
-      (theme) =>
-        `Perspective on ${theme}: This represents a viewpoint about ${theme}`,
-    );
+    try {
+      this.logger.log(
+        `Generating Q-statements from ${themes.length} themes for user ${userId}`,
+      );
+
+      // Phase 10 Day 5.17.5: Use AI StatementGeneratorService for Q-methodology statement generation
+      // Generate 8-10 statements per theme for comprehensive coverage
+      const statementsPerTheme = Math.ceil(60 / themes.length); // Target 60 total statements
+      const topic = studyContext?.topic || themes.join(', ');
+
+      const statements = await this.statementGenerator.generateStatements(
+        topic,
+        {
+          count: Math.max(40, statementsPerTheme * themes.length), // Minimum 40 statements for Q-methodology
+          perspectives: themes, // Use themes as perspectives
+          avoidBias: true,
+          academicLevel: studyContext?.academicLevel || 'intermediate',
+          maxLength: 120,
+        },
+        userId,
+      );
+
+      // Extract just the statement text
+      const statementTexts = statements.map((s) => s.text);
+
+      this.logger.log(
+        `✅ Generated ${statementTexts.length} Q-statements from themes`,
+      );
+
+      return statementTexts;
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to generate statements from themes: ${error.message}`,
+      );
+      throw error;
+    }
   }
 
   private async logSearch(

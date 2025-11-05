@@ -111,15 +111,19 @@ function OrcidSuccessContent() {
 
 export default function OrcidSuccessPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50">
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
-          <Loader2 className="w-16 h-16 animate-spin mx-auto text-green-600 mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Loading...</h1>
-          <p className="text-gray-600">Please wait...</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50">
+          <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+            <Loader2 className="w-16 h-16 animate-spin mx-auto text-green-600 mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Loading...
+            </h1>
+            <p className="text-gray-600">Please wait...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <OrcidSuccessContent />
     </Suspense>
   );

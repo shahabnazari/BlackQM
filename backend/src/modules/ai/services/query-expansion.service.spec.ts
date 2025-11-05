@@ -46,6 +46,10 @@ describe('QueryExpansionService', () => {
         'adaptation strategies',
       ],
     }),
+    tokens: 150,
+    responseTime: 500,
+    cached: false,
+    cost: 0.001,
   };
 
   const mockVagueQueryResponse = {
@@ -69,6 +73,10 @@ describe('QueryExpansionService', () => {
         'ecological resilience',
       ],
     }),
+    tokens: 180,
+    responseTime: 600,
+    cached: false,
+    cost: 0.0012,
   };
 
   beforeEach(async () => {
@@ -181,6 +189,10 @@ describe('QueryExpansionService', () => {
     it('should handle AI response with markdown code blocks', async () => {
       const responseWithMarkdown = {
         content: '```json\n' + mockExpansionResponse.content + '\n```',
+        tokens: 150,
+        responseTime: 500,
+        cached: false,
+        cost: 0.001,
       };
       openaiService.generateCompletion.mockResolvedValue(responseWithMarkdown);
 
@@ -193,6 +205,10 @@ describe('QueryExpansionService', () => {
     it('should return original query on invalid AI response', async () => {
       openaiService.generateCompletion.mockResolvedValue({
         content: 'Invalid response without JSON',
+        tokens: 10,
+        responseTime: 100,
+        cached: false,
+        cost: 0.0001,
       });
 
       const result = await service.expandQuery('climate', 'general');
@@ -230,6 +246,10 @@ describe('QueryExpansionService', () => {
           expanded: 'climate research',
           // Missing other fields
         }),
+        tokens: 50,
+        responseTime: 200,
+        cached: false,
+        cost: 0.0005,
       });
 
       const result = await service.expandQuery('climate', 'general');
@@ -255,6 +275,10 @@ describe('QueryExpansionService', () => {
         ],
         confidence: [0.9, 0.85, 0.8, 0.75, 0.7],
       }),
+      tokens: 100,
+      responseTime: 400,
+      cached: false,
+      cost: 0.0008,
     };
 
     it('should suggest related academic terms', async () => {
@@ -299,6 +323,10 @@ describe('QueryExpansionService', () => {
           terms: ['term1', 'term2', 'term3'],
           // confidence array missing
         }),
+        tokens: 30,
+        responseTime: 150,
+        cached: false,
+        cost: 0.0003,
       });
 
       const result = await service.suggestTerms('climate');
@@ -311,6 +339,10 @@ describe('QueryExpansionService', () => {
     it('should return empty arrays on invalid response', async () => {
       openaiService.generateCompletion.mockResolvedValue({
         content: 'Invalid JSON response',
+        tokens: 10,
+        responseTime: 100,
+        cached: false,
+        cost: 0.0001,
       });
 
       const result = await service.suggestTerms('climate');
@@ -342,6 +374,10 @@ describe('QueryExpansionService', () => {
         reasoning:
           'Narrowing helps focus research on specific ecosystems, methodologies, and geographic contexts',
       }),
+      tokens: 120,
+      responseTime: 450,
+      cached: false,
+      cost: 0.0009,
     };
 
     it('should provide narrowing suggestions for broad queries', async () => {
@@ -368,6 +404,10 @@ describe('QueryExpansionService', () => {
     it('should return empty arrays on invalid response', async () => {
       openaiService.generateCompletion.mockResolvedValue({
         content: 'Not valid JSON',
+        tokens: 10,
+        responseTime: 100,
+        cached: false,
+        cost: 0.0001,
       });
 
       const result = await service.narrowQuery('climate');
@@ -480,6 +520,10 @@ describe('QueryExpansionService', () => {
           confidence: 0.3,
           relatedTerms: [],
         }),
+        tokens: 40,
+        responseTime: 180,
+        cached: false,
+        cost: 0.0004,
       });
 
       const result = await service.expandQuery('', 'general');

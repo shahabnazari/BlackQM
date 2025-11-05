@@ -82,6 +82,12 @@ export class UpdateCommentDto {
   content!: string;
 }
 
+export class ReplyToCommentDto {
+  @ApiProperty({ example: 'This is a reply to your comment' })
+  @IsString()
+  content!: string;
+}
+
 // Track Changes DTOs
 export class TrackChangeDto {
   @ApiProperty({ example: 'section-2' })
@@ -262,4 +268,73 @@ export interface ApprovalResponse {
     name: string | null;
     email: string;
   };
+}
+
+// Sharing DTOs - Phase 10 Day 4
+export class GenerateShareLinkDto {
+  @ApiProperty({ enum: ['view', 'comment', 'edit'], description: 'Access level for shared link' })
+  @IsEnum(['view', 'comment', 'edit'])
+  accessLevel!: 'view' | 'comment' | 'edit';
+
+  @ApiProperty({ example: 7, description: 'Link expiration in days (optional)', required: false })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  expiresIn?: number;
+
+  @ApiProperty({ example: 'secure123', description: 'Password protection (optional)', required: false })
+  @IsOptional()
+  @IsString()
+  password?: string;
+
+  @ApiProperty({ example: ['company.com', 'university.edu'], description: 'Allowed email domains (optional)', required: false })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  allowedDomains?: string[];
+
+  @ApiProperty({ example: 100, description: 'Maximum access count (optional)', required: false })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxAccess?: number;
+}
+
+export class UpdateShareLinkDto {
+  @ApiProperty({ enum: ['view', 'comment', 'edit'], required: false })
+  @IsOptional()
+  @IsEnum(['view', 'comment', 'edit'])
+  accessLevel?: 'view' | 'comment' | 'edit';
+
+  @ApiProperty({ type: 'string', format: 'date-time', required: false })
+  @IsOptional()
+  expiresAt?: Date | null;
+
+  @ApiProperty({ example: 100, required: false })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxAccess?: number | null;
+
+  @ApiProperty({ example: ['company.com'], required: false })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  allowedDomains?: string[] | null;
+
+  @ApiProperty({ example: true, required: false })
+  @IsOptional()
+  isActive?: boolean;
+}
+
+export class AccessShareLinkDto {
+  @ApiProperty({ example: 'user@example.com', required: false })
+  @IsOptional()
+  @IsEmail()
+  userEmail?: string;
+
+  @ApiProperty({ example: 'secure123', required: false })
+  @IsOptional()
+  @IsString()
+  password?: string;
 }

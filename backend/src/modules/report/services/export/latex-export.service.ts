@@ -13,12 +13,22 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { ProvenanceChain, ReportSection, ReportMetadata } from '../report-generator.service';
+import {
+  ProvenanceChain,
+  ReportSection,
+  ReportMetadata,
+} from '../report-generator.service';
 import { Citation, CitationManagerService } from './citation-manager.service';
 
 export interface LaTeXExportOptions {
   documentClass: 'article' | 'report' | 'book' | 'thesis';
-  journalTemplate?: 'springer' | 'elsevier' | 'ieee' | 'plos' | 'nature' | 'apa';
+  journalTemplate?:
+    | 'springer'
+    | 'elsevier'
+    | 'ieee'
+    | 'plos'
+    | 'nature'
+    | 'apa';
   includeAbstract: boolean;
   includeTableOfContents: boolean;
   includeProvenance: boolean;
@@ -52,7 +62,7 @@ export class LaTeXExportService {
     sections: ReportSection[],
     provenance: ProvenanceChain[],
     citations: Citation[],
-    options: LaTeXExportOptions
+    options: LaTeXExportOptions,
   ): Promise<string> {
     this.logger.log(`Generating LaTeX document for study ${metadata.studyId}`);
 
@@ -76,22 +86,29 @@ export class LaTeXExportService {
         }
 
         // Committee approval page
-        if (options.dissertationOptions.committee && options.dissertationOptions.committee.length > 0) {
+        if (
+          options.dissertationOptions.committee &&
+          options.dissertationOptions.committee.length > 0
+        ) {
           latex += this.generateCommitteeApprovalPage(metadata, options);
         }
 
         // Dedication
         if (options.dissertationOptions.dedication) {
-          latex += this.generateDedicationPage(options.dissertationOptions.dedication);
+          latex += this.generateDedicationPage(
+            options.dissertationOptions.dedication,
+          );
         }
 
         // Acknowledgements
         if (options.dissertationOptions.acknowledgements) {
-          latex += this.generateAcknowledgementsPage(options.dissertationOptions.acknowledgements);
+          latex += this.generateAcknowledgementsPage(
+            options.dissertationOptions.acknowledgements,
+          );
         }
 
         // Abstract (for dissertation)
-        const abstractSection = sections.find(s => s.id === 'abstract');
+        const abstractSection = sections.find((s) => s.id === 'abstract');
         if (options.includeAbstract && abstractSection) {
           latex += this.generateAbstract(abstractSection.content);
         }
@@ -116,7 +133,7 @@ export class LaTeXExportService {
         latex += this.generateTitlePage(metadata, options);
 
         // Abstract (if applicable)
-        const abstractSection = sections.find(s => s.id === 'abstract');
+        const abstractSection = sections.find((s) => s.id === 'abstract');
         if (options.includeAbstract && abstractSection) {
           latex += this.generateAbstract(abstractSection.content);
         }
@@ -129,7 +146,10 @@ export class LaTeXExportService {
       }
 
       // Main sections
-      latex += this.generateSections(sections.filter(s => s.id !== 'abstract'), options);
+      latex += this.generateSections(
+        sections.filter((s) => s.id !== 'abstract'),
+        options,
+      );
 
       // Provenance appendix
       if (options.includeProvenance && provenance.length > 0) {
@@ -144,11 +164,16 @@ export class LaTeXExportService {
       // End document
       latex += '\\end{document}\n';
 
-      this.logger.log(`LaTeX document generated successfully (${latex.length} characters)`);
+      this.logger.log(
+        `LaTeX document generated successfully (${latex.length} characters)`,
+      );
 
       return latex;
     } catch (error: any) {
-      this.logger.error(`Failed to generate LaTeX document: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to generate LaTeX document: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -156,7 +181,10 @@ export class LaTeXExportService {
   /**
    * Generate LaTeX preamble with packages and settings
    */
-  private generatePreamble(metadata: ReportMetadata, options: LaTeXExportOptions): string {
+  private generatePreamble(
+    metadata: ReportMetadata,
+    options: LaTeXExportOptions,
+  ): string {
     let preamble = '';
 
     // Document class
@@ -199,7 +227,7 @@ export class LaTeXExportService {
     // Title and author metadata
     preamble += '% Document metadata\n';
     preamble += `\\title{${this.escapeLatex(metadata.title)}}\n`;
-    preamble += `\\author{${metadata.authors.map(a => this.escapeLatex(a)).join(' \\and ')}}\n`;
+    preamble += `\\author{${metadata.authors.map((a) => this.escapeLatex(a)).join(' \\and ')}}\n`;
     preamble += `\\date{${new Date(metadata.date).toLocaleDateString()}}\n\n`;
 
     // Hyperref setup
@@ -227,7 +255,7 @@ export class LaTeXExportService {
       ieee: '\\usepackage{IEEEtrantools}\n',
       plos: '\\usepackage{plos2015}\n',
       nature: '\\usepackage{nature}\n',
-      apa: '\\usepackage{apa7}\n'
+      apa: '\\usepackage{apa7}\n',
     };
 
     return templates[template] || '';
@@ -236,7 +264,10 @@ export class LaTeXExportService {
   /**
    * Generate title page
    */
-  private generateTitlePage(metadata: ReportMetadata, options: LaTeXExportOptions): string {
+  private generateTitlePage(
+    metadata: ReportMetadata,
+    options: LaTeXExportOptions,
+  ): string {
     let title = '';
 
     title += '\\maketitle\n\n';
@@ -254,7 +285,10 @@ export class LaTeXExportService {
   /**
    * Generate dissertation title page
    */
-  private generateDissertationTitlePage(metadata: ReportMetadata, options: LaTeXExportOptions): string {
+  private generateDissertationTitlePage(
+    metadata: ReportMetadata,
+    options: LaTeXExportOptions,
+  ): string {
     const dissOpts = options.dissertationOptions!;
     let title = '';
 
@@ -322,7 +356,10 @@ export class LaTeXExportService {
   /**
    * Generate committee approval page
    */
-  private generateCommitteeApprovalPage(metadata: ReportMetadata, options: LaTeXExportOptions): string {
+  private generateCommitteeApprovalPage(
+    metadata: ReportMetadata,
+    options: LaTeXExportOptions,
+  ): string {
     const committee = options.dissertationOptions!.committee!;
     let page = '';
 
@@ -332,8 +369,12 @@ export class LaTeXExportService {
     page += '{\\Large\\bfseries Committee Approval}\\par\n';
     page += '\\vspace{2cm}\n\n';
     page += '\\raggedright\n';
-    page += 'The dissertation committee for ' + this.escapeLatex(metadata.authors[0]) + '\\\\';
-    page += 'certifies that this is the approved version of the following dissertation:\\par\n';
+    page +=
+      'The dissertation committee for ' +
+      this.escapeLatex(metadata.authors[0]) +
+      '\\\\';
+    page +=
+      'certifies that this is the approved version of the following dissertation:\\par\n';
     page += '\\vspace{1cm}\n\n';
     page += '\\centering\n';
     page += `{\\Large\\bfseries ${this.escapeLatex(metadata.title)}}\\par\n`;
@@ -341,7 +382,7 @@ export class LaTeXExportService {
     page += '\\raggedright\n';
 
     // Committee members with signature lines
-    committee.forEach(member => {
+    committee.forEach((member) => {
       page += '\\vspace{1.5cm}\n';
       page += '\\rule{8cm}{0.4pt}\\par\n';
       page += `${this.escapeLatex(member.name)}\\par\n`;
@@ -405,7 +446,10 @@ export class LaTeXExportService {
   /**
    * Generate main sections
    */
-  private generateSections(sections: ReportSection[], options?: LaTeXExportOptions): string {
+  private generateSections(
+    sections: ReportSection[],
+    options?: LaTeXExportOptions,
+  ): string {
     let latex = '';
 
     // Use chapters for thesis, sections for other documents
@@ -454,7 +498,7 @@ export class LaTeXExportService {
 
     // Lists (bullet)
     latex = latex.replace(/^- (.+)$/gm, '\\item $1');
-    latex = latex.replace(/(\\item .+\n)+/g, match => {
+    latex = latex.replace(/(\\item .+\n)+/g, (match) => {
       return '\\begin{itemize}\n' + match + '\\end{itemize}\n';
     });
 
@@ -513,8 +557,8 @@ export class LaTeXExportService {
     // Parse header
     const headerCells = lines[0]
       .split('|')
-      .map(c => c.trim())
-      .filter(c => c);
+      .map((c) => c.trim())
+      .filter((c) => c);
 
     const numCols = headerCells.length;
 
@@ -524,18 +568,19 @@ export class LaTeXExportService {
     latex += '\\toprule\n';
 
     // Header row
-    latex += headerCells.map(c => this.escapeLatex(c)).join(' & ') + ' \\\\\n';
+    latex +=
+      headerCells.map((c) => this.escapeLatex(c)).join(' & ') + ' \\\\\n';
     latex += '\\midrule\n';
 
     // Data rows (skip separator row)
     for (let i = 2; i < lines.length; i++) {
       const cells = lines[i]
         .split('|')
-        .map(c => c.trim())
-        .filter(c => c);
+        .map((c) => c.trim())
+        .filter((c) => c);
 
       if (cells.length === numCols) {
-        latex += cells.map(c => this.escapeLatex(c)).join(' & ') + ' \\\\\n';
+        latex += cells.map((c) => this.escapeLatex(c)).join(' & ') + ' \\\\\n';
       }
     }
 
@@ -558,20 +603,27 @@ export class LaTeXExportService {
     latex += '\\appendix\n';
     latex += '\\section{Statement Provenance}\\label{app:provenance}\n\n';
 
-    latex += 'This appendix provides complete lineage information for all statements used in this study, ';
-    latex += 'showing the path from original literature sources through gap identification, research question ';
-    latex += 'refinement, hypothesis generation, theme extraction, and final statement formulation.\n\n';
+    latex +=
+      'This appendix provides complete lineage information for all statements used in this study, ';
+    latex +=
+      'showing the path from original literature sources through gap identification, research question ';
+    latex +=
+      'refinement, hypothesis generation, theme extraction, and final statement formulation.\n\n';
 
     // Create provenance table
-    latex += '\\begin{longtable}{p{0.08\\textwidth}p{0.25\\textwidth}p{0.2\\textwidth}p{0.15\\textwidth}p{0.15\\textwidth}p{0.1\\textwidth}}\n';
+    latex +=
+      '\\begin{longtable}{p{0.08\\textwidth}p{0.25\\textwidth}p{0.2\\textwidth}p{0.15\\textwidth}p{0.15\\textwidth}p{0.1\\textwidth}}\n';
     latex += '\\toprule\n';
-    latex += '\\textbf{\\#} & \\textbf{Statement} & \\textbf{Source} & \\textbf{Theme} & \\textbf{Gap} & \\textbf{Question} \\\\\n';
+    latex +=
+      '\\textbf{\\#} & \\textbf{Statement} & \\textbf{Source} & \\textbf{Theme} & \\textbf{Gap} & \\textbf{Question} \\\\\n';
     latex += '\\midrule\n';
     latex += '\\endfirsthead\n\n';
 
-    latex += '\\multicolumn{6}{c}{{\\tablename\\ \\thetable{} -- continued from previous page}} \\\\\n';
+    latex +=
+      '\\multicolumn{6}{c}{{\\tablename\\ \\thetable{} -- continued from previous page}} \\\\\n';
     latex += '\\toprule\n';
-    latex += '\\textbf{\\#} & \\textbf{Statement} & \\textbf{Source} & \\textbf{Theme} & \\textbf{Gap} & \\textbf{Question} \\\\\n';
+    latex +=
+      '\\textbf{\\#} & \\textbf{Statement} & \\textbf{Source} & \\textbf{Theme} & \\textbf{Gap} & \\textbf{Question} \\\\\n';
     latex += '\\midrule\n';
     latex += '\\endhead\n\n';
 
@@ -583,15 +635,21 @@ export class LaTeXExportService {
     latex += '\\endlastfoot\n\n';
 
     // Data rows
-    provenance.forEach(chain => {
+    provenance.forEach((chain) => {
       const stmtNum = chain.statement?.statementNumber?.toString() || '-';
-      const stmtText = this.escapeLatex(chain.statement?.text?.substring(0, 80) || '-');
+      const stmtText = this.escapeLatex(
+        chain.statement?.text?.substring(0, 80) || '-',
+      );
       const paper = chain.paper
         ? this.escapeLatex(`${chain.paper.authors} (${chain.paper.year})`)
         : 'N/A';
       const theme = this.escapeLatex(chain.theme?.label || 'N/A');
-      const gap = this.escapeLatex(chain.gap?.description?.substring(0, 40) || 'N/A');
-      const question = this.escapeLatex(chain.question?.text?.substring(0, 40) || 'N/A');
+      const gap = this.escapeLatex(
+        chain.gap?.description?.substring(0, 40) || 'N/A',
+      );
+      const question = this.escapeLatex(
+        chain.question?.text?.substring(0, 40) || 'N/A',
+      );
 
       latex += `${stmtNum} & ${stmtText} & ${paper} & ${theme} & ${gap} & ${question} \\\\\n`;
     });
@@ -613,7 +671,7 @@ export class LaTeXExportService {
     // Write BibTeX to separate file (in comments)
     latex += '% BibTeX entries (save to separate .bib file):\n';
     latex += '% \\begin{filecontents}{references.bib}\n';
-    bibtex.split('\n').forEach(line => {
+    bibtex.split('\n').forEach((line) => {
       latex += `% ${line}\n`;
     });
     latex += '% \\end{filecontents}\n\n';

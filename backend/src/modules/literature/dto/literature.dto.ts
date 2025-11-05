@@ -5,6 +5,7 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsNumber,
   IsObject,
   IsOptional,
@@ -101,6 +102,48 @@ export class SearchLiteratureDto {
   @IsString()
   @IsOptional()
   sortBy?: 'relevance' | 'date' | 'citations';
+
+  @ApiPropertyOptional({
+    description:
+      'Minimum word count (excluding references) for paper eligibility',
+    minimum: 0,
+    default: 1000,
+  })
+  @IsNumber()
+  @IsOptional()
+  minWordCount?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Minimum abstract length in words (default: 100 - academic standard)',
+    minimum: 0,
+    default: 100,
+  })
+  @IsNumber()
+  @IsOptional()
+  minAbstractLength?: number;
+
+  @ApiPropertyOptional({
+    description: 'Enhanced sorting options for enterprise research',
+    enum: [
+      'relevance',
+      'date',
+      'citations',
+      'citations_per_year',
+      'word_count',
+      'quality_score',
+    ],
+    default: 'relevance',
+  })
+  @IsString()
+  @IsOptional()
+  sortByEnhanced?:
+    | 'relevance'
+    | 'date'
+    | 'citations'
+    | 'citations_per_year'
+    | 'word_count'
+    | 'quality_score';
 }
 
 export class SavePaperDto {
@@ -209,6 +252,64 @@ export class AnalyzeGapsDto {
   includeCollaborations?: boolean;
 }
 
+// NEW: DTO for gap analysis with paper content
+export class PaperContentDto {
+  @ApiProperty({ description: 'Paper ID' })
+  @IsString()
+  id!: string;
+
+  @ApiProperty({ description: 'Paper title' })
+  @IsString()
+  title!: string;
+
+  @ApiPropertyOptional({ description: 'Paper abstract' })
+  @IsString()
+  @IsOptional()
+  abstract?: string;
+
+  @ApiPropertyOptional({ description: 'Authors', type: [String] })
+  @IsArray()
+  @IsOptional()
+  authors?: string[];
+
+  @ApiPropertyOptional({ description: 'Publication year' })
+  @IsNumber()
+  @IsOptional()
+  year?: number;
+
+  @ApiPropertyOptional({ description: 'Keywords', type: [String] })
+  @IsArray()
+  @IsOptional()
+  keywords?: string[];
+
+  @ApiPropertyOptional({ description: 'DOI' })
+  @IsString()
+  @IsOptional()
+  doi?: string;
+
+  @ApiPropertyOptional({ description: 'Venue/Journal' })
+  @IsString()
+  @IsOptional()
+  venue?: string;
+
+  @ApiPropertyOptional({ description: 'Citation count' })
+  @IsNumber()
+  @IsOptional()
+  citationCount?: number;
+}
+
+export class AnalyzeGapsFromPapersDto {
+  @ApiProperty({
+    description: 'Papers to analyze for research gaps',
+    type: [PaperContentDto],
+  })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'At least one paper is required' })
+  @ValidateNested({ each: true })
+  @Type(() => PaperContentDto)
+  papers!: PaperContentDto[];
+}
+
 export class Paper {
   id!: string;
   title!: string;
@@ -224,6 +325,41 @@ export class Paper {
   keywords?: string[];
   fieldsOfStudy?: string[];
   source!: LiteratureSource;
+  wordCount?: number; // Word count excluding references (Phase 10 Day 5.13+)
+  wordCountExcludingRefs?: number; // Alias for clarity
+  isEligible?: boolean; // Meets minimum word count threshold (1000 words)
+
+  // PDF availability (Phase 10 Day 5.17.4+)
+  pdfUrl?: string | null; // Direct URL to open access PDF
+  openAccessStatus?: string | null; // Open access status (e.g., 'GOLD', 'GREEN', 'HYBRID', 'BRONZE')
+  hasPdf?: boolean; // Whether PDF is available
+
+  // Full-text availability (Phase 10 Day 5.17.4+)
+  hasFullText?: boolean; // Whether full-text is available (PDF or other source)
+  fullTextStatus?:
+    | 'not_fetched'
+    | 'fetching'
+    | 'success'
+    | 'failed'
+    | 'available'; // Full-text fetch status
+  fullTextSource?:
+    | 'unpaywall'
+    | 'manual'
+    | 'abstract_overflow'
+    | 'pmc'
+    | 'publisher'; // Where full-text came from
+  fullTextWordCount?: number; // Word count from full-text (when fetched)
+  fullText?: string; // Full-text content (when fetched)
+
+  // Phase 10 Day 5.13+ (Extension 2): Enterprise Quality Metrics
+  abstractWordCount?: number; // Abstract length for minimum filtering
+  citationsPerYear?: number; // Citation velocity (normalized by age)
+  impactFactor?: number; // Journal impact factor (from OpenAlex)
+  sjrScore?: number; // SCImago Journal Rank
+  quartile?: 'Q1' | 'Q2' | 'Q3' | 'Q4'; // Journal quartile ranking
+  hIndexJournal?: number; // Journal h-index
+  qualityScore?: number; // Composite quality score (0-100)
+  isHighQuality?: boolean; // Meets enterprise quality standards
 }
 
 export class Theme {
@@ -337,6 +473,14 @@ export class SourceContentDto {
 }
 
 export class ExtractionOptionsDto {
+  @ApiPropertyOptional({
+    description: 'Research context for theme extraction',
+    example: 'climate change mitigation strategies',
+  })
+  @IsString()
+  @IsOptional()
+  researchContext?: string;
+
   @ApiPropertyOptional({
     description: 'Minimum confidence threshold (0-1)',
     minimum: 0,
@@ -561,4 +705,540 @@ export class ExpandQueryDto {
   @IsString()
   @IsOptional()
   domain?: 'climate' | 'health' | 'education' | 'general';
+}
+
+/**
+ * Phase 10 Day 5.8 Week 1: Academic-Grade Theme Extraction DTO
+ */
+export class ExtractThemesAcademicDto {
+  @ApiProperty({
+    description:
+      'Sources to extract themes from (FULL CONTENT - no truncation)',
+    type: [SourceContentDto],
+    minItems: 1,
+  })
+  @IsArray()
+  @ArrayMinSize(1, {
+    message: 'At least one source is required for theme extraction',
+  })
+  @ValidateNested({ each: true })
+  @Type(() => SourceContentDto)
+  sources!: SourceContentDto[];
+
+  @ApiPropertyOptional({
+    description: 'Research context for theme extraction',
+  })
+  @IsString()
+  @IsOptional()
+  researchContext?: string;
+
+  @ApiPropertyOptional({
+    description: 'Academic methodology to use',
+    enum: ['reflexive_thematic', 'grounded_theory', 'content_analysis'],
+    default: 'reflexive_thematic',
+  })
+  @IsString()
+  @IsOptional()
+  methodology?: 'reflexive_thematic' | 'grounded_theory' | 'content_analysis';
+
+  @ApiPropertyOptional({
+    description: 'Validation level for theme quality',
+    enum: ['standard', 'rigorous', 'publication_ready'],
+    default: 'rigorous',
+  })
+  @IsString()
+  @IsOptional()
+  validationLevel?: 'standard' | 'rigorous' | 'publication_ready';
+
+  @ApiPropertyOptional({
+    description: 'Maximum number of themes to extract',
+    minimum: 5,
+    maximum: 20,
+    default: 15,
+  })
+  @IsNumber()
+  @IsOptional()
+  maxThemes?: number;
+
+  @ApiPropertyOptional({
+    description: 'Minimum confidence threshold (0-1)',
+    minimum: 0,
+    maximum: 1,
+    default: 0.5,
+  })
+  @IsNumber()
+  @IsOptional()
+  minConfidence?: number;
+
+  @ApiPropertyOptional({
+    description: 'Study ID to associate themes with',
+  })
+  @IsString()
+  @IsOptional()
+  studyId?: string;
+}
+
+/**
+ * Extract Themes V2 DTO - Purpose-Driven Extraction
+ * Phase 10 Day 5.13 - Patent Claim #2: Purpose-Adaptive Algorithms
+ */
+export class ExtractThemesV2Dto extends ExtractThemesAcademicDto {
+  @ApiProperty({
+    description:
+      'Research purpose (determines extraction strategy and parameters)',
+    enum: [
+      'q_methodology',
+      'survey_construction',
+      'qualitative_analysis',
+      'literature_synthesis',
+      'hypothesis_generation',
+    ],
+    example: 'q_methodology',
+  })
+  @IsString()
+  @IsIn([
+    'q_methodology',
+    'survey_construction',
+    'qualitative_analysis',
+    'literature_synthesis',
+    'hypothesis_generation',
+  ])
+  purpose!:
+    | 'q_methodology'
+    | 'survey_construction'
+    | 'qualitative_analysis'
+    | 'literature_synthesis'
+    | 'hypothesis_generation';
+
+  @ApiPropertyOptional({
+    description:
+      'User expertise level for progressive disclosure (Patent Claim #10)',
+    enum: ['novice', 'researcher', 'expert'],
+    default: 'researcher',
+  })
+  @IsString()
+  @IsOptional()
+  userExpertiseLevel?: 'novice' | 'researcher' | 'expert';
+
+  @ApiPropertyOptional({
+    description:
+      'Allow iterative refinement (non-linear TA per Braun & Clarke 2019)',
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  allowIterativeRefinement?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Request ID for end-to-end tracing and debugging',
+  })
+  @IsString()
+  @IsOptional()
+  requestId?: string;
+}
+
+/**
+ * Theme input for survey item generation
+ */
+export class ThemeInput {
+  @ApiProperty({ description: 'Theme ID' })
+  @IsString()
+  id!: string;
+
+  @ApiProperty({ description: 'Theme name' })
+  @IsString()
+  name!: string;
+
+  @ApiProperty({ description: 'Theme description' })
+  @IsString()
+  description!: string;
+
+  @ApiProperty({ description: 'Theme prevalence (0-1)' })
+  @IsNumber()
+  prevalence!: number;
+
+  @ApiProperty({ description: 'Theme confidence (0-1)' })
+  @IsNumber()
+  confidence!: number;
+
+  @ApiPropertyOptional({
+    description: 'Source papers that contributed to this theme',
+    type: [Object],
+  })
+  @IsArray()
+  @IsOptional()
+  sources?: Array<{
+    id: string;
+    title: string;
+    type: string;
+  }>;
+
+  @ApiPropertyOptional({
+    description: 'Key phrases extracted from theme',
+    type: [String],
+  })
+  @IsArray()
+  @IsOptional()
+  keyPhrases?: string[];
+}
+
+/**
+ * DTO for generating survey items from themes
+ * Phase 10 Day 5.9 - Theme-to-Survey Item Generation Service
+ *
+ * Purpose: Convert academic themes into traditional survey items
+ * Research Foundation: DeVellis (2016) Scale Development
+ */
+export class GenerateThemeToSurveyItemsDto {
+  @ApiProperty({
+    description: 'Themes to convert into survey items',
+    type: [ThemeInput],
+    minItems: 1,
+  })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'At least one theme is required' })
+  @ValidateNested({ each: true })
+  @Type(() => ThemeInput)
+  themes!: ThemeInput[];
+
+  @ApiProperty({
+    description: 'Type of survey items to generate',
+    enum: [
+      'likert',
+      'multiple_choice',
+      'semantic_differential',
+      'matrix_grid',
+      'rating_scale',
+      'mixed',
+    ],
+    default: 'likert',
+  })
+  @IsEnum([
+    'likert',
+    'multiple_choice',
+    'semantic_differential',
+    'matrix_grid',
+    'rating_scale',
+    'mixed',
+  ])
+  itemType!:
+    | 'likert'
+    | 'multiple_choice'
+    | 'semantic_differential'
+    | 'matrix_grid'
+    | 'rating_scale'
+    | 'mixed';
+
+  @ApiPropertyOptional({
+    description: 'Scale type for Likert or rating scales',
+    enum: ['1-5', '1-7', '1-10', 'agree-disagree', 'frequency', 'satisfaction'],
+    default: '1-5',
+  })
+  @IsString()
+  @IsOptional()
+  scaleType?:
+    | '1-5'
+    | '1-7'
+    | '1-10'
+    | 'agree-disagree'
+    | 'frequency'
+    | 'satisfaction';
+
+  @ApiPropertyOptional({
+    description: 'Number of items to generate per theme',
+    minimum: 1,
+    maximum: 10,
+    default: 3,
+  })
+  @IsNumber()
+  @IsOptional()
+  itemsPerTheme?: number;
+
+  @ApiPropertyOptional({
+    description: 'Include reverse-coded items for reliability checking',
+    default: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  includeReverseCoded?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Research context to inform item generation',
+  })
+  @IsString()
+  @IsOptional()
+  researchContext?: string;
+
+  @ApiPropertyOptional({
+    description: 'Target audience for the survey (affects wording complexity)',
+  })
+  @IsString()
+  @IsOptional()
+  targetAudience?: string;
+}
+
+// ==================== ENHANCED THEME INTEGRATION DTOs (Phase 10 Day 5.12) ====================
+
+export class ThemeSourceDto {
+  @ApiProperty({ description: 'Source ID' })
+  @IsString()
+  id!: string;
+
+  @ApiProperty({ description: 'Source title' })
+  @IsString()
+  title!: string;
+
+  @ApiProperty({ description: 'Source type' })
+  @IsString()
+  type!: string;
+}
+
+export class SubthemeDto {
+  @ApiProperty({ description: 'Subtheme name' })
+  @IsString()
+  name!: string;
+
+  @ApiProperty({ description: 'Subtheme description' })
+  @IsString()
+  description!: string;
+}
+
+export class ThemeDto {
+  @ApiProperty({ description: 'Theme ID' })
+  @IsString()
+  id!: string;
+
+  @ApiProperty({ description: 'Theme name' })
+  @IsString()
+  name!: string;
+
+  @ApiProperty({ description: 'Theme description' })
+  @IsString()
+  description!: string;
+
+  @ApiProperty({
+    description: 'Theme prevalence (0-1)',
+    minimum: 0,
+    maximum: 1,
+  })
+  @IsNumber()
+  prevalence!: number;
+
+  @ApiProperty({
+    description: 'Theme confidence (0-1)',
+    minimum: 0,
+    maximum: 1,
+  })
+  @IsNumber()
+  confidence!: number;
+
+  @ApiProperty({ description: 'Source papers', type: [ThemeSourceDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ThemeSourceDto)
+  sources!: ThemeSourceDto[];
+
+  @ApiPropertyOptional({ description: 'Key phrases', type: [String] })
+  @IsArray()
+  @IsOptional()
+  keyPhrases?: string[];
+
+  @ApiPropertyOptional({ description: 'Subthemes', type: [SubthemeDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SubthemeDto)
+  @IsOptional()
+  subthemes?: SubthemeDto[];
+}
+
+export enum QuestionType {
+  EXPLORATORY = 'exploratory',
+  EXPLANATORY = 'explanatory',
+  EVALUATIVE = 'evaluative',
+  DESCRIPTIVE = 'descriptive',
+}
+
+export class SuggestQuestionsDto {
+  @ApiProperty({
+    description: 'Themes to generate questions from',
+    type: [ThemeDto],
+  })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'At least one theme is required' })
+  @ValidateNested({ each: true })
+  @Type(() => ThemeDto)
+  themes!: ThemeDto[];
+
+  @ApiPropertyOptional({
+    description: 'Types of questions to generate',
+    enum: QuestionType,
+    isArray: true,
+  })
+  @IsArray()
+  @IsEnum(QuestionType, { each: true })
+  @IsOptional()
+  questionTypes?: QuestionType[];
+
+  @ApiPropertyOptional({
+    description: 'Maximum number of questions to generate',
+    default: 15,
+  })
+  @IsNumber()
+  @IsOptional()
+  maxQuestions?: number;
+
+  @ApiPropertyOptional({ description: 'Research domain context' })
+  @IsString()
+  @IsOptional()
+  researchDomain?: string;
+
+  @ApiPropertyOptional({ description: 'Research goal description' })
+  @IsString()
+  @IsOptional()
+  researchGoal?: string;
+}
+
+export enum HypothesisType {
+  CORRELATIONAL = 'correlational',
+  CAUSAL = 'causal',
+  MEDIATION = 'mediation',
+  MODERATION = 'moderation',
+  INTERACTION = 'interaction',
+}
+
+export class SuggestHypothesesDto {
+  @ApiProperty({
+    description: 'Themes to generate hypotheses from',
+    type: [ThemeDto],
+  })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'At least one theme is required' })
+  @ValidateNested({ each: true })
+  @Type(() => ThemeDto)
+  themes!: ThemeDto[];
+
+  @ApiPropertyOptional({
+    description: 'Types of hypotheses to generate',
+    enum: HypothesisType,
+    isArray: true,
+  })
+  @IsArray()
+  @IsEnum(HypothesisType, { each: true })
+  @IsOptional()
+  hypothesisTypes?: HypothesisType[];
+
+  @ApiPropertyOptional({
+    description: 'Maximum number of hypotheses to generate',
+    default: 20,
+  })
+  @IsNumber()
+  @IsOptional()
+  maxHypotheses?: number;
+
+  @ApiPropertyOptional({ description: 'Research domain context' })
+  @IsString()
+  @IsOptional()
+  researchDomain?: string;
+
+  @ApiPropertyOptional({ description: 'Research context description' })
+  @IsString()
+  @IsOptional()
+  researchContext?: string;
+}
+
+export enum ClusteringAlgorithm {
+  SEMANTIC = 'semantic',
+  STATISTICAL = 'statistical',
+  HYBRID = 'hybrid',
+}
+
+export class MapConstructsDto {
+  @ApiProperty({ description: 'Themes to map to constructs', type: [ThemeDto] })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'At least one theme is required' })
+  @ValidateNested({ each: true })
+  @Type(() => ThemeDto)
+  themes!: ThemeDto[];
+
+  @ApiPropertyOptional({
+    description: 'Include relationship detection between constructs',
+    default: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  includeRelationships?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Clustering algorithm to use',
+    enum: ClusteringAlgorithm,
+    default: ClusteringAlgorithm.SEMANTIC,
+  })
+  @IsEnum(ClusteringAlgorithm)
+  @IsOptional()
+  clusteringAlgorithm?: ClusteringAlgorithm;
+}
+
+export enum SurveyPurpose {
+  EXPLORATORY = 'exploratory',
+  CONFIRMATORY = 'confirmatory',
+  MIXED = 'mixed',
+}
+
+export enum ComplexityLevel {
+  BASIC = 'basic',
+  INTERMEDIATE = 'intermediate',
+  ADVANCED = 'advanced',
+}
+
+export class GenerateCompleteSurveyDto {
+  @ApiProperty({ description: 'Themes to convert to survey', type: [ThemeDto] })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'At least one theme is required' })
+  @ValidateNested({ each: true })
+  @Type(() => ThemeDto)
+  themes!: ThemeDto[];
+
+  @ApiProperty({
+    description: 'Purpose of the survey',
+    enum: SurveyPurpose,
+  })
+  @IsEnum(SurveyPurpose)
+  surveyPurpose!: SurveyPurpose;
+
+  @ApiPropertyOptional({ description: 'Target number of respondents' })
+  @IsNumber()
+  @IsOptional()
+  targetRespondentCount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Complexity level of survey items',
+    enum: ComplexityLevel,
+    default: ComplexityLevel.INTERMEDIATE,
+  })
+  @IsEnum(ComplexityLevel)
+  @IsOptional()
+  complexityLevel?: ComplexityLevel;
+
+  @ApiPropertyOptional({
+    description: 'Include demographics section',
+    default: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  includeDemographics?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Include attention check items',
+    default: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  includeValidityChecks?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Research context to inform survey design',
+  })
+  @IsString()
+  @IsOptional()
+  researchContext?: string;
 }

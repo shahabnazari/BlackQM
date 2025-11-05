@@ -72,11 +72,15 @@ import { ArchiveService } from './services/archive.service';
   providers: [
     AppService,
     ArchiveService, // Phase 8.5 Day 4: Archive service for version control
-    // Apply throttler guard globally
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    // Apply throttler guard globally (disabled in test environment)
+    ...(process.env.NODE_ENV !== 'test'
+      ? [
+          {
+            provide: APP_GUARD,
+            useClass: ThrottlerGuard,
+          },
+        ]
+      : []),
   ],
 })
 export class AppModule implements NestModule {

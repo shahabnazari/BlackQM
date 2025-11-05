@@ -12,7 +12,7 @@ interface SkipLogicBuilderProps {
 export const SkipLogicBuilder: React.FC<SkipLogicBuilderProps> = ({
   questions,
   selectedQuestionId,
-  onUpdateLogic
+  onUpdateLogic,
 }) => {
   const selectedQuestion = questions.find(q => q.id === selectedQuestionId);
 
@@ -29,7 +29,7 @@ export const SkipLogicBuilder: React.FC<SkipLogicBuilderProps> = ({
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
         Skip Logic Builder
       </h3>
-      
+
       <div className="space-y-4">
         <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
           <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -46,7 +46,7 @@ export const SkipLogicBuilder: React.FC<SkipLogicBuilderProps> = ({
               // Add logic here
               if (selectedQuestionId) {
                 onUpdateLogic(selectedQuestionId, {
-                  conditions: []
+                  conditions: [],
                 });
               }
             }}
@@ -57,7 +57,8 @@ export const SkipLogicBuilder: React.FC<SkipLogicBuilderProps> = ({
         </div>
 
         <div className="text-sm text-gray-500 dark:text-gray-400">
-          Configure conditions to show, hide, or skip questions based on responses.
+          Configure conditions to show, hide, or skip questions based on
+          responses.
         </div>
       </div>
     </div>

@@ -7,7 +7,12 @@
 import { QuestionType } from './questionnaire';
 
 // Participant AI Types
-export type ParticipantStage = 'consent' | 'prescreening' | 'presorting' | 'qsort' | 'postsurvey';
+export type ParticipantStage =
+  | 'consent'
+  | 'prescreening'
+  | 'presorting'
+  | 'qsort'
+  | 'postsurvey';
 
 export interface ParticipantContext {
   participantId?: string | undefined;
@@ -343,10 +348,7 @@ export function isStatementData(obj: unknown): obj is StatementData {
 
 export function isAuthenticatedUser(obj: unknown): obj is AuthenticatedUser {
   return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'id' in obj &&
-    'email' in obj
+    typeof obj === 'object' && obj !== null && 'id' in obj && 'email' in obj
   );
 }
 
@@ -363,7 +365,7 @@ export type AsyncResult<T> = Promise<{ data?: T; error?: EnhancedError }>;
 export const AI_MODELS = {
   FAST: 'gpt-3.5-turbo' as const,
   SMART: 'gpt-4' as const,
-  VISION: 'gpt-4-vision' as const
+  VISION: 'gpt-4-vision' as const,
 } as const;
 
 export const BIAS_TYPES = [
@@ -372,8 +374,8 @@ export const BIAS_TYPES = [
   'cultural',
   'confirmation',
   'sampling',
-  'demographic'
+  'demographic',
 ] as const;
 
-export type BiasType = typeof BIAS_TYPES[number];
-export type AIModel = typeof AI_MODELS[keyof typeof AI_MODELS];
+export type BiasType = (typeof BIAS_TYPES)[number];
+export type AIModel = (typeof AI_MODELS)[keyof typeof AI_MODELS];

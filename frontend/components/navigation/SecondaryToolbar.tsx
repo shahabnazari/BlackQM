@@ -408,11 +408,19 @@ export function SecondaryToolbar({ phase, onClose }: SecondaryToolbarProps) {
                     whileHover={{
                       scale: 1.05,
                       y: -3,
-                      transition: { type: 'spring', stiffness: 400, damping: 17 },
+                      transition: {
+                        type: 'spring',
+                        stiffness: 400,
+                        damping: 17,
+                      },
                     }}
                     whileTap={{
                       scale: 0.97,
-                      transition: { type: 'spring', stiffness: 500, damping: 15 },
+                      transition: {
+                        type: 'spring',
+                        stiffness: 500,
+                        damping: 15,
+                      },
                     }}
                     transition={{
                       type: 'spring',
@@ -461,7 +469,10 @@ export function SecondaryToolbar({ phase, onClose }: SecondaryToolbarProps) {
                           isActive
                             ? {
                                 rotate: [0, 360],
-                                transition: { duration: 0.6, ease: 'easeInOut' },
+                                transition: {
+                                  duration: 0.6,
+                                  ease: 'easeInOut',
+                                },
                               }
                             : { rotate: 0 }
                         }
@@ -555,7 +566,7 @@ export function SecondaryToolbar({ phase, onClose }: SecondaryToolbarProps) {
                         </div>
                       </div>
                     ) : null}
-                </motion.button>
+                  </motion.button>
 
                   {/* Arrow between items */}
                   {index < tools.length - 1 && (

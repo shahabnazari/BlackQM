@@ -56,6 +56,7 @@ import { ReportCollaborationService } from '../services/report-collaboration.ser
 import { ReportCommentService } from '../services/report-comment.service';
 import { ReportGeneratorService } from '../services/report-generator.service';
 import { ReportVersionService } from '../services/report-version.service';
+import { ReportSharingService } from '../services/report-sharing.service';
 
 /**
  * Report Controller
@@ -75,6 +76,7 @@ export class ReportController {
     private readonly commentService: ReportCommentService,
     private readonly changeService: ReportChangeService,
     private readonly approvalService: ReportApprovalService,
+    private readonly sharingService: ReportSharingService,
   ) {}
 
   /**
@@ -142,6 +144,90 @@ export class ReportController {
       const err = error as Error;
       this.logger.error(
         `Report generation failed for study ${dto.studyId}: ${err.message}`,
+        err.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Preview report without saving (Day 5)
+   */
+  @Post('preview')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Preview report without saving to database',
+    description: `
+      Generates report preview with metadata and section summaries without persisting to database.
+      Useful for reviewing report structure before final generation.
+      Returns estimated word count, section list, and provenance summary.
+    `,
+  })
+  @ApiBody({ type: GenerateReportDto })
+  @ApiResponse({ status: 200, description: 'Preview generated successfully' })
+  async previewReport(
+    @Body() dto: GenerateReportDto,
+    @Request() req: any,
+  ) {
+    try {
+      // Fetch study data for preview
+      const study = await this.reportService['fetchStudyData'](dto.studyId);
+      if (!study) {
+        throw new NotFoundException(`Study ${dto.studyId} not found`);
+      }
+
+      const literatureData = await this.reportService['fetchPhase9Data'](dto.studyId);
+      const researchDesignData = await this.reportService['fetchPhase95Data'](dto.studyId);
+      const provenance = await this.reportService['buildProvenanceChain'](dto.studyId);
+
+      // Generate sections for preview
+      const sections = await this.reportService['generateSections']({
+        study,
+        literatureData,
+        researchDesignData,
+        provenance,
+        includeSections: dto.includeSections || [
+          'abstract',
+          'introduction',
+          'literature_review',
+          'methods',
+          'results',
+          'discussion',
+          'references',
+          'appendix_provenance',
+        ],
+      });
+
+      // Calculate preview metrics
+      const totalWords = sections.reduce((sum: number, section: any) => {
+        const wordCount = section.content.split(/\s+/).length;
+        return sum + wordCount;
+      }, 0);
+
+      return {
+        preview: true,
+        studyId: dto.studyId,
+        studyTitle: study.title,
+        estimatedWords: totalWords,
+        estimatedPages: Math.ceil(totalWords / 250), // ~250 words per page
+        sectionCount: sections.length,
+        sections: sections.map((s: any) => ({
+          id: s.id,
+          title: s.title,
+          wordCount: s.content.split(/\s+/).length,
+          order: s.order,
+        })),
+        provenanceChainCount: provenance.length,
+        literatureCount: literatureData?.papers?.length || 0,
+        researchQuestionsCount: researchDesignData?.refinedQuestion ? 1 : 0,
+        hypothesesCount: Array.isArray(researchDesignData?.hypotheses) ? researchDesignData.hypotheses.length : 0,
+        format: dto.format || 'html',
+        templateType: dto.templateType || 'apa',
+      };
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(
+        `Report preview failed for study ${dto.studyId}: ${err.message}`,
         err.stack,
       );
       throw error;
@@ -1056,6 +1142,29 @@ export class ReportController {
   }
 
   /**
+   * Reply to comment
+   */
+  @Post(':reportId/comments/:commentId/replies')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Reply to a comment' })
+  @ApiParam({ name: 'reportId', type: 'string' })
+  @ApiParam({ name: 'commentId', type: 'string' })
+  @ApiBody({ type: CollaborationDto.ReplyToCommentDto })
+  @ApiResponse({ status: 201, description: 'Reply created' })
+  async replyToComment(
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+    @Param('commentId', ParseUUIDPipe) commentId: string,
+    @Body() dto: CollaborationDto.ReplyToCommentDto,
+    @Request() req: any,
+  ) {
+    return await this.commentService.replyToComment(
+      commentId,
+      req.user.userId,
+      dto.content,
+    );
+  }
+
+  /**
    * Track change
    */
   @Post(':reportId/changes')
@@ -1344,5 +1453,177 @@ export class ReportController {
       reportId,
       req.user.userId,
     );
+  }
+
+  // ============================================================================
+  // SHARING ENDPOINTS - Phase 10 Day 4
+  // ============================================================================
+
+  /**
+   * Generate shareable link
+   */
+  @Post(':reportId/share/link')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Generate shareable link for report' })
+  @ApiParam({ name: 'reportId', type: 'string' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        accessLevel: {
+          type: 'string',
+          enum: ['view', 'comment', 'edit'],
+          description: 'Access level for the link',
+        },
+        expiresIn: {
+          type: 'number',
+          description: 'Link expiration in days (optional)',
+        },
+        password: {
+          type: 'string',
+          description: 'Password protection (optional)',
+        },
+        allowedDomains: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Allowed email domains (optional)',
+        },
+        maxAccess: {
+          type: 'number',
+          description: 'Maximum access count (optional)',
+        },
+      },
+      required: ['accessLevel'],
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Share link generated' })
+  async generateShareLink(
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+    @Body() body: CollaborationDto.GenerateShareLinkDto,
+    @Request() req: any,
+  ) {
+    return await this.sharingService.generateShareLink(reportId, req.user.userId, body);
+  }
+
+  /**
+   * Get all share links for a report
+   */
+  @Get(':reportId/share/links')
+  @ApiOperation({ summary: 'Get all share links for report' })
+  @ApiParam({ name: 'reportId', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Share links retrieved' })
+  async getShareLinks(
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+    @Request() req: any,
+  ) {
+    return await this.sharingService.getShareLinks(reportId, req.user.userId);
+  }
+
+  /**
+   * Revoke share link
+   */
+  @Post(':reportId/share/links/:linkId/revoke')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revoke/disable share link' })
+  @ApiParam({ name: 'reportId', type: 'string' })
+  @ApiParam({ name: 'linkId', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Share link revoked' })
+  async revokeShareLink(
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+    @Param('linkId', ParseUUIDPipe) linkId: string,
+    @Request() req: any,
+  ) {
+    return await this.sharingService.revokeShareLink(linkId, req.user.userId);
+  }
+
+  /**
+   * Delete share link
+   */
+  @Delete(':reportId/share/links/:linkId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete share link permanently' })
+  @ApiParam({ name: 'reportId', type: 'string' })
+  @ApiParam({ name: 'linkId', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Share link deleted' })
+  async deleteShareLink(
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+    @Param('linkId', ParseUUIDPipe) linkId: string,
+    @Request() req: any,
+  ) {
+    return await this.sharingService.deleteShareLink(linkId, req.user.userId);
+  }
+
+  /**
+   * Update share link
+   */
+  @Post(':reportId/share/links/:linkId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update share link settings' })
+  @ApiParam({ name: 'reportId', type: 'string' })
+  @ApiParam({ name: 'linkId', type: 'string' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        accessLevel: { type: 'string', enum: ['view', 'comment', 'edit'] },
+        expiresAt: { type: 'string', format: 'date-time' },
+        maxAccess: { type: 'number' },
+        allowedDomains: { type: 'array', items: { type: 'string' } },
+        isActive: { type: 'boolean' },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Share link updated' })
+  async updateShareLink(
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+    @Param('linkId', ParseUUIDPipe) linkId: string,
+    @Body() body: CollaborationDto.UpdateShareLinkDto,
+    @Request() req: any,
+  ) {
+    return await this.sharingService.updateShareLink(linkId, req.user.userId, body);
+  }
+
+  /**
+   * Make report public
+   */
+  @Post(':reportId/share/public')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Make report publicly accessible' })
+  @ApiParam({ name: 'reportId', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Report made public' })
+  async makeReportPublic(
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+    @Request() req: any,
+  ) {
+    return await this.sharingService.makeReportPublic(reportId, req.user.userId);
+  }
+
+  /**
+   * Make report private
+   */
+  @Post(':reportId/share/private')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Make report private' })
+  @ApiParam({ name: 'reportId', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Report made private' })
+  async makeReportPrivate(
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+    @Request() req: any,
+  ) {
+    return await this.sharingService.makeReportPrivate(reportId, req.user.userId);
+  }
+
+  /**
+   * Get sharing statistics
+   */
+  @Get(':reportId/share/stats')
+  @ApiOperation({ summary: 'Get sharing statistics for report' })
+  @ApiParam({ name: 'reportId', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Statistics retrieved' })
+  async getSharingStatistics(
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+    @Request() req: any,
+  ) {
+    return await this.sharingService.getSharingStatistics(reportId, req.user.userId);
   }
 }

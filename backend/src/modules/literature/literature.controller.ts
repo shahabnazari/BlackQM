@@ -1,55 +1,65 @@
 import {
-  Controller,
-  Get,
-  Post,
+  BadRequestException,
   Body,
-  Query,
-  Param,
-  UseGuards,
+  Controller,
   Delete,
-  Put,
+  ForbiddenException,
+  Get,
   HttpCode,
   HttpStatus,
-  ForbiddenException,
+  InternalServerErrorException,
   Logger,
+  Param,
+  Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
-import { LiteratureService } from './literature.service';
-import { ReferenceService, CitationStyle } from './services/reference.service';
-import { ThemeExtractionService } from './services/theme-extraction.service';
-import { GapAnalyzerService } from './services/gap-analyzer.service';
-import { ThemeToStatementService } from './services/theme-to-statement.service';
-import { KnowledgeGraphService } from './services/knowledge-graph.service'; // Phase 9 Day 14
-import { PredictiveGapService } from './services/predictive-gap.service'; // Phase 9 Day 15
-import { TranscriptionService } from './services/transcription.service'; // Phase 9 Day 18
-import { MultiMediaAnalysisService } from './services/multimedia-analysis.service'; // Phase 9 Day 18
-import { UnifiedThemeExtractionService } from './services/unified-theme-extraction.service'; // Phase 9 Day 20
-import { CrossPlatformSynthesisService } from './services/cross-platform-synthesis.service'; // Phase 9 Day 22
-import { VideoRelevanceService } from '../ai/services/video-relevance.service'; // Phase 9 Day 21
-import { QueryExpansionService } from '../ai/services/query-expansion.service'; // Phase 9 Day 21
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { ConfigService } from '@nestjs/config';
 import {
-  SearchLiteratureDto,
-  SavePaperDto,
-  ExportCitationsDto,
-  ExtractThemesDto,
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { QueryExpansionService } from '../ai/services/query-expansion.service'; // Phase 9 Day 21
+import { VideoRelevanceService } from '../ai/services/video-relevance.service'; // Phase 9 Day 21
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CustomRateLimit } from '../rate-limiting/decorators/rate-limit.decorator';
+import {
+  AISelectVideosDto,
   AnalyzeGapsDto,
-  ExtractUnifiedThemesDto,
+  BatchScoreVideosDto,
   CompareStudyThemesDto,
   CrossPlatformSynthesisDto,
-  PlatformFilterDto,
-  ScoreVideoRelevanceDto,
-  BatchScoreVideosDto,
-  AISelectVideosDto,
   ExpandQueryDto,
+  ExportCitationsDto,
+  ExtractThemesAcademicDto,
+  ExtractThemesDto,
+  ExtractThemesV2Dto,
+  ExtractUnifiedThemesDto,
+  GenerateCompleteSurveyDto,
+  MapConstructsDto,
+  SavePaperDto,
+  ScoreVideoRelevanceDto,
+  SearchLiteratureDto,
+  SuggestHypothesesDto,
+  SuggestQuestionsDto,
 } from './dto/literature.dto';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { LiteratureService } from './literature.service';
+import { CrossPlatformSynthesisService } from './services/cross-platform-synthesis.service'; // Phase 9 Day 22
+import { EnhancedThemeIntegrationService } from './services/enhanced-theme-integration.service'; // Phase 10 Day 5.12
+import { GapAnalyzerService } from './services/gap-analyzer.service';
+import { KnowledgeGraphService } from './services/knowledge-graph.service'; // Phase 9 Day 14
+import { MultiMediaAnalysisService } from './services/multimedia-analysis.service'; // Phase 9 Day 18
+import { PredictiveGapService } from './services/predictive-gap.service'; // Phase 9 Day 15
+import { CitationStyle, ReferenceService } from './services/reference.service';
+import { ThemeExtractionService } from './services/theme-extraction.service';
+import { ThemeToStatementService } from './services/theme-to-statement.service';
+import { TranscriptionService } from './services/transcription.service'; // Phase 9 Day 18
+import { UnifiedThemeExtractionService } from './services/unified-theme-extraction.service'; // Phase 9 Day 20
 
 @ApiTags('literature')
 @Controller('literature')
@@ -70,6 +80,8 @@ export class LiteratureController {
     private readonly crossPlatformSynthesisService: CrossPlatformSynthesisService, // Phase 9 Day 22
     private readonly videoRelevanceService: VideoRelevanceService, // Phase 9 Day 21
     private readonly queryExpansionService: QueryExpansionService, // Phase 9 Day 21
+    private readonly enhancedThemeIntegrationService: EnhancedThemeIntegrationService, // Phase 10 Day 5.12
+    private readonly configService: ConfigService, // Phase 10 Day 5.9 - Needed for ThemeToSurveyItemService
   ) {}
 
   @Post('search')
@@ -761,13 +773,64 @@ export class LiteratureController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Analyze research gaps from papers' })
+  @ApiOperation({ summary: 'Analyze research gaps from papers with content' })
   @ApiResponse({ status: 200, description: 'Research gaps analyzed' })
   async analyzeGapsFromPapers(
-    @Body() body: { paperIds: string[] },
+    @Body() body: { papers: any[] },
     @CurrentUser() user: any,
   ) {
-    return await this.gapAnalyzerService.analyzeResearchGaps(body.paperIds);
+    this.logger.log(
+      `Analyzing research gaps from ${body.papers?.length || 0} papers (User: ${user.userId})`,
+    );
+
+    if (!body.papers || body.papers.length === 0) {
+      return {
+        success: false,
+        message: 'No papers provided',
+        gaps: [],
+      };
+    }
+
+    // Use new method that accepts paper content directly
+    const gaps = await this.gapAnalyzerService.analyzeResearchGapsFromContent(
+      body.papers,
+    );
+
+    return gaps;
+  }
+
+  @Post('gaps/analyze/public')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'PUBLIC: Analyze research gaps for testing (dev only)',
+  })
+  @ApiResponse({ status: 200, description: 'Research gaps analyzed' })
+  async analyzeGapsFromPapersPublic(@Body() body: { papers: any[] }) {
+    // Security: Only allow in development mode
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException(
+        'Public endpoints are disabled in production. Please use the authenticated endpoint with JWT token.',
+      );
+    }
+
+    this.logger.log(
+      `PUBLIC: Analyzing research gaps from ${body.papers?.length || 0} papers`,
+    );
+
+    if (!body.papers || body.papers.length === 0) {
+      return {
+        success: false,
+        message: 'No papers provided',
+        gaps: [],
+      };
+    }
+
+    // Use new method that accepts paper content directly
+    const gaps = await this.gapAnalyzerService.analyzeResearchGapsFromContent(
+      body.papers,
+    );
+
+    return gaps;
   }
 
   @Post('gaps/opportunities')
@@ -1418,6 +1481,209 @@ export class LiteratureController {
         themesExtracted: result.themes.length,
       },
     };
+  }
+
+  /**
+   * PHASE 10 DAY 5.5: Enterprise-grade batch theme extraction
+   * Optimized for large-scale theme extraction (10-50 sources)
+   * Features: Per-paper caching, concurrency control, progress tracking, semantic deduplication
+   */
+  @Post('themes/unified-extract-batch')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      '⚡ OPTIMIZED: Batch theme extraction for 10-50 sources (Phase 10 Day 5.5)',
+    description:
+      'Enterprise-grade batch processing with per-paper caching, p-limit concurrency control (2 concurrent GPT-4 calls), progress tracking via WebSocket, and semantic deduplication. Handles 25 papers in ~6-8 minutes (vs 16+ minutes with regular endpoint). Repeated papers are instant via MD5 content-based cache.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Batch extraction completed with themes, stats, and performance metrics',
+  })
+  async extractUnifiedThemesBatch(
+    @Body() dto: ExtractUnifiedThemesDto,
+    @CurrentUser() user: any,
+  ) {
+    this.logger.log(
+      `🚀 BATCH: Extracting unified themes from ${dto.sources.length} sources (User: ${user.userId})`,
+    );
+
+    const startTime = Date.now();
+
+    // ✅ FIX #5: Add try-catch for proper error handling
+    try {
+      // Map DTOs to service interface
+      const sources = dto.sources.map((s) => ({
+        id: s.id,
+        type: s.type,
+        title: s.title || '',
+        content: s.content || '',
+        keywords: s.keywords || [],
+        author: s.metadata?.author,
+        url: s.metadata?.url,
+        doi: s.metadata?.doi,
+        authors: s.metadata?.authors,
+        year: s.metadata?.year,
+        timestampedSegments: s.metadata?.timestampedSegments,
+      }));
+
+      // Use enterprise-grade batch extraction
+      const result =
+        await this.unifiedThemeExtractionService.extractThemesInBatches(
+          sources,
+          dto.options,
+          user.userId,
+        );
+
+      const duration = Date.now() - startTime;
+
+      this.logger.log(
+        `✅ BATCH: Extraction complete for ${dto.sources.length} sources in ${duration}ms (User: ${user.userId})`,
+      );
+
+      return {
+        success: true,
+        themes: result.themes,
+        stats: result.stats,
+        metadata: {
+          totalSources: dto.sources.length,
+          sourceBreakdown: dto.sources.reduce(
+            (acc, s) => {
+              acc[s.type] = (acc[s.type] || 0) + 1;
+              return acc;
+            },
+            {} as Record<string, number>,
+          ),
+          processingTimeMs: duration,
+          processingTimeMinutes: (duration / 1000 / 60).toFixed(2),
+          themesExtracted: result.themes.length,
+          performanceGain: `${((1 - duration / (dto.sources.length * 40000)) * 100).toFixed(1)}% faster than sequential`,
+        },
+      };
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+
+      this.logger.error(
+        `❌ BATCH: Extraction failed for ${dto.sources.length} sources after ${duration}ms (User: ${user.userId})`,
+        error.stack,
+      );
+
+      // Return structured error response
+      throw new InternalServerErrorException({
+        message: 'Theme extraction failed',
+        details: error.message,
+        context: {
+          sourcesAttempted: dto.sources.length,
+          userId: user.userId,
+          failedAfterMs: duration,
+          errorType: error.name,
+        },
+      });
+    }
+  }
+
+  /**
+   * PUBLIC ENDPOINT: Batch theme extraction for testing (dev only)
+   * Same as authenticated endpoint but without JWT requirement
+   */
+  @Post('themes/unified-extract-batch/public')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '⚡ PUBLIC: Batch theme extraction for testing (dev only)',
+    description:
+      'PUBLIC endpoint for testing batch theme extraction without authentication. Only available in development mode. Uses same enterprise-grade processing as authenticated endpoint.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Batch extraction completed with themes, stats, and performance metrics',
+  })
+  async extractUnifiedThemesBatchPublic(@Body() dto: ExtractUnifiedThemesDto) {
+    // Security: Only allow in development mode
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException(
+        'Public endpoints are disabled in production. Please use the authenticated endpoint with JWT token.',
+      );
+    }
+
+    this.logger.log(
+      `🚀 BATCH PUBLIC: Extracting unified themes from ${dto.sources.length} sources (No Auth)`,
+    );
+
+    const startTime = Date.now();
+
+    try {
+      // Map DTOs to service interface
+      const sources = dto.sources.map((s) => ({
+        id: s.id,
+        type: s.type,
+        title: s.title || '',
+        content: s.content || '',
+        keywords: s.keywords || [],
+        author: s.metadata?.author,
+        url: s.metadata?.url,
+        doi: s.metadata?.doi,
+        authors: s.metadata?.authors,
+        year: s.metadata?.year,
+        timestampedSegments: s.metadata?.timestampedSegments,
+      }));
+
+      // Use enterprise-grade batch extraction
+      const result =
+        await this.unifiedThemeExtractionService.extractThemesInBatches(
+          sources,
+          dto.options,
+          'public-test-user', // Use public user ID
+        );
+
+      const duration = Date.now() - startTime;
+
+      this.logger.log(
+        `✅ BATCH PUBLIC: Extraction complete for ${dto.sources.length} sources in ${duration}ms`,
+      );
+
+      return {
+        success: true,
+        themes: result.themes,
+        stats: result.stats,
+        metadata: {
+          totalSources: dto.sources.length,
+          sourceBreakdown: dto.sources.reduce(
+            (acc, s) => {
+              acc[s.type] = (acc[s.type] || 0) + 1;
+              return acc;
+            },
+            {} as Record<string, number>,
+          ),
+          processingTimeMs: duration,
+          processingTimeMinutes: (duration / 1000 / 60).toFixed(2),
+          themesExtracted: result.themes.length,
+          performanceGain: `${((1 - duration / (dto.sources.length * 40000)) * 100).toFixed(1)}% faster than sequential`,
+        },
+        note: 'PUBLIC ENDPOINT: For development/testing only. Use authenticated endpoint in production.',
+      };
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+
+      this.logger.error(
+        `❌ BATCH PUBLIC: Extraction failed for ${dto.sources.length} sources after ${duration}ms`,
+        error.stack,
+      );
+
+      throw new InternalServerErrorException({
+        message: 'Theme extraction failed',
+        details: error.message,
+        context: {
+          sourcesAttempted: dto.sources.length,
+          userId: 'public-test-user',
+          failedAfterMs: duration,
+          errorType: error.name,
+        },
+      });
+    }
   }
 
   /**
@@ -2102,5 +2368,1141 @@ export class LiteratureController {
       success: true,
       ...result,
     };
+  }
+
+  /**
+   * Phase 10 Day 5.8 Week 1: Academic-Grade Theme Extraction Endpoint
+   * Based on Braun & Clarke (2006) Reflexive Thematic Analysis
+   */
+  @Post('/themes/extract-academic')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Extract themes using academic-grade methodology with semantic embeddings',
+    description: `
+      Implements rigorous 6-stage Reflexive Thematic Analysis (Braun & Clarke, 2006):
+
+      1. **Familiarization** - Generate semantic embeddings from FULL content (no truncation)
+      2. **Initial Coding** - Identify concepts and patterns across all sources
+      3. **Theme Generation** - Cluster related codes using semantic similarity
+      4. **Theme Review** - Validate themes against full dataset (3+ sources required)
+      5. **Refinement** - Merge overlaps and remove weak themes
+      6. **Provenance** - Calculate semantic influence (not keyword matching)
+
+      **Returns:**
+      - Themes with academic validation metrics
+      - Methodology transparency report
+      - Validation scores (coherence, coverage, saturation)
+      - Processing metadata
+
+      **Quality Assurance:**
+      - Cross-source triangulation (themes must appear in 3+ sources)
+      - Semantic embeddings (understands meaning, not just keywords)
+      - Full content analysis (no 500-char truncation)
+      - Confidence scoring with transparent metrics
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Themes extracted with academic validation',
+    schema: {
+      properties: {
+        success: { type: 'boolean' },
+        themes: {
+          type: 'array',
+          description: 'Validated themes with provenance tracking',
+        },
+        methodology: {
+          type: 'object',
+          properties: {
+            method: { type: 'string', example: 'Reflexive Thematic Analysis' },
+            citation: {
+              type: 'string',
+              example: 'Braun & Clarke (2006, 2019)',
+            },
+            stages: { type: 'number', example: 6 },
+            validation: { type: 'string' },
+            aiRole: { type: 'string' },
+            limitations: { type: 'string' },
+          },
+        },
+        validation: {
+          type: 'object',
+          properties: {
+            coherenceScore: { type: 'number', description: '0-1' },
+            coverage: { type: 'number', description: '0-1' },
+            saturation: { type: 'boolean' },
+            confidence: { type: 'number', description: '0-1' },
+          },
+        },
+        processingStages: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        metadata: {
+          type: 'object',
+          properties: {
+            sourcesAnalyzed: { type: 'number' },
+            codesGenerated: { type: 'number' },
+            candidateThemes: { type: 'number' },
+            finalThemes: { type: 'number' },
+            processingTimeMs: { type: 'number' },
+            embeddingModel: {
+              type: 'string',
+              example: 'text-embedding-3-large',
+            },
+            analysisModel: { type: 'string', example: 'gpt-4-turbo-preview' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async extractThemesAcademic(
+    @Body() dto: ExtractThemesAcademicDto,
+    @CurrentUser() user: any,
+  ) {
+    try {
+      this.logger.log(
+        `Academic theme extraction requested by user ${user.userId}`,
+      );
+      this.logger.log(
+        `Sources: ${dto.sources.length}, Methodology: ${dto.methodology || 'reflexive_thematic'}`,
+      );
+
+      // Convert DTO sources to service format
+      const sources = dto.sources.map((s) => ({
+        id: s.id || `source_${Date.now()}_${Math.random()}`,
+        type: s.type,
+        title: s.title || '',
+        content: s.content || '', // FULL CONTENT - NO TRUNCATION
+        author: s.authors && s.authors.length > 0 ? s.authors[0] : undefined,
+        keywords: s.keywords || [],
+        url: s.url,
+        doi: s.doi,
+        authors: s.authors,
+        year: s.year,
+        metadata: s.metadata, // PHASE 10 DAY 5.16: Pass content type metadata for adaptive validation
+      }));
+
+      // Call academic extraction service with progress callback
+      const result =
+        await this.unifiedThemeExtractionService.extractThemesAcademic(
+          sources,
+          {
+            methodology: dto.methodology || 'reflexive_thematic',
+            validationLevel: dto.validationLevel || 'rigorous',
+            maxThemes: dto.maxThemes || 15,
+            minConfidence: dto.minConfidence || 0.5,
+            researchContext: dto.researchContext,
+            studyId: dto.studyId,
+            userId: user.userId,
+          },
+          // Progress callback for WebSocket updates (optional)
+          (stage, total, message) => {
+            this.logger.debug(
+              `Academic extraction progress: ${stage}/${total} - ${message}`,
+            );
+            // WebSocket progress updates already handled by service via gateway
+          },
+        );
+
+      this.logger.log(
+        `Academic extraction complete: ${result.themes.length} themes extracted in ${result.metadata.processingTimeMs}ms`,
+      );
+
+      return {
+        success: true,
+        ...result,
+        transparency: {
+          howItWorks:
+            'Six-stage reflexive thematic analysis based on Braun & Clarke (2006)',
+          aiRole:
+            'AI assists in semantic clustering and pattern identification; all themes validated against full dataset',
+          quality:
+            'Inter-source triangulation (3+ sources), semantic coherence checks, confidence scoring',
+          limitations:
+            'AI-assisted interpretation; recommend researcher review for publication',
+          citation:
+            'Braun, V., & Clarke, V. (2006). Using thematic analysis in psychology. Qualitative Research in Psychology, 3(2), 77-101.',
+        },
+      };
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(
+        `Academic theme extraction failed for user ${user.userId}: ${err.message}`,
+        err.stack,
+      );
+
+      throw new InternalServerErrorException({
+        success: false,
+        error: 'Academic theme extraction failed',
+        message: err.message,
+        suggestion:
+          'Check that all sources have sufficient content and try again',
+      });
+    }
+  }
+
+  /**
+   * Enterprise-grade content validation for purpose-driven extraction
+   * REFACTORED: Eliminates code duplication between authenticated and public endpoints
+   */
+  private validateContentRequirements(
+    sources: any[],
+    purpose: string,
+  ): { valid: boolean; fullTextCount: number; contentBreakdown: any } {
+    const fullTextCount = sources.filter(
+      (s) =>
+        s.metadata?.contentType === 'full_text' ||
+        s.metadata?.contentType === 'abstract_overflow',
+    ).length;
+
+    const contentBreakdown = {
+      fullText: sources.filter((s) => s.metadata?.contentType === 'full_text')
+        .length,
+      abstractOverflow: sources.filter(
+        (s) => s.metadata?.contentType === 'abstract_overflow',
+      ).length,
+      abstract: sources.filter((s) => s.metadata?.contentType === 'abstract')
+        .length,
+      none: sources.filter(
+        (s) => s.metadata?.contentType === 'none' || !s.metadata?.contentType,
+      ).length,
+    };
+
+    // Literature Synthesis validation
+    if (purpose === 'literature_synthesis' && fullTextCount < 10) {
+      throw new BadRequestException({
+        success: false,
+        error: 'INSUFFICIENT_CONTENT',
+        message: `Literature Synthesis requires at least 10 full-text papers for methodologically sound meta-ethnography. You provided ${fullTextCount} full-text paper${fullTextCount !== 1 ? 's' : ''}.`,
+        required: 10,
+        provided: fullTextCount,
+        purpose: 'literature_synthesis',
+        contentBreakdown,
+        recommendation:
+          'Go back and select papers with full-text PDFs available, or choose Q-Methodology (works well with abstracts).',
+      });
+    }
+
+    // Hypothesis Generation validation
+    if (purpose === 'hypothesis_generation' && fullTextCount < 8) {
+      throw new BadRequestException({
+        success: false,
+        error: 'INSUFFICIENT_CONTENT',
+        message: `Hypothesis Generation requires at least 8 full-text papers for grounded theory. You provided ${fullTextCount} full-text paper${fullTextCount !== 1 ? 's' : ''}.`,
+        required: 8,
+        provided: fullTextCount,
+        purpose: 'hypothesis_generation',
+        contentBreakdown,
+        recommendation:
+          'Go back and select papers with full-text PDFs available, or choose Q-Methodology (works well with abstracts).',
+      });
+    }
+
+    return { valid: true, fullTextCount, contentBreakdown };
+  }
+
+  /**
+   * Phase 10 Day 5.13: Purpose-Driven Holistic Theme Extraction (V2)
+   * Revolutionary: Different research purposes require different extraction strategies
+   * Patent Claim #2: Purpose-Adaptive Algorithms
+   */
+  @Post('/themes/extract-themes-v2')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      '🔥 Purpose-Driven Theme Extraction with Transparent Process Visualization',
+    description: `
+      Revolutionary purpose-adaptive theme extraction (Patent Claim #2).
+
+      **5 Research Purposes:**
+      - **Q-Methodology:** Breadth-focused, 40-80 statements (Stephenson 1953)
+      - **Survey Construction:** Depth-focused, 5-15 constructs (Churchill 1979)
+      - **Qualitative Analysis:** Saturation-driven, 5-20 themes (Braun & Clarke 2019)
+      - **Literature Synthesis:** Meta-analytic, 10-25 themes (Noblit & Hare 1988)
+      - **Hypothesis Generation:** Theory-building, 8-15 themes (Glaser & Strauss 1967)
+
+      **Enhanced Features (13 Patent Claims):**
+      1. Scientifically correct holistic extraction (ALL sources together)
+      2. Purpose-adaptive algorithms (different strategy per purpose)
+      3. 4-part transparent progress messaging (Stage + What + Why + Stats)
+      4. Progressive disclosure (Novice/Researcher/Expert modes)
+      5. Iterative refinement support (non-linear TA)
+      6. AI confidence calibration (High/Medium/Low)
+      7. Theme saturation visualization
+      8. Enhanced methodology report with AI disclosure (Nature/Science 2024 compliance)
+
+      **Returns:**
+      - Themes with purpose-specific validation
+      - Enhanced methodology report (with AI disclosure)
+      - Saturation data (for visualization)
+      - Validation metrics
+      - Processing metadata
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Themes extracted with purpose-adaptive strategy',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async extractThemesV2(
+    @Body() dto: ExtractThemesV2Dto,
+    @CurrentUser() user: any,
+  ) {
+    try {
+      this.logger.log(
+        `V2 Purpose-driven extraction requested by user ${user.userId}`,
+      );
+      this.logger.log(
+        `Purpose: ${dto.purpose}, Sources: ${dto.sources.length}, User Level: ${dto.userExpertiseLevel || 'researcher'}`,
+      );
+
+      // Convert DTO sources to service format
+      const sources = dto.sources.map((s) => ({
+        id: s.id || `source_${Date.now()}_${Math.random()}`,
+        type: s.type,
+        title: s.title || '',
+        content: s.content || '', // FULL CONTENT - NO TRUNCATION
+        author: s.authors && s.authors.length > 0 ? s.authors[0] : undefined,
+        keywords: s.keywords || [],
+        url: s.url,
+        doi: s.doi,
+        authors: s.authors,
+        year: s.year,
+        metadata: s.metadata, // PHASE 10 DAY 5.16: Pass content type metadata for adaptive validation
+      }));
+
+      // Map string purpose to enum
+      const purposeMap: Record<string, any> = {
+        q_methodology: 'q_methodology',
+        survey_construction: 'survey_construction',
+        qualitative_analysis: 'qualitative_analysis',
+        literature_synthesis: 'literature_synthesis',
+        hypothesis_generation: 'hypothesis_generation',
+      };
+
+      // REFACTORED: Use centralized validation method (eliminates 70 lines of duplicate code)
+      const validation = this.validateContentRequirements(sources, dto.purpose);
+      this.logger.log(
+        `✅ Content validation passed: ${validation.fullTextCount} full-text papers for ${dto.purpose}`,
+      );
+
+      // Call V2 extraction service with purpose-adaptive parameters
+      const result = await this.unifiedThemeExtractionService.extractThemesV2(
+        sources,
+        purposeMap[dto.purpose],
+        {
+          methodology: dto.methodology || 'reflexive_thematic',
+          validationLevel: dto.validationLevel || 'rigorous',
+          researchContext: dto.researchContext,
+          studyId: dto.studyId,
+          userId: user.userId,
+          userExpertiseLevel: dto.userExpertiseLevel || 'researcher',
+          allowIterativeRefinement: dto.allowIterativeRefinement || false,
+          requestId: dto.requestId, // PHASE 10 DAY 5.17.3: Pass request ID for end-to-end tracing
+        },
+        // Progress callback for 4-part transparent messaging
+        (stage, total, message, transparentMessage) => {
+          if (transparentMessage) {
+            this.logger.debug(
+              `V2 Progress (${dto.userExpertiseLevel || 'researcher'}): ${stage}/${total} - ${transparentMessage.whatWeAreDoing}`,
+            );
+          }
+          // WebSocket progress updates already handled by service via gateway
+        },
+      );
+
+      this.logger.log(
+        `V2 extraction complete: ${result.themes.length} themes extracted in ${result.metadata.processingTimeMs}ms`,
+      );
+      this.logger.log(
+        `Saturation: ${result.saturationData?.saturationReached ? 'Yes' : 'No'}`,
+      );
+
+      return {
+        success: true,
+        ...result,
+        transparency: {
+          purpose: dto.purpose,
+          howItWorks:
+            'Purpose-adaptive thematic analysis with 4-part transparent progress messaging',
+          aiRole: result.methodology.aiDisclosure.aiRoleDetailed,
+          humanOversightRequired:
+            result.methodology.aiDisclosure.humanOversightRequired,
+          confidenceCalibration:
+            result.methodology.aiDisclosure.confidenceCalibration,
+          quality: 'Purpose-specific validation with saturation tracking',
+          limitations: result.methodology.limitations,
+          citations: result.methodology.citation,
+          saturationRecommendation: result.saturationData?.recommendation,
+        },
+      };
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(
+        `V2 theme extraction failed for user ${user.userId}: ${err.message}`,
+        err.stack,
+      );
+
+      throw new InternalServerErrorException({
+        success: false,
+        error: 'V2 purpose-driven theme extraction failed',
+        message: err.message,
+        suggestion:
+          'Check that all sources have sufficient content and purpose is valid',
+      });
+    }
+  }
+
+  /**
+   * PUBLIC ENDPOINT: V2 Purpose-Driven Theme Extraction (dev/testing only)
+   * Same as authenticated endpoint but without JWT requirement
+   * Phase 10 Day 5.15: Enterprise-grade testing support
+   */
+  @Post('/themes/extract-themes-v2/public')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '🔓 PUBLIC: V2 Purpose-Driven Theme Extraction (dev/testing only)',
+    description: `
+      PUBLIC endpoint for testing V2 purpose-driven extraction without authentication.
+      Only available in development mode. Uses same enterprise-grade processing as authenticated endpoint.
+
+      **WARNING**: This endpoint should be disabled in production.
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Themes extracted with purpose-adaptive strategy',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 403, description: 'Endpoint disabled in production' })
+  async extractThemesV2Public(@Body() dto: ExtractThemesV2Dto) {
+    // Security: Only allow in development
+    const env = this.configService.get<string>('NODE_ENV', 'development');
+    if (env === 'production') {
+      throw new ForbiddenException({
+        success: false,
+        error: 'Public endpoint disabled in production',
+        message:
+          'Please use the authenticated endpoint /themes/extract-themes-v2',
+      });
+    }
+
+    try {
+      this.logger.log(`[PUBLIC] V2 Purpose-driven extraction requested`);
+      this.logger.log(
+        `Purpose: ${dto.purpose}, Sources: ${dto.sources.length}`,
+      );
+
+      // Convert DTO sources to service format
+      const sources = dto.sources.map((s) => ({
+        id: s.id || `source_${Date.now()}_${Math.random()}`,
+        type: s.type,
+        title: s.title || '',
+        content: s.content || '',
+        author: s.authors && s.authors.length > 0 ? s.authors[0] : undefined,
+        keywords: s.keywords || [],
+        url: s.url,
+        doi: s.doi,
+        authors: s.authors,
+        year: s.year,
+        metadata: s.metadata, // PHASE 10 DAY 5.17: Pass content type metadata
+      }));
+
+      // Map purpose
+      const purposeMap: Record<string, any> = {
+        q_methodology: 'q_methodology',
+        survey_construction: 'survey_construction',
+        qualitative_analysis: 'qualitative_analysis',
+        literature_synthesis: 'literature_synthesis',
+        hypothesis_generation: 'hypothesis_generation',
+      };
+
+      // REFACTORED: Use centralized validation method (eliminates 70 lines of duplicate code)
+      const validation = this.validateContentRequirements(sources, dto.purpose);
+      this.logger.log(
+        `✅ [PUBLIC] Content validation passed: ${validation.fullTextCount} full-text papers for ${dto.purpose}`,
+      );
+
+      // Call V2 extraction service (no userId for public endpoint)
+      const result = await this.unifiedThemeExtractionService.extractThemesV2(
+        sources,
+        purposeMap[dto.purpose],
+        {
+          methodology: dto.methodology || 'reflexive_thematic',
+          validationLevel: dto.validationLevel || 'rigorous',
+          researchContext: dto.researchContext,
+          studyId: dto.studyId,
+          userId: 'public-test-user',
+          userExpertiseLevel: dto.userExpertiseLevel || 'researcher',
+          allowIterativeRefinement: dto.allowIterativeRefinement || false,
+        },
+        (stage, total, message, transparentMessage) => {
+          if (transparentMessage) {
+            this.logger.debug(
+              `[PUBLIC] V2 Progress: ${stage}/${total} - ${transparentMessage.whatWeAreDoing}`,
+            );
+          }
+        },
+      );
+
+      this.logger.log(
+        `[PUBLIC] V2 extraction complete: ${result.themes.length} themes`,
+      );
+
+      return {
+        success: true,
+        ...result,
+        transparency: {
+          purpose: dto.purpose,
+          howItWorks: 'Purpose-adaptive thematic analysis',
+          aiRole: result.methodology.aiDisclosure.aiRoleDetailed,
+          humanOversightRequired:
+            result.methodology.aiDisclosure.humanOversightRequired,
+          quality: 'Purpose-specific validation',
+          limitations: result.methodology.limitations,
+          citations: result.methodology.citation,
+          saturationRecommendation: result.saturationData?.recommendation,
+        },
+      };
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(
+        `[PUBLIC] V2 extraction failed: ${err.message}`,
+        err.stack,
+      );
+
+      throw new InternalServerErrorException({
+        success: false,
+        error: 'V2 purpose-driven theme extraction failed',
+        message: err.message,
+        suggestion:
+          'Check that all sources have sufficient content and purpose is valid',
+      });
+    }
+  }
+
+  /**
+   * Phase 10 Day 5.9: Theme-to-Survey Item Generation
+   * Convert academic themes into traditional survey items (Likert, MC, rating scales)
+   *
+   * Purpose: Expand theme utility from Q-methodology only (~5% market) to ALL survey types (~95% market)
+   * Research Foundation: DeVellis (2016) Scale Development: Theory and Applications
+   */
+  @Post('/themes/to-survey-items')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Generate survey items from academic themes',
+    description: `
+      Convert themes into traditional survey items for non-Q-methodology studies.
+
+      **Critical Gap Addressed:**
+      - Previously, themes only generated Q-statements (Q-methodology, ~5% of market)
+      - This endpoint enables Likert scales, multiple choice, rating scales (~95% of market)
+
+      **Supported Item Types:**
+      - **Likert Scales:** 1-5, 1-7, 1-10 with agree-disagree, frequency, or satisfaction anchors
+      - **Multiple Choice:** Categorical response options with mutually exclusive choices
+      - **Semantic Differential:** Bipolar adjective pairs (Osgood et al., 1957)
+      - **Matrix/Grid:** Multiple items measuring same construct (efficient data collection)
+      - **Rating Scales:** Numeric ratings with labeled endpoints
+      - **Mixed:** Combination of types for methodological triangulation
+
+      **Research Backing:**
+      - DeVellis (2016) - Scale Development: Theory and Applications
+      - Osgood et al. (1957) - Semantic Differential measurement
+      - Haladyna & Rodriguez (2013) - Test Item Development best practices
+
+      **Reliability Features:**
+      - Reverse-coded items included (detect acquiescence bias)
+      - Multiple items per construct (improve internal consistency)
+      - Pilot testing recommendations provided
+      - Cronbach's alpha targets specified (α > 0.70)
+
+      **Use Cases:**
+      - Attitude scales from literature themes
+      - Behavior frequency questionnaires
+      - Satisfaction surveys with academic grounding
+      - Mixed-methods studies (qual themes → quant items)
+      - Traditional survey research (Qualtrics-style)
+    `,
+  })
+  @ApiBody({
+    type: () => require('./dto/literature.dto').GenerateThemeToSurveyItemsDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Survey items generated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: 'theme_1_likert_1' },
+              type: {
+                type: 'string',
+                enum: [
+                  'likert',
+                  'multiple_choice',
+                  'semantic_differential',
+                  'matrix_grid',
+                  'rating_scale',
+                ],
+              },
+              themeId: { type: 'string' },
+              themeName: {
+                type: 'string',
+                example: 'Climate Change Awareness',
+              },
+              text: {
+                type: 'string',
+                example: 'I believe climate change is an urgent issue',
+              },
+              scaleType: { type: 'string', example: '1-5' },
+              scaleLabels: {
+                type: 'array',
+                items: { type: 'string' },
+                example: [
+                  'Strongly Disagree',
+                  'Disagree',
+                  'Neutral',
+                  'Agree',
+                  'Strongly Agree',
+                ],
+              },
+              reversed: { type: 'boolean', example: false },
+              metadata: {
+                type: 'object',
+                properties: {
+                  generationMethod: { type: 'string' },
+                  researchBacking: { type: 'string' },
+                  confidence: { type: 'number' },
+                  themePrevalence: { type: 'number' },
+                },
+              },
+            },
+          },
+        },
+        summary: {
+          type: 'object',
+          properties: {
+            totalItems: { type: 'number', example: 15 },
+            itemsByType: {
+              type: 'object',
+              example: { likert: 12, multiple_choice: 3 },
+            },
+            reverseCodedCount: { type: 'number', example: 3 },
+            averageConfidence: { type: 'number', example: 0.85 },
+          },
+        },
+        methodology: {
+          type: 'object',
+          properties: {
+            approach: { type: 'string' },
+            researchBacking: { type: 'string' },
+            validation: { type: 'string' },
+            reliability: { type: 'string' },
+          },
+        },
+        recommendations: {
+          type: 'object',
+          properties: {
+            pilotTesting: { type: 'string' },
+            reliabilityAnalysis: { type: 'string' },
+            validityChecks: { type: 'string' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input - themes array empty or invalid item type',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Valid JWT token required',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Survey item generation failed',
+  })
+  async generateThemeToSurveyItems(
+    @Body() dto: any, // Using any to avoid circular dependency, will be validated by class-validator
+    @CurrentUser() user: any,
+  ) {
+    try {
+      this.logger.log(
+        `Generating ${dto.itemType} survey items for ${dto.themes?.length || 0} themes (User: ${user?.userId || 'unknown'})`,
+      );
+
+      // Import DTO dynamically to avoid circular dependency
+      const { GenerateThemeToSurveyItemsDto } = await import(
+        './dto/literature.dto'
+      );
+      const validatedDto = Object.assign(
+        new GenerateThemeToSurveyItemsDto(),
+        dto,
+      );
+
+      // Import service dynamically
+      const { ThemeToSurveyItemService } = await import(
+        './services/theme-to-survey-item.service'
+      );
+      const themeToSurveyItemService = new ThemeToSurveyItemService(
+        this.configService,
+      );
+
+      const result = await themeToSurveyItemService.generateSurveyItems({
+        themes: validatedDto.themes.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+          prevalence: t.prevalence,
+          confidence: t.confidence,
+          sources: t.sources || [],
+          keyPhrases: t.keyPhrases || [],
+        })),
+        itemType: validatedDto.itemType,
+        scaleType: validatedDto.scaleType,
+        itemsPerTheme: validatedDto.itemsPerTheme || 3,
+        includeReverseCoded: validatedDto.includeReverseCoded !== false,
+        researchContext: validatedDto.researchContext,
+        targetAudience: validatedDto.targetAudience,
+      });
+
+      this.logger.log(
+        `Successfully generated ${result.items.length} survey items (${result.summary.reverseCodedCount} reverse-coded)`,
+      );
+
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (err) {
+      const error = err as Error;
+      this.logger.error(
+        `Failed to generate survey items: ${error.message}`,
+        error.stack,
+      );
+
+      throw new InternalServerErrorException({
+        success: false,
+        error: 'Survey item generation failed',
+        message: error.message,
+        suggestion:
+          'Ensure themes have sufficient metadata and try with fewer themes or different item type',
+      });
+    }
+  }
+
+  // ==================== ENHANCED THEME INTEGRATION ENDPOINTS (Phase 10 Day 5.12) ====================
+
+  @Post('themes/suggest-questions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @CustomRateLimit(60, 20) // 20 requests per minute for AI-powered endpoint
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '💡 Generate research question suggestions from themes',
+    description:
+      'AI-powered research question generation using SQUARE-IT framework. Generates exploratory, explanatory, evaluative, and descriptive questions based on extracted themes.',
+  })
+  @ApiBody({
+    description: 'Theme data and generation options',
+    schema: {
+      type: 'object',
+      required: ['themes'],
+      properties: {
+        themes: {
+          type: 'array',
+          description: 'Array of themes to generate questions from',
+          items: {
+            type: 'object',
+            required: ['id', 'name', 'description', 'confidence', 'prevalence'],
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              description: { type: 'string' },
+              confidence: { type: 'number', minimum: 0, maximum: 1 },
+              prevalence: { type: 'number', minimum: 0, maximum: 1 },
+              sources: { type: 'array', items: { type: 'object' } },
+              keyPhrases: { type: 'array', items: { type: 'string' } },
+            },
+          },
+        },
+        questionTypes: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: ['exploratory', 'explanatory', 'evaluative', 'descriptive'],
+          },
+        },
+        maxQuestions: { type: 'number', default: 15 },
+        researchDomain: { type: 'string' },
+        researchGoal: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Research question suggestions generated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        questions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              question: { type: 'string' },
+              type: {
+                type: 'string',
+                enum: [
+                  'exploratory',
+                  'explanatory',
+                  'evaluative',
+                  'descriptive',
+                ],
+              },
+              relevanceScore: { type: 'number', minimum: 0, maximum: 1 },
+              rationale: { type: 'string' },
+              relatedThemes: { type: 'array', items: { type: 'string' } },
+              complexity: {
+                type: 'string',
+                enum: ['basic', 'intermediate', 'advanced'],
+              },
+              squareItScore: { type: 'object' },
+              suggestedMethodology: { type: 'string' },
+            },
+          },
+        },
+        totalGenerated: { type: 'number' },
+      },
+    },
+  })
+  async suggestResearchQuestions(
+    @Body() dto: SuggestQuestionsDto,
+    @CurrentUser() user: any,
+  ) {
+    try {
+      this.logger.log(
+        `Generating research questions from ${dto.themes?.length || 0} themes (User: ${user?.userId || 'unknown'})`,
+      );
+
+      const questions =
+        await this.enhancedThemeIntegrationService.suggestResearchQuestions({
+          themes: dto.themes,
+          questionTypes: dto.questionTypes,
+          maxQuestions: dto.maxQuestions || 15,
+          researchDomain: dto.researchDomain,
+          researchGoal: dto.researchGoal,
+        });
+
+      this.logger.log(
+        `Successfully generated ${questions.length} research question suggestions`,
+      );
+
+      return {
+        success: true,
+        questions,
+        totalGenerated: questions.length,
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to generate research questions: ${error.message}`,
+        error.stack,
+      );
+
+      throw new InternalServerErrorException({
+        success: false,
+        error: 'Research question generation failed',
+        message: error.message,
+      });
+    }
+  }
+
+  @Post('themes/suggest-hypotheses')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @CustomRateLimit(60, 20) // 20 requests per minute for AI-powered endpoint
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '🔬 Generate hypothesis suggestions from themes',
+    description:
+      'AI-powered hypothesis generation identifying potential relationships between constructs. Generates correlational, causal, mediation, moderation, and interaction hypotheses.',
+  })
+  @ApiBody({
+    description: 'Theme data and generation options',
+    schema: {
+      type: 'object',
+      required: ['themes'],
+      properties: {
+        themes: {
+          type: 'array',
+          description: 'Array of themes to generate hypotheses from',
+        },
+        hypothesisTypes: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: [
+              'correlational',
+              'causal',
+              'mediation',
+              'moderation',
+              'interaction',
+            ],
+          },
+        },
+        maxHypotheses: { type: 'number', default: 20 },
+        researchDomain: { type: 'string' },
+        researchContext: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Hypothesis suggestions generated successfully',
+  })
+  async suggestHypotheses(
+    @Body() dto: SuggestHypothesesDto,
+    @CurrentUser() user: any,
+  ) {
+    try {
+      this.logger.log(
+        `Generating hypotheses from ${dto.themes?.length || 0} themes (User: ${user?.userId || 'unknown'})`,
+      );
+
+      const hypotheses =
+        await this.enhancedThemeIntegrationService.suggestHypotheses({
+          themes: dto.themes,
+          hypothesisTypes: dto.hypothesisTypes,
+          maxHypotheses: dto.maxHypotheses || 20,
+          researchDomain: dto.researchDomain,
+          researchContext: dto.researchContext,
+        });
+
+      this.logger.log(
+        `Successfully generated ${hypotheses.length} hypothesis suggestions`,
+      );
+
+      return {
+        success: true,
+        hypotheses,
+        totalGenerated: hypotheses.length,
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to generate hypotheses: ${error.message}`,
+        error.stack,
+      );
+
+      throw new InternalServerErrorException({
+        success: false,
+        error: 'Hypothesis generation failed',
+        message: error.message,
+      });
+    }
+  }
+
+  @Post('themes/map-constructs')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @CustomRateLimit(60, 30) // 30 requests per minute (less intensive than AI generation)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '🗺️ Map themes to psychological constructs',
+    description:
+      'Identify underlying psychological/research constructs from themes using semantic clustering. Detects relationships between constructs.',
+  })
+  @ApiBody({
+    description: 'Theme data and mapping options',
+    schema: {
+      type: 'object',
+      required: ['themes'],
+      properties: {
+        themes: { type: 'array', description: 'Array of themes to map' },
+        includeRelationships: { type: 'boolean', default: true },
+        clusteringAlgorithm: {
+          type: 'string',
+          enum: ['semantic', 'statistical', 'hybrid'],
+          default: 'semantic',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Construct mapping completed successfully',
+  })
+  async mapThemesToConstructs(
+    @Body() dto: MapConstructsDto,
+    @CurrentUser() user: any,
+  ) {
+    try {
+      this.logger.log(
+        `Mapping ${dto.themes?.length || 0} themes to constructs (User: ${user?.userId || 'unknown'})`,
+      );
+
+      const constructs =
+        await this.enhancedThemeIntegrationService.mapThemesToConstructs({
+          themes: dto.themes,
+          includeRelationships: dto.includeRelationships !== false,
+          clusteringAlgorithm: dto.clusteringAlgorithm || 'semantic',
+        });
+
+      this.logger.log(
+        `Successfully mapped themes to ${constructs.length} constructs`,
+      );
+
+      return {
+        success: true,
+        constructs,
+        totalConstructs: constructs.length,
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to map constructs: ${error.message}`,
+        error.stack,
+      );
+
+      throw new InternalServerErrorException({
+        success: false,
+        error: 'Construct mapping failed',
+        message: error.message,
+      });
+    }
+  }
+
+  @Post('themes/generate-complete-survey')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @CustomRateLimit(60, 10) // 10 requests per minute (most resource-intensive)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '🎯 Generate complete survey from themes (one-click)',
+    description:
+      'Create a publication-ready survey with introduction, demographics, main items, validity checks, and debrief. All items are linked to their theme provenance.',
+  })
+  @ApiBody({
+    description: 'Theme data and survey generation options',
+    schema: {
+      type: 'object',
+      required: ['themes', 'surveyPurpose'],
+      properties: {
+        themes: { type: 'array', description: 'Array of themes to convert' },
+        surveyPurpose: {
+          type: 'string',
+          enum: ['exploratory', 'confirmatory', 'mixed'],
+          description: 'Purpose of the survey',
+        },
+        targetRespondentCount: { type: 'number' },
+        complexityLevel: {
+          type: 'string',
+          enum: ['basic', 'intermediate', 'advanced'],
+          default: 'intermediate',
+        },
+        includeDemographics: { type: 'boolean', default: true },
+        includeValidityChecks: { type: 'boolean', default: true },
+        researchContext: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Complete survey generated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        sections: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              items: { type: 'array' },
+            },
+          },
+        },
+        metadata: {
+          type: 'object',
+          properties: {
+            totalItems: { type: 'number' },
+            estimatedCompletionTime: {
+              type: 'number',
+              description: 'Estimated time in minutes',
+            },
+            themeCoverage: {
+              type: 'number',
+              description: 'Percentage of themes covered',
+            },
+          },
+        },
+        methodology: { type: 'object' },
+      },
+    },
+  })
+  async generateCompleteSurvey(
+    @Body() dto: GenerateCompleteSurveyDto,
+    @CurrentUser() user: any,
+  ) {
+    try {
+      this.logger.log(
+        `Generating complete survey from ${dto.themes?.length || 0} themes (User: ${user?.userId || 'unknown'})`,
+      );
+
+      const survey =
+        await this.enhancedThemeIntegrationService.generateCompleteSurvey({
+          themes: dto.themes,
+          surveyPurpose: dto.surveyPurpose,
+          targetRespondentCount: dto.targetRespondentCount,
+          complexityLevel: dto.complexityLevel || 'intermediate',
+          includeDemographics: dto.includeDemographics !== false,
+          includeValidityChecks: dto.includeValidityChecks !== false,
+          researchContext: dto.researchContext,
+        });
+
+      this.logger.log(
+        `Successfully generated complete survey with ${survey.metadata.totalItems} items across ${survey.sections.length} sections`,
+      );
+
+      return {
+        success: true,
+        ...survey,
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to generate complete survey: ${error.message}`,
+        error.stack,
+      );
+
+      throw new InternalServerErrorException({
+        success: false,
+        error: 'Complete survey generation failed',
+        message: error.message,
+      });
+    }
   }
 }

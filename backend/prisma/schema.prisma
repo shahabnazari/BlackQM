@@ -66,6 +66,7 @@ model User {
   reportChanges         ReportChange[]        @relation("ReportChanges")
   approvalRequests      ReportApproval[]      @relation("ApprovalRequesters")
   approvalReviews       ReportApproval[]      @relation("ApprovalReviewers")
+  createdShareLinks     ReportShareLink[]     @relation("ReportShareLinkCreator")
 
   @@index([email])
   @@index([tenantId])
@@ -815,7 +816,22 @@ model Paper {
   // PDF support
   pdfPath       String?
   hasFullText   Boolean  @default(false)
-  
+
+  // Phase 10 Day 5.15: Full-Text PDF Parsing
+  fullText              String?   // Full-text content (10,000+ words)
+  fullTextStatus        String?   @default("not_fetched") // not_fetched | fetching | success | failed
+  fullTextSource        String?   // unpaywall | manual
+  fullTextFetchedAt     DateTime?
+  fullTextWordCount     Int?      // Word count of full-text only (for analytics)
+  fullTextHash          String?   // SHA256 hash for deduplication
+
+  // Content quality metrics (used for conditional full-text fetching)
+  wordCount             Int?      // Total word count (title + abstract + fullText)
+  abstractWordCount     Int?      // Abstract word count only
+  isEligible            Boolean?  @default(false) // wordCount >= 1000
+  wordCountExcludingRefs Int?     // Word count excluding references/indexes/etc
+  qualityScore          Float?    // 0-100 quality score (triggers full-text fetch if >=70)
+
   // Timestamps
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -1407,6 +1423,7 @@ model Report {
   // Collaboration Status (Phase 10 Day 4)
   status          String   @default("draft") // 'draft' | 'in_review' | 'approved' | 'published'
   isLocked        Boolean  @default(false)   // Lock for editing during approval
+  isPublic        Boolean  @default(false)   // Public accessibility
   currentVersion  Int      @default(1)
 
   // Timestamps
@@ -1420,6 +1437,7 @@ model Report {
   comments        ReportComment[]
   changes         ReportChange[]
   approvals       ReportApproval[]
+  shareLinks      ReportShareLink[]
 
   @@index([studyId])
   @@index([userId])
@@ -1547,4 +1565,42 @@ model ReportApproval {
   @@index([status])
   @@index([requestedAt])
   @@map("report_approvals")
+}
+
+
+/// Phase 10 Day 4: Secure link sharing with granular permissions
+model ReportShareLink {
+  id              String    @id @default(uuid())
+  reportId        String
+  token           String    @unique // Secure random token for URL
+  createdBy       String
+  accessLevel     String    // 'view' | 'comment' | 'edit'
+  
+  // Security & Access Control
+  password        String?   // Hashed password for protected links
+  allowedDomains  Json?     // Array of allowed email domains
+  maxAccess       Int?      // Maximum access count
+  accessCount     Int       @default(0)
+  isActive        Boolean   @default(true)
+  
+  // Expiration
+  expiresAt       DateTime?
+  
+  // Analytics
+  lastAccessedAt  DateTime?
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  report          Report    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  creator         User      @relation("ReportShareLinkCreator", fields: [createdBy], references: [id])
+  
+  @@index([reportId])
+  @@index([token])
+  @@index([createdBy])
+  @@index([isActive])
+  @@index([expiresAt])
+  @@map("report_share_links")
 }

@@ -42,9 +42,7 @@ export default defineConfig({
     // Retry configuration
     retry: 1, // Retry failed tests once
     // Reporter configuration for CI
-    reporters: process.env.CI
-      ? ['verbose', 'junit']
-      : ['verbose'],
+    reporters: process.env.CI ? ['verbose', 'junit'] : ['verbose'],
     ...(process.env.CI
       ? {
           outputFile: {

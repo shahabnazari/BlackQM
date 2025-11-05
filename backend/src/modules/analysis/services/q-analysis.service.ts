@@ -586,17 +586,19 @@ export class QAnalysisService {
     // Generate preview for interactive rotation
     return {
       factorLoadings: rotationResult.rotatedLoadings,
-      factorArrays: rotationResult.factorArrays,
-      topStatements: this.getTopStatements(
-        rotationResult.factorArrays,
-        statements,
-      ),
+      factorArrays: rotationResult.factorArrays || [],
+      topStatements: rotationResult.factorArrays
+        ? this.getTopStatements(rotationResult.factorArrays, statements)
+        : [],
       rotationQuality: this.assessRotationQuality(rotationResult),
     };
   }
 
   private getTopStatements(factorArrays: any[], statements: any[]): any {
     // Get top statements for each factor
+    if (!factorArrays || factorArrays.length === 0) {
+      return [];
+    }
     return factorArrays.map((array, factorIndex) => ({
       factor: factorIndex + 1,
       positive: array.slice(0, 3),

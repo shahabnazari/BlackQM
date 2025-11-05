@@ -177,11 +177,11 @@ export class ReportChangeService {
       throw new NotFoundException('Change not found');
     }
 
-    await this.collaborationService.checkPermission(
-      change.reportId,
-      userId,
-      ['owner', 'editor', 'reviewer'],
-    );
+    await this.collaborationService.checkPermission(change.reportId, userId, [
+      'owner',
+      'editor',
+      'reviewer',
+    ]);
 
     if (change.accepted || change.rejected) {
       throw new ForbiddenException(
@@ -224,11 +224,11 @@ export class ReportChangeService {
       throw new NotFoundException('Change not found');
     }
 
-    await this.collaborationService.checkPermission(
-      change.reportId,
-      userId,
-      ['owner', 'editor', 'reviewer'],
-    );
+    await this.collaborationService.checkPermission(change.reportId, userId, [
+      'owner',
+      'editor',
+      'reviewer',
+    ]);
 
     if (change.accepted || change.rejected) {
       throw new ForbiddenException(
@@ -255,7 +255,9 @@ export class ReportChangeService {
     });
 
     if (reason) {
-      this.logger.log(`❌ [Change] Rejected change ${changeId} - Reason: ${reason}`);
+      this.logger.log(
+        `❌ [Change] Rejected change ${changeId} - Reason: ${reason}`,
+      );
     } else {
       this.logger.log(`❌ [Change] Rejected change ${changeId}`);
     }

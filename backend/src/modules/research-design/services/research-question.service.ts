@@ -79,7 +79,11 @@ export interface QuestionAnalysisRequest {
     gaps: any[];
   };
   domain?: string;
-  methodology?: 'q-methodology' | 'mixed-methods' | 'qualitative' | 'quantitative';
+  methodology?:
+    | 'q-methodology'
+    | 'mixed-methods'
+    | 'qualitative'
+    | 'quantitative';
 }
 
 @Injectable()
@@ -96,7 +100,9 @@ export class ResearchQuestionService {
   ) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
     if (!apiKey) {
-      this.logger.warn('OPENAI_API_KEY not configured - AI features will be limited');
+      this.logger.warn(
+        'OPENAI_API_KEY not configured - AI features will be limited',
+      );
     } else {
       this.openai = new OpenAI({ apiKey });
     }
@@ -106,7 +112,9 @@ export class ResearchQuestionService {
    * Main method: Refine research question using SQUARE-IT framework
    * Integration point with Phase 9 literature discoveries
    */
-  async refineQuestion(request: QuestionAnalysisRequest): Promise<RefinedQuestion> {
+  async refineQuestion(
+    request: QuestionAnalysisRequest,
+  ): Promise<RefinedQuestion> {
     // Check cache first
     const cacheKey = this.getCacheKey(request);
     if (this.questionCache.has(cacheKey)) {
@@ -121,25 +129,32 @@ export class ResearchQuestionService {
       const squareitScore = await this.evaluateSQUAREIT(request);
 
       // Step 2: Generate refined question(s)
-      const refinedQuestions = await this.generateRefinements(request, squareitScore);
+      const refinedQuestions = await this.generateRefinements(
+        request,
+        squareitScore,
+      );
 
       // Step 3: Decompose into sub-questions
       const subQuestions = await this.decomposeIntoSubQuestions(
         refinedQuestions[0],
-        request.literatureSummary?.gaps || []
+        request.literatureSummary?.gaps || [],
       );
 
       // Step 4: Map to literature gaps
-      const gaps = this.mapToGaps(subQuestions, request.literatureSummary?.gaps || []);
+      const gaps = this.mapToGaps(
+        subQuestions,
+        request.literatureSummary?.gaps || [],
+      );
 
       // Step 5: Identify supporting papers
       const supportingPapers = this.identifySupportingPapers(
         refinedQuestions[0],
-        request.literatureSummary?.papers || []
+        request.literatureSummary?.papers || [],
       );
 
       // Step 6: Generate improvement suggestions
-      const improvementSuggestions = this.generateImprovementSuggestions(squareitScore);
+      const improvementSuggestions =
+        this.generateImprovementSuggestions(squareitScore);
 
       const result: RefinedQuestion = {
         id: `rq_${Date.now()}`,
@@ -162,7 +177,10 @@ export class ResearchQuestionService {
 
       return result;
     } catch (error: any) {
-      this.logger.error(`Failed to refine question: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to refine question: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -170,7 +188,9 @@ export class ResearchQuestionService {
   /**
    * Evaluate question using SQUARE-IT framework
    */
-  private async evaluateSQUAREIT(request: QuestionAnalysisRequest): Promise<SQUAREITScore> {
+  private async evaluateSQUAREIT(
+    request: QuestionAnalysisRequest,
+  ): Promise<SQUAREITScore> {
     if (!this.openai) {
       return this.getFallbackSQUAREITScore();
     }
@@ -181,12 +201,16 @@ Question: "${request.question}"
 Domain: ${request.domain || 'Not specified'}
 Methodology: ${request.methodology || 'Not specified'}
 
-${request.literatureSummary ? `
+${
+  request.literatureSummary
+    ? `
 Literature Context:
 - ${request.literatureSummary.papers?.length || 0} papers reviewed
 - ${request.literatureSummary.themes?.length || 0} themes identified
 - ${request.literatureSummary.gaps?.length || 0} research gaps found
-` : ''}
+`
+    : ''
+}
 
 SQUARE-IT Criteria (score each 0-10 and provide reasoning):
 1. Specific: Is the question narrow and focused enough?
@@ -224,7 +248,8 @@ Return a JSON object with this structure:
         messages: [
           {
             role: 'system',
-            content: 'You are an expert research methodology advisor specializing in Q-methodology and research design. Provide objective, evidence-based evaluations.',
+            content:
+              'You are an expert research methodology advisor specializing in Q-methodology and research design. Provide objective, evidence-based evaluations.',
           },
           { role: 'user', content: prompt },
         ],
@@ -275,7 +300,7 @@ Return a JSON object with this structure:
    */
   private async generateRefinements(
     request: QuestionAnalysisRequest,
-    squareitScore: SQUAREITScore
+    squareitScore: SQUAREITScore,
   ): Promise<string[]> {
     if (!this.openai) {
       return [request.question];
@@ -299,10 +324,20 @@ SQUARE-IT Scores:
 
 Weak Points to Address: ${weakPoints.join(', ')}
 
-${request.literatureSummary?.gaps && request.literatureSummary.gaps.length > 0 ? `
+${
+  request.literatureSummary?.gaps && request.literatureSummary.gaps.length > 0
+    ? `
 Research Gaps Identified:
-${request.literatureSummary.gaps.slice(0, 5).map((gap: any, i: number) => `${i + 1}. ${gap.description || gap.name || 'Gap ' + gap.id}`).join('\n')}
-` : ''}
+${request.literatureSummary.gaps
+  .slice(0, 5)
+  .map(
+    (gap: any, i: number) =>
+      `${i + 1}. ${gap.description || gap.name || 'Gap ' + gap.id}`,
+  )
+  .join('\n')}
+`
+    : ''
+}
 
 Generate 3-5 refined versions of this question that:
 1. Address the weak SQUARE-IT dimensions
@@ -318,7 +353,8 @@ Return JSON array: ["refined question 1", "refined question 2", ...]`;
         messages: [
           {
             role: 'system',
-            content: 'You are an expert research methodology advisor. Generate clear, specific, and researchable questions.',
+            content:
+              'You are an expert research methodology advisor. Generate clear, specific, and researchable questions.',
           },
           { role: 'user', content: prompt },
         ],
@@ -334,7 +370,7 @@ Return JSON array: ["refined question 1", "refined question 2", ...]`;
       const parsed = JSON.parse(content);
       const refinedQuestions = Array.isArray(parsed.questions)
         ? parsed.questions
-        : (parsed.refinedQuestions || [request.question]);
+        : parsed.refinedQuestions || [request.question];
 
       return refinedQuestions;
     } catch (error: any) {
@@ -348,7 +384,7 @@ Return JSON array: ["refined question 1", "refined question 2", ...]`;
    */
   private async decomposeIntoSubQuestions(
     mainQuestion: string,
-    gaps: any[]
+    gaps: any[],
   ): Promise<SubQuestion[]> {
     if (!this.openai) {
       return [];
@@ -359,7 +395,13 @@ Return JSON array: ["refined question 1", "refined question 2", ...]`;
 Main Question: "${mainQuestion}"
 
 Research Gaps Context:
-${gaps.slice(0, 5).map((gap: any, i: number) => `${i + 1}. ${gap.description || gap.name || 'Gap ' + gap.id}`).join('\n')}
+${gaps
+  .slice(0, 5)
+  .map(
+    (gap: any, i: number) =>
+      `${i + 1}. ${gap.description || gap.name || 'Gap ' + gap.id}`,
+  )
+  .join('\n')}
 
 Generate sub-questions that:
 1. Each address a specific aspect of the main question
@@ -393,7 +435,8 @@ Return JSON: {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert at breaking down complex research questions into manageable sub-questions.',
+            content:
+              'You are an expert at breaking down complex research questions into manageable sub-questions.',
           },
           { role: 'user', content: prompt },
         ],
@@ -412,7 +455,9 @@ Return JSON: {
       return subQuestions.map((sq: any, index: number) => ({
         id: `sq_${Date.now()}_${index}`,
         question: sq.question,
-        gapIds: (sq.gapIndices || []).map((i: number) => gaps[i - 1]?.id || `gap_${i}`),
+        gapIds: (sq.gapIndices || []).map(
+          (i: number) => gaps[i - 1]?.id || `gap_${i}`,
+        ),
         feasibility: sq.feasibility || 5,
         impact: sq.impact || 5,
         novelty: sq.novelty || 5,
@@ -427,19 +472,22 @@ Return JSON: {
   /**
    * Map sub-questions to literature gaps
    */
-  private mapToGaps(subQuestions: SubQuestion[], gaps: any[]): Array<{
+  private mapToGaps(
+    subQuestions: SubQuestion[],
+    gaps: any[],
+  ): Array<{
     id: string;
     description: string;
     importance: number;
   }> {
     const uniqueGapIds = new Set<string>();
-    subQuestions.forEach(sq => {
-      sq.gapIds.forEach(gapId => uniqueGapIds.add(gapId));
+    subQuestions.forEach((sq) => {
+      sq.gapIds.forEach((gapId) => uniqueGapIds.add(gapId));
     });
 
     return gaps
-      .filter(gap => uniqueGapIds.has(gap.id))
-      .map(gap => ({
+      .filter((gap) => uniqueGapIds.has(gap.id))
+      .map((gap) => ({
         id: gap.id,
         description: gap.description || gap.name || 'Research gap',
         importance: gap.importance || gap.citationCount || 5,
@@ -449,7 +497,10 @@ Return JSON: {
   /**
    * Identify papers that support the refined question
    */
-  private identifySupportingPapers(question: string, papers: any[]): Array<{
+  private identifySupportingPapers(
+    question: string,
+    papers: any[],
+  ): Array<{
     id: string;
     title: string;
     doi?: string;
@@ -459,22 +510,29 @@ Return JSON: {
     const questionWords = question.toLowerCase().split(/\W+/);
 
     return papers
-      .map(paper => {
+      .map((paper) => {
         const titleWords = (paper.title || '').toLowerCase().split(/\W+/);
-        const matchCount = questionWords.filter(word =>
-          word.length > 3 && titleWords.some((tw: string) => tw.includes(word))
+        const matchCount = questionWords.filter(
+          (word) =>
+            word.length > 3 &&
+            titleWords.some((tw: string) => tw.includes(word)),
         ).length;
 
         return {
           paper,
           matchCount,
-          relevance: matchCount > 2 ? 'High relevance' : matchCount > 0 ? 'Medium relevance' : 'Low relevance'
+          relevance:
+            matchCount > 2
+              ? 'High relevance'
+              : matchCount > 0
+                ? 'Medium relevance'
+                : 'Low relevance',
         };
       })
-      .filter(p => p.matchCount > 0)
+      .filter((p) => p.matchCount > 0)
       .sort((a, b) => b.matchCount - a.matchCount)
       .slice(0, 10)
-      .map(p => ({
+      .map((p) => ({
         id: p.paper.id || p.paper.doi || `paper_${Date.now()}`,
         title: p.paper.title || 'Untitled',
         doi: p.paper.doi,
@@ -485,32 +543,50 @@ Return JSON: {
   /**
    * Generate suggestions for improving the question
    */
-  private generateImprovementSuggestions(squareitScore: SQUAREITScore): string[] {
+  private generateImprovementSuggestions(
+    squareitScore: SQUAREITScore,
+  ): string[] {
     const suggestions: string[] = [];
 
     if (squareitScore.specific < 7) {
-      suggestions.push('Consider narrowing the scope by specifying the population, context, or timeframe');
+      suggestions.push(
+        'Consider narrowing the scope by specifying the population, context, or timeframe',
+      );
     }
     if (squareitScore.quantifiable < 7) {
-      suggestions.push('Identify specific variables or constructs that can be measured or categorized');
+      suggestions.push(
+        'Identify specific variables or constructs that can be measured or categorized',
+      );
     }
     if (squareitScore.usable < 7) {
-      suggestions.push('Clarify how the findings will contribute to theory or practice in your field');
+      suggestions.push(
+        'Clarify how the findings will contribute to theory or practice in your field',
+      );
     }
     if (squareitScore.accurate < 7) {
-      suggestions.push('Refine the problem definition to be more precise and unambiguous');
+      suggestions.push(
+        'Refine the problem definition to be more precise and unambiguous',
+      );
     }
     if (squareitScore.restricted < 7) {
-      suggestions.push('Further limit the scope to make the study more feasible');
+      suggestions.push(
+        'Further limit the scope to make the study more feasible',
+      );
     }
     if (squareitScore.eligible < 7) {
-      suggestions.push('Ensure Q-methodology is the most appropriate approach for this question');
+      suggestions.push(
+        'Ensure Q-methodology is the most appropriate approach for this question',
+      );
     }
     if (squareitScore.investigable < 7) {
-      suggestions.push('Consider resource constraints (time, budget, sample access) when refining');
+      suggestions.push(
+        'Consider resource constraints (time, budget, sample access) when refining',
+      );
     }
     if (squareitScore.timely < 7) {
-      suggestions.push('Verify this research gap is still current by checking recent publications');
+      suggestions.push(
+        'Verify this research gap is still current by checking recent publications',
+      );
     }
 
     return suggestions;
@@ -532,7 +608,9 @@ Return JSON: {
     if (score.investigable < threshold) weakPoints.push('Investigable');
     if (score.timely < threshold) weakPoints.push('Timely');
 
-    return weakPoints.length > 0 ? weakPoints : ['None - question is well-formed'];
+    return weakPoints.length > 0
+      ? weakPoints
+      : ['None - question is well-formed'];
   }
 
   /**
@@ -576,7 +654,9 @@ Return JSON: {
     try {
       // This integrates with existing AIUsage model from Phase 6.86b
       // For now, just log the cost
-      this.logger.log(`AI cost tracking: ${operation} for question "${question.substring(0, 50)}..."`);
+      this.logger.log(
+        `AI cost tracking: ${operation} for question "${question.substring(0, 50)}..."`,
+      );
     } catch (error: any) {
       this.logger.warn(`Failed to track AI cost: ${error.message}`);
     }

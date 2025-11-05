@@ -591,7 +591,7 @@ describe('CrossPlatformSynthesisService', () => {
       };
 
       const reach = service['calculateReach'](source);
-      expect(reach).toBe(2000); // 1000 + 100*10 + 10*100
+      expect(reach).toBe(3000); // 1000 views + 100 likes*10 + 10 shares*100
     });
 
     it('should categorize source types correctly', () => {

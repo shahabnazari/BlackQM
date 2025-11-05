@@ -19,14 +19,19 @@ const orcidProviderFactory = {
     const clientSecret = configService.get('ORCID_CLIENT_SECRET');
 
     // Only create ORCID strategy if real credentials are provided
-    if (clientId && clientSecret &&
-        clientId !== 'your-orcid-client-id' &&
-        clientSecret !== 'your-orcid-client-secret') {
+    if (
+      clientId &&
+      clientSecret &&
+      clientId !== 'your-orcid-client-id' &&
+      clientSecret !== 'your-orcid-client-secret'
+    ) {
       return new OrcidStrategy(configService, authService);
     }
 
     // Return null if no credentials - ORCID auth will not be available
-    console.log('[AuthModule] ORCID credentials not configured - ORCID authentication disabled');
+    console.log(
+      '[AuthModule] ORCID credentials not configured - ORCID authentication disabled',
+    );
     return null;
   },
   inject: [ConfigService, AuthService],

@@ -135,7 +135,7 @@ describe('TranscriptionService', () => {
       );
 
       expect(result.duration).toBe(3600); // Default 1 hour
-      expect(result.estimatedCost).toBeCloseTo(0.216, 3); // 3600 / 60 * 0.006
+      expect(result.estimatedCost).toBeCloseTo(0.36, 3); // 3600 / 60 * 0.01
     });
   });
 

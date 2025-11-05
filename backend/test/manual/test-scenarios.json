@@ -1,0 +1,279 @@
+{
+  "testScenarios": [
+    {
+      "id": 1,
+      "domain": "Medical Research",
+      "topic": "Type 2 diabetes management interventions",
+      "query": "type 2 diabetes management interventions",
+      "sources": ["pubmed", "crossref"],
+      "minimumPapers": 15,
+      "expectedKeywords": [
+        "diabetes",
+        "management",
+        "intervention",
+        "lifestyle",
+        "medication",
+        "diet",
+        "exercise",
+        "glycemic",
+        "insulin",
+        "treatment"
+      ],
+      "validationCriteria": {
+        "relevanceThreshold": 0.8,
+        "recencyYears": 5,
+        "authorTypesExpected": ["medical professionals", "endocrinologists", "researchers"],
+        "abstractKeywordsRequired": ["treatment", "intervention", "management", "control"]
+      }
+    },
+    {
+      "id": 2,
+      "domain": "Climate Science",
+      "topic": "Ocean acidification impact on marine ecosystems",
+      "query": "ocean acidification impact marine ecosystems",
+      "sources": ["crossref", "openalex"],
+      "minimumPapers": 12,
+      "expectedKeywords": [
+        "ocean",
+        "acidification",
+        "pH",
+        "marine",
+        "ecosystem",
+        "coral",
+        "reef",
+        "shellfish",
+        "carbonate",
+        "climate"
+      ],
+      "validationCriteria": {
+        "relevanceThreshold": 0.8,
+        "recencyYears": 10,
+        "geographicDiversity": ["Pacific", "Atlantic", "Indian Ocean", "Caribbean"],
+        "methodologies": ["field study", "modeling", "laboratory", "meta-analysis"]
+      }
+    },
+    {
+      "id": 3,
+      "domain": "Computer Science",
+      "topic": "Quantum computing algorithms for cryptography",
+      "query": "quantum computing algorithms cryptography",
+      "sources": ["arxiv", "crossref"],
+      "minimumPapers": 10,
+      "expectedKeywords": [
+        "quantum",
+        "algorithm",
+        "cryptography",
+        "Shor",
+        "Grover",
+        "qubit",
+        "entanglement",
+        "post-quantum",
+        "encryption",
+        "security"
+      ],
+      "validationCriteria": {
+        "relevanceThreshold": 0.8,
+        "recencyYears": 3,
+        "technicalDepth": "high",
+        "mathematicalContent": true
+      }
+    },
+    {
+      "id": 4,
+      "domain": "Social Sciences",
+      "topic": "Remote work productivity and employee wellbeing",
+      "query": "remote work productivity employee wellbeing",
+      "sources": ["crossref", "openalex"],
+      "minimumPapers": 15,
+      "expectedKeywords": [
+        "remote work",
+        "telework",
+        "productivity",
+        "wellbeing",
+        "work-from-home",
+        "mental health",
+        "burnout",
+        "engagement",
+        "flexibility",
+        "performance"
+      ],
+      "validationCriteria": {
+        "relevanceThreshold": 0.8,
+        "recencyYears": 5,
+        "methods": ["quantitative", "qualitative", "mixed methods"],
+        "pandemicEra": true,
+        "internationalStudies": true
+      }
+    },
+    {
+      "id": 5,
+      "domain": "Education",
+      "topic": "Active learning strategies in STEM education",
+      "query": "active learning strategies STEM education",
+      "sources": ["pubmed", "crossref"],
+      "minimumPapers": 12,
+      "expectedKeywords": [
+        "active learning",
+        "STEM",
+        "pedagogy",
+        "student engagement",
+        "teaching",
+        "outcomes",
+        "problem-based",
+        "collaborative",
+        "hands-on",
+        "inquiry"
+      ],
+      "validationCriteria": {
+        "relevanceThreshold": 0.8,
+        "recencyYears": 7,
+        "empiricalData": true,
+        "educationLevels": ["K-12", "undergraduate", "graduate"],
+        "stemFields": ["physics", "biology", "chemistry", "engineering", "mathematics"]
+      }
+    },
+    {
+      "id": 6,
+      "domain": "Environmental Science",
+      "topic": "Renewable energy policy effectiveness solar wind",
+      "query": "renewable energy policy effectiveness solar wind",
+      "sources": ["crossref", "openalex"],
+      "minimumPapers": 10,
+      "expectedKeywords": [
+        "renewable energy",
+        "policy",
+        "solar",
+        "wind",
+        "effectiveness",
+        "adoption",
+        "incentive",
+        "subsidy",
+        "regulation",
+        "implementation"
+      ],
+      "validationCriteria": {
+        "relevanceThreshold": 0.8,
+        "recencyYears": 5,
+        "geographicDiversity": ["Europe", "Asia", "North America", "developing countries"],
+        "policyTypes": ["feed-in tariff", "tax credits", "renewable portfolio standards"],
+        "impactAnalysis": ["economic", "environmental", "social"]
+      }
+    },
+    {
+      "id": 7,
+      "domain": "Psychology",
+      "topic": "Cognitive behavioral therapy for anxiety disorders",
+      "query": "cognitive behavioral therapy anxiety disorders",
+      "sources": ["pubmed", "crossref"],
+      "minimumPapers": 15,
+      "expectedKeywords": [
+        "cognitive behavioral therapy",
+        "CBT",
+        "anxiety",
+        "disorder",
+        "treatment",
+        "efficacy",
+        "randomized",
+        "controlled trial",
+        "intervention",
+        "outcomes"
+      ],
+      "validationCriteria": {
+        "relevanceThreshold": 0.8,
+        "recencyYears": 10,
+        "studyDesigns": ["RCT", "meta-analysis", "systematic review"],
+        "effectSizeReporting": true,
+        "anxietyTypes": ["GAD", "social anxiety", "panic disorder", "PTSD"]
+      }
+    },
+    {
+      "id": 8,
+      "domain": "Economics",
+      "topic": "Universal basic income pilot programs outcomes",
+      "query": "universal basic income pilot programs outcomes",
+      "sources": ["crossref", "openalex"],
+      "minimumPapers": 8,
+      "expectedKeywords": [
+        "universal basic income",
+        "UBI",
+        "pilot",
+        "cash transfer",
+        "unconditional",
+        "poverty",
+        "employment",
+        "wellbeing",
+        "experiment",
+        "trial"
+      ],
+      "validationCriteria": {
+        "relevanceThreshold": 0.8,
+        "recencyYears": 5,
+        "empiricalData": true,
+        "countries": ["Finland", "Kenya", "United States", "Canada", "India"],
+        "outcomes": ["labor market", "poverty", "health", "education", "crime"]
+      }
+    },
+    {
+      "id": 9,
+      "domain": "Neuroscience",
+      "topic": "Neuroplasticity adult brain recovery after injury",
+      "query": "neuroplasticity adult brain recovery injury",
+      "sources": ["pubmed", "crossref"],
+      "minimumPapers": 12,
+      "expectedKeywords": [
+        "neuroplasticity",
+        "brain",
+        "recovery",
+        "injury",
+        "adult",
+        "rehabilitation",
+        "stroke",
+        "TBI",
+        "neural",
+        "regeneration"
+      ],
+      "validationCriteria": {
+        "relevanceThreshold": 0.8,
+        "recencyYears": 7,
+        "humanStudies": true,
+        "imagingTypes": ["fMRI", "PET", "DTI", "EEG"],
+        "interventions": ["physical therapy", "cognitive training", "pharmacological", "neuromodulation"]
+      }
+    },
+    {
+      "id": 10,
+      "domain": "Artificial Intelligence",
+      "topic": "Explainable artificial intelligence interpretability healthcare",
+      "query": "explainable artificial intelligence interpretability healthcare",
+      "sources": ["arxiv", "crossref"],
+      "minimumPapers": 10,
+      "expectedKeywords": [
+        "explainable AI",
+        "XAI",
+        "interpretability",
+        "healthcare",
+        "SHAP",
+        "LIME",
+        "transparency",
+        "medical",
+        "diagnosis",
+        "trust"
+      ],
+      "validationCriteria": {
+        "relevanceThreshold": 0.8,
+        "recencyYears": 3,
+        "technicalMethods": ["SHAP", "LIME", "attention mechanisms", "saliency maps"],
+        "healthcareApplications": ["diagnosis", "prognosis", "treatment recommendation", "imaging"],
+        "ethicalConsiderations": true
+      }
+    }
+  ],
+  "metadata": {
+    "totalScenarios": 10,
+    "domainDiversity": 10,
+    "createdDate": "2025-10-29",
+    "purpose": "Phase 10 Day 5.7 Stage 2 Phase 2 Manual Testing",
+    "targetRelevance": 0.8,
+    "minimumTotalPapers": 119
+  }
+}

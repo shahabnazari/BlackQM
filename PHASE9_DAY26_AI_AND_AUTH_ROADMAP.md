@@ -9,6 +9,7 @@
 ## 📋 Executive Summary
 
 This roadmap addresses three critical gaps identified in Phase 9 Day 25:
+
 1. **AI Assistant** - Currently using demo/mock responses, needs real AI integration
 2. **University Authentication** - ROR API search works, but SSO is simulated
 3. **Theme Extraction Clarity** - Feature exists but needs better visibility/explanation
@@ -18,6 +19,7 @@ This roadmap addresses three critical gaps identified in Phase 9 Day 25:
 ## ✅ Day 26: Real AI Integration for Search Assistant - COMPLETE
 
 ### Current State (✅ Production Ready)
+
 - ✅ AI Search Assistant component built
 - ✅ Real OpenAI GPT-4 integration via backend
 - ✅ UI/UX updated with "AI Powered" badge
@@ -29,6 +31,7 @@ This roadmap addresses three critical gaps identified in Phase 9 Day 25:
 ### Implementation Plan
 
 #### **Option 1: OpenAI Integration (Recommended)**
+
 ```typescript
 // frontend/lib/services/ai-query-expansion.service.ts
 import OpenAI from 'openai';
@@ -45,12 +48,12 @@ export async function expandQuery(query: string): Promise<ExpandedQuery> {
         role: 'system',
         content: `You are a research query optimization assistant.
         Expand academic search queries with synonyms, related terms, and methodological keywords.
-        Detect vague queries and suggest specificity.`
+        Detect vague queries and suggest specificity.`,
       },
       {
         role: 'user',
-        content: `Expand this research query: "${query}"`
-      }
+        content: `Expand this research query: "${query}"`,
+      },
     ],
     temperature: 0.7,
     max_tokens: 500,
@@ -62,6 +65,7 @@ export async function expandQuery(query: string): Promise<ExpandedQuery> {
 ```
 
 #### **Option 2: Anthropic Claude Integration**
+
 ```typescript
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -73,10 +77,12 @@ export async function expandQuery(query: string): Promise<ExpandedQuery> {
   const response = await anthropic.messages.create({
     model: 'claude-3-opus-20240229',
     max_tokens: 1024,
-    messages: [{
-      role: 'user',
-      content: `Expand this academic search query with relevant terms: ${query}`
-    }],
+    messages: [
+      {
+        role: 'user',
+        content: `Expand this academic search query with relevant terms: ${query}`,
+      },
+    ],
   });
 
   return parseClaudeResponse(response.content);
@@ -103,6 +109,7 @@ export async function expandQuery(query: string): Promise<ExpandedQuery> {
    - Add loading states
 
 4. **Add Backend Proxy (Security)** (2 hours)
+
    ```typescript
    // backend/src/modules/ai/controllers/query-expansion.controller.ts
    @Post('expand-query')
@@ -124,6 +131,7 @@ export async function expandQuery(query: string): Promise<ExpandedQuery> {
    - Add troubleshooting guide
 
 **Cost Estimate:**
+
 - OpenAI GPT-4 Turbo: ~$0.01 per query expansion
 - Claude Opus: ~$0.015 per query expansion
 - Monthly (1000 users, 5 queries each): $50-75/month
@@ -133,6 +141,7 @@ export async function expandQuery(query: string): Promise<ExpandedQuery> {
 ## 🔐 Day 27: Real University SSO Authentication
 
 ### Current State
+
 - ✅ ROR API integration for institution search (100,000+ universities)
 - ✅ Institution selection UI complete
 - ✅ Comprehensive SSO documentation in `institution.service.ts`
@@ -159,6 +168,7 @@ Grant database access based on institution subscriptions
 **Day 27 Tasks (8-10 hours):**
 
 1. **Shibboleth Service Provider Setup** (3 hours)
+
    ```bash
    # Install Shibboleth SP
    sudo apt-get install libapache2-mod-shib
@@ -177,6 +187,7 @@ Grant database access based on institution subscriptions
    - Sign up for OpenAthens API account ($5k-$15k/year)
    - Configure WAYF (Where Are You From) service
    - Implement redirect flow
+
    ```typescript
    // Redirect to OpenAthens
    const openAthensUrl = `https://login.openathens.net/saml/2/sso-redirect
@@ -187,6 +198,7 @@ Grant database access based on institution subscriptions
    ```
 
 3. **SAML Assertion Validation** (2 hours)
+
    ```typescript
    // backend/src/modules/auth/services/saml-validation.service.ts
    import * as saml2 from 'saml2-js';
@@ -209,6 +221,7 @@ Grant database access based on institution subscriptions
    ```
 
 4. **Database Access Mapping** (1 hour)
+
    ```typescript
    // Map institution subscriptions to accessible databases
    const institutionSubscriptions = {
@@ -229,12 +242,14 @@ Grant database access based on institution subscriptions
    - Security audit (SAML validation)
 
 **Cost Estimate:**
+
 - OpenAthens subscription: $5k-$15k/year
 - Shibboleth SP hosting: Included in infrastructure
 - Development time: ~10 hours
 - Maintenance: 2 hours/month
 
 **Alternative: ORCID OAuth (Simpler, Free)**
+
 ```typescript
 // Redirect to ORCID for researcher authentication
 const orcidUrl = `https://orcid.org/oauth/authorize
@@ -252,6 +267,7 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 ## 📊 Day 28: Theme Extraction UX Enhancement
 
 ### Current State
+
 - ✅ Unified theme extraction implemented
 - ✅ Cross-platform synthesis (papers + videos)
 - ✅ Full provenance tracking
@@ -261,6 +277,7 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 ### Problem Analysis
 
 **User Confusion:**
+
 1. Button is in "Academic Resources" panel (not obvious for cross-platform)
 2. No visual guide showing the workflow
 3. Missing explanation of what "unified theme extraction" means
@@ -284,34 +301,49 @@ const orcidUrl = `https://orcid.org/oauth/authorize
         </h3>
 
         <p className="text-sm text-gray-600 mb-4">
-          Extract cross-cutting research themes from academic papers, YouTube videos,
-          Instagram posts, and alternative sources. Uses AI to identify patterns,
-          key concepts, and emerging trends with full provenance tracking.
+          Extract cross-cutting research themes from academic papers, YouTube
+          videos, Instagram posts, and alternative sources. Uses AI to identify
+          patterns, key concepts, and emerging trends with full provenance
+          tracking.
         </p>
 
         {/* Visual Workflow */}
         <div className="flex items-center gap-2 mb-4 text-xs text-gray-500">
-          <Badge variant="outline" className="bg-blue-50">1. Select Papers</Badge>
+          <Badge variant="outline" className="bg-blue-50">
+            1. Select Papers
+          </Badge>
           <ArrowRight className="w-3 h-3" />
-          <Badge variant="outline" className="bg-purple-50">2. Transcribe Videos</Badge>
+          <Badge variant="outline" className="bg-purple-50">
+            2. Transcribe Videos
+          </Badge>
           <ArrowRight className="w-3 h-3" />
-          <Badge variant="outline" className="bg-indigo-50">3. Add Alt Sources</Badge>
+          <Badge variant="outline" className="bg-indigo-50">
+            3. Add Alt Sources
+          </Badge>
           <ArrowRight className="w-3 h-3" />
-          <Badge variant="outline" className="bg-green-50">4. Extract Themes</Badge>
+          <Badge variant="outline" className="bg-green-50">
+            4. Extract Themes
+          </Badge>
         </div>
 
         {/* Stats */}
         <div className="flex items-center gap-4 mb-4">
           <div className="text-sm">
-            <span className="font-medium text-blue-600">{selectedPapers.size}</span>
+            <span className="font-medium text-blue-600">
+              {selectedPapers.size}
+            </span>
             <span className="text-gray-500 ml-1">papers selected</span>
           </div>
           <div className="text-sm">
-            <span className="font-medium text-purple-600">{transcribedVideos.length}</span>
+            <span className="font-medium text-purple-600">
+              {transcribedVideos.length}
+            </span>
             <span className="text-gray-500 ml-1">videos transcribed</span>
           </div>
           <div className="text-sm">
-            <span className="font-medium text-indigo-600">{instagramPosts.length}</span>
+            <span className="font-medium text-indigo-600">
+              {instagramPosts.length}
+            </span>
             <span className="text-gray-500 ml-1">Instagram posts</span>
           </div>
         </div>
@@ -320,7 +352,10 @@ const orcidUrl = `https://orcid.org/oauth/authorize
         <Button
           size="lg"
           onClick={handleExtractThemes}
-          disabled={(selectedPapers.size === 0 && transcribedVideos.length === 0) || analyzingThemes}
+          disabled={
+            (selectedPapers.size === 0 && transcribedVideos.length === 0) ||
+            analyzingThemes
+          }
           className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
         >
           {analyzingThemes ? (
@@ -331,16 +366,18 @@ const orcidUrl = `https://orcid.org/oauth/authorize
           ) : (
             <>
               <Sparkles className="w-5 h-5 mr-2" />
-              Extract Themes from {selectedPapers.size + transcribedVideos.length} Sources
+              Extract Themes from{' '}
+              {selectedPapers.size + transcribedVideos.length} Sources
             </>
           )}
         </Button>
 
-        {(selectedPapers.size === 0 && transcribedVideos.length === 0) && (
+        {selectedPapers.size === 0 && transcribedVideos.length === 0 && (
           <Alert className="mt-4">
             <Info className="h-4 w-4" />
             <AlertDescription>
-              Select papers from search results or transcribe YouTube videos to begin
+              Select papers from search results or transcribe YouTube videos to
+              begin
             </AlertDescription>
           </Alert>
         )}
@@ -361,7 +398,10 @@ const orcidUrl = `https://orcid.org/oauth/authorize
     <div className="space-y-2">
       <p className="font-semibold">How Unified Theme Extraction Works:</p>
       <ol className="list-decimal list-inside space-y-1 text-sm">
-        <li>Combines content from all selected sources (papers, videos, social media)</li>
+        <li>
+          Combines content from all selected sources (papers, videos, social
+          media)
+        </li>
         <li>AI analyzes text using NLP and semantic similarity</li>
         <li>Identifies recurring concepts, patterns, and relationships</li>
         <li>Groups related ideas into coherent themes</li>
@@ -369,8 +409,8 @@ const orcidUrl = `https://orcid.org/oauth/authorize
         <li>Generates confidence scores and evidence citations</li>
       </ol>
       <p className="text-xs text-gray-500 mt-2">
-        Each theme includes: title, description, supporting sources, confidence score,
-        and keywords with full citation tracking.
+        Each theme includes: title, description, supporting sources, confidence
+        score, and keywords with full citation tracking.
       </p>
     </div>
   </TooltipContent>
@@ -380,31 +420,37 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 #### **3. Add Visual Feedback During Extraction**
 
 ```tsx
-{analyzingThemes && (
-  <Card className="mt-4 border-green-200 bg-green-50">
-    <CardContent className="p-4">
-      <div className="flex items-center gap-3">
-        <Loader2 className="w-5 h-5 animate-spin text-green-600" />
-        <div className="flex-1">
-          <p className="font-medium text-green-900">Analyzing {selectedPapers.size + transcribedVideos.length} sources...</p>
-          <div className="text-sm text-green-700 mt-1">
-            Step {extractionStep} of 4: {extractionStatus}
-          </div>
-          {/* Progress bar */}
-          <div className="w-full bg-green-200 rounded-full h-2 mt-2">
-            <div
-              className="bg-green-600 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${(extractionStep / 4) * 100}%` }}
-            />
+{
+  analyzingThemes && (
+    <Card className="mt-4 border-green-200 bg-green-50">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-5 h-5 animate-spin text-green-600" />
+          <div className="flex-1">
+            <p className="font-medium text-green-900">
+              Analyzing {selectedPapers.size + transcribedVideos.length}{' '}
+              sources...
+            </p>
+            <div className="text-sm text-green-700 mt-1">
+              Step {extractionStep} of 4: {extractionStatus}
+            </div>
+            {/* Progress bar */}
+            <div className="w-full bg-green-200 rounded-full h-2 mt-2">
+              <div
+                className="bg-green-600 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${(extractionStep / 4) * 100}%` }}
+              />
+            </div>
           </div>
         </div>
-      </div>
-    </CardContent>
-  </Card>
-)}
+      </CardContent>
+    </Card>
+  );
+}
 ```
 
 **Day 28 Tasks (4 hours):**
+
 1. Create prominent theme extraction card (1.5 hours)
 2. Add "How It Works" explanation with visual workflow (1 hour)
 3. Implement progress feedback UI (1 hour)
@@ -415,6 +461,7 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 ## 📅 Implementation Timeline
 
 ### **Phase 9 Day 26** (Estimated: 6-8 hours)
+
 - ✅ **Real AI Integration for Search Assistant**
 - Setup OpenAI/Claude API
 - Replace demo responses with real AI
@@ -422,6 +469,7 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 - Add cost tracking and rate limiting
 
 ### **Phase 9 Day 27** (Estimated: 8-10 hours)
+
 - ✅ **Real University SSO Authentication**
 - Shibboleth SP configuration
 - OpenAthens or ORCID OAuth integration
@@ -429,6 +477,7 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 - Database access mapping
 
 ### **Phase 9 Day 28** (Estimated: 4 hours)
+
 - ✅ **Theme Extraction UX Enhancement**
 - Add prominent global theme extraction card
 - Visual workflow explanation
@@ -440,6 +489,7 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 ## 💰 Cost Analysis
 
 ### **AI Integration Costs**
+
 - **Development:** 8 hours @ $100/hr = $800 (one-time)
 - **API Costs:**
   - OpenAI GPT-4 Turbo: $50-75/month (1000 users)
@@ -447,16 +497,19 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 - **Maintenance:** 2 hours/month @ $100/hr = $200/month
 
 ### **SSO Authentication Costs**
+
 - **Development:** 10 hours @ $100/hr = $1,000 (one-time)
 - **OpenAthens Subscription:** $5,000-$15,000/year
 - **Alternative (ORCID):** Free (OAuth)
 - **Maintenance:** 2 hours/month @ $100/hr = $200/month
 
 ### **UX Enhancement Costs**
+
 - **Development:** 4 hours @ $100/hr = $400 (one-time)
 - **No ongoing costs**
 
 ### **Total Investment**
+
 - **One-time:** $2,200 development
 - **Monthly:** $250-$300 (AI + maintenance)
 - **Annual:** $5,000-$15,000 (if using OpenAthens)
@@ -467,18 +520,21 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 ## 🚀 Quick Start Checklist
 
 ### **Before Starting Day 26**
+
 - [ ] Obtain OpenAI or Anthropic API key
 - [ ] Set up API key rotation and monitoring
 - [ ] Create rate limiting rules (100 queries/user/day)
 - [ ] Set up cost alerts ($100 threshold)
 
 ### **Before Starting Day 27**
+
 - [ ] Choose SSO provider (OpenAthens vs ORCID vs Shibboleth)
 - [ ] Contact 3 partner universities for testing
 - [ ] Review SAML security best practices
 - [ ] Set up SSL certificates for SAML endpoints
 
 ### **Before Starting Day 28**
+
 - [ ] Review current theme extraction flow
 - [ ] Gather user feedback on confusion points
 - [ ] Design visual workflow diagram
@@ -489,18 +545,21 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 ## 📊 Success Metrics
 
 ### **AI Integration Success**
+
 - Query expansion quality: >85% user satisfaction
 - Response time: <2 seconds average
 - Cost per query: <$0.01
 - Error rate: <1%
 
 ### **SSO Authentication Success**
+
 - Successful authentication rate: >95%
 - Average login time: <10 seconds
 - Support tickets about auth: <5/month
 - Database access accuracy: 100%
 
 ### **Theme Extraction UX Success**
+
 - Users successfully extract themes: >90%
 - Time to first theme extraction: <5 minutes
 - User confusion support tickets: <3/month
@@ -511,6 +570,7 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 ## 🔧 Technical Dependencies
 
 ### **Day 26 Dependencies**
+
 ```json
 {
   "dependencies": {
@@ -521,6 +581,7 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 ```
 
 ### **Day 27 Dependencies**
+
 ```json
 {
   "dependencies": {
@@ -545,18 +606,21 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 ## ⚠️ Risk Mitigation
 
 ### **AI Integration Risks**
+
 - **Risk:** API costs spiral out of control
   - **Mitigation:** Strict rate limiting, cost alerts, caching
 - **Risk:** API downtime affects UX
   - **Mitigation:** Fallback to demo mode with warning
 
 ### **SSO Authentication Risks**
+
 - **Risk:** SAML vulnerability
   - **Mitigation:** Regular security audits, token validation
 - **Risk:** University IdP changes break auth
   - **Mitigation:** Monitor logs, maintain contact with IT
 
 ### **UX Enhancement Risks**
+
 - **Risk:** Users still don't understand workflow
   - **Mitigation:** User testing, iterate based on feedback
 
@@ -565,6 +629,7 @@ const orcidUrl = `https://orcid.org/oauth/authorize
 ## 📞 Support & Maintenance
 
 ### **Ongoing Support Required**
+
 - Monitor AI API usage and costs (weekly)
 - Update SSO metadata when universities change IdPs (as needed)
 - Respond to authentication support tickets (24hr SLA)

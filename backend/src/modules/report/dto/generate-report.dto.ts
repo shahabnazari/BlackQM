@@ -59,10 +59,10 @@ export enum ReportSection {
  */
 export class GenerateReportDto {
   @ApiProperty({
-    description: 'UUID of the study to generate report for',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'ID of the study to generate report for (CUID format)',
+    example: 'cmhb52mig0008qlq2ee758c97',
   })
-  @IsUUID()
+  @IsString()
   studyId!: string;
 
   @ApiPropertyOptional({
@@ -150,15 +150,15 @@ export class GenerateReportDto {
  */
 export class GenerateBulkReportsDto {
   @ApiProperty({
-    description: 'Array of study IDs to generate reports for',
+    description: 'Array of study IDs to generate reports for (CUID format)',
     example: [
-      '550e8400-e29b-41d4-a716-446655440000',
-      '550e8400-e29b-41d4-a716-446655440001',
+      'cmhb52mig0008qlq2ee758c97',
+      'cmhb52mig0008qlq2ee758c98',
     ],
   })
   @IsArray()
   @ArrayMinSize(1)
-  @IsUUID(undefined, { each: true })
+  @IsString({ each: true })
   studyIds!: string[];
 
   @ApiPropertyOptional({

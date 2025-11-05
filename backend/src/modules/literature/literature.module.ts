@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { LiteratureController } from './literature.controller';
 import { LiteratureService } from './literature.service';
 import { ReferenceService } from './services/reference.service';
@@ -15,11 +15,17 @@ import { CrossPlatformSynthesisService } from './services/cross-platform-synthes
 import { UnifiedThemeExtractionService } from './services/unified-theme-extraction.service';
 import { SearchCoalescerService } from './services/search-coalescer.service';
 import { APIQuotaMonitorService } from './services/api-quota-monitor.service';
+import { ThemeToSurveyItemService } from './services/theme-to-survey-item.service';
+import { EnhancedThemeIntegrationService } from './services/enhanced-theme-integration.service';
+import { PDFParsingService } from './services/pdf-parsing.service';
+import { PDFQueueService } from './services/pdf-queue.service';
+import { PDFController } from './controllers/pdf.controller';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
 import { ThemeExtractionGateway } from './gateways/theme-extraction.gateway';
 import { HttpModule } from '@nestjs/axios';
 import { CacheModule } from '@nestjs/cache-manager';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaModule } from '../../common/prisma.module';
 import { CacheService } from '../../common/cache.service';
 import { AIModule } from '../ai/ai.module';
@@ -30,12 +36,13 @@ import { AIModule } from '../ai/ai.module';
     HttpModule,
     PrismaModule,
     AIModule,
+    EventEmitterModule.forRoot(),
     CacheModule.register({
       ttl: 3600, // 1 hour cache
       max: 1000, // Maximum items in cache
     }),
   ],
-  controllers: [LiteratureController],
+  controllers: [LiteratureController, PDFController],
   providers: [
     LiteratureService,
     LiteratureGateway,
@@ -55,6 +62,10 @@ import { AIModule } from '../ai/ai.module';
     SearchCoalescerService, // Phase 10 Days 2-3 - Request deduplication
     CacheService, // Phase 10 Days 2-3 - Enhanced multi-tier cache
     APIQuotaMonitorService, // Phase 10 Days 2-3 - API quota monitoring
+    ThemeToSurveyItemService, // Phase 10 Day 5.9 - Theme-to-Survey Item Generation
+    EnhancedThemeIntegrationService, // Phase 10 Day 5.12 - Enhanced Theme Integration
+    PDFParsingService, // Phase 10 Day 5.15 - PDF Full-Text Parsing
+    PDFQueueService, // Phase 10 Day 5.15 - PDF Background Queue
   ],
   exports: [
     LiteratureService,
@@ -70,6 +81,23 @@ import { AIModule } from '../ai/ai.module';
     InstagramManualService, // Phase 9 Day 19
     CrossPlatformSynthesisService, // Phase 9 Day 19
     UnifiedThemeExtractionService, // Phase 9 Day 20
+    ThemeToSurveyItemService, // Phase 10 Day 5.9 - Theme-to-Survey Item Generation
+    EnhancedThemeIntegrationService, // Phase 10 Day 5.12 - Enhanced Theme Integration
+    PDFParsingService, // Phase 10 Day 5.15 - PDF Full-Text Parsing
+    PDFQueueService, // Phase 10 Day 5.15 - PDF Background Queue
   ],
 })
-export class LiteratureModule {}
+export class LiteratureModule implements OnModuleInit {
+  constructor(
+    private readonly unifiedThemeService: UnifiedThemeExtractionService,
+    private readonly themeGateway: ThemeExtractionGateway,
+  ) {}
+
+  /**
+   * Phase 10 Day 5.17.3: Wire up WebSocket gateway to service
+   * Connects real-time progress updates to theme extraction
+   */
+  onModuleInit() {
+    this.unifiedThemeService.setGateway(this.themeGateway);
+  }
+}

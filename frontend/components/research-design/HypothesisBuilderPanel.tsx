@@ -10,7 +10,10 @@ import {
   ArrowPathIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline';
-import { researchDesignAPI, GeneratedHypothesis } from '@/lib/api/services/research-design-api.service';
+import {
+  researchDesignAPI,
+  GeneratedHypothesis,
+} from '@/lib/api/services/research-design-api.service';
 
 /**
  * Phase 9.5 Day 3: Hypothesis Builder Panel
@@ -50,12 +53,14 @@ const HYPOTHESIS_SOURCE_COLORS = {
 export default function HypothesisBuilderPanel({
   researchQuestion,
   literatureSummary,
-  onHypothesesGenerated
+  onHypothesesGenerated,
 }: HypothesisBuilderPanelProps) {
   const [hypotheses, setHypotheses] = useState<GeneratedHypothesis[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedHypotheses, setExpandedHypotheses] = useState<Set<string>>(new Set());
+  const [expandedHypotheses, setExpandedHypotheses] = useState<Set<string>>(
+    new Set()
+  );
 
   const handleGenerateHypotheses = async () => {
     if (!researchQuestion.trim()) {
@@ -136,8 +141,12 @@ export default function HypothesisBuilderPanel({
             <BeakerIcon className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Hypothesis Generator</h2>
-            <p className="text-sm text-gray-600">AI-powered from contradictions, gaps & trends</p>
+            <h2 className="text-xl font-bold text-gray-900">
+              Hypothesis Generator
+            </h2>
+            <p className="text-sm text-gray-600">
+              AI-powered from contradictions, gaps & trends
+            </p>
           </div>
         </div>
         <button
@@ -171,16 +180,23 @@ export default function HypothesisBuilderPanel({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-600">
-              {hypotheses.length} hypotheses generated from your literature review
+              {hypotheses.length} hypotheses generated from your literature
+              review
             </p>
             <div className="flex items-center space-x-2 text-xs text-gray-600">
-              <span className="px-2 py-1 bg-red-100 text-red-800 rounded">Contradictions</span>
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">Gaps</span>
-              <span className="px-2 py-1 bg-green-100 text-green-800 rounded">Trends</span>
+              <span className="px-2 py-1 bg-red-100 text-red-800 rounded">
+                Contradictions
+              </span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                Gaps
+              </span>
+              <span className="px-2 py-1 bg-green-100 text-green-800 rounded">
+                Trends
+              </span>
             </div>
           </div>
 
-          {hypotheses.map((hypothesis) => {
+          {hypotheses.map(hypothesis => {
             const isExpanded = expandedHypotheses.has(hypothesis.id);
             return (
               <div
@@ -194,10 +210,14 @@ export default function HypothesisBuilderPanel({
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
-                      <span className={`text-xs px-2 py-1 rounded border ${HYPOTHESIS_SOURCE_COLORS[hypothesis.source]}`}>
+                      <span
+                        className={`text-xs px-2 py-1 rounded border ${HYPOTHESIS_SOURCE_COLORS[hypothesis.source]}`}
+                      >
                         {hypothesis.source}
                       </span>
-                      <span className={`text-xs px-2 py-1 rounded border ${getEvidenceStrengthColor(hypothesis.evidenceStrength)}`}>
+                      <span
+                        className={`text-xs px-2 py-1 rounded border ${getEvidenceStrengthColor(hypothesis.evidenceStrength)}`}
+                      >
                         {hypothesis.evidenceStrength} evidence
                       </span>
                       <span className="text-xs text-gray-600">
@@ -207,10 +227,17 @@ export default function HypothesisBuilderPanel({
                     <p className="text-gray-900 mb-2">{hypothesis.statement}</p>
                     <div className="flex items-center space-x-4 text-sm text-gray-600">
                       {getEvidenceIcon(hypothesis.evidenceStrength)}
-                      <span>Confidence: {(hypothesis.confidenceScore * 100).toFixed(0)}%</span>
-                      <span>{hypothesis.supportingPapers.length} supporting papers</span>
+                      <span>
+                        Confidence:{' '}
+                        {(hypothesis.confidenceScore * 100).toFixed(0)}%
+                      </span>
+                      <span>
+                        {hypothesis.supportingPapers.length} supporting papers
+                      </span>
                       {hypothesis.expectedEffectSize && (
-                        <span>Effect size: {hypothesis.expectedEffectSize}</span>
+                        <span>
+                          Effect size: {hypothesis.expectedEffectSize}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -224,7 +251,12 @@ export default function HypothesisBuilderPanel({
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -235,8 +267,12 @@ export default function HypothesisBuilderPanel({
                     {/* Statistical Test Suggestion */}
                     {hypothesis.suggestedStatisticalTest && (
                       <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                        <p className="text-xs font-medium text-purple-900 mb-1">Suggested Statistical Test:</p>
-                        <p className="text-sm text-purple-800">{hypothesis.suggestedStatisticalTest}</p>
+                        <p className="text-xs font-medium text-purple-900 mb-1">
+                          Suggested Statistical Test:
+                        </p>
+                        <p className="text-sm text-purple-800">
+                          {hypothesis.suggestedStatisticalTest}
+                        </p>
                       </div>
                     )}
 
@@ -245,7 +281,9 @@ export default function HypothesisBuilderPanel({
                       <div>
                         <div className="flex items-center space-x-2 mb-2">
                           <DocumentTextIcon className="w-4 h-4 text-gray-600" />
-                          <p className="text-sm font-medium text-gray-900">Supporting Evidence:</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Supporting Evidence:
+                          </p>
                         </div>
                         <div className="space-y-2">
                           {hypothesis.supportingPapers.map((paper, idx) => (
@@ -255,16 +293,24 @@ export default function HypothesisBuilderPanel({
                             >
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                  <p className="text-gray-900 font-medium mb-1">{paper.title}</p>
+                                  <p className="text-gray-900 font-medium mb-1">
+                                    {paper.title}
+                                  </p>
                                   {paper.excerpt && (
-                                    <p className="text-xs text-gray-600 italic">"{paper.excerpt}"</p>
+                                    <p className="text-xs text-gray-600 italic">
+                                      "{paper.excerpt}"
+                                    </p>
                                   )}
                                 </div>
-                                <span className={`ml-2 text-xs px-2 py-1 rounded ${
-                                  paper.evidenceType === 'supports' ? 'bg-green-100 text-green-800' :
-                                  paper.evidenceType === 'contradicts' ? 'bg-red-100 text-red-800' :
-                                  'bg-yellow-100 text-yellow-800'
-                                }`}>
+                                <span
+                                  className={`ml-2 text-xs px-2 py-1 rounded ${
+                                    paper.evidenceType === 'supports'
+                                      ? 'bg-green-100 text-green-800'
+                                      : paper.evidenceType === 'contradicts'
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-yellow-100 text-yellow-800'
+                                  }`}
+                                >
                                   {paper.evidenceType}
                                 </span>
                               </div>
@@ -295,12 +341,16 @@ export default function HypothesisBuilderPanel({
       {hypotheses.length === 0 && !isGenerating && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
           <BeakerIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Hypotheses Yet</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No Hypotheses Yet
+          </h3>
           <p className="text-sm text-gray-600 mb-4">
-            Click "Generate Hypotheses" to create hypotheses from your literature review
+            Click "Generate Hypotheses" to create hypotheses from your
+            literature review
           </p>
           <p className="text-xs text-gray-500">
-            We'll analyze contradictions, gaps, and trends to suggest testable hypotheses
+            We'll analyze contradictions, gaps, and trends to suggest testable
+            hypotheses
           </p>
         </div>
       )}

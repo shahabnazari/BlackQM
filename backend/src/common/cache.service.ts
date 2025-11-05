@@ -107,7 +107,7 @@ export class CacheService {
 
     if (result.data && (result.isStale || result.isArchive)) {
       this.logger.log(
-        `🔄 [Cache] Serving ${result.isStale ? 'stale' : 'archive'} data for "${key}" (age: ${Math.floor(result.age / 60)} min)`
+        `🔄 [Cache] Serving ${result.isStale ? 'stale' : 'archive'} data for "${key}" (age: ${Math.floor(result.age / 60)} min)`,
       );
       return result;
     }

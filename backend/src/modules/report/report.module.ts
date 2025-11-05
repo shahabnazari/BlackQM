@@ -13,6 +13,7 @@ import { ReportVersionService } from './services/report-version.service';
 import { ReportCommentService } from './services/report-comment.service';
 import { ReportChangeService } from './services/report-change.service';
 import { ReportApprovalService } from './services/report-approval.service';
+import { ReportSharingService } from './services/report-sharing.service';
 import { CacheService } from '../../common/cache.service';
 import { PrismaService } from '../../common/prisma.service';
 import { StudyModule } from '../study/study.module';
@@ -62,6 +63,7 @@ import { AnalysisModule } from '../analysis/analysis.module';
     ReportCommentService, // Phase 10 Day 4 - Comment system
     ReportChangeService, // Phase 10 Day 4 - Track changes
     ReportApprovalService, // Phase 10 Day 4 - Approval workflow
+    ReportSharingService, // Phase 10 Day 4 - Link sharing & permissions
     CacheService,
     PrismaService,
   ],
@@ -77,6 +79,7 @@ import { AnalysisModule } from '../analysis/analysis.module';
     ReportCommentService, // Export for comments
     ReportChangeService, // Export for track changes
     ReportApprovalService, // Export for approval workflow
+    ReportSharingService, // Export for link sharing
   ],
 })
 export class ReportModule {}

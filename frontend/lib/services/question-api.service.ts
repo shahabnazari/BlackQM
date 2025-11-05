@@ -77,7 +77,10 @@ class QuestionAPIService {
   ): Promise<Question[]> {
     try {
       const options = params ? { params } : undefined;
-      const response = await api.get(`${this.baseUrl}/survey/${surveyId}`, options);
+      const response = await api.get(
+        `${this.baseUrl}/survey/${surveyId}`,
+        options
+      );
       return response.data;
     } catch (error) {
       console.error('Error fetching questions:', error);

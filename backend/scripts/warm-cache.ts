@@ -15,7 +15,10 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import { LiteratureService } from '../src/modules/literature/literature.service';
-import { SearchLiteratureDto, LiteratureSource } from '../src/modules/literature/dto/literature.dto';
+import {
+  SearchLiteratureDto,
+  LiteratureSource,
+} from '../src/modules/literature/dto/literature.dto';
 
 /**
  * Top 100 common research queries across all disciplines
@@ -104,7 +107,9 @@ const COMMON_QUERIES = [
 
 async function warmCache() {
   console.log('🔥 [Cache Warmer] Starting cache warming process...');
-  console.log(`📊 [Cache Warmer] Warming ${COMMON_QUERIES.length} common queries`);
+  console.log(
+    `📊 [Cache Warmer] Warming ${COMMON_QUERIES.length} common queries`,
+  );
 
   const app = await NestFactory.createApplicationContext(AppModule);
   const literatureService = app.get(LiteratureService);
@@ -120,7 +125,9 @@ async function warmCache() {
     const query = COMMON_QUERIES[i];
 
     try {
-      console.log(`\n[${i + 1}/${COMMON_QUERIES.length}] Warming cache for: "${query}"`);
+      console.log(
+        `\n[${i + 1}/${COMMON_QUERIES.length}] Warming cache for: "${query}"`,
+      );
 
       const searchDto: SearchLiteratureDto = {
         query,
@@ -133,7 +140,10 @@ async function warmCache() {
         ],
       };
 
-      const result = await literatureService.searchLiterature(searchDto, cacheWarmerId);
+      const result = await literatureService.searchLiterature(
+        searchDto,
+        cacheWarmerId,
+      );
 
       console.log(`✅ Cached ${result.total} papers for "${query}"`);
       successCount++;
@@ -141,9 +151,8 @@ async function warmCache() {
       // Respect rate limits: 5-second delay between searches
       if (i < COMMON_QUERIES.length - 1) {
         console.log('⏳ Waiting 5 seconds to respect API rate limits...');
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
       }
-
     } catch (error: any) {
       console.error(`❌ Failed to warm cache for "${query}": ${error.message}`);
       failCount++;
@@ -160,7 +169,9 @@ async function warmCache() {
   console.log('='.repeat(60));
   console.log(`✅ Success: ${successCount}/${COMMON_QUERIES.length} queries`);
   console.log(`❌ Failed: ${failCount}/${COMMON_QUERIES.length} queries`);
-  console.log(`⏱️  Duration: ${duration} seconds (${Math.round(duration / 60)} minutes)`);
+  console.log(
+    `⏱️  Duration: ${duration} seconds (${Math.round(duration / 60)} minutes)`,
+  );
   console.log('='.repeat(60));
 
   await app.close();

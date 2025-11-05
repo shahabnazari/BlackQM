@@ -21,7 +21,8 @@ describe('UnifiedThemeExtractionService', () => {
     id: 'paper-1',
     type: 'paper' as const,
     title: 'The Impact of Climate Change on Agriculture',
-    content: 'Climate change significantly affects agricultural productivity through altered precipitation patterns, increased temperatures, and extreme weather events. Adaptation strategies include drought-resistant crops and improved irrigation systems.',
+    content:
+      'Climate change significantly affects agricultural productivity through altered precipitation patterns, increased temperatures, and extreme weather events. Adaptation strategies include drought-resistant crops and improved irrigation systems.',
     authors: ['Dr. Jane Smith', 'Dr. John Doe'],
     year: 2023,
     doi: '10.1000/test.2023',
@@ -32,7 +33,8 @@ describe('UnifiedThemeExtractionService', () => {
     id: 'video-1',
     type: 'youtube' as const,
     title: 'Sustainable Farming Techniques',
-    content: 'Discussion about organic farming methods, crop rotation benefits, soil health improvement, and reduced chemical pesticide usage in modern agriculture.',
+    content:
+      'Discussion about organic farming methods, crop rotation benefits, soil health improvement, and reduced chemical pesticide usage in modern agriculture.',
     keywords: ['sustainable farming', 'organic', 'soil health'],
   };
 
@@ -64,7 +66,9 @@ describe('UnifiedThemeExtractionService', () => {
       ],
     }).compile();
 
-    service = module.get<UnifiedThemeExtractionService>(UnifiedThemeExtractionService);
+    service = module.get<UnifiedThemeExtractionService>(
+      UnifiedThemeExtractionService,
+    );
     prismaService = module.get<PrismaService>(PrismaService);
     cacheService = module.get<CacheService>(CacheService);
 
@@ -111,13 +115,17 @@ describe('UnifiedThemeExtractionService', () => {
         ...mockPaper,
         id: 'paper-2',
         title: 'Water Scarcity and Crop Management',
-        content: 'Efficient water management is crucial for sustainable agriculture, particularly in arid regions experiencing water scarcity.',
+        content:
+          'Efficient water management is crucial for sustainable agriculture, particularly in arid regions experiencing water scarcity.',
       };
 
-      const result = await service.extractFromMultipleSources([mockPaper, mockPaper2], {
-        researchContext: 'sustainable agriculture',
-        minConfidence: 0.5,
-      });
+      const result = await service.extractFromMultipleSources(
+        [mockPaper, mockPaper2],
+        {
+          researchContext: 'sustainable agriculture',
+          minConfidence: 0.5,
+        },
+      );
 
       expect(result.themes.length).toBeGreaterThan(0);
       expect(result.metadata).toHaveProperty('totalSources', 2);
@@ -125,10 +133,13 @@ describe('UnifiedThemeExtractionService', () => {
     });
 
     it('should extract themes from mixed sources (papers + videos)', async () => {
-      const result = await service.extractFromMultipleSources([mockPaper, mockVideo], {
-        researchContext: 'sustainable agriculture',
-        minConfidence: 0.5,
-      });
+      const result = await service.extractFromMultipleSources(
+        [mockPaper, mockVideo],
+        {
+          researchContext: 'sustainable agriculture',
+          minConfidence: 0.5,
+        },
+      );
 
       expect(result.themes.length).toBeGreaterThan(0);
       expect(result.metadata.totalSources).toBe(2);
@@ -195,7 +206,9 @@ describe('UnifiedThemeExtractionService', () => {
       const themeWithProvenance = result.themes.find((t) => t.provenance);
       if (themeWithProvenance) {
         expect(themeWithProvenance.provenance).toHaveProperty('citationChain');
-        expect(Array.isArray(themeWithProvenance.provenance.citationChain)).toBe(true);
+        expect(
+          Array.isArray(themeWithProvenance.provenance.citationChain),
+        ).toBe(true);
       }
     });
 
@@ -218,10 +231,13 @@ describe('UnifiedThemeExtractionService', () => {
     }, 70000);
 
     it('should deduplicate similar themes', async () => {
-      const result = await service.extractFromMultipleSources([mockPaper, mockPaper], {
-        researchContext: 'climate change',
-        minConfidence: 0.5,
-      });
+      const result = await service.extractFromMultipleSources(
+        [mockPaper, mockPaper],
+        {
+          researchContext: 'climate change',
+          minConfidence: 0.5,
+        },
+      );
 
       // Themes should be deduplicated
       const themeLabels = result.themes.map((t) => t.label.toLowerCase());
@@ -241,7 +257,13 @@ describe('UnifiedThemeExtractionService', () => {
       });
 
       // Themes should not be generic structural themes
-      const genericThemes = ['methodology', 'results', 'conclusion', 'discussion', 'introduction'];
+      const genericThemes = [
+        'methodology',
+        'results',
+        'conclusion',
+        'discussion',
+        'introduction',
+      ];
       result.themes.forEach((theme) => {
         const themeLabel = theme.label.toLowerCase();
         genericThemes.forEach((generic) => {
@@ -257,8 +279,17 @@ describe('UnifiedThemeExtractionService', () => {
       });
 
       // Should have relevant keywords
-      const allKeywords = result.themes.flatMap((t) => t.keywords.map((k) => k.toLowerCase()));
-      const relevantKeywords = ['climate', 'agriculture', 'crop', 'weather', 'temperature', 'precipitation'];
+      const allKeywords = result.themes.flatMap((t) =>
+        t.keywords.map((k) => k.toLowerCase()),
+      );
+      const relevantKeywords = [
+        'climate',
+        'agriculture',
+        'crop',
+        'weather',
+        'temperature',
+        'precipitation',
+      ];
 
       const hasRelevantKeywords = relevantKeywords.some((keyword) =>
         allKeywords.some((k) => k.includes(keyword)),
@@ -268,10 +299,13 @@ describe('UnifiedThemeExtractionService', () => {
     });
 
     it('should assign appropriate confidence scores', async () => {
-      const result = await service.extractFromMultipleSources([mockPaper, mockVideo], {
-        researchContext: 'sustainable agriculture',
-        minConfidence: 0.4,
-      });
+      const result = await service.extractFromMultipleSources(
+        [mockPaper, mockVideo],
+        {
+          researchContext: 'sustainable agriculture',
+          minConfidence: 0.4,
+        },
+      );
 
       result.themes.forEach((theme) => {
         expect(theme.confidence).toBeGreaterThanOrEqual(0.4);
@@ -279,10 +313,13 @@ describe('UnifiedThemeExtractionService', () => {
       });
 
       // Themes with multiple supporting sources should have higher confidence
-      const multiSourceThemes = result.themes.filter((t) => t.provenance?.sourceCounts.total > 1);
+      const multiSourceThemes = result.themes.filter(
+        (t) => t.provenance?.sourceCounts.total > 1,
+      );
       if (multiSourceThemes.length > 0) {
         const avgConfidence =
-          multiSourceThemes.reduce((sum, t) => sum + t.confidence, 0) / multiSourceThemes.length;
+          multiSourceThemes.reduce((sum, t) => sum + t.confidence, 0) /
+          multiSourceThemes.length;
         expect(avgConfidence).toBeGreaterThan(0.5);
       }
     });
@@ -351,10 +388,13 @@ describe('UnifiedThemeExtractionService', () => {
         content: 'Test with special chars: @#$%^&*(){}[]|\\;:\'",<>?/`~',
       };
 
-      const result = await service.extractFromMultipleSources([specialContent], {
-        researchContext: 'test',
-        minConfidence: 0.5,
-      });
+      const result = await service.extractFromMultipleSources(
+        [specialContent],
+        {
+          researchContext: 'test',
+          minConfidence: 0.5,
+        },
+      );
 
       expect(result.themes).toBeDefined();
     });
@@ -364,10 +404,13 @@ describe('UnifiedThemeExtractionService', () => {
     it('should complete extraction in reasonable time for typical use case', async () => {
       const startTime = Date.now();
 
-      await service.extractFromMultipleSources([mockPaper, mockVideo, mockPaper], {
-        researchContext: 'agriculture',
-        minConfidence: 0.5,
-      });
+      await service.extractFromMultipleSources(
+        [mockPaper, mockVideo, mockPaper],
+        {
+          researchContext: 'agriculture',
+          minConfidence: 0.5,
+        },
+      );
 
       const elapsedTime = Date.now() - startTime;
 
@@ -376,8 +419,15 @@ describe('UnifiedThemeExtractionService', () => {
     }, 35000);
 
     it('should scale linearly with number of sources', async () => {
-      const threeSources = [mockPaper, mockVideo, { ...mockPaper, id: 'paper-3' }];
-      const sixSources = [...threeSources, ...threeSources.map((s, i) => ({ ...s, id: `${s.id}-copy-${i}` }))];
+      const threeSources = [
+        mockPaper,
+        mockVideo,
+        { ...mockPaper, id: 'paper-3' },
+      ];
+      const sixSources = [
+        ...threeSources,
+        ...threeSources.map((s, i) => ({ ...s, id: `${s.id}-copy-${i}` })),
+      ];
 
       const startTime1 = Date.now();
       await service.extractFromMultipleSources(threeSources, {

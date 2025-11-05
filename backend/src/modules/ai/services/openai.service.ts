@@ -49,6 +49,8 @@ export class OpenAIService {
     this.openai = new OpenAI({
       apiKey,
       organization: this.configService.get('OPENAI_ORG_ID'),
+      timeout: 120000, // 2 minutes timeout for OpenAI API calls
+      maxRetries: 2, // Retry failed requests up to 2 times
     });
   }
 

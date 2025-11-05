@@ -60,22 +60,27 @@ export class AIManuscriptGeneratorService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-    private readonly citationManager: CitationManagerService
+    private readonly citationManager: CitationManagerService,
   ) {
     this.openai = new OpenAI({
-      apiKey: this.config.get('OPENAI_API_KEY')
+      apiKey: this.config.get('OPENAI_API_KEY'),
     });
   }
 
   /**
    * Generate complete manuscript using AI
    */
-  async generateManuscript(request: ManuscriptGenerationRequest): Promise<ManuscriptSection[]> {
+  async generateManuscript(
+    request: ManuscriptGenerationRequest,
+  ): Promise<ManuscriptSection[]> {
     this.logger.log(`Generating AI manuscript for study ${request.studyId}`);
 
     try {
       // Load complete study data
-      const studyData = await this.loadStudyData(request.studyId, request.userId);
+      const studyData = await this.loadStudyData(
+        request.studyId,
+        request.userId,
+      );
 
       const sections: ManuscriptSection[] = [];
 
@@ -108,7 +113,10 @@ export class AIManuscriptGeneratorService {
 
       return sections;
     } catch (error: any) {
-      this.logger.error(`Failed to generate manuscript: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to generate manuscript: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -125,10 +133,10 @@ export class AIManuscriptGeneratorService {
         statements: true,
         responses: {
           include: {
-            participant: true
-          }
-        }
-      }
+            participant: true,
+          },
+        },
+      },
     });
 
     // Load phase contexts separately if they exist
@@ -142,11 +150,11 @@ export class AIManuscriptGeneratorService {
           researchQuestions: true,
           hypotheses: true,
           themes: true,
-          statementProvenances: true
+          statementProvenances: true,
         },
         orderBy: {
-          createdAt: 'asc'
-        }
+          createdAt: 'asc',
+        },
       });
     } catch (error: any) {
       // If phaseContext table doesn't exist or query fails, use empty array
@@ -169,14 +177,16 @@ export class AIManuscriptGeneratorService {
    */
   private async generateIntroduction(
     studyData: any,
-    request: ManuscriptGenerationRequest
+    request: ManuscriptGenerationRequest,
   ): Promise<ManuscriptSection> {
     this.logger.debug('Generating Introduction section');
 
     // Extract research questions from Phase 9.5
     const phaseContext = studyData.phaseContexts?.[0];
     const researchQuestions = phaseContext?.researchQuestions || [];
-    const refinedQuestion = researchQuestions.find((q: any) => q.refined === true);
+    const refinedQuestion = researchQuestions.find(
+      (q: any) => q.refined === true,
+    );
 
     const prompt = `You are an expert academic writer specializing in Q-methodology research.
 
@@ -209,7 +219,7 @@ Write the Introduction section:`;
       model: 'gpt-4',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 800
+      max_tokens: 800,
     });
 
     const content = completion.choices[0]?.message?.content || '';
@@ -220,7 +230,7 @@ Write the Introduction section:`;
       wordCount: content.split(/\s+/).length,
       citations: [],
       aiGenerated: true,
-      methodology: 'SQUARE-IT research question refinement'
+      methodology: 'SQUARE-IT research question refinement',
     };
   }
 
@@ -229,7 +239,7 @@ Write the Introduction section:`;
    */
   private async generateLiteratureReview(
     studyData: any,
-    request: ManuscriptGenerationRequest
+    request: ManuscriptGenerationRequest,
   ): Promise<ManuscriptSection> {
     this.logger.debug('Generating Literature Review section');
 
@@ -249,12 +259,15 @@ Write the Introduction section:`;
       volume: paper.volume,
       pages: paper.pages,
       doi: paper.doi,
-      url: paper.url
+      url: paper.url,
     }));
 
     const paperSummaries = papers
       .slice(0, 10) // Top 10 papers
-      .map((p: any) => `- "${p.title}" (${p.authors}, ${p.year}): ${p.abstract?.substring(0, 200) || 'No abstract available'}`)
+      .map(
+        (p: any) =>
+          `- "${p.title}" (${p.authors}, ${p.year}): ${p.abstract?.substring(0, 200) || 'No abstract available'}`,
+      )
       .join('\n');
 
     const themeSummaries = themes
@@ -299,7 +312,7 @@ Write the Literature Review section:`;
       model: 'gpt-4',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 1500
+      max_tokens: 1500,
     });
 
     const content = completion.choices[0]?.message?.content || '';
@@ -310,7 +323,7 @@ Write the Literature Review section:`;
       wordCount: content.split(/\s+/).length,
       citations,
       aiGenerated: true,
-      methodology: 'Multi-source theme extraction and synthesis'
+      methodology: 'Multi-source theme extraction and synthesis',
     };
   }
 
@@ -319,7 +332,7 @@ Write the Literature Review section:`;
    */
   private async generateMethods(
     studyData: any,
-    request: ManuscriptGenerationRequest
+    request: ManuscriptGenerationRequest,
   ): Promise<ManuscriptSection> {
     this.logger.debug('Generating Methods section with provenance tracking');
 
@@ -382,7 +395,7 @@ Write the Methods section:`;
       model: 'gpt-4',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.6,
-      max_tokens: 1200
+      max_tokens: 1200,
     });
 
     const content = completion.choices[0]?.message?.content || '';
@@ -393,7 +406,8 @@ Write the Methods section:`;
       wordCount: content.split(/\s+/).length,
       citations: [],
       aiGenerated: true,
-      methodology: 'SQUARE-IT + Multi-source Evidence + Theme Extraction + Provenance Tracking'
+      methodology:
+        'SQUARE-IT + Multi-source Evidence + Theme Extraction + Provenance Tracking',
     };
   }
 
@@ -402,7 +416,7 @@ Write the Methods section:`;
    */
   private async generateResults(
     studyData: any,
-    request: ManuscriptGenerationRequest
+    request: ManuscriptGenerationRequest,
   ): Promise<ManuscriptSection> {
     this.logger.debug('Generating Results section');
 
@@ -446,7 +460,7 @@ Write the Results section template:`;
       model: 'gpt-4',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.5,
-      max_tokens: 1400
+      max_tokens: 1400,
     });
 
     const content = completion.choices[0]?.message?.content || '';
@@ -456,7 +470,7 @@ Write the Results section template:`;
       content,
       wordCount: content.split(/\s+/).length,
       citations: [],
-      aiGenerated: true
+      aiGenerated: true,
     };
   }
 
@@ -465,7 +479,7 @@ Write the Results section template:`;
    */
   private async generateDiscussion(
     studyData: any,
-    request: ManuscriptGenerationRequest
+    request: ManuscriptGenerationRequest,
   ): Promise<ManuscriptSection> {
     this.logger.debug('Generating Discussion section');
 
@@ -479,7 +493,9 @@ Write the Results section template:`;
       .map((t: any) => `- ${t.label}`)
       .join('\n');
 
-    const mainQuestion = researchQuestions.find((q: any) => q.refined)?. question || 'Main research question';
+    const mainQuestion =
+      researchQuestions.find((q: any) => q.refined)?.question ||
+      'Main research question';
 
     const prompt = `You are an expert academic writer specializing in Q-methodology research.
 
@@ -514,7 +530,7 @@ Write the Discussion section:`;
       model: 'gpt-4',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 1500
+      max_tokens: 1500,
     });
 
     const content = completion.choices[0]?.message?.content || '';
@@ -527,7 +543,7 @@ Write the Discussion section:`;
       authors: paper.authors,
       year: paper.year,
       journal: paper.journal,
-      doi: paper.doi
+      doi: paper.doi,
     }));
 
     return {
@@ -535,7 +551,7 @@ Write the Discussion section:`;
       content,
       wordCount: content.split(/\s+/).length,
       citations,
-      aiGenerated: true
+      aiGenerated: true,
     };
   }
 
@@ -544,13 +560,15 @@ Write the Discussion section:`;
    */
   private async generateConclusion(
     studyData: any,
-    request: ManuscriptGenerationRequest
+    request: ManuscriptGenerationRequest,
   ): Promise<ManuscriptSection> {
     this.logger.debug('Generating Conclusion section');
 
     const phaseContext = studyData.phaseContexts?.[0];
     const researchQuestions = phaseContext?.researchQuestions || [];
-    const mainQuestion = researchQuestions.find((q: any) => q.refined)?.question || 'Main research question';
+    const mainQuestion =
+      researchQuestions.find((q: any) => q.refined)?.question ||
+      'Main research question';
 
     const prompt = `You are an expert academic writer specializing in Q-methodology research.
 
@@ -575,7 +593,7 @@ Write the Conclusion section:`;
       model: 'gpt-4',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 500
+      max_tokens: 500,
     });
 
     const content = completion.choices[0]?.message?.content || '';
@@ -585,7 +603,7 @@ Write the Conclusion section:`;
       content,
       wordCount: content.split(/\s+/).length,
       citations: [],
-      aiGenerated: true
+      aiGenerated: true,
     };
   }
 
@@ -594,31 +612,44 @@ Write the Conclusion section:`;
    */
   async generateStatementOriginsAppendix(
     provenance: ProvenanceChain[],
-    journalStyle: 'apa' | 'mla' | 'chicago'
+    journalStyle: 'apa' | 'mla' | 'chicago',
   ): Promise<string> {
-    this.logger.log(`Generating statement origins appendix for ${provenance.length} statements`);
+    this.logger.log(
+      `Generating statement origins appendix for ${provenance.length} statements`,
+    );
 
     let appendix = '## Appendix A: Statement Origins and Provenance\n\n';
 
-    appendix += 'This appendix provides complete lineage information for all Q-statements used in this study. ';
-    appendix += 'Each statement can be traced through the research pipeline from original literature sources ';
-    appendix += 'through gap identification, research question refinement, hypothesis generation, theme extraction, ';
+    appendix +=
+      'This appendix provides complete lineage information for all Q-statements used in this study. ';
+    appendix +=
+      'Each statement can be traced through the research pipeline from original literature sources ';
+    appendix +=
+      'through gap identification, research question refinement, hypothesis generation, theme extraction, ';
     appendix += 'and final statement formulation.\n\n';
 
     appendix += '**Research Pipeline:**\n';
-    appendix += '1. **Literature Review**: Academic papers from multiple databases (PubMed, ArXiv, Semantic Scholar, etc.)\n';
-    appendix += '2. **Gap Analysis**: Identification of research gaps through systematic review\n';
-    appendix += '3. **Research Question Refinement**: SQUARE-IT methodology (Specific, Quantifiable, Unambiguous, Answerable, Researchable, Ethical, Interesting, Testable)\n';
-    appendix += '4. **Hypothesis Generation**: Multi-source evidence synthesis\n';
-    appendix += '5. **Theme Extraction**: Unified multi-source theme extraction from papers, videos, and social media\n';
-    appendix += '6. **Statement Development**: Final Q-statements derived from themes\n\n';
+    appendix +=
+      '1. **Literature Review**: Academic papers from multiple databases (PubMed, ArXiv, Semantic Scholar, etc.)\n';
+    appendix +=
+      '2. **Gap Analysis**: Identification of research gaps through systematic review\n';
+    appendix +=
+      '3. **Research Question Refinement**: SQUARE-IT methodology (Specific, Quantifiable, Unambiguous, Answerable, Researchable, Ethical, Interesting, Testable)\n';
+    appendix +=
+      '4. **Hypothesis Generation**: Multi-source evidence synthesis\n';
+    appendix +=
+      '5. **Theme Extraction**: Unified multi-source theme extraction from papers, videos, and social media\n';
+    appendix +=
+      '6. **Statement Development**: Final Q-statements derived from themes\n\n';
 
     appendix += '### Complete Statement Lineage Table\n\n';
 
-    appendix += '| Statement # | Statement Text | Source Paper | Theme | Research Gap | Research Question |\n';
-    appendix += '|-------------|----------------|--------------|-------|--------------|-------------------|\n';
+    appendix +=
+      '| Statement # | Statement Text | Source Paper | Theme | Research Gap | Research Question |\n';
+    appendix +=
+      '|-------------|----------------|--------------|-------|--------------|-------------------|\n';
 
-    provenance.forEach(chain => {
+    provenance.forEach((chain) => {
       const stmtNum = chain.statement?.statementNumber?.toString() || '-';
       const stmtText = chain.statement?.text?.substring(0, 100) || '-';
       const paper = chain.paper
@@ -632,10 +663,14 @@ Write the Conclusion section:`;
     });
 
     appendix += '\n**Methodology Notes:**\n\n';
-    appendix += '- **SQUARE-IT Framework**: Research questions were systematically evaluated for being Specific, Quantifiable, Unambiguous, Answerable, Researchable, Ethical, Interesting, and Testable.\n';
-    appendix += '- **Multi-source Evidence**: Hypotheses were generated by triangulating evidence from academic papers, video content, and social media discussions.\n';
-    appendix += '- **Theme Extraction**: Themes were extracted using a unified multi-source algorithm that combines evidence from different media types with provenance tracking.\n';
-    appendix += '- **Statement Refinement**: Each statement went through multiple rounds of refinement to ensure clarity, neutrality, and relevance to the research question.\n\n';
+    appendix +=
+      '- **SQUARE-IT Framework**: Research questions were systematically evaluated for being Specific, Quantifiable, Unambiguous, Answerable, Researchable, Ethical, Interesting, and Testable.\n';
+    appendix +=
+      '- **Multi-source Evidence**: Hypotheses were generated by triangulating evidence from academic papers, video content, and social media discussions.\n';
+    appendix +=
+      '- **Theme Extraction**: Themes were extracted using a unified multi-source algorithm that combines evidence from different media types with provenance tracking.\n';
+    appendix +=
+      '- **Statement Refinement**: Each statement went through multiple rounds of refinement to ensure clarity, neutrality, and relevance to the research question.\n\n';
 
     return appendix;
   }

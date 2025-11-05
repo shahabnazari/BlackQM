@@ -58,7 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error: any) {
         // Session check failed - clear all auth data
-        console.log('[AuthProvider] Session check failed, clearing auth data:', error.message || error);
+        console.log(
+          '[AuthProvider] Session check failed, clearing auth data:',
+          error.message || error
+        );
         authService.clearAuthData();
         setUser(null);
       } finally {

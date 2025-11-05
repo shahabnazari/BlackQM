@@ -5,6 +5,11 @@ import { of, throwError } from 'rxjs';
 import { LiteratureService } from './literature.service';
 import { PrismaService } from '../../common/prisma.service';
 import { LiteratureSource } from './dto/literature.dto';
+import { CacheService } from '../../common/cache.service';
+import { TranscriptionService } from './services/transcription.service';
+import { MultiMediaAnalysisService } from './services/multimedia-analysis.service';
+import { SearchCoalescerService } from './services/search-coalescer.service';
+import { APIQuotaMonitorService } from './services/api-quota-monitor.service';
 
 describe('LiteratureService Integration Tests', () => {
   let service: LiteratureService;
@@ -32,6 +37,31 @@ describe('LiteratureService Integration Tests', () => {
     },
   };
 
+  const mockCacheService = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+    reset: jest.fn(),
+  };
+
+  const mockTranscriptionService = {
+    getOrCreateTranscription: jest.fn(),
+  };
+
+  const mockMultiMediaAnalysisService = {
+    extractThemesFromTranscript: jest.fn(),
+    extractCitationsFromTranscript: jest.fn(),
+  };
+
+  const mockSearchCoalescerService = {
+    coalesceSearchResults: jest.fn(),
+  };
+
+  const mockAPIQuotaMonitorService = {
+    checkQuota: jest.fn().mockResolvedValue(true),
+    incrementUsage: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [HttpModule],
@@ -39,6 +69,11 @@ describe('LiteratureService Integration Tests', () => {
         LiteratureService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: CACHE_MANAGER, useValue: mockCacheManager },
+        { provide: CacheService, useValue: mockCacheService },
+        { provide: TranscriptionService, useValue: mockTranscriptionService },
+        { provide: MultiMediaAnalysisService, useValue: mockMultiMediaAnalysisService },
+        { provide: SearchCoalescerService, useValue: mockSearchCoalescerService },
+        { provide: APIQuotaMonitorService, useValue: mockAPIQuotaMonitorService },
       ],
     }).compile();
 

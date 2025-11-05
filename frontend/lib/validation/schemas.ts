@@ -18,19 +18,21 @@ const errorMessages = {
   number: 'Must be a valid number',
   positive: 'Must be a positive number',
   integer: 'Must be a whole number',
-} as const
+} as const;
 
 /**
  * Common validation patterns
  */
 const patterns = {
   email: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2}$/i,
-  phone: /^[+]?[(]?[0-9]{1,3}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,4}[-\s.]?[0-9]{1,9}$/,
-  password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8}$/,
+  phone:
+    /^[+]?[(]?[0-9]{1,3}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,4}[-\s.]?[0-9]{1,9}$/,
+  password:
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8}$/,
   alphanumeric: /^[a-zA-Z0-9]+$/,
   slug: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-  uuid: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-} as const
+  uuid: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+} as const;
 
 /**
  * Base schemas for common types
@@ -67,12 +69,17 @@ export const baseSchemas = {
   /**
    * URL schema
    */
-  url: z.string({ message: errorMessages.required }).url(errorMessages.url).trim(),
+  url: z
+    .string({ message: errorMessages.required })
+    .url(errorMessages.url)
+    .trim(),
 
   /**
    * UUID schema
    */
-  uuid: z.string({ message: errorMessages.required }).regex(patterns.uuid, 'Invalid ID format'),
+  uuid: z
+    .string({ message: errorMessages.required })
+    .regex(patterns.uuid, 'Invalid ID format'),
 
   /**
    * Slug schema
@@ -87,15 +94,15 @@ export const baseSchemas = {
    * Date schemas
    */
   date: z.coerce.date({
-    message: 'Invalid date'
+    message: 'Invalid date',
   }),
 
   futureDate: z.coerce.date().refine((date: any) => date > new Date(), {
-    message: 'Date must be in the future'
+    message: 'Date must be in the future',
   }),
 
   pastDate: z.coerce.date().refine((date: any) => date < new Date(), {
-    message: 'Date must be in the past'
+    message: 'Date must be in the past',
   }),
 
   /**
@@ -114,8 +121,8 @@ export const baseSchemas = {
   currency: z
     .number({ message: errorMessages.required })
     .positive(errorMessages.positive)
-    .multipleOf(0.01, 'Invalid currency format')
-} as const
+    .multipleOf(0.01, 'Invalid currency format'),
+} as const;
 
 /**
  * User authentication schemas
@@ -127,7 +134,7 @@ export const authSchemas = {
   login: z.object({
     email: baseSchemas.email,
     password: z.string({ message: errorMessages.required }).min(1),
-    rememberMe: z.boolean().optional().default(false)
+    rememberMe: z.boolean().optional().default(false),
   }),
 
   /**
@@ -148,18 +155,18 @@ export const authSchemas = {
       confirmPassword: z.string({ message: errorMessages.required }),
       acceptTerms: z.boolean().refine((val: any) => val === true, {
         message: 'You must accept the terms and conditions',
-      })
+      }),
     })
     .refine((data: any) => data.password === data.confirmPassword, {
       message: 'Passwords do not match',
-      path: ['confirmPassword']
+      path: ['confirmPassword'],
     }),
 
   /**
    * Password reset request schema
    */
   forgotPassword: z.object({
-    email: baseSchemas.email
+    email: baseSchemas.email,
   }),
 
   /**
@@ -169,11 +176,11 @@ export const authSchemas = {
     .object({
       token: z.string({ message: errorMessages.required }),
       password: baseSchemas.password,
-      confirmPassword: z.string({ message: errorMessages.required })
+      confirmPassword: z.string({ message: errorMessages.required }),
     })
     .refine((data: any) => data.password === data.confirmPassword, {
       message: 'Passwords do not match',
-      path: ['confirmPassword']
+      path: ['confirmPassword'],
     }),
 
   /**
@@ -185,9 +192,9 @@ export const authSchemas = {
     email: baseSchemas.email.optional(),
     phone: baseSchemas.phone,
     bio: z.string().max(500).optional(),
-    avatar: baseSchemas.url.optional()
-  })
-} as const
+    avatar: baseSchemas.url.optional(),
+  }),
+} as const;
 
 /**
  * Study and research schemas
@@ -215,10 +222,12 @@ export const studySchemas = {
       maxParticipants: baseSchemas.positiveInt.optional(),
       compensation: z
         .object({
-          type: z.enum(['none', 'monetary', 'gift_card', 'other']).default('none'),
+          type: z
+            .enum(['none', 'monetary', 'gift_card', 'other'])
+            .default('none'),
           amount: z.number().positive().optional(),
           currency: z.string().length(3).optional(),
-          description: z.string().max(200).optional()
+          description: z.string().max(200).optional(),
         })
         .optional(),
       tags: z.array(z.string()).max(10).optional(),
@@ -227,14 +236,18 @@ export const studySchemas = {
           required: z.boolean(),
           number: z.string().optional(),
           institution: z.string().optional(),
-          expiryDate: baseSchemas.date.optional()
+          expiryDate: baseSchemas.date.optional(),
         })
-        .optional()
+        .optional(),
     })
-    .refine((data: any) => !data.endDate || !data.startDate || data.endDate > data.startDate, {
-      message: 'End date must be after start date',
-      path: ['endDate']
-    }),
+    .refine(
+      (data: any) =>
+        !data.endDate || !data.startDate || data.endDate > data.startDate,
+      {
+        message: 'End date must be after start date',
+        path: ['endDate'],
+      }
+    ),
 
   /**
    * Participant schema
@@ -254,9 +267,9 @@ export const studySchemas = {
         gender: z.string().optional(),
         location: z.string().optional(),
         education: z.string().optional(),
-        occupation: z.string().optional()
+        occupation: z.string().optional(),
       })
-      .optional()
+      .optional(),
   }),
 
   /**
@@ -268,15 +281,15 @@ export const studySchemas = {
         z.object({
           email: baseSchemas.email,
           firstName: z.string().optional(),
-          lastName: z.string().optional()
+          lastName: z.string().optional(),
         })
       )
       .min(1, 'At least one participant is required')
       .max(1000, 'Maximum 1000 participants at once'),
     sendInvitations: z.boolean().default(false),
-    customMessage: z.string().max(500).optional()
-  })
-} as const
+    customMessage: z.string().max(500).optional(),
+  }),
+} as const;
 
 /**
  * Questionnaire schemas
@@ -288,7 +301,7 @@ export const questionnaireSchemas: any = {
   validationRule: z.object({
     type: z.enum(['required', 'min', 'max', 'pattern', 'custom']),
     value: z.union([z.string(), z.number(), z.boolean()]).optional(),
-    message: z.string().optional()
+    message: z.string().optional(),
   }),
 
   /**
@@ -298,7 +311,7 @@ export const questionnaireSchemas: any = {
     id: baseSchemas.uuid,
     label: z.string().min(1),
     value: z.union([z.string(), z.number()]),
-    order: z.number().int().min(0)
+    order: z.number().int().min(0),
   }),
 
   /**
@@ -319,13 +332,15 @@ export const questionnaireSchemas: any = {
       'ranking',
       'date',
       'time',
-      'file'
+      'file',
     ]),
     title: z.string().min(1).max(500),
     description: z.string().max(1000).optional(),
     required: z.boolean().default(false),
     order: z.number().int().min(0),
-    validation: z.array(z.lazy(() => questionnaireSchemas.validationRule)).optional(),
+    validation: z
+      .array(z.lazy(() => questionnaireSchemas.validationRule))
+      .optional(),
     options: z.array(z.lazy(() => questionnaireSchemas.option)).optional(),
     logic: z
       .object({
@@ -333,15 +348,21 @@ export const questionnaireSchemas: any = {
           .array(
             z.object({
               questionId: baseSchemas.uuid,
-              operator: z.enum(['equals', 'not_equals', 'contains', 'greater_than', 'less_than']),
-              value: z.unknown()
+              operator: z.enum([
+                'equals',
+                'not_equals',
+                'contains',
+                'greater_than',
+                'less_than',
+              ]),
+              value: z.unknown(),
             })
           )
           .optional(),
         action: z.enum(['show', 'hide', 'skip_to']).optional(),
-        target: baseSchemas.uuid.optional()
+        target: baseSchemas.uuid.optional(),
       })
-      .optional()
+      .optional(),
   }),
 
   /**
@@ -361,12 +382,12 @@ export const questionnaireSchemas: any = {
         allowBackNavigation: z.boolean().default(true),
         requiredMessage: z.string().default('This field is required'),
         submitButtonText: z.string().default('Submit'),
-        completionMessage: z.string().optional()
+        completionMessage: z.string().optional(),
       })
       .optional(),
-    metadata: z.record(z.string(), z.unknown()).optional()
-  })
-} as const
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  }),
+} as const;
 
 /**
  * API response schemas
@@ -377,11 +398,13 @@ export const apiSchemas = {
    */
   pagination: z.object({
     page: baseSchemas.positiveInt.default(1),
-    limit: baseSchemas.positiveInt.default(20).refine((val: any) => val <= 100, {
-      message: 'Limit cannot exceed 100'
-    }),
+    limit: baseSchemas.positiveInt
+      .default(20)
+      .refine((val: any) => val <= 100, {
+        message: 'Limit cannot exceed 100',
+      }),
     total: z.number().int().min(0),
-    totalPages: z.number().int().min(0)
+    totalPages: z.number().int().min(0),
   }),
 
   /**
@@ -389,7 +412,7 @@ export const apiSchemas = {
    */
   sort: z.object({
     field: z.string(),
-    order: z.enum(['asc', 'desc']).default('asc')
+    order: z.enum(['asc', 'desc']).default('asc'),
   }),
 
   /**
@@ -397,8 +420,18 @@ export const apiSchemas = {
    */
   filter: z.object({
     field: z.string(),
-    operator: z.enum(['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in', 'nin', 'like']),
-    value: z.unknown()
+    operator: z.enum([
+      'eq',
+      'neq',
+      'gt',
+      'gte',
+      'lt',
+      'lte',
+      'in',
+      'nin',
+      'like',
+    ]),
+    value: z.unknown(),
   }),
 
   /**
@@ -409,7 +442,7 @@ export const apiSchemas = {
       success: z.literal(true),
       data: dataSchema,
       message: z.string().optional(),
-      metadata: z.record(z.string(), z.unknown()).optional()
+      metadata: z.record(z.string(), z.unknown()).optional(),
     }),
 
   /**
@@ -421,8 +454,8 @@ export const apiSchemas = {
       code: z.string(),
       message: z.string(),
       details: z.unknown().optional(),
-      timestamp: z.string().datetime()
-    })
+      timestamp: z.string().datetime(),
+    }),
   }),
 
   /**
@@ -434,9 +467,9 @@ export const apiSchemas = {
       data: z.array(itemSchema),
       pagination: apiSchemas.pagination,
       sort: apiSchemas.sort.optional(),
-      filters: z.array(apiSchemas.filter).optional()
-    })
-} as const
+      filters: z.array(apiSchemas.filter).optional(),
+    }),
+} as const;
 
 /**
  * Type exports for TypeScript inference
@@ -446,7 +479,9 @@ export type RegisterInput = z.infer<typeof authSchemas.register>;
 export type CreateStudyInput = z.infer<typeof studySchemas.createStudy>;
 export type ParticipantInput = z.infer<typeof studySchemas.participant>;
 export type QuestionInput = z.infer<typeof questionnaireSchemas.question>;
-export type QuestionnaireInput = z.infer<typeof questionnaireSchemas.questionnaire>;
+export type QuestionnaireInput = z.infer<
+  typeof questionnaireSchemas.questionnaire
+>;
 
 /**
  * Validation helper functions
@@ -458,10 +493,12 @@ export const validate = {
   parse: <T extends z.ZodTypeAny>(
     schema: T,
     data: unknown
-  ): { success: true; data: z.infer<T> } | { success: false; errors: ValidationError[] } => {
+  ):
+    | { success: true; data: z.infer<T> }
+    | { success: false; errors: ValidationError[] } => {
     try {
       const result = schema.parse(data);
-      return { success: true, data: result }
+      return { success: true, data: result };
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         return {
@@ -469,9 +506,9 @@ export const validate = {
           errors: error.issues.map((err: any) => ({
             path: err.path.join('.'),
             message: err.message,
-            code: err.code
-          }))
-        }
+            code: err.code,
+          })),
+        };
       }
       throw error;
     }
@@ -489,8 +526,8 @@ export const validate = {
    */
   isValid: <T extends z.ZodTypeAny>(schema: T, data: unknown): boolean => {
     return schema.safeParse(data).success;
-  }
-}
+  },
+};
 
 /**
  * Validation error interface

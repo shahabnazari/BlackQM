@@ -17,22 +17,10 @@ import { Logger } from '@nestjs/common';
 
 export interface ExtractionProgress {
   userId: string;
-  stage:
-    | 'analyzing'
-    | 'papers'
-    | 'videos'
-    | 'social'
-    | 'merging'
-    | 'complete'
-    | 'error';
+  stage: string; // Phase 10 Day 5.17.3: Flexible stage names (familiarization, coding, generation, review, refinement, provenance)
   percentage: number;
   message: string;
-  details?: {
-    sourcesProcessed?: number;
-    totalSources?: number;
-    currentSource?: string;
-    themesExtracted?: number;
-  };
+  details?: any; // Phase 10 Day 5.17.3: Can contain TransparentProgressMessage or simple stats
 }
 
 @WebSocketGateway({

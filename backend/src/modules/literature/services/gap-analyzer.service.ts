@@ -120,6 +120,75 @@ export class GapAnalyzerService {
   }
 
   /**
+   * NEW: Analyze research gaps from paper content directly (no database lookup)
+   * This method accepts paper content from the frontend instead of fetching from DB
+   */
+  async analyzeResearchGapsFromContent(papers: any[]): Promise<ResearchGap[]> {
+    this.logger.log(
+      `Analyzing research gaps from ${papers.length} papers (content provided)`,
+    );
+
+    // Validate input
+    if (!papers || papers.length === 0) {
+      this.logger.warn('No papers provided for gap analysis');
+      return [];
+    }
+
+    try {
+      // Transform frontend paper format to internal format
+      const transformedPapers = papers.map((paper) => ({
+        id: paper.id,
+        title: paper.title || '',
+        abstract: (paper as any).fullText || paper.abstract || '', // Phase 10 Day 5.15: Prioritize full-text
+        authors: paper.authors || [],
+        year: paper.year || new Date().getFullYear(),
+        keywords: paper.keywords || [],
+        doi: paper.doi,
+        venue: paper.venue,
+        citationCount: paper.citationCount || 0,
+      }));
+
+      this.logger.log(
+        `Transformed ${transformedPapers.length} papers for analysis`,
+      );
+
+      // Extract keywords from all papers
+      const keywordAnalysis =
+        await this.extractAndAnalyzeKeywords(transformedPapers);
+
+      // Perform topic modeling
+      const topicModels = await this.performTopicModeling(transformedPapers);
+
+      // Detect trends
+      const trends = await this.detectTrends(
+        transformedPapers,
+        keywordAnalysis,
+      );
+
+      // Identify gaps using AI
+      const gaps = await this.identifyGapsWithAI(
+        transformedPapers,
+        topicModels,
+        trends,
+      );
+
+      // Score and rank gaps
+      const scoredGaps = await this.scoreGaps(gaps, trends);
+
+      this.logger.log(`Identified ${scoredGaps.length} research gaps`);
+
+      return scoredGaps;
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to analyze research gaps from content: ${error.message}`,
+        error.stack,
+      );
+      // Return empty array instead of throwing to prevent 500 errors
+      return [];
+    }
+  }
+
+  /**
    * Generate research opportunities from identified gaps
    */
   async generateOpportunities(
@@ -145,7 +214,9 @@ export class GapAnalyzerService {
     const keywordMap = new Map<string, KeywordAnalysis>();
 
     for (const paper of papers) {
-      const text = `${paper.title} ${paper.abstract || ''}`;
+      // Phase 10 Day 5.15: Prioritize full-text over abstract
+      const content = (paper as any).fullText || paper.abstract || '';
+      const text = `${paper.title} ${content}`;
       const keywords = await this.extractKeywords(text);
       const year = paper.year || new Date().getFullYear();
 
@@ -281,28 +352,47 @@ export class GapAnalyzerService {
   ): Promise<ResearchGap[]> {
     const gaps: ResearchGap[] = [];
 
-    // Create context for AI analysis
-    const context = this.createAnalysisContext(papers, topics, trends);
+    // Create detailed context with actual paper content
+    const paperSummaries = papers
+      .slice(0, 10)
+      .map(
+        (p, idx) =>
+          `${idx + 1}. "${p.title}" (${p.year})\n   Abstract: ${(p.abstract || 'No abstract').substring(0, 200)}...`,
+      )
+      .join('\n\n');
 
-    // Use AI to identify gaps
+    // Use AI to identify gaps with actual paper content
     const prompt = `
-      Based on the following research landscape analysis:
-      
-      Topics covered: ${topics.map((t) => t.label).join(', ')}
-      Trending areas: ${trends
-        .filter((t) => t.trendType === 'emerging')
-        .map((t) => t.topic)
-        .join(', ')}
-      Number of papers analyzed: ${papers.length}
-      
-      Identify 5-10 significant research gaps. For each gap, provide:
-      1. A clear title
-      2. Description of the gap
-      3. Why it's important
-      4. Suggested methodology to address it
-      5. Potential impact
-      
-      Format as JSON array with fields: title, description, importance, methodology, impact
+You are a research analyst. Analyze these ${papers.length} academic papers and identify 5 specific research gaps.
+
+PAPERS ANALYZED:
+${paperSummaries}
+
+KEY TOPICS COVERED: ${topics.map((t) => t.label).join(', ')}
+EMERGING TRENDS: ${trends
+      .filter((t) => t.trendType === 'emerging')
+      .map((t) => t.topic)
+      .join(', ')}
+
+For each gap, provide:
+1. A SPECIFIC title (use actual concepts from the papers, not placeholders like "X" or "Y")
+2. A detailed description explaining what's missing
+3. Importance score (1-10)
+4. Suggested methodology
+5. Potential impact
+
+Return ONLY a valid JSON array with this exact structure:
+[
+  {
+    "title": "Specific gap title using real concepts",
+    "description": "Detailed description of what's missing",
+    "importance": 8,
+    "methodology": "Suggested research approach",
+    "impact": "Expected impact on the field"
+  }
+]
+
+IMPORTANT: Use specific terminology from the papers. Do NOT use generic placeholders like "X", "Y", or "Z".
     `;
 
     try {
@@ -315,26 +405,40 @@ export class GapAnalyzerService {
       // Parse AI response
       const aiGaps = this.parseAIGapsResponse(response.content);
 
+      this.logger.log(`AI identified ${aiGaps.length} gaps`);
+
       // Enhance gaps with additional analysis
       for (const aiGap of aiGaps) {
+        // Ensure numeric values are valid
+        const importance =
+          typeof aiGap.importance === 'number' && !isNaN(aiGap.importance)
+            ? Math.min(Math.max(aiGap.importance, 1), 10)
+            : this.estimateImportance(aiGap, trends);
+
+        const feasibility = this.estimateFeasibility(aiGap);
+        const marketPotential = this.estimateMarketPotential(aiGap, trends);
+
         const gap: ResearchGap = {
           id: `gap-${Date.now()}-${Math.random()}`,
-          title: aiGap.title,
-          description: aiGap.description,
-          keywords: await this.extractKeywords(aiGap.description),
+          title: aiGap.title || 'Untitled Research Gap',
+          description: aiGap.description || 'No description provided',
+          keywords: await this.extractKeywords(
+            aiGap.description || aiGap.title || '',
+          ),
           relatedPapers: this.findRelatedPapers(aiGap, papers),
-          importance:
-            aiGap.importance || this.estimateImportance(aiGap, trends),
-          feasibility: this.estimateFeasibility(aiGap),
-          marketPotential: this.estimateMarketPotential(aiGap, trends),
-          suggestedMethodology: aiGap.methodology,
-          estimatedImpact: aiGap.impact,
+          importance,
+          feasibility,
+          marketPotential,
+          suggestedMethodology: aiGap.methodology || 'Mixed methods approach',
+          estimatedImpact: aiGap.impact || 'Potential to advance the field',
           trendDirection: this.determineTrendDirection(aiGap, trends),
           confidenceScore: 0.75, // Default confidence for AI-identified gaps
         };
 
         gaps.push(gap);
       }
+
+      this.logger.log(`Enhanced ${gaps.length} gaps with scores`);
     } catch (error) {
       this.logger.error('Error using AI for gap identification:', error);
       // Fall back to rule-based gap identification
@@ -387,30 +491,39 @@ export class GapAnalyzerService {
   private async createOpportunity(
     gap: ResearchGap,
   ): Promise<ResearchOpportunity> {
-    // Generate detailed opportunity analysis using AI
-    const prompt = `
-      For the research gap: "${gap.title}"
-      Description: ${gap.description}
-      
-      Provide:
-      1. A rationale for why this is a valuable opportunity
-      2. Suggested approach to address this gap
-      3. Potential challenges (list 3-5)
-      4. Required resources (list 3-5)
-      5. Timeline estimate
-      6. Potential collaborators or expertise needed
-      7. Funding opportunities that might support this research
-    `;
-
-    const response = await this.openAIService.generateCompletion(prompt, {
-      model: 'smart',
-      temperature: 0.6,
-      maxTokens: 800,
-    });
-
-    const analysis = this.parseOpportunityAnalysis(response.content);
-
     const opportunityScore = this.calculateOpportunityScore(gap);
+
+    let analysis: any = {};
+
+    try {
+      // Generate detailed opportunity analysis using AI
+      const prompt = `
+        For the research gap: "${gap.title}"
+        Description: ${gap.description}
+
+        Provide:
+        1. A rationale for why this is a valuable opportunity
+        2. Suggested approach to address this gap
+        3. Potential challenges (list 3-5)
+        4. Required resources (list 3-5)
+        5. Timeline estimate
+        6. Potential collaborators or expertise needed
+        7. Funding opportunities that might support this research
+      `;
+
+      const response = await this.openAIService.generateCompletion(prompt, {
+        model: 'smart',
+        temperature: 0.6,
+        maxTokens: 800,
+      });
+
+      analysis = this.parseOpportunityAnalysis(response.content);
+    } catch (error: any) {
+      this.logger.warn(
+        `Failed to generate AI opportunity analysis for gap "${gap.title}": ${error.message}`,
+      );
+      // Continue with empty analysis - will use fallback values below
+    }
 
     return {
       gap,
@@ -799,7 +912,9 @@ export class GapAnalyzerService {
     const gapKeywords = gap.title.toLowerCase().split(/\s+/);
 
     for (const paper of papers) {
-      const paperText = `${paper.title} ${paper.abstract || ''}`.toLowerCase();
+      // Phase 10 Day 5.15: Prioritize full-text over abstract
+      const content = (paper as any).fullText || paper.abstract || '';
+      const paperText = `${paper.title} ${content}`.toLowerCase();
       const matchCount = gapKeywords.filter((keyword: string) =>
         paperText.includes(keyword),
       ).length;

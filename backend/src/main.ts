@@ -19,7 +19,14 @@ async function bootstrap() {
   } as any);
   sentryConfig.init();
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: true, // Enable body parser
+  });
+
+  // Increase body size limit for large theme extraction requests
+  // Default is 100kb, but we need more for 30+ themes with full source data
+  app.use(require('express').json({ limit: '50mb' }));
+  app.use(require('express').urlencoded({ limit: '50mb', extended: true }));
 
   // Security middleware - relaxed for development
   if (process.env.NODE_ENV === 'production') {

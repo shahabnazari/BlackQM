@@ -55,41 +55,56 @@ export class APIQuotaMonitorService {
 
   // API provider configurations
   private readonly providers: Map<string, APIProvider> = new Map([
-    ['semantic-scholar', {
-      name: 'Semantic Scholar',
-      requestsPerWindow: 100,
-      windowMs: 5 * 60 * 1000, // 5 minutes
-      warningThreshold: 0.6, // 60%
-      blockingThreshold: 0.8, // 80%
-    }],
-    ['crossref', {
-      name: 'CrossRef',
-      requestsPerWindow: 50,
-      windowMs: 1000, // 1 second
-      warningThreshold: 0.7, // 70%
-      blockingThreshold: 0.85, // 85%
-    }],
-    ['pubmed', {
-      name: 'PubMed',
-      requestsPerWindow: 3,
-      windowMs: 1000, // 1 second (3 req/sec limit)
-      warningThreshold: 0.6, // 60%
-      blockingThreshold: 0.8, // 80%
-    }],
-    ['arxiv', {
-      name: 'arXiv',
-      requestsPerWindow: 10,
-      windowMs: 3 * 1000, // 3 seconds
-      warningThreshold: 0.6, // 60%
-      blockingThreshold: 0.8, // 80%
-    }],
-    ['openalex', {
-      name: 'OpenAlex',
-      requestsPerWindow: 10,
-      windowMs: 1000, // 1 second (10 req/sec without API key)
-      warningThreshold: 0.6, // 60%
-      blockingThreshold: 0.8, // 80%
-    }],
+    [
+      'semantic-scholar',
+      {
+        name: 'Semantic Scholar',
+        requestsPerWindow: 100,
+        windowMs: 5 * 60 * 1000, // 5 minutes
+        warningThreshold: 0.6, // 60%
+        blockingThreshold: 0.8, // 80%
+      },
+    ],
+    [
+      'crossref',
+      {
+        name: 'CrossRef',
+        requestsPerWindow: 50,
+        windowMs: 1000, // 1 second
+        warningThreshold: 0.7, // 70%
+        blockingThreshold: 0.85, // 85%
+      },
+    ],
+    [
+      'pubmed',
+      {
+        name: 'PubMed',
+        requestsPerWindow: 3,
+        windowMs: 1000, // 1 second (3 req/sec limit)
+        warningThreshold: 0.6, // 60%
+        blockingThreshold: 0.8, // 80%
+      },
+    ],
+    [
+      'arxiv',
+      {
+        name: 'arXiv',
+        requestsPerWindow: 10,
+        windowMs: 3 * 1000, // 3 seconds
+        warningThreshold: 0.6, // 60%
+        blockingThreshold: 0.8, // 80%
+      },
+    ],
+    [
+      'openalex',
+      {
+        name: 'OpenAlex',
+        requestsPerWindow: 10,
+        windowMs: 1000, // 1 second (10 req/sec without API key)
+        warningThreshold: 0.6, // 60%
+        blockingThreshold: 0.8, // 80%
+      },
+    ],
   ]);
 
   // Tracking request timestamps per provider
@@ -110,18 +125,18 @@ export class APIQuotaMonitorService {
 
     if (stats.status === 'blocked') {
       this.logger.warn(
-        `🚫 [Quota] ${config.name} BLOCKED (${stats.percentUsed}% used) - using cache instead`
+        `🚫 [Quota] ${config.name} BLOCKED (${stats.percentUsed}% used) - using cache instead`,
       );
       return false;
     }
 
     if (stats.status === 'critical') {
       this.logger.warn(
-        `⚠️  [Quota] ${config.name} CRITICAL (${stats.percentUsed}% used) - approaching rate limit`
+        `⚠️  [Quota] ${config.name} CRITICAL (${stats.percentUsed}% used) - approaching rate limit`,
       );
     } else if (stats.status === 'warning') {
       this.logger.log(
-        `⚡ [Quota] ${config.name} WARNING (${stats.percentUsed}% used)`
+        `⚡ [Quota] ${config.name} WARNING (${stats.percentUsed}% used)`,
       );
     }
 
@@ -151,13 +166,13 @@ export class APIQuotaMonitorService {
 
     // Remove requests outside current time window (sliding window)
     const cutoff = now - config.windowMs;
-    window.requests = window.requests.filter(timestamp => timestamp > cutoff);
+    window.requests = window.requests.filter((timestamp) => timestamp > cutoff);
 
     // Add current request
     window.requests.push(now);
 
     this.logger.debug(
-      `📊 [Quota] ${config.name}: ${window.requests.length}/${config.requestsPerWindow} requests in window`
+      `📊 [Quota] ${config.name}: ${window.requests.length}/${config.requestsPerWindow} requests in window`,
     );
   }
 
@@ -192,7 +207,7 @@ export class APIQuotaMonitorService {
 
     // Clean up old requests (sliding window)
     const cutoff = now - config.windowMs;
-    window.requests = window.requests.filter(timestamp => timestamp > cutoff);
+    window.requests = window.requests.filter((timestamp) => timestamp > cutoff);
 
     const requestCount = window.requests.length;
     const percentUsed = (requestCount / config.requestsPerWindow) * 100;
@@ -270,10 +285,10 @@ export class APIQuotaMonitorService {
 
     return {
       totalProviders: providers.length,
-      healthyCount: providers.filter(p => p.status === 'healthy').length,
-      warningCount: providers.filter(p => p.status === 'warning').length,
-      criticalCount: providers.filter(p => p.status === 'critical').length,
-      blockedCount: providers.filter(p => p.status === 'blocked').length,
+      healthyCount: providers.filter((p) => p.status === 'healthy').length,
+      warningCount: providers.filter((p) => p.status === 'warning').length,
+      criticalCount: providers.filter((p) => p.status === 'critical').length,
+      blockedCount: providers.filter((p) => p.status === 'blocked').length,
       providers,
     };
   }

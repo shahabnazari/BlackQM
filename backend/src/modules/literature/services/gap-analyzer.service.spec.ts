@@ -111,6 +111,10 @@ describe('GapAnalyzerService', () => {
             impact: 'Improved clinical trust',
           },
         ]),
+        tokens: 200,
+        responseTime: 600,
+        cached: false,
+        cost: 0.0015,
       });
 
       const gaps = await service.analyzeResearchGaps([
@@ -403,6 +407,10 @@ describe('GapAnalyzerService', () => {
       mockOpenAIService.generateCompletion.mockResolvedValue({
         content:
           'Rationale: High impact opportunity\nApproach: Develop new methods\nChallenges: Technical complexity',
+        tokens: 150,
+        responseTime: 500,
+        cached: false,
+        cost: 0.001,
       });
 
       const opportunities = await service.generateOpportunities(gaps);
@@ -444,6 +452,10 @@ describe('GapAnalyzerService', () => {
 
       mockOpenAIService.generateCompletion.mockResolvedValue({
         content: 'Generic opportunity analysis',
+        tokens: 100,
+        responseTime: 400,
+        cached: false,
+        cost: 0.0008,
       });
 
       const opportunities = await service.generateOpportunities(gaps);
@@ -498,6 +510,10 @@ describe('GapAnalyzerService', () => {
       mockThemeExtractionService.extractThemes.mockResolvedValue([]);
       mockOpenAIService.generateCompletion.mockResolvedValue({
         content: '[]',
+        tokens: 50,
+        responseTime: 200,
+        cached: false,
+        cost: 0.0005,
       });
 
       const startTime = Date.now();
@@ -510,7 +526,13 @@ describe('GapAnalyzerService', () => {
     it('should handle concurrent requests efficiently', async () => {
       mockPrismaService.paper.findMany.mockResolvedValue(mockPapers);
       mockThemeExtractionService.extractThemes.mockResolvedValue([]);
-      mockOpenAIService.generateCompletion.mockResolvedValue({ content: '[]' });
+      mockOpenAIService.generateCompletion.mockResolvedValue({
+        content: '[]',
+        tokens: 50,
+        responseTime: 200,
+        cached: false,
+        cost: 0.0005,
+      });
 
       const promises = Array(5)
         .fill(null)

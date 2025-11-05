@@ -104,7 +104,8 @@ export function AcademicInstitutionLogin({
   const handleOrcidLogin = useCallback(() => {
     setIsLoading(true);
     // Redirect to backend ORCID OAuth endpoint with returnUrl
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+    const backendUrl =
+      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
     const returnUrl = encodeURIComponent('/discover/literature');
     window.location.href = `${backendUrl}/auth/orcid?returnUrl=${returnUrl}`;
   }, []);
@@ -183,13 +184,22 @@ export function AcademicInstitutionLogin({
               ✅ ORCID Benefits:
             </p>
             <div className="flex flex-wrap gap-1">
-              <Badge variant="outline" className="text-xs bg-white dark:bg-gray-800 border-green-200">
+              <Badge
+                variant="outline"
+                className="text-xs bg-white dark:bg-gray-800 border-green-200"
+              >
                 Persistent Identity
               </Badge>
-              <Badge variant="outline" className="text-xs bg-white dark:bg-gray-800 border-green-200">
+              <Badge
+                variant="outline"
+                className="text-xs bg-white dark:bg-gray-800 border-green-200"
+              >
                 Research Tracking
               </Badge>
-              <Badge variant="outline" className="text-xs bg-white dark:bg-gray-800 border-green-200">
+              <Badge
+                variant="outline"
+                className="text-xs bg-white dark:bg-gray-800 border-green-200"
+              >
                 Profile Linking
               </Badge>
             </div>
@@ -221,7 +231,8 @@ export function AcademicInstitutionLogin({
                 <div className="flex items-center gap-2 mt-1">
                   <Globe2 className="w-3 h-3 text-blue-700" />
                   <p className="text-xs text-blue-700 dark:text-blue-300">
-                    {currentAuth.institution.city}, {currentAuth.institution.country}
+                    {currentAuth.institution.city},{' '}
+                    {currentAuth.institution.country}
                   </p>
                   <span className="text-xs text-blue-600">•</span>
                   <p className="text-xs text-blue-700 dark:text-blue-300">
@@ -280,13 +291,17 @@ export function AcademicInstitutionLogin({
               Institution Access
             </h3>
           </div>
-          <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
+          <Badge
+            variant="secondary"
+            className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
+          >
             Free for members
           </Badge>
         </div>
 
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Login with ORCID for persistent researcher identity and research tracking
+          Login with ORCID for persistent researcher identity and research
+          tracking
         </p>
 
         {/* ORCID Login Button */}
@@ -328,8 +343,12 @@ export function AcademicInstitutionLogin({
             <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
               <p className="font-medium">ℹ️ Important Note:</p>
               <p>
-                <strong>ORCID does NOT provide access to premium databases or paywalled content.</strong>
-                For institutional database access, contact your library separately.
+                <strong>
+                  ORCID does NOT provide access to premium databases or
+                  paywalled content.
+                </strong>
+                For institutional database access, contact your library
+                separately.
               </p>
             </div>
           </div>

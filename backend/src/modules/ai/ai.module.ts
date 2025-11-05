@@ -11,9 +11,7 @@ import { AIController } from './controllers/ai.controller';
 import { PrismaService } from '../../common/prisma.service';
 
 @Module({
-  imports: [
-    ScheduleModule.forRoot(),
-  ],
+  imports: [ScheduleModule.forRoot()],
   controllers: [AIController],
   providers: [
     OpenAIService,

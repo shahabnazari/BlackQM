@@ -17,32 +17,36 @@ POST /api/literature/themes/unified-extract
 ### Example Request
 
 ```javascript
-const response = await fetch('http://localhost:4000/api/literature/themes/unified-extract', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${your_access_token}`
-  },
-  body: JSON.stringify({
-    sources: [
-      {
-        id: 'paper1',
-        type: 'paper',  // Must be lowercase: paper, youtube, podcast, tiktok, instagram
-        title: 'Explainable AI',
-        content: 'This paper discusses explainable artificial intelligence...',
-        metadata: {
-          authors: ['John Doe'],
-          year: 2024,
-          doi: '10.1234/example'
-        }
-      }
-    ],
-    options: {
-      minConfidence: 0.5,
-      maxThemes: 10
-    }
-  })
-});
+const response = await fetch(
+  'http://localhost:4000/api/literature/themes/unified-extract',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${your_access_token}`,
+    },
+    body: JSON.stringify({
+      sources: [
+        {
+          id: 'paper1',
+          type: 'paper', // Must be lowercase: paper, youtube, podcast, tiktok, instagram
+          title: 'Explainable AI',
+          content:
+            'This paper discusses explainable artificial intelligence...',
+          metadata: {
+            authors: ['John Doe'],
+            year: 2024,
+            doi: '10.1234/example',
+          },
+        },
+      ],
+      options: {
+        minConfidence: 0.5,
+        maxThemes: 10,
+      },
+    }),
+  }
+);
 ```
 
 ### Important Notes
@@ -70,7 +74,7 @@ await fetch('http://localhost:4000/api/literature/save', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${your_access_token}`
+    Authorization: `Bearer ${your_access_token}`,
   },
   body: JSON.stringify({
     title: 'Paper Title',
@@ -78,8 +82,8 @@ await fetch('http://localhost:4000/api/literature/save', {
     year: 2024,
     abstract: 'Paper abstract text...',
     doi: '10.1234/example',
-    url: 'https://...'
-  })
+    url: 'https://...',
+  }),
 });
 ```
 
@@ -91,12 +95,12 @@ await fetch('http://localhost:4000/api/literature/themes', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${your_access_token}`
+    Authorization: `Bearer ${your_access_token}`,
   },
   body: JSON.stringify({
     paperIds: ['saved-paper-id-1', 'saved-paper-id-2'],
-    numThemes: 5
-  })
+    numThemes: 5,
+  }),
 });
 ```
 
@@ -112,6 +116,7 @@ npx ts-node test-theme-extraction.ts
 ## 💡 Recommendation
 
 For most use cases, use the **Unified Theme Extraction** endpoint as it:
+
 - Works with any content source
 - Doesn't require saving to database first
 - Provides full provenance tracking

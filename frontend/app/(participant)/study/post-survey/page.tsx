@@ -10,7 +10,7 @@ import { Alert } from '@/components/ui/alert';
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  DocumentCheckIcon
+  DocumentCheckIcon,
 } from '@heroicons/react/24/outline';
 
 /**
@@ -32,12 +32,13 @@ function PostSurveyContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   // Extract parameters
-  const studyId = searchParams.get('studyId') || params.studyId as string;
-  const participantId = searchParams.get('participantId') || params.participantId as string;
+  const studyId = searchParams.get('studyId') || (params.studyId as string);
+  const participantId =
+    searchParams.get('participantId') || (params.participantId as string);
   const studyToken = searchParams.get('token');
-  
+
   // State
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +56,7 @@ function PostSurveyContent() {
         if (storedData) {
           setQsortData(JSON.parse(storedData));
         }
-        
+
         // Check if dynamic questions are available
         checkDynamicQuestionsAvailability();
       } catch (err) {
@@ -71,7 +72,9 @@ function PostSurveyContent() {
   // Check if dynamic questions are available
   const checkDynamicQuestionsAvailability = async () => {
     try {
-      const response = await fetch(`/api/questions/survey/${studyId}?type=post-survey`);
+      const response = await fetch(
+        `/api/questions/survey/${studyId}?type=post-survey`
+      );
       if (response.ok) {
         const questions = await response.json();
         setUseDynamicQuestions(questions.length > 0);
@@ -121,7 +124,11 @@ function PostSurveyContent() {
 
   // Handle skip
   const handleSkip = () => {
-    if (confirm('Are you sure you want to skip the post-survey? Your feedback helps improve our research.')) {
+    if (
+      confirm(
+        'Are you sure you want to skip the post-survey? Your feedback helps improve our research.'
+      )
+    ) {
       handleComplete([]);
     }
   };
@@ -158,9 +165,7 @@ function PostSurveyContent() {
           <Card className="text-center">
             <div className="py-12">
               <CheckCircleIcon className="h-20 w-20 text-green-500 mx-auto mb-6" />
-              <h1 className="text-3xl font-bold text-label mb-4">
-                Thank You!
-              </h1>
+              <h1 className="text-3xl font-bold text-label mb-4">Thank You!</h1>
               <p className="text-lg text-secondary-label mb-2">
                 Your post-survey responses have been recorded successfully.
               </p>
@@ -176,7 +181,9 @@ function PostSurveyContent() {
               )}
               {surveyResult?.insights && (
                 <div className="mt-6 text-left max-w-md mx-auto">
-                  <h3 className="text-sm font-semibold text-label mb-2">Key Insights:</h3>
+                  <h3 className="text-sm font-semibold text-label mb-2">
+                    Key Insights:
+                  </h3>
                   <ul className="space-y-1">
                     <li className="text-sm text-secondary-label">
                       • Sentiment: {surveyResult.insights.sentiment}
@@ -186,7 +193,8 @@ function PostSurveyContent() {
                     </li>
                     {surveyResult.insights.keyThemes?.length > 0 && (
                       <li className="text-sm text-secondary-label">
-                        • Themes: {surveyResult.insights.keyThemes.slice(0, 3).join(', ')}
+                        • Themes:{' '}
+                        {surveyResult.insights.keyThemes.slice(0, 3).join(', ')}
                       </li>
                     )}
                   </ul>
@@ -226,13 +234,19 @@ function PostSurveyContent() {
                   Questions tailored to your experience
                 </h3>
                 <p className="text-sm text-blue-700 mt-1">
-                  Based on your Q-sort patterns, we've prepared specific questions to better understand your perspective.
+                  Based on your Q-sort patterns, we've prepared specific
+                  questions to better understand your perspective.
                 </p>
                 <div className="flex gap-6 mt-3 text-xs text-blue-600">
-                  <span>Time spent: {Math.floor(qsortData.timeSpent / 60)} minutes</span>
+                  <span>
+                    Time spent: {Math.floor(qsortData.timeSpent / 60)} minutes
+                  </span>
                   <span>Changes made: {qsortData.changesCount}</span>
                   {qsortData.extremeStatements?.mostAgree?.length > 0 && (
-                    <span>Strong positions: {qsortData.extremeStatements.mostAgree.length}</span>
+                    <span>
+                      Strong positions:{' '}
+                      {qsortData.extremeStatements.mostAgree.length}
+                    </span>
                   )}
                 </div>
               </div>
@@ -246,7 +260,9 @@ function PostSurveyContent() {
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-                <p className="text-secondary-label">Preparing your post-survey...</p>
+                <p className="text-secondary-label">
+                  Preparing your post-survey...
+                </p>
               </div>
             </div>
           </Card>
@@ -259,10 +275,7 @@ function PostSurveyContent() {
             onBack={handleBack}
           />
         ) : (
-          <PostSurvey
-            onComplete={handleComplete}
-            onBack={handleBack}
-          />
+          <PostSurvey onComplete={handleComplete} onBack={handleBack} />
         )}
 
         {/* Skip Option */}
@@ -283,20 +296,22 @@ function PostSurveyContent() {
 
 export default function PostSurveyPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-3xl mx-auto px-4">
-          <Card>
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-                <p className="text-secondary-label">Loading...</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 py-12">
+          <div className="max-w-3xl mx-auto px-4">
+            <Card>
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+                  <p className="text-secondary-label">Loading...</p>
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <PostSurveyContent />
     </Suspense>
   );

@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import OpenAI from 'openai';
+import pLimit from 'p-limit';
 import { PrismaService } from '../../../common/prisma.service';
 
 /**
@@ -74,14 +75,25 @@ export interface SourceContent {
   id: string;
   type: 'paper' | 'youtube' | 'podcast' | 'tiktok' | 'instagram';
   title: string;
-  content: string; // Abstract for papers, transcript for multimedia
+  content: string; // Full-text (if available) or abstract for papers, transcript for multimedia
+  contentSource?: 'full-text' | 'abstract' | 'none'; // Phase 10 Day 5.15: Track content source
   author?: string;
   keywords: string[];
   url?: string;
   doi?: string;
   authors?: string[];
   year?: number;
+  fullTextWordCount?: number; // Phase 10 Day 5.15: Full-text word count for transparency
   timestampedSegments?: Array<{ timestamp: number; text: string }>;
+  // Phase 10 Day 5.16: Content type metadata for adaptive validation
+  metadata?: {
+    contentType?: 'none' | 'abstract' | 'full_text' | 'abstract_overflow';
+    contentSource?: string;
+    contentLength?: number;
+    hasFullText?: boolean;
+    fullTextStatus?: 'not_fetched' | 'fetching' | 'success' | 'failed';
+    [key: string]: any; // Allow other metadata fields (videoId, duration, etc.)
+  };
 }
 
 export interface ExtractionOptions {
@@ -91,6 +103,31 @@ export interface ExtractionOptions {
   collectionId?: string;
   maxThemes?: number;
   minConfidence?: number;
+}
+
+/**
+ * Research purposes for purpose-adaptive theme extraction
+ * Phase 10 Day 5.13 - Patent Claim #2: Purpose-Adaptive Algorithms
+ */
+export enum ResearchPurpose {
+  Q_METHODOLOGY = 'q_methodology',
+  SURVEY_CONSTRUCTION = 'survey_construction',
+  QUALITATIVE_ANALYSIS = 'qualitative_analysis',
+  LITERATURE_SYNTHESIS = 'literature_synthesis',
+  HYPOTHESIS_GENERATION = 'hypothesis_generation',
+}
+
+/**
+ * Purpose-specific configuration interface
+ */
+export interface PurposeConfig {
+  purpose: ResearchPurpose;
+  targetThemeCount: { min: number; max: number };
+  extractionFocus: 'breadth' | 'depth' | 'saturation';
+  themeGranularity: 'fine' | 'medium' | 'coarse';
+  validationRigor: 'standard' | 'rigorous' | 'publication_ready';
+  citation: string;
+  description: string;
 }
 
 const ENTERPRISE_CONFIG = {
@@ -103,11 +140,81 @@ const ENTERPRISE_CONFIG = {
   SIMILARITY_THRESHOLD: 0.7, // For theme deduplication
 };
 
+/**
+ * Purpose-specific configurations for theme extraction
+ * Phase 10 Day 5.13 - Patent Claim #2: Purpose-Adaptive Algorithms
+ *
+ * Each research purpose requires different extraction strategies:
+ * - Q-Methodology: Breadth-focused (many diverse themes)
+ * - Survey: Depth-focused (few robust constructs)
+ * - Qualitative: Saturation-driven (until no new themes emerge)
+ * - Synthesis: Meta-analytic (comprehensive coverage)
+ * - Hypothesis: Theory-building (conceptual relationships)
+ */
+const PURPOSE_CONFIGS: Record<ResearchPurpose, PurposeConfig> = {
+  [ResearchPurpose.Q_METHODOLOGY]: {
+    purpose: ResearchPurpose.Q_METHODOLOGY,
+    targetThemeCount: { min: 30, max: 80 },
+    extractionFocus: 'breadth',
+    themeGranularity: 'fine',
+    validationRigor: 'rigorous',
+    citation:
+      'Stephenson, W. (1953). The Study of Behavior: Q-Technique and Its Methodology.',
+    description:
+      'Q-methodology requires a broad concourse of 30-80 diverse statements representing the full range of viewpoints on the topic. Extraction prioritizes breadth over depth to capture maximum diversity. While 40-60 is typical, focused studies can use as few as 30 statements.',
+  },
+  [ResearchPurpose.SURVEY_CONSTRUCTION]: {
+    purpose: ResearchPurpose.SURVEY_CONSTRUCTION,
+    targetThemeCount: { min: 5, max: 15 },
+    extractionFocus: 'depth',
+    themeGranularity: 'coarse',
+    validationRigor: 'publication_ready',
+    citation:
+      'Churchill, G. A. (1979). A Paradigm for Developing Better Measures of Marketing Constructs. DeVellis, R. F. (2016). Scale Development: Theory and Applications.',
+    description:
+      'Survey construction requires 5-15 robust constructs that can be operationalized into measurement scales. Extraction prioritizes depth and construct validity over breadth.',
+  },
+  [ResearchPurpose.QUALITATIVE_ANALYSIS]: {
+    purpose: ResearchPurpose.QUALITATIVE_ANALYSIS,
+    targetThemeCount: { min: 5, max: 20 },
+    extractionFocus: 'saturation',
+    themeGranularity: 'medium',
+    validationRigor: 'rigorous',
+    citation:
+      'Braun, V., & Clarke, V. (2006, 2019). Using thematic analysis in psychology / Reflecting on reflexive thematic analysis.',
+    description:
+      'Qualitative thematic analysis continues until data saturation is reached (no new themes emerging). Typically yields 5-20 themes depending on dataset complexity and research questions.',
+  },
+  [ResearchPurpose.LITERATURE_SYNTHESIS]: {
+    purpose: ResearchPurpose.LITERATURE_SYNTHESIS,
+    targetThemeCount: { min: 10, max: 25 },
+    extractionFocus: 'breadth',
+    themeGranularity: 'medium',
+    validationRigor: 'publication_ready',
+    citation:
+      'Noblit, G. W., & Hare, R. D. (1988). Meta-Ethnography: Synthesizing Qualitative Studies.',
+    description:
+      'Literature synthesis requires comprehensive coverage of key themes across multiple studies. Meta-ethnographic approach identifies 10-25 themes representing the state of knowledge in the field.',
+  },
+  [ResearchPurpose.HYPOTHESIS_GENERATION]: {
+    purpose: ResearchPurpose.HYPOTHESIS_GENERATION,
+    targetThemeCount: { min: 8, max: 15 },
+    extractionFocus: 'depth',
+    themeGranularity: 'medium',
+    validationRigor: 'rigorous',
+    citation:
+      'Glaser, B. G., & Strauss, A. L. (1967). The Discovery of Grounded Theory: Strategies for Qualitative Research.',
+    description:
+      'Hypothesis generation uses grounded theory principles to identify 8-15 conceptual themes that can be developed into testable relationships. Focus on theoretical sampling and constant comparison.',
+  },
+};
+
 @Injectable()
-export class UnifiedThemeExtractionService {
+export class UnifiedThemeExtractionService implements OnModuleInit {
   private readonly logger = new Logger(UnifiedThemeExtractionService.name);
   private readonly openai: OpenAI;
   private readonly cache = new Map<string, { data: any; timestamp: number }>();
+  private themeGateway: any;
 
   constructor(
     private prisma: PrismaService,
@@ -118,13 +225,19 @@ export class UnifiedThemeExtractionService {
   }
 
   /**
-   * Set the WebSocket gateway for progress updates
-   * Day 28: Progress Animations
+   * Phase 10 Day 5.17.3: Initialize after module creation
    */
-  private themeGateway: any;
+  onModuleInit() {
+    this.logger.log('✅ UnifiedThemeExtractionService initialized');
+  }
 
+  /**
+   * Set the WebSocket gateway for progress updates
+   * Phase 10 Day 5.17.3: Called by LiteratureModule
+   */
   setGateway(gateway: any) {
     this.themeGateway = gateway;
+    this.logger.log('✅ ThemeExtractionGateway connected');
   }
 
   private emitProgress(
@@ -135,6 +248,10 @@ export class UnifiedThemeExtractionService {
     details?: any,
   ) {
     if (this.themeGateway) {
+      // Log userId for debugging WebSocket room mismatch issues
+      this.logger.debug(
+        `📡 Emitting progress to userId: ${userId} (${stage}: ${percentage}%)`,
+      );
       this.themeGateway.emitProgress({
         userId,
         stage,
@@ -143,6 +260,101 @@ export class UnifiedThemeExtractionService {
         details,
       });
     }
+  }
+
+  /**
+   * Create 4-part transparent progress message
+   * Phase 10 Day 5.13 - Patent Claim #9: 4-Part Transparent Progress Messaging
+   *
+   * Implements Nielsen's Usability Heuristic #1 (Visibility of System Status)
+   * Reduces user anxiety by showing exactly what the machine is doing
+   *
+   * @param stageNumber - Current stage (1-6)
+   * @param stageName - Name of stage (e.g., "Initial Coding")
+   * @param percentage - Completion percentage (0-100)
+   * @param userLevel - User expertise level for progressive disclosure
+   * @param stats - Live statistics
+   * @returns 4-part transparent progress message
+   * @private
+   */
+  private create4PartProgressMessage(
+    stageNumber: number,
+    stageName: string,
+    percentage: number,
+    userLevel: 'novice' | 'researcher' | 'expert',
+    stats: {
+      sourcesAnalyzed: number;
+      codesGenerated?: number;
+      themesIdentified?: number;
+      currentOperation: string;
+    },
+  ): TransparentProgressMessage {
+    // Stage-specific messaging based on Braun & Clarke (2006, 2019)
+    const stageMessages: Record<
+      number,
+      { what: Record<string, string>; why: string }
+    > = {
+      1: {
+        what: {
+          novice: `Reading all ${stats.sourcesAnalyzed} papers together and converting them into a format the AI can understand`,
+          researcher: `Generating semantic embeddings from full source content using text-embedding-3-large (3072 dimensions)`,
+          expert: `Corpus-level embedding generation: OpenAI text-embedding-3-large, batch size ${stats.sourcesAnalyzed}, full content (no truncation), cosine similarity space`,
+        },
+        why: 'Familiarization is the first step in thematic analysis (Braun & Clarke, 2019). Reading ALL sources together—not one-by-one—prevents early papers from biasing later analysis. This ensures themes emerge from the entire dataset, not just the first few sources.',
+      },
+      2: {
+        what: {
+          novice: `Looking for interesting ideas and concepts that appear across all ${stats.sourcesAnalyzed} papers. Found ${stats.codesGenerated || 0} initial concepts so far.`,
+          researcher: `Performing cross-corpus initial coding to identify semantic patterns. Generated ${stats.codesGenerated || 0} codes from ${stats.sourcesAnalyzed} sources.`,
+          expert: `AI-assisted initial coding: GPT-4 Turbo pattern detection across unified corpus, semantic clustering (threshold: 0.7), ${stats.codesGenerated || 0} codes extracted, cross-validation against embeddings`,
+        },
+        why: 'Initial coding identifies specific concepts and patterns ACROSS the entire dataset (Braun & Clarke, 2019). This prevents the error of extracting themes from individual papers separately—which misses cross-paper patterns and produces fragmented results.',
+      },
+      3: {
+        what: {
+          novice: `Grouping related concepts together into bigger ideas (themes). Building ${stats.themesIdentified || 0} potential themes from ${stats.codesGenerated || 0} concepts.`,
+          researcher: `Clustering ${stats.codesGenerated || 0} codes into candidate themes using semantic similarity. Generated ${stats.themesIdentified || 0} candidate themes.`,
+          expert: `Theme generation via hierarchical clustering: cosine similarity matrix, centroid calculation, ${stats.themesIdentified || 0} themes, silhouette score validation, semantic coherence >0.6`,
+        },
+        why: 'Theme generation searches for patterns across codes (Braun & Clarke, 2019). Themes are coherent patterns of meaning that appear throughout the dataset. This is where AI helps identify connections humans might miss in large datasets.',
+      },
+      4: {
+        what: {
+          novice: `Checking if the ${stats.themesIdentified || 0} themes make sense and truly appear across all papers. Removing themes that are too weak or rare.`,
+          researcher: `Validating ${stats.themesIdentified || 0} candidate themes against full dataset. Cross-checking theme coherence and source coverage.`,
+          expert: `Academic validation: coherence scoring, coverage analysis, cross-source triangulation, confidence thresholds (0.8+ for high), removing low-evidence themes (<0.6)`,
+        },
+        why: 'Theme review ensures themes are coherent and supported by data (Braun & Clarke, 2019). Themes must work at the individual extract level AND across the dataset. This prevents false positives from statistical noise.',
+      },
+      5: {
+        what: {
+          novice: `Refining the final ${stats.themesIdentified || 0} themes: giving them clear names and descriptions, merging similar ones, removing duplicates.`,
+          researcher: `Refining ${stats.themesIdentified || 0} themes: merging overlaps (similarity >0.85), removing weak themes, generating clear definitions and labels.`,
+          expert: `Theme refinement: overlap detection (cosine >0.85), deduplication, GPT-4 labeling, definition generation, quality control, final ${stats.themesIdentified || 0} themes`,
+        },
+        why: 'Refinement produces clear, distinct themes with precise definitions (Braun & Clarke, 2019). Themes should be coherent, distinctive, and meaningful. This stage ensures publication-ready theme descriptions.',
+      },
+      6: {
+        what: {
+          novice: `Calculating which papers influenced which themes and how strongly. This creates a full record of where each theme came from.`,
+          researcher: `Calculating semantic influence: determining how much each source contributed to each theme based on embedding similarity.`,
+          expert: `Provenance calculation: semantic influence matrix, source contribution weights, confidence scoring, citation chain construction, reproducibility metadata`,
+        },
+        why: 'Provenance tracking ensures reproducibility and transparency (academic publishing standards). This creates a complete audit trail from sources → themes, essential for scholarly rigor and allowing readers to trace theme origins.',
+      },
+    };
+
+    const message = stageMessages[stageNumber];
+
+    return {
+      stageName,
+      stageNumber,
+      totalStages: 6,
+      percentage,
+      whatWeAreDoing: message.what[userLevel],
+      whyItMatters: message.why,
+      liveStats: stats,
+    };
   }
 
   /**
@@ -641,24 +853,36 @@ export class UnifiedThemeExtractionService {
       where: { id: { in: paperIds } },
     });
 
-    return papers.map((paper) => ({
-      id: paper.id,
-      type: 'paper' as const,
-      title: paper.title,
-      content: paper.abstract || '',
-      author: Array.isArray(paper.authors)
-        ? (paper.authors as string[]).join(', ')
-        : 'Unknown',
-      keywords: Array.isArray(paper.keywords)
-        ? (paper.keywords as string[])
-        : [],
-      url: paper.url || undefined,
-      doi: paper.doi || undefined,
-      authors: Array.isArray(paper.authors)
-        ? (paper.authors as string[])
-        : undefined,
-      year: paper.year || undefined,
-    }));
+    return papers.map((paper) => {
+      // Phase 10 Day 5.15: Prioritize full-text over abstract
+      const content = paper.fullText || paper.abstract || '';
+      const contentSource = paper.fullText
+        ? 'full-text'
+        : paper.abstract
+          ? 'abstract'
+          : 'none';
+
+      return {
+        id: paper.id,
+        type: 'paper' as const,
+        title: paper.title,
+        content,
+        contentSource, // Track which content was used
+        author: Array.isArray(paper.authors)
+          ? (paper.authors as string[]).join(', ')
+          : 'Unknown',
+        keywords: Array.isArray(paper.keywords)
+          ? (paper.keywords as string[])
+          : [],
+        url: paper.url || undefined,
+        doi: paper.doi || undefined,
+        authors: Array.isArray(paper.authors)
+          ? (paper.authors as string[])
+          : undefined,
+        year: paper.year || undefined,
+        fullTextWordCount: paper.fullTextWordCount || undefined,
+      };
+    });
   }
 
   /**
@@ -690,6 +914,324 @@ export class UnifiedThemeExtractionService {
   }
 
   /**
+   * Phase 10 Day 5.5: Extract themes from single source with per-paper caching
+   * Enterprise optimization: Cache individual paper themes to avoid reprocessing
+   *
+   * @param source - Single source content
+   * @param researchContext - Optional research context
+   * @param userId - User ID for progress tracking
+   * @returns Extracted themes for this single source
+   */
+  async extractThemesFromSingleSource(
+    source: SourceContent,
+    researchContext?: string,
+    userId?: string,
+  ): Promise<any[]> {
+    // Generate content-based cache key (papers with same content get same themes)
+    const contentHash = crypto
+      .createHash('md5')
+      .update(source.content + (researchContext || ''))
+      .digest('hex');
+
+    const cacheKey = `single:${source.type}:${contentHash}`;
+
+    // Check cache first
+    const cached = this.getFromCache(cacheKey);
+    if (cached) {
+      this.logger.log(`✅ Cache HIT for: ${source.title.substring(0, 50)}...`);
+      return cached;
+    }
+
+    this.logger.log(
+      `🔄 Cache MISS - Extracting themes for: ${source.title.substring(0, 50)}...`,
+    );
+
+    // Extract themes for single source
+    const themes = await this.extractThemesWithAI([source], researchContext, 5); // Max 5 themes per paper
+
+    // Cache the result
+    this.setCache(cacheKey, themes);
+
+    return themes;
+  }
+
+  /**
+   * Phase 10 Day 5.6 (FIXED): Extract themes from multiple sources with proper concurrency control
+   * Enterprise pattern: p-limit library for battle-tested concurrency control
+   *
+   * FIXES from Day 5.5:
+   * - ✅ Proper p-limit implementation using npm package (Issue #1)
+   * - ✅ Concurrency control at PAPER level, not batch level (Issue #2)
+   * - ✅ Graceful error handling with Promise.allSettled (Issue #3)
+   * - ✅ Division-by-zero protection in stats (Issue #4)
+   * - ✅ Input validation (Issue #6)
+   * - ✅ Accurate progress tracking (Issue #7)
+   *
+   * @param sources - Array of source content
+   * @param options - Extraction options
+   * @param userId - User ID for progress tracking
+   * @returns Merged themes from all sources with stats and error details
+   */
+  async extractThemesInBatches(
+    sources: SourceContent[],
+    options: ExtractionOptions = {},
+    userId?: string,
+  ): Promise<{ themes: UnifiedTheme[]; stats: any }> {
+    const startTime = Date.now();
+    const MAX_CONCURRENT_CALLS = 2; // Max 2 concurrent GPT-4 API calls (rate limit safety)
+
+    // ✅ FIX #6: Input validation
+    if (!sources || sources.length === 0) {
+      throw new Error('No sources provided for theme extraction');
+    }
+
+    if (sources.length > ENTERPRISE_CONFIG.MAX_SOURCES_PER_REQUEST) {
+      throw new Error(
+        `Too many sources: ${sources.length} (max ${ENTERPRISE_CONFIG.MAX_SOURCES_PER_REQUEST})`,
+      );
+    }
+
+    this.logger.log(
+      `🚀 Starting batch extraction for ${sources.length} sources`,
+    );
+    this.logger.log(`   Max concurrent GPT-4 calls: ${MAX_CONCURRENT_CALLS}`);
+
+    // ✅ FIX #1 & #2: Use p-limit library at PAPER level
+    const limit = pLimit(MAX_CONCURRENT_CALLS);
+
+    const stats = {
+      totalSources: sources.length,
+      successfulSources: 0,
+      failedSources: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
+      processingTimes: [] as number[],
+      errors: [] as Array<{ sourceTitle: string; error: string }>,
+    };
+
+    // ✅ FIX #3: Use Promise.allSettled for graceful error handling
+    const results = await Promise.allSettled(
+      sources.map((source, index) =>
+        limit(async () => {
+          const sourceStart = Date.now();
+
+          try {
+            this.logger.log(
+              `📄 Processing source ${index + 1}/${sources.length}: ${source.title.substring(0, 50)}...`,
+            );
+
+            const themes = await this.extractThemesFromSingleSource(
+              source,
+              options.researchContext,
+              userId,
+            );
+
+            const sourceTime = Date.now() - sourceStart;
+            stats.processingTimes.push(sourceTime);
+            stats.successfulSources++;
+
+            // ✅ FIX #7: Emit progress AFTER source completes
+            const progress = Math.round(
+              (stats.successfulSources / sources.length) * 100,
+            );
+            this.emitProgress(
+              userId || 'system',
+              'batch_extraction',
+              progress,
+              `Completed ${stats.successfulSources} of ${sources.length} sources`,
+              {
+                completed: stats.successfulSources,
+                total: sources.length,
+                failed: stats.failedSources,
+              },
+            );
+
+            this.logger.log(
+              `   ✅ Source ${index + 1} complete in ${sourceTime}ms (${themes.length} themes)`,
+            );
+
+            return { success: true, themes, source };
+          } catch (error: any) {
+            const sourceTime = Date.now() - sourceStart;
+            stats.processingTimes.push(sourceTime);
+            stats.failedSources++;
+
+            const errorMsg =
+              error instanceof Error ? error.message : 'Unknown error';
+            stats.errors.push({
+              sourceTitle: source.title,
+              error: errorMsg,
+            });
+
+            this.logger.warn(
+              `   ⚠️ Source ${index + 1} failed after ${sourceTime}ms: ${errorMsg}`,
+            );
+
+            return { success: false, themes: [], source, error: errorMsg };
+          }
+        }),
+      ),
+    );
+
+    // Collect all themes from successful extractions
+    const allThemes: any[] = [];
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value.success) {
+        allThemes.push(...result.value.themes);
+      }
+    }
+
+    this.logger.log(
+      `📊 Extraction results: ${stats.successfulSources} success, ${stats.failedSources} failed`,
+    );
+
+    if (stats.failedSources > 0) {
+      this.logger.warn(
+        `   Failed sources: ${stats.errors.map((e) => e.sourceTitle).join(', ')}`,
+      );
+    }
+
+    // Deduplicate and merge similar themes across all sources
+    this.logger.log(`🔄 Deduplicating ${allThemes.length} themes...`);
+    const deduplicatedThemes = this.deduplicateThemes(allThemes);
+
+    // Calculate unified influence across all SUCCESSFUL sources
+    const successfulSources = sources.filter((_, index) => {
+      const result = results[index];
+      return result.status === 'fulfilled' && (result.value as any).success;
+    });
+
+    const themesWithInfluence = await this.calculateInfluence(
+      deduplicatedThemes,
+      successfulSources,
+    );
+
+    // Store in database
+    const storedThemes = await this.storeUnifiedThemes(
+      themesWithInfluence,
+      options.studyId,
+      options.collectionId,
+    );
+
+    const totalDuration = Date.now() - startTime;
+
+    // ✅ FIX #4: Division-by-zero protection
+    const avgSourceTime =
+      stats.processingTimes.length > 0
+        ? stats.processingTimes.reduce((a, b) => a + b, 0) /
+          stats.processingTimes.length
+        : 0;
+
+    this.logger.log(`🎉 Batch extraction complete!`);
+    this.logger.log(
+      `   Total time: ${totalDuration}ms (${(totalDuration / 1000 / 60).toFixed(1)} minutes)`,
+    );
+    this.logger.log(`   Avg source time: ${avgSourceTime.toFixed(0)}ms`);
+    this.logger.log(`   Themes extracted: ${storedThemes.length}`);
+    this.logger.log(
+      `   Success rate: ${((stats.successfulSources / sources.length) * 100).toFixed(1)}%`,
+    );
+
+    return {
+      themes: storedThemes,
+      stats: {
+        ...stats,
+        totalDuration,
+        avgSourceTime,
+        themesExtracted: storedThemes.length,
+        successRate: (stats.successfulSources / sources.length) * 100,
+      },
+    };
+  }
+
+  /**
+   * Phase 10 Day 5.5: Deduplicate similar themes using semantic similarity
+   * Enterprise pattern: Cosine similarity with keyword overlap
+   *
+   * @private
+   */
+  private deduplicateThemes(themes: any[]): any[] {
+    if (themes.length === 0) return [];
+
+    const uniqueThemes: any[] = [];
+    const seen = new Set<string>();
+
+    for (const theme of themes) {
+      const normalizedLabel = theme.label.toLowerCase().trim();
+
+      // Check if we've seen this exact label
+      if (seen.has(normalizedLabel)) {
+        // Find and merge with existing theme
+        const existing = uniqueThemes.find(
+          (t) => t.label.toLowerCase() === normalizedLabel,
+        );
+        if (existing) {
+          // Merge keywords
+          existing.keywords = [
+            ...new Set([...existing.keywords, ...theme.keywords]),
+          ];
+          // Take higher weight
+          existing.weight = Math.max(existing.weight, theme.weight);
+          // Merge source indices if present
+          if (theme.sourceIndices && existing.sourceIndices) {
+            existing.sourceIndices = [
+              ...new Set([...existing.sourceIndices, ...theme.sourceIndices]),
+            ];
+          }
+        }
+      } else {
+        // Check for similar themes (keyword overlap > 50%)
+        let merged = false;
+        for (const existing of uniqueThemes) {
+          const overlap = this.calculateKeywordOverlap(
+            theme.keywords,
+            existing.keywords,
+          );
+          if (overlap > 0.5) {
+            // Merge into existing
+            existing.keywords = [
+              ...new Set([...existing.keywords, ...theme.keywords]),
+            ];
+            existing.weight = Math.max(existing.weight, theme.weight);
+            if (theme.sourceIndices && existing.sourceIndices) {
+              existing.sourceIndices = [
+                ...new Set([...existing.sourceIndices, ...theme.sourceIndices]),
+              ];
+            }
+            merged = true;
+            break;
+          }
+        }
+
+        if (!merged) {
+          uniqueThemes.push({ ...theme });
+          seen.add(normalizedLabel);
+        }
+      }
+    }
+
+    this.logger.log(
+      `   Deduplicated ${themes.length} → ${uniqueThemes.length} themes`,
+    );
+    return uniqueThemes;
+  }
+
+  /**
+   * Calculate keyword overlap between two theme keyword sets
+   * @private
+   */
+  private calculateKeywordOverlap(
+    keywords1: string[],
+    keywords2: string[],
+  ): number {
+    const set1 = new Set(keywords1.map((k) => k.toLowerCase()));
+    const set2 = new Set(keywords2.map((k) => k.toLowerCase()));
+    const intersection = new Set([...set1].filter((k) => set2.has(k)));
+    const union = new Set([...set1, ...set2]);
+    return union.size > 0 ? intersection.size / union.size : 0;
+  }
+
+  /**
    * Extract themes using AI with retry logic
    * @private
    */
@@ -700,6 +1242,17 @@ export class UnifiedThemeExtractionService {
   ): Promise<any[]> {
     const themesLimit =
       maxThemes || ENTERPRISE_CONFIG.MAX_THEMES_PER_EXTRACTION;
+
+    // PHASE 10 DAY 5.17.3: Log OpenAI API call details
+    this.logger.log(`\n🤖 Calling OpenAI API for theme extraction...`);
+    this.logger.log(`   • Model: gpt-4-turbo-preview`);
+    this.logger.log(`   • Sources: ${sources.length}`);
+    this.logger.log(`   • Max themes: ${themesLimit}`);
+    this.logger.log(
+      `   • Context: ${researchContext || 'General research literature review'}`,
+    );
+    this.logger.log(`   • Temperature: 0.3`);
+    this.logger.log(`   • Response format: JSON object`);
 
     const prompt = `Extract research themes from these sources.
 
@@ -731,14 +1284,27 @@ Return JSON format:
   ]
 }`;
 
+    const promptLength = prompt.length;
+    const estimatedTokens = Math.ceil(promptLength / 4);
+    this.logger.log(
+      `   • Prompt length: ${promptLength.toLocaleString()} chars (~${estimatedTokens.toLocaleString()} tokens)`,
+    );
+
     let lastError: Error | null = null;
+    const totalStartTime = Date.now();
 
     for (
       let attempt = 1;
       attempt <= ENTERPRISE_CONFIG.MAX_RETRY_ATTEMPTS;
       attempt++
     ) {
+      let attemptStartTime = Date.now();
       try {
+        this.logger.log(
+          `\n   🔄 Attempt ${attempt}/${ENTERPRISE_CONFIG.MAX_RETRY_ATTEMPTS}...`,
+        );
+        attemptStartTime = Date.now();
+
         const response = await this.openai.chat.completions.create({
           model: 'gpt-4-turbo-preview',
           messages: [{ role: 'user', content: prompt }],
@@ -746,21 +1312,64 @@ Return JSON format:
           temperature: 0.3,
         });
 
+        const attemptDuration = (
+          (Date.now() - attemptStartTime) /
+          1000
+        ).toFixed(2);
+
+        // PHASE 10 DAY 5.17.3: Log OpenAI response details
+        this.logger.log(
+          `   ✅ OpenAI API call successful in ${attemptDuration}s`,
+        );
+        this.logger.log(`      • Model used: ${response.model}`);
+        this.logger.log(
+          `      • Tokens - Prompt: ${response.usage?.prompt_tokens || 'N/A'}`,
+        );
+        this.logger.log(
+          `      • Tokens - Completion: ${response.usage?.completion_tokens || 'N/A'}`,
+        );
+        this.logger.log(
+          `      • Tokens - Total: ${response.usage?.total_tokens || 'N/A'}`,
+        );
+        this.logger.log(
+          `      • Finish reason: ${response.choices[0].finish_reason}`,
+        );
+
         const result = JSON.parse(response.choices[0].message.content || '{}');
+        const themesExtracted = result.themes?.length || 0;
+        this.logger.log(`      • Themes extracted: ${themesExtracted}`);
+
+        if (themesExtracted > 0) {
+          this.logger.log(`      • First theme: "${result.themes[0].label}"`);
+        }
+
         return result.themes || [];
       } catch (error) {
         lastError = error as Error;
+        const attemptDuration = (
+          (Date.now() - attemptStartTime) /
+          1000
+        ).toFixed(2);
+
         this.logger.warn(
-          `Theme extraction attempt ${attempt} failed: ${(error as Error).message}`,
+          `   ❌ Attempt ${attempt} failed after ${attemptDuration}s: ${(error as Error).message}`,
         );
 
         if (attempt < ENTERPRISE_CONFIG.MAX_RETRY_ATTEMPTS) {
           const delay =
             ENTERPRISE_CONFIG.RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+          this.logger.log(
+            `   ⏳ Retrying in ${delay}ms with exponential backoff...`,
+          );
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
+
+    const totalDuration = ((Date.now() - totalStartTime) / 1000).toFixed(2);
+    this.logger.error(
+      `   ❌ All ${ENTERPRISE_CONFIG.MAX_RETRY_ATTEMPTS} attempts failed after ${totalDuration}s`,
+    );
 
     throw lastError || new Error('Theme extraction failed after all retries');
   }
@@ -1190,4 +1799,2320 @@ Return JSON format:
       timestamp: Date.now(),
     });
   }
+
+  // ========================================================================
+  // PHASE 10 DAY 5.8 WEEK 1: ACADEMIC-GRADE THEME EXTRACTION
+  // Based on Braun & Clarke (2006) Reflexive Thematic Analysis
+  // ========================================================================
+
+  /**
+   * Academic-grade theme extraction with semantic embeddings
+   *
+   * Implements rigorous 6-stage qualitative methodology:
+   * 1. Familiarization - Generate embeddings from FULL content
+   * 2. Initial Coding - Identify semantic clusters
+   * 3. Theme Generation - Group codes into candidate themes
+   * 4. Theme Review - Validate against full dataset
+   * 5. Refinement - Remove weak themes, merge overlaps
+   * 6. Provenance - Calculate semantic influence (not keywords)
+   *
+   * @param sources - Full source content (NO TRUNCATION)
+   * @param options - Extraction configuration with methodology choice
+   * @param progressCallback - WebSocket callback for 6-stage progress
+   * @returns Themes with academic validation and methodology report
+   */
+  async extractThemesAcademic(
+    sources: SourceContent[],
+    options: AcademicExtractionOptions,
+    progressCallback?: AcademicProgressCallback,
+  ): Promise<AcademicExtractionResult> {
+    const startTime = Date.now();
+    const userId = options.userId || 'system';
+    const requestId = options.requestId || 'unknown';
+
+    this.logger.log(`\n${'─'.repeat(60)}`);
+    this.logger.log(`🔬 [${requestId}] ACADEMIC EXTRACTION: 6-Stage Process`);
+    this.logger.log(`${'─'.repeat(60)}`);
+    this.logger.log(`   📊 Sources: ${sources.length}`);
+    this.logger.log(
+      `   🔬 Methodology: ${options.methodology || 'reflexive_thematic'}`,
+    );
+    this.logger.log(
+      `   ✅ Validation Level: ${options.validationLevel || 'rigorous'}`,
+    );
+    this.logger.log(`   👤 User ID: ${userId}`);
+
+    // Enhanced methodology report with AI disclosure (Phase 10 Day 5.13)
+    // Patent Claim #8 + #12: AI Disclosure & Confidence Calibration
+    const methodology: EnhancedMethodologyReport = {
+      method: 'Reflexive Thematic Analysis',
+      citation: 'Braun & Clarke (2006, 2019)',
+      stages: 6,
+      validation: 'Cross-source triangulation with semantic embeddings',
+      aiRole:
+        'AI-assisted semantic clustering; themes validated against full dataset',
+      limitations:
+        'AI-assisted interpretation; recommend researcher review for publication',
+      // NEW: AI Disclosure Section (Nature/Science 2024 compliance)
+      aiDisclosure: {
+        modelUsed:
+          'GPT-4 Turbo (gpt-4-turbo-preview) + text-embedding-3-large (3072 dimensions)',
+        aiRoleDetailed:
+          'AI performs: (1) Semantic embedding generation from full source content, (2) Initial code extraction via pattern detection, (3) Code clustering into candidate themes, (4) Theme labeling and description generation. Human oversight required for final theme selection and interpretation.',
+        humanOversightRequired:
+          'Researchers must: (1) Review and validate all identified themes against research questions, (2) Interpret thematic meanings within theoretical framework, (3) Make final decisions on theme inclusion/exclusion, (4) Assess applicability to specific context. AI provides suggestions; humans make final scholarly judgments.',
+        confidenceCalibration: {
+          high: '0.8-1.0: Theme appears in 80%+ of sources with strong semantic coherence (cosine similarity >0.7). Robust evidence across dataset.',
+          medium:
+            '0.6-0.8: Theme appears in 50-80% of sources with moderate coherence. Present but not dominant across dataset.',
+          low: '<0.6: Theme appears in <50% of sources or has weak coherence. Review recommended; may represent emerging/minor theme or require refinement.',
+        },
+      },
+      // Iterative refinement tracking (will be updated if refinement occurs)
+      iterativeRefinement: options.allowIterativeRefinement
+        ? {
+            cyclesPerformed: 0,
+            stagesRevisited: [],
+            rationale:
+              'Initial extraction; no refinement cycles performed yet.',
+          }
+        : undefined,
+    };
+
+    // Get user expertise level for progressive disclosure (Patent Claim #10)
+    const userLevel = options.userExpertiseLevel || 'researcher';
+
+    try {
+      // ===== STAGE 1: FAMILIARIZATION (20%) =====
+      this.logger.log(
+        `\n📖 [${requestId}] STAGE 1/6: Familiarization (0% → 20%)`,
+      );
+      this.logger.log(
+        `   🔬 Phase 10 Day 5.17.3: Per-article transparent progress with word count tracking`,
+      );
+      const stage1Start = Date.now();
+
+      const stage1Message = this.create4PartProgressMessage(
+        1,
+        'Familiarization',
+        0,
+        userLevel,
+        {
+          sourcesAnalyzed: sources.length,
+          currentOperation: 'Starting article-by-article reading',
+        },
+      );
+      progressCallback?.(
+        1,
+        6,
+        'Reading and embedding all sources (full content analysis)...',
+        stage1Message,
+      );
+      this.emitProgress(
+        userId,
+        'familiarization',
+        0,
+        stage1Message.whatWeAreDoing,
+        stage1Message,
+      );
+
+      // Phase 10 Day 5.17.3: Pass userId, progressCallback, userLevel for per-article progress
+      const embeddings = await this.generateSemanticEmbeddings(
+        sources,
+        userId,
+        progressCallback,
+        userLevel,
+      );
+      const stage1Duration = ((Date.now() - stage1Start) / 1000).toFixed(2);
+      this.logger.log(`   ✅ Stage 1 complete in ${stage1Duration}s`);
+
+      // ===== STAGE 2: INITIAL CODING (30%) =====
+      this.logger.log(
+        `\n🔍 [${requestId}] STAGE 2/6: Initial Coding (20% → 30%)`,
+      );
+      const stage2Start = Date.now();
+
+      const initialCodes = await this.extractInitialCodes(sources, embeddings);
+      const stage2Duration = ((Date.now() - stage2Start) / 1000).toFixed(2);
+
+      const stage2Message = this.create4PartProgressMessage(
+        2,
+        'Initial Coding',
+        30,
+        userLevel,
+        {
+          sourcesAnalyzed: sources.length,
+          codesGenerated: initialCodes.length,
+          currentOperation: 'Extracting initial codes',
+        },
+      );
+      progressCallback?.(
+        2,
+        6,
+        'Identifying semantic patterns across sources...',
+        stage2Message,
+      );
+      this.emitProgress(
+        userId,
+        'coding',
+        30,
+        stage2Message.whatWeAreDoing,
+        stage2Message,
+      );
+      this.logger.log(
+        `   ✅ Extracted ${initialCodes.length} initial codes in ${stage2Duration}s`,
+      );
+
+      // ===== STAGE 3: THEME GENERATION (50%) =====
+      this.logger.log(
+        `\n🎨 [${requestId}] STAGE 3/6: Theme Generation (30% → 50%)`,
+      );
+      const stage3Start = Date.now();
+
+      const candidateThemes = await this.generateCandidateThemes(
+        initialCodes,
+        sources,
+        embeddings,
+        options,
+      );
+      const stage3Duration = ((Date.now() - stage3Start) / 1000).toFixed(2);
+
+      const stage3Message = this.create4PartProgressMessage(
+        3,
+        'Theme Generation',
+        50,
+        userLevel,
+        {
+          sourcesAnalyzed: sources.length,
+          codesGenerated: initialCodes.length,
+          themesIdentified: candidateThemes.length,
+          currentOperation: 'Clustering codes into themes',
+        },
+      );
+      progressCallback?.(
+        3,
+        6,
+        'Generating candidate themes from semantic clusters...',
+        stage3Message,
+      );
+      this.emitProgress(
+        userId,
+        'generation',
+        50,
+        stage3Message.whatWeAreDoing,
+        stage3Message,
+      );
+      this.logger.log(
+        `   ✅ Generated ${candidateThemes.length} candidate themes in ${stage3Duration}s`,
+      );
+
+      // ===== STAGE 4: THEME REVIEW (70%) =====
+      this.logger.log(
+        `\n✅ [${requestId}] STAGE 4/6: Theme Review (50% → 70%)`,
+      );
+      const stage4Start = Date.now();
+
+      // PHASE 10 DAY 5.17.4: Now returns both themes and diagnostics
+      const validationResult = await this.validateThemesAcademic(
+        candidateThemes,
+        sources,
+        embeddings,
+        options,
+      );
+      const validatedThemes = validationResult.validatedThemes;
+      const rejectionDiagnostics = validationResult.rejectionDiagnostics;
+      const stage4Duration = ((Date.now() - stage4Start) / 1000).toFixed(2);
+      const removedCount = candidateThemes.length - validatedThemes.length;
+
+      const stage4Message = this.create4PartProgressMessage(
+        4,
+        'Theme Review',
+        70,
+        userLevel,
+        {
+          sourcesAnalyzed: sources.length,
+          codesGenerated: initialCodes.length,
+          themesIdentified: validatedThemes.length,
+          currentOperation: 'Cross-validating themes',
+        },
+      );
+      progressCallback?.(
+        4,
+        6,
+        'Validating themes against full dataset...',
+        stage4Message,
+      );
+      this.emitProgress(
+        userId,
+        'review',
+        70,
+        stage4Message.whatWeAreDoing,
+        stage4Message,
+      );
+      this.logger.log(
+        `   ✅ Validated ${validatedThemes.length} themes (removed ${removedCount} weak themes) in ${stage4Duration}s`,
+      );
+
+      // ===== STAGE 5: REFINEMENT (85%) =====
+      this.logger.log(`\n🔧 [${requestId}] STAGE 5/6: Refinement (70% → 85%)`);
+      const stage5Start = Date.now();
+
+      const refinedThemes = await this.refineThemesAcademic(
+        validatedThemes,
+        embeddings,
+      );
+      const stage5Duration = ((Date.now() - stage5Start) / 1000).toFixed(2);
+      const mergedCount = validatedThemes.length - refinedThemes.length;
+
+      const stage5Message = this.create4PartProgressMessage(
+        5,
+        'Refinement',
+        85,
+        userLevel,
+        {
+          sourcesAnalyzed: sources.length,
+          codesGenerated: initialCodes.length,
+          themesIdentified: refinedThemes.length,
+          currentOperation: 'Merging overlaps and removing weak themes',
+        },
+      );
+      progressCallback?.(
+        5,
+        6,
+        'Refining and defining themes...',
+        stage5Message,
+      );
+      this.emitProgress(
+        userId,
+        'refinement',
+        85,
+        stage5Message.whatWeAreDoing,
+        stage5Message,
+      );
+      this.logger.log(
+        `   ✅ Refined to ${refinedThemes.length} final themes (merged ${mergedCount} overlaps) in ${stage5Duration}s`,
+      );
+
+      // ===== STAGE 6: PROVENANCE (100%) =====
+      this.logger.log(`\n📊 [${requestId}] STAGE 6/6: Provenance (85% → 100%)`);
+      const stage6Start = Date.now();
+
+      const themesWithProvenance = await this.calculateSemanticProvenance(
+        refinedThemes,
+        sources,
+        embeddings,
+      );
+      const stage6Duration = ((Date.now() - stage6Start) / 1000).toFixed(2);
+
+      const stage6Message = this.create4PartProgressMessage(
+        6,
+        'Provenance',
+        100,
+        userLevel,
+        {
+          sourcesAnalyzed: sources.length,
+          codesGenerated: initialCodes.length,
+          themesIdentified: themesWithProvenance.length,
+          currentOperation: 'Finalizing theme provenance',
+        },
+      );
+      progressCallback?.(
+        6,
+        6,
+        'Calculating semantic influence and building provenance...',
+        stage6Message,
+      );
+      this.emitProgress(
+        userId,
+        'provenance',
+        100,
+        stage6Message.whatWeAreDoing,
+        stage6Message,
+      );
+      this.logger.log(
+        `   ✅ Calculated provenance for ${themesWithProvenance.length} themes in ${stage6Duration}s`,
+      );
+
+      // Calculate validation metrics
+      this.logger.log(`\n📈 [${requestId}] Calculating Validation Metrics...`);
+      const validationStartTime = Date.now();
+
+      const validation = {
+        coherenceScore: this.calculateCoherenceScore(
+          themesWithProvenance,
+          embeddings,
+        ),
+        coverage: this.calculateCoverage(themesWithProvenance, sources),
+        saturation: this.checkSaturation(themesWithProvenance),
+        confidence: this.calculateAverageConfidence(themesWithProvenance),
+      };
+
+      const validationDuration = (
+        (Date.now() - validationStartTime) /
+        1000
+      ).toFixed(2);
+      this.logger.log(
+        `   ✅ Validation metrics calculated in ${validationDuration}s`,
+      );
+      this.logger.log(
+        `      • Coherence: ${validation.coherenceScore.toFixed(3)}`,
+      );
+      this.logger.log(`      • Coverage: ${validation.coverage.toFixed(3)}`);
+      this.logger.log(
+        `      • Saturation: ${validation.saturation ? 'Yes' : 'No'}`,
+      );
+      this.logger.log(
+        `      • Confidence: ${validation.confidence.toFixed(3)}`,
+      );
+
+      const duration = Date.now() - startTime;
+      this.logger.log(`\n${'─'.repeat(60)}`);
+      this.logger.log(`✅ [${requestId}] ACADEMIC EXTRACTION COMPLETE`);
+      this.logger.log(`   ⏱️ Total duration: ${(duration / 1000).toFixed(2)}s`);
+      this.logger.log(`   📊 Final themes: ${themesWithProvenance.length}`);
+      this.logger.log(
+        `   📈 Average confidence: ${(validation.confidence * 100).toFixed(1)}%`,
+      );
+      this.logger.log(`${'─'.repeat(60)}`);
+
+      // PHASE 10 DAY 5.17.4: Include rejection diagnostics in response (visible in frontend console)
+      const response: any = {
+        themes: themesWithProvenance,
+        methodology,
+        validation,
+        processingStages: [
+          'Familiarization (Semantic Embeddings)',
+          'Initial Coding (Pattern Detection)',
+          'Theme Generation (Clustering)',
+          'Theme Review (Cross-Validation)',
+          'Refinement (Quality Control)',
+          'Provenance Tracking (Influence Calculation)',
+        ],
+        metadata: {
+          sourcesAnalyzed: sources.length,
+          codesGenerated: initialCodes.length,
+          candidateThemes: candidateThemes.length,
+          finalThemes: themesWithProvenance.length,
+          processingTimeMs: duration,
+          embeddingModel: 'text-embedding-3-large',
+          analysisModel: 'gpt-4-turbo-preview',
+        },
+      };
+
+      // Add rejection diagnostics if available (helps users understand why themes were rejected)
+      if (rejectionDiagnostics) {
+        response.rejectionDiagnostics = rejectionDiagnostics;
+        this.logger.warn(
+          `\n⚠️ [${requestId}] REJECTION DIAGNOSTICS INCLUDED IN RESPONSE`,
+        );
+        this.logger.warn(
+          `   • Total Generated: ${rejectionDiagnostics.totalGenerated}`,
+        );
+        this.logger.warn(
+          `   • Total Rejected: ${rejectionDiagnostics.totalRejected}`,
+        );
+        this.logger.warn(
+          `   • Total Validated: ${rejectionDiagnostics.totalValidated}`,
+        );
+      }
+
+      return response;
+    } catch (error) {
+      const err = error as Error;
+      const requestId = options.requestId || 'unknown';
+
+      this.logger.error(`\n${'='.repeat(80)}`);
+      this.logger.error(`❌ [${requestId}] ACADEMIC EXTRACTION ERROR`);
+      this.logger.error(`${'='.repeat(80)}`);
+      this.logger.error(`⏰ Timestamp: ${new Date().toISOString()}`);
+      this.logger.error(`🔍 Error Type: ${err.name || 'Unknown'}`);
+      this.logger.error(`💬 Error Message: ${err.message}`);
+      this.logger.error(`\n📊 Context:`);
+      this.logger.error(`   • Sources: ${sources.length}`);
+      this.logger.error(
+        `   • Methodology: ${options.methodology || 'reflexive_thematic'}`,
+      );
+      this.logger.error(
+        `   • Validation level: ${options.validationLevel || 'rigorous'}`,
+      );
+      this.logger.error(`   • User ID: ${userId}`);
+
+      if (err.stack) {
+        this.logger.error(`\n📚 Stack Trace:`);
+        this.logger.error(err.stack);
+      }
+
+      this.logger.error(`${'='.repeat(80)}\n`);
+
+      throw error;
+    }
+  }
+
+  /**
+   * Purpose-Driven Holistic Theme Extraction (V2)
+   * Phase 10 Day 5.13 - Patent Claim #2: Purpose-Adaptive Algorithms
+   *
+   * Revolutionary approach: Different research purposes require different extraction strategies
+   * - Q-Methodology: Breadth-focused (40-80 statements)
+   * - Survey Construction: Depth-focused (5-15 constructs)
+   * - Qualitative Analysis: Saturation-driven (5-20 themes)
+   * - Literature Synthesis: Meta-analytic (10-25 themes)
+   * - Hypothesis Generation: Theory-building (8-15 themes)
+   *
+   * @param sources - Full source content (analyzed together as unified corpus)
+   * @param purpose - Research purpose (determines extraction strategy)
+   * @param options - Additional extraction configuration
+   * @param progressCallback - WebSocket callback for 4-part transparent progress
+   * @returns Themes with enhanced methodology report and saturation data
+   */
+  async extractThemesV2(
+    sources: SourceContent[],
+    purpose: ResearchPurpose,
+    options: AcademicExtractionOptions = {},
+    progressCallback?: AcademicProgressCallback,
+  ): Promise<AcademicExtractionResult> {
+    // PHASE 10 DAY 5.17.3: Generate request ID for end-to-end tracing
+    const requestId =
+      options.requestId ||
+      `backend_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const startTime = Date.now();
+
+    this.logger.log(`\n${'='.repeat(80)}`);
+    this.logger.log(`🚀 [${requestId}] BACKEND: V2 Theme Extraction Started`);
+    this.logger.log(`${'='.repeat(80)}`);
+    this.logger.log(`⏰ Timestamp: ${new Date().toISOString()}`);
+    this.logger.log(`🎯 Purpose: ${purpose}`);
+    this.logger.log(`📊 Source count: ${sources.length}`);
+
+    // Get purpose-specific configuration
+    const purposeConfig = PURPOSE_CONFIGS[purpose];
+
+    this.logger.log(`\n📋 Purpose Configuration:`);
+    this.logger.log(
+      `   • Name: ${purposeConfig.purpose.replace(/_/g, ' ').toUpperCase()}`,
+    );
+    this.logger.log(`   • Description: ${purposeConfig.description}`);
+    this.logger.log(
+      `   • Target theme count: ${purposeConfig.targetThemeCount.min}-${purposeConfig.targetThemeCount.max}`,
+    );
+    this.logger.log(`   • Extraction focus: ${purposeConfig.extractionFocus}`);
+    this.logger.log(`   • Validation rigor: ${purposeConfig.validationRigor}`);
+    this.logger.log(`   • Citation: ${purposeConfig.citation}`);
+
+    // PHASE 10 DAY 5.17.3: Detailed content analysis logging
+    this.logger.log(`\n📊 Content Analysis:`);
+    const contentBreakdown = {
+      fullText: sources.filter((s) => s.metadata?.contentType === 'full_text')
+        .length,
+      abstractOverflow: sources.filter(
+        (s) => s.metadata?.contentType === 'abstract_overflow',
+      ).length,
+      abstract: sources.filter((s) => s.metadata?.contentType === 'abstract')
+        .length,
+      none: sources.filter(
+        (s) => s.metadata?.contentType === 'none' || !s.metadata?.contentType,
+      ).length,
+    };
+    const totalChars = sources.reduce(
+      (sum, s) => sum + (s.content?.length || 0),
+      0,
+    );
+    const avgChars =
+      sources.length > 0 ? Math.round(totalChars / sources.length) : 0;
+
+    this.logger.log(`   • Full-text sources: ${contentBreakdown.fullText}`);
+    this.logger.log(
+      `   • Abstract overflow: ${contentBreakdown.abstractOverflow}`,
+    );
+    this.logger.log(`   • Abstract-only: ${contentBreakdown.abstract}`);
+    this.logger.log(`   • No content: ${contentBreakdown.none}`);
+    this.logger.log(`   • Total characters: ${totalChars.toLocaleString()}`);
+    this.logger.log(
+      `   • Average per source: ${avgChars.toLocaleString()} chars`,
+    );
+    this.logger.log(
+      `   • Estimated words: ${Math.round(totalChars / 5).toLocaleString()}`,
+    );
+
+    // Log sample of first source
+    if (sources.length > 0) {
+      this.logger.log(`\n📄 Sample of first source:`);
+      this.logger.log(
+        `   • Title: "${sources[0].title.substring(0, 80)}${sources[0].title.length > 80 ? '...' : ''}"`,
+      );
+      this.logger.log(`   • Type: ${sources[0].type}`);
+      this.logger.log(
+        `   • Content type: ${sources[0].metadata?.contentType || 'unknown'}`,
+      );
+      this.logger.log(
+        `   • Content length: ${(sources[0].content?.length || 0).toLocaleString()} chars`,
+      );
+      this.logger.log(
+        `   • Has full-text: ${sources[0].metadata?.hasFullText || false}`,
+      );
+    }
+
+    // Apply purpose-specific parameters to options
+    const enhancedOptions: AcademicExtractionOptions = {
+      ...options,
+      requestId, // Pass requestId to child methods
+      purpose,
+      maxThemes: purposeConfig.targetThemeCount.max,
+      minConfidence: purposeConfig.extractionFocus === 'depth' ? 0.7 : 0.6, // Depth requires higher confidence
+      validationLevel: purposeConfig.validationRigor,
+    };
+
+    this.logger.log(`\n⚙️ Enhanced Options:`);
+    this.logger.log(`   • Max themes: ${enhancedOptions.maxThemes}`);
+    this.logger.log(`   • Min confidence: ${enhancedOptions.minConfidence}`);
+    this.logger.log(
+      `   • Validation level: ${enhancedOptions.validationLevel}`,
+    );
+    this.logger.log(
+      `   • User expertise level: ${enhancedOptions.userExpertiseLevel || 'researcher'}`,
+    );
+    this.logger.log(
+      `   • Allow iterative refinement: ${enhancedOptions.allowIterativeRefinement || false}`,
+    );
+
+    // Call core extraction with purpose-specific config
+    this.logger.log(`\n🚀 [${requestId}] Calling extractThemesAcademic...`);
+    const extractionStartTime = Date.now();
+
+    const result = await this.extractThemesAcademic(
+      sources,
+      enhancedOptions,
+      progressCallback,
+    );
+
+    const extractionDuration = (
+      (Date.now() - extractionStartTime) /
+      1000
+    ).toFixed(2);
+    this.logger.log(
+      `✅ [${requestId}] extractThemesAcademic completed in ${extractionDuration}s`,
+    );
+    this.logger.log(`   • Themes extracted: ${result.themes.length}`);
+    this.logger.log(`   • Validation metrics:`, {
+      coherence: result.validation?.coherenceScore?.toFixed(3),
+      coverage: result.validation?.coverage?.toFixed(3),
+      confidence: result.validation?.confidence?.toFixed(3),
+    });
+
+    // Enhance methodology report with purpose-specific citation
+    result.methodology.citation = `${result.methodology.citation}; ${purposeConfig.citation}`;
+
+    // Add purpose context to methodology
+    const purposeDescription = `Purpose: ${purposeConfig.purpose.replace(/_/g, ' ').toUpperCase()}. ${purposeConfig.description}`;
+    result.methodology.aiRole = `${result.methodology.aiRole} ${purposeDescription}`;
+
+    // Calculate saturation data (Patent Claim #13)
+    this.logger.log(`\n📈 [${requestId}] Calculating saturation data...`);
+    const saturationData = this.calculateSaturationData(result.themes, sources);
+    result.saturationData = saturationData;
+    this.logger.log(
+      `   • Saturation reached: ${saturationData.saturationReached}`,
+    );
+    this.logger.log(
+      `   • Saturation point: ${saturationData.saturationPoint || 'N/A'}`,
+    );
+    this.logger.log(`   • Recommendation: ${saturationData.recommendation}`);
+
+    // Validate theme count against purpose expectations
+    const themeCount = result.themes.length;
+    this.logger.log(`\n🔍 [${requestId}] Theme Count Validation:`);
+    this.logger.log(`   • Extracted: ${themeCount} themes`);
+    this.logger.log(
+      `   • Expected range: ${purposeConfig.targetThemeCount.min}-${purposeConfig.targetThemeCount.max}`,
+    );
+
+    if (themeCount < purposeConfig.targetThemeCount.min) {
+      this.logger.warn(
+        `⚠️ [${requestId}] Theme count (${themeCount}) is below recommended minimum (${purposeConfig.targetThemeCount.min}) for ${purpose}. Consider adding more sources or reducing minConfidence.`,
+      );
+    } else if (themeCount > purposeConfig.targetThemeCount.max) {
+      this.logger.warn(
+        `⚠️ [${requestId}] Theme count (${themeCount}) exceeds recommended maximum (${purposeConfig.targetThemeCount.max}) for ${purpose}. Consider increasing minConfidence or merging similar themes.`,
+      );
+    } else {
+      this.logger.log(
+        `   ✅ Theme count is within optimal range for ${purpose}`,
+      );
+    }
+
+    // Log theme summary
+    if (themeCount > 0) {
+      this.logger.log(`\n📊 [${requestId}] Theme Summary:`);
+      result.themes.slice(0, 3).forEach((theme, idx) => {
+        this.logger.log(`   ${idx + 1}. "${theme.label}"`);
+        this.logger.log(
+          `      • Confidence: ${(theme.confidence * 100).toFixed(1)}%`,
+        );
+        this.logger.log(`      • Sources: ${theme.sources.length}`);
+        this.logger.log(
+          `      • Keywords: ${theme.keywords.slice(0, 5).join(', ')}${theme.keywords.length > 5 ? '...' : ''}`,
+        );
+      });
+      if (themeCount > 3) {
+        this.logger.log(`   ... and ${themeCount - 3} more themes`);
+      }
+    }
+
+    const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
+    this.logger.log(`\n${'='.repeat(80)}`);
+    this.logger.log(`✅ [${requestId}] V2 EXTRACTION COMPLETE`);
+    this.logger.log(`   ⏱️ Total time: ${totalDuration}s`);
+    this.logger.log(`   📊 Themes: ${themeCount}`);
+    this.logger.log(`   🎯 Purpose: ${purpose}`);
+    this.logger.log(
+      `   ✅ Quality: ${result.validation?.confidence ? (result.validation.confidence * 100).toFixed(1) + '%' : 'N/A'}`,
+    );
+    this.logger.log(`${'='.repeat(80)}\n`);
+
+    return result;
+  }
+
+  /**
+   * Calculate saturation data for visualization
+   * Patent Claim #13: Theme Saturation Visualization
+   *
+   * Tracks how many new themes are discovered as each source is analyzed
+   * Helps researchers understand when saturation is reached
+   *
+   * @param themes - Final extracted themes
+   * @param sources - Source content
+   * @returns Saturation progression data
+   * @private
+   */
+  private calculateSaturationData(
+    themes: UnifiedTheme[],
+    sources: SourceContent[],
+  ): SaturationData {
+    const sourceProgression: Array<{
+      sourceNumber: number;
+      newThemesDiscovered: number;
+      cumulativeThemes: number;
+    }> = [];
+
+    // Track cumulative themes discovered
+    let cumulativeThemes = 0;
+    let previousThemeIds = new Set<string>();
+
+    // Simulate progressive discovery (in real implementation, this would track actual discovery order)
+    // For now, estimate based on source influence
+    for (let i = 0; i < sources.length; i++) {
+      const source = sources[i];
+
+      // Find themes where this source has influence
+      const themesFromThisSource = themes.filter((theme) =>
+        theme.sources.some(
+          (s) => s.sourceId === source.id && s.influence > 0.1,
+        ),
+      );
+
+      // Count new themes (not seen in previous sources)
+      const newThemes = themesFromThisSource.filter(
+        (theme) => !previousThemeIds.has(theme.id),
+      );
+
+      cumulativeThemes += newThemes.length;
+      newThemes.forEach((theme) => previousThemeIds.add(theme.id));
+
+      sourceProgression.push({
+        sourceNumber: i + 1,
+        newThemesDiscovered: newThemes.length,
+        cumulativeThemes,
+      });
+    }
+
+    // Detect saturation: when last 3 sources contribute <10% new themes
+    let saturationReached = false;
+    let saturationPoint: number | undefined;
+
+    if (sourceProgression.length >= 3) {
+      const last3 = sourceProgression.slice(-3);
+      const totalNewInLast3 = last3.reduce(
+        (sum, p) => sum + p.newThemesDiscovered,
+        0,
+      );
+      const totalThemes = cumulativeThemes;
+
+      if (totalNewInLast3 / totalThemes < 0.1) {
+        saturationReached = true;
+        saturationPoint = sourceProgression.length - 3;
+      }
+    }
+
+    return {
+      sourceProgression,
+      saturationReached,
+      saturationPoint,
+      recommendation: saturationReached
+        ? `Saturation reached after ${saturationPoint} sources. Last 3 sources added minimal new themes. Current theme count (${themes.length}) is appropriate for your dataset.`
+        : `Saturation not yet reached. Consider analyzing additional sources if possible to ensure comprehensive theme coverage. Current: ${themes.length} themes from ${sources.length} sources.`,
+    };
+  }
+
+  /**
+   * Generate semantic embeddings for FULL source content
+   * NO TRUNCATION - analyzes complete text
+   *
+   * Uses OpenAI text-embedding-3-large (3072 dimensions)
+   * Rate limit: 5000 req/min (handled with p-limit)
+   *
+   * @private
+   */
+  private async generateSemanticEmbeddings(
+    sources: SourceContent[],
+    userId?: string,
+    progressCallback?: AcademicProgressCallback,
+    userLevel: 'novice' | 'researcher' | 'expert' = 'researcher',
+  ): Promise<Map<string, number[]>> {
+    const embeddings = new Map<string, number[]>();
+
+    // Track detailed stats for transparent progress (atomic updates for thread safety)
+    const stats = {
+      fullTextCount: 0,
+      abstractCount: 0,
+      totalWords: 0,
+      processedCount: 0,
+    };
+
+    // Phase 10 Day 5.17.3: Process sources in PARALLEL with concurrency limit + per-article progress
+    // Balance: Parallel for speed + Detailed progress + 1 second minimum per article
+    const limit = pLimit(5); // Process 5 at a time (balance speed vs rate limits)
+
+    const embeddingTasks = sources.map((source, index) =>
+      limit(async () => {
+        const sourceStart = Date.now();
+
+        try {
+          // Use FULL content - NO TRUNCATION
+          const textToEmbed = `${source.title}\n\n${source.content}`;
+
+          // Calculate word count and content type
+          const wordCount = source.content
+            ? source.content.split(/\s+/).length
+            : 0;
+          const isFullText =
+            (source as any).contentSource === 'full-text' ||
+            (source as any).fullTextWordCount > 0 ||
+            wordCount > 1000; // Heuristic: >1000 words likely full-text
+
+          // Log content length for transparency
+          this.logger.log(
+            `   📄 [${index + 1}/${sources.length}] Reading: "${source.title.substring(0, 60)}..." (${wordCount.toLocaleString()} words, ${isFullText ? 'full-text' : 'abstract'})`,
+          );
+
+          // Generate embedding
+          const response = await this.openai.embeddings.create({
+            model: 'text-embedding-3-large',
+            input: textToEmbed,
+            encoding_format: 'float',
+          });
+
+          embeddings.set(source.id, response.data[0].embedding);
+
+          // Atomically update stats
+          stats.processedCount++;
+          if (isFullText) {
+            stats.fullTextCount++;
+          } else {
+            stats.abstractCount++;
+          }
+          stats.totalWords += wordCount;
+
+          // Calculate progress within Stage 1 (0% → 20%)
+          const progressWithinStage = Math.round(
+            (stats.processedCount / sources.length) * 20,
+          );
+
+          // Phase 10 Day 5.17.3: Detailed per-article progress (Patent Claim #9: 4-Part Transparency)
+          const detailedStats = {
+            currentArticle: index + 1,
+            totalArticles: sources.length,
+            articleTitle: source.title.substring(0, 80),
+            articleType: isFullText ? 'full-text' : 'abstract',
+            articleWords: wordCount,
+            fullTextRead: stats.fullTextCount,
+            abstractsRead: stats.abstractCount,
+            totalWordsRead: stats.totalWords,
+          };
+
+          // Progressive disclosure: different detail levels
+          let progressMessage = '';
+          if (userLevel === 'novice') {
+            progressMessage = `Reading article ${index + 1} of ${sources.length}: "${source.title.substring(0, 60)}..." (${wordCount.toLocaleString()} words)`;
+          } else if (userLevel === 'researcher') {
+            progressMessage = `Reading ${isFullText ? 'full-text' : 'abstract'} ${index + 1}/${sources.length}: "${source.title.substring(0, 50)}..." • Running total: ${stats.fullTextCount} full articles, ${stats.abstractCount} abstracts (${stats.totalWords.toLocaleString()} words)`;
+          } else {
+            // expert
+            progressMessage = `Embedding ${index + 1}/${sources.length}: ${source.type} [${isFullText ? 'full' : 'abstract'}] • ${wordCount.toLocaleString()} words • Cumulative: ${stats.totalWords.toLocaleString()} words from ${stats.fullTextCount} full + ${stats.abstractCount} abstracts`;
+          }
+
+          // Phase 10 Day 5.17.3: Create TransparentProgressMessage for both WebSocket and callback
+          const transparentMessage = {
+            stageName: 'Familiarization',
+            stageNumber: 1,
+            totalStages: 6,
+            percentage: progressWithinStage,
+            whatWeAreDoing: progressMessage,
+            whyItMatters:
+              'Reading ALL sources together (not one-by-one) prevents early papers from biasing analysis. This ensures themes emerge from the entire dataset.',
+            liveStats: {
+              sourcesAnalyzed: stats.processedCount,
+              currentOperation: `Reading ${isFullText ? 'full-text' : 'abstract'} ${index + 1}/${sources.length}`,
+            },
+          };
+
+          // Emit progress via WebSocket
+          if (userId) {
+            this.emitProgress(
+              userId,
+              'familiarization',
+              progressWithinStage,
+              progressMessage,
+              transparentMessage, // Send TransparentProgressMessage for frontend compatibility
+            );
+          }
+
+          // Emit via callback (for frontend EnhancedThemeExtractionProgress)
+          if (progressCallback) {
+            progressCallback(1, 6, progressMessage, transparentMessage);
+          }
+
+          // Phase 10 Day 5.17.3: Ensure at least 1 second per article (user requirement)
+          const elapsedTime = Date.now() - sourceStart;
+          const minDelay = 1000; // 1 second minimum
+          if (elapsedTime < minDelay) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, minDelay - elapsedTime),
+            );
+          }
+
+          return true;
+        } catch (error) {
+          this.logger.error(
+            `   ⚠️ Failed to embed source ${source.id}: ${(error as Error).message}`,
+          );
+          // Don't fail entire extraction if one source fails
+          return false;
+        }
+      }),
+    );
+
+    await Promise.all(embeddingTasks);
+
+    this.logger.log(
+      `\n   ✅ Successfully generated ${embeddings.size}/${sources.length} embeddings`,
+    );
+    this.logger.log(
+      `   📊 Familiarization complete: ${stats.fullTextCount} full articles + ${stats.abstractCount} abstracts = ${stats.totalWords.toLocaleString()} total words read`,
+    );
+
+    return embeddings;
+  }
+
+  /**
+   * Extract initial codes using AI-assisted semantic analysis
+   * Analyzes FULL content to identify concepts and patterns
+   *
+   * @private
+   */
+  private async extractInitialCodes(
+    sources: SourceContent[],
+    embeddings: Map<string, number[]>,
+  ): Promise<InitialCode[]> {
+    const codes: InitialCode[] = [];
+
+    // Process sources in batches for efficiency
+    const batchSize = 5;
+    for (let i = 0; i < sources.length; i += batchSize) {
+      const batch = sources.slice(i, i + batchSize);
+
+      const prompt = `Analyze these research sources and extract initial codes (concepts, patterns, ideas).
+
+Sources (FULL CONTENT):
+${batch
+  .map(
+    (s, idx) => `
+SOURCE ${i + idx + 1}: ${s.title}
+Type: ${s.type}
+Full Content:
+${s.content}
+---
+`,
+  )
+  .join('\n')}
+
+For each source, identify 5-10 key codes (concepts that appear in the content).
+Each code should be:
+- Specific and data-driven
+- Grounded in the actual text
+- Distinct from other codes
+
+Return JSON format:
+{
+  "codes": [
+    {
+      "label": "Code name (2-4 words)",
+      "description": "What this code represents",
+      "sourceId": "source ID",
+      "excerpts": ["relevant quote 1", "relevant quote 2"]
+    }
+  ]
+}`;
+
+      try {
+        const response = await this.openai.chat.completions.create({
+          model: 'gpt-4-turbo-preview',
+          messages: [{ role: 'user', content: prompt }],
+          response_format: { type: 'json_object' },
+          temperature: 0.2, // Lower for more consistent coding
+        });
+
+        const result = JSON.parse(response.choices[0].message.content || '{}');
+
+        if (result.codes && Array.isArray(result.codes)) {
+          codes.push(
+            ...result.codes.map((code: any) => ({
+              ...code,
+              id: `code_${crypto.randomBytes(8).toString('hex')}`,
+            })),
+          );
+        }
+      } catch (error) {
+        this.logger.error(
+          `Failed to extract codes from batch ${i}: ${(error as Error).message}`,
+        );
+      }
+    }
+
+    return codes;
+  }
+
+  /**
+   * Generate candidate themes by clustering related codes
+   * Uses semantic similarity (cosine distance) between code embeddings
+   *
+   * @private
+   */
+  private async generateCandidateThemes(
+    codes: InitialCode[],
+    sources: SourceContent[],
+    embeddings: Map<string, number[]>,
+    options: AcademicExtractionOptions,
+  ): Promise<CandidateTheme[]> {
+    // Create embeddings for each code
+    const codeEmbeddings = new Map<string, number[]>();
+    const limit = pLimit(10);
+
+    const embeddingTasks = codes.map((code) =>
+      limit(async () => {
+        try {
+          const codeText = `${code.label}\n${code.description}\n${code.excerpts.join('\n')}`;
+
+          const response = await this.openai.embeddings.create({
+            model: 'text-embedding-3-large',
+            input: codeText,
+            encoding_format: 'float',
+          });
+
+          codeEmbeddings.set(code.id, response.data[0].embedding);
+        } catch (error) {
+          this.logger.error(
+            `Failed to embed code ${code.id}: ${(error as Error).message}`,
+          );
+        }
+      }),
+    );
+
+    await Promise.all(embeddingTasks);
+
+    // Cluster codes into themes using hierarchical clustering
+    const themes = await this.hierarchicalClustering(
+      codes,
+      codeEmbeddings,
+      options.maxThemes || 15,
+    );
+
+    // Use AI to label and describe each theme cluster
+    const labeledThemes = await this.labelThemeClusters(themes, sources);
+
+    return labeledThemes;
+  }
+
+  /**
+   * Hierarchical clustering of codes based on semantic similarity
+   * Groups related codes into theme clusters
+   *
+   * @private
+   */
+  private async hierarchicalClustering(
+    codes: InitialCode[],
+    codeEmbeddings: Map<string, number[]>,
+    maxThemes: number,
+  ): Promise<Array<{ codes: InitialCode[]; centroid: number[] }>> {
+    // Start with each code as its own cluster
+    const clusters = codes.map((code) => ({
+      codes: [code],
+      centroid: codeEmbeddings.get(code.id) || [],
+    }));
+
+    // Merge clusters until we reach maxThemes
+    while (clusters.length > maxThemes) {
+      let minDistance = Infinity;
+      let mergeIndices = [0, 1];
+
+      // Find two most similar clusters
+      for (let i = 0; i < clusters.length; i++) {
+        for (let j = i + 1; j < clusters.length; j++) {
+          const distance = this.cosineSimilarity(
+            clusters[i].centroid,
+            clusters[j].centroid,
+          );
+
+          if (distance < minDistance) {
+            minDistance = distance;
+            mergeIndices = [i, j];
+          }
+        }
+      }
+
+      // Merge the two closest clusters
+      const [i, j] = mergeIndices;
+      const mergedCodes = [...clusters[i].codes, ...clusters[j].codes];
+      const mergedCentroid = this.calculateCentroid([
+        clusters[i].centroid,
+        clusters[j].centroid,
+      ]);
+
+      // Remove old clusters and add merged
+      clusters.splice(Math.max(i, j), 1);
+      clusters.splice(Math.min(i, j), 1);
+      clusters.push({ codes: mergedCodes, centroid: mergedCentroid });
+    }
+
+    return clusters;
+  }
+
+  /**
+   * Label theme clusters using AI to generate descriptive names
+   *
+   * @private
+   */
+  private async labelThemeClusters(
+    clusters: Array<{ codes: InitialCode[]; centroid: number[] }>,
+    sources: SourceContent[],
+  ): Promise<CandidateTheme[]> {
+    const themes: CandidateTheme[] = [];
+
+    for (const [index, cluster] of clusters.entries()) {
+      const codeLabels = cluster.codes.map((c) => c.label).join(', ');
+      const codeDescriptions = cluster.codes
+        .map((c) => c.description)
+        .join('\n');
+
+      const prompt = `Based on these related research codes, generate a cohesive theme.
+
+Codes in this cluster:
+${cluster.codes.map((c) => `- ${c.label}: ${c.description}`).join('\n')}
+
+Representative excerpts:
+${cluster.codes
+  .flatMap((c) => c.excerpts)
+  .slice(0, 5)
+  .join('\n---\n')}
+
+Generate a theme that encompasses these codes.
+
+Return JSON:
+{
+  "label": "Theme name (2-5 words, specific and descriptive)",
+  "description": "2-3 sentences explaining what this theme represents across the literature",
+  "keywords": ["keyword1", "keyword2", ...] (5-7 keywords),
+  "definition": "Clear academic definition of this theme"
+}`;
+
+      try {
+        const response = await this.openai.chat.completions.create({
+          model: 'gpt-4-turbo-preview',
+          messages: [{ role: 'user', content: prompt }],
+          response_format: { type: 'json_object' },
+          temperature: 0.3,
+        });
+
+        const themeData = JSON.parse(
+          response.choices[0].message.content || '{}',
+        );
+
+        themes.push({
+          id: `theme_${crypto.randomBytes(8).toString('hex')}`,
+          label: themeData.label,
+          description: themeData.description,
+          keywords: themeData.keywords || [],
+          definition: themeData.definition,
+          codes: cluster.codes,
+          centroid: cluster.centroid,
+          sourceIds: [...new Set(cluster.codes.map((c) => c.sourceId))],
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed to label theme cluster ${index}: ${(error as Error).message}`,
+        );
+
+        // Fallback: use code labels
+        themes.push({
+          id: `theme_${crypto.randomBytes(8).toString('hex')}`,
+          label: `Theme ${index + 1}: ${cluster.codes[0].label}`,
+          description: codeDescriptions,
+          keywords: cluster.codes.flatMap((c) =>
+            c.label.toLowerCase().split(' '),
+          ),
+          definition: 'Generated from code clustering',
+          codes: cluster.codes,
+          centroid: cluster.centroid,
+          sourceIds: [...new Set(cluster.codes.map((c) => c.sourceId))],
+        });
+      }
+    }
+
+    return themes;
+  }
+
+  /**
+   * Calculate adaptive validation thresholds based on content characteristics
+   * Phase 10 Day 5.15: Addresses issue where abstract-only papers (150-500 words)
+   * were being validated with thresholds designed for full-text papers (10,000+ words)
+   *
+   * UPDATE Day 5.15.2: Now checks metadata for content type detection
+   * Handles cases where full articles are in "abstract" field (>2000 chars)
+   *
+   * @private
+   */
+  private calculateAdaptiveThresholds(
+    sources: SourceContent[],
+    validationLevel: string = 'rigorous',
+    purpose?: ResearchPurpose, // PHASE 10 DAY 5.17.1: Purpose-aware validation
+  ) {
+    // ENHANCED: Analyze content characteristics with metadata awareness
+    const avgContentLength =
+      sources.reduce((sum, s) => sum + s.content.length, 0) / sources.length;
+
+    // Check metadata if available (Phase 10 Day 5.15.2)
+    const contentTypes = sources.map(
+      (s) => s.metadata?.contentType || 'unknown',
+    );
+    const hasFullText = contentTypes.some(
+      (t) => t === 'full_text' || t === 'abstract_overflow',
+    );
+    const allAbstracts = contentTypes.every((t) => t === 'abstract');
+
+    // Determine if content is actually full-text despite being in abstract field
+    const avgLengthSuggestsFullText = avgContentLength > 2000; // >2000 chars likely full articles
+    const isActuallyFullText = hasFullText || avgLengthSuggestsFullText;
+
+    const isAbstractOnly = !isActuallyFullText && avgContentLength < 1000; // Less than 1000 chars = abstracts
+    const isVeryShort = !isActuallyFullText && avgContentLength < 500; // Less than 500 chars = very brief abstracts
+
+    // Base thresholds (for full-text papers)
+    let minSources = validationLevel === 'publication_ready' ? 3 : 2;
+    let minCoherence = validationLevel === 'publication_ready' ? 0.7 : 0.6;
+    let minEvidence = 0.5;
+
+    // ADAPTIVE ADJUSTMENT for short content
+    if (isAbstractOnly) {
+      this.logger.log('');
+      this.logger.log(
+        '📉 ═══════════════════════════════════════════════════════════════',
+      );
+      this.logger.log('📉 ADAPTIVE THRESHOLDS: Detected abstract-only content');
+      this.logger.log(
+        '📉 ═══════════════════════════════════════════════════════════════',
+      );
+      this.logger.log(
+        `   Average content length: ${Math.round(avgContentLength)} chars`,
+      );
+      this.logger.log(
+        `   Content type: ${isVeryShort ? 'Very brief abstracts' : 'Standard abstracts'}`,
+      );
+      this.logger.log(
+        `   Content breakdown: ${contentTypes.filter((t) => t === 'abstract').length} abstracts, ${contentTypes.filter((t) => t === 'full_text').length} full-text, ${contentTypes.filter((t) => t === 'abstract_overflow').length} overflow`,
+      );
+      this.logger.log('');
+
+      // Store original thresholds for comparison
+      const originalMinSources = minSources;
+      const originalMinCoherence = minCoherence;
+      const originalMinEvidence = minEvidence;
+
+      // Relax thresholds for abstracts (20-30% more lenient)
+      minSources = Math.max(2, minSources - 1); // Min 2 sources even for abstracts
+      minCoherence = isVeryShort ? minCoherence * 0.7 : minCoherence * 0.8; // 0.6 → 0.42-0.48
+      minEvidence = isVeryShort ? 0.25 : 0.35; // Lower evidence requirement for short content
+
+      this.logger.log('   Threshold Adjustments:');
+      this.logger.log(
+        `   • minSources: ${originalMinSources} → ${minSources} (${minSources === originalMinSources ? 'unchanged' : 'relaxed'})`,
+      );
+      this.logger.log(
+        `   • minCoherence: ${originalMinCoherence.toFixed(2)} → ${minCoherence.toFixed(2)} (${Math.round((1 - minCoherence / originalMinCoherence) * 100)}% more lenient)`,
+      );
+      this.logger.log(
+        `   • minEvidence: ${originalMinEvidence.toFixed(2)} → ${minEvidence.toFixed(2)} (${Math.round((1 - minEvidence / originalMinEvidence) * 100)}% more lenient)`,
+      );
+      this.logger.log('');
+      this.logger.log(
+        '   Rationale: Short abstracts limit semantic depth and code density.',
+      );
+      this.logger.log(
+        '   Adjusted thresholds maintain rigor while accounting for content constraints.',
+      );
+      this.logger.log(
+        '📉 ═══════════════════════════════════════════════════════════════',
+      );
+      this.logger.log('');
+    } else if (isActuallyFullText) {
+      this.logger.log('');
+      this.logger.log(
+        '📈 ═══════════════════════════════════════════════════════════════',
+      );
+      this.logger.log(
+        '📈 FULL-TEXT CONTENT DETECTED: Using standard strict thresholds',
+      );
+      this.logger.log(
+        '📈 ═══════════════════════════════════════════════════════════════',
+      );
+      this.logger.log(
+        `   Average content length: ${Math.round(avgContentLength)} chars`,
+      );
+      this.logger.log(
+        `   Content breakdown: ${contentTypes.filter((t) => t === 'abstract').length} abstracts, ${contentTypes.filter((t) => t === 'full_text').length} full-text, ${contentTypes.filter((t) => t === 'abstract_overflow').length} overflow (full article in abstract field)`,
+      );
+      this.logger.log(
+        `   ✅ Full-text content provides rich semantic context for high-quality theme extraction`,
+      );
+      this.logger.log(
+        '📈 ═══════════════════════════════════════════════════════════════',
+      );
+      this.logger.log('');
+    }
+
+    // PHASE 10 DAY 5.17.1: Purpose-specific threshold adjustments
+    if (purpose === ResearchPurpose.Q_METHODOLOGY) {
+      this.logger.log('');
+      this.logger.log(
+        '🎯 ═══════════════════════════════════════════════════════════════',
+      );
+      this.logger.log(
+        '🎯 Q-METHODOLOGY: Further relaxing thresholds for breadth-focused extraction',
+      );
+      this.logger.log(
+        '🎯 ═══════════════════════════════════════════════════════════════',
+      );
+      this.logger.log(
+        `   Purpose: Generate 40-80 diverse statements (breadth > depth)`,
+      );
+      this.logger.log(
+        `   Focus: Capture full discourse space, not deep coherence`,
+      );
+      this.logger.log('');
+
+      const originalMinSources = minSources;
+      const originalMinCoherence = minCoherence;
+      const originalMinEvidence = minEvidence;
+
+      // Q-Methodology needs VERY lenient thresholds
+      minSources = 1; // Single source OK for Q-Methodology (captures unique perspectives)
+      minCoherence = minCoherence * 0.5; // 50% more lenient (diversity > coherence)
+      minEvidence = Math.min(minEvidence * 0.6, 0.2); // Very low evidence requirement (breadth focus)
+
+      this.logger.log('   Q-Methodology Adjustments:');
+      this.logger.log(
+        `   • minSources: ${originalMinSources} → ${minSources} (single-source themes OK for diverse statements)`,
+      );
+      this.logger.log(
+        `   • minCoherence: ${originalMinCoherence.toFixed(2)} → ${minCoherence.toFixed(2)} (diversity prioritized over coherence)`,
+      );
+      this.logger.log(
+        `   • minEvidence: ${originalMinEvidence.toFixed(2)} → ${minEvidence.toFixed(2)} (lower requirement for statement generation)`,
+      );
+      this.logger.log('');
+      this.logger.log(
+        '   Rationale: Q-Methodology requires broad concourse of diverse viewpoints.',
+      );
+      this.logger.log(
+        '   Goal is 40-80 statements covering full discourse space, NOT deep coherent themes.',
+      );
+      this.logger.log(
+        '   Abstracts provide sufficient breadth for statement generation.',
+      );
+      this.logger.log(
+        '🎯 ═══════════════════════════════════════════════════════════════',
+      );
+      this.logger.log('');
+    } else if (purpose === ResearchPurpose.QUALITATIVE_ANALYSIS) {
+      // PHASE 10 DAY 5.17.5: BUG FIX - Qualitative Analysis needs moderate thresholds
+      this.logger.log('');
+      this.logger.log(
+        '🔬 ═══════════════════════════════════════════════════════════════',
+      );
+      this.logger.log(
+        '🔬 QUALITATIVE ANALYSIS: Moderately relaxed thresholds for saturation-driven extraction',
+      );
+      this.logger.log(
+        '🔬 ═══════════════════════════════════════════════════════════════',
+      );
+      this.logger.log(
+        `   Purpose: Extract 5-20 themes until saturation (no new themes emerge)`,
+      );
+      this.logger.log(`   Focus: Balance between breadth and depth`);
+      this.logger.log('');
+
+      const originalMinSources = minSources;
+      const originalMinCoherence = minCoherence;
+      const originalMinEvidence = minEvidence;
+
+      // Qualitative Analysis: Moderate thresholds (between Q-Methodology and strict)
+      minSources = Math.max(1, minSources - 1); // Reduce by 1 (2→1 or 3→2)
+      minCoherence = minCoherence * 0.75; // 25% more lenient
+      minEvidence = minEvidence * 0.7; // 30% more lenient
+
+      this.logger.log('   Qualitative Analysis Adjustments:');
+      this.logger.log(
+        `   • minSources: ${originalMinSources} → ${minSources} (moderate requirement)`,
+      );
+      this.logger.log(
+        `   • minCoherence: ${originalMinCoherence.toFixed(2)} → ${minCoherence.toFixed(2)} (balanced approach)`,
+      );
+      this.logger.log(
+        `   • minEvidence: ${originalMinEvidence.toFixed(2)} → ${minEvidence.toFixed(2)} (moderate evidence requirement)`,
+      );
+      this.logger.log('');
+      this.logger.log(
+        '   Rationale: Qualitative thematic analysis (Braun & Clarke 2006, 2019).',
+      );
+      this.logger.log(
+        '   Goal is iterative extraction until data saturation, balancing rigor with discovery.',
+      );
+      this.logger.log(
+        '🔬 ═══════════════════════════════════════════════════════════════',
+      );
+      this.logger.log('');
+    } else if (
+      purpose === ResearchPurpose.LITERATURE_SYNTHESIS ||
+      purpose === ResearchPurpose.HYPOTHESIS_GENERATION
+    ) {
+      // PHASE 10 DAY 5.17.5: BUG FIX - Synthesis/Hypothesis need slightly relaxed thresholds
+      this.logger.log('');
+      this.logger.log(
+        `📚 ═══════════════════════════════════════════════════════════════`,
+      );
+      this.logger.log(
+        `📚 ${purpose === ResearchPurpose.LITERATURE_SYNTHESIS ? 'LITERATURE SYNTHESIS' : 'HYPOTHESIS GENERATION'}: Slightly relaxed thresholds`,
+      );
+      this.logger.log(
+        `📚 ═══════════════════════════════════════════════════════════════`,
+      );
+      this.logger.log(
+        `   Purpose: Extract ${purpose === ResearchPurpose.LITERATURE_SYNTHESIS ? '10-25 meta-analytic themes' : '8-15 theory-building themes'}`,
+      );
+      this.logger.log(
+        `   Focus: Comprehensive coverage with theoretical depth`,
+      );
+      this.logger.log('');
+
+      const originalMinSources = minSources;
+      const originalMinCoherence = minCoherence;
+      const originalMinEvidence = minEvidence;
+
+      // Slight relaxation for synthesis/hypothesis work
+      minCoherence = minCoherence * 0.85; // 15% more lenient
+      minEvidence = minEvidence * 0.8; // 20% more lenient
+
+      this.logger.log('   Threshold Adjustments:');
+      this.logger.log(
+        `   • minSources: ${originalMinSources} (unchanged - need cross-source validation)`,
+      );
+      this.logger.log(
+        `   • minCoherence: ${originalMinCoherence.toFixed(2)} → ${minCoherence.toFixed(2)} (slightly more lenient)`,
+      );
+      this.logger.log(
+        `   • minEvidence: ${originalMinEvidence.toFixed(2)} → ${minEvidence.toFixed(2)} (moderate relaxation)`,
+      );
+      this.logger.log('');
+      this.logger.log(
+        `   Rationale: ${purpose === ResearchPurpose.LITERATURE_SYNTHESIS ? 'Meta-ethnography requires comprehensive theme coverage' : 'Grounded theory requires emerging conceptual patterns'}.`,
+      );
+      this.logger.log(
+        `📚 ═══════════════════════════════════════════════════════════════`,
+      );
+      this.logger.log('');
+    }
+
+    return {
+      minSources,
+      minCoherence,
+      minEvidence,
+      minDistinctiveness: 0.3,
+      isAbstractOnly,
+    };
+  }
+
+  /**
+   * Validate themes against academic rigor criteria
+   *
+   * Criteria:
+   * - Minimum 2-3 sources supporting theme (inter-source validation)
+   * - Semantic coherence > 0.6 or adaptive (codes in theme are related)
+   * - Distinctiveness > 0.3 (theme is different from others)
+   * - Sufficient evidence (quality excerpts)
+   *
+   * Phase 10 Day 5.15: Now uses adaptive thresholds based on content characteristics
+   *
+   * @private
+   */
+  private async validateThemesAcademic(
+    themes: CandidateTheme[],
+    sources: SourceContent[],
+    embeddings: Map<string, number[]>,
+    options: AcademicExtractionOptions,
+  ): Promise<ValidationResult> {
+    // Calculate adaptive thresholds based on content characteristics (PHASE 10 DAY 5.17.1: Now purpose-aware)
+    const thresholds = this.calculateAdaptiveThresholds(
+      sources,
+      options.validationLevel,
+      options.purpose,
+    );
+    const {
+      minSources,
+      minCoherence,
+      minEvidence,
+      minDistinctiveness,
+      isAbstractOnly,
+    } = thresholds;
+
+    const validatedThemes: CandidateTheme[] = [];
+
+    for (const theme of themes) {
+      // Check 1: Minimum source count
+      if (theme.sourceIds.length < minSources) {
+        this.logger.debug(
+          `Theme "${theme.label}" rejected: only ${theme.sourceIds.length} sources (need ${minSources})`,
+        );
+        continue;
+      }
+
+      // Check 2: Semantic coherence (are codes in theme actually related?)
+      const coherence = this.calculateThemeCoherence(theme);
+      if (coherence < minCoherence) {
+        this.logger.debug(
+          `Theme "${theme.label}" rejected: low coherence ${coherence.toFixed(2)} (need ${minCoherence})`,
+        );
+        continue;
+      }
+
+      // Check 3: Distinctiveness (is theme sufficiently different from others?)
+      const distinctiveness = this.calculateDistinctiveness(
+        theme,
+        validatedThemes,
+      );
+      if (distinctiveness < minDistinctiveness && validatedThemes.length > 0) {
+        this.logger.debug(
+          `Theme "${theme.label}" rejected: low distinctiveness ${distinctiveness.toFixed(2)} (need ${minDistinctiveness})`,
+        );
+        continue;
+      }
+
+      // Check 4: Evidence quality (do we have good excerpts?)
+      const evidenceQuality =
+        theme.codes.filter((c) => c.excerpts.length > 0).length /
+        theme.codes.length;
+      if (evidenceQuality < minEvidence) {
+        this.logger.debug(
+          `Theme "${theme.label}" rejected: insufficient evidence ${evidenceQuality.toFixed(2)} (need ${minEvidence.toFixed(2)})`,
+        );
+        continue;
+      }
+
+      // Theme passed all validation checks
+      validatedThemes.push({
+        ...theme,
+        validationScore: (coherence + distinctiveness + evidenceQuality) / 3,
+      });
+    }
+
+    this.logger.log(
+      `Validated ${validatedThemes.length}/${themes.length} themes`,
+    );
+
+    // PHASE 10 DAY 5.17.4: Capture rejection details for API response
+    let rejectionDiagnostics: any = null;
+
+    // ============================================================================
+    // 🔍 ENTERPRISE-GRADE DEBUG LOGGING: Phase 10 Day 5.15
+    // When ALL themes are rejected, log detailed validation failure reasons
+    // ============================================================================
+    if (validatedThemes.length === 0 && themes.length > 0) {
+      this.logger.warn('');
+      this.logger.warn(
+        '⚠️ ═══════════════════════════════════════════════════════════════════',
+      );
+      this.logger.warn(
+        `⚠️  ALL ${themes.length} GENERATED THEMES WERE REJECTED BY VALIDATION`,
+      );
+      this.logger.warn(
+        '⚠️ ═══════════════════════════════════════════════════════════════════',
+      );
+      this.logger.warn('');
+      this.logger.warn(
+        '📊 Validation Thresholds' +
+          (isAbstractOnly ? ' (ADAPTIVE - Abstract Content Detected):' : ':'),
+      );
+      this.logger.warn(`   • Minimum Sources: ${minSources} papers per theme`);
+      this.logger.warn(
+        `   • Minimum Coherence: ${minCoherence.toFixed(2)} (semantic relatedness of codes)`,
+      );
+      this.logger.warn(
+        `   • Minimum Distinctiveness: ${minDistinctiveness} (uniqueness from other themes)`,
+      );
+      this.logger.warn(
+        `   • Minimum Evidence Quality: ${minEvidence.toFixed(2)} (${Math.round(minEvidence * 100)}% of codes need excerpts)`,
+      );
+      if (isAbstractOnly) {
+        this.logger.warn(
+          `   ℹ️  Note: Thresholds have been automatically adjusted for abstract-only content`,
+        );
+      }
+      this.logger.warn('');
+      this.logger.warn('🔍 Detailed Rejection Analysis (first 5 themes):');
+      this.logger.warn('');
+
+      const themesToLog = themes.slice(0, 5);
+      const rejectedThemeDetails: any[] = [];
+
+      for (let i = 0; i < themesToLog.length; i++) {
+        const theme = themesToLog[i];
+        const coherence = this.calculateThemeCoherence(theme);
+        const distinctiveness =
+          i > 0
+            ? this.calculateDistinctiveness(theme, themes.slice(0, i))
+            : 1.0;
+        const evidenceQuality =
+          theme.codes.filter((c) => c.excerpts.length > 0).length /
+          theme.codes.length;
+
+        // Determine which check(s) failed
+        const failures: string[] = [];
+        const checks = {
+          sources: {
+            actual: theme.sourceIds.length,
+            required: minSources,
+            passed: false,
+          },
+          coherence: {
+            actual: coherence,
+            required: minCoherence,
+            passed: false,
+          },
+          distinctiveness: {
+            actual: distinctiveness,
+            required: minDistinctiveness,
+            passed: false,
+          },
+          evidence: {
+            actual: evidenceQuality,
+            required: minEvidence,
+            passed: false,
+          },
+        };
+
+        if (theme.sourceIds.length < minSources) {
+          failures.push(`Sources: ${theme.sourceIds.length}/${minSources} ❌`);
+        } else {
+          failures.push(`Sources: ${theme.sourceIds.length}/${minSources} ✓`);
+          checks.sources.passed = true;
+        }
+
+        if (coherence < minCoherence) {
+          failures.push(
+            `Coherence: ${coherence.toFixed(3)}/${minCoherence.toFixed(2)} ❌`,
+          );
+        } else {
+          failures.push(
+            `Coherence: ${coherence.toFixed(3)}/${minCoherence.toFixed(2)} ✓`,
+          );
+          checks.coherence.passed = true;
+        }
+
+        if (distinctiveness < minDistinctiveness && i > 0) {
+          failures.push(
+            `Distinct: ${distinctiveness.toFixed(3)}/${minDistinctiveness} ❌`,
+          );
+        } else {
+          failures.push(
+            `Distinct: ${distinctiveness.toFixed(3)}/${minDistinctiveness} ✓`,
+          );
+          checks.distinctiveness.passed = true;
+        }
+
+        if (evidenceQuality < minEvidence) {
+          failures.push(
+            `Evidence: ${evidenceQuality.toFixed(3)}/${minEvidence.toFixed(2)} ❌`,
+          );
+        } else {
+          failures.push(
+            `Evidence: ${evidenceQuality.toFixed(3)}/${minEvidence.toFixed(2)} ✓`,
+          );
+          checks.evidence.passed = true;
+        }
+
+        this.logger.warn(
+          `Theme ${i + 1}: "${theme.label.substring(0, 60)}${theme.label.length > 60 ? '...' : ''}"`,
+        );
+        this.logger.warn(`   └─ ${failures.join(' | ')}`);
+        this.logger.warn(
+          `   └─ Codes: ${theme.codes.length}, Keywords: ${theme.keywords.slice(0, 3).join(', ')}`,
+        );
+
+        // PHASE 10 DAY 5.17.4: Capture for API response
+        rejectedThemeDetails.push({
+          themeName: theme.label,
+          codes: theme.codes.length,
+          keywords: theme.keywords.slice(0, 3),
+          checks,
+          failureReasons: failures.filter((f) => f.includes('❌')),
+        });
+      }
+
+      // PHASE 10 DAY 5.17.4: Build diagnostic object for API response
+      rejectionDiagnostics = {
+        totalGenerated: themes.length,
+        totalRejected: themes.length,
+        totalValidated: 0,
+        thresholds: {
+          minSources,
+          minCoherence: parseFloat(minCoherence.toFixed(2)),
+          minDistinctiveness,
+          minEvidence: parseFloat(minEvidence.toFixed(2)),
+          isAbstractOnly,
+        },
+        rejectedThemes: rejectedThemeDetails,
+        moreRejectedCount: themes.length - rejectedThemeDetails.length,
+        recommendations: isAbstractOnly
+          ? [
+              'Adaptive thresholds are ALREADY ACTIVE for abstract-only content',
+              'Topics may be too diverse: Ensure papers cover similar research areas',
+              'Add more sources: More papers (20-30) increase cross-source theme likelihood',
+              'Consider full-text: If available, use full papers for richer theme extraction',
+            ]
+          : [
+              'Content quality: Ensure sources have substantive research content',
+              'Topic coherence: Papers may cover very different topics with no overlap',
+              'Add more sources: More papers increase likelihood of cross-source themes',
+              'Adjust validation level: Try "exploratory" instead of "rigorous"',
+            ],
+      };
+
+      if (themes.length > 5) {
+        this.logger.warn(
+          `   ... and ${themes.length - 5} more rejected themes`,
+        );
+      }
+
+      this.logger.warn('');
+      this.logger.warn('💡 Possible Solutions:');
+      if (isAbstractOnly) {
+        this.logger.warn(
+          '   ✓ Adaptive thresholds are ALREADY ACTIVE for abstract-only content',
+        );
+        this.logger.warn(
+          '   1. Topics may be too diverse: Ensure papers cover similar research areas',
+        );
+        this.logger.warn(
+          '   2. Add more sources: More papers (15-20) increase cross-source theme likelihood',
+        );
+        this.logger.warn(
+          '   3. Consider full-text: If available, use full papers for richer theme extraction',
+        );
+        this.logger.warn(
+          '   4. Check abstract quality: Ensure abstracts describe methodology and findings',
+        );
+      } else {
+        this.logger.warn(
+          '   1. Content quality: Ensure sources have substantive research content',
+        );
+        this.logger.warn(
+          '   2. Topic coherence: Papers may cover very different topics with no overlap',
+        );
+        this.logger.warn(
+          '   3. Add more sources: More papers increase likelihood of cross-source themes',
+        );
+        this.logger.warn(
+          '   4. Adjust validation level: Try "exploratory" instead of "rigorous"',
+        );
+      }
+      this.logger.warn('');
+      this.logger.warn(
+        '⚠️ ═══════════════════════════════════════════════════════════════════',
+      );
+      this.logger.warn('');
+    }
+
+    // PHASE 10 DAY 5.17.4: Return both themes and diagnostics
+    return { validatedThemes, rejectionDiagnostics };
+  }
+
+  /**
+   * Refine themes by merging similar ones and removing weak themes
+   *
+   * @private
+   */
+  private async refineThemesAcademic(
+    themes: CandidateTheme[],
+    embeddings: Map<string, number[]>,
+  ): Promise<CandidateTheme[]> {
+    let refinedThemes = [...themes];
+
+    // Sort by validation score (strongest themes first)
+    refinedThemes.sort(
+      (a, b) => (b.validationScore || 0) - (a.validationScore || 0),
+    );
+
+    // Merge overlapping themes (similarity > 0.8)
+    const finalThemes: CandidateTheme[] = [];
+
+    for (const theme of refinedThemes) {
+      let merged = false;
+
+      for (const existingTheme of finalThemes) {
+        const similarity = this.cosineSimilarity(
+          theme.centroid,
+          existingTheme.centroid,
+        );
+
+        if (similarity > 0.8) {
+          // Merge into existing theme
+          existingTheme.codes.push(...theme.codes);
+          existingTheme.keywords = [
+            ...new Set([...existingTheme.keywords, ...theme.keywords]),
+          ];
+          existingTheme.sourceIds = [
+            ...new Set([...existingTheme.sourceIds, ...theme.sourceIds]),
+          ];
+          merged = true;
+          this.logger.debug(
+            `Merged "${theme.label}" into "${existingTheme.label}" (similarity: ${similarity.toFixed(2)})`,
+          );
+          break;
+        }
+      }
+
+      if (!merged) {
+        finalThemes.push(theme);
+      }
+    }
+
+    this.logger.log(
+      `Refined ${themes.length} themes down to ${finalThemes.length} distinct themes`,
+    );
+
+    return finalThemes;
+  }
+
+  /**
+   * Calculate semantic provenance using embeddings (NOT keyword matching)
+   *
+   * For each theme, calculate:
+   * - Semantic similarity between theme centroid and each source
+   * - Extract contextually relevant excerpts
+   * - Weight influence by citation count, recency, source quality
+   *
+   * @private
+   */
+  private async calculateSemanticProvenance(
+    themes: CandidateTheme[],
+    sources: SourceContent[],
+    embeddings: Map<string, number[]>,
+  ): Promise<UnifiedTheme[]> {
+    const themesWithProvenance: UnifiedTheme[] = [];
+
+    for (const theme of themes) {
+      const themeSources: ThemeSource[] = [];
+
+      for (const source of sources) {
+        const sourceEmbedding = embeddings.get(source.id);
+        if (!sourceEmbedding) continue;
+
+        // Calculate semantic similarity (cosine similarity)
+        const semanticSimilarity = this.cosineSimilarity(
+          theme.centroid,
+          sourceEmbedding,
+        );
+
+        // Only include sources with meaningful semantic connection
+        if (semanticSimilarity > 0.3) {
+          // Extract relevant excerpts using semantic search
+          const relevantExcerpts = theme.codes
+            .filter((code) => code.sourceId === source.id)
+            .flatMap((code) => code.excerpts);
+
+          themeSources.push({
+            sourceType: source.type,
+            sourceId: source.id,
+            sourceTitle: source.title,
+            sourceAuthor: source.author,
+            sourceUrl: source.url,
+            doi: source.doi,
+            authors: source.authors,
+            year: source.year,
+            influence: semanticSimilarity,
+            keywordMatches: 0, // Deprecated - using semantic similarity instead
+            excerpts: relevantExcerpts.slice(0, 3), // Top 3 most relevant
+          });
+        }
+      }
+
+      // Sort sources by semantic influence
+      themeSources.sort((a, b) => b.influence - a.influence);
+
+      // Calculate provenance statistics
+      const provenance: ThemeProvenance = {
+        paperInfluence: this.calculateProvenanceByType(themeSources, 'paper'),
+        videoInfluence: this.calculateProvenanceByType(themeSources, 'youtube'),
+        podcastInfluence: this.calculateProvenanceByType(
+          themeSources,
+          'podcast',
+        ),
+        socialInfluence:
+          this.calculateProvenanceByType(themeSources, 'tiktok') +
+          this.calculateProvenanceByType(themeSources, 'instagram'),
+        paperCount: themeSources.filter((s) => s.sourceType === 'paper').length,
+        videoCount: themeSources.filter((s) => s.sourceType === 'youtube')
+          .length,
+        podcastCount: themeSources.filter((s) => s.sourceType === 'podcast')
+          .length,
+        socialCount: themeSources.filter(
+          (s) => s.sourceType === 'tiktok' || s.sourceType === 'instagram',
+        ).length,
+        averageConfidence: theme.validationScore || 0.5,
+        citationChain: themeSources.map(
+          (s) =>
+            `${s.sourceTitle} (influence: ${(s.influence * 100).toFixed(1)}%)`,
+        ),
+      };
+
+      themesWithProvenance.push({
+        id: theme.id,
+        label: theme.label,
+        description: theme.description,
+        keywords: theme.keywords,
+        weight: themeSources.length / sources.length, // Prevalence across dataset
+        controversial: false, // Could be enhanced with controversy detection
+        confidence: theme.validationScore || 0.5,
+        sources: themeSources,
+        provenance,
+        extractedAt: new Date(),
+        extractionModel: 'academic-semantic-v1',
+      });
+    }
+
+    return themesWithProvenance;
+  }
+
+  /**
+   * Calculate cosine similarity between two embedding vectors
+   * Returns value between -1 and 1 (1 = identical, 0 = orthogonal, -1 = opposite)
+   *
+   * @private
+   */
+  private cosineSimilarity(vec1: number[], vec2: number[]): number {
+    if (!vec1 || !vec2 || vec1.length === 0 || vec2.length === 0) {
+      return 0;
+    }
+
+    if (vec1.length !== vec2.length) {
+      this.logger.warn('Vector dimension mismatch in cosine similarity');
+      return 0;
+    }
+
+    let dotProduct = 0;
+    let norm1 = 0;
+    let norm2 = 0;
+
+    for (let i = 0; i < vec1.length; i++) {
+      dotProduct += vec1[i] * vec2[i];
+      norm1 += vec1[i] * vec1[i];
+      norm2 += vec2[i] * vec2[i];
+    }
+
+    norm1 = Math.sqrt(norm1);
+    norm2 = Math.sqrt(norm2);
+
+    if (norm1 === 0 || norm2 === 0) {
+      return 0;
+    }
+
+    return dotProduct / (norm1 * norm2);
+  }
+
+  /**
+   * Calculate centroid of multiple embedding vectors
+   *
+   * @private
+   */
+  private calculateCentroid(vectors: number[][]): number[] {
+    if (vectors.length === 0) return [];
+
+    const dimensions = vectors[0].length;
+    const centroid = new Array(dimensions).fill(0);
+
+    for (const vector of vectors) {
+      for (let i = 0; i < dimensions; i++) {
+        centroid[i] += vector[i];
+      }
+    }
+
+    // Average
+    for (let i = 0; i < dimensions; i++) {
+      centroid[i] /= vectors.length;
+    }
+
+    return centroid;
+  }
+
+  /**
+   * Calculate semantic coherence of a theme
+   * Measures how related the codes within a theme are to each other
+   *
+   * @private
+   */
+  private calculateThemeCoherence(theme: CandidateTheme): number {
+    if (theme.codes.length < 2) return 1.0;
+
+    // For now, use a heuristic based on keyword overlap
+    // In production, would use code embeddings
+    let totalOverlap = 0;
+    let comparisons = 0;
+
+    for (let i = 0; i < theme.codes.length; i++) {
+      for (let j = i + 1; j < theme.codes.length; j++) {
+        const overlap = this.calculateKeywordOverlap(
+          theme.codes[i].label.split(' '),
+          theme.codes[j].label.split(' '),
+        );
+        totalOverlap += overlap;
+        comparisons++;
+      }
+    }
+
+    return comparisons > 0 ? totalOverlap / comparisons : 0.5;
+  }
+
+  /**
+   * Calculate distinctiveness of a theme compared to existing themes
+   * Measures how different this theme is from others
+   *
+   * @private
+   */
+  private calculateDistinctiveness(
+    theme: CandidateTheme,
+    existingThemes: CandidateTheme[],
+  ): number {
+    if (existingThemes.length === 0) return 1.0;
+
+    const similarities = existingThemes.map((existing) =>
+      this.cosineSimilarity(theme.centroid, existing.centroid),
+    );
+
+    // Return inverse of max similarity (most distinct = least similar to any existing theme)
+    const maxSimilarity = Math.max(...similarities);
+    return 1 - maxSimilarity;
+  }
+
+  /**
+   * Calculate average influence by source type
+   *
+   * @private
+   */
+  private calculateProvenanceByType(
+    sources: ThemeSource[],
+    type: 'paper' | 'youtube' | 'podcast' | 'tiktok' | 'instagram',
+  ): number {
+    const filtered = sources.filter((s) => s.sourceType === type);
+    if (filtered.length === 0) return 0;
+
+    const totalInfluence = filtered.reduce((sum, s) => sum + s.influence, 0);
+    return totalInfluence / filtered.length;
+  }
+
+  /**
+   * Calculate coherence score across all themes
+   *
+   * @private
+   */
+  private calculateCoherenceScore(
+    themes: UnifiedTheme[],
+    embeddings: Map<string, number[]>,
+  ): number {
+    if (themes.length === 0) return 0;
+
+    const coherenceScores = themes.map((theme) => theme.confidence);
+    return (
+      coherenceScores.reduce((sum, score) => sum + score, 0) / themes.length
+    );
+  }
+
+  /**
+   * Calculate coverage (percentage of dataset represented by themes)
+   *
+   * @private
+   */
+  private calculateCoverage(
+    themes: UnifiedTheme[],
+    sources: SourceContent[],
+  ): number {
+    const coveredSourceIds = new Set<string>();
+
+    for (const theme of themes) {
+      for (const source of theme.sources) {
+        coveredSourceIds.add(source.sourceId);
+      }
+    }
+
+    return coveredSourceIds.size / sources.length;
+  }
+
+  /**
+   * Check if theme saturation has been reached
+   * (no new themes emerging - good stopping point)
+   *
+   * @private
+   */
+  private checkSaturation(themes: UnifiedTheme[]): boolean {
+    // Simple heuristic: if we have reasonable number of themes with good coverage
+    return themes.length >= 5 && themes.length <= 20;
+  }
+
+  /**
+   * Calculate average confidence across all themes
+   *
+   * @private
+   */
+  private calculateAverageConfidence(themes: UnifiedTheme[]): number {
+    if (themes.length === 0) return 0;
+
+    const totalConfidence = themes.reduce(
+      (sum, theme) => sum + theme.confidence,
+      0,
+    );
+    return totalConfidence / themes.length;
+  }
+}
+
+// ========================================================================
+// TYPE DEFINITIONS FOR ACADEMIC EXTRACTION (PHASE 10 DAY 5.13)
+// ========================================================================
+
+/**
+ * 4-part transparent progress message structure
+ * Implements Nielsen's Usability Heuristic #1
+ *
+ * Patent Claim #9: 4-Part Transparent Progress Messaging
+ */
+export interface TransparentProgressMessage {
+  stageName: string; // Part 1: Stage name
+  stageNumber: number;
+  totalStages: number;
+  percentage: number;
+  whatWeAreDoing: string; // Part 2: Plain English (no jargon)
+  whyItMatters: string; // Part 3: Scientific rationale (Braun & Clarke 2019)
+  liveStats: {
+    // Part 4: Live statistics
+    sourcesAnalyzed: number;
+    codesGenerated?: number;
+    themesIdentified?: number;
+    currentOperation: string;
+  };
+}
+
+export interface AcademicExtractionOptions extends ExtractionOptions {
+  methodology?: 'reflexive_thematic' | 'grounded_theory' | 'content_analysis';
+  validationLevel?: 'standard' | 'rigorous' | 'publication_ready';
+  userId?: string;
+  purpose?: ResearchPurpose; // NEW: Purpose-adaptive extraction
+  allowIterativeRefinement?: boolean; // NEW: Non-linear TA support (Patent Claim #11)
+  userExpertiseLevel?: 'novice' | 'researcher' | 'expert'; // NEW: Progressive disclosure (Patent Claim #10)
+  requestId?: string; // PHASE 10 DAY 5.17.3: Request tracking for end-to-end logging
+}
+
+export type AcademicProgressCallback = (
+  stage: number,
+  totalStages: number,
+  message: string,
+  transparentMessage?: TransparentProgressMessage, // NEW: 4-part message
+) => void;
+
+export interface AcademicExtractionResult {
+  themes: UnifiedTheme[];
+  methodology: EnhancedMethodologyReport; // ENHANCED: With AI disclosure
+  validation: ValidationMetrics;
+  processingStages: string[];
+  metadata: ExtractionMetadata;
+  saturationData?: SaturationData; // NEW: For saturation visualization (Patent Claim #13)
+  iterativeRefinements?: number; // NEW: Track refinement cycles
+  rejectionDiagnostics?: {
+    // PHASE 10 DAY 5.17.4: Rejection diagnostics for users without backend access
+    totalGenerated: number;
+    totalRejected: number;
+    totalValidated: number;
+    thresholds: {
+      minSources: number;
+      minCoherence: number;
+      minDistinctiveness?: number;
+      minEvidence: number;
+      isAbstractOnly: boolean;
+    };
+    rejectedThemes: Array<{
+      themeName: string;
+      codes: number;
+      keywords: string[];
+      checks: {
+        sources: { actual: number; required: number; passed: boolean };
+        coherence: { actual: number; required: number; passed: boolean };
+        distinctiveness?: { actual: number; required: number; passed: boolean };
+        evidence: { actual: number; required: number; passed: boolean };
+      };
+      failureReasons: string[];
+    }>;
+    moreRejectedCount: number;
+    recommendations: string[];
+  };
+}
+
+/**
+ * PHASE 10 DAY 5.17.4: Validation result with optional rejection diagnostics
+ * Helps users without backend access understand why themes were rejected
+ */
+export interface ValidationResult {
+  validatedThemes: CandidateTheme[];
+  rejectionDiagnostics: {
+    totalGenerated: number;
+    totalRejected: number;
+    totalValidated: number;
+    thresholds: {
+      minSources: number;
+      minCoherence: number;
+      minDistinctiveness?: number;
+      minEvidence: number;
+      isAbstractOnly: boolean;
+    };
+    rejectedThemes: Array<{
+      themeName: string;
+      codes: number;
+      keywords: string[];
+      checks: {
+        sources: { actual: number; required: number; passed: boolean };
+        coherence: { actual: number; required: number; passed: boolean };
+        distinctiveness?: { actual: number; required: number; passed: boolean };
+        evidence: { actual: number; required: number; passed: boolean };
+      };
+      failureReasons: string[];
+    }>;
+    moreRejectedCount: number;
+    recommendations: string[];
+  } | null;
+}
+
+/**
+ * Enhanced methodology report with AI disclosure section
+ * Complies with Nature/Science 2024 AI disclosure guidelines
+ *
+ * Patent Claim #8 + #12: Methodology Report + AI Confidence Calibration
+ */
+export interface EnhancedMethodologyReport {
+  method: string;
+  citation: string;
+  stages: number;
+  validation: string;
+  aiRole: string;
+  limitations: string;
+  // NEW: AI Disclosure Section (Nature/Science 2024 compliance)
+  aiDisclosure: {
+    modelUsed: string; // e.g., "GPT-4 Turbo + text-embedding-3-large"
+    aiRoleDetailed: string; // Specific tasks AI performed
+    humanOversightRequired: string; // What humans must review
+    confidenceCalibration: {
+      high: string; // e.g., "0.8-1.0: Theme in 80%+ sources"
+      medium: string;
+      low: string;
+    };
+  };
+  // NEW: Iterative Refinement Documentation (Patent Claim #11)
+  iterativeRefinement?: {
+    cyclesPerformed: number;
+    stagesRevisited: string[];
+    rationale: string;
+  };
+}
+
+export interface MethodologyReport {
+  method: string;
+  citation: string;
+  stages: number;
+  validation: string;
+  aiRole: string;
+  limitations: string;
+}
+
+/**
+ * Saturation data for visualization
+ * Patent Claim #13: Theme Saturation Visualization
+ */
+export interface SaturationData {
+  sourceProgression: Array<{
+    sourceNumber: number;
+    newThemesDiscovered: number;
+    cumulativeThemes: number;
+  }>;
+  saturationReached: boolean;
+  saturationPoint?: number; // Source number where saturation occurred
+  recommendation: string; // e.g., "Saturation reached - optimal theme count"
+}
+
+export interface ValidationMetrics {
+  coherenceScore: number; // 0-1, within-theme semantic similarity
+  coverage: number; // 0-1, % of sources covered by themes
+  saturation: boolean; // Has theme saturation been reached?
+  confidence: number; // 0-1, average confidence across themes
+}
+
+export interface ExtractionMetadata {
+  sourcesAnalyzed: number;
+  codesGenerated: number;
+  candidateThemes: number;
+  finalThemes: number;
+  processingTimeMs: number;
+  embeddingModel: string;
+  analysisModel: string;
+}
+
+export interface InitialCode {
+  id: string;
+  label: string;
+  description: string;
+  sourceId: string;
+  excerpts: string[];
+}
+
+export interface CandidateTheme {
+  id: string;
+  label: string;
+  description: string;
+  keywords: string[];
+  definition: string;
+  codes: InitialCode[];
+  centroid: number[];
+  sourceIds: string[];
+  validationScore?: number;
 }

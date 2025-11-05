@@ -345,17 +345,29 @@ export function PostSurveyQuestionnaire({
         currentQuestion.type === QuestionType.TEXT_SHORT ||
         currentQuestion.type === QuestionType.TEXT_LONG
       ) {
-        const minLengthRule = validation.find(rule => rule.type === 'minLength');
-        const maxLengthRule = validation.find(rule => rule.type === 'maxLength');
+        const minLengthRule = validation.find(
+          rule => rule.type === 'minLength'
+        );
+        const maxLengthRule = validation.find(
+          rule => rule.type === 'maxLength'
+        );
 
-        if (minLengthRule && minLengthRule.value && response.length < minLengthRule.value) {
+        if (
+          minLengthRule &&
+          minLengthRule.value &&
+          response.length < minLengthRule.value
+        ) {
           setErrors(prev => ({
             ...prev,
             [currentQuestion.id]: `Minimum ${minLengthRule.value} characters required`,
           }));
           return false;
         }
-        if (maxLengthRule && maxLengthRule.value && response.length > maxLengthRule.value) {
+        if (
+          maxLengthRule &&
+          maxLengthRule.value &&
+          response.length > maxLengthRule.value
+        ) {
           setErrors(prev => ({
             ...prev,
             [currentQuestion.id]: `Maximum ${maxLengthRule.value} characters allowed`,
@@ -481,7 +493,9 @@ export function PostSurveyQuestionnaire({
         );
 
       case QuestionType.TEXT_LONG:
-        const maxLengthRule = currentQuestion.validation?.find(rule => rule.type === 'maxLength');
+        const maxLengthRule = currentQuestion.validation?.find(
+          rule => rule.type === 'maxLength'
+        );
         return (
           <div className="space-y-2">
             <textarea
@@ -553,8 +567,12 @@ export function PostSurveyQuestionnaire({
 
       case QuestionType.RATING_SCALE:
       case QuestionType.LIKERT_SCALE:
-        const minRule = currentQuestion.validation?.find(rule => rule.type === 'min');
-        const maxRule = currentQuestion.validation?.find(rule => rule.type === 'max');
+        const minRule = currentQuestion.validation?.find(
+          rule => rule.type === 'min'
+        );
+        const maxRule = currentQuestion.validation?.find(
+          rule => rule.type === 'max'
+        );
         const min = (minRule?.value as number) || 1;
         const max = (maxRule?.value as number) || 5;
         return (

@@ -6,6 +6,7 @@ import {
   ExtractedTheme,
   ExtractedCitation,
 } from './multimedia-analysis.service';
+import { UnifiedThemeExtractionService } from './unified-theme-extraction.service';
 
 describe('MultiMediaAnalysisService', () => {
   let service: MultiMediaAnalysisService;
@@ -34,12 +35,19 @@ describe('MultiMediaAnalysisService', () => {
     }),
   };
 
+  const mockUnifiedThemeService = {
+    extractThemesFromSource: jest.fn(),
+    extractFromMultipleSources: jest.fn(),
+    getThemeProvenanceReport: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MultiMediaAnalysisService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: UnifiedThemeExtractionService, useValue: mockUnifiedThemeService },
       ],
     }).compile();
 

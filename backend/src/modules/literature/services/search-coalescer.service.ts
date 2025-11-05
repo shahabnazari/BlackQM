@@ -55,7 +55,7 @@ export class SearchCoalescerService {
       this.stats.coalescedRequests++;
 
       this.logger.log(
-        `🔗 [Coalescer] Request coalesced: "${key}" (${existing.waiters} waiters)`
+        `🔗 [Coalescer] Request coalesced: "${key}" (${existing.waiters} waiters)`,
       );
 
       try {
@@ -99,7 +99,7 @@ export class SearchCoalescerService {
     const request = this.pendingRequests.get(key);
     if (request) {
       this.logger.debug(
-        `🧹 [Coalescer] Cleanup: "${key}" (served ${request.waiters} requests)`
+        `🧹 [Coalescer] Cleanup: "${key}" (served ${request.waiters} requests)`,
       );
       this.pendingRequests.delete(key);
     }
@@ -116,9 +116,13 @@ export class SearchCoalescerService {
     deduplicationRate: string;
     currentPending: number;
   } {
-    const deduplicationRate = this.stats.totalRequests > 0
-      ? ((this.stats.coalescedRequests / this.stats.totalRequests) * 100).toFixed(2)
-      : '0.00';
+    const deduplicationRate =
+      this.stats.totalRequests > 0
+        ? (
+            (this.stats.coalescedRequests / this.stats.totalRequests) *
+            100
+          ).toFixed(2)
+        : '0.00';
 
     return {
       ...this.stats,
@@ -153,7 +157,7 @@ export class SearchCoalescerService {
     for (const [key, request] of this.pendingRequests.entries()) {
       if (now - request.timestamp > staleThreshold) {
         this.logger.warn(
-          `⚠️  [Coalescer] Removing stale request: "${key}" (age: ${now - request.timestamp}ms)`
+          `⚠️  [Coalescer] Removing stale request: "${key}" (age: ${now - request.timestamp}ms)`,
         );
         this.pendingRequests.delete(key);
         cleanedCount++;
@@ -161,7 +165,9 @@ export class SearchCoalescerService {
     }
 
     if (cleanedCount > 0) {
-      this.logger.log(`🧹 [Coalescer] Cleaned up ${cleanedCount} stale requests`);
+      this.logger.log(
+        `🧹 [Coalescer] Cleaned up ${cleanedCount} stale requests`,
+      );
     }
   }
 

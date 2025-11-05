@@ -14,6 +14,39 @@ export interface Paper {
   keywords?: string[];
   fieldsOfStudy?: string[];
   source: string;
+  // Phase 10 Day 5.13+ word count fields
+  wordCount?: number; // Word count excluding references
+  wordCountExcludingRefs?: number; // Alias for clarity
+  isEligible?: boolean; // Meets minimum word count threshold
+  // Phase 10 Day 5.17.4+ PDF availability
+  pdfUrl?: string | null; // Direct URL to open access PDF
+  openAccessStatus?: string | null; // Open access status (e.g., 'GOLD', 'GREEN', 'HYBRID', 'BRONZE')
+  hasPdf?: boolean; // Whether PDF is available
+  // Phase 10 Day 5.13+ Extension 2: Enterprise quality metrics
+  abstractWordCount?: number; // Abstract word count
+  citationsPerYear?: number; // Citation velocity (normalized by age)
+  impactFactor?: number; // Journal impact factor
+  sjrScore?: number; // SCImago Journal Rank
+  quartile?: 'Q1' | 'Q2' | 'Q3' | 'Q4'; // Journal quartile ranking
+  hIndexJournal?: number; // Journal h-index
+  qualityScore?: number; // Composite quality score (0-100)
+  isHighQuality?: boolean; // Quality score >= 50
+  // Phase 10 Day 5.15+ Full-text support (CRITICAL for theme extraction quality)
+  fullText?: string; // Full article content (10,000+ words when available)
+  hasFullText?: boolean; // Whether full-text is available (PDF detected or already fetched)
+  fullTextStatus?:
+    | 'not_fetched'
+    | 'fetching'
+    | 'success'
+    | 'failed'
+    | 'available'; // Fetch status
+  fullTextSource?:
+    | 'unpaywall'
+    | 'manual'
+    | 'abstract_overflow'
+    | 'pmc'
+    | 'publisher'; // How full-text was obtained
+  fullTextWordCount?: number; // Word count of full-text only (for analytics)
 }
 
 export interface Theme {
@@ -48,6 +81,17 @@ export interface SearchLiteratureParams {
   page?: number;
   includeCitations?: boolean;
   sortBy?: 'relevance' | 'date' | 'citations';
+  // Phase 10 Day 5.13+ filters
+  minWordCount?: number; // Minimum word count (default: 1000)
+  // Phase 10 Day 5.13+ Extension 2: Enterprise quality filters and sorting
+  minAbstractLength?: number; // Minimum abstract words (default: 100)
+  sortByEnhanced?:
+    | 'relevance'
+    | 'date'
+    | 'citations'
+    | 'citations_per_year'
+    | 'word_count'
+    | 'quality_score';
 }
 
 export interface KnowledgeGraphData {
@@ -415,6 +459,103 @@ class LiteratureAPIService {
   }
 
   // ===========================================================================
+  // PHASE 10 DAY 5.8 WEEK 1: ACADEMIC-GRADE THEME EXTRACTION
+  // ===========================================================================
+
+  /**
+   * Extract themes using academic-grade methodology with semantic embeddings
+   * Based on Braun & Clarke (2006) Reflexive Thematic Analysis
+   *
+   * Implements 6-stage process:
+   * 1. Familiarization - Generate embeddings from FULL content
+   * 2. Initial Coding - Identify semantic patterns
+   * 3. Theme Generation - Cluster related codes
+   * 4. Theme Review - Validate against full dataset (3+ sources)
+   * 5. Refinement - Merge overlaps and remove weak themes
+   * 6. Provenance - Calculate semantic influence
+   */
+  async extractThemesAcademic(
+    sources: {
+      id?: string;
+      type: 'paper' | 'youtube' | 'podcast' | 'tiktok' | 'instagram';
+      title: string;
+      content: string; // FULL CONTENT - NO TRUNCATION
+      authors?: string[];
+      keywords?: string[];
+      url?: string;
+      doi?: string;
+      year?: number;
+    }[],
+    options?: {
+      researchContext?: string;
+      methodology?:
+        | 'reflexive_thematic'
+        | 'grounded_theory'
+        | 'content_analysis';
+      validationLevel?: 'standard' | 'rigorous' | 'publication_ready';
+      maxThemes?: number;
+      minConfidence?: number;
+      studyId?: string;
+    }
+  ): Promise<{
+    success: boolean;
+    themes: Theme[];
+    methodology: {
+      method: string;
+      citation: string;
+      stages: number;
+      validation: string;
+      aiRole: string;
+      limitations: string;
+    };
+    validation: {
+      coherenceScore: number;
+      coverage: number;
+      saturation: boolean;
+      confidence: number;
+    };
+    processingStages: string[];
+    metadata: {
+      sourcesAnalyzed: number;
+      codesGenerated: number;
+      candidateThemes: number;
+      finalThemes: number;
+      processingTimeMs: number;
+      embeddingModel: string;
+      analysisModel: string;
+    };
+    transparency: {
+      howItWorks: string;
+      aiRole: string;
+      quality: string;
+      limitations: string;
+      citation: string;
+    };
+  }> {
+    try {
+      const response = await this.api.post(
+        '/literature/themes/extract-academic',
+        {
+          sources,
+          researchContext: options?.researchContext,
+          methodology: options?.methodology || 'reflexive_thematic',
+          validationLevel: options?.validationLevel || 'rigorous',
+          maxThemes: options?.maxThemes || 15,
+          minConfidence: options?.minConfidence || 0.5,
+          studyId: options?.studyId,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error(
+        'Failed to extract themes with academic methodology:',
+        error
+      );
+      throw error;
+    }
+  }
+
+  // ===========================================================================
   // PHASE 9 DAY 14-15: KNOWLEDGE GRAPH & PREDICTIVE GAP DETECTION
   // ===========================================================================
 
@@ -660,15 +801,64 @@ class LiteratureAPIService {
 
   /**
    * Analyze research gaps from papers (Phase 9 Day 8-10 enhanced)
+   * Now sends full paper content instead of just IDs
    */
-  async analyzeGapsFromPapers(paperIds: string[]): Promise<any[]> {
+  async analyzeGapsFromPapers(papers: Paper[]): Promise<any[]> {
     try {
+      console.log(`🔍 Analyzing research gaps from ${papers.length} papers...`);
+
+      // Send full paper content to backend
       const response = await this.api.post('/literature/gaps/analyze', {
-        paperIds,
+        papers: papers.map(p => ({
+          id: p.id,
+          title: p.title,
+          abstract: p.abstract,
+          authors: p.authors,
+          year: p.year,
+          keywords: p.keywords,
+          doi: p.doi,
+          venue: p.venue,
+          citationCount: p.citationCount,
+        })),
       });
+
+      console.log(
+        `✅ Gap analysis complete: ${response.data?.length || 0} gaps found`
+      );
       return response.data;
-    } catch (error) {
-      console.error('Failed to analyze gaps from papers:', error);
+    } catch (error: any) {
+      console.error('❌ Failed to analyze gaps from papers:', error);
+
+      // Fallback to public endpoint for development
+      if (error.response?.status === 401 || error.response?.status === 404) {
+        console.log('🔄 Trying public endpoint for gap analysis...');
+        try {
+          const publicResponse = await this.api.post(
+            '/literature/gaps/analyze/public',
+            {
+              papers: papers.map(p => ({
+                id: p.id,
+                title: p.title,
+                abstract: p.abstract,
+                authors: p.authors,
+                year: p.year,
+                keywords: p.keywords,
+                doi: p.doi,
+                venue: p.venue,
+                citationCount: p.citationCount,
+              })),
+            }
+          );
+          console.log(
+            `✅ Public gap analysis complete: ${publicResponse.data?.length || 0} gaps found`
+          );
+          return publicResponse.data;
+        } catch (publicError) {
+          console.error('❌ Public endpoint also failed:', publicError);
+          throw publicError;
+        }
+      }
+
       throw error;
     }
   }
@@ -964,12 +1154,9 @@ class LiteratureAPIService {
    */
   async getYouTubeChannel(channelIdentifier: string): Promise<any> {
     try {
-      const response = await this.api.post(
-        '/literature/youtube/channel/info',
-        {
-          channelIdentifier,
-        }
-      );
+      const response = await this.api.post('/literature/youtube/channel/info', {
+        channelIdentifier,
+      });
       return response.data.channel;
     } catch (error) {
       console.error('Failed to fetch YouTube channel:', error);
@@ -1016,6 +1203,119 @@ class LiteratureAPIService {
       };
     } catch (error) {
       console.error('Failed to fetch channel videos:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Phase 10 Day 5.9: Generate Survey Items from Themes
+   * Convert academic themes into traditional survey items (Likert, MC, rating scales)
+   *
+   * Purpose: Expand theme utility from Q-methodology only to ALL survey types
+   * Research Foundation: DeVellis (2016) Scale Development
+   */
+  async generateSurveyItemsFromThemes(
+    themes: Array<{
+      id: string;
+      name: string;
+      description: string;
+      prevalence: number;
+      confidence: number;
+      sources?: Array<{
+        id: string;
+        title: string;
+        type: string;
+      }>;
+      keyPhrases?: string[];
+    }>,
+    options?: {
+      itemType?:
+        | 'likert'
+        | 'multiple_choice'
+        | 'semantic_differential'
+        | 'matrix_grid'
+        | 'rating_scale'
+        | 'mixed';
+      scaleType?:
+        | '1-5'
+        | '1-7'
+        | '1-10'
+        | 'agree-disagree'
+        | 'frequency'
+        | 'satisfaction';
+      itemsPerTheme?: number;
+      includeReverseCoded?: boolean;
+      researchContext?: string;
+      targetAudience?: string;
+    }
+  ): Promise<{
+    success: boolean;
+    items: Array<{
+      id: string;
+      type:
+        | 'likert'
+        | 'multiple_choice'
+        | 'semantic_differential'
+        | 'matrix_grid'
+        | 'rating_scale';
+      themeId: string;
+      themeName: string;
+      text: string;
+      scaleType?: string;
+      scaleLabels?: string[];
+      options?: string[];
+      reversed?: boolean;
+      dimension?: string;
+      leftPole?: string;
+      rightPole?: string;
+      construct?: string;
+      itemNumber?: number;
+      reliability?: {
+        reverseCodedReason?: string;
+        expectedCorrelation?: 'positive' | 'negative';
+      };
+      metadata: {
+        generationMethod: string;
+        researchBacking: string;
+        confidence: number;
+        themePrevalence: number;
+      };
+    }>;
+    summary: {
+      totalItems: number;
+      itemsByType: Record<string, number>;
+      reverseCodedCount: number;
+      averageConfidence: number;
+    };
+    methodology: {
+      approach: string;
+      researchBacking: string;
+      validation: string;
+      reliability: string;
+    };
+    recommendations: {
+      pilotTesting: string;
+      reliabilityAnalysis: string;
+      validityChecks: string;
+    };
+  }> {
+    try {
+      const response = await this.api.post(
+        '/literature/themes/to-survey-items',
+        {
+          themes,
+          itemType: options?.itemType || 'likert',
+          scaleType: options?.scaleType || '1-5',
+          itemsPerTheme: options?.itemsPerTheme || 3,
+          includeReverseCoded: options?.includeReverseCoded !== false,
+          researchContext: options?.researchContext,
+          targetAudience: options?.targetAudience,
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Failed to generate survey items from themes:', error);
       throw error;
     }
   }

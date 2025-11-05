@@ -1,0 +1,89 @@
+{
+  "sources": [
+    {
+      "type": "paper",
+      "id": "paper-001",
+      "title": "Machine Learning Applications in Healthcare Diagnostics",
+      "content": "This paper explores the application of machine learning algorithms in medical diagnostics, focusing on image recognition and patient outcome prediction.",
+      "authors": ["Smith, J.", "Johnson, M.", "Lee, K."],
+      "year": 2024
+    },
+    {
+      "type": "paper",
+      "id": "paper-002",
+      "title": "Climate Change Impact on Agricultural Systems",
+      "content": "An analysis of climate change effects on crop yields and farming practices across different geographical regions.",
+      "authors": ["Garcia, A.", "Martinez, L."],
+      "year": 2023
+    },
+    {
+      "type": "paper",
+      "id": "paper-003",
+      "title": "Quantum Computing for Cryptographic Applications",
+      "content": "This study examines the potential of quantum computing to revolutionize cryptographic methods and data security.",
+      "authors": ["Chen, W.", "Patel, R.", "Kim, S."],
+      "year": 2024
+    },
+    {
+      "type": "paper",
+      "id": "paper-004",
+      "title": "Renewable Energy Integration in Smart Grids",
+      "content": "Research on integrating renewable energy sources into smart grid infrastructure for improved efficiency.",
+      "authors": ["Brown, T.", "Wilson, D."],
+      "year": 2023
+    },
+    {
+      "type": "paper",
+      "id": "paper-005",
+      "title": "Natural Language Processing for Sentiment Analysis",
+      "content": "A comprehensive review of NLP techniques for analyzing sentiment in social media data.",
+      "authors": ["Anderson, P.", "Taylor, R.", "Moore, J."],
+      "year": 2024
+    },
+    {
+      "type": "paper",
+      "id": "paper-006",
+      "title": "Blockchain Technology in Supply Chain Management",
+      "content": "This paper discusses the implementation of blockchain for transparency and efficiency in supply chains.",
+      "authors": ["White, L.", "Harris, M."],
+      "year": 2023
+    },
+    {
+      "type": "paper",
+      "id": "paper-007",
+      "title": "Artificial Intelligence in Education: Personalized Learning",
+      "content": "An exploration of AI-driven personalized learning platforms and their impact on student outcomes.",
+      "authors": ["Clark, E.", "Lewis, N.", "Walker, S."],
+      "year": 2024
+    },
+    {
+      "type": "paper",
+      "id": "paper-008",
+      "title": "Cybersecurity Threats in IoT Devices",
+      "content": "Analysis of security vulnerabilities in Internet of Things devices and proposed mitigation strategies.",
+      "authors": ["Hall, K.", "Allen, C."],
+      "year": 2023
+    },
+    {
+      "type": "paper",
+      "id": "paper-009",
+      "title": "Gene Editing Technologies: CRISPR Applications",
+      "content": "A review of CRISPR-Cas9 technology applications in treating genetic disorders.",
+      "authors": ["Young, B.", "King, V.", "Scott, T."],
+      "year": 2024
+    },
+    {
+      "type": "paper",
+      "id": "paper-010",
+      "title": "Urban Planning and Sustainable Development",
+      "content": "Research on sustainable urban planning strategies for reducing environmental impact in cities.",
+      "authors": ["Green, H.", "Adams, F."],
+      "year": 2023
+    }
+  ],
+  "options": {
+    "researchContext": "Cross-domain research synthesis",
+    "minConfidence": 0.5
+  },
+  "_comment": "This is a 10-paper sample. In production, expand to 100 papers for stress testing. Each paper should have realistic abstracts (100-300 words) for accurate theme extraction."
+}

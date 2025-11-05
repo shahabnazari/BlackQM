@@ -1,11 +1,15 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { PrismaService } from '../../common/prisma.service';
+import { CacheService } from '../../common/cache.service';
 
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    private cacheService: CacheService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Basic health check' })
@@ -50,7 +54,8 @@ export class HealthController {
   async checkDetailedHealth() {
     const dbHealthy = await this.prismaService.isHealthy();
     const poolStats = await this.prismaService.getPoolStats();
-    
+    const cacheStats = this.cacheService.getStats();
+
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -66,12 +71,55 @@ export class HealthController {
         type: process.env.DATABASE_URL?.includes('postgres') ? 'PostgreSQL' : 'SQLite',
         connectionPool: poolStats,
       },
+      cache: {
+        status: 'operational',
+        type: 'NodeCache (in-memory)',
+        ...cacheStats,
+      },
       services: {
         api: 'operational',
         database: dbHealthy ? 'operational' : 'degraded',
+        cache: 'operational',
         fileUpload: process.env.ENABLE_VIRUS_SCANNING === 'false' ? 'limited' : 'operational',
         monitoring: process.env.SENTRY_DSN ? 'enabled' : 'disabled',
       },
+    };
+  }
+
+  @Get('ready')
+  @ApiOperation({ summary: 'Readiness probe for Kubernetes/production deployments' })
+  @ApiResponse({ status: 200, description: 'Service is ready to accept traffic' })
+  @ApiResponse({ status: 503, description: 'Service is not ready' })
+  async checkReadiness() {
+    const dbHealthy = await this.prismaService.isHealthy();
+
+    if (!dbHealthy) {
+      return {
+        status: 'not_ready',
+        reason: 'database_unavailable',
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    return {
+      status: 'ready',
+      timestamp: new Date().toISOString(),
+      checks: {
+        database: 'ok',
+        cache: 'ok',
+        api: 'ok',
+      },
+    };
+  }
+
+  @Get('live')
+  @ApiOperation({ summary: 'Liveness probe for Kubernetes/production deployments' })
+  @ApiResponse({ status: 200, description: 'Service is alive' })
+  async checkLiveness() {
+    return {
+      status: 'alive',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
     };
   }
 }

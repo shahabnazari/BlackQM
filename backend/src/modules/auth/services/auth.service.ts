@@ -11,7 +11,13 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { PrismaService } from '../../../common/prisma.service';
-import { RegisterDto, LoginDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from '../dto/auth.dto';
+import {
+  RegisterDto,
+  LoginDto,
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from '../dto/auth.dto';
 import { AuditService } from '../services/audit.service';
 import { EmailService } from '../../email/services/email.service';
 
@@ -25,7 +31,11 @@ export class AuthService {
     private emailService: EmailService,
   ) {}
 
-  async register(registerDto: RegisterDto, ipAddress?: string, userAgent?: string) {
+  async register(
+    registerDto: RegisterDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
     const { email, password, name, role = 'RESEARCHER' } = registerDto;
 
     // Check if user already exists
@@ -38,7 +48,10 @@ export class AuthService {
     }
 
     // Hash password
-    const saltRounds = parseInt(this.configService.get<string>('BCRYPT_ROUNDS', '12'), 10);
+    const saltRounds = parseInt(
+      this.configService.get<string>('BCRYPT_ROUNDS', '12'),
+      10,
+    );
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Create user
@@ -92,7 +105,9 @@ export class AuthService {
 
     // Check if account is locked
     if (user.lockedUntil && user.lockedUntil > new Date()) {
-      throw new ForbiddenException('Account is temporarily locked due to too many failed login attempts');
+      throw new ForbiddenException(
+        'Account is temporarily locked due to too many failed login attempts',
+      );
     }
 
     // Check if account is active
@@ -144,7 +159,11 @@ export class AuthService {
     };
   }
 
-  async refreshToken(refreshToken: string, ipAddress?: string, userAgent?: string) {
+  async refreshToken(
+    refreshToken: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
     // Find session
     const session = await this.prisma.session.findUnique({
       where: { refreshToken },
@@ -243,7 +262,10 @@ export class AuthService {
 
     // Generate random password for OAuth users (they won't use it)
     const randomPassword = crypto.randomBytes(32).toString('hex');
-    const saltRounds = parseInt(this.configService.get<string>('BCRYPT_ROUNDS', '12'), 10);
+    const saltRounds = parseInt(
+      this.configService.get<string>('BCRYPT_ROUNDS', '12'),
+      10,
+    );
     const hashedPassword = await bcrypt.hash(randomPassword, saltRounds);
 
     user = await this.prisma.user.create({
@@ -285,7 +307,10 @@ export class AuthService {
     }
 
     // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password,
+    );
     if (!isCurrentPasswordValid) {
       throw new UnauthorizedException('Current password is incorrect');
     }
@@ -331,20 +356,25 @@ export class AuthService {
     // Add a unique identifier to prevent duplicate tokens
     const payload = {
       sub: userId,
-      jti: `${Date.now()}-${Math.random().toString(36).substring(7)}`
+      jti: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
     };
     const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '15m');
-    const refreshExpiresIn = rememberMe ? '30d' : this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d');
+    const refreshExpiresIn = rememberMe
+      ? '30d'
+      : this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d');
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_SECRET'),
         expiresIn,
       }),
-      this.jwtService.signAsync({ ...payload, type: 'refresh' }, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-        expiresIn: refreshExpiresIn,
-      }),
+      this.jwtService.signAsync(
+        { ...payload, type: 'refresh' },
+        {
+          secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+          expiresIn: refreshExpiresIn,
+        },
+      ),
     ]);
 
     // Clean up expired sessions for this user
@@ -400,7 +430,10 @@ export class AuthService {
     });
   }
 
-  async forgotPassword(forgotPasswordDto: ForgotPasswordDto, ipAddress?: string) {
+  async forgotPassword(
+    forgotPasswordDto: ForgotPasswordDto,
+    ipAddress?: string,
+  ) {
     const { email } = forgotPasswordDto;
 
     // Find user by email
@@ -410,7 +443,9 @@ export class AuthService {
 
     // Always return success message to prevent email enumeration
     if (!user) {
-      return { message: 'If the email exists, a password reset link has been sent.' };
+      return {
+        message: 'If the email exists, a password reset link has been sent.',
+      };
     }
 
     // Delete any existing password reset tokens for this user
@@ -420,8 +455,11 @@ export class AuthService {
 
     // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
     // Save token to database (expires in 1 hour)
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 1);
@@ -451,7 +489,9 @@ export class AuthService {
       ipAddress,
     });
 
-    return { message: 'If the email exists, a password reset link has been sent.' };
+    return {
+      message: 'If the email exists, a password reset link has been sent.',
+    };
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto, ipAddress?: string) {
@@ -480,12 +520,15 @@ export class AuthService {
     // Validate password complexity
     if (!this.validatePasswordComplexity(newPassword)) {
       throw new BadRequestException(
-        'Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character'
+        'Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character',
       );
     }
 
     // Hash new password
-    const saltRounds = parseInt(this.configService.get<string>('BCRYPT_ROUNDS', '12'), 10);
+    const saltRounds = parseInt(
+      this.configService.get<string>('BCRYPT_ROUNDS', '12'),
+      10,
+    );
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
     // Update user password
@@ -554,7 +597,10 @@ export class AuthService {
     });
 
     // Send welcome email
-    await this.emailService.sendWelcomeEmail(verification.user.email, verification.user.name || 'User');
+    await this.emailService.sendWelcomeEmail(
+      verification.user.email,
+      verification.user.name || 'User',
+    );
 
     // Log email verification
     await this.auditService.log({
@@ -571,19 +617,19 @@ export class AuthService {
   private validatePasswordComplexity(password: string): boolean {
     // At least 8 characters
     if (password.length < 8) return false;
-    
+
     // Contains uppercase letter
     if (!/[A-Z]/.test(password)) return false;
-    
+
     // Contains lowercase letter
     if (!/[a-z]/.test(password)) return false;
-    
+
     // Contains number
     if (!/[0-9]/.test(password)) return false;
-    
+
     // Contains special character
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) return false;
-    
+
     return true;
   }
 }

@@ -1,8 +1,4 @@
-import {
-  Node,
-  NodeViewWrapper,
-  ReactNodeViewRenderer,
-} from '@tiptap/react';
+import { Node, NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react';
 import React, { useState, useRef, useCallback } from 'react';
 import {
   Move,

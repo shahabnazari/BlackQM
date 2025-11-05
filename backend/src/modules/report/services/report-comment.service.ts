@@ -143,10 +143,7 @@ export class ReportCommentService {
       throw new NotFoundException('Comment not found');
     }
 
-    await this.collaborationService.checkReportAccess(
-      comment.reportId,
-      userId,
-    );
+    await this.collaborationService.checkReportAccess(comment.reportId, userId);
 
     return comment;
   }
@@ -154,11 +151,7 @@ export class ReportCommentService {
   /**
    * Reply to a comment
    */
-  async replyToComment(
-    commentId: string,
-    userId: string,
-    content: string,
-  ) {
+  async replyToComment(commentId: string, userId: string, content: string) {
     const parentComment = await this.prisma.reportComment.findUnique({
       where: { id: commentId },
     });
@@ -290,11 +283,10 @@ export class ReportCommentService {
       throw new NotFoundException('Comment not found');
     }
 
-    await this.collaborationService.checkPermission(
-      comment.reportId,
-      userId,
-      ['owner', 'editor'],
-    );
+    await this.collaborationService.checkPermission(comment.reportId, userId, [
+      'owner',
+      'editor',
+    ]);
 
     const updated = await this.prisma.reportComment.update({
       where: { id: commentId },
@@ -331,11 +323,10 @@ export class ReportCommentService {
       throw new NotFoundException('Comment not found');
     }
 
-    await this.collaborationService.checkPermission(
-      comment.reportId,
-      userId,
-      ['owner', 'editor'],
-    );
+    await this.collaborationService.checkPermission(comment.reportId, userId, [
+      'owner',
+      'editor',
+    ]);
 
     const updated = await this.prisma.reportComment.update({
       where: { id: commentId },

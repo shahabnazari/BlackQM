@@ -21,7 +21,7 @@ import {
   Clock,
   Database,
   RefreshCw,
-  Sparkles
+  Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -76,14 +76,7 @@ export function CachedResultsBanner({
   const bgColor = isArchive ? 'bg-orange-50' : 'bg-amber-50';
 
   return (
-    <Alert
-      className={cn(
-        'mb-6 border-2',
-        borderColor,
-        bgColor,
-        className
-      )}
-    >
+    <Alert className={cn('mb-6 border-2', borderColor, bgColor, className)}>
       <div className="flex items-start gap-3">
         <Database className={cn('h-5 w-5 mt-0.5', cacheTypeColor)} />
 
@@ -99,7 +92,9 @@ export function CachedResultsBanner({
                 variant="outline"
                 className={cn(
                   'text-xs font-normal',
-                  isArchive ? 'border-orange-300 bg-orange-100 text-orange-700' : 'border-amber-300 bg-amber-100 text-amber-700'
+                  isArchive
+                    ? 'border-orange-300 bg-orange-100 text-orange-700'
+                    : 'border-amber-300 bg-amber-100 text-amber-700'
                 )}
               >
                 <Clock className="h-3 w-3 mr-1" />
@@ -135,14 +130,15 @@ export function CachedResultsBanner({
             {isArchive ? (
               <>
                 <AlertCircle className="h-3.5 w-3.5 inline mr-1" />
-                These results are from our archive cache. API rate limits detected.
-                Results may not include the latest papers.
+                These results are from our archive cache. API rate limits
+                detected. Results may not include the latest papers.
               </>
             ) : (
               <>
                 <AlertCircle className="h-3.5 w-3.5 inline mr-1" />
-                API rate limits detected. Showing cached results from {formatCacheAge(cacheAge)}.
-                Click "Retry now" to fetch fresh results.
+                API rate limits detected. Showing cached results from{' '}
+                {formatCacheAge(cacheAge)}. Click "Retry now" to fetch fresh
+                results.
               </>
             )}
           </AlertDescription>

@@ -17,7 +17,14 @@ import { Cite } from 'citation-js';
 
 export interface Citation {
   id: string;
-  type: 'article' | 'book' | 'chapter' | 'conference' | 'thesis' | 'webpage' | 'preprint';
+  type:
+    | 'article'
+    | 'book'
+    | 'chapter'
+    | 'conference'
+    | 'thesis'
+    | 'webpage'
+    | 'preprint';
   title: string;
   authors: string | string[];
   year: number;
@@ -36,7 +43,7 @@ export interface Citation {
 
 export interface FormattedCitation {
   inText: string; // e.g., "(Smith & Jones, 2023)"
-  full: string;   // Full bibliography entry
+  full: string; // Full bibliography entry
   bibtex?: string; // LaTeX BibTeX format
 }
 
@@ -51,7 +58,7 @@ export class CitationManagerService {
    */
   async formatCitation(
     citation: Citation,
-    style: CitationStyle = 'apa'
+    style: CitationStyle = 'apa',
   ): Promise<FormattedCitation> {
     this.logger.debug(`Formatting citation ${citation.id} in ${style} style`);
 
@@ -67,7 +74,7 @@ export class CitationManagerService {
       const full = cite.format('bibliography', {
         format: 'text',
         template: this.getTemplateForStyle(style),
-        lang: 'en-US'
+        lang: 'en-US',
       });
 
       // Generate BibTeX for LaTeX export
@@ -76,10 +83,13 @@ export class CitationManagerService {
       return {
         inText,
         full,
-        bibtex
+        bibtex,
       };
     } catch (error: any) {
-      this.logger.error(`Failed to format citation: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to format citation: ${error.message}`,
+        error.stack,
+      );
 
       // Fallback to manual formatting
       return this.fallbackFormat(citation, style);
@@ -91,9 +101,11 @@ export class CitationManagerService {
    */
   async generateBibliography(
     citations: Citation[],
-    style: CitationStyle = 'apa'
+    style: CitationStyle = 'apa',
   ): Promise<string> {
-    this.logger.log(`Generating bibliography with ${citations.length} citations in ${style} style`);
+    this.logger.log(
+      `Generating bibliography with ${citations.length} citations in ${style} style`,
+    );
 
     const formatted: string[] = [];
 
@@ -102,7 +114,9 @@ export class CitationManagerService {
         const result = await this.formatCitation(citation, style);
         formatted.push(result.full);
       } catch (error: any) {
-        this.logger.error(`Failed to format citation ${citation.id}: ${error.message}`);
+        this.logger.error(
+          `Failed to format citation ${citation.id}: ${error.message}`,
+        );
       }
     }
 
@@ -111,7 +125,9 @@ export class CitationManagerService {
 
     // Add numbering for IEEE style
     if (style === 'ieee') {
-      return formatted.map((entry, index) => `[${index + 1}] ${entry}`).join('\n\n');
+      return formatted
+        .map((entry, index) => `[${index + 1}] ${entry}`)
+        .join('\n\n');
     }
 
     return formatted.join('\n\n');
@@ -123,7 +139,7 @@ export class CitationManagerService {
   private getInTextCitation(citation: Citation, style: CitationStyle): string {
     const authors = Array.isArray(citation.authors)
       ? citation.authors
-      : citation.authors.split(',').map(a => a.trim());
+      : citation.authors.split(',').map((a) => a.trim());
 
     switch (style) {
       case 'apa':
@@ -153,7 +169,7 @@ export class CitationManagerService {
   private formatAPAInText(authors: string[], year: number): string {
     if (authors.length === 0) return '(Anonymous, ' + year + ')';
 
-    const lastNames = authors.map(a => {
+    const lastNames = authors.map((a) => {
       const parts = a.trim().split(' ');
       return parts[parts.length - 1];
     });
@@ -173,7 +189,7 @@ export class CitationManagerService {
   private formatMLAInText(authors: string[]): string {
     if (authors.length === 0) return '(Anonymous)';
 
-    const lastNames = authors.map(a => {
+    const lastNames = authors.map((a) => {
       const parts = a.trim().split(' ');
       return parts[parts.length - 1];
     });
@@ -193,7 +209,7 @@ export class CitationManagerService {
   private formatChicagoInText(authors: string[], year: number): string {
     if (authors.length === 0) return '(Anonymous ' + year + ')';
 
-    const lastNames = authors.map(a => {
+    const lastNames = authors.map((a) => {
       const parts = a.trim().split(' ');
       return parts[parts.length - 1];
     });
@@ -223,16 +239,16 @@ export class CitationManagerService {
       id: citation.id,
       type: this.mapCitationType(citation.type),
       title: citation.title,
-      issued: { 'date-parts': [[citation.year]] }
+      issued: { 'date-parts': [[citation.year]] },
     };
 
     // Authors
     if (citation.authors) {
       const authors = Array.isArray(citation.authors)
         ? citation.authors
-        : citation.authors.split(',').map(a => a.trim());
+        : citation.authors.split(',').map((a) => a.trim());
 
-      citeData.author = authors.map(name => this.parseAuthorName(name));
+      citeData.author = authors.map((name) => this.parseAuthorName(name));
     }
 
     // Journal article fields
@@ -252,7 +268,9 @@ export class CitationManagerService {
 
     // Editors
     if (citation.editors && citation.editors.length > 0) {
-      citeData.editor = citation.editors.map(name => this.parseAuthorName(name));
+      citeData.editor = citation.editors.map((name) =>
+        this.parseAuthorName(name),
+      );
     }
 
     return citeData;
@@ -272,7 +290,7 @@ export class CitationManagerService {
       // Handle middle names/initials
       return {
         given: parts.slice(0, -1).join(' '),
-        family: parts[parts.length - 1]
+        family: parts[parts.length - 1],
       };
     }
   }
@@ -282,13 +300,13 @@ export class CitationManagerService {
    */
   private mapCitationType(type: string): string {
     const typeMap: Record<string, string> = {
-      'article': 'article-journal',
-      'book': 'book',
-      'chapter': 'chapter',
-      'conference': 'paper-conference',
-      'thesis': 'thesis',
-      'webpage': 'webpage',
-      'preprint': 'article'
+      article: 'article-journal',
+      book: 'book',
+      chapter: 'chapter',
+      conference: 'paper-conference',
+      thesis: 'thesis',
+      webpage: 'webpage',
+      preprint: 'article',
     };
 
     return typeMap[type] || 'article';
@@ -299,11 +317,11 @@ export class CitationManagerService {
    */
   private getTemplateForStyle(style: CitationStyle): string {
     const templateMap: Record<CitationStyle, string> = {
-      'apa': 'apa',
-      'mla': 'modern-language-association',
-      'chicago': 'chicago',
-      'ieee': 'ieee',
-      'harvard': 'harvard1'
+      apa: 'apa',
+      mla: 'modern-language-association',
+      chicago: 'chicago',
+      ieee: 'ieee',
+      harvard: 'harvard1',
     };
 
     return templateMap[style] || 'apa';
@@ -312,10 +330,13 @@ export class CitationManagerService {
   /**
    * Fallback formatting if citation-js fails
    */
-  private fallbackFormat(citation: Citation, style: CitationStyle): FormattedCitation {
+  private fallbackFormat(
+    citation: Citation,
+    style: CitationStyle,
+  ): FormattedCitation {
     const authors = Array.isArray(citation.authors)
       ? citation.authors
-      : citation.authors.split(',').map(a => a.trim());
+      : citation.authors.split(',').map((a) => a.trim());
 
     const authorsStr = this.formatAuthorsList(authors, style);
     const inText = this.getInTextCitation(citation, style);
@@ -350,24 +371,31 @@ export class CitationManagerService {
 
     switch (style) {
       case 'apa':
-        return authors.map((author, index) => {
-          const parts = author.trim().split(' ');
-          const lastName = parts[parts.length - 1];
-          const initials = parts.slice(0, -1).map(p => p[0] + '.').join(' ');
-          return index === 0
-            ? `${lastName}, ${initials}`
-            : `${initials} ${lastName}`;
-        }).join(', ');
+        return authors
+          .map((author, index) => {
+            const parts = author.trim().split(' ');
+            const lastName = parts[parts.length - 1];
+            const initials = parts
+              .slice(0, -1)
+              .map((p) => p[0] + '.')
+              .join(' ');
+            return index === 0
+              ? `${lastName}, ${initials}`
+              : `${initials} ${lastName}`;
+          })
+          .join(', ');
 
       case 'mla':
-        return authors.map((author, index) => {
-          const parts = author.trim().split(' ');
-          const lastName = parts[parts.length - 1];
-          const firstName = parts.slice(0, -1).join(' ');
-          return index === 0
-            ? `${lastName}, ${firstName}`
-            : `${firstName} ${lastName}`;
-        }).join(', and ');
+        return authors
+          .map((author, index) => {
+            const parts = author.trim().split(' ');
+            const lastName = parts[parts.length - 1];
+            const firstName = parts.slice(0, -1).join(' ');
+            return index === 0
+              ? `${lastName}, ${firstName}`
+              : `${firstName} ${lastName}`;
+          })
+          .join(', and ');
 
       default:
         return authors.join(', ');
@@ -456,7 +484,9 @@ export class CitationManagerService {
         const bibtex = cite.format('bibtex');
         entries.push(bibtex);
       } catch (error: any) {
-        this.logger.error(`Failed to generate BibTeX for ${citation.id}: ${error.message}`);
+        this.logger.error(
+          `Failed to generate BibTeX for ${citation.id}: ${error.message}`,
+        );
       }
     }
 
@@ -485,7 +515,7 @@ export class CitationManagerService {
         pages: data.page || undefined,
         doi: data.DOI || doi,
         url: data.URL || undefined,
-        publisher: data.publisher || undefined
+        publisher: data.publisher || undefined,
       };
     } catch (error: any) {
       this.logger.error(`Failed to resolve DOI ${doi}: ${error.message}`);

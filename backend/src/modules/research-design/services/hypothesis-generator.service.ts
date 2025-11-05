@@ -55,7 +55,11 @@ export interface TheoryDiagram {
 }
 
 export interface MethodologyRecommendation {
-  methodology: 'q-methodology' | 'mixed-methods' | 'qualitative' | 'quantitative';
+  methodology:
+    | 'q-methodology'
+    | 'mixed-methods'
+    | 'qualitative'
+    | 'quantitative';
   suitabilityScore: number; // 0-10
   reasoning: string;
   qMethodologyOptimization?: {
@@ -95,7 +99,9 @@ export class HypothesisGeneratorService {
   ) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
     if (!apiKey) {
-      this.logger.warn('OPENAI_API_KEY not configured - AI features will be limited');
+      this.logger.warn(
+        'OPENAI_API_KEY not configured - AI features will be limited',
+      );
     } else {
       this.openai = new OpenAI({ apiKey });
     }
@@ -104,38 +110,51 @@ export class HypothesisGeneratorService {
   /**
    * Main method: Generate hypotheses from literature contradictions, gaps, and trends
    */
-  async generateHypotheses(request: HypothesisGenerationRequest): Promise<GeneratedHypothesis[]> {
-    this.logger.log(`Generating hypotheses for research question: "${request.researchQuestion}"`);
+  async generateHypotheses(
+    request: HypothesisGenerationRequest,
+  ): Promise<GeneratedHypothesis[]> {
+    this.logger.log(
+      `Generating hypotheses for research question: "${request.researchQuestion}"`,
+    );
 
     const allHypotheses: GeneratedHypothesis[] = [];
 
     try {
       // 1. Generate from contradictions
-      if (request.literatureSummary.contradictions && request.literatureSummary.contradictions.length > 0) {
+      if (
+        request.literatureSummary.contradictions &&
+        request.literatureSummary.contradictions.length > 0
+      ) {
         const contradictionHypotheses = await this.generateFromContradictions(
           request.researchQuestion,
           request.literatureSummary.contradictions,
-          request.literatureSummary.papers
+          request.literatureSummary.papers,
         );
         allHypotheses.push(...contradictionHypotheses);
       }
 
       // 2. Generate from gaps
-      if (request.literatureSummary.gaps && request.literatureSummary.gaps.length > 0) {
+      if (
+        request.literatureSummary.gaps &&
+        request.literatureSummary.gaps.length > 0
+      ) {
         const gapHypotheses = await this.generateFromGaps(
           request.researchQuestion,
           request.literatureSummary.gaps,
-          request.literatureSummary.themes
+          request.literatureSummary.themes,
         );
         allHypotheses.push(...gapHypotheses);
       }
 
       // 3. Generate from trends
-      if (request.literatureSummary.trends && request.literatureSummary.trends.length > 0) {
+      if (
+        request.literatureSummary.trends &&
+        request.literatureSummary.trends.length > 0
+      ) {
         const trendHypotheses = await this.generateFromTrends(
           request.researchQuestion,
           request.literatureSummary.trends,
-          request.literatureSummary.papers
+          request.literatureSummary.papers,
         );
         allHypotheses.push(...trendHypotheses);
       }
@@ -144,11 +163,16 @@ export class HypothesisGeneratorService {
       const prioritizedHypotheses = this.prioritizeHypotheses(allHypotheses);
 
       // 5. Validate evidence strength
-      const validatedHypotheses = this.validateEvidenceStrength(prioritizedHypotheses);
+      const validatedHypotheses = this.validateEvidenceStrength(
+        prioritizedHypotheses,
+      );
 
       return validatedHypotheses;
     } catch (error: any) {
-      this.logger.error(`Hypothesis generation failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Hypothesis generation failed: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -159,7 +183,7 @@ export class HypothesisGeneratorService {
   private async generateFromContradictions(
     researchQuestion: string,
     contradictions: any[],
-    papers: any[]
+    papers: any[],
   ): Promise<GeneratedHypothesis[]> {
     if (!this.openai) {
       return [];
@@ -170,12 +194,17 @@ export class HypothesisGeneratorService {
 Research Question: "${researchQuestion}"
 
 Contradictions Identified:
-${contradictions.slice(0, 5).map((c, i) => `
+${contradictions
+  .slice(0, 5)
+  .map(
+    (c, i) => `
 ${i + 1}. ${c.description || c.summary || 'Contradiction'}
    - Finding A: ${c.findingA || 'Not specified'}
    - Finding B: ${c.findingB || 'Not specified'}
    - Papers: ${c.paperIds?.join(', ') || 'Not specified'}
-`).join('\n')}
+`,
+  )
+  .join('\n')}
 
 For each contradiction, generate:
 1. A null hypothesis (no relationship exists)
@@ -208,7 +237,8 @@ Return JSON: {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert research methodologist specializing in hypothesis development. Generate clear, testable hypotheses.',
+            content:
+              'You are an expert research methodologist specializing in hypothesis development. Generate clear, testable hypotheses.',
           },
           { role: 'user', content: prompt },
         ],
@@ -233,12 +263,16 @@ Return JSON: {
         expectedEffectSize: h.expectedEffectSize,
         suggestedStatisticalTest: h.suggestedStatisticalTest,
         confidenceScore: h.confidenceScore || 0.5,
-        evidenceStrength: this.calculateEvidenceStrength(h.supportingPaperIds?.length || 0),
+        evidenceStrength: this.calculateEvidenceStrength(
+          h.supportingPaperIds?.length || 0,
+        ),
         priority: Math.round(h.confidenceScore * 10),
         createdAt: new Date(),
       }));
     } catch (error: any) {
-      this.logger.error(`Contradiction hypothesis generation failed: ${error.message}`);
+      this.logger.error(
+        `Contradiction hypothesis generation failed: ${error.message}`,
+      );
       return [];
     }
   }
@@ -249,7 +283,7 @@ Return JSON: {
   private async generateFromGaps(
     researchQuestion: string,
     gaps: any[],
-    themes: any[]
+    themes: any[],
   ): Promise<GeneratedHypothesis[]> {
     if (!this.openai) {
       return [];
@@ -260,14 +294,22 @@ Return JSON: {
 Research Question: "${researchQuestion}"
 
 Research Gaps:
-${gaps.slice(0, 5).map((g, i) => `
+${gaps
+  .slice(0, 5)
+  .map(
+    (g, i) => `
 ${i + 1}. ${g.description || g.name || 'Gap'}
    - Type: ${g.type || 'Not specified'}
    - Importance: ${g.importance || 'Not specified'}
-`).join('\n')}
+`,
+  )
+  .join('\n')}
 
 Themes:
-${themes.slice(0, 5).map((t, i) => `${i + 1}. ${t.name || t.title || 'Theme'}`).join('\n')}
+${themes
+  .slice(0, 5)
+  .map((t, i) => `${i + 1}. ${t.name || t.title || 'Theme'}`)
+  .join('\n')}
 
 For each gap, generate exploratory hypotheses that:
 1. Propose unexplored relationships between constructs
@@ -283,7 +325,8 @@ Return JSON with same structure as before.`;
         messages: [
           {
             role: 'system',
-            content: 'You are an expert at identifying novel research directions from literature gaps.',
+            content:
+              'You are an expert at identifying novel research directions from literature gaps.',
           },
           { role: 'user', content: prompt },
         ],
@@ -324,7 +367,7 @@ Return JSON with same structure as before.`;
   private async generateFromTrends(
     researchQuestion: string,
     trends: any[],
-    papers: any[]
+    papers: any[],
   ): Promise<GeneratedHypothesis[]> {
     if (!this.openai) {
       return [];
@@ -335,11 +378,16 @@ Return JSON with same structure as before.`;
 Research Question: "${researchQuestion}"
 
 Emerging Trends:
-${trends.slice(0, 5).map((t, i) => `
+${trends
+  .slice(0, 5)
+  .map(
+    (t, i) => `
 ${i + 1}. ${t.description || t.name || 'Trend'}
    - Growth rate: ${t.growthRate || 'Not specified'}
    - Recent papers: ${t.paperCount || 'Not specified'}
-`).join('\n')}
+`,
+  )
+  .join('\n')}
 
 Generate hypotheses that predict future developments based on current trends.
 
@@ -351,7 +399,8 @@ Return JSON with same structure as before.`;
         messages: [
           {
             role: 'system',
-            content: 'You are an expert at identifying future research directions from emerging trends.',
+            content:
+              'You are an expert at identifying future research directions from emerging trends.',
           },
           { role: 'user', content: prompt },
         ],
@@ -376,7 +425,9 @@ Return JSON with same structure as before.`;
         expectedEffectSize: h.expectedEffectSize,
         suggestedStatisticalTest: h.suggestedStatisticalTest,
         confidenceScore: h.confidenceScore || 0.6,
-        evidenceStrength: this.calculateEvidenceStrength(h.supportingPaperIds?.length || 0),
+        evidenceStrength: this.calculateEvidenceStrength(
+          h.supportingPaperIds?.length || 0,
+        ),
         priority: Math.round((h.confidenceScore || 0.6) * 10),
         createdAt: new Date(),
       }));
@@ -392,7 +443,7 @@ Return JSON with same structure as before.`;
   async buildTheoryDiagram(
     researchQuestion: string,
     themes: any[],
-    knowledgeGraphData?: any
+    knowledgeGraphData?: any,
   ): Promise<TheoryDiagram> {
     if (!this.openai) {
       return { constructs: [], relationships: [] };
@@ -403,7 +454,13 @@ Return JSON with same structure as before.`;
 Research Question: "${researchQuestion}"
 
 Themes:
-${themes.slice(0, 10).map((t, i) => `${i + 1}. ${t.name || t.title || 'Theme'}: ${t.description || ''}`).join('\n')}
+${themes
+  .slice(0, 10)
+  .map(
+    (t, i) =>
+      `${i + 1}. ${t.name || t.title || 'Theme'}: ${t.description || ''}`,
+  )
+  .join('\n')}
 
 Extract:
 1. Key constructs (variables, concepts)
@@ -437,7 +494,8 @@ Return JSON: {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert at building conceptual frameworks and theoretical models.',
+            content:
+              'You are an expert at building conceptual frameworks and theoretical models.',
           },
           { role: 'user', content: prompt },
         ],
@@ -457,17 +515,25 @@ Return JSON: {
           id: `construct_${i}`,
           name: c.name,
           definition: c.definition,
-          sources: (c.themeIds || []).map((idx: number) => themes[idx - 1]?.id || `theme_${idx}`),
+          sources: (c.themeIds || []).map(
+            (idx: number) => themes[idx - 1]?.id || `theme_${idx}`,
+          ),
         })),
         relationships: (parsed.relationships || []).map((r: any, i: number) => {
-          const fromConstruct = parsed.constructs.findIndex((c: any) => c.name === r.fromConstruct);
-          const toConstruct = parsed.constructs.findIndex((c: any) => c.name === r.toConstruct);
+          const fromConstruct = parsed.constructs.findIndex(
+            (c: any) => c.name === r.fromConstruct,
+          );
+          const toConstruct = parsed.constructs.findIndex(
+            (c: any) => c.name === r.toConstruct,
+          );
           return {
             from: `construct_${fromConstruct}`,
             to: `construct_${toConstruct}`,
             type: r.type,
             strength: r.strength,
-            evidence: (r.themeIds || []).map((idx: number) => themes[idx - 1]?.id || `theme_${idx}`),
+            evidence: (r.themeIds || []).map(
+              (idx: number) => themes[idx - 1]?.id || `theme_${idx}`,
+            ),
           };
         }),
       };
@@ -483,7 +549,7 @@ Return JSON: {
   async recommendMethodology(
     researchQuestion: string,
     hypotheses: GeneratedHypothesis[],
-    themes: any[]
+    themes: any[],
   ): Promise<MethodologyRecommendation> {
     if (!this.openai) {
       return this.getFallbackMethodologyRecommendation();
@@ -531,7 +597,8 @@ Return JSON: {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert research methodologist specializing in Q-methodology and mixed methods.',
+            content:
+              'You are an expert research methodologist specializing in Q-methodology and mixed methods.',
           },
           { role: 'user', content: prompt },
         ],
@@ -549,7 +616,9 @@ Return JSON: {
       return {
         methodology: 'q-methodology',
         suitabilityScore: parsed.qMethodologySuitability || 7,
-        reasoning: parsed.reasoning || 'Q-methodology is suitable for this research question',
+        reasoning:
+          parsed.reasoning ||
+          'Q-methodology is suitable for this research question',
         qMethodologyOptimization: {
           recommendedStatementCount: parsed.recommendedStatementCount || 40,
           recommendedPSetSize: parsed.recommendedPSetSize || 30,
@@ -567,16 +636,22 @@ Return JSON: {
   /**
    * Prioritize hypotheses by confidence and importance
    */
-  private prioritizeHypotheses(hypotheses: GeneratedHypothesis[]): GeneratedHypothesis[] {
+  private prioritizeHypotheses(
+    hypotheses: GeneratedHypothesis[],
+  ): GeneratedHypothesis[] {
     return hypotheses.sort((a, b) => {
       // Priority = confidence × evidence strength × source weight
       const sourceWeight = { contradiction: 1.0, trend: 0.8, gap: 0.6 };
       const evidenceWeight = { strong: 1.0, moderate: 0.7, weak: 0.4 };
 
       const scoreA =
-        a.confidenceScore * evidenceWeight[a.evidenceStrength] * sourceWeight[a.source];
+        a.confidenceScore *
+        evidenceWeight[a.evidenceStrength] *
+        sourceWeight[a.source];
       const scoreB =
-        b.confidenceScore * evidenceWeight[b.evidenceStrength] * sourceWeight[b.source];
+        b.confidenceScore *
+        evidenceWeight[b.evidenceStrength] *
+        sourceWeight[b.source];
 
       return scoreB - scoreA;
     });
@@ -585,8 +660,10 @@ Return JSON: {
   /**
    * Validate that hypotheses have sufficient evidence
    */
-  private validateEvidenceStrength(hypotheses: GeneratedHypothesis[]): GeneratedHypothesis[] {
-    return hypotheses.filter(h => {
+  private validateEvidenceStrength(
+    hypotheses: GeneratedHypothesis[],
+  ): GeneratedHypothesis[] {
+    return hypotheses.filter((h) => {
       // Require at least 2 supporting papers for "strong" evidence
       if (h.evidenceStrength === 'strong') {
         return h.supportingPapers.length >= 2;
@@ -603,7 +680,9 @@ Return JSON: {
   /**
    * Calculate evidence strength based on number of supporting papers
    */
-  private calculateEvidenceStrength(paperCount: number): 'strong' | 'moderate' | 'weak' {
+  private calculateEvidenceStrength(
+    paperCount: number,
+  ): 'strong' | 'moderate' | 'weak' {
     if (paperCount >= 3) return 'strong';
     if (paperCount >= 1) return 'moderate';
     return 'weak';
@@ -614,7 +693,7 @@ Return JSON: {
    */
   private mapPaperIds(
     paperIds: string[],
-    papers: any[]
+    papers: any[],
   ): Array<{
     id: string;
     title: string;
@@ -623,8 +702,8 @@ Return JSON: {
     excerpt?: string;
   }> {
     return paperIds
-      .map(id => {
-        const paper = papers.find(p => p.id === id || p.doi === id);
+      .map((id) => {
+        const paper = papers.find((p) => p.id === id || p.doi === id);
         if (!paper) return null;
 
         return {

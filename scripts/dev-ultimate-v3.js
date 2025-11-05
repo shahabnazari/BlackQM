@@ -42,7 +42,7 @@ class UltimateDevManagerV3Enhanced {
     // Track last successful health checks
     this.lastFrontendCheck = Date.now();
     this.lastBackendCheck = Date.now();
-    this.stallTimeout = 60000; // 60 seconds for stability
+    this.stallTimeout = 180000; // 180 seconds (3 minutes) for stability - increased to avoid false positives
 
     // Track process states
     this.frontendState = 'stopped';

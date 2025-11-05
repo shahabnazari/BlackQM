@@ -1,11 +1,12 @@
 /**
  * API Service - Phase 7 Day 1 Audit Fix
- * 
+ *
  * Simple API wrapper for making HTTP requests to the backend
  * This fixes the missing import in study-hub.store.ts
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 class APIService {
   private async request(
@@ -13,7 +14,7 @@ class APIService {
     options: RequestInit = {}
   ): Promise<Response> {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     const response = await fetch(url, {
       ...options,
       headers: {

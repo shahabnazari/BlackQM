@@ -60,15 +60,11 @@ export class ReportApprovalService {
     }
 
     if (report.status === 'in_review' || report.status === 'approved') {
-      throw new BadRequestException(
-        `Report is already ${report.status}`,
-      );
+      throw new BadRequestException(`Report is already ${report.status}`);
     }
 
     if (reviewerIds.length === 0) {
-      throw new BadRequestException(
-        'At least one reviewer must be specified',
-      );
+      throw new BadRequestException('At least one reviewer must be specified');
     }
 
     for (const reviewerId of reviewerIds) {
@@ -137,11 +133,7 @@ export class ReportApprovalService {
   /**
    * Approve a report
    */
-  async approveReport(
-    approvalId: string,
-    userId: string,
-    comments?: string,
-  ) {
+  async approveReport(approvalId: string, userId: string, comments?: string) {
     const approval = await this.prisma.reportApproval.findUnique({
       where: { id: approvalId },
       include: {
@@ -216,11 +208,7 @@ export class ReportApprovalService {
   /**
    * Reject a report with feedback
    */
-  async rejectReport(
-    approvalId: string,
-    userId: string,
-    comments: string,
-  ) {
+  async rejectReport(approvalId: string, userId: string, comments: string) {
     if (!comments || comments.trim().length === 0) {
       throw new BadRequestException(
         'Comments are required when rejecting a report',
@@ -366,9 +354,7 @@ export class ReportApprovalService {
     }
 
     if (report.status !== 'in_review') {
-      throw new BadRequestException(
-        'Only reports in review can be cancelled',
-      );
+      throw new BadRequestException('Only reports in review can be cancelled');
     }
 
     await this.prisma.reportApproval.updateMany({
@@ -415,16 +401,10 @@ export class ReportApprovalService {
     }
 
     if (report.status !== 'approved') {
-      throw new BadRequestException(
-        'Only approved reports can be published',
-      );
+      throw new BadRequestException('Only approved reports can be published');
     }
 
-    await this.versionService.createVersion(
-      reportId,
-      userId,
-      'Published',
-    );
+    await this.versionService.createVersion(reportId, userId, 'Published');
 
     const published = await this.prisma.report.update({
       where: { id: reportId },

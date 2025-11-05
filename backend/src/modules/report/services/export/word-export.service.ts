@@ -28,9 +28,13 @@ import {
   PageNumber,
   NumberFormat,
   convertInchesToTwip,
-  TableOfContents
+  TableOfContents,
 } from 'docx';
-import { ProvenanceChain, ReportSection, ReportMetadata } from '../report-generator.service';
+import {
+  ProvenanceChain,
+  ReportSection,
+  ReportMetadata,
+} from '../report-generator.service';
 
 export interface WordExportOptions {
   format: 'apa' | 'mla' | 'chicago';
@@ -50,7 +54,7 @@ export class WordExportService {
     metadata: ReportMetadata,
     sections: ReportSection[],
     provenance: ProvenanceChain[],
-    options: WordExportOptions
+    options: WordExportOptions,
   ): Promise<Buffer> {
     this.logger.log(`Generating Word document for study ${metadata.studyId}`);
 
@@ -89,7 +93,9 @@ export class WordExportService {
               new Paragraph({ pageBreakBefore: true }),
 
               // Table of contents (if requested)
-              ...(options.includeTableOfContents ? this.createTableOfContents() : []),
+              ...(options.includeTableOfContents
+                ? this.createTableOfContents()
+                : []),
 
               // Sections
               ...this.createSections(sections),
@@ -105,11 +111,16 @@ export class WordExportService {
 
       // Generate buffer
       const buffer = await Packer.toBuffer(doc);
-      this.logger.log(`Word document generated successfully (${buffer.length} bytes)`);
+      this.logger.log(
+        `Word document generated successfully (${buffer.length} bytes)`,
+      );
 
       return buffer;
     } catch (error: any) {
-      this.logger.error(`Failed to generate Word document: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to generate Word document: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -117,7 +128,10 @@ export class WordExportService {
   /**
    * Create title page based on formatting style
    */
-  private createTitlePage(metadata: ReportMetadata, format: string): Paragraph[] {
+  private createTitlePage(
+    metadata: ReportMetadata,
+    format: string,
+  ): Paragraph[] {
     const paragraphs: Paragraph[] = [];
 
     switch (format) {
@@ -171,7 +185,7 @@ export class WordExportService {
           new Paragraph({
             text: new Date(metadata.date).toLocaleDateString(),
             alignment: AlignmentType.CENTER,
-          })
+          }),
         );
         break;
 
@@ -199,7 +213,7 @@ export class WordExportService {
             ],
             alignment: AlignmentType.CENTER,
             spacing: { after: 200 },
-          })
+          }),
         );
         break;
 
@@ -236,7 +250,7 @@ export class WordExportService {
           new Paragraph({
             text: new Date(metadata.date).toLocaleDateString(),
             alignment: AlignmentType.CENTER,
-          })
+          }),
         );
         break;
 
@@ -246,7 +260,7 @@ export class WordExportService {
             text: metadata.title,
             heading: HeadingLevel.TITLE,
             alignment: AlignmentType.CENTER,
-          })
+          }),
         );
     }
 
@@ -260,7 +274,10 @@ export class WordExportService {
     return {
       children: [
         new Paragraph({
-          text: format === 'apa' ? metadata.title.substring(0, 50).toUpperCase() : '',
+          text:
+            format === 'apa'
+              ? metadata.title.substring(0, 50).toUpperCase()
+              : '',
           alignment: AlignmentType.RIGHT,
         }),
       ],
@@ -321,7 +338,7 @@ export class WordExportService {
           text: section.title,
           heading: HeadingLevel.HEADING_1,
           spacing: { before: 400, after: 200 },
-        })
+        }),
       );
 
       // Section content (convert markdown to paragraphs)
@@ -336,10 +353,12 @@ export class WordExportService {
               text: subsection.title,
               heading: HeadingLevel.HEADING_2,
               spacing: { before: 300, after: 150 },
-            })
+            }),
           );
 
-          const subContentParagraphs = this.markdownToParagraphs(subsection.content);
+          const subContentParagraphs = this.markdownToParagraphs(
+            subsection.content,
+          );
           paragraphs.push(...subContentParagraphs);
         }
       }
@@ -370,7 +389,7 @@ export class WordExportService {
             text: line.substring(4),
             heading: HeadingLevel.HEADING_3,
             spacing: { before: 200, after: 100 },
-          })
+          }),
         );
       } else if (line.startsWith('## ')) {
         paragraphs.push(
@@ -378,7 +397,7 @@ export class WordExportService {
             text: line.substring(3),
             heading: HeadingLevel.HEADING_2,
             spacing: { before: 300, after: 150 },
-          })
+          }),
         );
       } else if (line.startsWith('# ')) {
         paragraphs.push(
@@ -386,7 +405,7 @@ export class WordExportService {
             text: line.substring(2),
             heading: HeadingLevel.HEADING_1,
             spacing: { before: 400, after: 200 },
-          })
+          }),
         );
       }
       // Bullet list
@@ -395,7 +414,7 @@ export class WordExportService {
           new Paragraph({
             text: line.substring(2),
             bullet: { level: 0 },
-          })
+          }),
         );
       }
       // Table (basic support)
@@ -422,7 +441,7 @@ export class WordExportService {
           new Paragraph({
             children,
             spacing: { after: 100 },
-          })
+          }),
         );
       }
     }
@@ -466,15 +485,15 @@ export class WordExportService {
 
       const cells = rows[i]
         .split('|')
-        .map(c => c.trim())
-        .filter(c => c);
+        .map((c) => c.trim())
+        .filter((c) => c);
 
       const tableCells = cells.map(
-        cellText =>
+        (cellText) =>
           new TableCell({
             children: [new Paragraph({ text: cellText })],
             width: { size: 100 / cells.length, type: WidthType.PERCENTAGE },
-          })
+          }),
       );
 
       tableRows.push(new TableRow({ children: tableCells }));
@@ -503,7 +522,7 @@ export class WordExportService {
       new Paragraph({
         text: 'This appendix provides complete lineage information for all statements used in this study, showing the path from original literature sources through gap identification, research question refinement, hypothesis generation, theme extraction, and final statement formulation.',
         spacing: { after: 200 },
-      })
+      }),
     );
 
     // Create provenance table
@@ -511,33 +530,57 @@ export class WordExportService {
       tableHeader: true,
       children: [
         new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'Statement #', bold: true })] })],
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: 'Statement #', bold: true })],
+            }),
+          ],
           width: { size: 10, type: WidthType.PERCENTAGE },
         }),
         new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'Statement Text', bold: true })] })],
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: 'Statement Text', bold: true })],
+            }),
+          ],
           width: { size: 30, type: WidthType.PERCENTAGE },
         }),
         new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'Source Paper', bold: true })] })],
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: 'Source Paper', bold: true })],
+            }),
+          ],
           width: { size: 20, type: WidthType.PERCENTAGE },
         }),
         new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'Theme', bold: true })] })],
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: 'Theme', bold: true })],
+            }),
+          ],
           width: { size: 15, type: WidthType.PERCENTAGE },
         }),
         new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'Gap', bold: true })] })],
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: 'Gap', bold: true })],
+            }),
+          ],
           width: { size: 15, type: WidthType.PERCENTAGE },
         }),
         new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'Question', bold: true })] })],
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: 'Question', bold: true })],
+            }),
+          ],
           width: { size: 10, type: WidthType.PERCENTAGE },
         }),
       ],
     });
 
-    const dataRows = provenance.map(chain => {
+    const dataRows = provenance.map((chain) => {
       const stmtNum = chain.statement?.statementNumber?.toString() || '-';
       const stmtText = chain.statement?.text?.substring(0, 100) || '-';
       const paper = chain.paper
@@ -569,7 +612,7 @@ export class WordExportService {
     paragraphs.push(
       new Paragraph({
         text: `[Provenance table with ${provenance.length} entries - full data available in exported document]`,
-      })
+      }),
     );
 
     return paragraphs;

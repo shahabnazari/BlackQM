@@ -11,7 +11,6 @@ import { VirusScanService } from './virus-scan.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { fileTypeFromFile } from 'file-type';
 import * as magicBytes from 'magic-bytes.js';
 
 interface FileValidationResult {
@@ -198,7 +197,8 @@ export class FileUploadService {
   private async validateMimeType(filePath: string, declaredMimeType: string): Promise<FileValidationResult> {
     try {
       // Check actual file type from magic bytes
-      const fileType = await fileTypeFromFile(filePath);
+      const { fromFile } = await import('file-type');
+      const fileType = await fromFile(filePath);
       
       if (!fileType) {
         // Try magic-bytes as fallback

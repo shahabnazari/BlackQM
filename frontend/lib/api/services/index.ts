@@ -57,3 +57,22 @@ export type {
   ParticipantProgress,
   StudyAccessResponse,
 } from './participant.service';
+
+// Day 5.10 Research Question to Items Service
+export { researchQuestionToItemsApiService } from './research-question-to-items-api.service';
+
+// Day 5.11 Hypothesis to Items Service
+export { hypothesisToItemsApiService } from './hypothesis-to-items-api.service';
+
+// Day 5.12 Enhanced Theme Integration Service
+export { enhancedThemeIntegrationService } from './enhanced-theme-integration-api.service';
+export type {
+  ResearchQuestionSuggestion,
+  HypothesisSuggestion,
+  ConstructMapping,
+  CompleteSurvey,
+  SuggestQuestionsRequest,
+  SuggestHypothesesRequest,
+  MapConstructsRequest,
+  GenerateCompleteSurveyRequest,
+} from './enhanced-theme-integration-api.service';

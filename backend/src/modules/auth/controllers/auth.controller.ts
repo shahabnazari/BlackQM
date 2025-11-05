@@ -159,8 +159,15 @@ export class AuthController {
   @Get('orcid')
   @UseGuards(AuthGuard('orcid'))
   @ApiOperation({ summary: 'Initiate ORCID OAuth login' })
-  @ApiQuery({ name: 'returnUrl', required: false, description: 'URL to redirect after successful authentication' })
-  @ApiResponse({ status: 302, description: 'Redirects to ORCID for authentication' })
+  @ApiQuery({
+    name: 'returnUrl',
+    required: false,
+    description: 'URL to redirect after successful authentication',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to ORCID for authentication',
+  })
   async orcidLogin(@Query('returnUrl') returnUrl?: string, @Req() req?: any) {
     // Store returnUrl in session for use in callback
     if (returnUrl && req && req.session) {
@@ -173,7 +180,10 @@ export class AuthController {
   @Get('orcid/callback')
   @UseGuards(AuthGuard('orcid'))
   @ApiOperation({ summary: 'ORCID OAuth callback' })
-  @ApiResponse({ status: 302, description: 'Redirects to frontend with tokens' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to frontend with tokens',
+  })
   async orcidCallback(@Req() req: any, @Res() res: any) {
     // User authenticated via ORCID (already created/updated by strategy)
     const user = req.user;
@@ -182,7 +192,8 @@ export class AuthController {
     const tokens = await this.authService.generateOAuthTokens(user.id);
 
     // Get frontend URL from config
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
 
     // Get returnUrl from session (if stored during login)
     const returnUrl = req.session?.returnUrl || '/discover/literature';
@@ -193,18 +204,18 @@ export class AuthController {
     }
 
     // Redirect to frontend with tokens in URL and returnUrl parameter
-    const redirectUrl = `${frontendUrl}/auth/orcid/success?token=${tokens.accessToken}&refresh=${tokens.refreshToken}&returnUrl=${encodeURIComponent(returnUrl)}&user=${encodeURIComponent(JSON.stringify({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      orcidId: user.orcidId,
-    }))}`;
+    const redirectUrl = `${frontendUrl}/auth/orcid/success?token=${tokens.accessToken}&refresh=${tokens.refreshToken}&returnUrl=${encodeURIComponent(returnUrl)}&user=${encodeURIComponent(
+      JSON.stringify({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        orcidId: user.orcidId,
+      }),
+    )}`;
 
     res.redirect(redirectUrl);
   }
 }
-
-
 
 
 

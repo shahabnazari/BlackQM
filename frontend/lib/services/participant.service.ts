@@ -1,21 +1,17 @@
-
 // Type definitions
-
-
-
 
 // Enterprise-Grade Participant Service
 // Phase 6.91: Complete Participant Management with Error Handling
 import { apiClient, ApiResponse } from '@/lib/api/client';
 import {
-    BulkImportData,
-    EmailCampaign,
-    EmailTemplate,
-    ImportResult,
-    Participant,
-    ParticipantFilter,
-    ParticipantInvitation,
-    ParticipantMetrics
+  BulkImportData,
+  EmailCampaign,
+  EmailTemplate,
+  ImportResult,
+  Participant,
+  ParticipantFilter,
+  ParticipantInvitation,
+  ParticipantMetrics,
 } from '@/lib/types/participant.types';
 // Custom error class for participant operations
 export class ParticipantServiceError extends Error {
@@ -40,7 +36,7 @@ const DEFAULT_CONFIG: ServiceConfig = {
   maxRetries: 3,
   retryDelay: 1000,
   cacheTimeout: 5 * 60 * 1000, // 5 minutes
-  batchSize: 100
+  batchSize: 100,
 };
 class ParticipantService {
   private cache: Map<string, { data: any; expiry: number }> = new Map();
@@ -64,14 +60,17 @@ class ParticipantService {
   private setCache<T>(key: string, data: T): void {
     this.cache.set(key, {
       data,
-      expiry: Date.now() + this.config.cacheTimeout
+      expiry: Date.now() + this.config.cacheTimeout,
     });
   }
   private clearCache(): void {
     this.cache.clear();
   }
   // Error handling with retry logic
-  private async withRetry<T>(fn: () => Promise<T>, retries = this.config.maxRetries): Promise<T> {
+  private async withRetry<T>(
+    fn: () => Promise<T>,
+    retries = this.config.maxRetries
+  ): Promise<T> {
     try {
       return await fn();
     } catch (error: any) {
@@ -111,7 +110,9 @@ class ParticipantService {
     const cached = this.getFromCache<Participant>(cacheKey);
     if (cached) return cached;
     return this.withRetry(async () => {
-      const response = await apiClient.get<ApiResponse<Participant>>(`/participants/${id}`);
+      const response = await apiClient.get<ApiResponse<Participant>>(
+        `/participants/${id}`
+      );
       this.setCache(cacheKey, response.data.data);
       return response.data.data;
     });
@@ -126,12 +127,14 @@ class ParticipantService {
     const cached = this.getFromCache<any>(cacheKey);
     if (cached) return cached;
     return this.withRetry(async () => {
-      const response = await apiClient.get<ApiResponse<{
-        participants: Participant[];
-        total: number;
-        page: number;
-        pageSize: number;
-      }>>('/participants', { params: filter });
+      const response = await apiClient.get<
+        ApiResponse<{
+          participants: Participant[];
+          total: number;
+          page: number;
+          pageSize: number;
+        }>
+      >('/participants', { params: filter });
       this.setCache(cacheKey, response.data.data);
       return response.data.data;
     });
@@ -140,15 +143,24 @@ class ParticipantService {
     this.clearCache(); // Clear cache on mutation
 
     return this.withRetry(async () => {
-      const response = await apiClient.post<ApiResponse<Participant>>('/participants', data);
+      const response = await apiClient.post<ApiResponse<Participant>>(
+        '/participants',
+        data
+      );
       return response.data.data;
     });
   }
-  async updateParticipant(id: string, data: Partial<Participant>): Promise<Participant> {
+  async updateParticipant(
+    id: string,
+    data: Partial<Participant>
+  ): Promise<Participant> {
     this.clearCache(); // Clear cache on mutation
 
     return this.withRetry(async () => {
-      const response = await apiClient.patch<ApiResponse<Participant>>(`/participants/${id}`, data);
+      const response = await apiClient.patch<ApiResponse<Participant>>(
+        `/participants/${id}`,
+        data
+      );
       return response.data.data;
     });
   }
@@ -160,7 +172,9 @@ class ParticipantService {
     });
   }
   // Bulk operations
-  async bulkCreateParticipants(participants: Partial<Participant>[]): Promise<Participant[]> {
+  async bulkCreateParticipants(
+    participants: Partial<Participant>[]
+  ): Promise<Participant[]> {
     this.clearCache();
 
     // Process in batches to avoid overwhelming the server
@@ -169,7 +183,7 @@ class ParticipantService {
       const batch = participants.slice(i, i + this.config.batchSize);
       const response = await this.withRetry(async () => {
         const res = await apiClient.post<Participant[]>('/participants/bulk', {
-          participants: batch
+          participants: batch,
         });
         return res.data;
       });
@@ -183,7 +197,10 @@ class ParticipantService {
     this.clearCache();
 
     return this.withRetry(async () => {
-      const response = await apiClient.patch<Participant[]>('/participants/bulk', { updates });
+      const response = await apiClient.patch<Participant[]>(
+        '/participants/bulk',
+        { updates }
+      );
       return response.data;
     });
   }
@@ -205,18 +222,22 @@ class ParticipantService {
     formData.append('mapping', JSON.stringify(uploadData.mapping));
     formData.append('options', JSON.stringify(uploadData.options));
     return this.withRetry(async () => {
-      const response = await apiClient.post<ApiResponse<ImportResult>>('/participants/import', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / (progressEvent.total || 1)
-          );
-          // Can emit progress events here if needed
-          console.log(`Upload Progress: ${percentCompleted}%`);
+      const response = await apiClient.post<ApiResponse<ImportResult>>(
+        '/participants/import',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          onUploadProgress: progressEvent => {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / (progressEvent.total || 1)
+            );
+            // Can emit progress events here if needed
+            console.log(`Upload Progress: ${percentCompleted}%`);
+          },
         }
-      });
+      );
       return response.data.data;
     });
   }
@@ -227,7 +248,7 @@ class ParticipantService {
     return this.withRetry(async () => {
       const response = await apiClient.get<Blob>('/participants/export', {
         params: { ...filter, format },
-        responseType: 'blob'
+        responseType: 'blob',
       });
       return response.data;
     });
@@ -241,10 +262,12 @@ class ParticipantService {
     this.clearCache();
 
     return this.withRetry(async () => {
-      const response = await apiClient.post<ApiResponse<ParticipantInvitation[]>>('/participants/invite', {
+      const response = await apiClient.post<
+        ApiResponse<ParticipantInvitation[]>
+      >('/participants/invite', {
         participantIds,
         templateId,
-        customMessage
+        customMessage,
       });
       return response.data.data;
     });
@@ -259,7 +282,9 @@ class ParticipantService {
   }
   async trackInvitationOpen(invitationCode: string): Promise<void> {
     return this.withRetry(async () => {
-      await apiClient.post(`/participants/invitations/track/${invitationCode}/open`);
+      await apiClient.post(
+        `/participants/invitations/track/${invitationCode}/open`
+      );
     });
   }
   async acceptInvitation(invitationCode: string): Promise<Participant> {
@@ -272,9 +297,15 @@ class ParticipantService {
       return response.data.data;
     });
   }
-  async declineInvitation(invitationCode: string, reason?: string): Promise<void> {
+  async declineInvitation(
+    invitationCode: string,
+    reason?: string
+  ): Promise<void> {
     return this.withRetry(async () => {
-      await apiClient.post(`/participants/invitations/${invitationCode}/decline`, { reason });
+      await apiClient.post(
+        `/participants/invitations/${invitationCode}/decline`,
+        { reason }
+      );
     });
   }
   // Metrics and analytics
@@ -283,7 +314,9 @@ class ParticipantService {
     const cached = this.getFromCache<ParticipantMetrics>(cacheKey);
     if (cached) return cached;
     return this.withRetry(async () => {
-      const response = await apiClient.get<ApiResponse<ParticipantMetrics>>(`/participants/metrics/${studyId}`);
+      const response = await apiClient.get<ApiResponse<ParticipantMetrics>>(
+        `/participants/metrics/${studyId}`
+      );
       this.setCache(cacheKey, response.data.data);
       return response.data.data;
     });
@@ -302,26 +335,33 @@ class ParticipantService {
     }>;
   }> {
     return this.withRetry(async () => {
-      const response = await apiClient.get<ApiResponse<{
-        sessions: Array<{
-          startTime: Date;
-          endTime: Date;
-          duration: number;
-          actions: number;
-        }>;
-        responses: Array<{
-          questionId: string;
-          timestamp: Date;
-          value: any;
-        }>;
-      }>>(`/participants/${participantId}/activity`);
+      const response = await apiClient.get<
+        ApiResponse<{
+          sessions: Array<{
+            startTime: Date;
+            endTime: Date;
+            duration: number;
+            actions: number;
+          }>;
+          responses: Array<{
+            questionId: string;
+            timestamp: Date;
+            value: any;
+          }>;
+        }>
+      >(`/participants/${participantId}/activity`);
       return response.data.data;
     });
   }
   // Email campaign management
-  async createEmailCampaign(campaign: Partial<EmailCampaign>): Promise<EmailCampaign> {
+  async createEmailCampaign(
+    campaign: Partial<EmailCampaign>
+  ): Promise<EmailCampaign> {
     return this.withRetry(async () => {
-      const response = await apiClient.post<ApiResponse<EmailCampaign>>('/participants/campaigns', campaign);
+      const response = await apiClient.post<ApiResponse<EmailCampaign>>(
+        '/participants/campaigns',
+        campaign
+      );
       return response.data.data;
     });
   }
@@ -335,7 +375,9 @@ class ParticipantService {
     const cached = this.getFromCache<EmailTemplate[]>(cacheKey);
     if (cached) return cached;
     return this.withRetry(async () => {
-      const response = await apiClient.get<EmailTemplate[]>('/participants/templates');
+      const response = await apiClient.get<EmailTemplate[]>(
+        '/participants/templates'
+      );
       this.setCache(cacheKey, response.data);
       return response.data;
     });
@@ -354,8 +396,8 @@ class ParticipantService {
     });
     return {
       valid: errors.length === 0,
-      errors
-    }
+      errors,
+    };
   }
   private isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -369,4 +411,9 @@ class ParticipantService {
 // Singleton instance
 export const participantService = new ParticipantService();
 // Export types for convenience
-export type { Participant, ParticipantFilter, ParticipantInvitation, ParticipantMetrics };
+export type {
+  Participant,
+  ParticipantFilter,
+  ParticipantInvitation,
+  ParticipantMetrics,
+};

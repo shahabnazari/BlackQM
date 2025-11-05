@@ -76,7 +76,7 @@ function generateQuery(index: number): string {
  */
 async function executeSearch(
   query: string,
-  searchId: number
+  searchId: number,
 ): Promise<{
   success: boolean;
   isRateLimited: boolean;
@@ -101,7 +101,7 @@ async function executeSearch(
       {
         timeout: 30000, // 30 second timeout
         validateStatus: (status) => status < 500, // Don't throw on 4xx
-      }
+      },
     );
 
     const responseTime = Date.now() - startTime;
@@ -127,7 +127,11 @@ async function executeSearch(
     return {
       success: true,
       isRateLimited: false,
-      isCached: cacheMetadata.isFresh || cacheMetadata.isStale || cacheMetadata.isArchive || false,
+      isCached:
+        cacheMetadata.isFresh ||
+        cacheMetadata.isStale ||
+        cacheMetadata.isArchive ||
+        false,
       isFresh: !cacheMetadata.isStale && !cacheMetadata.isArchive,
       isStale: cacheMetadata.isStale || false,
       isArchive: cacheMetadata.isArchive || false,
@@ -156,7 +160,7 @@ async function executeSearch(
  */
 async function runLoadTest(
   totalRequests: number = 1000,
-  batchSize: number = 50
+  batchSize: number = 50,
 ) {
   console.log('\n📊 Starting Literature API Load Test');
   console.log('=====================================');
@@ -190,7 +194,7 @@ async function runLoadTest(
     const batchRequests = batchEnd - batchStart;
 
     console.log(
-      `\n🚀 Batch ${batch + 1}/${batches} - Executing ${batchRequests} concurrent requests...`
+      `\n🚀 Batch ${batch + 1}/${batches} - Executing ${batchRequests} concurrent requests...`,
     );
 
     // Create concurrent requests
@@ -237,12 +241,21 @@ async function runLoadTest(
     }
 
     // Progress update
-    const successRate = ((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1);
-    const cacheHitRate = stats.cacheHits + stats.cacheMisses > 0
-      ? ((stats.cacheHits / (stats.cacheHits + stats.cacheMisses)) * 100).toFixed(1)
-      : '0.0';
+    const successRate = (
+      (stats.successfulRequests / stats.totalRequests) *
+      100
+    ).toFixed(1);
+    const cacheHitRate =
+      stats.cacheHits + stats.cacheMisses > 0
+        ? (
+            (stats.cacheHits / (stats.cacheHits + stats.cacheMisses)) *
+            100
+          ).toFixed(1)
+        : '0.0';
 
-    console.log(`   ✅ Success: ${successRate}% | 💾 Cache: ${cacheHitRate}% | ⚠️  Rate Limits: ${stats.rateLimitErrors}`);
+    console.log(
+      `   ✅ Success: ${successRate}% | 💾 Cache: ${cacheHitRate}% | ⚠️  Rate Limits: ${stats.rateLimitErrors}`,
+    );
 
     // Small delay between batches to avoid overwhelming the server
     if (batch < batches - 1) {
@@ -252,14 +265,17 @@ async function runLoadTest(
 
   // Calculate final stats
   stats.avgResponseTime =
-    stats.responseTimes.reduce((sum, t) => sum + t, 0) / stats.responseTimes.length;
+    stats.responseTimes.reduce((sum, t) => sum + t, 0) /
+    stats.responseTimes.length;
 
   // Print results
   printResults(stats);
 
   // Return pass/fail
   return {
-    passed: stats.rateLimitErrors === 0 && stats.cacheHits / (stats.cacheHits + stats.cacheMisses) >= 0.95,
+    passed:
+      stats.rateLimitErrors === 0 &&
+      stats.cacheHits / (stats.cacheHits + stats.cacheMisses) >= 0.95,
     stats,
   };
 }
@@ -274,15 +290,22 @@ function printResults(stats: LoadTestStats) {
   // Request Stats
   console.log('\n🔢 Request Statistics:');
   console.log(`   Total Requests: ${stats.totalRequests}`);
-  console.log(`   Successful: ${stats.successfulRequests} (${((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1)}%)`);
-  console.log(`   Failed: ${stats.failedRequests} (${((stats.failedRequests / stats.totalRequests) * 100).toFixed(1)}%)`);
+  console.log(
+    `   Successful: ${stats.successfulRequests} (${((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1)}%)`,
+  );
+  console.log(
+    `   Failed: ${stats.failedRequests} (${((stats.failedRequests / stats.totalRequests) * 100).toFixed(1)}%)`,
+  );
   console.log(`   Rate Limited (429): ${stats.rateLimitErrors}`);
 
   // Cache Stats
   console.log('\n💾 Cache Statistics:');
   const totalCacheRequests = stats.cacheHits + stats.cacheMisses;
-  const cacheHitRate = totalCacheRequests > 0 ? (stats.cacheHits / totalCacheRequests) * 100 : 0;
-  console.log(`   Cache Hits: ${stats.cacheHits} (${cacheHitRate.toFixed(1)}%)`);
+  const cacheHitRate =
+    totalCacheRequests > 0 ? (stats.cacheHits / totalCacheRequests) * 100 : 0;
+  console.log(
+    `   Cache Hits: ${stats.cacheHits} (${cacheHitRate.toFixed(1)}%)`,
+  );
   console.log(`   Cache Misses: ${stats.cacheMisses}`);
   console.log(`   Fresh Results: ${stats.freshResults}`);
   console.log(`   Stale Results: ${stats.staleResults}`);
@@ -297,7 +320,9 @@ function printResults(stats: LoadTestStats) {
   // Results
   console.log('\n📄 Results:');
   console.log(`   Total Papers: ${stats.totalPapers}`);
-  console.log(`   Avg Papers/Request: ${(stats.totalPapers / stats.successfulRequests).toFixed(1)}`);
+  console.log(
+    `   Avg Papers/Request: ${(stats.totalPapers / stats.successfulRequests).toFixed(1)}`,
+  );
 
   // Pass/Fail
   console.log('\n✅ Test Criteria:');
@@ -305,7 +330,9 @@ function printResults(stats: LoadTestStats) {
   const cacheHitPass = cacheHitRate >= 95;
 
   console.log(`   No Rate Limiting: ${rateLimitPass ? '✅ PASS' : '❌ FAIL'}`);
-  console.log(`   Cache Hit Rate ≥95%: ${cacheHitPass ? '✅ PASS' : `❌ FAIL (${cacheHitRate.toFixed(1)}%)`}`);
+  console.log(
+    `   Cache Hit Rate ≥95%: ${cacheHitPass ? '✅ PASS' : `❌ FAIL (${cacheHitRate.toFixed(1)}%)`}`,
+  );
 
   const overallPass = rateLimitPass && cacheHitPass;
   console.log(`\n${overallPass ? '✅ OVERALL: PASS' : '❌ OVERALL: FAIL'}`);
