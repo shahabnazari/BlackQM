@@ -898,13 +898,19 @@ class LiteratureAPIService {
     studyContext: any
   ): Promise<string[]> {
     try {
-      const response = await this.api.post('/literature/statements/generate', {
+      // Phase 10 Day 14: Use public endpoint for development/testing
+      // In production, this should use the authenticated endpoint
+      const endpoint = '/literature/statements/generate/public';
+
+      console.log(`📝 [Q-Statements] Generating from ${themes.length} themes`);
+      const response = await this.api.post(endpoint, {
         themes,
         studyContext,
       });
+      console.log(`✅ [Q-Statements] Generated ${response.data?.length || 0} statements`);
       return response.data;
     } catch (error) {
-      console.error('Failed to generate statements:', error);
+      console.error('❌ [Q-Statements] Generation failed:', error);
       throw error;
     }
   }

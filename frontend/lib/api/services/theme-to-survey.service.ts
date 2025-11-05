@@ -31,11 +31,22 @@ export interface Theme {
 
 export interface SurveyItem {
   id: string;
-  type: 'likert' | 'multiple_choice' | 'semantic_differential' | 'matrix_grid' | 'rating_scale';
+  type:
+    | 'likert'
+    | 'multiple_choice'
+    | 'semantic_differential'
+    | 'matrix_grid'
+    | 'rating_scale';
   themeId: string;
   themeName: string;
   text: string;
-  scaleType?: '1-5' | '1-7' | '1-10' | 'agree-disagree' | 'frequency' | 'satisfaction';
+  scaleType?:
+    | '1-5'
+    | '1-7'
+    | '1-10'
+    | 'agree-disagree'
+    | 'frequency'
+    | 'satisfaction';
   scaleLabels?: string[];
   options?: string[];
   reversed?: boolean;
@@ -58,8 +69,20 @@ export interface SurveyItem {
 
 export interface GenerateSurveyItemsOptions {
   themes: Theme[];
-  itemType: 'likert' | 'multiple_choice' | 'semantic_differential' | 'matrix_grid' | 'rating_scale' | 'mixed';
-  scaleType?: '1-5' | '1-7' | '1-10' | 'agree-disagree' | 'frequency' | 'satisfaction';
+  itemType:
+    | 'likert'
+    | 'multiple_choice'
+    | 'semantic_differential'
+    | 'matrix_grid'
+    | 'rating_scale'
+    | 'mixed';
+  scaleType?:
+    | '1-5'
+    | '1-7'
+    | '1-10'
+    | 'agree-disagree'
+    | 'frequency'
+    | 'satisfaction';
   itemsPerTheme?: number;
   includeReverseCoded?: boolean;
   researchContext?: string;
@@ -161,7 +184,10 @@ class ThemeToSurveyService {
       description: `Generated from theme: ${item.themeName}`,
       required: false,
       order: index,
-      options: item.options || item.scaleLabels || this.generateScaleOptions(item.scaleType),
+      options:
+        item.options ||
+        item.scaleLabels ||
+        this.generateScaleOptions(item.scaleType),
       metadata: {
         source: 'theme-extraction' as const,
         themeId: item.themeId,
@@ -199,11 +225,23 @@ class ThemeToSurveyService {
       case '1-10':
         return Array.from({ length: 10 }, (_, i) => String(i + 1));
       case 'agree-disagree':
-        return ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'];
+        return [
+          'Strongly Disagree',
+          'Disagree',
+          'Neutral',
+          'Agree',
+          'Strongly Agree',
+        ];
       case 'frequency':
         return ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'];
       case 'satisfaction':
-        return ['Very Dissatisfied', 'Dissatisfied', 'Neutral', 'Satisfied', 'Very Satisfied'];
+        return [
+          'Very Dissatisfied',
+          'Dissatisfied',
+          'Neutral',
+          'Satisfied',
+          'Very Satisfied',
+        ];
       default:
         return ['1', '2', '3', '4', '5'];
     }

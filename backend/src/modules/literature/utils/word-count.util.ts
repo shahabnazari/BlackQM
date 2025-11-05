@@ -101,7 +101,7 @@ const EXCLUDED_SECTION_MARKERS = [
  */
 export function calculateWordCount(
   text: string | undefined | null,
-  excludeNonContentSections: boolean = true
+  excludeNonContentSections: boolean = true,
 ): number {
   if (!text || typeof text !== 'string') {
     return 0;
@@ -119,7 +119,11 @@ export function calculateWordCount(
       const regex = new RegExp(`\\n\\s*${marker}\\s*\\n`, 'i');
       const match = lowerText.match(regex);
 
-      if (match && match.index !== undefined && match.index < earliestExcludedIndex) {
+      if (
+        match &&
+        match.index !== undefined &&
+        match.index < earliestExcludedIndex
+      ) {
         earliestExcludedIndex = match.index;
       }
 
@@ -139,7 +143,7 @@ export function calculateWordCount(
   const words = contentToCount
     .trim()
     .split(/\s+/)
-    .filter(word => word.length > 0);
+    .filter((word) => word.length > 0);
 
   return words.length;
 }
@@ -151,7 +155,9 @@ export function calculateWordCount(
  * @param abstract - Paper abstract text
  * @returns Word count
  */
-export function calculateAbstractWordCount(abstract: string | undefined | null): number {
+export function calculateAbstractWordCount(
+  abstract: string | undefined | null,
+): number {
   return calculateWordCount(abstract, false);
 }
 
@@ -170,14 +176,12 @@ export function calculateAbstractWordCount(abstract: string | undefined | null):
 export function calculateComprehensiveWordCount(
   title: string | undefined | null,
   abstract: string | undefined | null,
-  fullText?: string | undefined | null
+  fullText?: string | undefined | null,
 ): number {
   // Combine all available content with space separators
-  const combinedContent = [
-    title || '',
-    abstract || '',
-    fullText || '',
-  ].filter(text => text.length > 0).join(' ');
+  const combinedContent = [title || '', abstract || '', fullText || '']
+    .filter((text) => text.length > 0)
+    .join(' ');
 
   // Calculate word count excluding references, indexes, glossaries, appendices, etc.
   // Default behavior excludes non-content sections
@@ -198,7 +202,7 @@ export function calculateComprehensiveWordCount(
  */
 export function isPaperEligible(
   wordCount: number,
-  minimumThreshold: number = 1000
+  minimumThreshold: number = 1000,
 ): boolean {
   return wordCount >= minimumThreshold;
 }
@@ -225,7 +229,10 @@ export function getWordCountCategory(wordCount: number): string {
  * @param showCategory - Include category label (default: false)
  * @returns Formatted string (e.g., "3,245 words" or "3,245 words (Standard)")
  */
-export function formatWordCount(wordCount: number, showCategory: boolean = false): string {
+export function formatWordCount(
+  wordCount: number,
+  showCategory: boolean = false,
+): string {
   const formatted = wordCount.toLocaleString();
   const label = wordCount === 1 ? 'word' : 'words';
 
@@ -247,7 +254,7 @@ export function formatWordCount(wordCount: number, showCategory: boolean = false
  */
 export function calculateReadingTime(
   wordCount: number,
-  wordsPerMinute: number = 225
+  wordsPerMinute: number = 225,
 ): number {
   if (wordCount === 0) return 0;
   return Math.ceil(wordCount / wordsPerMinute);

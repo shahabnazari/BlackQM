@@ -25,11 +25,13 @@ Successfully implemented **enterprise-grade UX** for content analysis and theme 
 **Lines:** 681-797
 
 **What Changed:**
+
 - Moved content analysis from `handlePurposeSelected` to `handleExtractThemes`
 - Analysis happens **BEFORE** wizard opens (not after purpose selection)
 - Stores results in new state: `contentAnalysis`
 
 **Content Analysis Includes:**
+
 ```typescript
 {
   fullTextCount: number;           // Papers with full-text (10k+ words)
@@ -48,12 +50,14 @@ Successfully implemented **enterprise-grade UX** for content analysis and theme 
 **Lines:** 203, 258-381, 601-608
 
 **New Step 0 UI:**
+
 - **3-column content breakdown**: Full-text | Overflow | Abstracts
 - **Expected quality assessment**: HIGH (full-text) vs MODERATE (abstracts only)
 - **Content requirements preview**: Which purposes need full-text
 - **4-step progress indicator**: 0 → 1 → 2 → 3 (was 1 → 2 → 3)
 
 **Visual Design:**
+
 ```
 ┌─ Content Analysis ──────────────────────────────┐
 │ 📊 Selected Sources Analysis                    │
@@ -74,6 +78,7 @@ Successfully implemented **enterprise-grade UX** for content analysis and theme 
 **Lines:** 873-874 (deleted lines 879-884)
 
 **Before (BAD UX):**
+
 ```typescript
 toast.success(contentSummary, {
   duration: 6000, // Disappears after 6 seconds!
@@ -82,6 +87,7 @@ toast.success(contentSummary, {
 ```
 
 **After (ENTERPRISE UX):**
+
 ```typescript
 // Content analysis data shown in Purpose Wizard Step 0 (enterprise-grade UX)
 // No ephemeral toasts - all feedback integrated into extraction flow
@@ -93,6 +99,7 @@ toast.success(contentSummary, {
 **Lines:** 97-103
 
 **New Stage 1 Message:**
+
 ```
 Reading ALL source content together to understand the breadth and depth
 of your dataset. The AI is processing all available content simultaneously
@@ -109,6 +116,7 @@ extraction than abstracts (150-500 words).
 **Lines:** 83-91
 
 **Added Metadata Field:**
+
 ```typescript
 metadata?: {
   contentType?: 'none' | 'abstract' | 'full_text' | 'abstract_overflow';
@@ -129,6 +137,7 @@ metadata?: {
 **After:** 34 lines using pre-calculated `contentAnalysis` state
 
 **Code Reduction:**
+
 - Removed duplicate content type detection
 - Removed duplicate content breakdown logging
 - Use stored `contentAnalysis.sources` directly
@@ -141,6 +150,7 @@ metadata?: {
 ### User Journey (Before → After)
 
 **BEFORE (Day 5.15):**
+
 ```
 1. User selects 11 papers
 2. Clicks "Extract Themes"
@@ -154,6 +164,7 @@ metadata?: {
 ```
 
 **AFTER (Day 5.16 - ENTERPRISE GRADE):**
+
 ```
 1. User selects 11 papers (sees badges on cards: 🟢 3, ⚪ 8)
 2. Clicks "Extract Themes"
@@ -177,9 +188,11 @@ metadata?: {
 ## 🎯 FILES MODIFIED
 
 ### Created (1 file)
+
 1. ✅ `PHASE10_DAY5.16_ENTERPRISE_UX_COMPLETE.md` - This document
 
 ### Modified (4 files)
+
 1. ✅ `frontend/app/(researcher)/discover/literature/page.tsx`
    - Lines 314-323: Added `contentAnalysis` state
    - Lines 681-797: Moved content analysis to `handleExtractThemes` (117 lines)
@@ -213,12 +226,14 @@ metadata?: {
 ## ✅ VERIFICATION
 
 ### TypeScript Compilation
+
 ```bash
 npx tsc --noEmit --pretty
 # Result: ✅ SUCCESS - No errors
 ```
 
 ### Key Checks
+
 - ✅ No TypeScript errors
 - ✅ Content analysis state properly typed
 - ✅ Purpose wizard accepts contentAnalysis prop
@@ -231,19 +246,24 @@ npx tsc --noEmit --pretty
 ## 💡 KEY ACHIEVEMENTS
 
 ### 1. **Eliminated Ephemeral Feedback** ❌ → ✅
+
 **Before:** Toast notification (6 seconds, then gone)
 **After:** Permanent Step 0 UI (user can review anytime)
 
 ### 2. **Pre-Emptive Quality Assessment** 🆕
+
 Users now see content quality **BEFORE** committing to extraction, not after.
 
 ### 3. **Code Deduplication** 📉
+
 Removed 166 lines of duplicate content analysis logic from `handlePurposeSelected`.
 
 ### 4. **Type Safety** 🔒
+
 Added `metadata` field to `SourceContent` interface for proper type checking.
 
 ### 5. **Enterprise-Grade Flow** 🎯
+
 4-step wizard with contextual, permanent, in-flow feedback.
 
 ---
@@ -251,19 +271,21 @@ Added `metadata` field to `SourceContent` interface for proper type checking.
 ## 📈 IMPACT ANALYSIS
 
 ### User Experience
-| Aspect | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| **Content visibility** | Toast (6s) | Permanent Step 0 UI | ✅ Always available |
-| **Informed decisions** | Blind purpose selection | See content first | ✅ Better choices |
-| **Progress clarity** | Generic "reading abstracts" | Content-aware Stage 1 | ✅ Transparency |
-| **Flow integration** | Disconnected toasts | Integrated wizard | ✅ Cohesive UX |
+
+| Aspect                 | Before                      | After                 | Improvement         |
+| ---------------------- | --------------------------- | --------------------- | ------------------- |
+| **Content visibility** | Toast (6s)                  | Permanent Step 0 UI   | ✅ Always available |
+| **Informed decisions** | Blind purpose selection     | See content first     | ✅ Better choices   |
+| **Progress clarity**   | Generic "reading abstracts" | Content-aware Stage 1 | ✅ Transparency     |
+| **Flow integration**   | Disconnected toasts         | Integrated wizard     | ✅ Cohesive UX      |
 
 ### Developer Experience
-| Aspect | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| **Code duplication** | 200+ lines duplicated | Single source of truth | ✅ DRY principle |
-| **Type safety** | Metadata not typed | Full TypeScript support | ✅ Fewer bugs |
-| **Maintainability** | Logic in 2 places | Centralized analysis | ✅ Easier updates |
+
+| Aspect               | Before                | After                   | Improvement       |
+| -------------------- | --------------------- | ----------------------- | ----------------- |
+| **Code duplication** | 200+ lines duplicated | Single source of truth  | ✅ DRY principle  |
+| **Type safety**      | Metadata not typed    | Full TypeScript support | ✅ Fewer bugs     |
+| **Maintainability**  | Logic in 2 places     | Centralized analysis    | ✅ Easier updates |
 
 ---
 
@@ -272,10 +294,12 @@ Added `metadata` field to `SourceContent` interface for proper type checking.
 Based on `PHASE10_DAY5.15.2_GAPS_AND_FINAL_PLAN.md`:
 
 ### Optional Enhancement 1: Content Requirements per Purpose
+
 **Status:** NOT IMPLEMENTED (optional)
 **Location:** `PurposeSelectionWizard.tsx:64-118`
 
 **What It Would Add:**
+
 ```typescript
 {
   id: 'survey_construction',
@@ -290,6 +314,7 @@ Based on `PHASE10_DAY5.15.2_GAPS_AND_FINAL_PLAN.md`:
 **Why Skipped:** Current Step 0 already shows content quality. Adding per-purpose warnings would be redundant unless user testing shows confusion.
 
 ### Optional Enhancement 2: Real-Time Content Panel During Extraction
+
 **Status:** NOT IMPLEMENTED (optional)
 **Location:** N/A
 
@@ -302,6 +327,7 @@ Based on `PHASE10_DAY5.15.2_GAPS_AND_FINAL_PLAN.md`:
 ## 📝 TESTING RECOMMENDATIONS
 
 ### Manual Testing
+
 1. **Test with 3 full-text papers:**
    - ✅ Should show green badges on cards
    - ✅ Step 0 should show "3 Full-text papers"
@@ -324,6 +350,7 @@ Based on `PHASE10_DAY5.15.2_GAPS_AND_FINAL_PLAN.md`:
    - ✅ Progress indicators should update
 
 ### Automated Testing (Future)
+
 - [ ] E2E test: Content analysis flow
 - [ ] Unit test: `handleExtractThemes` content analysis
 - [ ] Integration test: Purpose wizard with content analysis prop
@@ -351,4 +378,4 @@ Based on `PHASE10_DAY5.15.2_GAPS_AND_FINAL_PLAN.md`:
 **Status:** 🚀 PRODUCTION-READY
 **Expected Impact:** Users now have full transparency into content quality **BEFORE** starting extraction
 
-*Enterprise-grade content analysis UX successfully implemented. No more ephemeral toasts—everything in-context and permanent.*
+_Enterprise-grade content analysis UX successfully implemented. No more ephemeral toasts—everything in-context and permanent._

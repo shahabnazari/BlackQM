@@ -82,7 +82,9 @@ describe('UnifiedThemeExtractionService - Academic Extraction', () => {
       ],
     }).compile();
 
-    service = module.get<UnifiedThemeExtractionService>(UnifiedThemeExtractionService);
+    service = module.get<UnifiedThemeExtractionService>(
+      UnifiedThemeExtractionService,
+    );
     prisma = module.get<PrismaService>(PrismaService);
   });
 
@@ -121,7 +123,7 @@ describe('UnifiedThemeExtractionService - Academic Extraction', () => {
     it('should support multiple validation levels', () => {
       const levels = ['standard', 'rigorous', 'publication_ready'] as const;
 
-      levels.forEach(level => {
+      levels.forEach((level) => {
         expect(['standard', 'rigorous', 'publication_ready']).toContain(level);
       });
     });
@@ -133,8 +135,12 @@ describe('UnifiedThemeExtractionService - Academic Extraction', () => {
         'content_analysis',
       ] as const;
 
-      methodologies.forEach(method => {
-        expect(['reflexive_thematic', 'grounded_theory', 'content_analysis']).toContain(method);
+      methodologies.forEach((method) => {
+        expect([
+          'reflexive_thematic',
+          'grounded_theory',
+          'content_analysis',
+        ]).toContain(method);
       });
     });
 
@@ -159,12 +165,12 @@ describe('UnifiedThemeExtractionService - Academic Extraction', () => {
         const validThemeCounts = [5, 10, 15, 20];
         const invalidThemeCounts = [2, 3, 25, 30];
 
-        validThemeCounts.forEach(count => {
+        validThemeCounts.forEach((count) => {
           expect(count).toBeGreaterThanOrEqual(5);
           expect(count).toBeLessThanOrEqual(20);
         });
 
-        invalidThemeCounts.forEach(count => {
+        invalidThemeCounts.forEach((count) => {
           expect(count < 5 || count > 20).toBe(true);
         });
       });
@@ -176,7 +182,8 @@ describe('UnifiedThemeExtractionService - Academic Extraction', () => {
           { confidence: 0.9 },
         ];
 
-        const avgConfidence = themes.reduce((sum, t) => sum + t.confidence, 0) / themes.length;
+        const avgConfidence =
+          themes.reduce((sum, t) => sum + t.confidence, 0) / themes.length;
         expect(avgConfidence).toBeCloseTo(0.8, 1);
       });
     });
@@ -188,8 +195,10 @@ describe('UnifiedThemeExtractionService - Academic Extraction', () => {
           citation: 'Braun & Clarke (2006, 2019)',
           stages: 6,
           validation: 'Cross-source triangulation with semantic embeddings',
-          aiRole: 'AI-assisted semantic clustering; themes validated against full dataset',
-          limitations: 'AI-assisted interpretation; recommend researcher review for publication',
+          aiRole:
+            'AI-assisted semantic clustering; themes validated against full dataset',
+          limitations:
+            'AI-assisted interpretation; recommend researcher review for publication',
         };
 
         expect(methodology.method).toBe('Reflexive Thematic Analysis');
@@ -243,7 +252,10 @@ describe('UnifiedThemeExtractionService - Academic Extraction', () => {
         expect(similarity).toBe(1);
 
         // Orthogonal vectors = similarity 0
-        const dotProduct2 = vec1.reduce((sum, val, i) => sum + val * vec3[i], 0);
+        const dotProduct2 = vec1.reduce(
+          (sum, val, i) => sum + val * vec3[i],
+          0,
+        );
         const norm3 = Math.sqrt(vec3.reduce((sum, val) => sum + val * val, 0));
         const similarity2 = dotProduct2 / (norm1 * norm3);
 
@@ -289,7 +301,7 @@ describe('UnifiedThemeExtractionService - Academic Extraction', () => {
           { excerpts: [] },
         ];
 
-        const withEvidence = codes.filter(c => c.excerpts.length > 0).length;
+        const withEvidence = codes.filter((c) => c.excerpts.length > 0).length;
         const evidenceQuality = withEvidence / codes.length;
 
         expect(evidenceQuality).toBeCloseTo(0.67, 1);
@@ -309,8 +321,12 @@ describe('UnifiedThemeExtractionService - Academic Extraction', () => {
         };
 
         expect(metadata.sourcesAnalyzed).toBe(3);
-        expect(metadata.finalThemes).toBeLessThanOrEqual(metadata.candidateThemes);
-        expect(metadata.candidateThemes).toBeLessThanOrEqual(metadata.codesGenerated);
+        expect(metadata.finalThemes).toBeLessThanOrEqual(
+          metadata.candidateThemes,
+        );
+        expect(metadata.candidateThemes).toBeLessThanOrEqual(
+          metadata.codesGenerated,
+        );
       });
 
       it('should use GPT-4 for analysis', () => {
@@ -322,11 +338,16 @@ describe('UnifiedThemeExtractionService - Academic Extraction', () => {
     describe('Transparency Report', () => {
       it('should explain how it works', () => {
         const transparency = {
-          howItWorks: 'Six-stage reflexive thematic analysis based on Braun & Clarke (2006)',
-          aiRole: 'AI assists in semantic clustering and pattern identification',
-          quality: 'Inter-source triangulation (3+ sources), semantic coherence checks',
-          limitations: 'AI-assisted interpretation; recommend researcher review for publication',
-          citation: 'Braun, V., & Clarke, V. (2006). Using thematic analysis in psychology.',
+          howItWorks:
+            'Six-stage reflexive thematic analysis based on Braun & Clarke (2006)',
+          aiRole:
+            'AI assists in semantic clustering and pattern identification',
+          quality:
+            'Inter-source triangulation (3+ sources), semantic coherence checks',
+          limitations:
+            'AI-assisted interpretation; recommend researcher review for publication',
+          citation:
+            'Braun, V., & Clarke, V. (2006). Using thematic analysis in psychology.',
         };
 
         expect(transparency.howItWorks).toContain('Six-stage');
@@ -337,9 +358,17 @@ describe('UnifiedThemeExtractionService - Academic Extraction', () => {
 
     describe('Progress Tracking', () => {
       it('should support progress callbacks for 6 stages', () => {
-        const progressUpdates: Array<{ stage: number; total: number; message: string }> = [];
+        const progressUpdates: Array<{
+          stage: number;
+          total: number;
+          message: string;
+        }> = [];
 
-        const mockProgressCallback = (stage: number, total: number, message: string) => {
+        const mockProgressCallback = (
+          stage: number,
+          total: number,
+          message: string,
+        ) => {
           progressUpdates.push({ stage, total, message });
         };
 
@@ -433,7 +462,7 @@ describe('UnifiedThemeExtractionService - Academic Extraction', () => {
       ];
 
       // Should merge clusters with similarity > 0.8
-      const shouldMerge = clusters.filter(c => c.similarity > 0.8);
+      const shouldMerge = clusters.filter((c) => c.similarity > 0.8);
       expect(shouldMerge).toHaveLength(1);
     });
 

@@ -30,21 +30,23 @@ export class HealthController {
   async checkDatabaseHealth() {
     const isHealthy = await this.prismaService.isHealthy();
     const poolStats = await this.prismaService.getPoolStats();
-    
+
     const response = {
       status: isHealthy ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
       database: {
         connected: isHealthy,
-        type: process.env.DATABASE_URL?.includes('postgres') ? 'PostgreSQL' : 'SQLite',
+        type: process.env.DATABASE_URL?.includes('postgres')
+          ? 'PostgreSQL'
+          : 'SQLite',
         poolStats: poolStats,
       },
     };
-    
+
     if (!isHealthy) {
       throw new Error('Database health check failed');
     }
-    
+
     return response;
   }
 
@@ -68,7 +70,9 @@ export class HealthController {
       },
       database: {
         status: dbHealthy ? 'connected' : 'disconnected',
-        type: process.env.DATABASE_URL?.includes('postgres') ? 'PostgreSQL' : 'SQLite',
+        type: process.env.DATABASE_URL?.includes('postgres')
+          ? 'PostgreSQL'
+          : 'SQLite',
         connectionPool: poolStats,
       },
       cache: {
@@ -80,15 +84,23 @@ export class HealthController {
         api: 'operational',
         database: dbHealthy ? 'operational' : 'degraded',
         cache: 'operational',
-        fileUpload: process.env.ENABLE_VIRUS_SCANNING === 'false' ? 'limited' : 'operational',
+        fileUpload:
+          process.env.ENABLE_VIRUS_SCANNING === 'false'
+            ? 'limited'
+            : 'operational',
         monitoring: process.env.SENTRY_DSN ? 'enabled' : 'disabled',
       },
     };
   }
 
   @Get('ready')
-  @ApiOperation({ summary: 'Readiness probe for Kubernetes/production deployments' })
-  @ApiResponse({ status: 200, description: 'Service is ready to accept traffic' })
+  @ApiOperation({
+    summary: 'Readiness probe for Kubernetes/production deployments',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Service is ready to accept traffic',
+  })
   @ApiResponse({ status: 503, description: 'Service is not ready' })
   async checkReadiness() {
     const dbHealthy = await this.prismaService.isHealthy();
@@ -113,7 +125,9 @@ export class HealthController {
   }
 
   @Get('live')
-  @ApiOperation({ summary: 'Liveness probe for Kubernetes/production deployments' })
+  @ApiOperation({
+    summary: 'Liveness probe for Kubernetes/production deployments',
+  })
   @ApiResponse({ status: 200, description: 'Service is alive' })
   async checkLiveness() {
     return {

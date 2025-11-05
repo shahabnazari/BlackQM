@@ -63,7 +63,11 @@ export interface ResearchQuestionSuggestion {
     timely: number;
     overallScore: number;
   };
-  suggestedMethodology: 'qualitative' | 'quantitative' | 'mixed_methods' | 'q_methodology';
+  suggestedMethodology:
+    | 'qualitative'
+    | 'quantitative'
+    | 'mixed_methods'
+    | 'q_methodology';
 }
 
 export interface HypothesisSuggestion {
@@ -92,7 +96,12 @@ export interface ConstructMapping {
   relatedConstructs: Array<{
     constructId: string;
     constructName: string;
-    relationshipType: 'causes' | 'influences' | 'correlates' | 'moderates' | 'mediates';
+    relationshipType:
+      | 'causes'
+      | 'influences'
+      | 'correlates'
+      | 'moderates'
+      | 'mediates';
     strength: 'weak' | 'moderate' | 'strong';
     confidence: number;
   }>;
@@ -105,7 +114,11 @@ export interface CompleteSurveyGeneration {
     description: string;
     items: Array<{
       id: string;
-      type: 'likert' | 'multiple_choice' | 'semantic_differential' | 'open_ended';
+      type:
+        | 'likert'
+        | 'multiple_choice'
+        | 'semantic_differential'
+        | 'open_ended';
       text: string;
       scaleType?: string;
       options?: string[];
@@ -128,7 +141,12 @@ export interface CompleteSurveyGeneration {
 
 export interface SuggestQuestionsOptions {
   themes: Theme[];
-  questionTypes?: ('exploratory' | 'explanatory' | 'evaluative' | 'descriptive')[];
+  questionTypes?: (
+    | 'exploratory'
+    | 'explanatory'
+    | 'evaluative'
+    | 'descriptive'
+  )[];
   maxQuestions?: number;
   researchDomain?: string;
   researchGoal?: string;
@@ -136,7 +154,13 @@ export interface SuggestQuestionsOptions {
 
 export interface SuggestHypothesesOptions {
   themes: Theme[];
-  hypothesisTypes?: ('correlational' | 'causal' | 'mediation' | 'moderation' | 'interaction')[];
+  hypothesisTypes?: (
+    | 'correlational'
+    | 'causal'
+    | 'mediation'
+    | 'moderation'
+    | 'interaction'
+  )[];
   maxHypotheses?: number;
   researchDomain?: string;
   researchContext?: string;
@@ -189,8 +213,12 @@ export class EnhancedThemeIntegrationService {
     this.logger.log(
       `[suggestResearchQuestions] Suggesting research questions from ${options.themes.length} themes`,
     );
-    this.logger.log(`[suggestResearchQuestions] OpenAI available: ${!!this.openai}`);
-    this.logger.log(`[suggestResearchQuestions] Theme names: ${options.themes.map(t => t.name).join(', ')}`);
+    this.logger.log(
+      `[suggestResearchQuestions] OpenAI available: ${!!this.openai}`,
+    );
+    this.logger.log(
+      `[suggestResearchQuestions] Theme names: ${options.themes.map((t) => t.name).join(', ')}`,
+    );
 
     const cacheKey = this.getCacheKey('questions', options);
     if (this.questionCache.has(cacheKey)) {
@@ -204,12 +232,18 @@ export class EnhancedThemeIntegrationService {
     if (this.openai) {
       this.logger.log('[suggestResearchQuestions] Using AI generation');
       const aiQuestions = await this.generateQuestionsWithAI(options);
-      this.logger.log(`[suggestResearchQuestions] AI returned ${aiQuestions.length} questions`);
+      this.logger.log(
+        `[suggestResearchQuestions] AI returned ${aiQuestions.length} questions`,
+      );
       questions.push(...aiQuestions);
     } else {
-      this.logger.log('[suggestResearchQuestions] Using template generation (no OpenAI)');
+      this.logger.log(
+        '[suggestResearchQuestions] Using template generation (no OpenAI)',
+      );
       const templateQuestions = this.generateQuestionsWithTemplates(options);
-      this.logger.log(`[suggestResearchQuestions] Templates returned ${templateQuestions.length} questions`);
+      this.logger.log(
+        `[suggestResearchQuestions] Templates returned ${templateQuestions.length} questions`,
+      );
       questions.push(...templateQuestions);
     }
 
@@ -274,9 +308,7 @@ export class EnhancedThemeIntegrationService {
   async mapThemesToConstructs(
     options: MapConstructsOptions,
   ): Promise<ConstructMapping[]> {
-    this.logger.log(
-      `Mapping ${options.themes.length} themes to constructs`,
-    );
+    this.logger.log(`Mapping ${options.themes.length} themes to constructs`);
 
     const constructs: ConstructMapping[] = [];
 
@@ -344,10 +376,7 @@ export class EnhancedThemeIntegrationService {
       0,
     );
     const estimatedTime = Math.ceil(totalItems * 0.5); // 30 seconds per item
-    const themeCoverage = this.calculateThemeCoverage(
-      sections,
-      options.themes,
-    );
+    const themeCoverage = this.calculateThemeCoverage(sections, options.themes);
 
     return {
       sections,
@@ -357,7 +386,8 @@ export class EnhancedThemeIntegrationService {
         themeCoverage,
       },
       methodology: {
-        approach: 'AI-assisted thematic analysis to traditional survey conversion',
+        approach:
+          'AI-assisted thematic analysis to traditional survey conversion',
         researchBacking:
           'Braun & Clarke (2019) + Churchill (1979) + DeVellis (2016)',
         validation:
@@ -453,7 +483,9 @@ IMPORTANT: Return a JSON object (not an array) with a "questions" key containing
       });
 
       const response = completion.choices[0]?.message?.content;
-      this.logger.log(`[AI] Received response length: ${response?.length || 0} chars`);
+      this.logger.log(
+        `[AI] Received response length: ${response?.length || 0} chars`,
+      );
 
       if (!response) {
         this.logger.warn('[AI] Empty response from OpenAI');
@@ -461,7 +493,9 @@ IMPORTANT: Return a JSON object (not an array) with a "questions" key containing
       }
 
       const parsed = JSON.parse(response);
-      this.logger.log(`[AI] Parsed response keys: ${Object.keys(parsed).join(', ')}`);
+      this.logger.log(
+        `[AI] Parsed response keys: ${Object.keys(parsed).join(', ')}`,
+      );
 
       // Handle both array and object with questions key
       let questions = Array.isArray(parsed) ? parsed : parsed.questions || [];
@@ -474,7 +508,9 @@ IMPORTANT: Return a JSON object (not an array) with a "questions" key containing
         questions = Array.isArray(parsed.results) ? parsed.results : [];
       }
 
-      this.logger.log(`[AI] Extracted ${questions.length} questions from response`);
+      this.logger.log(
+        `[AI] Extracted ${questions.length} questions from response`,
+      );
 
       return questions.map((q: any, index: number) => ({
         id: `rq_${index + 1}_${Date.now()}`,
@@ -517,7 +553,10 @@ IMPORTANT: Return a JSON object (not an array) with a "questions" key containing
     );
 
     // Take top themes for question generation
-    const topThemes = sortedThemes.slice(0, Math.min(10, options.themes.length));
+    const topThemes = sortedThemes.slice(
+      0,
+      Math.min(10, options.themes.length),
+    );
 
     for (const theme of topThemes) {
       // Generate one question per type for high-priority themes
@@ -560,9 +599,8 @@ IMPORTANT: Return a JSON object (not an array) with a "questions" key containing
       ],
     };
 
-    const template = templates[type][
-      Math.floor(Math.random() * templates[type].length)
-    ];
+    const template =
+      templates[type][Math.floor(Math.random() * templates[type].length)];
 
     // Phase 10 Day 5.17.4: Add default SQUARE-IT scores for template-based questions
     // Template questions get baseline scores since they're not AI-evaluated
@@ -732,7 +770,8 @@ Return a JSON array with this structure:
               : 'moderate',
           relatedThemes: [themeA.id, themeB.id],
           expectedEffectSize: 'medium',
-          suggestedStatisticalTest: 'Pearson correlation or Spearman correlation',
+          suggestedStatisticalTest:
+            'Pearson correlation or Spearman correlation',
           researchBacking:
             'Based on thematic co-occurrence and conceptual similarity',
         });
@@ -784,9 +823,7 @@ Return a JSON array with this structure:
     const phrasesA = new Set(themeA.keyPhrases || []);
     const phrasesB = new Set(themeB.keyPhrases || []);
 
-    const intersection = new Set(
-      [...phrasesA].filter((p) => phrasesB.has(p)),
-    );
+    const intersection = new Set([...phrasesA].filter((p) => phrasesB.has(p)));
     const union = new Set([...phrasesA, ...phrasesB]);
 
     return union.size > 0 ? intersection.size / union.size : 0;
@@ -824,7 +861,9 @@ Return a JSON array with this structure:
    */
   private synthesizeDefinition(themes: Theme[]): string {
     // Combine descriptions, prioritizing by confidence
-    const sortedThemes = [...themes].sort((a, b) => b.confidence - a.confidence);
+    const sortedThemes = [...themes].sort(
+      (a, b) => b.confidence - a.confidence,
+    );
     const primaryDescription = sortedThemes[0].description;
 
     if (themes.length === 1) {
@@ -858,8 +897,7 @@ Return a JSON array with this structure:
         );
 
         if (sharedThemes.length > 0) {
-          const strength =
-            sharedThemes.length >= 2 ? 'strong' : 'moderate';
+          const strength = sharedThemes.length >= 2 ? 'strong' : 'moderate';
 
           constructA.relatedConstructs.push({
             constructId: constructB.construct.id,
@@ -992,7 +1030,8 @@ Return a JSON array with this structure:
     return {
       id: 'main_items',
       title: 'Main Survey Items',
-      description: 'Please indicate your level of agreement with each statement',
+      description:
+        'Please indicate your level of agreement with each statement',
       items,
     };
   }
@@ -1080,9 +1119,7 @@ Return a JSON array with this structure:
       }
     }
 
-    return themes.length > 0
-      ? (coveredThemeIds.size / themes.length) * 100
-      : 0;
+    return themes.length > 0 ? (coveredThemeIds.size / themes.length) * 100 : 0;
   }
 
   /**
@@ -1111,7 +1148,11 @@ Return a JSON array with this structure:
     questionType: string,
   ): ResearchQuestionSuggestion['suggestedMethodology'] {
     // Exploratory questions lean towards qualitative
-    if (questionType === 'exploratory' && theme.subthemes && theme.subthemes.length > 0) {
+    if (
+      questionType === 'exploratory' &&
+      theme.subthemes &&
+      theme.subthemes.length > 0
+    ) {
       return 'q_methodology';
     }
 

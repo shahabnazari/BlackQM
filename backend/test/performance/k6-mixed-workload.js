@@ -62,12 +62,12 @@ export const options = {
     },
   },
   thresholds: {
-    'login_latency': ['p(95)<500'],      // 500ms for auth
-    'search_latency': ['p(95)<3000'],    // 3s for search
-    'browse_latency': ['p(95)<1000'],    // 1s for browsing
-    'select_latency': ['p(95)<500'],     // 500ms for selection
-    'extract_latency': ['p(95)<30000'],  // 30s for extraction
-    'http_req_failed': ['rate<0.02'],    // 2% overall error rate
+    login_latency: ['p(95)<500'], // 500ms for auth
+    search_latency: ['p(95)<3000'], // 3s for search
+    browse_latency: ['p(95)<1000'], // 1s for browsing
+    select_latency: ['p(95)<500'], // 500ms for selection
+    extract_latency: ['p(95)<30000'], // 30s for extraction
+    http_req_failed: ['rate<0.02'], // 2% overall error rate
   },
 };
 
@@ -86,7 +86,7 @@ export function loginScenario() {
       {
         headers: { 'Content-Type': 'application/json' },
         tags: { scenario: 'login' },
-      }
+      },
     );
 
     loginLatency.add(res.timings.duration);
@@ -129,7 +129,7 @@ export function searchScenario() {
       {
         headers: { 'Content-Type': 'application/json' },
         tags: { scenario: 'search' },
-      }
+      },
     );
 
     searchLatency.add(res.timings.duration);
@@ -158,7 +158,7 @@ export function browseScenario() {
       `${BASE_URL}/api/health/ready`, // Placeholder - in real app would be GET /papers?page=2
       {
         tags: { scenario: 'browse' },
-      }
+      },
     );
 
     browseLatency.add(res.timings.duration);
@@ -180,7 +180,7 @@ export function selectScenario() {
       `${BASE_URL}/api/health/ready`, // Placeholder - in real app would be POST /selections
       {
         tags: { scenario: 'select' },
-      }
+      },
     );
 
     selectLatency.add(res.timings.duration);
@@ -211,7 +211,8 @@ export function extractScenario() {
             type: 'paper',
             id: 'mixed-workload-test',
             title: 'Test Paper for Mixed Workload',
-            content: 'Sample content for theme extraction testing during mixed workload scenario.',
+            content:
+              'Sample content for theme extraction testing during mixed workload scenario.',
             authors: ['Test Author'],
             year: 2024,
           },
@@ -224,11 +225,11 @@ export function extractScenario() {
       {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${AUTH_TOKEN}`,
+          Authorization: `Bearer ${AUTH_TOKEN}`,
         },
         tags: { scenario: 'extract' },
         timeout: '60s',
-      }
+      },
     );
 
     extractLatency.add(res.timings.duration);

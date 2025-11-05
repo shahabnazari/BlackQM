@@ -29,7 +29,9 @@ export function ThemeMethodologyExplainer() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <GraduationCap className="text-blue-600 w-5 h-5" />
-            <h3 className="font-semibold text-lg">Scientific Theme Extraction</h3>
+            <h3 className="font-semibold text-lg">
+              Scientific Theme Extraction
+            </h3>
             <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
               Research-Grade
             </Badge>
@@ -40,9 +42,12 @@ export function ThemeMethodologyExplainer() {
           <div className="flex items-start gap-3 bg-white rounded-lg p-4 border border-blue-100">
             <BookOpen className="text-blue-600 mt-1 w-5 h-5" />
             <div>
-              <p className="font-semibold">Based on Reflexive Thematic Analysis</p>
+              <p className="font-semibold">
+                Based on Reflexive Thematic Analysis
+              </p>
               <p className="text-sm text-gray-600">
-                Braun & Clarke (2006, 2019) • 77,000+ citations • Gold standard in qualitative research
+                Braun & Clarke (2006, 2019) • 77,000+ citations • Gold standard
+                in qualitative research
               </p>
             </div>
           </div>
@@ -55,22 +60,28 @@ export function ThemeMethodologyExplainer() {
             </p>
             <ol className="text-sm space-y-2 pl-4 list-decimal list-inside">
               <li>
-                <strong className="text-blue-600">Familiarization:</strong> AI reads ALL sources (complete text, not excerpts)
+                <strong className="text-blue-600">Familiarization:</strong> AI
+                reads ALL sources (complete text, not excerpts)
               </li>
               <li>
-                <strong className="text-blue-600">Semantic Coding:</strong> Identifies concepts using embeddings, not just keywords
+                <strong className="text-blue-600">Semantic Coding:</strong>{' '}
+                Identifies concepts using embeddings, not just keywords
               </li>
               <li>
-                <strong className="text-blue-600">Theme Generation:</strong> Clusters related concepts into coherent themes
+                <strong className="text-blue-600">Theme Generation:</strong>{' '}
+                Clusters related concepts into coherent themes
               </li>
               <li>
-                <strong className="text-blue-600">Cross-Validation:</strong> Themes must appear in 3+ sources
+                <strong className="text-blue-600">Cross-Validation:</strong>{' '}
+                Themes must appear in 3+ sources
               </li>
               <li>
-                <strong className="text-blue-600">Refinement:</strong> Weak themes removed, overlaps merged
+                <strong className="text-blue-600">Refinement:</strong> Weak
+                themes removed, overlaps merged
               </li>
               <li>
-                <strong className="text-blue-600">Provenance Tracking:</strong> Full evidence chain from theme to sources
+                <strong className="text-blue-600">Provenance Tracking:</strong>{' '}
+                Full evidence chain from theme to sources
               </li>
             </ol>
           </div>
@@ -84,23 +95,39 @@ export function ThemeMethodologyExplainer() {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-green-50 rounded-lg p-3 border border-green-200">
                 <CheckCircle className="text-green-600 w-4 h-4 mb-1" />
-                <p className="text-xs font-semibold text-gray-900">Cross-Source Validation</p>
-                <p className="text-xs text-gray-600">Minimum 3 sources per theme</p>
+                <p className="text-xs font-semibold text-gray-900">
+                  Cross-Source Validation
+                </p>
+                <p className="text-xs text-gray-600">
+                  Minimum 3 sources per theme
+                </p>
               </div>
               <div className="bg-green-50 rounded-lg p-3 border border-green-200">
                 <CheckCircle className="text-green-600 w-4 h-4 mb-1" />
-                <p className="text-xs font-semibold text-gray-900">Semantic Analysis</p>
-                <p className="text-xs text-gray-600">Understands meaning, not keywords</p>
+                <p className="text-xs font-semibold text-gray-900">
+                  Semantic Analysis
+                </p>
+                <p className="text-xs text-gray-600">
+                  Understands meaning, not keywords
+                </p>
               </div>
               <div className="bg-green-50 rounded-lg p-3 border border-green-200">
                 <CheckCircle className="text-green-600 w-4 h-4 mb-1" />
-                <p className="text-xs font-semibold text-gray-900">Full Content Analysis</p>
-                <p className="text-xs text-gray-600">Complete texts, no truncation</p>
+                <p className="text-xs font-semibold text-gray-900">
+                  Full Content Analysis
+                </p>
+                <p className="text-xs text-gray-600">
+                  Complete texts, no truncation
+                </p>
               </div>
               <div className="bg-green-50 rounded-lg p-3 border border-green-200">
                 <CheckCircle className="text-green-600 w-4 h-4 mb-1" />
-                <p className="text-xs font-semibold text-gray-900">Confidence Scoring</p>
-                <p className="text-xs text-gray-600">Transparent reliability metrics</p>
+                <p className="text-xs font-semibold text-gray-900">
+                  Confidence Scoring
+                </p>
+                <p className="text-xs text-gray-600">
+                  Transparent reliability metrics
+                </p>
               </div>
             </div>
           </div>
@@ -108,9 +135,13 @@ export function ThemeMethodologyExplainer() {
           {/* AI Role Explanation */}
           <Alert className="bg-amber-50 border-amber-200">
             <Info className="text-amber-600" />
-            <AlertTitle className="text-sm">AI-Assisted, Research-Validated</AlertTitle>
+            <AlertTitle className="text-sm">
+              AI-Assisted, Research-Validated
+            </AlertTitle>
             <AlertDescription className="text-xs">
-              AI accelerates coding and pattern identification, but themes are validated against the full dataset using established qualitative methods. Recommend researcher review for publication.
+              AI accelerates coding and pattern identification, but themes are
+              validated against the full dataset using established qualitative
+              methods. Recommend researcher review for publication.
             </AlertDescription>
           </Alert>
 
@@ -121,12 +152,19 @@ export function ThemeMethodologyExplainer() {
             </summary>
             <div className="mt-2 space-y-2 text-gray-700">
               <p className="border-l-2 border-blue-300 pl-2">
-                <strong>Braun, V., & Clarke, V. (2006).</strong> Using thematic analysis in psychology.
-                <em className="block text-gray-600">Qualitative Research in Psychology, 3(2), 77-101.</em>
+                <strong>Braun, V., & Clarke, V. (2006).</strong> Using thematic
+                analysis in psychology.
+                <em className="block text-gray-600">
+                  Qualitative Research in Psychology, 3(2), 77-101.
+                </em>
               </p>
               <p className="border-l-2 border-blue-300 pl-2">
-                <strong>Braun, V., & Clarke, V. (2019).</strong> Reflecting on reflexive thematic analysis.
-                <em className="block text-gray-600">Qualitative Research in Sport, Exercise and Health, 11(4), 589-597.</em>
+                <strong>Braun, V., & Clarke, V. (2019).</strong> Reflecting on
+                reflexive thematic analysis.
+                <em className="block text-gray-600">
+                  Qualitative Research in Sport, Exercise and Health, 11(4),
+                  589-597.
+                </em>
               </p>
             </div>
           </details>
@@ -145,7 +183,14 @@ interface FlowStepProps {
   color: 'purple' | 'blue' | 'amber' | 'green' | 'pink';
 }
 
-function FlowStep({ number, icon: Icon, title, description, action, color }: FlowStepProps) {
+function FlowStep({
+  number,
+  icon: Icon,
+  title,
+  description,
+  action,
+  color,
+}: FlowStepProps) {
   const colorClasses = {
     purple: 'bg-purple-500 border-purple-200',
     blue: 'bg-blue-500 border-blue-200',
@@ -163,14 +208,27 @@ function FlowStep({ number, icon: Icon, title, description, action, color }: Flo
   };
 
   return (
-    <div className={cn('rounded-lg p-4 border-2', `border-${color}-200`, bgColorClasses[color])}>
+    <div
+      className={cn(
+        'rounded-lg p-4 border-2',
+        `border-${color}-200`,
+        bgColorClasses[color]
+      )}
+    >
       <div className="flex items-start gap-3">
-        <div className={cn('w-8 h-8 rounded-full flex items-center justify-center text-white', colorClasses[color])}>
+        <div
+          className={cn(
+            'w-8 h-8 rounded-full flex items-center justify-center text-white',
+            colorClasses[color]
+          )}
+        >
           <Icon className="w-4 h-4" />
         </div>
         <div className="flex-1">
           <div className="flex items-center justify-between">
-            <p className="font-semibold text-sm">{number}. {title}</p>
+            <p className="font-semibold text-sm">
+              {number}. {title}
+            </p>
             {action && (
               <button className="text-xs text-blue-600 hover:underline">
                 {action} →
@@ -192,7 +250,9 @@ export function ThemeUtilityFlow() {
           <GitBranch className="w-5 h-5 text-purple-600" />
           How Themes Power Your Research
         </h3>
-        <p className="text-sm text-gray-600">Themes are the foundation of your entire study</p>
+        <p className="text-sm text-gray-600">
+          Themes are the foundation of your entire study
+        </p>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
@@ -258,8 +318,9 @@ export function ThemeUtilityFlow() {
             <Info className="text-blue-600" />
             <AlertTitle>Full Research Pipeline</AlertTitle>
             <AlertDescription>
-              Themes extracted today become the Q-statements participants sort tomorrow,
-              enabling rigorous Q-methodology analysis of subjective viewpoints.
+              Themes extracted today become the Q-statements participants sort
+              tomorrow, enabling rigorous Q-methodology analysis of subjective
+              viewpoints.
             </AlertDescription>
           </Alert>
         </div>

@@ -5,7 +5,10 @@
  */
 
 import { Theme } from '../api/services/theme-to-survey.service';
-import type { OperationalizationResult, HypothesisToItemResult } from '../types/questionnaire-import.types';
+import type {
+  OperationalizationResult,
+  HypothesisToItemResult,
+} from '../types/questionnaire-import.types';
 
 interface StorageOptions {
   encrypt?: boolean;
@@ -46,7 +49,7 @@ class SecureStorageService {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32bit integer
     }
     return hash.toString(36);
@@ -73,7 +76,7 @@ class SecureStorageService {
         data: value,
         timestamp: Date.now(),
         version: this.version,
-        checksum: this.generateChecksum(value)
+        checksum: this.generateChecksum(value),
       };
 
       const serialized = JSON.stringify(storedItem);
@@ -114,7 +117,10 @@ class SecureStorageService {
       }
 
       // Checksum validation
-      if (storedItem.checksum && !this.validateChecksum(storedItem.data, storedItem.checksum)) {
+      if (
+        storedItem.checksum &&
+        !this.validateChecksum(storedItem.data, storedItem.checksum)
+      ) {
         console.error('Data integrity check failed');
         this.removeItem(key);
         return null;
@@ -198,11 +204,17 @@ class SecureStorageService {
    * Theme-specific methods
    */
   saveThemes(themes: Theme[]): boolean {
-    return this.setItem('extracted_themes', themes, { maxAge: 7 * 24 * 60 * 60 * 1000 }); // 7 days
+    return this.setItem('extracted_themes', themes, {
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    }); // 7 days
   }
 
   getThemes(): Theme[] {
-    return this.getItem<Theme[]>('extracted_themes', { maxAge: 7 * 24 * 60 * 60 * 1000 }) || [];
+    return (
+      this.getItem<Theme[]>('extracted_themes', {
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      }) || []
+    );
   }
 
   clearThemes(): boolean {
@@ -217,25 +229,43 @@ class SecureStorageService {
     history.unshift(result); // Add to beginning
     // Keep only last 10 results
     const limited = history.slice(0, 10);
-    return this.setItem('operationalization_history', limited, { maxAge: 30 * 24 * 60 * 60 * 1000 }); // 30 days
+    return this.setItem('operationalization_history', limited, {
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    }); // 30 days
   }
 
   getOperationalizationResults(): OperationalizationResult[] {
-    return this.getItem<OperationalizationResult[]>('operationalization_history', { maxAge: 30 * 24 * 60 * 60 * 1000 }) || [];
+    return (
+      this.getItem<OperationalizationResult[]>('operationalization_history', {
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      }) || []
+    );
   }
 
   clearOperationalizationHistory(): boolean {
     return this.removeItem('operationalization_history');
   }
 
-  saveResearchQuestions(questions: Array<{ question: string; studyType: string; timestamp: number }>): boolean {
+  saveResearchQuestions(
+    questions: Array<{ question: string; studyType: string; timestamp: number }>
+  ): boolean {
     // Keep only last 20 questions
     const limited = questions.slice(-20);
-    return this.setItem('research_questions', limited, { maxAge: 90 * 24 * 60 * 60 * 1000 }); // 90 days
+    return this.setItem('research_questions', limited, {
+      maxAge: 90 * 24 * 60 * 60 * 1000,
+    }); // 90 days
   }
 
-  getResearchQuestions(): Array<{ question: string; studyType: string; timestamp: number }> {
-    return this.getItem<Array<{ question: string; studyType: string; timestamp: number }>>('research_questions', { maxAge: 90 * 24 * 60 * 60 * 1000 }) || [];
+  getResearchQuestions(): Array<{
+    question: string;
+    studyType: string;
+    timestamp: number;
+  }> {
+    return (
+      this.getItem<
+        Array<{ question: string; studyType: string; timestamp: number }>
+      >('research_questions', { maxAge: 90 * 24 * 60 * 60 * 1000 }) || []
+    );
   }
 
   clearResearchQuestions(): boolean {
@@ -249,24 +279,46 @@ class SecureStorageService {
     const history = this.getHypothesisResults();
     history.unshift(result);
     const limited = history.slice(0, 10);
-    return this.setItem('hypothesis_history', limited, { maxAge: 30 * 24 * 60 * 60 * 1000 });
+    return this.setItem('hypothesis_history', limited, {
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
   }
 
   getHypothesisResults(): HypothesisToItemResult[] {
-    return this.getItem<HypothesisToItemResult[]>('hypothesis_history', { maxAge: 30 * 24 * 60 * 60 * 1000 }) || [];
+    return (
+      this.getItem<HypothesisToItemResult[]>('hypothesis_history', {
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      }) || []
+    );
   }
 
   clearHypothesisHistory(): boolean {
     return this.removeItem('hypothesis_history');
   }
 
-  saveHypothesesList(hypotheses: Array<{ hypothesis: string; hypothesisType: string; timestamp: number }>): boolean {
+  saveHypothesesList(
+    hypotheses: Array<{
+      hypothesis: string;
+      hypothesisType: string;
+      timestamp: number;
+    }>
+  ): boolean {
     const limited = hypotheses.slice(-20);
-    return this.setItem('hypotheses_list', limited, { maxAge: 90 * 24 * 60 * 60 * 1000 });
+    return this.setItem('hypotheses_list', limited, {
+      maxAge: 90 * 24 * 60 * 60 * 1000,
+    });
   }
 
-  getHypothesesList(): Array<{ hypothesis: string; hypothesisType: string; timestamp: number }> {
-    return this.getItem<Array<{ hypothesis: string; hypothesisType: string; timestamp: number }>>('hypotheses_list', { maxAge: 90 * 24 * 60 * 60 * 1000 }) || [];
+  getHypothesesList(): Array<{
+    hypothesis: string;
+    hypothesisType: string;
+    timestamp: number;
+  }> {
+    return (
+      this.getItem<
+        Array<{ hypothesis: string; hypothesisType: string; timestamp: number }>
+      >('hypotheses_list', { maxAge: 90 * 24 * 60 * 60 * 1000 }) || []
+    );
   }
 
   clearHypothesesList(): boolean {

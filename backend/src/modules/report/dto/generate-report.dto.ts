@@ -151,10 +151,7 @@ export class GenerateReportDto {
 export class GenerateBulkReportsDto {
   @ApiProperty({
     description: 'Array of study IDs to generate reports for (CUID format)',
-    example: [
-      'cmhb52mig0008qlq2ee758c97',
-      'cmhb52mig0008qlq2ee758c98',
-    ],
+    example: ['cmhb52mig0008qlq2ee758c97', 'cmhb52mig0008qlq2ee758c98'],
   })
   @IsArray()
   @ArrayMinSize(1)

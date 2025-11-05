@@ -11,7 +11,9 @@
 User reported Qualitative Analysis extracted 0 themes while Q-Methodology extracted 29 themes from the same 15 Alzheimer's biomarker papers. User has **no backend terminal access**, only frontend browser console, making debugging impossible.
 
 ### Root Cause
+
 All 29 themes were generated but rejected by validation thresholds:
+
 - **Qualitative Analysis**: `minSources: 2` (themes must appear in 2+ papers)
 - **Q-Methodology**: `minSources: 1` (themes can appear in 1 paper)
 - **Reality**: Each biomarker theme appeared in only 1 paper (highly specialized topics)
@@ -21,6 +23,7 @@ All 29 themes were generated but rejected by validation thresholds:
 ## Solution Implemented
 
 ### 1. Created ValidationResult Interface
+
 **File**: `backend/src/modules/literature/services/unified-theme-extraction.service.ts:3342-3370`
 
 ```typescript
@@ -56,14 +59,17 @@ export interface ValidationResult {
 ```
 
 ### 2. Modified validateThemesAcademic() Method
+
 **File**: `backend/src/modules/literature/services/unified-theme-extraction.service.ts:2747-2932`
 
 **Changes**:
+
 - Updated return type from `Promise<CandidateTheme[]>` to `Promise<ValidationResult>`
 - Added rejection diagnostics capture logic (lines 2781-2891)
 - Returns both validated themes AND rejection details
 
 **Diagnostic Capture Logic**:
+
 ```typescript
 // When all themes rejected, capture first 5 with detailed failure analysis
 for (let i = 0; i < themesToLog.length; i++) {
@@ -84,6 +90,7 @@ for (let i = 0; i < themesToLog.length; i++) {
 ```
 
 ### 3. Updated API Response
+
 **File**: `backend/src/modules/literature/services/unified-theme-extraction.service.ts:1928-1961`
 
 ```typescript
@@ -106,11 +113,13 @@ return response;
 ```
 
 ### 4. Updated AcademicExtractionResult Interface
+
 **File**: `backend/src/modules/literature/services/unified-theme-extraction.service.ts:3309-3335`
 
 Added optional `rejectionDiagnostics` field to API response interface.
 
 ### 5. Updated Caller
+
 **File**: `backend/src/modules/literature/services/unified-theme-extraction.service.ts:1844-1852`
 
 ```typescript
@@ -126,15 +135,19 @@ const rejectionDiagnostics = validationResult.rejectionDiagnostics;
 ## Fixed TypeScript Compilation Errors
 
 ### Error 1: Return Type Mismatch
+
 ```
 Property 'validatedThemes' does not exist on type 'CandidateTheme[]'
 ```
+
 **Fix**: Changed method signature from `Promise<CandidateTheme[]>` to `Promise<ValidationResult>`
 
 ### Error 2: Object Literal Type Error
+
 ```
 Object literal may only specify known properties, and 'validatedThemes' does not exist
 ```
+
 **Fix**: Created `ValidationResult` interface to properly type the return value
 
 ---
@@ -142,6 +155,7 @@ Object literal may only specify known properties, and 'validatedThemes' does not
 ## Testing Instructions
 
 ### Frontend Console Output Example
+
 When extraction returns 0 themes, you'll now see:
 
 ```json
@@ -166,13 +180,14 @@ When extraction returns 0 themes, you'll now see:
         "checks": {
           "sources": { "actual": 1, "required": 2, "passed": false },
           "coherence": { "actual": 0.52, "required": 0.48, "passed": true },
-          "distinctiveness": { "actual": 0.35, "required": 0.3, "passed": true },
-          "evidence": { "actual": 0.30, "required": 0.35, "passed": false }
+          "distinctiveness": {
+            "actual": 0.35,
+            "required": 0.3,
+            "passed": true
+          },
+          "evidence": { "actual": 0.3, "required": 0.35, "passed": false }
         },
-        "failureReasons": [
-          "Sources: 1/2 ❌",
-          "Evidence: 0.30/0.35 ❌"
-        ]
+        "failureReasons": ["Sources: 1/2 ❌", "Evidence: 0.30/0.35 ❌"]
       }
     ],
     "moreRejectedCount": 24,
@@ -187,6 +202,7 @@ When extraction returns 0 themes, you'll now see:
 ```
 
 ### Test Steps
+
 1. Navigate to http://localhost:3000
 2. Go to Discover → Literature
 3. Search for "Alzheimer's disease biomarkers"

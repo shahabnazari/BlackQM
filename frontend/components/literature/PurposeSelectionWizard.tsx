@@ -83,7 +83,8 @@ const PURPOSE_CONFIGS: Record<ResearchPurpose, PurposeConfig> = {
   q_methodology: {
     id: 'q_methodology',
     title: 'Q-Methodology',
-    description: 'Generate a broad concourse of 30-80 diverse statements for Q-sorts',
+    description:
+      'Generate a broad concourse of 30-80 diverse statements for Q-sorts',
     icon: FlaskConical,
     color: 'text-purple-600',
     bgColor: 'bg-purple-50',
@@ -91,7 +92,8 @@ const PURPOSE_CONFIGS: Record<ResearchPurpose, PurposeConfig> = {
     targetThemeCount: { min: 30, max: 80 },
     extractionFocus: 'breadth',
     themeGranularity: 'fine',
-    citation: 'Stephenson, W. (1953). The Study of Behavior: Q-Technique and Its Methodology.',
+    citation:
+      'Stephenson, W. (1953). The Study of Behavior: Q-Technique and Its Methodology.',
     scientificBacking:
       'Q-methodology requires a broad concourse (30-80 statements) representing the full diversity of viewpoints on a topic. While 40-60 is typical, focused studies can use as few as 30 statements. The algorithm prioritizes breadth over depth, ensuring comprehensive coverage of the discourse space.',
     bestFor: [
@@ -105,7 +107,8 @@ const PURPOSE_CONFIGS: Record<ResearchPurpose, PurposeConfig> = {
     contentRequirements: {
       minFullText: 0,
       level: 'optional',
-      rationale: 'Q-Methodology prioritizes breadth over depth. Abstracts provide sufficient diversity for statement generation.',
+      rationale:
+        'Q-Methodology prioritizes breadth over depth. Abstracts provide sufficient diversity for statement generation.',
     },
   },
   survey_construction: {
@@ -119,7 +122,8 @@ const PURPOSE_CONFIGS: Record<ResearchPurpose, PurposeConfig> = {
     targetThemeCount: { min: 5, max: 15 },
     extractionFocus: 'depth',
     themeGranularity: 'coarse',
-    citation: 'Churchill, G. A. (1979). A Paradigm for Developing Better Measures; DeVellis, R. F. (2016). Scale Development.',
+    citation:
+      'Churchill, G. A. (1979). A Paradigm for Developing Better Measures; DeVellis, R. F. (2016). Scale Development.',
     scientificBacking:
       'Survey construction paradigm (Churchill 1979; DeVellis 2016) recommends 5-15 latent constructs, each measured by multiple items. The algorithm prioritizes depth and conceptual clarity, identifying high-level constructs suitable for item generation.',
     bestFor: [
@@ -133,7 +137,8 @@ const PURPOSE_CONFIGS: Record<ResearchPurpose, PurposeConfig> = {
     contentRequirements: {
       minFullText: 5,
       level: 'recommended',
-      rationale: 'Full-text papers provide richer construct definitions, operational details, and theoretical depth needed for scale development.',
+      rationale:
+        'Full-text papers provide richer construct definitions, operational details, and theoretical depth needed for scale development.',
     },
   },
   qualitative_analysis: {
@@ -161,7 +166,8 @@ const PURPOSE_CONFIGS: Record<ResearchPurpose, PurposeConfig> = {
     contentRequirements: {
       minFullText: 3,
       level: 'recommended',
-      rationale: 'Flexible requirements. Abstracts work for descriptive themes; full-text recommended for explanatory depth and mechanisms.',
+      rationale:
+        'Flexible requirements. Abstracts work for descriptive themes; full-text recommended for explanatory depth and mechanisms.',
     },
   },
   literature_synthesis: {
@@ -175,7 +181,8 @@ const PURPOSE_CONFIGS: Record<ResearchPurpose, PurposeConfig> = {
     targetThemeCount: { min: 10, max: 25 },
     extractionFocus: 'breadth',
     themeGranularity: 'medium',
-    citation: 'Noblit & Hare (1988). Meta-Ethnography: Synthesizing Qualitative Studies.',
+    citation:
+      'Noblit & Hare (1988). Meta-Ethnography: Synthesizing Qualitative Studies.',
     scientificBacking:
       'Meta-ethnography (Noblit & Hare 1988) synthesizes findings across multiple qualitative studies. The algorithm identifies cross-study themes, preserving nuance while building higher-order interpretations.',
     bestFor: [
@@ -189,13 +196,15 @@ const PURPOSE_CONFIGS: Record<ResearchPurpose, PurposeConfig> = {
     contentRequirements: {
       minFullText: 10,
       level: 'blocking',
-      rationale: 'Meta-ethnography requires full findings sections, not just abstracts. Without full-text, synthesis is superficial and methodologically flawed.',
+      rationale:
+        'Meta-ethnography requires full findings sections, not just abstracts. Without full-text, synthesis is superficial and methodologically flawed.',
     },
   },
   hypothesis_generation: {
     id: 'hypothesis_generation',
     title: 'Hypothesis Generation',
-    description: 'Identify 8-15 theory-building themes for hypothesis development',
+    description:
+      'Identify 8-15 theory-building themes for hypothesis development',
     icon: Lightbulb,
     color: 'text-amber-600',
     bgColor: 'bg-amber-50',
@@ -217,7 +226,8 @@ const PURPOSE_CONFIGS: Record<ResearchPurpose, PurposeConfig> = {
     contentRequirements: {
       minFullText: 8,
       level: 'blocking',
-      rationale: 'Grounded theory requires causal mechanisms and theoretical depth from methods/results sections. Abstracts lack the detail needed for hypothesis generation.',
+      rationale:
+        'Grounded theory requires causal mechanisms and theoretical depth from methods/results sections. Abstracts lack the detail needed for hypothesis generation.',
     },
   },
 };
@@ -233,14 +243,14 @@ export default function PurposeSelectionWizard({
   contentAnalysis,
 }: PurposeSelectionWizardProps) {
   const [step, setStep] = useState<0 | 1 | 2 | 3>(0); // PHASE 10 DAY 5.16: Start at Step 0 (Content Analysis)
-  const [selectedPurpose, setSelectedPurpose] = useState<ResearchPurpose | null>(
-    initialPurpose || null
-  );
+  const [selectedPurpose, setSelectedPurpose] =
+    useState<ResearchPurpose | null>(initialPurpose || null);
 
   // PHASE 10 DAY 5.17: Content sufficiency validation
   const validateContentSufficiency = (purpose: ResearchPurpose) => {
     const config = PURPOSE_CONFIGS[purpose];
-    const totalFullText = contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
+    const totalFullText =
+      contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
     const requirements = config.contentRequirements;
 
     const isSufficient = totalFullText >= requirements.minFullText;
@@ -256,8 +266,12 @@ export default function PurposeSelectionWizard({
   };
 
   // Get validation status for selected purpose
-  const selectedConfig = selectedPurpose ? PURPOSE_CONFIGS[selectedPurpose] : null;
-  const validationStatus = selectedPurpose ? validateContentSufficiency(selectedPurpose) : null;
+  const selectedConfig = selectedPurpose
+    ? PURPOSE_CONFIGS[selectedPurpose]
+    : null;
+  const validationStatus = selectedPurpose
+    ? validateContentSufficiency(selectedPurpose)
+    : null;
 
   // Step 0: Content Analysis (NEW!)
   const handleContinueToPurposeSelection = () => {
@@ -284,7 +298,10 @@ export default function PurposeSelectionWizard({
       if (validation.isBlocking) {
         // Should never reach here due to Step 2/3 button disabling,
         // but add safety check as defense in depth
-        console.error('⛔ Cannot confirm extraction with insufficient content:', validation);
+        console.error(
+          '⛔ Cannot confirm extraction with insufficient content:',
+          validation
+        );
         return;
       }
 
@@ -317,25 +334,32 @@ export default function PurposeSelectionWizard({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
-                {step === 0 && "Content Analysis"}
-                {step === 1 && "Select Your Research Goal"}
-                {step === 2 && "Scientific Backing"}
-                {step === 3 && "Review & Confirm"}
+                {step === 0 && 'Content Analysis'}
+                {step === 1 && 'Select Your Research Goal'}
+                {step === 2 && 'Scientific Backing'}
+                {step === 3 && 'Review & Confirm'}
               </h2>
               <p className="text-sm text-gray-600 mt-1">
-                {step === 0 && "Review your selected sources and expected extraction quality"}
-                {step === 1 && "Choose the purpose that best matches your research needs"}
-                {step === 2 && "Understanding the methodology behind your choice"}
-                {step === 3 && "Final parameter review before extraction"}
+                {step === 0 &&
+                  'Review your selected sources and expected extraction quality'}
+                {step === 1 &&
+                  'Choose the purpose that best matches your research needs'}
+                {step === 2 &&
+                  'Understanding the methodology behind your choice'}
+                {step === 3 && 'Final parameter review before extraction'}
               </p>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
-                {[0, 1, 2, 3].map((s) => (
+                {[0, 1, 2, 3].map(s => (
                   <div
                     key={s}
                     className={`h-2 w-8 rounded-full transition-colors ${
-                      s === step ? 'bg-blue-600' : s < step ? 'bg-green-500' : 'bg-gray-200'
+                      s === step
+                        ? 'bg-blue-600'
+                        : s < step
+                          ? 'bg-green-500'
+                          : 'bg-gray-200'
                     }`}
                   />
                 ))}
@@ -366,47 +390,84 @@ export default function PurposeSelectionWizard({
                   <div className="grid grid-cols-3 gap-4 mb-4">
                     {contentAnalysis.fullTextCount > 0 && (
                       <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
-                        <div className="text-3xl font-bold text-green-700">{contentAnalysis.fullTextCount}</div>
-                        <div className="text-sm text-green-600 mt-1">Full-text papers</div>
-                        <div className="text-xs text-green-500 mt-1">~8,500 words each</div>
+                        <div className="text-3xl font-bold text-green-700">
+                          {contentAnalysis.fullTextCount}
+                        </div>
+                        <div className="text-sm text-green-600 mt-1">
+                          Full-text papers
+                        </div>
+                        <div className="text-xs text-green-500 mt-1">
+                          ~8,500 words each
+                        </div>
                       </div>
                     )}
                     {contentAnalysis.abstractOverflowCount > 0 && (
                       <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 text-center">
-                        <div className="text-3xl font-bold text-purple-700">{contentAnalysis.abstractOverflowCount}</div>
-                        <div className="text-sm text-purple-600 mt-1">Full articles</div>
-                        <div className="text-xs text-purple-500 mt-1">In abstract field (&gt;2k chars)</div>
+                        <div className="text-3xl font-bold text-purple-700">
+                          {contentAnalysis.abstractOverflowCount}
+                        </div>
+                        <div className="text-sm text-purple-600 mt-1">
+                          Full articles
+                        </div>
+                        <div className="text-xs text-purple-500 mt-1">
+                          In abstract field (&gt;2k chars)
+                        </div>
                       </div>
                     )}
                     {contentAnalysis.abstractCount > 0 && (
                       <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4 text-center">
-                        <div className="text-3xl font-bold text-gray-700">{contentAnalysis.abstractCount}</div>
-                        <div className="text-sm text-gray-600 mt-1">Abstracts only</div>
-                        <div className="text-xs text-gray-500 mt-1">~{Math.round(contentAnalysis.avgContentLength)} chars avg</div>
+                        <div className="text-3xl font-bold text-gray-700">
+                          {contentAnalysis.abstractCount}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          Abstracts only
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          ~{Math.round(contentAnalysis.avgContentLength)} chars
+                          avg
+                        </div>
                       </div>
                     )}
                   </div>
 
                   {/* Quality Assessment */}
-                  <div className={`rounded-lg p-4 ${contentAnalysis.hasFullTextContent ? 'bg-green-50 border-2 border-green-200' : 'bg-blue-50 border-2 border-blue-200'}`}>
+                  <div
+                    className={`rounded-lg p-4 ${contentAnalysis.hasFullTextContent ? 'bg-green-50 border-2 border-green-200' : 'bg-blue-50 border-2 border-blue-200'}`}
+                  >
                     <div className="flex items-start gap-3">
-                      <Info className={`w-5 h-5 mt-0.5 ${contentAnalysis.hasFullTextContent ? 'text-green-600' : 'text-blue-600'}`} />
+                      <Info
+                        className={`w-5 h-5 mt-0.5 ${contentAnalysis.hasFullTextContent ? 'text-green-600' : 'text-blue-600'}`}
+                      />
                       <div className="flex-1">
                         <h4 className="font-semibold text-gray-900 mb-2">
-                          Expected Theme Quality: {contentAnalysis.hasFullTextContent ? 'HIGH' : 'MODERATE'}
+                          Expected Theme Quality:{' '}
+                          {contentAnalysis.hasFullTextContent
+                            ? 'HIGH'
+                            : 'MODERATE'}
                         </h4>
                         <p className="text-sm text-gray-700 leading-relaxed">
                           {contentAnalysis.hasFullTextContent ? (
                             <>
-                              <strong>Full-text papers</strong> provide <strong>40-50x more content</strong> than abstracts (10,000+ words vs 150-500 words).
-                              This enables deeper theme extraction with richer contextual evidence and more nuanced codes.
-                              The system will use <strong>strict validation thresholds</strong> to ensure high-quality themes.
+                              <strong>Full-text papers</strong> provide{' '}
+                              <strong>40-50x more content</strong> than
+                              abstracts (10,000+ words vs 150-500 words). This
+                              enables deeper theme extraction with richer
+                              contextual evidence and more nuanced codes. The
+                              system will use{' '}
+                              <strong>strict validation thresholds</strong> to
+                              ensure high-quality themes.
                             </>
                           ) : (
                             <>
-                              Abstract-only content (~{Math.round(contentAnalysis.avgContentLength)} characters average) provides less context than full-text papers.
-                              The system has automatically activated <strong>adaptive validation thresholds</strong> to account for shorter content length.
-                              For best results, consider adding full-text papers if available.
+                              Abstract-only content (~
+                              {Math.round(contentAnalysis.avgContentLength)}{' '}
+                              characters average) provides less context than
+                              full-text papers. The system has automatically
+                              activated{' '}
+                              <strong>adaptive validation thresholds</strong> to
+                              account for shorter content length. For best
+                              results, consider adding full-text papers if
+                              available.
                             </>
                           )}
                         </p>
@@ -417,30 +478,63 @@ export default function PurposeSelectionWizard({
 
                 {/* What Happens Next Preview */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
-                  <h4 className="font-semibold text-gray-900 mb-3">What Happens Next</h4>
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    What Happens Next
+                  </h4>
                   <p className="text-sm text-gray-700 mb-3">
-                    In the next step, you'll select your research purpose. Each purpose has different content requirements:
+                    In the next step, you'll select your research purpose. Each
+                    purpose has different content requirements:
                   </p>
                   <ul className="space-y-2.5 text-sm text-gray-700">
                     <li className="flex items-start gap-2">
                       <span className="text-green-600 font-semibold">✅</span>
-                      <span><strong>Q-Methodology:</strong> Abstracts sufficient (breadth &gt; depth). Generates 40-80 diverse statements. <span className="text-gray-600">Min: 0 full-text</span></span>
+                      <span>
+                        <strong>Q-Methodology:</strong> Abstracts sufficient
+                        (breadth &gt; depth). Generates 40-80 diverse
+                        statements.{' '}
+                        <span className="text-gray-600">Min: 0 full-text</span>
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-yellow-600 font-semibold">⚠️</span>
-                      <span><strong>Survey Construction:</strong> Full-text strongly recommended for construct depth and item pools. <span className="text-gray-600">Min: 5 full-text recommended</span></span>
+                      <span>
+                        <strong>Survey Construction:</strong> Full-text strongly
+                        recommended for construct depth and item pools.{' '}
+                        <span className="text-gray-600">
+                          Min: 5 full-text recommended
+                        </span>
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-blue-600 font-semibold">ℹ️</span>
-                      <span><strong>Qualitative Analysis:</strong> Flexible. Abstracts OK for descriptive; full-text for explanatory depth. <span className="text-gray-600">Min: 3 full-text optional</span></span>
+                      <span>
+                        <strong>Qualitative Analysis:</strong> Flexible.
+                        Abstracts OK for descriptive; full-text for explanatory
+                        depth.{' '}
+                        <span className="text-gray-600">
+                          Min: 3 full-text optional
+                        </span>
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-red-600 font-semibold">🔥</span>
-                      <span><strong>Literature Synthesis:</strong> Full-text REQUIRED (needs findings sections for meta-ethnography). <span className="text-gray-600">Min: 10 full-text required</span></span>
+                      <span>
+                        <strong>Literature Synthesis:</strong> Full-text
+                        REQUIRED (needs findings sections for meta-ethnography).{' '}
+                        <span className="text-gray-600">
+                          Min: 10 full-text required
+                        </span>
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-red-600 font-semibold">🔥</span>
-                      <span><strong>Hypothesis Generation:</strong> Full-text REQUIRED (needs mechanisms for grounded theory). <span className="text-gray-600">Min: 8 full-text required</span></span>
+                      <span>
+                        <strong>Hypothesis Generation:</strong> Full-text
+                        REQUIRED (needs mechanisms for grounded theory).{' '}
+                        <span className="text-gray-600">
+                          Min: 8 full-text required
+                        </span>
+                      </span>
                     </li>
                   </ul>
                 </div>
@@ -456,7 +550,7 @@ export default function PurposeSelectionWizard({
                 exit={{ opacity: 0, x: 20 }}
                 className="space-y-4"
               >
-                {Object.values(PURPOSE_CONFIGS).map((config) => {
+                {Object.values(PURPOSE_CONFIGS).map(config => {
                   const Icon = config.icon;
                   return (
                     <motion.button
@@ -467,20 +561,27 @@ export default function PurposeSelectionWizard({
                       whileTap={{ scale: 0.98 }}
                     >
                       <div className="flex items-start gap-4">
-                        <div className={`p-3 rounded-lg bg-white shadow-sm ${config.color}`}>
+                        <div
+                          className={`p-3 rounded-lg bg-white shadow-sm ${config.color}`}
+                        >
                           <Icon className="w-6 h-6" />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900">{config.title}</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {config.title}
+                            </h3>
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <span className="font-mono">
-                                {config.targetThemeCount.min}-{config.targetThemeCount.max} themes
+                                {config.targetThemeCount.min}-
+                                {config.targetThemeCount.max} themes
                               </span>
                               <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
                             </div>
                           </div>
-                          <p className="text-gray-700 mt-2">{config.description}</p>
+                          <p className="text-gray-700 mt-2">
+                            {config.description}
+                          </p>
                           <div className="flex items-center gap-2 mt-3">
                             <span className="text-xs px-2 py-1 rounded bg-white text-gray-600 font-medium">
                               Focus: {config.extractionFocus}
@@ -507,59 +608,95 @@ export default function PurposeSelectionWizard({
                 className="space-y-6"
               >
                 {/* Selected Purpose Header */}
-                <div className={`p-6 rounded-lg ${selectedConfig.bgColor} border-2 ${selectedConfig.borderColor.replace('hover:', '')}`}>
+                <div
+                  className={`p-6 rounded-lg ${selectedConfig.bgColor} border-2 ${selectedConfig.borderColor.replace('hover:', '')}`}
+                >
                   <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-lg bg-white shadow-sm ${selectedConfig.color}`}>
-                      {React.createElement(selectedConfig.icon, { className: 'w-8 h-8' })}
+                    <div
+                      className={`p-3 rounded-lg bg-white shadow-sm ${selectedConfig.color}`}
+                    >
+                      {React.createElement(selectedConfig.icon, {
+                        className: 'w-8 h-8',
+                      })}
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">{selectedConfig.title}</h3>
-                      <p className="text-gray-700 mt-1">{selectedConfig.description}</p>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {selectedConfig.title}
+                      </h3>
+                      <p className="text-gray-700 mt-1">
+                        {selectedConfig.description}
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 {/* PHASE 10 DAY 5.17: Content Sufficiency Warning */}
                 {validationStatus && !validationStatus.isSufficient && (
-                  <div className={`p-5 rounded-lg border-2 ${
-                    validationStatus.isBlocking
-                      ? 'bg-red-50 border-red-300'
-                      : validationStatus.level === 'recommended'
-                      ? 'bg-yellow-50 border-yellow-300'
-                      : 'bg-blue-50 border-blue-300'
-                  }`}>
+                  <div
+                    className={`p-5 rounded-lg border-2 ${
+                      validationStatus.isBlocking
+                        ? 'bg-red-50 border-red-300'
+                        : validationStatus.level === 'recommended'
+                          ? 'bg-yellow-50 border-yellow-300'
+                          : 'bg-blue-50 border-blue-300'
+                    }`}
+                  >
                     <div className="flex items-start gap-3">
-                      <AlertCircle className={`w-6 h-6 mt-0.5 flex-shrink-0 ${
-                        validationStatus.isBlocking
-                          ? 'text-red-600'
-                          : validationStatus.level === 'recommended'
-                          ? 'text-yellow-600'
-                          : 'text-blue-600'
-                      }`} />
-                      <div className="flex-1">
-                        <h4 className={`font-bold mb-2 ${
+                      <AlertCircle
+                        className={`w-6 h-6 mt-0.5 flex-shrink-0 ${
                           validationStatus.isBlocking
-                            ? 'text-red-900'
+                            ? 'text-red-600'
                             : validationStatus.level === 'recommended'
-                            ? 'text-yellow-900'
-                            : 'text-blue-900'
-                        }`}>
-                          {validationStatus.isBlocking && '⛔ Insufficient Content - Cannot Proceed'}
-                          {validationStatus.level === 'recommended' && !validationStatus.isBlocking && '⚠️ Recommended Content Not Met'}
-                          {validationStatus.level === 'required' && !validationStatus.isBlocking && 'ℹ️ Content Requirements'}
+                              ? 'text-yellow-600'
+                              : 'text-blue-600'
+                        }`}
+                      />
+                      <div className="flex-1">
+                        <h4
+                          className={`font-bold mb-2 ${
+                            validationStatus.isBlocking
+                              ? 'text-red-900'
+                              : validationStatus.level === 'recommended'
+                                ? 'text-yellow-900'
+                                : 'text-blue-900'
+                          }`}
+                        >
+                          {validationStatus.isBlocking &&
+                            '⛔ Insufficient Content - Cannot Proceed'}
+                          {validationStatus.level === 'recommended' &&
+                            !validationStatus.isBlocking &&
+                            '⚠️ Recommended Content Not Met'}
+                          {validationStatus.level === 'required' &&
+                            !validationStatus.isBlocking &&
+                            'ℹ️ Content Requirements'}
                         </h4>
                         <p className="text-sm text-gray-700 mb-3">
-                          <strong>{selectedConfig.title}</strong> requires at least <strong>{validationStatus.minRequired} full-text paper{validationStatus.minRequired !== 1 ? 's' : ''}</strong>, but you currently have <strong>{validationStatus.currentCount}</strong>.
+                          <strong>{selectedConfig.title}</strong> requires at
+                          least{' '}
+                          <strong>
+                            {validationStatus.minRequired} full-text paper
+                            {validationStatus.minRequired !== 1 ? 's' : ''}
+                          </strong>
+                          , but you currently have{' '}
+                          <strong>{validationStatus.currentCount}</strong>.
                         </p>
                         <p className="text-sm text-gray-700 mb-4">
                           {validationStatus.rationale}
                         </p>
                         {validationStatus.isBlocking && (
                           <div className="bg-white border border-red-200 rounded p-3 text-sm">
-                            <p className="font-semibold text-red-900 mb-2">To proceed:</p>
+                            <p className="font-semibold text-red-900 mb-2">
+                              To proceed:
+                            </p>
                             <ol className="list-decimal list-inside space-y-1 text-gray-700">
-                              <li>Go back and select papers with full-text PDFs available</li>
-                              <li>Or choose a different research purpose (e.g., Q-Methodology works with abstracts)</li>
+                              <li>
+                                Go back and select papers with full-text PDFs
+                                available
+                              </li>
+                              <li>
+                                Or choose a different research purpose (e.g.,
+                                Q-Methodology works with abstracts)
+                              </li>
                             </ol>
                           </div>
                         )}
@@ -573,7 +710,9 @@ export default function PurposeSelectionWizard({
                   <div className="flex items-start gap-3">
                     <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-2">Scientific Foundation</h4>
+                      <h4 className="font-semibold text-gray-900 mb-2">
+                        Scientific Foundation
+                      </h4>
                       <p className="text-sm text-gray-700 leading-relaxed mb-3">
                         {selectedConfig.scientificBacking}
                       </p>
@@ -586,10 +725,15 @@ export default function PurposeSelectionWizard({
 
                 {/* Best For */}
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">Best For:</h4>
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    Best For:
+                  </h4>
                   <ul className="space-y-2">
                     {selectedConfig.bestFor.map((item, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                      <li
+                        key={idx}
+                        className="flex items-start gap-2 text-sm text-gray-700"
+                      >
                         <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                         <span>{item}</span>
                       </li>
@@ -599,8 +743,12 @@ export default function PurposeSelectionWizard({
 
                 {/* Example */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
-                  <h4 className="font-semibold text-gray-900 mb-2">Example Use Case</h4>
-                  <p className="text-sm text-gray-700">{selectedConfig.example}</p>
+                  <h4 className="font-semibold text-gray-900 mb-2">
+                    Example Use Case
+                  </h4>
+                  <p className="text-sm text-gray-700">
+                    {selectedConfig.example}
+                  </p>
                 </div>
               </motion.div>
             )}
@@ -615,14 +763,24 @@ export default function PurposeSelectionWizard({
                 className="space-y-6"
               >
                 {/* Selected Purpose Summary */}
-                <div className={`p-6 rounded-lg ${selectedConfig.bgColor} border-2 ${selectedConfig.borderColor.replace('hover:', '')}`}>
+                <div
+                  className={`p-6 rounded-lg ${selectedConfig.bgColor} border-2 ${selectedConfig.borderColor.replace('hover:', '')}`}
+                >
                   <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-lg bg-white shadow-sm ${selectedConfig.color}`}>
-                      {React.createElement(selectedConfig.icon, { className: 'w-8 h-8' })}
+                    <div
+                      className={`p-3 rounded-lg bg-white shadow-sm ${selectedConfig.color}`}
+                    >
+                      {React.createElement(selectedConfig.icon, {
+                        className: 'w-8 h-8',
+                      })}
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">{selectedConfig.title}</h3>
-                      <p className="text-gray-700 mt-1">{selectedConfig.description}</p>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {selectedConfig.title}
+                      </h3>
+                      <p className="text-gray-700 mt-1">
+                        {selectedConfig.description}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -646,59 +804,78 @@ export default function PurposeSelectionWizard({
 
                 {/* Extraction Parameters */}
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-4">Extraction Parameters</h4>
+                  <h4 className="font-semibold text-gray-900 mb-4">
+                    Extraction Parameters
+                  </h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <p className="text-sm text-gray-600 mb-1">Target Theme Count</p>
+                      <p className="text-sm text-gray-600 mb-1">
+                        Target Theme Count
+                      </p>
                       <p className="text-2xl font-bold text-gray-900">
-                        {selectedConfig.targetThemeCount.min}-{selectedConfig.targetThemeCount.max}
+                        {selectedConfig.targetThemeCount.min}-
+                        {selectedConfig.targetThemeCount.max}
                       </p>
                     </div>
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <p className="text-sm text-gray-600 mb-1">Extraction Focus</p>
+                      <p className="text-sm text-gray-600 mb-1">
+                        Extraction Focus
+                      </p>
                       <p className="text-2xl font-bold text-gray-900 capitalize">
                         {selectedConfig.extractionFocus}
                       </p>
                     </div>
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <p className="text-sm text-gray-600 mb-1">Theme Granularity</p>
+                      <p className="text-sm text-gray-600 mb-1">
+                        Theme Granularity
+                      </p>
                       <p className="text-2xl font-bold text-gray-900 capitalize">
                         {selectedConfig.themeGranularity}
                       </p>
                     </div>
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <p className="text-sm text-gray-600 mb-1">Validation Rigor</p>
-                      <p className="text-2xl font-bold text-gray-900">Rigorous</p>
+                      <p className="text-sm text-gray-600 mb-1">
+                        Validation Rigor
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        Rigorous
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 {/* What Happens Next */}
                 <div className="bg-green-50 border border-green-200 rounded-lg p-5">
-                  <h4 className="font-semibold text-gray-900 mb-3">What Happens Next</h4>
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    What Happens Next
+                  </h4>
                   <ol className="space-y-2 text-sm text-gray-700">
                     <li className="flex items-start gap-2">
                       <span className="font-bold text-green-600">1.</span>
                       <span>
-                        The system will perform 6-stage reflexive thematic analysis on your sources
+                        The system will perform 6-stage reflexive thematic
+                        analysis on your sources
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="font-bold text-green-600">2.</span>
                       <span>
-                        You'll see transparent progress messages explaining each stage in real-time
+                        You'll see transparent progress messages explaining each
+                        stage in real-time
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="font-bold text-green-600">3.</span>
                       <span>
-                        Themes will be extracted according to {selectedConfig.title} best practices
+                        Themes will be extracted according to{' '}
+                        {selectedConfig.title} best practices
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="font-bold text-green-600">4.</span>
                       <span>
-                        You can refine themes iteratively if needed (Stages 4-6 are non-linear)
+                        You can refine themes iteratively if needed (Stages 4-6
+                        are non-linear)
                       </span>
                     </li>
                   </ol>
@@ -748,7 +925,11 @@ export default function PurposeSelectionWizard({
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
-                title={validationStatus?.isBlocking ? 'Cannot proceed with insufficient content' : ''}
+                title={
+                  validationStatus?.isBlocking
+                    ? 'Cannot proceed with insufficient content'
+                    : ''
+                }
               >
                 Continue to Preview
                 <ChevronRight className="w-4 h-4" />
@@ -763,7 +944,11 @@ export default function PurposeSelectionWizard({
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-green-600 text-white hover:bg-green-700'
                 }`}
-                title={validationStatus?.isBlocking ? 'Cannot proceed with insufficient content' : ''}
+                title={
+                  validationStatus?.isBlocking
+                    ? 'Cannot proceed with insufficient content'
+                    : ''
+                }
               >
                 <CheckCircle2 className="w-5 h-5" />
                 Start Extraction

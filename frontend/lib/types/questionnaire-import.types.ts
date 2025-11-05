@@ -8,7 +8,16 @@ import { ReactNode } from 'react';
 // Base question type that matches existing questionnaire system
 export interface Question {
   id: string;
-  type: 'text' | 'textarea' | 'radio' | 'checkbox' | 'select' | 'likert' | 'scale' | 'matrix' | 'ranking';
+  type:
+    | 'text'
+    | 'textarea'
+    | 'radio'
+    | 'checkbox'
+    | 'select'
+    | 'likert'
+    | 'scale'
+    | 'matrix'
+    | 'ranking';
   title: string;
   description?: string;
   required: boolean;
@@ -20,7 +29,13 @@ export interface Question {
 }
 
 export interface QuestionSettings {
-  scaleType?: '1-5' | '1-7' | '1-10' | 'agree-disagree' | 'frequency' | 'satisfaction';
+  scaleType?:
+    | '1-5'
+    | '1-7'
+    | '1-10'
+    | 'agree-disagree'
+    | 'frequency'
+    | 'satisfaction';
   leftPole?: string;
   rightPole?: string;
   construct?: string;
@@ -29,7 +44,12 @@ export interface QuestionSettings {
 }
 
 export interface QuestionMetadata {
-  source: 'manual' | 'theme-extraction' | 'research-question' | 'hypothesis' | 'ai-generated';
+  source:
+    | 'manual'
+    | 'theme-extraction'
+    | 'research-question'
+    | 'hypothesis'
+    | 'ai-generated';
   themeId?: string;
   themeName?: string;
   confidence?: number;
@@ -155,7 +175,13 @@ export interface ResearchQuestionConstruct {
   id: string;
   name: string;
   definition: string;
-  type: 'independent_variable' | 'dependent_variable' | 'moderator' | 'mediator' | 'control' | 'outcome';
+  type:
+    | 'independent_variable'
+    | 'dependent_variable'
+    | 'moderator'
+    | 'mediator'
+    | 'control'
+    | 'outcome';
   confidence: number;
   source: 'extracted' | 'inferred' | 'user_defined';
   relatedConcepts: string[];
@@ -182,7 +208,14 @@ export interface SurveyMeasurementItem {
   variableId: string;
   constructId: string;
   itemNumber: number;
-  scaleType: 'likert_5' | 'likert_7' | 'semantic_differential' | 'frequency' | 'agreement' | 'satisfaction' | 'importance';
+  scaleType:
+    | 'likert_5'
+    | 'likert_7'
+    | 'semantic_differential'
+    | 'frequency'
+    | 'agreement'
+    | 'satisfaction'
+    | 'importance';
   scaleLabels: string[];
   reversed: boolean;
   psychometricNote: string;
@@ -214,7 +247,12 @@ export interface StatisticalAnalysisPlan {
 
 export interface OperationalizationRequest {
   researchQuestion: string;
-  studyType: 'exploratory' | 'explanatory' | 'evaluative' | 'predictive' | 'descriptive';
+  studyType:
+    | 'exploratory'
+    | 'explanatory'
+    | 'evaluative'
+    | 'predictive'
+    | 'descriptive';
   methodology?: 'survey' | 'experiment' | 'mixed_methods';
   targetPopulation?: string;
   existingConstructs?: ResearchQuestionConstruct[];
@@ -299,7 +337,13 @@ export interface HypothesisSurveyItem {
   text: string;
   variableId: string;
   itemNumber: number;
-  scaleType: 'likert_5' | 'likert_7' | 'semantic_differential' | 'frequency' | 'agreement' | 'satisfaction';
+  scaleType:
+    | 'likert_5'
+    | 'likert_7'
+    | 'semantic_differential'
+    | 'frequency'
+    | 'agreement'
+    | 'satisfaction';
   scaleLabels: string[];
   reversed: boolean;
   purpose: string;
@@ -334,7 +378,12 @@ export interface HypothesisTestBattery {
 
 export interface HypothesisToItemRequest {
   hypothesis: string;
-  hypothesisType?: 'correlational' | 'causal' | 'interaction' | 'mediation' | 'moderation';
+  hypothesisType?:
+    | 'correlational'
+    | 'causal'
+    | 'interaction'
+    | 'mediation'
+    | 'moderation';
   itemsPerVariable?: number;
   targetReliability?: number;
   includeReverseItems?: boolean;

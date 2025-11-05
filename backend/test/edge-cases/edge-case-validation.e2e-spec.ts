@@ -41,7 +41,9 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
 
     prisma = app.get<PrismaService>(PrismaService);
     literatureService = app.get<LiteratureService>(LiteratureService);
-    themeExtractionService = app.get<UnifiedThemeExtractionService>(UnifiedThemeExtractionService);
+    themeExtractionService = app.get<UnifiedThemeExtractionService>(
+      UnifiedThemeExtractionService,
+    );
 
     // Create test user
     const hashedPassword = await bcrypt.hash('test123', 10);
@@ -79,7 +81,10 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
 
   describe('EDGE-001: Data Extremes - Paper with 100+ Authors', () => {
     it('should handle paper with 100+ authors without UI breaking', async () => {
-      const manyAuthors = Array.from({ length: 150 }, (_, i) => `Author ${i + 1}`);
+      const manyAuthors = Array.from(
+        { length: 150 },
+        (_, i) => `Author ${i + 1}`,
+      );
 
       const paper = await prisma.paper.create({
         data: {
@@ -103,7 +108,9 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
       expect(retrieved).toBeDefined();
       expect(retrieved.authors.length).toBe(150);
 
-      console.log('✅ EDGE-001 PASSED: 150 authors stored and retrieved successfully');
+      console.log(
+        '✅ EDGE-001 PASSED: 150 authors stored and retrieved successfully',
+      );
     });
 
     it('should truncate author display in API response (frontend concern)', async () => {
@@ -115,7 +122,9 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
       // Example: "Author 1, Author 2, Author 3 et al. (150 total)"
       expect(paper.authors.length).toBeGreaterThan(100);
 
-      console.log(`✅ EDGE-001: Paper has ${paper.authors.length} authors (frontend should truncate)`);
+      console.log(
+        `✅ EDGE-001: Paper has ${paper.authors.length} authors (frontend should truncate)`,
+      );
     });
   });
 
@@ -151,20 +160,27 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
       ];
 
       try {
-        const result = await themeExtractionService.extractFromMultipleSources(sources, {
-          researchContext: 'test',
-          minConfidence: 0.5,
-        });
+        const result = await themeExtractionService.extractFromMultipleSources(
+          sources,
+          {
+            researchContext: 'test',
+            minConfidence: 0.5,
+          },
+        );
 
         // Should either:
         // 1. Skip the paper with warning (themes.length = 0), OR
         // 2. Generate generic themes with low confidence
 
-        console.log(`✅ EDGE-002: Extraction handled empty content (${result.themes.length} themes)`);
+        console.log(
+          `✅ EDGE-002: Extraction handled empty content (${result.themes.length} themes)`,
+        );
       } catch (error: any) {
         // If it throws, error should be descriptive
         expect(error.message).toContain('abstract');
-        console.log(`✅ EDGE-002: Empty content rejected with clear error: ${error.message}`);
+        console.log(
+          `✅ EDGE-002: Empty content rejected with clear error: ${error.message}`,
+        );
       }
     });
   });
@@ -176,16 +192,20 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
           type: 'paper' as const,
           id: 'single-paper',
           title: 'Climate Change and Agriculture',
-          content: 'Climate change poses significant challenges to agricultural systems worldwide. Rising temperatures, changing precipitation patterns, and increased frequency of extreme weather events are affecting crop yields and farming practices.',
+          content:
+            'Climate change poses significant challenges to agricultural systems worldwide. Rising temperatures, changing precipitation patterns, and increased frequency of extreme weather events are affecting crop yields and farming practices.',
           authors: ['Jane Smith'],
           year: 2023,
         },
       ];
 
-      const result = await themeExtractionService.extractFromMultipleSources(sources, {
-        researchContext: 'climate change agriculture',
-        minConfidence: 0.5,
-      });
+      const result = await themeExtractionService.extractFromMultipleSources(
+        sources,
+        {
+          researchContext: 'climate change agriculture',
+          minConfidence: 0.5,
+        },
+      );
 
       expect(result.themes).toBeDefined();
       expect(result.themes.length).toBeGreaterThan(0);
@@ -198,7 +218,9 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
         expect(theme.sources[0].id).toBe('single-paper');
       });
 
-      console.log(`✅ EDGE-003 PASSED: Single paper extraction generated ${result.themes.length} themes`);
+      console.log(
+        `✅ EDGE-003 PASSED: Single paper extraction generated ${result.themes.length} themes`,
+      );
     }, 60000);
   });
 
@@ -219,7 +241,9 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
 
       expect(paper.doi).toBe('NOT_A_VALID_DOI_123');
 
-      console.log('✅ EDGE-004 PASSED: Invalid DOI accepted (UI should handle display)');
+      console.log(
+        '✅ EDGE-004 PASSED: Invalid DOI accepted (UI should handle display)',
+      );
     });
 
     it('should accept paper with null DOI', async () => {
@@ -267,7 +291,9 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
 
       expect(retrieved.title.length).toBe(1000);
 
-      console.log('✅ EDGE-005 PASSED: 1000-character title stored successfully (UI should truncate)');
+      console.log(
+        '✅ EDGE-005 PASSED: 1000-character title stored successfully (UI should truncate)',
+      );
     });
   });
 
@@ -276,11 +302,14 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
       const maliciousQuery = "'; DROP TABLE papers;--";
 
       try {
-        const result = await literatureService.searchLiterature({
-          query: maliciousQuery,
-          sources: ['arxiv'],
-          limit: 5,
-        }, testUserId);
+        const result = await literatureService.searchLiterature(
+          {
+            query: maliciousQuery,
+            sources: ['arxiv'],
+            limit: 5,
+          },
+          testUserId,
+        );
 
         // Should return empty or search results (not crash or execute SQL)
         expect(result).toBeDefined();
@@ -300,11 +329,14 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
       const xssQuery = "<script>alert('XSS')</script>";
 
       try {
-        const result = await literatureService.searchLiterature({
-          query: xssQuery,
-          sources: ['arxiv'],
-          limit: 5,
-        }, testUserId);
+        const result = await literatureService.searchLiterature(
+          {
+            query: xssQuery,
+            sources: ['arxiv'],
+            limit: 5,
+          },
+          testUserId,
+        );
 
         expect(result).toBeDefined();
         expect(result.papers).toBeDefined();
@@ -320,18 +352,23 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
       const unicodeQuery = '量子计算机 机器学习'; // Chinese: quantum computer machine learning
 
       try {
-        const result = await literatureService.searchLiterature({
-          query: unicodeQuery,
-          sources: ['arxiv'],
-          limit: 5,
-        }, testUserId);
+        const result = await literatureService.searchLiterature(
+          {
+            query: unicodeQuery,
+            sources: ['arxiv'],
+            limit: 5,
+          },
+          testUserId,
+        );
 
         expect(result).toBeDefined();
         expect(result.papers).toBeDefined();
 
         console.log('✅ EDGE-006 PASSED: Unicode query handled correctly');
       } catch (error: any) {
-        console.log(`⚠️  EDGE-006: Unicode support may need improvement: ${error.message}`);
+        console.log(
+          `⚠️  EDGE-006: Unicode support may need improvement: ${error.message}`,
+        );
       }
     }, 15000);
   });
@@ -353,7 +390,9 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
       expect(response.status).toBe(400);
       expect(response.body.message).toBeDefined();
 
-      console.log(`✅ EDGE-007 PASSED: Empty sources rejected with: ${response.body.message}`);
+      console.log(
+        `✅ EDGE-007 PASSED: Empty sources rejected with: ${response.body.message}`,
+      );
     });
 
     it('should reject theme extraction with null sources', async () => {
@@ -436,7 +475,9 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
         expect(result.themes.length).toBeGreaterThan(0);
       });
 
-      console.log(`✅ EDGE-008 PASSED: 3 concurrent extractions completed in ${(elapsedTime / 1000).toFixed(1)}s`);
+      console.log(
+        `✅ EDGE-008 PASSED: 3 concurrent extractions completed in ${(elapsedTime / 1000).toFixed(1)}s`,
+      );
     }, 120000);
   });
 
@@ -444,18 +485,23 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
     it('should handle search query with no results gracefully', async () => {
       const obscureQuery = 'xyzabc123notarealquery999';
 
-      const result = await literatureService.searchLiterature({
-        query: obscureQuery,
-        sources: ['arxiv'],
-        limit: 10,
-      }, testUserId);
+      const result = await literatureService.searchLiterature(
+        {
+          query: obscureQuery,
+          sources: ['arxiv'],
+          limit: 10,
+        },
+        testUserId,
+      );
 
       expect(result).toBeDefined();
       expect(result.papers).toBeDefined();
       expect(Array.isArray(result.papers)).toBe(true);
 
       // May return 0 results (acceptable)
-      console.log(`✅ EDGE-009 PASSED: Zero-result search handled (${result.papers.length} papers returned)`);
+      console.log(
+        `✅ EDGE-009 PASSED: Zero-result search handled (${result.papers.length} papers returned)`,
+      );
     }, 15000);
   });
 
@@ -493,7 +539,9 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
 
       expect(paper.year).toBe(0);
 
-      console.log('✅ EDGE-010: Paper with year=0 accepted (UI should handle display)');
+      console.log(
+        '✅ EDGE-010: Paper with year=0 accepted (UI should handle display)',
+      );
     });
   });
 
@@ -513,7 +561,9 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
 
       expect(paper.authors.length).toBe(0);
 
-      console.log('✅ EDGE-011 PASSED: Paper with empty authors array accepted');
+      console.log(
+        '✅ EDGE-011 PASSED: Paper with empty authors array accepted',
+      );
     });
   });
 
@@ -542,7 +592,9 @@ describe('Edge Case Validation Tests (Stage 2 Phase 4)', () => {
 
       expect(retrieved.abstract.length).toBeGreaterThan(9000);
 
-      console.log(`✅ EDGE-012 PASSED: ${retrieved.abstract.length}-character abstract stored successfully`);
+      console.log(
+        `✅ EDGE-012 PASSED: ${retrieved.abstract.length}-character abstract stored successfully`,
+      );
     });
   });
 

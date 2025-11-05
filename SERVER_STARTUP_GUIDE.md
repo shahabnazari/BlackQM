@@ -9,6 +9,7 @@
 ## 🎯 PROBLEM IDENTIFIED
 
 You were seeing this error:
+
 ```
 Failed to load resource: net::ERR_CONNECTION_REFUSED
 :4000/api/auth/login
@@ -29,6 +30,7 @@ npm run start:dev
 ```
 
 **Backend Status:**
+
 ```
 ✓ Nest application successfully started
 🚀 Backend server running on: http://localhost:4000/api
@@ -36,6 +38,7 @@ npm run start:dev
 ```
 
 **Health Check:**
+
 ```json
 {
   "status": "healthy",
@@ -50,12 +53,14 @@ npm run start:dev
 ## 🌐 CURRENT SERVER STATUS
 
 ### Frontend (Port 3000) ✅
+
 - **Status:** RUNNING
 - **URL:** http://localhost:3000
 - **PID:** 53049
 - **Logs:** `/tmp/frontend-dev.log`
 
 ### Backend (Port 4000) ✅
+
 - **Status:** RUNNING
 - **URL:** http://localhost:4000/api
 - **PID:** 54989
@@ -68,6 +73,7 @@ npm run start:dev
 Frontend is correctly configured to connect to backend:
 
 **File:** `frontend/.env.local`
+
 ```env
 PORT=3000
 NEXT_PUBLIC_API_URL=http://localhost:4000/api
@@ -76,6 +82,7 @@ NEXT_PUBLIC_WS_URL=ws://localhost:4000
 ```
 
 **File:** `backend/.env`
+
 ```env
 PORT=4000
 NODE_ENV=development
@@ -88,10 +95,13 @@ JWT_SECRET="your-super-secret-jwt-key-change-in-production"
 ## 🧪 TESTING
 
 ### Test 1: Backend Health ✅
+
 ```bash
 curl http://localhost:4000/api/health
 ```
+
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -102,12 +112,15 @@ curl http://localhost:4000/api/health
 ```
 
 ### Test 2: Frontend Loading ✅
+
 ```bash
 curl http://localhost:3000
 ```
+
 **Response:** Full HTML page with VQMethod content
 
 ### Test 3: Login (Should Work Now) ⏳
+
 1. Go to http://localhost:3000/auth/login
 2. Enter credentials
 3. Backend should respond (no more network error)
@@ -119,12 +132,14 @@ curl http://localhost:3000
 ### Option 1: Manual (Two Terminals)
 
 **Terminal 1 - Frontend:**
+
 ```bash
 cd /Users/shahabnazariadli/Documents/blackQmethhod/frontend
 npm run dev
 ```
 
 **Terminal 2 - Backend:**
+
 ```bash
 cd /Users/shahabnazariadli/Documents/blackQmethhod/backend
 npm run start:dev
@@ -133,10 +148,12 @@ npm run start:dev
 ### Option 2: Background (Current Setup)
 
 Both servers are now running in the background:
+
 - Frontend logs: `tail -f /tmp/frontend-dev.log`
 - Backend logs: `tail -f /tmp/backend-dev.log`
 
 To stop:
+
 ```bash
 pkill -f "next dev"
 pkill -f "nest start"
@@ -149,16 +166,19 @@ pkill -f "nest start"
 ### If Login Still Fails
 
 **Check Backend Logs:**
+
 ```bash
 tail -f /tmp/backend-dev.log
 ```
 
 **Check Frontend Console:**
+
 1. Open browser DevTools (F12)
 2. Go to Console tab
 3. Look for errors
 
 **Verify Servers Are Running:**
+
 ```bash
 # Check port 3000 (frontend)
 lsof -i :3000
@@ -168,6 +188,7 @@ lsof -i :4000
 ```
 
 **Test API Directly:**
+
 ```bash
 # Test auth endpoint
 curl -X POST http://localhost:4000/api/auth/login \
@@ -180,12 +201,15 @@ curl -X POST http://localhost:4000/api/auth/login \
 ## ⚠️ WARNINGS (Non-Critical)
 
 **Virus Scanner Warning:**
+
 ```
 WARN [VirusScanService] Virus scanner not available
 ```
+
 **Impact:** None - virus scanning is optional for development
 
 **Fix (Optional):**
+
 ```bash
 # Install ClamAV (macOS)
 brew install clamav
@@ -205,6 +229,7 @@ freshclam
 ## 📊 PHASE 10 DAY 5.17.1 STATUS
 
 **All Systems Operational:**
+
 - ✅ Frontend compiling and running
 - ✅ Backend compiling and running
 - ✅ API endpoints mapped correctly
@@ -213,6 +238,7 @@ freshclam
 - ✅ Day 5.17.1 validation fixes deployed
 
 **Production-Ready Features:**
+
 - ✅ Purpose-aware content validation (5-layer defense)
 - ✅ Backend enforces minimum full-text requirements
 - ✅ Frontend validates before API calls
@@ -224,6 +250,7 @@ freshclam
 ## 🚀 ACCESS YOUR APPLICATION
 
 **URLs:**
+
 - **Home:** http://localhost:3000/
 - **Login:** http://localhost:3000/auth/login
 - **Register:** http://localhost:3000/auth/register

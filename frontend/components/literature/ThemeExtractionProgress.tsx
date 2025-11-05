@@ -7,13 +7,21 @@
 
 import { useEffect, useState } from 'react';
 import { ExtractionProgress } from '@/lib/hooks/useThemeExtractionProgress';
-import { Loader2, CheckCircle2, AlertCircle, Brain, Sparkles } from 'lucide-react';
+import {
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Brain,
+  Sparkles,
+} from 'lucide-react';
 
 interface ThemeExtractionProgressProps {
   progress: ExtractionProgress;
 }
 
-export function ThemeExtractionProgressComponent({ progress }: ThemeExtractionProgressProps) {
+export function ThemeExtractionProgressComponent({
+  progress,
+}: ThemeExtractionProgressProps) {
   const [animatedProgress, setAnimatedProgress] = useState(0);
 
   // Animate progress bar
@@ -36,7 +44,11 @@ export function ThemeExtractionProgressComponent({ progress }: ThemeExtractionPr
     });
   }, [progress]);
 
-  if (!progress.isExtracting && progress.stage !== 'complete' && progress.stage !== 'error') {
+  if (
+    !progress.isExtracting &&
+    progress.stage !== 'complete' &&
+    progress.stage !== 'error'
+  ) {
     console.log('🟣 ThemeExtractionProgress: Returning null (not showing)');
     return null;
   }
@@ -87,7 +99,9 @@ export function ThemeExtractionProgressComponent({ progress }: ThemeExtractionPr
         <div className="flex items-center gap-2">
           {getStageIcon()}
           <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
-            {progress.stage === 'complete' ? 'Extraction Complete' : 'Extracting Themes'}
+            {progress.stage === 'complete'
+              ? 'Extraction Complete'
+              : 'Extracting Themes'}
           </h3>
         </div>
         <span className="text-xs text-gray-500 dark:text-gray-400">

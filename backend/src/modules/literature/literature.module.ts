@@ -19,6 +19,7 @@ import { ThemeToSurveyItemService } from './services/theme-to-survey-item.servic
 import { EnhancedThemeIntegrationService } from './services/enhanced-theme-integration.service';
 import { PDFParsingService } from './services/pdf-parsing.service';
 import { PDFQueueService } from './services/pdf-queue.service';
+import { LiteratureCacheService } from './services/literature-cache.service';
 import { PDFController } from './controllers/pdf.controller';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
@@ -66,6 +67,7 @@ import { AIModule } from '../ai/ai.module';
     EnhancedThemeIntegrationService, // Phase 10 Day 5.12 - Enhanced Theme Integration
     PDFParsingService, // Phase 10 Day 5.15 - PDF Full-Text Parsing
     PDFQueueService, // Phase 10 Day 5.15 - PDF Background Queue
+    LiteratureCacheService, // Phase 10 Day 18 - Iterative Theme Extraction Cache
   ],
   exports: [
     LiteratureService,
@@ -85,6 +87,7 @@ import { AIModule } from '../ai/ai.module';
     EnhancedThemeIntegrationService, // Phase 10 Day 5.12 - Enhanced Theme Integration
     PDFParsingService, // Phase 10 Day 5.15 - PDF Full-Text Parsing
     PDFQueueService, // Phase 10 Day 5.15 - PDF Background Queue
+    LiteratureCacheService, // Phase 10 Day 18 - Iterative Theme Extraction Cache
   ],
 })
 export class LiteratureModule implements OnModuleInit {

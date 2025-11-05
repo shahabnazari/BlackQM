@@ -41,11 +41,22 @@ export interface Theme {
 
 export interface SurveyItem {
   id: string;
-  type: 'likert' | 'multiple_choice' | 'semantic_differential' | 'matrix_grid' | 'rating_scale';
+  type:
+    | 'likert'
+    | 'multiple_choice'
+    | 'semantic_differential'
+    | 'matrix_grid'
+    | 'rating_scale';
   themeId: string;
   themeName: string;
   text: string;
-  scaleType?: '1-5' | '1-7' | '1-10' | 'agree-disagree' | 'frequency' | 'satisfaction';
+  scaleType?:
+    | '1-5'
+    | '1-7'
+    | '1-10'
+    | 'agree-disagree'
+    | 'frequency'
+    | 'satisfaction';
   scaleLabels?: string[];
   options?: string[];
   reversed?: boolean;
@@ -68,8 +79,20 @@ export interface SurveyItem {
 
 export interface GenerateSurveyItemsOptions {
   themes: Theme[];
-  itemType: 'likert' | 'multiple_choice' | 'semantic_differential' | 'matrix_grid' | 'rating_scale' | 'mixed';
-  scaleType?: '1-5' | '1-7' | '1-10' | 'agree-disagree' | 'frequency' | 'satisfaction';
+  itemType:
+    | 'likert'
+    | 'multiple_choice'
+    | 'semantic_differential'
+    | 'matrix_grid'
+    | 'rating_scale'
+    | 'mixed';
+  scaleType?:
+    | '1-5'
+    | '1-7'
+    | '1-10'
+    | 'agree-disagree'
+    | 'frequency'
+    | 'satisfaction';
   itemsPerTheme?: number;
   includeReverseCoded?: boolean;
   researchContext?: string;
@@ -110,7 +133,9 @@ export class ThemeToSurveyItemService {
   async generateSurveyItems(
     options: GenerateSurveyItemsOptions,
   ): Promise<SurveyItemGenerationResult> {
-    this.logger.log(`Generating survey items for ${options.themes.length} themes`);
+    this.logger.log(
+      `Generating survey items for ${options.themes.length} themes`,
+    );
 
     const items: SurveyItem[] = [];
     const itemsPerTheme = options.itemsPerTheme || 3;
@@ -120,19 +145,39 @@ export class ThemeToSurveyItemService {
 
       switch (options.itemType) {
         case 'likert':
-          themeItems = await this.generateLikertItems(theme, options, itemsPerTheme);
+          themeItems = await this.generateLikertItems(
+            theme,
+            options,
+            itemsPerTheme,
+          );
           break;
         case 'multiple_choice':
-          themeItems = await this.generateMultipleChoiceItems(theme, options, itemsPerTheme);
+          themeItems = await this.generateMultipleChoiceItems(
+            theme,
+            options,
+            itemsPerTheme,
+          );
           break;
         case 'semantic_differential':
-          themeItems = await this.generateSemanticDifferentialItems(theme, options, itemsPerTheme);
+          themeItems = await this.generateSemanticDifferentialItems(
+            theme,
+            options,
+            itemsPerTheme,
+          );
           break;
         case 'matrix_grid':
-          themeItems = await this.generateMatrixGridItems(theme, options, itemsPerTheme);
+          themeItems = await this.generateMatrixGridItems(
+            theme,
+            options,
+            itemsPerTheme,
+          );
           break;
         case 'rating_scale':
-          themeItems = await this.generateRatingScaleItems(theme, options, itemsPerTheme);
+          themeItems = await this.generateRatingScaleItems(
+            theme,
+            options,
+            itemsPerTheme,
+          );
           break;
         case 'mixed':
           // Generate mix of item types for triangulation
@@ -184,15 +229,18 @@ export class ThemeToSurveyItemService {
         reversed,
         reliability: reversed
           ? {
-              reverseCodedReason: 'Included to detect acquiescence bias and improve scale reliability',
+              reverseCodedReason:
+                'Included to detect acquiescence bias and improve scale reliability',
               expectedCorrelation: 'negative',
             }
           : {
               expectedCorrelation: 'positive',
             },
         metadata: {
-          generationMethod: 'AI-assisted with DeVellis (2016) scale development principles',
-          researchBacking: 'DeVellis, R. F. (2016). Scale Development: Theory and Applications (4th ed.)',
+          generationMethod:
+            'AI-assisted with DeVellis (2016) scale development principles',
+          researchBacking:
+            'DeVellis, R. F. (2016). Scale Development: Theory and Applications (4th ed.)',
           confidence: theme.confidence,
           themePrevalence: theme.prevalence,
         },
@@ -272,7 +320,8 @@ export class ThemeToSurveyItemService {
         dimension: pair.dimension,
         metadata: {
           generationMethod: 'Semantic differential with bipolar adjectives',
-          researchBacking: 'Osgood, C. E., Suci, G., & Tannenbaum, P. (1957). The Measurement of Meaning',
+          researchBacking:
+            'Osgood, C. E., Suci, G., & Tannenbaum, P. (1957). The Measurement of Meaning',
           confidence: theme.confidence,
           themePrevalence: theme.prevalence,
         },
@@ -377,7 +426,9 @@ export class ThemeToSurveyItemService {
   ): Promise<string[]> {
     const openaiApiKey = this.configService.get<string>('OPENAI_API_KEY');
     if (!openaiApiKey) {
-      this.logger.warn('OpenAI API key not configured, using template-based generation');
+      this.logger.warn(
+        'OpenAI API key not configured, using template-based generation',
+      );
       return this.generateTemplateItems(theme, itemType, count);
     }
 
@@ -468,7 +519,8 @@ Format your response as JSON array:
           messages: [
             {
               role: 'system',
-              content: 'You are an expert in survey design. Generate valid JSON only.',
+              content:
+                'You are an expert in survey design. Generate valid JSON only.',
             },
             {
               role: 'user',
@@ -532,7 +584,8 @@ Format as JSON:
           messages: [
             {
               role: 'system',
-              content: 'You are an expert in semantic differential scales. Generate valid JSON only.',
+              content:
+                'You are an expert in semantic differential scales. Generate valid JSON only.',
             },
             {
               role: 'user',
@@ -608,7 +661,10 @@ Each item should be clear, concise, and appropriate for the target audience.`;
   /**
    * Parse AI-generated items from text
    */
-  private parseAIGeneratedItems(content: string, expectedCount: number): string[] {
+  private parseAIGeneratedItems(
+    content: string,
+    expectedCount: number,
+  ): string[] {
     const lines = content
       .split('\n')
       .map((line) => line.trim())
@@ -635,7 +691,11 @@ Each item should be clear, concise, and appropriate for the target audience.`;
   /**
    * Template-based item generation (fallback)
    */
-  private generateTemplateItems(theme: Theme, itemType: string, count: number): string[] {
+  private generateTemplateItems(
+    theme: Theme,
+    itemType: string,
+    count: number,
+  ): string[] {
     const templates = this.getItemTemplates(itemType);
     const items: string[] = [];
 
@@ -721,7 +781,13 @@ Each item should be clear, concise, and appropriate for the target audience.`;
    */
   private getLikertScaleLabels(scaleType: string): string[] {
     const labels: Record<string, string[]> = {
-      '1-5': ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'],
+      '1-5': [
+        'Strongly Disagree',
+        'Disagree',
+        'Neutral',
+        'Agree',
+        'Strongly Agree',
+      ],
       '1-7': [
         'Strongly Disagree',
         'Disagree',
@@ -732,7 +798,13 @@ Each item should be clear, concise, and appropriate for the target audience.`;
         'Strongly Agree',
       ],
       '1-10': ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
-      'agree-disagree': ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'],
+      'agree-disagree': [
+        'Strongly Disagree',
+        'Disagree',
+        'Neutral',
+        'Agree',
+        'Strongly Agree',
+      ],
       frequency: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'],
       satisfaction: [
         'Very Dissatisfied',
@@ -751,7 +823,18 @@ Each item should be clear, concise, and appropriate for the target audience.`;
    */
   private getRatingScaleLabels(scaleType: string): string[] {
     if (scaleType === '1-10') {
-      return ['1 (Lowest)', '2', '3', '4', '5', '6', '7', '8', '9', '10 (Highest)'];
+      return [
+        '1 (Lowest)',
+        '2',
+        '3',
+        '4',
+        '5',
+        '6',
+        '7',
+        '8',
+        '9',
+        '10 (Highest)',
+      ];
     }
     return ['1 (Lowest)', '2', '3', '4', '5 (Highest)'];
   }
@@ -763,14 +846,18 @@ Each item should be clear, concise, and appropriate for the target audience.`;
     items: SurveyItem[],
     options: GenerateSurveyItemsOptions,
   ): SurveyItemGenerationResult {
-    const itemsByType = items.reduce((acc, item) => {
-      acc[item.type] = (acc[item.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const itemsByType = items.reduce(
+      (acc, item) => {
+        acc[item.type] = (acc[item.type] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     const reverseCodedCount = items.filter((item) => item.reversed).length;
     const averageConfidence =
-      items.reduce((sum, item) => sum + item.metadata.confidence, 0) / items.length;
+      items.reduce((sum, item) => sum + item.metadata.confidence, 0) /
+      items.length;
 
     return {
       items,

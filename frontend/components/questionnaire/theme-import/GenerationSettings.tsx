@@ -9,7 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { GenerateSurveyItemsOptions } from '@/lib/api/services/theme-to-survey.service';
 
 interface GenerationSettingsProps {
@@ -28,7 +34,10 @@ interface GenerationSettingsProps {
   onTargetAudienceChange: (value: string) => void;
 }
 
-const ITEM_TYPES: Array<{ value: GenerateSurveyItemsOptions['itemType']; label: string }> = [
+const ITEM_TYPES: Array<{
+  value: GenerateSurveyItemsOptions['itemType'];
+  label: string;
+}> = [
   { value: 'mixed', label: 'Mixed (Recommended)' },
   { value: 'likert', label: 'Likert Scales Only' },
   { value: 'multiple_choice', label: 'Multiple Choice Only' },
@@ -38,7 +47,12 @@ const ITEM_TYPES: Array<{ value: GenerateSurveyItemsOptions['itemType']; label: 
 ];
 
 const SCALE_TYPES = [
-  '1-5', '1-7', '1-10', 'agree-disagree', 'frequency', 'satisfaction'
+  '1-5',
+  '1-7',
+  '1-10',
+  'agree-disagree',
+  'frequency',
+  'satisfaction',
 ] as const;
 
 export const GenerationSettings: React.FC<GenerationSettingsProps> = ({
@@ -56,7 +70,9 @@ export const GenerationSettings: React.FC<GenerationSettingsProps> = ({
   onResearchContextChange,
   onTargetAudienceChange,
 }) => {
-  const handleItemsPerThemeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleItemsPerThemeChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const value = parseInt(e.target.value) || 1;
     const clampedValue = Math.max(1, Math.min(10, value));
     onItemsPerThemeChange(clampedValue);
@@ -71,10 +87,7 @@ export const GenerationSettings: React.FC<GenerationSettingsProps> = ({
       {/* Item Type Selection */}
       <div>
         <Label htmlFor="item-type">Item Type</Label>
-        <Select
-          value={itemType}
-          onValueChange={onItemTypeChange}
-        >
+        <Select value={itemType} onValueChange={onItemTypeChange}>
           <SelectTrigger id="item-type" className="mt-2">
             <SelectValue />
           </SelectTrigger>
@@ -87,7 +100,8 @@ export const GenerationSettings: React.FC<GenerationSettingsProps> = ({
           </SelectContent>
         </Select>
         <p className="text-xs text-gray-500 mt-1">
-          Mixed type generates a variety of question formats for comprehensive coverage
+          Mixed type generates a variety of question formats for comprehensive
+          coverage
         </p>
       </div>
 
@@ -145,14 +159,15 @@ export const GenerationSettings: React.FC<GenerationSettingsProps> = ({
         <Checkbox
           id="reverse-coded"
           checked={includeReverseCoded}
-          onCheckedChange={(checked) => onReverseCodedChange(checked as boolean)}
+          onCheckedChange={checked => onReverseCodedChange(checked as boolean)}
         />
         <div className="flex-1">
           <Label htmlFor="reverse-coded" className="text-sm cursor-pointer">
             Include reverse-coded items for reliability
           </Label>
           <p className="text-xs text-gray-500 mt-1">
-            Helps detect response bias and improves scale reliability (recommended)
+            Helps detect response bias and improves scale reliability
+            (recommended)
           </p>
         </div>
       </div>
@@ -164,7 +179,7 @@ export const GenerationSettings: React.FC<GenerationSettingsProps> = ({
           id="research-context"
           placeholder="e.g., Environmental attitudes in urban communities"
           value={researchContext}
-          onChange={(e) => onResearchContextChange(e.target.value)}
+          onChange={e => onResearchContextChange(e.target.value)}
           className="mt-2"
           maxLength={200}
         />
@@ -180,7 +195,7 @@ export const GenerationSettings: React.FC<GenerationSettingsProps> = ({
           id="target-audience"
           placeholder="e.g., College students, Healthcare professionals"
           value={targetAudience}
-          onChange={(e) => onTargetAudienceChange(e.target.value)}
+          onChange={e => onTargetAudienceChange(e.target.value)}
           className="mt-2"
           maxLength={100}
         />

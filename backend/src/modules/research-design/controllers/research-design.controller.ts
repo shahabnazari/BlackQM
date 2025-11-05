@@ -136,7 +136,9 @@ export class ResearchDesignController {
     this.logger.log(
       `Operationalizing research question: "${request.researchQuestion}"`,
     );
-    return this.questionOperationalizationService.operationalizeQuestion(request);
+    return this.questionOperationalizationService.operationalizeQuestion(
+      request,
+    );
   }
 
   /**

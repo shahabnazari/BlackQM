@@ -1,5 +1,9 @@
 import { ConfigService } from '@nestjs/config';
-import { ThemeToSurveyItemService, Theme, GenerateSurveyItemsOptions } from '../theme-to-survey-item.service';
+import {
+  ThemeToSurveyItemService,
+  Theme,
+  GenerateSurveyItemsOptions,
+} from '../theme-to-survey-item.service';
 
 /**
  * Comprehensive test suite for ThemeToSurveyItemService
@@ -23,7 +27,8 @@ describe('ThemeToSurveyItemService', () => {
   const mockTheme: Theme = {
     id: 'theme_1',
     name: 'Climate Change Awareness',
-    description: 'Understanding and perception of climate change issues among different populations',
+    description:
+      'Understanding and perception of climate change issues among different populations',
     prevalence: 0.85,
     confidence: 0.92,
     sources: [
@@ -31,7 +36,12 @@ describe('ThemeToSurveyItemService', () => {
       { id: 'paper2', title: 'Environmental Awareness Survey', type: 'paper' },
       { id: 'paper3', title: 'Public Opinion on Climate', type: 'paper' },
     ],
-    keyPhrases: ['climate change', 'global warming', 'environmental concern', 'sustainability'],
+    keyPhrases: [
+      'climate change',
+      'global warming',
+      'environmental concern',
+      'sustainability',
+    ],
   };
 
   const mockThemes: Theme[] = [
@@ -39,14 +49,20 @@ describe('ThemeToSurveyItemService', () => {
     {
       id: 'theme_2',
       name: 'Trust in Science',
-      description: 'Public trust and confidence in scientific institutions and research',
+      description:
+        'Public trust and confidence in scientific institutions and research',
       prevalence: 0.72,
       confidence: 0.88,
       sources: [
         { id: 'paper4', title: 'Trust in Science Research', type: 'paper' },
         { id: 'paper5', title: 'Scientific Credibility Study', type: 'paper' },
       ],
-      keyPhrases: ['trust', 'credibility', 'scientific evidence', 'research integrity'],
+      keyPhrases: [
+        'trust',
+        'credibility',
+        'scientific evidence',
+        'research integrity',
+      ],
     },
   ];
 
@@ -120,7 +136,13 @@ describe('ThemeToSurveyItemService', () => {
 
       const result = await service.generateSurveyItems(options);
 
-      expect(result.items[0].scaleLabels).toEqual(['Never', 'Rarely', 'Sometimes', 'Often', 'Always']);
+      expect(result.items[0].scaleLabels).toEqual([
+        'Never',
+        'Rarely',
+        'Sometimes',
+        'Often',
+        'Always',
+      ]);
     });
 
     it('should generate Likert items with satisfaction scale', async () => {
@@ -153,10 +175,14 @@ describe('ThemeToSurveyItemService', () => {
 
       const result = await service.generateSurveyItems(options);
 
-      const reversedItems = result.items.filter((item) => item.reversed === true);
+      const reversedItems = result.items.filter(
+        (item) => item.reversed === true,
+      );
       expect(reversedItems.length).toBeGreaterThan(0);
       expect(reversedItems[0].reliability).toHaveProperty('reverseCodedReason');
-      expect(reversedItems[0].reliability?.expectedCorrelation).toBe('negative');
+      expect(reversedItems[0].reliability?.expectedCorrelation).toBe(
+        'negative',
+      );
     });
 
     it('should not include reverse-coded items when disabled', async () => {
@@ -170,7 +196,9 @@ describe('ThemeToSurveyItemService', () => {
 
       const result = await service.generateSurveyItems(options);
 
-      const reversedItems = result.items.filter((item) => item.reversed === true);
+      const reversedItems = result.items.filter(
+        (item) => item.reversed === true,
+      );
       expect(reversedItems.length).toBe(0);
     });
   });
@@ -352,7 +380,9 @@ describe('ThemeToSurveyItemService', () => {
       const result = await service.generateSurveyItems(options);
 
       const hasLikert = result.items.some((item) => item.type === 'likert');
-      const hasMC = result.items.some((item) => item.type === 'multiple_choice');
+      const hasMC = result.items.some(
+        (item) => item.type === 'multiple_choice',
+      );
 
       expect(hasLikert || hasMC).toBeTruthy();
     });
@@ -381,8 +411,12 @@ describe('ThemeToSurveyItemService', () => {
 
       const result = await service.generateSurveyItems(options);
 
-      const theme1Items = result.items.filter((item) => item.themeId === mockThemes[0].id);
-      const theme2Items = result.items.filter((item) => item.themeId === mockThemes[1].id);
+      const theme1Items = result.items.filter(
+        (item) => item.themeId === mockThemes[0].id,
+      );
+      const theme2Items = result.items.filter(
+        (item) => item.themeId === mockThemes[1].id,
+      );
 
       expect(theme1Items.length).toBe(2);
       expect(theme2Items.length).toBe(2);
@@ -395,7 +429,8 @@ describe('ThemeToSurveyItemService', () => {
         themes: [mockTheme],
         itemType: 'likert',
         itemsPerTheme: 2,
-        researchContext: 'Environmental policy study with government stakeholders',
+        researchContext:
+          'Environmental policy study with government stakeholders',
       };
 
       const result = await service.generateSurveyItems(options);
@@ -492,7 +527,9 @@ describe('ThemeToSurveyItemService', () => {
       expect(result.items[0].metadata.generationMethod).toBeTruthy();
       expect(result.items[0].metadata.researchBacking).toBeTruthy();
       expect(result.items[0].metadata.confidence).toBe(mockTheme.confidence);
-      expect(result.items[0].metadata.themePrevalence).toBe(mockTheme.prevalence);
+      expect(result.items[0].metadata.themePrevalence).toBe(
+        mockTheme.prevalence,
+      );
     });
 
     it('should preserve theme confidence in item metadata', async () => {

@@ -48,7 +48,7 @@ describe('PDFQueueService', () => {
           jobId,
           paperId: 'paper-1',
           progress: 0,
-        })
+        }),
       );
     });
 
@@ -62,7 +62,7 @@ describe('PDFQueueService', () => {
 
     it('should return different job IDs for same paper', async () => {
       const jobId1 = await service.addJob('paper-1');
-      await new Promise(resolve => setTimeout(resolve, 10)); // Small delay
+      await new Promise((resolve) => setTimeout(resolve, 10)); // Small delay
       const jobId2 = await service.addJob('paper-1');
 
       expect(jobId1).not.toBe(jobId2);
@@ -90,7 +90,7 @@ describe('PDFQueueService', () => {
   describe('getJobByPaperId', () => {
     it('should retrieve the latest job for a paper', async () => {
       const jobId1 = await service.addJob('paper-1');
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       const jobId2 = await service.addJob('paper-1');
 
       const job = service.getJobByPaperId('paper-1');
@@ -150,7 +150,7 @@ describe('PDFQueueService', () => {
           jobId,
           paperId: 'paper-1',
           wordCount: 5000,
-        })
+        }),
       );
     });
 
@@ -175,7 +175,7 @@ describe('PDFQueueService', () => {
           jobId,
           attempt: 1,
           error: 'Network error',
-        })
+        }),
       );
     });
 
@@ -205,7 +205,7 @@ describe('PDFQueueService', () => {
           jobId,
           error: 'Network error',
           attempts: 3,
-        })
+        }),
       );
     });
 
@@ -227,7 +227,7 @@ describe('PDFQueueService', () => {
         expect.objectContaining({
           jobId,
           progress: 10,
-        })
+        }),
       );
 
       expect(eventEmitter.emit).toHaveBeenCalledWith(
@@ -236,7 +236,7 @@ describe('PDFQueueService', () => {
           jobId,
           progress: 30,
           stage: 'downloading',
-        })
+        }),
       );
     });
   });

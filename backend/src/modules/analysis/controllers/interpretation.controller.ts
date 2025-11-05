@@ -18,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { InterpretationService } from '../services/interpretation.service';
+import { ExplainabilityService } from '../services/explainability.service';
 
 class GenerateNarrativesDto {
   includeDistinguishing?: boolean;
@@ -50,7 +51,10 @@ class ExtractStudyThemesDto {
 @Controller('interpretation')
 @UseGuards(JwtAuthGuard)
 export class InterpretationController {
-  constructor(private readonly interpretationService: InterpretationService) {}
+  constructor(
+    private readonly interpretationService: InterpretationService,
+    private readonly explainabilityService: ExplainabilityService,
+  ) {}
 
   /**
    * Generate AI-powered factor narratives
@@ -239,5 +243,105 @@ export class InterpretationController {
       minOccurrence,
       includeQuotes,
     });
+  }
+
+  // ========================================================================
+  // PHASE 10 DAYS 9-10: EXPLAINABILITY & AI GUARDRAILS ENDPOINTS
+  // ========================================================================
+
+  /**
+   * Day 9: Calculate SHAP-inspired feature importance for factors
+   */
+  @Get(':studyId/explainability/feature-importance')
+  @ApiOperation({ summary: 'Get statement feature importance for all factors (SHAP-inspired)' })
+  @ApiParam({ name: 'studyId', description: 'Study ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Feature importance calculated successfully',
+  })
+  async getFeatureImportance(@Param('studyId') studyId: string) {
+    return await this.explainabilityService.calculateFeatureImportance(studyId);
+  }
+
+  /**
+   * Day 9: Generate counterfactual "what-if" scenarios
+   */
+  @Get(':studyId/explainability/counterfactuals')
+  @ApiOperation({ summary: 'Generate what-if scenarios for factor analysis' })
+  @ApiParam({ name: 'studyId', description: 'Study ID' })
+  @ApiQuery({ name: 'scenarioCount', required: false, type: Number })
+  @ApiQuery({ name: 'focusOnDistinguishing', required: false, type: Boolean })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Counterfactuals generated successfully',
+  })
+  async getCounterfactuals(
+    @Param('studyId') studyId: string,
+    @Query('scenarioCount') scenarioCount?: number,
+    @Query('focusOnDistinguishing') focusOnDistinguishing?: boolean,
+  ) {
+    return await this.explainabilityService.generateCounterfactuals(studyId, {
+      scenarioCount: scenarioCount ? Number(scenarioCount) : undefined,
+      focusOnDistinguishing: focusOnDistinguishing === true,
+    });
+  }
+
+  /**
+   * Day 9: Multi-dimensional bias audit
+   */
+  @Get(':studyId/explainability/bias-audit')
+  @ApiOperation({ summary: 'Perform multi-dimensional bias audit for study quality' })
+  @ApiParam({ name: 'studyId', description: 'Study ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Bias audit completed successfully',
+  })
+  async getBiasAudit(@Param('studyId') studyId: string) {
+    return await this.explainabilityService.performBiasAudit(studyId);
+  }
+
+  /**
+   * Day 10: Calculate certainty score for interpretations
+   */
+  @Get(':studyId/explainability/certainty-score')
+  @ApiOperation({ summary: 'Calculate certainty score for factor interpretations' })
+  @ApiParam({ name: 'studyId', description: 'Study ID' })
+  @ApiQuery({ name: 'factorNumber', required: false, type: Number })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Certainty score calculated successfully',
+  })
+  async getCertaintyScore(
+    @Param('studyId') studyId: string,
+    @Query('factorNumber') factorNumber?: number,
+  ) {
+    return await this.explainabilityService.calculateCertaintyScore(
+      studyId,
+      factorNumber ? Number(factorNumber) : undefined,
+    );
+  }
+
+  /**
+   * Day 10: Generate alternative explanations for factors
+   */
+  @Get(':studyId/explainability/alternative-explanations/:factorNumber')
+  @ApiOperation({ summary: 'Generate alternative interpretations for a factor' })
+  @ApiParam({ name: 'studyId', description: 'Study ID' })
+  @ApiParam({ name: 'factorNumber', description: 'Factor number' })
+  @ApiQuery({ name: 'count', required: false, type: Number })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Alternative explanations generated successfully',
+  })
+  async getAlternativeExplanations(
+    @Param('studyId') studyId: string,
+    @Param('factorNumber') factorNumber: string,
+    @Query('count') count?: number,
+  ) {
+    return await this.explainabilityService.generateAlternativeExplanations(
+      studyId,
+      Number(factorNumber),
+      count ? Number(count) : undefined,
+    );
   }
 }

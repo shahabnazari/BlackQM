@@ -30,6 +30,7 @@ After implementing purpose-aware content validation, a comprehensive audit revea
 The backend controller (`literature.controller.ts`) and service (`unified-theme-extraction.service.ts`) accept ANY purpose with ANY content. There's no server-side validation of minimum full-text requirements.
 
 **Code Path:**
+
 ```typescript
 // frontend/app/(researcher)/discover/literature/page.tsx:800
 const handlePurposeSelected = async (purpose: ResearchPurpose) => {
@@ -45,6 +46,7 @@ async extractThemesV2Public(@Body() dto: ExtractThemesV2Dto) {
 ```
 
 **Attack Vector:**
+
 1. User bypasses wizard UI by opening browser console
 2. User calls `extractThemesV2()` directly with `purpose: 'literature_synthesis'` and 0 full-text papers
 3. Backend accepts and processes the request
@@ -52,11 +54,13 @@ async extractThemesV2Public(@Body() dto: ExtractThemesV2Dto) {
 
 **Expected Behavior:**
 Backend should validate:
+
 ```typescript
 if (purpose === 'literature_synthesis' || purpose === 'hypothesis_generation') {
-  const fullTextCount = sources.filter(s =>
-    s.metadata?.contentType === 'full_text' ||
-    s.metadata?.contentType === 'abstract_overflow'
+  const fullTextCount = sources.filter(
+    s =>
+      s.metadata?.contentType === 'full_text' ||
+      s.metadata?.contentType === 'abstract_overflow'
   ).length;
 
   if (purpose === 'literature_synthesis' && fullTextCount < 10) {
@@ -93,9 +97,10 @@ if (purpose === 'literature_synthesis' || purpose === 'hypothesis_generation') {
 Day 5.16 fixed metadata dropping in the authenticated endpoint (line 2590), but the **public endpoint** (used in development) still drops metadata.
 
 **Current Code:**
+
 ```typescript
 // Line 2694-2705 (PUBLIC ENDPOINT)
-const sources = dto.sources.map((s) => ({
+const sources = dto.sources.map(s => ({
   id: s.id || `source_${Date.now()}_${Math.random()}`,
   type: s.type,
   title: s.title || '',
@@ -111,8 +116,9 @@ const sources = dto.sources.map((s) => ({
 ```
 
 **Expected Code:**
+
 ```typescript
-const sources = dto.sources.map((s) => ({
+const sources = dto.sources.map(s => ({
   // ... other fields ...
   year: s.year,
   metadata: s.metadata, // ✅ PHASE 10 DAY 5.17: Pass content type metadata
@@ -120,6 +126,7 @@ const sources = dto.sources.map((s) => ({
 ```
 
 **Impact:**
+
 - Frontend sends `metadata: { contentType: 'full_text' }`
 - Public endpoint drops it
 - Backend falls back to length-based detection (less accurate)
@@ -137,6 +144,7 @@ const sources = dto.sources.map((s) => ({
 
 **Issue:**
 Even with frontend validation, users can:
+
 1. Open browser DevTools
 2. Modify React state: `setValidationStatus({ isBlocking: false })`
 3. Enable the disabled Continue button
@@ -161,6 +169,7 @@ Must add backend validation (see Gap 1). Frontend validation is UX guidance, not
 Step 2 shows the warning and disables Continue button. BUT if user somehow reaches Step 3 (e.g., by going Back from Step 3 and forward again, or by manipulating state), Step 3 shows NO warning.
 
 **Current Behavior:**
+
 ```
 Step 2: ⛔ Warning shown, button disabled
   ↓ (if user bypasses or state changes)
@@ -169,22 +178,27 @@ Step 3: ✅ No warning, [Confirm & Start] button enabled
 
 **Expected Behavior:**
 Step 3 should also show the warning if content is insufficient:
-```tsx
-{/* STEP 3: Parameter Preview */}
-{step === 3 && selectedConfig && (
-  <motion.div>
-    {/* MISSING: Re-show warning if still blocking */}
-    {validationStatus && validationStatus.isBlocking && (
-      <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-6">
-        <p className="text-red-900 font-semibold">
-          ⛔ Cannot proceed: {validationStatus.rationale}
-        </p>
-      </div>
-    )}
 
-    {/* Existing Step 3 content */}
-  </motion.div>
-)}
+```tsx
+{
+  /* STEP 3: Parameter Preview */
+}
+{
+  step === 3 && selectedConfig && (
+    <motion.div>
+      {/* MISSING: Re-show warning if still blocking */}
+      {validationStatus && validationStatus.isBlocking && (
+        <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-6">
+          <p className="text-red-900 font-semibold">
+            ⛔ Cannot proceed: {validationStatus.rationale}
+          </p>
+        </div>
+      )}
+
+      {/* Existing Step 3 content */}
+    </motion.div>
+  );
+}
 ```
 
 **Risk Level:** MEDIUM - Unlikely but possible edge case
@@ -201,6 +215,7 @@ Step 3 should also show the warning if content is insufficient:
 The `handleConfirm` function (called when user clicks "Confirm & Start Extraction" in Step 3) does NOT check validation status.
 
 **Current Code:**
+
 ```typescript
 const handleConfirm = () => {
   if (selectedPurpose) {
@@ -210,6 +225,7 @@ const handleConfirm = () => {
 ```
 
 **Expected Code:**
+
 ```typescript
 const handleConfirm = () => {
   if (selectedPurpose) {
@@ -242,6 +258,7 @@ const handleConfirm = () => {
 When wizard calls `onPurposeSelected(purpose)`, the parent component's `handlePurposeSelected` function immediately proceeds with extraction WITHOUT validating content requirements.
 
 **Current Code:**
+
 ```typescript
 const handlePurposeSelected = async (purpose: ResearchPurpose) => {
   setExtractionPurpose(purpose);
@@ -254,19 +271,25 @@ const handlePurposeSelected = async (purpose: ResearchPurpose) => {
 ```
 
 **Expected Code:**
+
 ```typescript
 const handlePurposeSelected = async (purpose: ResearchPurpose) => {
   // PHASE 10 DAY 5.17: Validate content before extraction
-  const fullTextCount = contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
+  const fullTextCount =
+    contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
 
   // Check blocking requirements
   if (purpose === 'literature_synthesis' && fullTextCount < 10) {
-    toast.error('Cannot extract: Literature Synthesis requires at least 10 full-text papers');
+    toast.error(
+      'Cannot extract: Literature Synthesis requires at least 10 full-text papers'
+    );
     return;
   }
 
   if (purpose === 'hypothesis_generation' && fullTextCount < 8) {
-    toast.error('Cannot extract: Hypothesis Generation requires at least 8 full-text papers');
+    toast.error(
+      'Cannot extract: Hypothesis Generation requires at least 8 full-text papers'
+    );
     return;
   }
 
@@ -278,7 +301,7 @@ const handlePurposeSelected = async (purpose: ResearchPurpose) => {
   // Proceed with extraction
   setExtractionPurpose(purpose);
   // ... rest of function
-}
+};
 ```
 
 **Impact:** This is the last line of defense before calling the API. Without this check, validation is purely cosmetic.
@@ -295,6 +318,7 @@ const handlePurposeSelected = async (purpose: ResearchPurpose) => {
 
 **Issue:**
 The system distinguishes between:
+
 - `blocking`: Cannot proceed (red, button disabled)
 - `recommended`: Should have but not required (yellow, button enabled)
 - `optional`: No requirements (green/blue, no warning)
@@ -302,14 +326,19 @@ The system distinguishes between:
 BUT the code only checks `isBlocking`. There's no special handling for `recommended` level warnings (e.g., confirmation dialog, extra emphasis).
 
 **Current Behavior:**
+
 - Blocking: Button disabled ✅
 - Recommended: Warning shown, button enabled ⚠️ (same as optional)
 - Optional: No warning ✅
 
 **Possible Enhancement:**
 Add confirmation dialog for recommended warnings:
+
 ```typescript
-if (validationStatus.level === 'recommended' && !validationStatus.isSufficient) {
+if (
+  validationStatus.level === 'recommended' &&
+  !validationStatus.isSufficient
+) {
   // Show modal: "You have fewer papers than recommended. Continue anyway?"
 }
 ```
@@ -327,15 +356,18 @@ if (validationStatus.level === 'recommended' && !validationStatus.isSufficient) 
 **Impact:** Crashes if contentAnalysis is somehow undefined
 
 **Issue:**
+
 ```typescript
 const validateContentSufficiency = (purpose: ResearchPurpose) => {
   const config = PURPOSE_CONFIGS[purpose];
-  const totalFullText = contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
+  const totalFullText =
+    contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
   // ❌ What if contentAnalysis is undefined? Runtime error!
-}
+};
 ```
 
 **Expected Code:**
+
 ```typescript
 const validateContentSufficiency = (purpose: ResearchPurpose) => {
   if (!contentAnalysis) {
@@ -350,9 +382,10 @@ const validateContentSufficiency = (purpose: ResearchPurpose) => {
   }
 
   const config = PURPOSE_CONFIGS[purpose];
-  const totalFullText = contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
+  const totalFullText =
+    contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
   // ...
-}
+};
 ```
 
 **Risk Level:** LOW - Component requires contentAnalysis prop, but defensive coding is best practice
@@ -367,6 +400,7 @@ const validateContentSufficiency = (purpose: ResearchPurpose) => {
 
 **Issue:**
 If user goes:
+
 ```
 Step 1 → Select "Literature Synthesis"
 Step 2 → See blocking warning
@@ -380,6 +414,7 @@ Step 2 → Validation status still cached from "Literature Synthesis"?
 
 **Analysis:**
 NOT A BUG - validation status is reactive. BUT could be more explicit:
+
 ```typescript
 const handlePurposeClick = (purpose: ResearchPurpose) => {
   setSelectedPurpose(purpose);
@@ -394,23 +429,24 @@ const handlePurposeClick = (purpose: ResearchPurpose) => {
 
 ## 📊 GAP SUMMARY TABLE
 
-| Gap | Severity | Type | Location | Impact | Fix Priority |
-|-----|----------|------|----------|--------|--------------|
-| 1. No backend validation | 🔴 CRITICAL | Security | Backend controller + service | Users can bypass all checks | 🔥 URGENT |
-| 2. Public endpoint drops metadata | 🔴 CRITICAL | Regression | Controller line 2705 | Breaks content detection | 🔥 URGENT |
-| 3. Frontend bypass possible | 🟠 MEDIUM | Security | Frontend validation | Tech-savvy users can bypass | ⚠️ HIGH |
-| 4. Step 3 no warning | 🟠 MAJOR | UX | Step 3 UI | User confusion if reached | ⚠️ HIGH |
-| 5. handleConfirm no check | 🟠 MAJOR | UX | Wizard confirm handler | Missing validation | ⚠️ HIGH |
-| 6. handlePurposeSelected no check | 🟠 MAJOR | UX | Literature page handler | Missing validation | 🔥 URGENT |
-| 7. Recommended warnings weak | 🟡 MINOR | UX | Validation logic | Same as optional | 📋 MEDIUM |
-| 8. No null check | 🟡 MINOR | Reliability | Validation function | Crash if undefined | 📋 MEDIUM |
-| 9. Back navigation state | 🟡 MINOR | Edge case | Navigation handler | Already working ✅ | ✅ OK |
+| Gap                               | Severity    | Type        | Location                     | Impact                      | Fix Priority |
+| --------------------------------- | ----------- | ----------- | ---------------------------- | --------------------------- | ------------ |
+| 1. No backend validation          | 🔴 CRITICAL | Security    | Backend controller + service | Users can bypass all checks | 🔥 URGENT    |
+| 2. Public endpoint drops metadata | 🔴 CRITICAL | Regression  | Controller line 2705         | Breaks content detection    | 🔥 URGENT    |
+| 3. Frontend bypass possible       | 🟠 MEDIUM   | Security    | Frontend validation          | Tech-savvy users can bypass | ⚠️ HIGH      |
+| 4. Step 3 no warning              | 🟠 MAJOR    | UX          | Step 3 UI                    | User confusion if reached   | ⚠️ HIGH      |
+| 5. handleConfirm no check         | 🟠 MAJOR    | UX          | Wizard confirm handler       | Missing validation          | ⚠️ HIGH      |
+| 6. handlePurposeSelected no check | 🟠 MAJOR    | UX          | Literature page handler      | Missing validation          | 🔥 URGENT    |
+| 7. Recommended warnings weak      | 🟡 MINOR    | UX          | Validation logic             | Same as optional            | 📋 MEDIUM    |
+| 8. No null check                  | 🟡 MINOR    | Reliability | Validation function          | Crash if undefined          | 📋 MEDIUM    |
+| 9. Back navigation state          | 🟡 MINOR    | Edge case   | Navigation handler           | Already working ✅          | ✅ OK        |
 
 ---
 
 ## 🔥 CRITICAL FIX PRIORITY
 
 ### Phase 1 (URGENT - Day 5.17.1)
+
 Must fix before production:
 
 1. ✅ **Fix Gap 2: Public endpoint metadata** (5 min)
@@ -425,6 +461,7 @@ Must fix before production:
    - Return 400 Bad Request if insufficient content
 
 ### Phase 2 (HIGH - Day 5.17.2)
+
 Should fix before user testing:
 
 4. ✅ **Fix Gap 4: Add warning to Step 3** (10 min)
@@ -434,6 +471,7 @@ Should fix before user testing:
    - Safety check before calling onPurposeSelected
 
 ### Phase 3 (MEDIUM - Day 5.18)
+
 Nice to have:
 
 6. ⏳ **Fix Gap 8: Add null check** (5 min)
@@ -449,9 +487,10 @@ Nice to have:
 ### Immediate Fixes (30 minutes)
 
 **Fix 1: Public Endpoint Metadata (Gap 2)**
+
 ```typescript
 // backend/src/modules/literature/literature.controller.ts:2705
-const sources = dto.sources.map((s) => ({
+const sources = dto.sources.map(s => ({
   id: s.id || `source_${Date.now()}_${Math.random()}`,
   type: s.type,
   // ... other fields ...
@@ -461,20 +500,30 @@ const sources = dto.sources.map((s) => ({
 ```
 
 **Fix 2: Frontend Validation (Gap 6)**
+
 ```typescript
 // frontend/app/(researcher)/discover/literature/page.tsx:800
 const handlePurposeSelected = async (purpose: ResearchPurpose) => {
   // Validate content requirements
-  const fullTextCount = contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
+  const fullTextCount =
+    contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
 
   if (purpose === 'literature_synthesis' && fullTextCount < 10) {
-    toast.error('Cannot extract themes: Literature Synthesis requires at least 10 full-text papers. You have ' + fullTextCount + '.');
+    toast.error(
+      'Cannot extract themes: Literature Synthesis requires at least 10 full-text papers. You have ' +
+        fullTextCount +
+        '.'
+    );
     setShowPurposeWizard(false);
     return;
   }
 
   if (purpose === 'hypothesis_generation' && fullTextCount < 8) {
-    toast.error('Cannot extract themes: Hypothesis Generation requires at least 8 full-text papers. You have ' + fullTextCount + '.');
+    toast.error(
+      'Cannot extract themes: Hypothesis Generation requires at least 8 full-text papers. You have ' +
+        fullTextCount +
+        '.'
+    );
     setShowPurposeWizard(false);
     return;
   }
@@ -482,16 +531,18 @@ const handlePurposeSelected = async (purpose: ResearchPurpose) => {
   // Proceed with extraction
   setExtractionPurpose(purpose);
   // ... rest of function
-}
+};
 ```
 
 **Fix 3: Backend Validation (Gap 1)**
+
 ```typescript
 // backend/src/modules/literature/literature.controller.ts:2720
 // Before calling service
-const fullTextCount = sources.filter(s =>
-  s.metadata?.contentType === 'full_text' ||
-  s.metadata?.contentType === 'abstract_overflow'
+const fullTextCount = sources.filter(
+  s =>
+    s.metadata?.contentType === 'full_text' ||
+    s.metadata?.contentType === 'abstract_overflow'
 ).length;
 
 if (dto.purpose === 'literature_synthesis' && fullTextCount < 10) {
@@ -523,21 +574,21 @@ if (dto.purpose === 'hypothesis_generation' && fullTextCount < 8) {
 
 ### Before Fixes (Current State)
 
-| Security | UX | Reliability |
-|----------|-----|-------------|
-| 🔴 **WEAK** | 🟠 **MODERATE** | 🟡 **ACCEPTABLE** |
-| No backend validation | Frontend validation working | Minor edge cases |
-| Metadata dropped | Warnings shown | Mostly stable |
-| Easy to bypass | Button disabling works | No crashes |
+| Security              | UX                          | Reliability       |
+| --------------------- | --------------------------- | ----------------- |
+| 🔴 **WEAK**           | 🟠 **MODERATE**             | 🟡 **ACCEPTABLE** |
+| No backend validation | Frontend validation working | Minor edge cases  |
+| Metadata dropped      | Warnings shown              | Mostly stable     |
+| Easy to bypass        | Button disabling works      | No crashes        |
 
 ### After Phase 1 Fixes
 
-| Security | UX | Reliability |
-|----------|-----|-------------|
-| 🟢 **STRONG** | 🟢 **GOOD** | 🟢 **STRONG** |
-| Backend enforces rules | Multi-layer validation | Defensive coding |
-| Metadata flowing | Consistent warnings | Null checks |
-| Hard to bypass | Clear feedback | Edge cases handled |
+| Security               | UX                     | Reliability        |
+| ---------------------- | ---------------------- | ------------------ |
+| 🟢 **STRONG**          | 🟢 **GOOD**            | 🟢 **STRONG**      |
+| Backend enforces rules | Multi-layer validation | Defensive coding   |
+| Metadata flowing       | Consistent warnings    | Null checks        |
+| Hard to bypass         | Clear feedback         | Edge cases handled |
 
 ---
 
@@ -546,6 +597,7 @@ if (dto.purpose === 'hypothesis_generation' && fullTextCount < 8) {
 ### After Fixes, Test These Scenarios:
 
 **Test 1: Literature Synthesis with 2 full-text (Should Block)**
+
 ```
 1. Select 2 full-text papers, 8 abstracts
 2. Click "Extract Themes"
@@ -556,6 +608,7 @@ if (dto.purpose === 'hypothesis_generation' && fullTextCount < 8) {
 ```
 
 **Test 2: Q-Methodology with 0 full-text (Should Succeed)**
+
 ```
 1. Select 10 abstract-only papers
 2. Click "Extract Themes"
@@ -565,6 +618,7 @@ if (dto.purpose === 'hypothesis_generation' && fullTextCount < 8) {
 ```
 
 **Test 3: Survey Construction with 3 full-text (Should Warn)**
+
 ```
 1. Select 3 full-text, 7 abstracts
 2. Select "Survey Construction"
@@ -582,12 +636,14 @@ if (dto.purpose === 'hypothesis_generation' && fullTextCount < 8) {
 **After Phase 1 Fixes:** 🟢 **PRODUCTION-READY**
 
 **Key Lessons:**
+
 1. ✅ Frontend validation alone is insufficient (security)
 2. ✅ Backend must enforce business rules (integrity)
 3. ✅ Metadata must flow through ALL endpoints (consistency)
 4. ✅ Defense in depth: Validate at multiple layers (reliability)
 
 **Next Steps:**
+
 1. Implement Phase 1 fixes (30 minutes)
 2. Run verification tests
 3. Update documentation
@@ -597,4 +653,4 @@ if (dto.purpose === 'hypothesis_generation' && fullTextCount < 8) {
 
 **Audit Complete** 🔍
 
-*Self-audit performed to ensure enterprise-grade quality. All gaps documented with severity, location, and fix recommendations.*
+_Self-audit performed to ensure enterprise-grade quality. All gaps documented with severity, location, and fix recommendations._

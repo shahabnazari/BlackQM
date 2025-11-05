@@ -46,7 +46,11 @@ export interface GeneratedSurvey {
     description: string;
     items: Array<{
       id: string;
-      type: 'likert' | 'multiple_choice' | 'semantic_differential' | 'open_ended';
+      type:
+        | 'likert'
+        | 'multiple_choice'
+        | 'semantic_differential'
+        | 'open_ended';
       text: string;
       scaleType?: string;
       options?: string[];
@@ -108,7 +112,7 @@ export const GeneratedSurveyPreview: React.FC<GeneratedSurveyPreviewProps> = ({
   className = '',
 }) => {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(survey.sections.map((s) => s.id))
+    new Set(survey.sections.map(s => s.id))
   );
   const [showProvenance, setShowProvenance] = useState(true);
 
@@ -123,7 +127,8 @@ export const GeneratedSurveyPreview: React.FC<GeneratedSurveyPreviewProps> = ({
   };
 
   const collapseAll = () => setExpandedSections(new Set());
-  const expandAll = () => setExpandedSections(new Set(survey.sections.map((s) => s.id)));
+  const expandAll = () =>
+    setExpandedSections(new Set(survey.sections.map(s => s.id)));
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -136,7 +141,9 @@ export const GeneratedSurveyPreview: React.FC<GeneratedSurveyPreviewProps> = ({
               Generated Survey Preview
             </h2>
             <p className="text-blue-100 text-sm">
-              {survey.metadata.purpose.charAt(0).toUpperCase() + survey.metadata.purpose.slice(1)} research survey
+              {survey.metadata.purpose.charAt(0).toUpperCase() +
+                survey.metadata.purpose.slice(1)}{' '}
+              research survey
             </p>
           </div>
         </div>
@@ -144,7 +151,9 @@ export const GeneratedSurveyPreview: React.FC<GeneratedSurveyPreviewProps> = ({
         {/* Summary Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
           <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg">
-            <div className="text-3xl font-bold">{survey.metadata.totalItems}</div>
+            <div className="text-3xl font-bold">
+              {survey.metadata.totalItems}
+            </div>
             <div className="text-sm text-blue-100">Total Items</div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg">
@@ -154,12 +163,16 @@ export const GeneratedSurveyPreview: React.FC<GeneratedSurveyPreviewProps> = ({
           <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg flex items-center gap-2">
             <Clock className="w-5 h-5" />
             <div>
-              <div className="text-2xl font-bold">{survey.metadata.estimatedCompletionTime}</div>
+              <div className="text-2xl font-bold">
+                {survey.metadata.estimatedCompletionTime}
+              </div>
               <div className="text-sm text-blue-100">Minutes</div>
             </div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg">
-            <div className="text-3xl font-bold">{survey.metadata.themeCoverage.length}</div>
+            <div className="text-3xl font-bold">
+              {survey.metadata.themeCoverage.length}
+            </div>
             <div className="text-sm text-blue-100">Themes Covered</div>
           </div>
         </div>
@@ -185,7 +198,9 @@ export const GeneratedSurveyPreview: React.FC<GeneratedSurveyPreviewProps> = ({
           <button
             onClick={() => setShowProvenance(!showProvenance)}
             className={`px-3 py-1.5 text-sm border rounded-md transition-colors ${
-              showProvenance ? 'bg-purple-50 border-purple-300 text-purple-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              showProvenance
+                ? 'bg-purple-50 border-purple-300 text-purple-700'
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
             <Tag className="w-3 h-3 inline mr-1" />
@@ -246,11 +261,18 @@ export const GeneratedSurveyPreview: React.FC<GeneratedSurveyPreviewProps> = ({
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <h4 className="font-semibold text-purple-900 mb-2">Theme Coverage</h4>
+              <h4 className="font-semibold text-purple-900 mb-2">
+                Theme Coverage
+              </h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-sm">
-                {survey.metadata.themeCoverage.map((theme) => (
-                  <div key={theme.themeId} className="flex items-center justify-between bg-white px-3 py-1.5 rounded border border-purple-200">
-                    <span className="text-gray-900 truncate flex-1">{theme.themeName}</span>
+                {survey.metadata.themeCoverage.map(theme => (
+                  <div
+                    key={theme.themeId}
+                    className="flex items-center justify-between bg-white px-3 py-1.5 rounded border border-purple-200"
+                  >
+                    <span className="text-gray-900 truncate flex-1">
+                      {theme.themeName}
+                    </span>
                     <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded">
                       {theme.itemCount}
                     </span>
@@ -286,12 +308,15 @@ export const GeneratedSurveyPreview: React.FC<GeneratedSurveyPreviewProps> = ({
                     <h3 className="font-semibold text-gray-900">
                       Section {sectionIndex + 1}: {section.title}
                     </h3>
-                    <p className="text-sm text-gray-600 mt-0.5">{section.description}</p>
+                    <p className="text-sm text-gray-600 mt-0.5">
+                      {section.description}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="px-3 py-1 bg-gray-200 text-gray-700 text-sm font-medium rounded-full">
-                    {section.items.length} item{section.items.length !== 1 ? 's' : ''}
+                    {section.items.length} item
+                    {section.items.length !== 1 ? 's' : ''}
                   </span>
                   {isExpanded ? (
                     <ChevronUp className="w-5 h-5 text-gray-600" />
@@ -319,7 +344,9 @@ export const GeneratedSurveyPreview: React.FC<GeneratedSurveyPreviewProps> = ({
                           </span>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <span className={`px-2 py-1 ${typeConfig.bgColor} ${typeConfig.color} text-xs font-medium rounded`}>
+                              <span
+                                className={`px-2 py-1 ${typeConfig.bgColor} ${typeConfig.color} text-xs font-medium rounded`}
+                              >
                                 {typeConfig.icon} {typeConfig.label}
                               </span>
                               {item.construct && (
@@ -328,20 +355,28 @@ export const GeneratedSurveyPreview: React.FC<GeneratedSurveyPreviewProps> = ({
                                 </span>
                               )}
                             </div>
-                            <p className="text-gray-900 font-medium">{item.text}</p>
+                            <p className="text-gray-900 font-medium">
+                              {item.text}
+                            </p>
 
                             {/* Scale Type / Options */}
                             {item.scaleType && (
                               <p className="text-sm text-gray-600 mt-2">
-                                <span className="font-medium">Scale:</span> {item.scaleType}
+                                <span className="font-medium">Scale:</span>{' '}
+                                {item.scaleType}
                               </p>
                             )}
                             {item.options && item.options.length > 0 && (
                               <div className="mt-2">
-                                <p className="text-sm text-gray-600 font-medium mb-1">Options:</p>
+                                <p className="text-sm text-gray-600 font-medium mb-1">
+                                  Options:
+                                </p>
                                 <ul className="text-sm text-gray-700 space-y-1 ml-4">
                                   {item.options.map((option, idx) => (
-                                    <li key={idx} className="flex items-center gap-2">
+                                    <li
+                                      key={idx}
+                                      className="flex items-center gap-2"
+                                    >
                                       <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
                                       {option}
                                     </li>
@@ -351,14 +386,21 @@ export const GeneratedSurveyPreview: React.FC<GeneratedSurveyPreviewProps> = ({
                             )}
 
                             {/* Theme Provenance */}
-                            {showProvenance && item.themeProvenance.length > 0 && (
-                              <div className="mt-3 pt-3 border-t border-gray-200">
-                                <p className="text-xs text-gray-500 flex items-center gap-1">
-                                  <Tag className="w-3 h-3" />
-                                  Generated from {item.themeProvenance.length} theme{item.themeProvenance.length !== 1 ? 's' : ''}
-                                </p>
-                              </div>
-                            )}
+                            {showProvenance &&
+                              item.themeProvenance.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-gray-200">
+                                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                                    <Tag className="w-3 h-3" />
+                                    Generated from {
+                                      item.themeProvenance.length
+                                    }{' '}
+                                    theme
+                                    {item.themeProvenance.length !== 1
+                                      ? 's'
+                                      : ''}
+                                  </p>
+                                </div>
+                              )}
                           </div>
                         </div>
                       </div>
@@ -376,13 +418,19 @@ export const GeneratedSurveyPreview: React.FC<GeneratedSurveyPreviewProps> = ({
         <div className="flex items-start gap-3">
           <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-semibold text-gray-900 mb-1">Survey Generation Complete</h4>
+            <h4 className="font-semibold text-gray-900 mb-1">
+              Survey Generation Complete
+            </h4>
             <p className="text-sm text-gray-700">
-              Generated {survey.metadata.totalItems} items across {survey.sections.length} sections from {survey.metadata.themeCoverage.length} themes.
-              Estimated completion time: {survey.metadata.estimatedCompletionTime} minutes.
+              Generated {survey.metadata.totalItems} items across{' '}
+              {survey.sections.length} sections from{' '}
+              {survey.metadata.themeCoverage.length} themes. Estimated
+              completion time: {survey.metadata.estimatedCompletionTime}{' '}
+              minutes.
             </p>
             <p className="text-xs text-gray-600 mt-2">
-              Generated on {new Date(survey.metadata.generatedAt).toLocaleString()}
+              Generated on{' '}
+              {new Date(survey.metadata.generatedAt).toLocaleString()}
             </p>
           </div>
         </div>

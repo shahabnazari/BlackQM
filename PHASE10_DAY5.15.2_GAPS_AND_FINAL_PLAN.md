@@ -7,9 +7,11 @@
 ## ✅ COMPLETED (Just Now)
 
 ### 1. Paper Card Visual Indicators ✅
+
 **File**: `frontend/app/(researcher)/discover/literature/page.tsx:1677-1744`
 
 **What It Shows**:
+
 - 🟢 **Full-text badge** (green): "Full-text (8,500 words)"
   - When: `fullTextStatus === 'success'`
   - User sees: Exact word count, knows it's high-quality content
@@ -27,6 +29,7 @@
   - User sees: Content length, knows adaptive thresholds will apply
 
 **Tooltips Explain Everything**:
+
 - Full-text: "✅ Full-text available (8,500 words). Provides 40-50x more content for deeper theme extraction."
 - Overflow: "📄 Full article detected in abstract field (2,340 chars). System will treat as full-text for validation."
 - Abstract: "📝 Abstract-only (455 chars). System will automatically adjust validation thresholds for abstract-length content."
@@ -36,9 +39,11 @@
 ## 🚨 CRITICAL GAPS IDENTIFIED
 
 ### Gap 1: Toast Notifications Still Active ❌
+
 **Location**: `frontend/app/(researcher)/discover/literature/page.tsx:879-884`
 
 **Current Bad UX**:
+
 ```typescript
 toast.success(contentSummary, {
   duration: 6000,
@@ -47,6 +52,7 @@ toast.success(contentSummary, {
 ```
 
 **Why It's Bad**:
+
 - Ephemeral (disappears after 6 seconds)
 - Not contextual (appears at random screen location)
 - User can't review later
@@ -57,12 +63,14 @@ toast.success(contentSummary, {
 ---
 
 ### Gap 2: No Content Analysis in Purpose Wizard ❌
+
 **Location**: `frontend/components/literature/PurposeSelectionWizard.tsx`
 
 **Current State**: Wizard goes straight to purpose selection
 **Missing**: Content Analysis Step BEFORE purpose selection
 
 **What Should Happen**:
+
 ```
 STEP 1: Content Analysis (NEW!)
 ┌─────────────────────────────────────────┐
@@ -86,24 +94,33 @@ STEP 3: Confirmation (current Step 2)
 ---
 
 ### Gap 3: Extraction Progress Doesn't Show Content Details ❌
+
 **Location**: `frontend/components/literature/ThemeExtractionProgressModal.tsx:95-100`
 
 **Current Stage 1 Text**:
+
 ```typescript
-whatWeAreDoing: 'Reading ALL source titles and abstracts together...'
+whatWeAreDoing: 'Reading ALL source titles and abstracts together...';
 ```
 
 **Missing**: What ACTUAL content is being read
 
 **What It Should Say**:
+
 ```typescript
 whatWeAreDoing: (() => {
-  const fullTextCount = sources.filter(s => s.metadata?.contentType === 'full_text').length;
-  const overflowCount = sources.filter(s => s.metadata?.contentType === 'abstract_overflow').length;
-  const abstractCount = sources.filter(s => s.metadata?.contentType === 'abstract').length;
+  const fullTextCount = sources.filter(
+    s => s.metadata?.contentType === 'full_text'
+  ).length;
+  const overflowCount = sources.filter(
+    s => s.metadata?.contentType === 'abstract_overflow'
+  ).length;
+  const abstractCount = sources.filter(
+    s => s.metadata?.contentType === 'abstract'
+  ).length;
 
   return `Reading ${fullTextCount} full-text papers (avg 8,500 words), ${overflowCount} full articles from abstract field, and ${abstractCount} abstracts (avg 455 chars). The AI is processing ${fullTextCount > 0 ? 'rich full-text content' : 'abstract-only content with adaptive validation'} using semantic embeddings (text-embedding-3-large).`;
-})()
+})();
 ```
 
 **Why Critical**: User needs real-time transparency about WHAT is being analyzed
@@ -111,11 +128,13 @@ whatWeAreDoing: (() => {
 ---
 
 ### Gap 4: No Content Requirements in Purpose Configs ❌
+
 **Location**: `frontend/components/literature/PurposeSelectionWizard.tsx:64-118`
 
 **Current**: Purpose cards don't mention content requirements
 
 **Missing**: Each purpose should show:
+
 ```typescript
 {
   id: 'survey_construction',
@@ -131,6 +150,7 @@ whatWeAreDoing: (() => {
 ```
 
 **Display in UI**:
+
 ```
 ┌─ Survey Construction ────────────────┐
 │ 5-15 core constructs                 │
@@ -147,11 +167,13 @@ whatWeAreDoing: (() => {
 ---
 
 ### Gap 5: No Real-Time Content Summary During Extraction ❌
+
 **Location**: N/A - Needs new component
 
 **Missing**: Live content breakdown during extraction
 
 **What Should Show**:
+
 ```
 ┌─ Stage 2: Initial Coding ────────────┐
 │ Progress: 45% (234 codes extracted)  │
@@ -170,10 +192,12 @@ whatWeAreDoing: (() => {
 ## 🎯 ENTERPRISE-GRADE IMPLEMENTATION PLAN
 
 ### Phase A: Remove Toast Notifications (IMMEDIATE)
+
 1. **Delete toast.success()** at line 879
 2. **Move content summary to Purpose Wizard Step 1**
 
 ### Phase B: Enhance Purpose Wizard (HIGH PRIORITY)
+
 1. **Add Step 0: Content Analysis**
    - Show content breakdown (full-text vs abstract)
    - Show expected quality
@@ -189,6 +213,7 @@ whatWeAreDoing: (() => {
    - If Literature Synthesis + <50% full-text → Block or warn
 
 ### Phase C: Update Extraction Progress (HIGH PRIORITY)
+
 1. **Stage 1 (Familiarization)**:
    - Show what content is being read
    - Mention full-text vs abstract breakdown
@@ -199,6 +224,7 @@ whatWeAreDoing: (() => {
    - Indicate content type for each batch
 
 ### Phase D: Real-Time Content Indicators (MEDIUM PRIORITY)
+
 1. **Add live content panel to progress modal**
 2. **Show which papers currently being processed**
 3. **Color-code by content type** (green=full-text, purple=overflow, gray=abstract)
@@ -207,14 +233,14 @@ whatWeAreDoing: (() => {
 
 ## 📊 PRIORITY MATRIX
 
-| Task | Priority | Impact | Effort | Status |
-|------|----------|--------|--------|--------|
-| Remove toast notifications | 🔴 HIGH | High | 5 min | TODO |
-| Add Content Analysis to Wizard | 🔴 HIGH | Critical | 30 min | TODO |
-| Update Progress Stage 1 message | 🔴 HIGH | High | 15 min | TODO |
-| Add content requirements to purposes | 🟡 MEDIUM | Medium | 20 min | TODO |
-| Add real-time content panel | 🟢 LOW | Medium | 45 min | OPTIONAL |
-| Paper card indicators | ✅ DONE | High | 30 min | ✅ |
+| Task                                 | Priority  | Impact   | Effort | Status   |
+| ------------------------------------ | --------- | -------- | ------ | -------- |
+| Remove toast notifications           | 🔴 HIGH   | High     | 5 min  | TODO     |
+| Add Content Analysis to Wizard       | 🔴 HIGH   | Critical | 30 min | TODO     |
+| Update Progress Stage 1 message      | 🔴 HIGH   | High     | 15 min | TODO     |
+| Add content requirements to purposes | 🟡 MEDIUM | Medium   | 20 min | TODO     |
+| Add real-time content panel          | 🟢 LOW    | Medium   | 45 min | OPTIONAL |
+| Paper card indicators                | ✅ DONE   | High     | 30 min | ✅       |
 
 ---
 
@@ -232,12 +258,14 @@ whatWeAreDoing: (() => {
 ## 📝 CODE SNIPPETS READY TO IMPLEMENT
 
 ### 1. Remove Toast (DELETE THIS)
+
 ```typescript
 // DELETE lines 879-884
 toast.success(contentSummary, { ... }); // ❌ REMOVE
 ```
 
 ### 2. Add to Purpose Wizard (NEW STEP 0)
+
 ```typescript
 // Add to PurposeSelectionWizard.tsx
 const ContentAnalysisStep = ({ sources }: { sources: SourceContent[] }) => {
@@ -290,6 +318,7 @@ const ContentAnalysisStep = ({ sources }: { sources: SourceContent[] }) => {
 ```
 
 ### 3. Update Progress Stage 1
+
 ```typescript
 // ThemeExtractionProgressModal.tsx:95-100
 stageName: 'Familiarization with Data',
@@ -321,6 +350,7 @@ whatWeAreDoing: (() => {
    - Purpose Wizard opens
 
 3. **Step 1: Content Analysis** (NEW!):
+
    ```
    ┌─ Content Analysis ──────────────┐
    │ 3 Full-text  | 2 Full articles │

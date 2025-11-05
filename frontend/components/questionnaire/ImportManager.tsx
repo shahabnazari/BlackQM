@@ -6,7 +6,10 @@ import { ThemeImportModal } from './ThemeImportModal';
 import { ResearchQuestionToItemsModal } from './ResearchQuestionToItemsModal';
 import { HypothesisToItemsModal } from './HypothesisToItemsModal';
 import { toast } from 'sonner';
-import type { ImportManagerProps, ImportableItem } from '@/lib/types/questionnaire-import.types';
+import type {
+  ImportManagerProps,
+  ImportableItem,
+} from '@/lib/types/questionnaire-import.types';
 
 // Re-export the props interface
 export type { ImportManagerProps };
@@ -29,7 +32,9 @@ export const ImportManager: React.FC<ImportManagerProps> = ({
   onClose,
   onImport,
 }) => {
-  const [currentModal, setCurrentModal] = useState<'selector' | ImportSource>('selector');
+  const [currentModal, setCurrentModal] = useState<'selector' | ImportSource>(
+    'selector'
+  );
 
   if (!isOpen) return null;
 
@@ -41,21 +46,24 @@ export const ImportManager: React.FC<ImportManagerProps> = ({
     setCurrentModal('selector');
   }, []);
 
-  const handleImportComplete = useCallback((items: ImportableItem[]) => {
-    try {
-      // Validate items before passing to parent
-      if (!Array.isArray(items) || items.length === 0) {
-        toast.warning('No items selected for import');
-        return;
-      }
+  const handleImportComplete = useCallback(
+    (items: ImportableItem[]) => {
+      try {
+        // Validate items before passing to parent
+        if (!Array.isArray(items) || items.length === 0) {
+          toast.warning('No items selected for import');
+          return;
+        }
 
-      onImport(items);
-      onClose();
-    } catch (error) {
-      console.error('Import completion failed:', error);
-      toast.error('Failed to complete import');
-    }
-  }, [onImport, onClose]);
+        onImport(items);
+        onClose();
+      } catch (error) {
+        console.error('Import completion failed:', error);
+        toast.error('Failed to complete import');
+      }
+    },
+    [onImport, onClose]
+  );
 
   // Render source selector
   if (currentModal === 'selector') {

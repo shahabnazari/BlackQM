@@ -56,6 +56,10 @@ model User {
   researchGaps          ResearchGap[]
   searchLogs            SearchLog[]
 
+  // Phase 10 Day 18: Iterative Theme Extraction
+  processedLiterature   ProcessedLiterature[]
+  extractionCorpus      ExtractionCorpus[]
+
   // Report models (Phase 10)
   reports               Report[]              @relation("UserReports")
 
@@ -840,7 +844,8 @@ model Paper {
   themes        PaperTheme[]
   gaps          ResearchGap[]
   statementProvenances StatementProvenance[]
-  
+  processedLiterature ProcessedLiterature[] // Phase 10 Day 18: Caching relation
+
   @@index([userId])
   @@index([doi])
   @@index([collectionId])
@@ -875,6 +880,50 @@ model PaperTheme {
   updatedAt       DateTime @updatedAt
 
   @@map("paper_themes")
+}
+
+// Phase 10 Day 18: Iterative Theme Extraction - Content Caching
+model ProcessedLiterature {
+  id              String   @id @default(cuid())
+  paperId         String   // Foreign key to Paper
+  userId          String   // Foreign key to User
+  fullTextContent String   // Cached full-text content (SQLite TEXT default)
+  fullTextHash    String   // MD5 hash to detect content changes
+  wordCount       Int
+  embeddings      Json?    // Store embeddings as JSON array to avoid regeneration
+  processedAt     DateTime @default(now())
+  lastUsedAt      DateTime @default(now())
+  extractionCount Int      @default(1) // Track reuse count for cost analysis
+  paper           Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([paperId, userId])
+  @@index([userId])
+  @@index([paperId])
+  @@index([lastUsedAt])
+  @@map("processed_literature")
+}
+
+// Phase 10 Day 18: Iterative Theme Extraction - Corpus Management
+model ExtractionCorpus {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String   @default("Untitled Corpus")
+  purpose         String   // research purpose (exploratory, explanatory, evaluative)
+  paperIds        Json     // JSON array of paper IDs in corpus
+  themeCount      Int      @default(0)
+  lastExtractedAt DateTime @default(now())
+  isSaturated     Boolean  @default(false) // Theoretical saturation reached
+  saturationConfidence Float? // Confidence level for saturation (0-1)
+  costSaved       Float    @default(0.0) // Estimated $ saved via caching
+  totalExtractions Int     @default(1) // Number of times extracted
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([lastExtractedAt])
+  @@map("extraction_corpus")
 }
 
 model ResearchGap {

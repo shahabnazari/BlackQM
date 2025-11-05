@@ -55,7 +55,9 @@ const TTL_HOURS = 24;
  * Save literature review state to localStorage
  * Automatically called when critical state changes
  */
-export function saveLiteratureState(state: Partial<LiteratureReviewState>): void {
+export function saveLiteratureState(
+  state: Partial<LiteratureReviewState>
+): void {
   try {
     const existingState = loadLiteratureState();
 
@@ -71,7 +73,9 @@ export function saveLiteratureState(state: Partial<LiteratureReviewState>): void
     // Check storage size (warn if > 4MB, localStorage limit is ~5-10MB)
     const sizeInMB = new Blob([serialized]).size / (1024 * 1024);
     if (sizeInMB > 4) {
-      console.warn(`⚠️ Literature state is ${sizeInMB.toFixed(2)}MB. Consider clearing old data.`);
+      console.warn(
+        `⚠️ Literature state is ${sizeInMB.toFixed(2)}MB. Consider clearing old data.`
+      );
     }
 
     localStorage.setItem(STORAGE_KEY, serialized);
@@ -103,7 +107,9 @@ export function loadLiteratureState(): Partial<LiteratureReviewState> {
 
     // Check version compatibility
     if (state.version !== STORAGE_VERSION) {
-      console.warn(`⚠️ State version mismatch (saved: ${state.version}, current: ${STORAGE_VERSION}). Clearing...`);
+      console.warn(
+        `⚠️ State version mismatch (saved: ${state.version}, current: ${STORAGE_VERSION}). Clearing...`
+      );
       clearLiteratureState();
       return {};
     }
@@ -111,15 +117,20 @@ export function loadLiteratureState(): Partial<LiteratureReviewState> {
     // Check TTL expiration
     const savedAt = new Date(state.savedAt || '');
     const now = new Date();
-    const hoursSinceSave = (now.getTime() - savedAt.getTime()) / (1000 * 60 * 60);
+    const hoursSinceSave =
+      (now.getTime() - savedAt.getTime()) / (1000 * 60 * 60);
 
     if (hoursSinceSave > TTL_HOURS) {
-      console.log(`ℹ️ Saved state expired (${hoursSinceSave.toFixed(1)}h old). Clearing...`);
+      console.log(
+        `ℹ️ Saved state expired (${hoursSinceSave.toFixed(1)}h old). Clearing...`
+      );
       clearLiteratureState();
       return {};
     }
 
-    console.log(`✅ Literature state loaded (saved ${hoursSinceSave.toFixed(1)}h ago)`);
+    console.log(
+      `✅ Literature state loaded (saved ${hoursSinceSave.toFixed(1)}h ago)`
+    );
 
     // Log what was restored
     const stats = {

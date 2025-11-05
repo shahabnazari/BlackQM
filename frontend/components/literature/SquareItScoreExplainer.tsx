@@ -20,7 +20,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Info, HelpCircle, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import {
+  Info,
+  HelpCircle,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+} from 'lucide-react';
 
 interface SquareItScore {
   specific: number;
@@ -52,7 +58,8 @@ const DIMENSION_DETAILS = {
     },
     interpretation: {
       high: '≥0.8: Question is highly focused with clear boundaries',
-      medium: '0.6-0.79: Question has reasonable focus but could be more precise',
+      medium:
+        '0.6-0.79: Question has reasonable focus but could be more precise',
       low: '<0.6: Question is too broad or vague',
     },
   },
@@ -186,7 +193,9 @@ export const SquareItScoreExplainer: React.FC<SquareItScoreExplainerProps> = ({
   compact = false,
   className = '',
 }) => {
-  const [expandedDimension, setExpandedDimension] = useState<string | null>(null);
+  const [expandedDimension, setExpandedDimension] = useState<string | null>(
+    null
+  );
   const [showFullExplanation, setShowFullExplanation] = useState(false);
 
   if (compact) {
@@ -205,7 +214,9 @@ export const SquareItScoreExplainer: React.FC<SquareItScoreExplainerProps> = ({
               <HelpCircle className="w-4 h-4" />
             </button>
           </div>
-          <span className={`text-xs font-bold ${getScoreColor(score.overallScore)}`}>
+          <span
+            className={`text-xs font-bold ${getScoreColor(score.overallScore)}`}
+          >
             {(score.overallScore * 100).toFixed(0)}%
           </span>
         </div>
@@ -213,7 +224,8 @@ export const SquareItScoreExplainer: React.FC<SquareItScoreExplainerProps> = ({
           {Object.entries(score)
             .filter(([key]) => key !== 'overallScore')
             .map(([key, value]) => {
-              const details = DIMENSION_DETAILS[key as keyof typeof DIMENSION_DETAILS];
+              const details =
+                DIMENSION_DETAILS[key as keyof typeof DIMENSION_DETAILS];
               return (
                 <div
                   key={key}
@@ -270,17 +282,22 @@ export const SquareItScoreExplainer: React.FC<SquareItScoreExplainerProps> = ({
           </h3>
         </div>
         <p className="text-sm text-gray-600 mt-1">
-          Enterprise-grade framework for evaluating research question rigor across 8 dimensions
+          Enterprise-grade framework for evaluating research question rigor
+          across 8 dimensions
         </p>
       </div>
 
       {/* Overall Score */}
       <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">Overall Quality Score</span>
+          <span className="text-sm font-medium text-gray-700">
+            Overall Quality Score
+          </span>
           <div className="flex items-center gap-2">
             {getScoreIcon(score.overallScore)}
-            <span className={`text-2xl font-bold ${getScoreColor(score.overallScore)}`}>
+            <span
+              className={`text-2xl font-bold ${getScoreColor(score.overallScore)}`}
+            >
               {(score.overallScore * 100).toFixed(0)}%
             </span>
           </div>
@@ -299,7 +316,8 @@ export const SquareItScoreExplainer: React.FC<SquareItScoreExplainerProps> = ({
         {Object.entries(score)
           .filter(([key]) => key !== 'overallScore')
           .map(([key, value]) => {
-            const details = DIMENSION_DETAILS[key as keyof typeof DIMENSION_DETAILS];
+            const details =
+              DIMENSION_DETAILS[key as keyof typeof DIMENSION_DETAILS];
             const isExpanded = expandedDimension === key;
 
             return (
@@ -311,12 +329,16 @@ export const SquareItScoreExplainer: React.FC<SquareItScoreExplainerProps> = ({
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       {getScoreIcon(value)}
-                      <span className="font-medium text-gray-900">{details.name}</span>
+                      <span className="font-medium text-gray-900">
+                        {details.name}
+                      </span>
                       <span className="text-xs text-gray-500">
                         {details.shortDesc}
                       </span>
                     </div>
-                    <span className={`text-sm font-bold ${getScoreColor(value)}`}>
+                    <span
+                      className={`text-sm font-bold ${getScoreColor(value)}`}
+                    >
                       {(value * 100).toFixed(0)}%
                     </span>
                   </div>
@@ -334,7 +356,9 @@ export const SquareItScoreExplainer: React.FC<SquareItScoreExplainerProps> = ({
                 {isExpanded && (
                   <div className="mt-4 space-y-3 text-sm">
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">What it means:</h4>
+                      <h4 className="font-semibold text-gray-900 mb-1">
+                        What it means:
+                      </h4>
                       <p className="text-gray-700">{details.fullDesc}</p>
                     </div>
 
@@ -360,7 +384,9 @@ export const SquareItScoreExplainer: React.FC<SquareItScoreExplainerProps> = ({
                     </div>
 
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Score Interpretation:</h4>
+                      <h4 className="font-semibold text-gray-900 mb-1">
+                        Score Interpretation:
+                      </h4>
                       <ul className="space-y-1 text-gray-700">
                         <li className="flex items-start gap-2">
                           <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
@@ -386,9 +412,10 @@ export const SquareItScoreExplainer: React.FC<SquareItScoreExplainerProps> = ({
       {/* Footer */}
       <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
         <p className="text-xs text-gray-600">
-          <strong>Reference:</strong> SQUARE-IT framework adapted from Butler et al. (2016) and
-          evidence-based research question quality assessment. This AI-generated score should be
-          validated by domain experts before finalizing research questions.
+          <strong>Reference:</strong> SQUARE-IT framework adapted from Butler et
+          al. (2016) and evidence-based research question quality assessment.
+          This AI-generated score should be validated by domain experts before
+          finalizing research questions.
         </p>
       </div>
     </div>

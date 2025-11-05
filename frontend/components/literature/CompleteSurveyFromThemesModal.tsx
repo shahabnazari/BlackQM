@@ -109,7 +109,9 @@ const complexityLevels = [
   },
 ];
 
-export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesModalProps> = ({
+export const CompleteSurveyFromThemesModal: React.FC<
+  CompleteSurveyFromThemesModalProps
+> = ({
   isOpen,
   onClose,
   themeIds: _themeIds,
@@ -130,7 +132,9 @@ export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesMod
   const [error, setError] = useState<string | null>(null);
 
   // Calculate estimated items and time
-  const complexityConfig = complexityLevels.find((c) => c.value === config.complexityLevel) ?? {
+  const complexityConfig = complexityLevels.find(
+    c => c.value === config.complexityLevel
+  ) ?? {
     value: 'intermediate' as const,
     label: 'Intermediate',
     itemsPerTheme: '3-4',
@@ -143,7 +147,8 @@ export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesMod
   const demographicItems = config.includeDemographics ? 5 : 0;
   const validityItems = config.includeValidityChecks ? 3 : 0;
   const openEndedItems = config.includeOpenEnded ? 2 : 0;
-  const totalItems = estimatedMainItems + demographicItems + validityItems + openEndedItems;
+  const totalItems =
+    estimatedMainItems + demographicItems + validityItems + openEndedItems;
   const estimatedMinutes = Math.ceil(totalItems * 0.5); // ~30 seconds per item
 
   const handleGenerate = async () => {
@@ -154,7 +159,9 @@ export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesMod
       await onGenerate(config);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate survey');
+      setError(
+        err instanceof Error ? err.message : 'Failed to generate survey'
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -164,7 +171,9 @@ export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesMod
 
   return (
     <AnimatePresence>
-      <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${className}`}>
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${className}`}
+      >
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -190,7 +199,8 @@ export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesMod
                   Generate Complete Survey from Themes
                 </h2>
                 <p className="text-blue-100 mt-1 text-sm">
-                  One-click survey generation from {themeCount} extracted theme{themeCount !== 1 ? 's' : ''}
+                  One-click survey generation from {themeCount} extracted theme
+                  {themeCount !== 1 ? 's' : ''}
                 </p>
               </div>
               <button
@@ -210,7 +220,9 @@ export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesMod
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-red-900">Generation Error</p>
+                  <p className="text-sm font-medium text-red-900">
+                    Generation Error
+                  </p>
                   <p className="text-sm text-red-700 mt-1">{error}</p>
                 </div>
               </div>
@@ -222,22 +234,30 @@ export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesMod
                 1. Survey Purpose <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {purposeOptions.map((option) => {
+                {purposeOptions.map(option => {
                   const isSelected = config.purpose === option.value;
                   const Icon = option.icon;
 
                   return (
                     <button
                       key={option.value}
-                      onClick={() => setConfig({ ...config, purpose: option.value })}
+                      onClick={() =>
+                        setConfig({ ...config, purpose: option.value })
+                      }
                       className={`
                         p-4 border-2 rounded-lg text-left transition-all
                         ${isSelected ? `${option.borderColor} ${option.bgColor}` : 'border-gray-200 hover:border-gray-300'}
                       `}
                     >
-                      <Icon className={`w-5 h-5 mb-2 ${isSelected ? option.color : 'text-gray-400'}`} />
-                      <div className="font-medium text-gray-900 mb-1">{option.label}</div>
-                      <div className="text-xs text-gray-600">{option.description}</div>
+                      <Icon
+                        className={`w-5 h-5 mb-2 ${isSelected ? option.color : 'text-gray-400'}`}
+                      />
+                      <div className="font-medium text-gray-900 mb-1">
+                        {option.label}
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        {option.description}
+                      </div>
                     </button>
                   );
                 })}
@@ -256,14 +276,20 @@ export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesMod
                   min="10"
                   max="10000"
                   value={config.targetRespondents}
-                  onChange={(e) => setConfig({ ...config, targetRespondents: parseInt(e.target.value) || 100 })}
+                  onChange={e =>
+                    setConfig({
+                      ...config,
+                      targetRespondents: parseInt(e.target.value) || 100,
+                    })
+                  }
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="e.g., 100"
                 />
                 <span className="text-sm text-gray-600">respondents</span>
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                Recommended: 100+ for exploratory, 200+ for confirmatory research
+                Recommended: 100+ for exploratory, 200+ for confirmatory
+                research
               </p>
             </div>
 
@@ -273,20 +299,24 @@ export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesMod
                 3. Survey Complexity <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {complexityLevels.map((level) => {
+                {complexityLevels.map(level => {
                   const isSelected = config.complexityLevel === level.value;
 
                   return (
                     <button
                       key={level.value}
-                      onClick={() => setConfig({ ...config, complexityLevel: level.value })}
+                      onClick={() =>
+                        setConfig({ ...config, complexityLevel: level.value })
+                      }
                       className={`
                         p-4 border-2 rounded-lg text-left transition-all
                         ${isSelected ? 'border-purple-400 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}
                       `}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-gray-900">{level.label}</span>
+                        <span className="font-medium text-gray-900">
+                          {level.label}
+                        </span>
                         <Clock className="w-4 h-4 text-gray-400" />
                       </div>
                       <div className="text-xs text-gray-600 space-y-1">
@@ -310,11 +340,18 @@ export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesMod
                   <input
                     type="checkbox"
                     checked={config.includeDemographics}
-                    onChange={(e) => setConfig({ ...config, includeDemographics: e.target.checked })}
+                    onChange={e =>
+                      setConfig({
+                        ...config,
+                        includeDemographics: e.target.checked,
+                      })
+                    }
                     className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                   />
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900">Include Demographics</div>
+                    <div className="font-medium text-gray-900">
+                      Include Demographics
+                    </div>
                     <div className="text-xs text-gray-600 mt-0.5">
                       Age, gender, education, occupation, location (+5 items)
                     </div>
@@ -325,11 +362,18 @@ export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesMod
                   <input
                     type="checkbox"
                     checked={config.includeValidityChecks}
-                    onChange={(e) => setConfig({ ...config, includeValidityChecks: e.target.checked })}
+                    onChange={e =>
+                      setConfig({
+                        ...config,
+                        includeValidityChecks: e.target.checked,
+                      })
+                    }
                     className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                   />
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900">Include Validity Checks</div>
+                    <div className="font-medium text-gray-900">
+                      Include Validity Checks
+                    </div>
                     <div className="text-xs text-gray-600 mt-0.5">
                       Attention checks, response quality indicators (+3 items)
                     </div>
@@ -340,11 +384,18 @@ export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesMod
                   <input
                     type="checkbox"
                     checked={config.includeOpenEnded}
-                    onChange={(e) => setConfig({ ...config, includeOpenEnded: e.target.checked })}
+                    onChange={e =>
+                      setConfig({
+                        ...config,
+                        includeOpenEnded: e.target.checked,
+                      })
+                    }
                     className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                   />
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900">Include Open-Ended Questions</div>
+                    <div className="font-medium text-gray-900">
+                      Include Open-Ended Questions
+                    </div>
                     <div className="text-xs text-gray-600 mt-0.5">
                       Qualitative feedback, additional insights (+2 items)
                     </div>
@@ -358,24 +409,36 @@ export const CompleteSurveyFromThemesModal: React.FC<CompleteSurveyFromThemesMod
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-2">Estimated Survey</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">
+                    Estimated Survey
+                  </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                     <div>
                       <div className="text-gray-600">Total Items</div>
-                      <div className="font-bold text-gray-900">{totalItems}</div>
+                      <div className="font-bold text-gray-900">
+                        {totalItems}
+                      </div>
                     </div>
                     <div>
                       <div className="text-gray-600">Main Items</div>
-                      <div className="font-bold text-gray-900">{estimatedMainItems}</div>
+                      <div className="font-bold text-gray-900">
+                        {estimatedMainItems}
+                      </div>
                     </div>
                     <div>
                       <div className="text-gray-600">Time</div>
-                      <div className="font-bold text-gray-900">{estimatedMinutes} min</div>
+                      <div className="font-bold text-gray-900">
+                        {estimatedMinutes} min
+                      </div>
                     </div>
                     <div>
                       <div className="text-gray-600">Sections</div>
                       <div className="font-bold text-gray-900">
-                        {1 + (config.includeDemographics ? 1 : 0) + (config.includeValidityChecks ? 1 : 0) + (config.includeOpenEnded ? 1 : 0) + 1}
+                        {1 +
+                          (config.includeDemographics ? 1 : 0) +
+                          (config.includeValidityChecks ? 1 : 0) +
+                          (config.includeOpenEnded ? 1 : 0) +
+                          1}
                       </div>
                     </div>
                   </div>

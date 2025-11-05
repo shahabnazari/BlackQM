@@ -120,7 +120,9 @@ describe('Literature Comprehensive E2E Tests (Phase 10 Day 5.7 Stage 2 Phase 1)'
 
         // Skip test if we couldn't save enough papers
         if (paperIds.length < 2) {
-          console.log(`⚠️ TEST-069 SKIPPED: Could not save enough papers (${paperIds.length}/5)`);
+          console.log(
+            `⚠️ TEST-069 SKIPPED: Could not save enough papers (${paperIds.length}/5)`,
+          );
           return;
         }
 
@@ -139,9 +141,13 @@ describe('Literature Comprehensive E2E Tests (Phase 10 Day 5.7 Stage 2 Phase 1)'
           expect(graphResponse.body).toHaveProperty('nodes');
           expect(graphResponse.body).toHaveProperty('edges');
           expect(graphResponse.body.nodes.length).toBeGreaterThan(0);
-          console.log(`✅ TEST-069 PASSED: Knowledge graph generated with ${graphResponse.body.nodes.length} nodes`);
+          console.log(
+            `✅ TEST-069 PASSED: Knowledge graph generated with ${graphResponse.body.nodes.length} nodes`,
+          );
         } else {
-          console.log(`⚠️ TEST-069 SKIPPED: Knowledge graph endpoint not available`);
+          console.log(
+            `⚠️ TEST-069 SKIPPED: Knowledge graph endpoint not available`,
+          );
         }
       }, 60000);
     });
@@ -177,11 +183,15 @@ describe('Literature Comprehensive E2E Tests (Phase 10 Day 5.7 Stage 2 Phase 1)'
         if (gapResponse.status === 200 || gapResponse.status === 201) {
           expect(gapResponse.body).toHaveProperty('gaps');
           expect(Array.isArray(gapResponse.body.gaps)).toBe(true);
-          console.log(`✅ TEST-070 PASSED: ${gapResponse.body.gaps.length} gaps identified`);
+          console.log(
+            `✅ TEST-070 PASSED: ${gapResponse.body.gaps.length} gaps identified`,
+          );
         } else if (gapResponse.status === 500) {
           console.log(`⚠️ TEST-070 SKIPPED: Gap analysis endpoint error (500)`);
         } else {
-          console.log(`⚠️ TEST-070 SKIPPED: Gap analysis endpoint not available`);
+          console.log(
+            `⚠️ TEST-070 SKIPPED: Gap analysis endpoint not available`,
+          );
         }
       }, 60000);
     });
@@ -215,14 +225,18 @@ describe('Literature Comprehensive E2E Tests (Phase 10 Day 5.7 Stage 2 Phase 1)'
                 type: 'youtube',
                 id: 'test-video-1',
                 title: 'Sustainable Farming Techniques',
-                content: 'Discussion about organic farming, crop rotation, and soil health.',
+                content:
+                  'Discussion about organic farming, crop rotation, and soil health.',
               },
             ],
           });
 
         expect([200, 201, 404]).toContain(synthesisResponse.status);
 
-        if (synthesisResponse.status === 200 || synthesisResponse.status === 201) {
+        if (
+          synthesisResponse.status === 200 ||
+          synthesisResponse.status === 201
+        ) {
           expect(synthesisResponse.body).toHaveProperty('synthesis');
           console.log(`✅ TEST-071 PASSED: Cross-platform synthesis complete`);
         } else {
@@ -274,7 +288,9 @@ describe('Literature Comprehensive E2E Tests (Phase 10 Day 5.7 Stage 2 Phase 1)'
 
         // If pagination not supported, skip test gracefully
         if (page1Response.status === 400) {
-          console.log(`⚠️ TEST-096 SKIPPED: Pagination parameters not supported yet`);
+          console.log(
+            `⚠️ TEST-096 SKIPPED: Pagination parameters not supported yet`,
+          );
           return;
         }
 
@@ -301,16 +317,24 @@ describe('Literature Comprehensive E2E Tests (Phase 10 Day 5.7 Stage 2 Phase 1)'
 
         // Pages should have different results
         if (page2Response.body.papers && page2Response.body.papers.length > 0) {
-          const page1Titles = new Set(page1Response.body.papers.map((p: any) => p.title));
-          const page2Titles = new Set(page2Response.body.papers.map((p: any) => p.title));
+          const page1Titles = new Set(
+            page1Response.body.papers.map((p: any) => p.title),
+          );
+          const page2Titles = new Set(
+            page2Response.body.papers.map((p: any) => p.title),
+          );
 
-          const overlap = [...page1Titles].filter((title) => page2Titles.has(title)).length;
+          const overlap = [...page1Titles].filter((title) =>
+            page2Titles.has(title),
+          ).length;
           const totalUnique = page1Titles.size + page2Titles.size - overlap;
 
           expect(totalUnique).toBeGreaterThan(page1Titles.size);
           console.log(`✅ TEST-096 PASSED: Pagination working correctly`);
         } else {
-          console.log(`⚠️ TEST-096 WARNING: No second page results, but no errors`);
+          console.log(
+            `⚠️ TEST-096 WARNING: No second page results, but no errors`,
+          );
         }
       }, 15000);
     });
@@ -365,7 +389,9 @@ describe('Literature Comprehensive E2E Tests (Phase 10 Day 5.7 Stage 2 Phase 1)'
 
         // Theme extraction may return 0 themes for papers with minimal content
         if (themes.length === 0) {
-          console.log(`⚠️ TEST-101 WARNING: No themes extracted from paper (minimal content)`);
+          console.log(
+            `⚠️ TEST-101 WARNING: No themes extracted from paper (minimal content)`,
+          );
         } else {
           console.log(`✅ TEST-101: ${themes.length} themes extracted`);
         }
@@ -376,11 +402,15 @@ describe('Literature Comprehensive E2E Tests (Phase 10 Day 5.7 Stage 2 Phase 1)'
           .set('Authorization', `Bearer ${authToken}`)
           .expect(200);
 
-        expect(libraryResponse.body.papers.some((p: any) => p.id === paperId)).toBe(true);
+        expect(
+          libraryResponse.body.papers.some((p: any) => p.id === paperId),
+        ).toBe(true);
 
         const elapsedTime = Date.now() - startTime;
 
-        console.log(`✅ TEST-101 PASSED: Full pipeline completed in ${(elapsedTime / 1000).toFixed(1)}s`);
+        console.log(
+          `✅ TEST-101 PASSED: Full pipeline completed in ${(elapsedTime / 1000).toFixed(1)}s`,
+        );
       }, 180000);
     });
 
@@ -432,14 +462,23 @@ describe('Literature Comprehensive E2E Tests (Phase 10 Day 5.7 Stage 2 Phase 1)'
 
         expect([200, 201, 404, 500]).toContain(statementResponse.status);
 
-        if (statementResponse.status === 200 || statementResponse.status === 201) {
+        if (
+          statementResponse.status === 200 ||
+          statementResponse.status === 201
+        ) {
           expect(statementResponse.body).toHaveProperty('statements');
           expect(statementResponse.body.statements.length).toBeGreaterThan(0);
-          console.log(`✅ TEST-102 PASSED: ${statementResponse.body.statements.length} statements generated`);
+          console.log(
+            `✅ TEST-102 PASSED: ${statementResponse.body.statements.length} statements generated`,
+          );
         } else if (statementResponse.status === 500) {
-          console.log(`⚠️ TEST-102 SKIPPED: Statement generation endpoint error (500)`);
+          console.log(
+            `⚠️ TEST-102 SKIPPED: Statement generation endpoint error (500)`,
+          );
         } else {
-          console.log(`⚠️ TEST-102 SKIPPED: Statement generation endpoint not available`);
+          console.log(
+            `⚠️ TEST-102 SKIPPED: Statement generation endpoint not available`,
+          );
         }
       }, 180000);
     });
@@ -482,7 +521,9 @@ describe('Literature Comprehensive E2E Tests (Phase 10 Day 5.7 Stage 2 Phase 1)'
         // Should be faster than sequential (5 searches * 3s = 15s)
         expect(elapsedTime).toBeLessThan(15000);
 
-        console.log(`✅ TEST-109 PASSED: ${queries.length} concurrent requests completed in ${(elapsedTime / 1000).toFixed(1)}s`);
+        console.log(
+          `✅ TEST-109 PASSED: ${queries.length} concurrent requests completed in ${(elapsedTime / 1000).toFixed(1)}s`,
+        );
       }, 30000);
     });
 
@@ -515,13 +556,19 @@ describe('Literature Comprehensive E2E Tests (Phase 10 Day 5.7 Stage 2 Phase 1)'
         const elapsedTime2 = Date.now() - startTime2;
 
         // Cached request should be significantly faster (at least 50% faster)
-        console.log(`Cache performance: First=${elapsedTime1}ms, Second=${elapsedTime2}ms`);
+        console.log(
+          `Cache performance: First=${elapsedTime1}ms, Second=${elapsedTime2}ms`,
+        );
 
         // Accept either cached (faster) or both fresh (if cache disabled in tests)
         if (elapsedTime2 < elapsedTime1) {
-          console.log(`✅ TEST-110 PASSED: Caching working (${((1 - elapsedTime2 / elapsedTime1) * 100).toFixed(1)}% faster)`);
+          console.log(
+            `✅ TEST-110 PASSED: Caching working (${((1 - elapsedTime2 / elapsedTime1) * 100).toFixed(1)}% faster)`,
+          );
         } else {
-          console.log(`⚠️ TEST-110 WARNING: No caching improvement detected (may be disabled in tests)`);
+          console.log(
+            `⚠️ TEST-110 WARNING: No caching improvement detected (may be disabled in tests)`,
+          );
         }
       }, 20000);
     });
@@ -546,7 +593,9 @@ describe('Literature Comprehensive E2E Tests (Phase 10 Day 5.7 Stage 2 Phase 1)'
 
         expect(heapUsedMB).toBeLessThan(1024); // Should not exceed 1GB for E2E tests
 
-        console.log(`✅ TEST-111 PASSED: ${response.body.papers.length} papers with ${heapUsedMB.toFixed(0)}MB heap usage`);
+        console.log(
+          `✅ TEST-111 PASSED: ${response.body.papers.length} papers with ${heapUsedMB.toFixed(0)}MB heap usage`,
+        );
       }, 20000);
     });
   });

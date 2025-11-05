@@ -45,7 +45,7 @@ export interface QualityScoreComponents {
  */
 export function calculateCitationsPerYear(
   citationCount: number | null | undefined,
-  year: number | null | undefined
+  year: number | null | undefined,
 ): number {
   if (!citationCount || !year) return 0;
 
@@ -144,7 +144,9 @@ export function calculateJournalPrestigeScore(metrics: JournalMetrics): number {
  * @param wordCount - Paper word count
  * @returns Score 0-100
  */
-export function calculateContentDepthScore(wordCount: number | null | undefined): number {
+export function calculateContentDepthScore(
+  wordCount: number | null | undefined,
+): number {
   if (!wordCount || wordCount <= 0) return 0;
 
   if (wordCount >= 8000) return 100; // Extensive
@@ -194,19 +196,33 @@ export function calculateRecencyBoost(year: number | null | undefined): number {
  */
 export function calculateVenueQualityScore(
   venue: string | null | undefined,
-  source: string
+  source: string,
 ): number {
   if (!venue) return 40; // Unknown venue baseline
 
   const venueLower = venue.toLowerCase();
 
   // Top-tier journals (Nature Publishing Group, Science, Cell Press)
-  const topTier = ['nature', 'science', 'cell', 'lancet', 'nejm', 'jama', 'pnas'];
-  if (topTier.some(t => venueLower.includes(t))) return 100;
+  const topTier = [
+    'nature',
+    'science',
+    'cell',
+    'lancet',
+    'nejm',
+    'jama',
+    'pnas',
+  ];
+  if (topTier.some((t) => venueLower.includes(t))) return 100;
 
   // High-quality established journals
-  const highQuality = ['journal', 'proceedings', 'transactions', 'quarterly', 'review'];
-  if (highQuality.some(t => venueLower.includes(t))) {
+  const highQuality = [
+    'journal',
+    'proceedings',
+    'transactions',
+    'quarterly',
+    'review',
+  ];
+  if (highQuality.some((t) => venueLower.includes(t))) {
     // Check if it's a conference proceedings (lower score)
     if (venueLower.includes('conference') || venueLower.includes('workshop')) {
       return 65; // Conference proceedings
@@ -215,7 +231,10 @@ export function calculateVenueQualityScore(
   }
 
   // Preprints (not peer-reviewed)
-  if (source.toLowerCase().includes('arxiv') || venueLower.includes('preprint')) {
+  if (
+    source.toLowerCase().includes('arxiv') ||
+    venueLower.includes('preprint')
+  ) {
     return 40; // Preprint - no peer review yet
   }
 
@@ -250,7 +269,10 @@ export function calculateQualityScore(paper: {
   hIndexJournal?: number | null;
 }): QualityScoreComponents {
   // Calculate each component
-  const citationsPerYear = calculateCitationsPerYear(paper.citationCount, paper.year);
+  const citationsPerYear = calculateCitationsPerYear(
+    paper.citationCount,
+    paper.year,
+  );
   const citationImpact = calculateCitationImpactScore(citationsPerYear);
 
   const journalPrestige = calculateJournalPrestigeScore({
@@ -266,7 +288,7 @@ export function calculateQualityScore(paper: {
 
   // Apply weights
   const totalScore =
-    citationImpact * 0.30 +
+    citationImpact * 0.3 +
     journalPrestige * 0.25 +
     contentDepth * 0.15 +
     recencyBoost * 0.15 +

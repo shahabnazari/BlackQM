@@ -22,8 +22,17 @@
       "validationCriteria": {
         "relevanceThreshold": 0.8,
         "recencyYears": 5,
-        "authorTypesExpected": ["medical professionals", "endocrinologists", "researchers"],
-        "abstractKeywordsRequired": ["treatment", "intervention", "management", "control"]
+        "authorTypesExpected": [
+          "medical professionals",
+          "endocrinologists",
+          "researchers"
+        ],
+        "abstractKeywordsRequired": [
+          "treatment",
+          "intervention",
+          "management",
+          "control"
+        ]
       }
     },
     {
@@ -48,8 +57,18 @@
       "validationCriteria": {
         "relevanceThreshold": 0.8,
         "recencyYears": 10,
-        "geographicDiversity": ["Pacific", "Atlantic", "Indian Ocean", "Caribbean"],
-        "methodologies": ["field study", "modeling", "laboratory", "meta-analysis"]
+        "geographicDiversity": [
+          "Pacific",
+          "Atlantic",
+          "Indian Ocean",
+          "Caribbean"
+        ],
+        "methodologies": [
+          "field study",
+          "modeling",
+          "laboratory",
+          "meta-analysis"
+        ]
       }
     },
     {
@@ -129,7 +148,13 @@
         "recencyYears": 7,
         "empiricalData": true,
         "educationLevels": ["K-12", "undergraduate", "graduate"],
-        "stemFields": ["physics", "biology", "chemistry", "engineering", "mathematics"]
+        "stemFields": [
+          "physics",
+          "biology",
+          "chemistry",
+          "engineering",
+          "mathematics"
+        ]
       }
     },
     {
@@ -154,8 +179,17 @@
       "validationCriteria": {
         "relevanceThreshold": 0.8,
         "recencyYears": 5,
-        "geographicDiversity": ["Europe", "Asia", "North America", "developing countries"],
-        "policyTypes": ["feed-in tariff", "tax credits", "renewable portfolio standards"],
+        "geographicDiversity": [
+          "Europe",
+          "Asia",
+          "North America",
+          "developing countries"
+        ],
+        "policyTypes": [
+          "feed-in tariff",
+          "tax credits",
+          "renewable portfolio standards"
+        ],
         "impactAnalysis": ["economic", "environmental", "social"]
       }
     },
@@ -237,7 +271,12 @@
         "recencyYears": 7,
         "humanStudies": true,
         "imagingTypes": ["fMRI", "PET", "DTI", "EEG"],
-        "interventions": ["physical therapy", "cognitive training", "pharmacological", "neuromodulation"]
+        "interventions": [
+          "physical therapy",
+          "cognitive training",
+          "pharmacological",
+          "neuromodulation"
+        ]
       }
     },
     {
@@ -262,8 +301,18 @@
       "validationCriteria": {
         "relevanceThreshold": 0.8,
         "recencyYears": 3,
-        "technicalMethods": ["SHAP", "LIME", "attention mechanisms", "saliency maps"],
-        "healthcareApplications": ["diagnosis", "prognosis", "treatment recommendation", "imaging"],
+        "technicalMethods": [
+          "SHAP",
+          "LIME",
+          "attention mechanisms",
+          "saliency maps"
+        ],
+        "healthcareApplications": [
+          "diagnosis",
+          "prognosis",
+          "treatment recommendation",
+          "imaging"
+        ],
         "ethicalConsiderations": true
       }
     }

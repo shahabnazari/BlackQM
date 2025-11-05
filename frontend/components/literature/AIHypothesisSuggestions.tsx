@@ -94,23 +94,36 @@ const hypothesisTypeConfig = {
 };
 
 const evidenceStrengthConfig = {
-  strong: { color: 'text-green-600', label: 'Strong Evidence', badgeColor: 'bg-green-100' },
-  moderate: { color: 'text-amber-600', label: 'Moderate Evidence', badgeColor: 'bg-amber-100' },
-  weak: { color: 'text-red-600', label: 'Weak Evidence', badgeColor: 'bg-red-100' },
+  strong: {
+    color: 'text-green-600',
+    label: 'Strong Evidence',
+    badgeColor: 'bg-green-100',
+  },
+  moderate: {
+    color: 'text-amber-600',
+    label: 'Moderate Evidence',
+    badgeColor: 'bg-amber-100',
+  },
+  weak: {
+    color: 'text-red-600',
+    label: 'Weak Evidence',
+    badgeColor: 'bg-red-100',
+  },
 };
 
 const effectSizeConfig = {
   small: { color: 'text-blue-600', label: 'Small', description: '(d ≈ 0.2)' },
-  medium: { color: 'text-purple-600', label: 'Medium', description: '(d ≈ 0.5)' },
+  medium: {
+    color: 'text-purple-600',
+    label: 'Medium',
+    description: '(d ≈ 0.5)',
+  },
   large: { color: 'text-green-600', label: 'Large', description: '(d ≈ 0.8)' },
 };
 
-export const AIHypothesisSuggestions: React.FC<AIHypothesisSuggestionsProps> = ({
-  hypotheses,
-  onSelectHypothesis,
-  onTestHypothesis,
-  className = '',
-}) => {
+export const AIHypothesisSuggestions: React.FC<
+  AIHypothesisSuggestionsProps
+> = ({ hypotheses, onSelectHypothesis, onTestHypothesis, className = '' }) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -184,7 +197,9 @@ export const AIHypothesisSuggestions: React.FC<AIHypothesisSuggestionsProps> = (
                     onSelectHypothesis?.(hyp);
                   }}
                   className="mt-1 focus:outline-none focus:ring-2 focus:ring-purple-500 rounded"
-                  aria-label={isSelected ? 'Deselect hypothesis' : 'Select hypothesis'}
+                  aria-label={
+                    isSelected ? 'Deselect hypothesis' : 'Select hypothesis'
+                  }
                 >
                   {isSelected ? (
                     <CheckCircle2 className="w-5 h-5 text-purple-600" />
@@ -210,14 +225,17 @@ export const AIHypothesisSuggestions: React.FC<AIHypothesisSuggestionsProps> = (
                       className={`px-2 py-1 rounded-md text-xs font-medium ${evidenceConfig.badgeColor} ${evidenceConfig.color}`}
                       title={`Confidence: ${(hyp.confidenceScore * 100).toFixed(0)}%`}
                     >
-                      {evidenceConfig.label} ({(hyp.confidenceScore * 100).toFixed(0)}%)
+                      {evidenceConfig.label} (
+                      {(hyp.confidenceScore * 100).toFixed(0)}%)
                     </span>
 
                     {/* Expected Effect Size */}
                     {hyp.expectedEffectSize && (
                       <span
                         className={`px-2 py-1 rounded-md text-xs font-medium bg-gray-100 ${effectSizeConfig[hyp.expectedEffectSize].color}`}
-                        title={effectSizeConfig[hyp.expectedEffectSize].description}
+                        title={
+                          effectSizeConfig[hyp.expectedEffectSize].description
+                        }
                       >
                         Effect: {effectSizeConfig[hyp.expectedEffectSize].label}
                       </span>
@@ -233,22 +251,36 @@ export const AIHypothesisSuggestions: React.FC<AIHypothesisSuggestionsProps> = (
                   <div className="bg-gray-50 border border-gray-200 rounded-md p-3 mb-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="text-gray-500 font-medium">Independent Variable (IV):</span>
-                        <p className="text-gray-900 mt-0.5">{hyp.independentVariable}</p>
+                        <span className="text-gray-500 font-medium">
+                          Independent Variable (IV):
+                        </span>
+                        <p className="text-gray-900 mt-0.5">
+                          {hyp.independentVariable}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-gray-500 font-medium">Dependent Variable (DV):</span>
-                        <p className="text-gray-900 mt-0.5">{hyp.dependentVariable}</p>
+                        <span className="text-gray-500 font-medium">
+                          Dependent Variable (DV):
+                        </span>
+                        <p className="text-gray-900 mt-0.5">
+                          {hyp.dependentVariable}
+                        </p>
                       </div>
                       {hyp.moderator && (
                         <div>
-                          <span className="text-amber-600 font-medium">Moderator:</span>
-                          <p className="text-gray-900 mt-0.5">{hyp.moderator}</p>
+                          <span className="text-amber-600 font-medium">
+                            Moderator:
+                          </span>
+                          <p className="text-gray-900 mt-0.5">
+                            {hyp.moderator}
+                          </p>
                         </div>
                       )}
                       {hyp.mediator && (
                         <div>
-                          <span className="text-green-600 font-medium">Mediator:</span>
+                          <span className="text-green-600 font-medium">
+                            Mediator:
+                          </span>
                           <p className="text-gray-900 mt-0.5">{hyp.mediator}</p>
                         </div>
                       )}
@@ -260,7 +292,9 @@ export const AIHypothesisSuggestions: React.FC<AIHypothesisSuggestionsProps> = (
                     <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
                     <div>
                       <span className="font-medium">Suggested Test:</span>{' '}
-                      <span className="text-gray-900">{hyp.suggestedStatisticalTest}</span>
+                      <span className="text-gray-900">
+                        {hyp.suggestedStatisticalTest}
+                      </span>
                     </div>
                   </div>
 
@@ -292,7 +326,8 @@ export const AIHypothesisSuggestions: React.FC<AIHypothesisSuggestionsProps> = (
                   {/* Related Themes Count */}
                   {hyp.relatedThemes.length > 0 && (
                     <div className="mt-2 text-xs text-gray-500">
-                      Based on {hyp.relatedThemes.length} theme{hyp.relatedThemes.length !== 1 ? 's' : ''}
+                      Based on {hyp.relatedThemes.length} theme
+                      {hyp.relatedThemes.length !== 1 ? 's' : ''}
                     </div>
                   )}
                 </div>
@@ -323,7 +358,8 @@ export const AIHypothesisSuggestions: React.FC<AIHypothesisSuggestionsProps> = (
       {selectedIds.size > 0 && (
         <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
           <p className="text-sm text-purple-900">
-            <span className="font-semibold">{selectedIds.size}</span> hypothesis{selectedIds.size !== 1 ? 'es' : ''} selected
+            <span className="font-semibold">{selectedIds.size}</span> hypothesis
+            {selectedIds.size !== 1 ? 'es' : ''} selected
           </p>
         </div>
       )}

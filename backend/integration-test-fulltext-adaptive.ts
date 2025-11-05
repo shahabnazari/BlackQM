@@ -23,7 +23,8 @@ const TEST_CASES = [
         id: 'abstract-1',
         type: 'paper',
         title: 'Climate Adaptation in Cities',
-        content: 'Short abstract about climate adaptation strategies in urban environments. Covers green infrastructure, community engagement, and policy frameworks. Approximately 250 words of content here.',
+        content:
+          'Short abstract about climate adaptation strategies in urban environments. Covers green infrastructure, community engagement, and policy frameworks. Approximately 250 words of content here.',
         metadata: {
           contentType: 'abstract',
           contentSource: 'abstract_field',
@@ -35,7 +36,8 @@ const TEST_CASES = [
         id: 'abstract-2',
         type: 'paper',
         title: 'Urban Resilience Planning',
-        content: 'Brief abstract discussing urban resilience planning methodologies. Focuses on stakeholder engagement and integrated planning approaches. Around 200 words.',
+        content:
+          'Brief abstract discussing urban resilience planning methodologies. Focuses on stakeholder engagement and integrated planning approaches. Around 200 words.',
         metadata: {
           contentType: 'abstract',
           contentSource: 'abstract_field',
@@ -47,7 +49,8 @@ const TEST_CASES = [
         id: 'abstract-3',
         type: 'paper',
         title: 'Green Infrastructure Benefits',
-        content: 'Abstract covering the multiple benefits of green infrastructure including heat reduction, stormwater management, and biodiversity support. Approximately 230 words.',
+        content:
+          'Abstract covering the multiple benefits of green infrastructure including heat reduction, stormwater management, and biodiversity support. Approximately 230 words.',
         metadata: {
           contentType: 'abstract',
           contentSource: 'abstract_field',
@@ -118,7 +121,8 @@ const TEST_CASES = [
         id: 'abstract-mixed-1',
         type: 'paper',
         title: 'Urban Planning Brief (Abstract)',
-        content: 'Brief abstract about urban planning considerations for climate resilience. Covers basic concepts and recommendations. About 180 words.',
+        content:
+          'Brief abstract about urban planning considerations for climate resilience. Covers basic concepts and recommendations. About 180 words.',
         metadata: {
           contentType: 'abstract',
           contentSource: 'abstract_field',
@@ -139,9 +143,13 @@ const TEST_CASES = [
 
 async function runIntegrationTest() {
   console.log('');
-  console.log('🧪 ═══════════════════════════════════════════════════════════════════');
+  console.log(
+    '🧪 ═══════════════════════════════════════════════════════════════════',
+  );
   console.log('🧪 INTEGRATION TEST: Full-Text + Adaptive Thresholds');
-  console.log('🧪 ═══════════════════════════════════════════════════════════════════');
+  console.log(
+    '🧪 ═══════════════════════════════════════════════════════════════════',
+  );
   console.log('');
 
   // Check backend health
@@ -157,27 +165,43 @@ async function runIntegrationTest() {
 
   // Run each test case
   for (const testCase of TEST_CASES) {
-    console.log('═══════════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════════',
+    );
     console.log(`TEST: ${testCase.name}`);
-    console.log('═══════════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════════',
+    );
     console.log('');
     console.log('📊 Content Breakdown:');
     testCase.sources.forEach((s) => {
       console.log(`   • ${s.title}`);
       console.log(`     Content Type: ${s.metadata.contentType}`);
       console.log(`     Content Length: ${s.metadata.contentLength} chars`);
-      console.log(`     Full Text Available: ${s.metadata.hasFullText ? 'YES' : 'NO'}`);
+      console.log(
+        `     Full Text Available: ${s.metadata.hasFullText ? 'YES' : 'NO'}`,
+      );
     });
 
-    const avgLength = testCase.sources.reduce((sum, s) => sum + s.metadata.contentLength, 0) / testCase.sources.length;
+    const avgLength =
+      testCase.sources.reduce((sum, s) => sum + s.metadata.contentLength, 0) /
+      testCase.sources.length;
     console.log('');
     console.log(`   Average content length: ${Math.round(avgLength)} chars`);
     console.log('');
     console.log('🎯 Expected Behavior:');
-    console.log(`   • Adaptive Thresholds: ${testCase.expectedBehavior.adaptiveThresholds ? 'YES (abstract-only)' : 'NO (full-text detected)'}`);
-    console.log(`   • Coherence Threshold: ${testCase.expectedBehavior.coherenceThreshold}`);
-    console.log(`   • Evidence Threshold: ${testCase.expectedBehavior.evidenceThreshold}`);
-    console.log(`   • Expected Themes: ${testCase.expectedBehavior.expectedThemes}`);
+    console.log(
+      `   • Adaptive Thresholds: ${testCase.expectedBehavior.adaptiveThresholds ? 'YES (abstract-only)' : 'NO (full-text detected)'}`,
+    );
+    console.log(
+      `   • Coherence Threshold: ${testCase.expectedBehavior.coherenceThreshold}`,
+    );
+    console.log(
+      `   • Evidence Threshold: ${testCase.expectedBehavior.evidenceThreshold}`,
+    );
+    console.log(
+      `   • Expected Themes: ${testCase.expectedBehavior.expectedThemes}`,
+    );
     console.log('');
     console.log('📡 Calling API...');
 
@@ -194,38 +218,50 @@ async function runIntegrationTest() {
           validationLevel: 'rigorous',
           researchContext: 'Climate adaptation testing',
         },
-        { timeout: 300000 } // 5 minutes
+        { timeout: 300000 }, // 5 minutes
       );
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
 
       console.log(`✅ API Response (${duration}s)`);
       console.log(`   Themes extracted: ${response.data.themes?.length || 0}`);
-      console.log(`   Saturation reached: ${response.data.saturationAnalysis?.reached ? 'Yes' : 'No'}`);
+      console.log(
+        `   Saturation reached: ${response.data.saturationAnalysis?.reached ? 'Yes' : 'No'}`,
+      );
 
       // Validate results match expectations
       const actualThemes = response.data.themes?.length || 0;
       if (actualThemes > 0) {
         console.log(`   ✅ SUCCESS: Extracted ${actualThemes} themes`);
       } else if (testCase.expectedBehavior.adaptiveThresholds) {
-        console.log(`   ⚠️  WARNING: 0 themes (adaptive thresholds may need further tuning)`);
+        console.log(
+          `   ⚠️  WARNING: 0 themes (adaptive thresholds may need further tuning)`,
+        );
       } else {
-        console.log(`   ⚠️  WARNING: 0 themes (unexpected for full-text content)`);
+        console.log(
+          `   ⚠️  WARNING: 0 themes (unexpected for full-text content)`,
+        );
       }
 
       console.log('');
     } catch (error: any) {
       console.error(`❌ TEST FAILED`);
-      console.error(`   Error: ${error.response?.data?.message || error.message}`);
+      console.error(
+        `   Error: ${error.response?.data?.message || error.message}`,
+      );
       console.error('');
     }
 
     console.log('');
   }
 
-  console.log('═══════════════════════════════════════════════════════════════════');
+  console.log(
+    '═══════════════════════════════════════════════════════════════════',
+  );
   console.log('✅ INTEGRATION TEST COMPLETE');
-  console.log('═══════════════════════════════════════════════════════════════════');
+  console.log(
+    '═══════════════════════════════════════════════════════════════════',
+  );
   console.log('');
   console.log('📝 Check backend logs for:');
   console.log('   • "📉 ADAPTIVE THRESHOLDS" message (Test 1)');

@@ -26,7 +26,11 @@ export function useThemeExtractionProgress() {
   });
 
   const startExtraction = useCallback((totalSources: number) => {
-    console.log('🟣 useThemeExtractionProgress: startExtraction called with', totalSources, 'sources');
+    console.log(
+      '🟣 useThemeExtractionProgress: startExtraction called with',
+      totalSources,
+      'sources'
+    );
     const newProgress = {
       isExtracting: true,
       currentSource: 0,
@@ -39,17 +43,22 @@ export function useThemeExtractionProgress() {
     setProgress(newProgress);
   }, []);
 
-  const updateProgress = useCallback((currentSource: number, totalSources: number) => {
-    console.log(`🟣 useThemeExtractionProgress: updateProgress called (${currentSource}/${totalSources})`);
-    const progressPercent = Math.round((currentSource / totalSources) * 100);
-    setProgress(prev => ({
-      ...prev,
-      currentSource,
-      progress: progressPercent,
-      message: `Extracting themes from source ${currentSource} of ${totalSources}...`,
-      stage: 'extracting',
-    }));
-  }, []);
+  const updateProgress = useCallback(
+    (currentSource: number, totalSources: number) => {
+      console.log(
+        `🟣 useThemeExtractionProgress: updateProgress called (${currentSource}/${totalSources})`
+      );
+      const progressPercent = Math.round((currentSource / totalSources) * 100);
+      setProgress(prev => ({
+        ...prev,
+        currentSource,
+        progress: progressPercent,
+        message: `Extracting themes from source ${currentSource} of ${totalSources}...`,
+        stage: 'extracting',
+      }));
+    },
+    []
+  );
 
   const setDeduplicating = useCallback(() => {
     setProgress(prev => ({
@@ -61,7 +70,9 @@ export function useThemeExtractionProgress() {
   }, []);
 
   const completeExtraction = useCallback((themesCount: number) => {
-    console.log(`🟣 useThemeExtractionProgress: completeExtraction called with ${themesCount} themes`);
+    console.log(
+      `🟣 useThemeExtractionProgress: completeExtraction called with ${themesCount} themes`
+    );
     setProgress(prev => ({
       ...prev,
       isExtracting: false,

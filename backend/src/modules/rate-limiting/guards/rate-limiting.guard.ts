@@ -88,6 +88,3 @@ export class RateLimitingGuard implements CanActivate {
     response.setHeader('Retry-After', windowSeconds);
   }
 }
-
-
-

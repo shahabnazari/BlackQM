@@ -100,7 +100,8 @@ function generate4PartMessage(
         'Converting ALL source content into semantic embeddings—mathematical representations that capture meaning (3,072-dimension vectors using text-embedding-3-large). This stage is FAST (~1-2 seconds) because it\'s mathematical transformation, not "deep reading." The system processes full-text papers (10,000+ words), full articles from abstract fields, and standard abstracts. Later stages (2-6) perform deeper analysis using GPT-4, which takes longer (2-6 seconds per batch).',
       whyItMatters:
         'Following Braun & Clarke (2006), familiarization builds an overview of the dataset. Embeddings enable the AI to understand semantic relationships (e.g., "autonomy" ≈ "self-determination") even across different wording. Full-text papers provide 40-50x more content than abstracts, enabling richer pattern detection. This stage is about breadth; depth comes in later stages when GPT-4 analyzes actual content for concepts and themes.',
-      currentOperation: 'Generating semantic embeddings from all available content (mathematical transformation, not deep reading)',
+      currentOperation:
+        'Generating semantic embeddings from all available content (mathematical transformation, not deep reading)',
     },
     {
       // Stage 2: Coding
@@ -133,7 +134,7 @@ function generate4PartMessage(
       // Stage 5: Theme Definition
       stageName: 'Theme Naming & Definition',
       whatWeAreDoing:
-        'Defining each theme\'s essence and choosing clear, descriptive names. Each theme gets a precise scope - what it includes AND what it doesn\'t.',
+        "Defining each theme's essence and choosing clear, descriptive names. Each theme gets a precise scope - what it includes AND what it doesn't.",
       whyItMatters:
         'Clear definitions prevent misinterpretation. A theme called "Barriers" is vague; "Institutional Barriers to Implementation" is actionable. Names should convey the analytical narrative.',
       currentOperation: 'Defining and naming final themes',
@@ -230,7 +231,7 @@ export default function ThemeExtractionProgressModal({
             exit={{ scale: 0.95, y: 20 }}
             transition={{ type: 'spring', duration: 0.5 }}
             className="w-full max-w-4xl max-h-[90vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="p-8 overflow-y-auto">
               {progress.stage === 'error' ? (

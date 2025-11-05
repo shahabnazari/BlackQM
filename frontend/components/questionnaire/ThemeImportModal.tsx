@@ -23,14 +23,21 @@ interface ScrollAreaProps {
   className?: string;
 }
 
-const ScrollArea: React.FC<ScrollAreaProps> = ({ children, className = '' }) => (
-  <div className={`overflow-auto ${className}`}>{children}</div>
-);
+const ScrollArea: React.FC<ScrollAreaProps> = ({
+  children,
+  className = '',
+}) => <div className={`overflow-auto ${className}`}>{children}</div>;
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import {
@@ -53,7 +60,9 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
   onClose,
   onImport,
 }) => {
-  const [activeTab, setActiveTab] = useState<'themes' | 'preview' | 'settings'>('themes');
+  const [activeTab, setActiveTab] = useState<'themes' | 'preview' | 'settings'>(
+    'themes'
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [themes, setThemes] = useState<Theme[]>([]);
   const [selectedThemes, setSelectedThemes] = useState<Set<string>>(new Set());
@@ -64,8 +73,10 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Generation settings
-  const [itemType, setItemType] = useState<GenerateSurveyItemsOptions['itemType']>('mixed');
-  const [scaleType, setScaleType] = useState<GenerateSurveyItemsOptions['scaleType']>('1-5');
+  const [itemType, setItemType] =
+    useState<GenerateSurveyItemsOptions['itemType']>('mixed');
+  const [scaleType, setScaleType] =
+    useState<GenerateSurveyItemsOptions['scaleType']>('1-5');
   const [itemsPerTheme, setItemsPerTheme] = useState(3);
   const [includeReverseCoded, setIncludeReverseCoded] = useState(true);
   const [researchContext, setResearchContext] = useState('');
@@ -93,46 +104,80 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
     {
       id: 'theme-1',
       name: 'Environmental Responsibility',
-      description: 'Individual and collective actions toward environmental protection and sustainability',
+      description:
+        'Individual and collective actions toward environmental protection and sustainability',
       prevalence: 0.85,
       confidence: 0.92,
       sources: [
-        { id: 'p1', title: 'Climate Action and Individual Behavior', type: 'paper' },
+        {
+          id: 'p1',
+          title: 'Climate Action and Individual Behavior',
+          type: 'paper',
+        },
         { id: 'p2', title: 'Sustainable Living Practices', type: 'paper' },
       ],
-      keyPhrases: ['recycling', 'carbon footprint', 'renewable energy', 'conservation'],
+      keyPhrases: [
+        'recycling',
+        'carbon footprint',
+        'renewable energy',
+        'conservation',
+      ],
       subthemes: [
-        { name: 'Personal Actions', description: 'Individual behaviors for environmental protection' },
-        { name: 'Policy Support', description: 'Support for environmental policies and regulations' },
+        {
+          name: 'Personal Actions',
+          description: 'Individual behaviors for environmental protection',
+        },
+        {
+          name: 'Policy Support',
+          description: 'Support for environmental policies and regulations',
+        },
       ],
     },
     {
       id: 'theme-2',
       name: 'Digital Transformation Impact',
-      description: 'Effects of digital technology on work, education, and social interactions',
+      description:
+        'Effects of digital technology on work, education, and social interactions',
       prevalence: 0.78,
       confidence: 0.88,
       sources: [
         { id: 'p3', title: 'Remote Work and Productivity', type: 'paper' },
         { id: 'v1', title: 'The Future of Digital Education', type: 'video' },
       ],
-      keyPhrases: ['remote work', 'online learning', 'digital divide', 'virtual collaboration'],
+      keyPhrases: [
+        'remote work',
+        'online learning',
+        'digital divide',
+        'virtual collaboration',
+      ],
       subthemes: [
-        { name: 'Work-Life Balance', description: 'Impact on work-life boundaries' },
-        { name: 'Digital Skills', description: 'Required competencies for digital age' },
+        {
+          name: 'Work-Life Balance',
+          description: 'Impact on work-life boundaries',
+        },
+        {
+          name: 'Digital Skills',
+          description: 'Required competencies for digital age',
+        },
       ],
     },
     {
       id: 'theme-3',
       name: 'Health and Wellbeing',
-      description: 'Physical and mental health considerations in modern society',
+      description:
+        'Physical and mental health considerations in modern society',
       prevalence: 0.91,
       confidence: 0.94,
       sources: [
         { id: 'p4', title: 'Mental Health in the Workplace', type: 'paper' },
         { id: 'p5', title: 'Preventive Healthcare Strategies', type: 'paper' },
       ],
-      keyPhrases: ['mental health', 'wellness', 'stress management', 'preventive care'],
+      keyPhrases: [
+        'mental health',
+        'wellness',
+        'stress management',
+        'preventive care',
+      ],
     },
   ];
 
@@ -188,7 +233,9 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
       setSelectedItems(new Set(result.items.map(item => item.id)));
       setActiveTab('preview');
 
-      toast.success(`Generated ${result.items.length} survey items from ${selectedThemes.size} themes`);
+      toast.success(
+        `Generated ${result.items.length} survey items from ${selectedThemes.size} themes`
+      );
     } catch (error) {
       console.error('Failed to generate survey items:', error);
       toast.error('Failed to generate survey items. Please try again.');
@@ -221,17 +268,21 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
       return;
     }
 
-    const itemsToImport = generatedItems.filter(item => selectedItems.has(item.id));
-    const questionnaireItems = themeToSurveyService.convertToQuestionnaireFormat(itemsToImport);
+    const itemsToImport = generatedItems.filter(item =>
+      selectedItems.has(item.id)
+    );
+    const questionnaireItems =
+      themeToSurveyService.convertToQuestionnaireFormat(itemsToImport);
 
     onImport(questionnaireItems);
     toast.success(`Imported ${selectedItems.size} items to questionnaire`);
     onClose();
   };
 
-  const filteredThemes = themes.filter(theme =>
-    theme.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    theme.description.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredThemes = themes.filter(
+    theme =>
+      theme.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      theme.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -257,7 +308,13 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'themes' | 'preview' | 'settings')} className="flex-1 flex flex-col">
+        <Tabs
+          value={activeTab}
+          onValueChange={v =>
+            setActiveTab(v as 'themes' | 'preview' | 'settings')
+          }
+          className="flex-1 flex flex-col"
+        >
           <TabsList className="w-full rounded-none border-b">
             <TabsTrigger value="themes" className="flex-1">
               1. Select Themes
@@ -270,7 +327,11 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
             <TabsTrigger value="settings" className="flex-1">
               2. Generation Settings
             </TabsTrigger>
-            <TabsTrigger value="preview" className="flex-1" disabled={generatedItems.length === 0}>
+            <TabsTrigger
+              value="preview"
+              className="flex-1"
+              disabled={generatedItems.length === 0}
+            >
               3. Preview & Select
               {generatedItems.length > 0 && (
                 <Badge variant="secondary" className="ml-2">
@@ -289,22 +350,16 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                   <Input
                     placeholder="Search themes..."
                     value={searchQuery}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setSearchQuery(e.target.value)
+                    }
                     className="pl-9"
                   />
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={selectAllThemes}
-                >
+                <Button variant="outline" size="sm" onClick={selectAllThemes}>
                   Select All
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={deselectAllThemes}
-                >
+                <Button variant="outline" size="sm" onClick={deselectAllThemes}>
                   Clear
                 </Button>
               </div>
@@ -329,7 +384,8 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                       key={theme.id}
                       className={cn(
                         'p-4 transition-all',
-                        selectedThemes.has(theme.id) && 'ring-2 ring-purple-500 bg-purple-50/50 dark:bg-purple-900/20'
+                        selectedThemes.has(theme.id) &&
+                          'ring-2 ring-purple-500 bg-purple-50/50 dark:bg-purple-900/20'
                       )}
                     >
                       <div className="space-y-3">
@@ -357,15 +413,20 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                               {theme.description}
                             </p>
 
-                            {theme.keyPhrases && theme.keyPhrases.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mb-2">
-                                {theme.keyPhrases.map(phrase => (
-                                  <Badge key={phrase} variant="outline" className="text-xs">
-                                    {phrase}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
+                            {theme.keyPhrases &&
+                              theme.keyPhrases.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                  {theme.keyPhrases.map(phrase => (
+                                    <Badge
+                                      key={phrase}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {phrase}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
 
                             <button
                               onClick={() => toggleExpanded(theme.id)}
@@ -395,10 +456,18 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                                 </p>
                                 <div className="space-y-1">
                                   {theme.sources.map(source => (
-                                    <div key={source.id} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                    <div
+                                      key={source.id}
+                                      className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
+                                    >
                                       <FileText className="w-3 h-3" />
-                                      <span className="truncate">{source.title}</span>
-                                      <Badge variant="outline" className="text-xs">
+                                      <span className="truncate">
+                                        {source.title}
+                                      </span>
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
                                         {source.type}
                                       </Badge>
                                     </div>
@@ -414,7 +483,10 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                                 </p>
                                 <div className="space-y-1">
                                   {theme.subthemes.map(subtheme => (
-                                    <div key={subtheme.name} className="text-xs">
+                                    <div
+                                      key={subtheme.name}
+                                      className="text-xs"
+                                    >
                                       <span className="font-medium text-gray-700 dark:text-gray-300">
                                         {subtheme.name}:
                                       </span>{' '}
@@ -441,16 +513,27 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
             <div className="max-w-2xl mx-auto space-y-6">
               <div>
                 <Label>Item Type</Label>
-                <Select value={itemType} onValueChange={(v) => setItemType(v as GenerateSurveyItemsOptions['itemType'])}>
+                <Select
+                  value={itemType}
+                  onValueChange={v =>
+                    setItemType(v as GenerateSurveyItemsOptions['itemType'])
+                  }
+                >
                   <SelectTrigger className="mt-2">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="mixed">Mixed (Recommended)</SelectItem>
                     <SelectItem value="likert">Likert Scales Only</SelectItem>
-                    <SelectItem value="multiple_choice">Multiple Choice Only</SelectItem>
-                    <SelectItem value="semantic_differential">Semantic Differential</SelectItem>
-                    <SelectItem value="matrix_grid">Matrix/Grid Questions</SelectItem>
+                    <SelectItem value="multiple_choice">
+                      Multiple Choice Only
+                    </SelectItem>
+                    <SelectItem value="semantic_differential">
+                      Semantic Differential
+                    </SelectItem>
+                    <SelectItem value="matrix_grid">
+                      Matrix/Grid Questions
+                    </SelectItem>
                     <SelectItem value="rating_scale">Rating Scales</SelectItem>
                   </SelectContent>
                 </Select>
@@ -461,9 +544,21 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
 
               <div>
                 <Label>Scale Type</Label>
-                <RadioGroup value={scaleType || '1-5'} onValueChange={(v) => setScaleType(v as GenerateSurveyItemsOptions['scaleType'])}>
+                <RadioGroup
+                  value={scaleType || '1-5'}
+                  onValueChange={v =>
+                    setScaleType(v as GenerateSurveyItemsOptions['scaleType'])
+                  }
+                >
                   <div className="grid grid-cols-2 gap-3 mt-2">
-                    {['1-5', '1-7', '1-10', 'agree-disagree', 'frequency', 'satisfaction'].map(scale => (
+                    {[
+                      '1-5',
+                      '1-7',
+                      '1-10',
+                      'agree-disagree',
+                      'frequency',
+                      'satisfaction',
+                    ].map(scale => (
                       <div key={scale} className="flex items-center space-x-2">
                         <RadioGroupItem value={scale} id={scale} />
                         <Label htmlFor={scale} className="text-sm capitalize">
@@ -483,11 +578,14 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                     min={1}
                     max={10}
                     value={itemsPerTheme}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setItemsPerTheme(parseInt(e.target.value) || 3)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setItemsPerTheme(parseInt(e.target.value) || 3)
+                    }
                     className="w-24"
                   />
                   <span className="text-sm text-gray-500">
-                    Will generate ~{selectedThemes.size * itemsPerTheme} items total
+                    Will generate ~{selectedThemes.size * itemsPerTheme} items
+                    total
                   </span>
                 </div>
               </div>
@@ -496,7 +594,9 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                 <Checkbox
                   id="reverse"
                   checked={includeReverseCoded}
-                  onCheckedChange={(checked) => setIncludeReverseCoded(checked as boolean)}
+                  onCheckedChange={checked =>
+                    setIncludeReverseCoded(checked as boolean)
+                  }
                 />
                 <Label htmlFor="reverse" className="text-sm">
                   Include reverse-coded items for reliability
@@ -508,7 +608,9 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                 <Input
                   placeholder="e.g., Environmental attitudes in urban communities"
                   value={researchContext}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setResearchContext(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setResearchContext(e.target.value)
+                  }
                   className="mt-2"
                 />
               </div>
@@ -518,7 +620,9 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                 <Input
                   placeholder="e.g., College students, Healthcare professionals"
                   value={targetAudience}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTargetAudience(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setTargetAudience(e.target.value)
+                  }
                   className="mt-2"
                 />
               </div>
@@ -533,11 +637,7 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                   {selectedItems.size} of {generatedItems.length} items selected
                 </p>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={selectAllItems}
-                  >
+                  <Button variant="outline" size="sm" onClick={selectAllItems}>
                     Select All
                   </Button>
                   <Button
@@ -566,7 +666,8 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                       key={item.id}
                       className={cn(
                         'p-4 transition-all',
-                        selectedItems.has(item.id) && 'ring-2 ring-blue-500 bg-blue-50/50 dark:bg-blue-900/20'
+                        selectedItems.has(item.id) &&
+                          'ring-2 ring-blue-500 bg-blue-50/50 dark:bg-blue-900/20'
                       )}
                     >
                       <div className="flex items-start gap-3">
@@ -588,7 +689,10 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                               {item.themeName}
                             </Badge>
                             {item.reversed && (
-                              <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-orange-300 text-orange-600"
+                              >
                                 Reverse-coded
                               </Badge>
                             )}
@@ -603,7 +707,9 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                               {item.scaleLabels.map((label, i) => (
                                 <React.Fragment key={i}>
                                   <span>{label}</span>
-                                  {i < item.scaleLabels!.length - 1 && <span>•</span>}
+                                  {i < item.scaleLabels!.length - 1 && (
+                                    <span>•</span>
+                                  )}
                                 </React.Fragment>
                               ))}
                             </div>
@@ -612,7 +718,10 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                           {item.options && (
                             <div className="space-y-1 mt-2">
                               {item.options.map((option, i) => (
-                                <div key={i} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                <div
+                                  key={i}
+                                  className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"
+                                >
                                   <Square className="w-3 h-3" />
                                   <span>{option}</span>
                                 </div>
@@ -642,12 +751,14 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
           <div className="flex items-center gap-2">
             {activeTab === 'themes' && selectedThemes.size > 0 && (
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {selectedThemes.size} theme{selectedThemes.size !== 1 ? 's' : ''} selected
+                {selectedThemes.size} theme
+                {selectedThemes.size !== 1 ? 's' : ''} selected
               </p>
             )}
             {activeTab === 'preview' && generatedItems.length > 0 && (
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Ready to import {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''}
+                Ready to import {selectedItems.size} item
+                {selectedItems.size !== 1 ? 's' : ''}
               </p>
             )}
           </div>
@@ -690,7 +801,8 @@ export const ThemeImportModal: React.FC<ThemeImportModalProps> = ({
                 onClick={handleImport}
                 disabled={selectedItems.size === 0}
               >
-                Import {selectedItems.size} Item{selectedItems.size !== 1 ? 's' : ''}
+                Import {selectedItems.size} Item
+                {selectedItems.size !== 1 ? 's' : ''}
               </Button>
             )}
           </div>

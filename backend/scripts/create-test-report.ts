@@ -52,7 +52,8 @@ async function main() {
         },
       ],
       provenance: [],
-      content: '<h1>Integration Test Report for Collaboration Features</h1><h2>Abstract</h2><p>This is a test abstract for integration testing.</p><h2>Introduction</h2><p>This is a test introduction section.</p><h2>Methods</h2><p>Test methods section for collaboration testing.</p>',
+      content:
+        '<h1>Integration Test Report for Collaboration Features</h1><h2>Abstract</h2><p>This is a test abstract for integration testing.</p><h2>Introduction</h2><p>This is a test introduction section.</p><h2>Methods</h2><p>Test methods section for collaboration testing.</p>',
     },
   });
 
@@ -61,7 +62,9 @@ async function main() {
   console.log(`   Title: ${(report.metadata as any).title}`);
   console.log(`   Status: ${report.status}`);
   console.log(`   Format: ${report.format}`);
-  console.log('\nYou can now test collaboration endpoints with this report ID.');
+  console.log(
+    '\nYou can now test collaboration endpoints with this report ID.',
+  );
 
   return report;
 }

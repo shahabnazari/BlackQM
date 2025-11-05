@@ -1,4 +1,5 @@
 # Stage 3: Performance Testing Guide
+
 ## Phase 10 Day 5.7 - Enterprise-Grade Load & Stress Testing
 
 **Purpose:** Validate system performance under realistic and extreme load conditions
@@ -13,6 +14,7 @@
 Performance testing validates that the system meets defined Service Level Agreements (SLAs) under various load conditions. This is not theoretical - these benchmarks must reflect **real-world PhD researcher usage patterns**.
 
 **Key Questions:**
+
 - Can the system handle 50 concurrent researchers during peak hours?
 - Does search response time remain <3s under load?
 - Can theme extraction process 100+ papers without timeout?
@@ -25,16 +27,19 @@ Performance testing validates that the system meets defined Service Level Agreem
 ### Three-Tier Load Testing Approach
 
 **Tier 1: Baseline Performance (1 concurrent user)**
+
 - Establishes performance baseline without contention
 - Validates optimal performance characteristics
 - Identifies slow endpoints needing optimization
 
 **Tier 2: Expected Load (10-50 concurrent users)**
+
 - Simulates typical peak usage (e.g., seminar class of PhD students)
 - Validates SLA compliance under realistic conditions
 - Measures throughput, latency, error rate
 
 **Tier 3: Stress Testing (100-200 concurrent users)**
+
 - Identifies breaking point and graceful degradation
 - Validates rate limiting, queue management, resource constraints
 - Ensures no data corruption under extreme load
@@ -45,24 +50,24 @@ Performance testing validates that the system meets defined Service Level Agreem
 
 ### Critical Endpoints (User-Facing Operations)
 
-| Endpoint | Operation | p50 Latency | p95 Latency | p99 Latency | Throughput | Error Rate |
-|----------|-----------|-------------|-------------|-------------|------------|------------|
-| `POST /api/literature/search/public` | Literature Search | <1.5s | <3s | <5s | ≥20 req/s | <1% |
-| `POST /api/literature/themes/unified-extract` | Single Paper Theme Extraction | <15s | <30s | <45s | ≥5 req/s | <2% |
-| `POST /api/literature/themes/unified-extract-batch` | Batch Theme Extraction (25 papers) | <300s | <600s | <900s | ≥1 req/s | <5% |
-| `GET /api/health/ready` | Health Check | <20ms | <50ms | <100ms | ≥1000 req/s | <0.1% |
-| `POST /api/auth/login` | Authentication | <200ms | <500ms | <1s | ≥50 req/s | <0.5% |
-| `GET /api/papers` | List Papers | <500ms | <1s | <2s | ≥30 req/s | <1% |
+| Endpoint                                            | Operation                          | p50 Latency | p95 Latency | p99 Latency | Throughput  | Error Rate |
+| --------------------------------------------------- | ---------------------------------- | ----------- | ----------- | ----------- | ----------- | ---------- |
+| `POST /api/literature/search/public`                | Literature Search                  | <1.5s       | <3s         | <5s         | ≥20 req/s   | <1%        |
+| `POST /api/literature/themes/unified-extract`       | Single Paper Theme Extraction      | <15s        | <30s        | <45s        | ≥5 req/s    | <2%        |
+| `POST /api/literature/themes/unified-extract-batch` | Batch Theme Extraction (25 papers) | <300s       | <600s       | <900s       | ≥1 req/s    | <5%        |
+| `GET /api/health/ready`                             | Health Check                       | <20ms       | <50ms       | <100ms      | ≥1000 req/s | <0.1%      |
+| `POST /api/auth/login`                              | Authentication                     | <200ms      | <500ms      | <1s         | ≥50 req/s   | <0.5%      |
+| `GET /api/papers`                                   | List Papers                        | <500ms      | <1s         | <2s         | ≥30 req/s   | <1%        |
 
 ### Background Operations (System Health)
 
-| Metric | Target | Critical Threshold |
-|--------|--------|-------------------|
-| Database Connection Pool | ≤80% utilization | 100% = fail |
-| Memory Usage | ≤1.5GB | 2GB = OOM risk |
-| CPU Usage | ≤70% average | 90% = degradation |
-| API Rate Limit | ≤80% of quota | 100% = 429 errors |
-| Cache Hit Rate | ≥60% | <30% = inefficient |
+| Metric                   | Target           | Critical Threshold |
+| ------------------------ | ---------------- | ------------------ |
+| Database Connection Pool | ≤80% utilization | 100% = fail        |
+| Memory Usage             | ≤1.5GB           | 2GB = OOM risk     |
+| CPU Usage                | ≤70% average     | 90% = degradation  |
+| API Rate Limit           | ≤80% of quota    | 100% = 429 errors  |
+| Cache Hit Rate           | ≥60%             | <30% = inefficient |
 
 ---
 
@@ -97,25 +102,26 @@ import { check, sleep } from 'k6';
 // Test configuration
 export const options = {
   stages: [
-    { duration: '2m', target: 10 },  // Ramp up to 10 users over 2 minutes
-    { duration: '5m', target: 10 },  // Stay at 10 users for 5 minutes
-    { duration: '2m', target: 0 },   // Ramp down to 0 users
+    { duration: '2m', target: 10 }, // Ramp up to 10 users over 2 minutes
+    { duration: '5m', target: 10 }, // Stay at 10 users for 5 minutes
+    { duration: '2m', target: 0 }, // Ramp down to 0 users
   ],
   thresholds: {
     http_req_duration: ['p(95)<3000'], // 95% of requests must complete below 3s
-    http_req_failed: ['rate<0.01'],    // Error rate must be below 1%
+    http_req_failed: ['rate<0.01'], // Error rate must be below 1%
   },
 };
 
 // Test scenario
 export default function () {
-  const res = http.post('http://localhost:4000/api/literature/search/public',
+  const res = http.post(
+    'http://localhost:4000/api/literature/search/public',
     JSON.stringify({
       query: 'machine learning healthcare',
       sources: ['arxiv', 'pubmed'],
       limit: 20,
     }),
-    { headers: { 'Content-Type': 'application/json' } }
+    { headers: { 'Content-Type': 'application/json' } },
   );
 
   check(res, {
@@ -139,11 +145,13 @@ export default function () {
 **Success Criteria:** p95 < 3s, error rate < 1%
 
 **Execution:**
+
 ```bash
 k6 run backend/test/performance/k6-literature-search.js
 ```
 
 **Expected Results:**
+
 ```
 ✓ status is 200           | 100% of checks pass
 ✓ response time < 3s      | ≥95% of requests under 3s
@@ -155,6 +163,7 @@ http_reqs...........: 1000      | ~16.7 req/s
 ```
 
 **Interpretation:**
+
 - ✅ **Pass:** p95 = 2.1s (within 3s SLA)
 - ✅ **Pass:** Error rate = 0.2% (within 1% SLA)
 - ✅ **Pass:** Throughput = 16.7 req/s (exceeds 10 req/s minimum)
@@ -168,16 +177,19 @@ http_reqs...........: 1000      | ~16.7 req/s
 **Success Criteria:** p95 < 30s, error rate < 2%, no rate limit violations
 
 **Key Consideration:** This endpoint calls OpenAI GPT-4, which has rate limits:
+
 - Free tier: 3 requests/minute
 - Tier 1: 500 requests/day
 - Rate limiting must prevent 429 errors
 
 **Execution:**
+
 ```bash
 k6 run backend/test/performance/k6-theme-extraction.js
 ```
 
 **Expected Results:**
+
 ```
 ✓ status is 200           | ≥98% of checks pass
 ✓ response time < 30s     | ≥95% of requests under 30s
@@ -200,17 +212,20 @@ http_reqs...........: 1000       | ~1.1 req/s (limited by rate limiter)
 **Success Criteria:** p95 < 600s (10 minutes), error rate < 5%, memory stable
 
 **Execution:**
+
 ```bash
 k6 run --vus 5 --duration 30m backend/test/performance/k6-batch-extraction.js
 ```
 
 **Why 5 VUs only?**
 Each batch takes ~5-10 minutes and consumes 50-100 OpenAI API calls. Running 50 concurrent batches would:
+
 - Exhaust API quota in minutes
 - Cost $50-100 in API fees
 - Not reflect realistic usage (PhD researchers don't submit 50 batches simultaneously)
 
 **Expected Results:**
+
 ```
 ✓ status is 200           | ≥95% of checks pass
 ✓ response time < 600s    | ≥95% complete within 10 minutes
@@ -232,6 +247,7 @@ Memory usage: Stable at 1.2GB (no memory leak detected)
 **Success Criteria:** All endpoints meet SLAs concurrently
 
 **User Journey:**
+
 1. Login (5% of traffic)
 2. Search for papers (40% of traffic)
 3. Browse/filter results (30% of traffic)
@@ -239,11 +255,13 @@ Memory usage: Stable at 1.2GB (no memory leak detected)
 5. Extract themes (10% of traffic)
 
 **Execution:**
+
 ```bash
 k6 run backend/test/performance/k6-mixed-workload.js
 ```
 
 **Expected Results:**
+
 ```
 Scenario: login
   ✓ http_req_duration..: p95=480ms (SLA: <500ms)
@@ -272,6 +290,7 @@ Overall: All SLAs met ✅
 **Success Criteria:** Graceful degradation (no crashes), clear error messages, partial service maintained
 
 **Load Profile:**
+
 ```
 Stage 1: 0 → 50 users (2 minutes)    | Baseline load
 Stage 2: 50 → 100 users (2 minutes)  | Expected peak
@@ -281,11 +300,13 @@ Stage 5: 200 → 0 users (2 minutes)   | Recovery
 ```
 
 **Execution:**
+
 ```bash
 k6 run backend/test/performance/k6-stress-test.js
 ```
 
 **Expected Results:**
+
 ```
 VUs: 0-50   | p95=2.1s   | Error rate: 0.5%   | ✅ Normal operation
 VUs: 50-100 | p95=4.2s   | Error rate: 2.1%   | ⚠️  Degraded performance
@@ -298,6 +319,7 @@ Database connections released properly ✅
 ```
 
 **Interpretation:**
+
 - **Comfortable capacity:** 50 concurrent users
 - **Degraded capacity:** 100 concurrent users (SLA violations)
 - **Breaking point:** 200 concurrent users (15% error rate)
@@ -312,11 +334,13 @@ Database connections released properly ✅
 **Objective:** Identify slow code paths and optimization opportunities
 
 **Tools:**
+
 1. **NestJS Built-in Logger:** Already configured
 2. **Node.js Profiler:** V8 CPU profiler
 3. **Clinic.js:** Performance diagnostics tool
 
 **Setup Clinic.js:**
+
 ```bash
 cd backend
 npm install -g clinic
@@ -332,12 +356,14 @@ k6 run test/performance/k6-literature-search.js
 ```
 
 **What to Look For:**
+
 - **Event Loop Delay:** Should be <10ms (>50ms = blocked event loop)
 - **CPU Usage:** Should be <70% average (>90% = CPU bottleneck)
 - **Memory Leaks:** Heap should stabilize (continuous growth = leak)
 - **Hot Paths:** Functions called >10,000 times during test
 
 **Example Findings:**
+
 ```
 🔥 Hot Path Detected: JSON.parse() called 45,000 times
    → Optimization: Cache parsed results
@@ -356,11 +382,13 @@ k6 run test/performance/k6-literature-search.js
 **Objective:** Ensure UI remains responsive under data load
 
 **Tools:**
+
 1. **Chrome DevTools Performance Tab**
 2. **Lighthouse Performance Audit**
 3. **React Developer Tools Profiler**
 
 **Test Scenarios:**
+
 ```
 Scenario A: Render 100 papers in search results
   - Measure: Time to Interactive (TTI)
@@ -379,6 +407,7 @@ Scenario C: Navigate between 10 pages quickly
 ```
 
 **Chrome DevTools Performance Recipe:**
+
 1. Open DevTools → Performance tab
 2. Start recording
 3. Execute test scenario (e.g., load 100 papers)
@@ -390,6 +419,7 @@ Scenario C: Navigate between 10 pages quickly
    - **Long Tasks:** None >50ms
 
 **Lighthouse Performance Audit:**
+
 ```bash
 lighthouse http://localhost:3000/discover/literature \
   --only-categories=performance \
@@ -411,6 +441,7 @@ lighthouse http://localhost:3000/discover/literature \
 **Tool:** Prisma Query Analysis + Database Explain Plans
 
 **Setup Query Logging:**
+
 ```typescript
 // backend/src/common/prisma.service.ts
 const prisma = new PrismaClient({
@@ -423,13 +454,15 @@ const prisma = new PrismaClient({
 });
 
 prisma.$on('query', (e) => {
-  if (e.duration > 100) { // Log queries >100ms
+  if (e.duration > 100) {
+    // Log queries >100ms
     console.log(`[SLOW QUERY] ${e.duration}ms: ${e.query}`);
   }
 });
 ```
 
 **Run Load Test with Query Logging:**
+
 ```bash
 # Terminal 1: Start backend with query logging
 cd backend
@@ -443,6 +476,7 @@ tail -f logs/slow-queries.log
 ```
 
 **Expected Findings:**
+
 ```sql
 -- Example slow query (350ms)
 SELECT * FROM papers WHERE userId = 'user-123' ORDER BY createdAt DESC LIMIT 20;
@@ -458,6 +492,7 @@ SELECT * FROM papers WHERE id = 'paper-123';
 ```
 
 **Create Missing Indexes:**
+
 ```prisma
 // backend/prisma/schema.prisma
 model Paper {
@@ -479,12 +514,14 @@ model Paper {
 **Objective:** Optimize database connection pool for concurrent load
 
 **Current Configuration:**
+
 ```env
 # backend/.env
 DATABASE_URL="postgresql://user:pass@localhost:5432/vqmethod_db?connection_limit=10"
 ```
 
 **Load Test Findings:**
+
 ```
 10 connections:
   - 10 VUs: 0% connection wait time ✅
@@ -501,6 +538,7 @@ DATABASE_URL="postgresql://user:pass@localhost:5432/vqmethod_db?connection_limit
 ```
 
 **Recommendation:**
+
 ```env
 # For 50 concurrent users (expected peak)
 DATABASE_URL="postgresql://user:pass@localhost:5432/vqmethod_db?connection_limit=20"
@@ -518,13 +556,16 @@ DATABASE_URL="postgresql://user:pass@localhost:5432/vqmethod_db?connection_limit
 ### Quick Wins (Immediate Impact)
 
 - [ ] **Enable Response Compression (Gzip)**
+
   ```typescript
   // backend/src/main.ts
   app.use(compression());
   ```
+
   Impact: 70-80% bandwidth reduction
 
 - [ ] **Add HTTP Caching Headers**
+
   ```typescript
   app.use((req, res, next) => {
     if (req.url.startsWith('/api/papers')) {
@@ -533,6 +574,7 @@ DATABASE_URL="postgresql://user:pass@localhost:5432/vqmethod_db?connection_limit
     next();
   });
   ```
+
   Impact: 30-50% reduction in API calls
 
 - [ ] **Enable Database Query Caching (Redis)**
@@ -547,9 +589,12 @@ DATABASE_URL="postgresql://user:pass@localhost:5432/vqmethod_db?connection_limit
 - [ ] **Code Splitting (Frontend)**
   ```tsx
   // frontend/app/(researcher)/discover/literature/page.tsx
-  const LiteratureSearch = dynamic(() => import('@/components/literature/LiteratureSearch'), {
-    loading: () => <Skeleton />,
-  });
+  const LiteratureSearch = dynamic(
+    () => import('@/components/literature/LiteratureSearch'),
+    {
+      loading: () => <Skeleton />,
+    },
+  );
   ```
   Impact: 40% reduction in initial bundle size
 
@@ -599,6 +644,7 @@ DATABASE_URL="postgresql://user:pass@localhost:5432/vqmethod_db?connection_limit
 # Performance Test Results - [Date]
 
 ## Test Configuration
+
 - K6 Version: 0.48.0
 - Backend Version: [Git commit hash]
 - Database: PostgreSQL 15.3
@@ -607,34 +653,41 @@ DATABASE_URL="postgresql://user:pass@localhost:5432/vqmethod_db?connection_limit
 ## Load Test Results
 
 ### Scenario 1: Literature Search
+
 - ✅ PASS: p95 = 2.1s (SLA: <3s)
 - ✅ PASS: Error rate = 0.2% (SLA: <1%)
 - ✅ PASS: Throughput = 16.7 req/s (Target: ≥10 req/s)
 
 ### Scenario 2: Theme Extraction
+
 - ✅ PASS: p95 = 22s (SLA: <30s)
 - ✅ PASS: Error rate = 1.5% (SLA: <2%)
-- ⚠️  WARNING: Throughput = 1.1 req/s (limited by OpenAI rate limits)
+- ⚠️ WARNING: Throughput = 1.1 req/s (limited by OpenAI rate limits)
 
 ### Scenario 3: Batch Extraction
+
 - ✅ PASS: p95 = 560s (SLA: <600s)
 - ✅ PASS: Error rate = 3.2% (SLA: <5%)
 - ✅ PASS: Memory stable (no leaks)
 
 ### Scenario 4: Mixed Workload
+
 - ✅ PASS: All endpoints meet SLAs under realistic load
 
 ### Scenario 5: Stress Test
+
 - ✅ PASS: Graceful degradation (no crashes)
-- ⚠️  WARNING: Breaking point at 200 concurrent users
+- ⚠️ WARNING: Breaking point at 200 concurrent users
 - 📊 Recommendation: Set rate limit at 75 concurrent users
 
 ## Bottlenecks Identified
+
 1. OpenAI API rate limits (expected, cannot optimize)
 2. Database connection pool exhaustion at 100+ VUs
 3. JSON parsing in hot path (45K calls during test)
 
 ## Optimizations Applied
+
 - [x] Increased connection pool: 10 → 20 connections
 - [x] Added database index on (userId, createdAt)
 - [x] Enabled response compression (gzip)
@@ -642,6 +695,7 @@ DATABASE_URL="postgresql://user:pass@localhost:5432/vqmethod_db?connection_limit
 - [ ] TODO: Add Redis caching for search results
 
 ## Production Readiness: ✅ YES
+
 - System meets all SLAs under expected load (50 concurrent users)
 - Graceful degradation under stress
 - No memory leaks or crashes detected
@@ -653,6 +707,7 @@ DATABASE_URL="postgresql://user:pass@localhost:5432/vqmethod_db?connection_limit
 ## Next Steps
 
 After completing performance testing:
+
 1. Document all bottlenecks and optimizations
 2. Set up production monitoring (Datadog, New Relic, or Prometheus)
 3. Configure alerts for SLA violations

@@ -59,10 +59,12 @@ export class SPSSExportUtil {
   /**
    * Generate variable definitions
    */
-  private static generateVariableDefinitions(result: OperationalizationResult): string {
+  private static generateVariableDefinitions(
+    result: OperationalizationResult
+  ): string {
     const lines: string[] = ['* Variable Definitions', 'VARIABLE LABELS'];
 
-    result.measurementItems.forEach((item) => {
+    result.measurementItems.forEach(item => {
       const varName = this.getVariableName(item);
       const label = item.text.substring(0, 255); // SPSS label limit
       lines.push(`  ${varName} "${this.escapeSPSS(label)}"`);
@@ -80,7 +82,7 @@ export class SPSSExportUtil {
 
     // Group items by scale type
     const scaleGroups = new Map<string, SurveyMeasurementItem[]>();
-    result.measurementItems.forEach((item) => {
+    result.measurementItems.forEach(item => {
       const key = JSON.stringify(item.scaleLabels);
       if (!scaleGroups.has(key)) {
         scaleGroups.set(key, []);
@@ -105,16 +107,20 @@ export class SPSSExportUtil {
   /**
    * Generate reliability analysis syntax
    */
-  private static generateReliabilityAnalysis(result: OperationalizationResult): string {
-    const lines: string[] = ['* Reliability Analysis (Cronbach\'s Alpha)'];
+  private static generateReliabilityAnalysis(
+    result: OperationalizationResult
+  ): string {
+    const lines: string[] = ["* Reliability Analysis (Cronbach's Alpha)"];
 
-    result.variables.forEach((variable) => {
+    result.variables.forEach(variable => {
       const items = result.measurementItems.filter(
         item => item.variableId === variable.id
       );
 
       if (items.length > 0) {
-        const varNames = items.map(item => this.getVariableName(item)).join(' ');
+        const varNames = items
+          .map(item => this.getVariableName(item))
+          .join(' ');
 
         lines.push(`\n* Reliability for ${variable.variableName}`);
         lines.push(`RELIABILITY`);
@@ -132,7 +138,9 @@ export class SPSSExportUtil {
   /**
    * Generate primary analysis syntax
    */
-  private static generatePrimaryAnalysis(result: OperationalizationResult): string {
+  private static generatePrimaryAnalysis(
+    result: OperationalizationResult
+  ): string {
     const method = result.statisticalPlan.primaryAnalysis.method;
     const lines: string[] = [`* Primary Analysis: ${method}`];
 
@@ -152,22 +160,34 @@ export class SPSSExportUtil {
   /**
    * Generate regression syntax
    */
-  private static generateRegressionSyntax(result: OperationalizationResult): string {
-    const dvVars = result.constructs.filter(c => c.type === 'dependent_variable');
-    const ivVars = result.constructs.filter(c => c.type === 'independent_variable');
+  private static generateRegressionSyntax(
+    result: OperationalizationResult
+  ): string {
+    const dvVars = result.constructs.filter(
+      c => c.type === 'dependent_variable'
+    );
+    const ivVars = result.constructs.filter(
+      c => c.type === 'independent_variable'
+    );
 
     if (dvVars.length === 0 || ivVars.length === 0) {
       return '* Note: Regression analysis requires both DV and IV constructs.';
     }
 
     const dv = dvVars[0]!; // Safe because we checked length above
-    const dvItems = result.measurementItems.filter(item => item.constructId === dv.id);
+    const dvItems = result.measurementItems.filter(
+      item => item.constructId === dv.id
+    );
     const ivItems = result.measurementItems.filter(item =>
       ivVars.some(iv => iv.id === item.constructId)
     );
 
-    const dvVarNames = dvItems.map(item => this.getVariableName(item)).join(' + ');
-    const ivVarNames = ivItems.map(item => this.getVariableName(item)).join(' ');
+    const dvVarNames = dvItems
+      .map(item => this.getVariableName(item))
+      .join(' + ');
+    const ivVarNames = ivItems
+      .map(item => this.getVariableName(item))
+      .join(' ');
 
     return `REGRESSION
   /MISSING LISTWISE
@@ -183,8 +203,12 @@ export class SPSSExportUtil {
   /**
    * Generate factor analysis syntax
    */
-  private static generateFactorAnalysisSyntax(result: OperationalizationResult): string {
-    const allVarNames = result.measurementItems.map(item => this.getVariableName(item)).join(' ');
+  private static generateFactorAnalysisSyntax(
+    result: OperationalizationResult
+  ): string {
+    const allVarNames = result.measurementItems
+      .map(item => this.getVariableName(item))
+      .join(' ');
 
     return `FACTOR
   /VARIABLES ${allVarNames}
@@ -203,8 +227,12 @@ export class SPSSExportUtil {
   /**
    * Generate correlation syntax
    */
-  private static generateCorrelationSyntax(result: OperationalizationResult): string {
-    const allVarNames = result.measurementItems.map(item => this.getVariableName(item)).join(' ');
+  private static generateCorrelationSyntax(
+    result: OperationalizationResult
+  ): string {
+    const allVarNames = result.measurementItems
+      .map(item => this.getVariableName(item))
+      .join(' ');
 
     return `CORRELATIONS
   /VARIABLES=${allVarNames}
@@ -216,8 +244,12 @@ export class SPSSExportUtil {
    * Generate ANOVA syntax
    */
   private static generateANOVASyntax(result: OperationalizationResult): string {
-    const dvVars = result.constructs.filter(c => c.type === 'dependent_variable');
-    const ivVars = result.constructs.filter(c => c.type === 'independent_variable');
+    const dvVars = result.constructs.filter(
+      c => c.type === 'dependent_variable'
+    );
+    const ivVars = result.constructs.filter(
+      c => c.type === 'independent_variable'
+    );
 
     if (dvVars.length === 0 || ivVars.length === 0) {
       return '* Note: ANOVA requires both DV and IV constructs.';
@@ -225,8 +257,12 @@ export class SPSSExportUtil {
 
     const dv = dvVars[0]!; // Safe because we checked length above
     const iv = ivVars[0]!; // Safe because we checked length above
-    const dvItems = result.measurementItems.filter(item => item.constructId === dv.id);
-    const ivItems = result.measurementItems.filter(item => item.constructId === iv.id);
+    const dvItems = result.measurementItems.filter(
+      item => item.constructId === dv.id
+    );
+    const ivItems = result.measurementItems.filter(
+      item => item.constructId === iv.id
+    );
 
     if (ivItems.length === 0) {
       return '* Note: No measurement items found for IV construct.';
@@ -241,8 +277,12 @@ export class SPSSExportUtil {
   /**
    * Generate descriptive statistics
    */
-  private static generateDescriptives(result: OperationalizationResult): string {
-    const allVarNames = result.measurementItems.map(item => this.getVariableName(item)).join(' ');
+  private static generateDescriptives(
+    result: OperationalizationResult
+  ): string {
+    const allVarNames = result.measurementItems
+      .map(item => this.getVariableName(item))
+      .join(' ');
 
     return `* Descriptive Statistics
 DESCRIPTIVES VARIABLES=${allVarNames}
@@ -254,9 +294,7 @@ DESCRIPTIVES VARIABLES=${allVarNames}
    */
   private static getVariableName(item: SurveyMeasurementItem): string {
     // SPSS variable names: max 64 chars, alphanumeric + underscore, must start with letter
-    const safe = item.id
-      .replace(/[^a-zA-Z0-9_]/g, '_')
-      .substring(0, 64);
+    const safe = item.id.replace(/[^a-zA-Z0-9_]/g, '_').substring(0, 64);
 
     // Ensure starts with letter
     return safe.match(/^[a-zA-Z]/) ? safe : `V${safe}`;
@@ -267,9 +305,9 @@ DESCRIPTIVES VARIABLES=${allVarNames}
    */
   private static escapeSPSS(text: string): string {
     return text
-      .replace(/"/g, '""')  // Double quotes
-      .replace(/\n/g, ' ')   // Remove newlines
-      .replace(/\t/g, ' ');  // Remove tabs
+      .replace(/"/g, '""') // Double quotes
+      .replace(/\n/g, ' ') // Remove newlines
+      .replace(/\t/g, ' '); // Remove tabs
   }
 
   /**
@@ -282,7 +320,10 @@ DESCRIPTIVES VARIABLES=${allVarNames}
   /**
    * Export as downloadable file
    */
-  static downloadSyntax(result: OperationalizationResult, filename?: string): void {
+  static downloadSyntax(
+    result: OperationalizationResult,
+    filename?: string
+  ): void {
     const syntax = this.generateSyntax(result);
     const blob = new Blob([syntax], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);

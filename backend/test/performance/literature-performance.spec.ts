@@ -122,7 +122,9 @@ describe('Literature API Performance Tests (Stage 2 Phase 1)', () => {
       // Should complete within 10 seconds
       expect(elapsedTime).toBeLessThan(10000);
 
-      console.log(`✅ PERF-001: Handled ${requestCount} requests in ${(elapsedTime / 1000).toFixed(1)}s`);
+      console.log(
+        `✅ PERF-001: Handled ${requestCount} requests in ${(elapsedTime / 1000).toFixed(1)}s`,
+      );
     }, 30000);
   });
 
@@ -162,12 +164,16 @@ describe('Literature API Performance Tests (Stage 2 Phase 1)', () => {
       const elapsedTime = Date.now() - startTime;
       const timePerPaper = elapsedTime / papers.length;
 
-      console.log(`Theme Extraction: ${(elapsedTime / 1000).toFixed(1)}s for ${papers.length} papers (${(timePerPaper / 1000).toFixed(1)}s per paper)`);
+      console.log(
+        `Theme Extraction: ${(elapsedTime / 1000).toFixed(1)}s for ${papers.length} papers (${(timePerPaper / 1000).toFixed(1)}s per paper)`,
+      );
 
       expect(timePerPaper).toBeLessThan(24000); // < 24s per paper
       expect(extractResponse.body.themes.length).toBeGreaterThan(0);
 
-      console.log(`✅ PERF-002 PASSED: Theme extraction performance acceptable`);
+      console.log(
+        `✅ PERF-002 PASSED: Theme extraction performance acceptable`,
+      );
     }, 120000);
 
     it('should scale linearly with paper count', async () => {
@@ -222,7 +228,9 @@ describe('Literature API Performance Tests (Stage 2 Phase 1)', () => {
 
       const scalingFactor = time4Papers / time2Papers;
 
-      console.log(`Scaling: 2 papers=${(time2Papers / 1000).toFixed(1)}s, 4 papers=${(time4Papers / 1000).toFixed(1)}s, factor=${scalingFactor.toFixed(2)}`);
+      console.log(
+        `Scaling: 2 papers=${(time2Papers / 1000).toFixed(1)}s, 4 papers=${(time4Papers / 1000).toFixed(1)}s, factor=${scalingFactor.toFixed(2)}`,
+      );
 
       // Should scale roughly linearly (allow 3x buffer for variability)
       expect(scalingFactor).toBeLessThan(3);
@@ -255,7 +263,9 @@ describe('Literature API Performance Tests (Stage 2 Phase 1)', () => {
 
       expect(successRate).toBeGreaterThanOrEqual(90); // ≥90% success rate
 
-      console.log(`✅ PERF-003 PASSED: ${successCount}/${userCount} concurrent users (${successRate.toFixed(1)}% success) in ${(elapsedTime / 1000).toFixed(1)}s`);
+      console.log(
+        `✅ PERF-003 PASSED: ${successCount}/${userCount} concurrent users (${successRate.toFixed(1)}% success) in ${(elapsedTime / 1000).toFixed(1)}s`,
+      );
     }, 30000);
 
     it('should handle mixed concurrent operations', async () => {
@@ -300,11 +310,15 @@ describe('Literature API Performance Tests (Stage 2 Phase 1)', () => {
       const responses = await Promise.all(promises);
       const elapsedTime = Date.now() - startTime;
 
-      const successCount = responses.filter((r) => r.status === 200 || r.status === 201).length;
+      const successCount = responses.filter(
+        (r) => r.status === 200 || r.status === 201,
+      ).length;
 
       expect(successCount).toBeGreaterThanOrEqual(6); // At least 6/7 should succeed
 
-      console.log(`✅ PERF-003: Mixed operations completed (${successCount}/7 success) in ${(elapsedTime / 1000).toFixed(1)}s`);
+      console.log(
+        `✅ PERF-003: Mixed operations completed (${successCount}/7 success) in ${(elapsedTime / 1000).toFixed(1)}s`,
+      );
     }, 180000);
   });
 
@@ -331,10 +345,13 @@ describe('Literature API Performance Tests (Stage 2 Phase 1)', () => {
       }
 
       const finalMemory = process.memoryUsage();
-      const heapIncreaseMB = (finalMemory.heapUsed - initialMemory.heapUsed) / 1024 / 1024;
+      const heapIncreaseMB =
+        (finalMemory.heapUsed - initialMemory.heapUsed) / 1024 / 1024;
 
       console.log(`Memory increase: ${heapIncreaseMB.toFixed(1)}MB`);
-      console.log(`Final heap usage: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(0)}MB`);
+      console.log(
+        `Final heap usage: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(0)}MB`,
+      );
 
       // Memory increase should be reasonable (< 100MB for 20 requests)
       expect(Math.abs(heapIncreaseMB)).toBeLessThan(100);
@@ -355,9 +372,12 @@ describe('Literature API Performance Tests (Stage 2 Phase 1)', () => {
         .expect(200);
 
       const finalMemory = process.memoryUsage();
-      const heapIncreaseMB = (finalMemory.heapUsed - initialMemory.heapUsed) / 1024 / 1024;
+      const heapIncreaseMB =
+        (finalMemory.heapUsed - initialMemory.heapUsed) / 1024 / 1024;
 
-      console.log(`Large result set (${response.body.papers.length} papers): +${heapIncreaseMB.toFixed(1)}MB`);
+      console.log(
+        `Large result set (${response.body.papers.length} papers): +${heapIncreaseMB.toFixed(1)}MB`,
+      );
 
       // Should handle 50 papers without excessive memory usage
       expect(heapIncreaseMB).toBeLessThan(50);
@@ -386,7 +406,9 @@ describe('Literature API Performance Tests (Stage 2 Phase 1)', () => {
 
       // Calculate statistics
       const mean = timings.reduce((sum, t) => sum + t, 0) / timings.length;
-      const variance = timings.reduce((sum, t) => sum + Math.pow(t - mean, 2), 0) / timings.length;
+      const variance =
+        timings.reduce((sum, t) => sum + Math.pow(t - mean, 2), 0) /
+        timings.length;
       const stdDev = Math.sqrt(variance);
       const coefficientOfVariation = (stdDev / mean) * 100;
 
@@ -398,9 +420,13 @@ describe('Literature API Performance Tests (Stage 2 Phase 1)', () => {
 
       console.log(`Response Time Distribution:`);
       console.log(`  Min: ${min}ms, Max: ${max}ms`);
-      console.log(`  Mean: ${mean.toFixed(0)}ms, StdDev: ${stdDev.toFixed(0)}ms`);
+      console.log(
+        `  Mean: ${mean.toFixed(0)}ms, StdDev: ${stdDev.toFixed(0)}ms`,
+      );
       console.log(`  p50: ${p50}ms, p95: ${p95}ms`);
-      console.log(`  Coefficient of Variation: ${coefficientOfVariation.toFixed(1)}%`);
+      console.log(
+        `  Coefficient of Variation: ${coefficientOfVariation.toFixed(1)}%`,
+      );
 
       // Coefficient of variation should be reasonable (< 50% for consistent performance)
       expect(coefficientOfVariation).toBeLessThan(50);

@@ -22,12 +22,12 @@ class ResearchQuestionToItemsApiService {
    * Operationalize a research question into survey items
    */
   async operationalizeQuestion(
-    request: OperationalizationRequest,
+    request: OperationalizationRequest
   ): Promise<OperationalizationResult> {
     try {
       const response = await apiClient.post<OperationalizationResult>(
         '/research-design/question-to-items',
-        request,
+        request
       );
 
       // Cache the result for later use
@@ -59,7 +59,7 @@ class ResearchQuestionToItemsApiService {
    */
   convertToImportableItems(
     measurementItems: SurveyMeasurementItem[],
-    constructName?: string,
+    constructName?: string
   ): ImportableItem[] {
     return measurementItems.map((item, index) => ({
       id: `rq-item-${item.id}`,
@@ -87,9 +87,12 @@ class ResearchQuestionToItemsApiService {
    * Map backend scale types to frontend question types
    */
   private mapScaleTypeToQuestionType(
-    scaleType: SurveyMeasurementItem['scaleType'],
+    scaleType: SurveyMeasurementItem['scaleType']
   ): ImportableItem['type'] {
-    const mapping: Record<SurveyMeasurementItem['scaleType'], ImportableItem['type']> = {
+    const mapping: Record<
+      SurveyMeasurementItem['scaleType'],
+      ImportableItem['type']
+    > = {
       likert_5: 'likert',
       likert_7: 'likert',
       semantic_differential: 'scale',
@@ -105,7 +108,7 @@ class ResearchQuestionToItemsApiService {
    * Map backend scale types to frontend settings
    */
   private mapScaleTypeToSettings(
-    scaleType: SurveyMeasurementItem['scaleType'],
+    scaleType: SurveyMeasurementItem['scaleType']
   ): '1-5' | '1-7' | '1-10' | 'agree-disagree' | 'frequency' | 'satisfaction' {
     const mapping: Record<SurveyMeasurementItem['scaleType'], string> = {
       likert_5: '1-5',
@@ -122,7 +125,10 @@ class ResearchQuestionToItemsApiService {
   /**
    * Save research question for later use
    */
-  async saveResearchQuestion(question: string, studyType: string): Promise<void> {
+  async saveResearchQuestion(
+    question: string,
+    studyType: string
+  ): Promise<void> {
     try {
       const history = secureStorage.getResearchQuestions();
       history.push({ question, studyType, timestamp: Date.now() });
@@ -135,7 +141,11 @@ class ResearchQuestionToItemsApiService {
   /**
    * Get saved research questions
    */
-  getSavedQuestions(): Array<{ question: string; studyType: string; timestamp: number }> {
+  getSavedQuestions(): Array<{
+    question: string;
+    studyType: string;
+    timestamp: number;
+  }> {
     try {
       return secureStorage.getResearchQuestions();
     } catch (error) {
@@ -145,4 +155,5 @@ class ResearchQuestionToItemsApiService {
   }
 }
 
-export const researchQuestionToItemsApiService = new ResearchQuestionToItemsApiService();
+export const researchQuestionToItemsApiService =
+  new ResearchQuestionToItemsApiService();

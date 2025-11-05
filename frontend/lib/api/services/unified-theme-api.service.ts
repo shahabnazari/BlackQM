@@ -233,6 +233,15 @@ export interface V2ExtractionResponse {
     citations: string;
     saturationRecommendation?: string;
   };
+  metadata?: {
+    processedPapers?: number;
+    fullTextCount?: number;
+    abstractCount?: number;
+    rejectionCount?: number;
+    processingTime?: number;
+    averageConfidence?: number;
+    [key: string]: any;
+  };
 }
 
 export type V2ProgressCallback = (
@@ -523,7 +532,8 @@ export class UnifiedThemeAPIService {
           }
         };
 
-        const userId = getUserIdFromToken() ||
+        const userId =
+          getUserIdFromToken() ||
           `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
         console.log('🔐 WebSocket userId resolution:');
@@ -724,7 +734,10 @@ export class UnifiedThemeAPIService {
       const responseData = response as any;
       // Convert record to Map for better API
       const uniqueThemes = new Map(
-        Object.entries(responseData.uniqueThemes || {}) as [string, UnifiedTheme[]][]
+        Object.entries(responseData.uniqueThemes || {}) as [
+          string,
+          UnifiedTheme[],
+        ][]
       );
 
       return {

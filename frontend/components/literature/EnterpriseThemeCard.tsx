@@ -186,11 +186,11 @@ export default function EnterpriseThemeCard({
               <input
                 type="checkbox"
                 checked={isSelected}
-                onChange={(e) => {
+                onChange={e => {
                   e.stopPropagation();
                   onToggleSelect?.(theme.id);
                 }}
-                onClick={(e) => e.stopPropagation()}
+                onClick={e => e.stopPropagation()}
                 className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-2 focus:ring-blue-500 cursor-pointer"
               />
             </div>
@@ -202,11 +202,17 @@ export default function EnterpriseThemeCard({
               <span className="px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs font-bold">
                 {purposeDisplay.label} {index + 1}/{totalThemes}
               </span>
-              <span className="text-xs text-gray-500">{purposeDisplay.description}</span>
+              <span className="text-xs text-gray-500">
+                {purposeDisplay.description}
+              </span>
             </div>
 
-            <h3 className="text-lg font-bold text-gray-900 mb-2">{theme.label}</h3>
-            <p className="text-sm text-gray-700 leading-relaxed">{theme.description}</p>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              {theme.label}
+            </h3>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              {theme.description}
+            </p>
 
             {/* Keywords */}
             {theme.keywords && theme.keywords.length > 0 && (
@@ -230,12 +236,16 @@ export default function EnterpriseThemeCard({
               <div
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 ${confidenceLevel.bgColor} ${confidenceLevel.borderColor}`}
               >
-                <ConfidenceIcon className={`w-4 h-4 ${confidenceLevel.color}`} />
+                <ConfidenceIcon
+                  className={`w-4 h-4 ${confidenceLevel.color}`}
+                />
                 <div>
                   <p className={`text-xs font-bold ${confidenceLevel.color}`}>
                     {confidenceLevel.label} Confidence
                   </p>
-                  <p className="text-xs text-gray-600">{(theme.confidence * 100).toFixed(0)}%</p>
+                  <p className="text-xs text-gray-600">
+                    {(theme.confidence * 100).toFixed(0)}%
+                  </p>
                 </div>
               </div>
             )}
@@ -267,8 +277,8 @@ export default function EnterpriseThemeCard({
                 theme.confidence >= 0.8
                   ? 'bg-green-500'
                   : theme.confidence >= 0.6
-                  ? 'bg-yellow-500'
-                  : 'bg-orange-500'
+                    ? 'bg-yellow-500'
+                    : 'bg-orange-500'
               }`}
               initial={{ width: 0 }}
               animate={{ width: `${theme.confidence * 100}%` }}
@@ -290,18 +300,27 @@ export default function EnterpriseThemeCard({
           >
             <div className="p-5 space-y-4 bg-gray-50">
               {/* AI Confidence Explanation */}
-              <div className={`rounded-lg border-2 p-4 ${confidenceLevel.bgColor} ${confidenceLevel.borderColor}`}>
+              <div
+                className={`rounded-lg border-2 p-4 ${confidenceLevel.bgColor} ${confidenceLevel.borderColor}`}
+              >
                 <div className="flex items-start gap-3">
-                  <ConfidenceIcon className={`w-5 h-5 ${confidenceLevel.color} flex-shrink-0 mt-0.5`} />
+                  <ConfidenceIcon
+                    className={`w-5 h-5 ${confidenceLevel.color} flex-shrink-0 mt-0.5`}
+                  />
                   <div>
-                    <p className={`text-sm font-semibold ${confidenceLevel.color} mb-1`}>
+                    <p
+                      className={`text-sm font-semibold ${confidenceLevel.color} mb-1`}
+                    >
                       {confidenceLevel.label} Confidence - What This Means
                     </p>
-                    <p className="text-sm text-gray-700">{confidenceLevel.description}</p>
+                    <p className="text-sm text-gray-700">
+                      {confidenceLevel.description}
+                    </p>
                     {theme.confidence < 0.8 && (
                       <p className="text-xs text-gray-600 mt-2">
-                        <strong>Recommendation:</strong> Review this theme carefully before publication.
-                        Consider gathering additional sources or refining the definition.
+                        <strong>Recommendation:</strong> Review this theme
+                        carefully before publication. Consider gathering
+                        additional sources or refining the definition.
                       </p>
                     )}
                   </div>
@@ -316,28 +335,38 @@ export default function EnterpriseThemeCard({
                     Top Contributing Sources
                   </h4>
                   <div className="space-y-2">
-                    {topSources.map((source) => (
+                    {topSources.map(source => (
                       <div
                         key={source.sourceId}
                         className="bg-white rounded-lg border border-gray-200 p-3"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{source.sourceTitle}</p>
-                            {source.excerpts && source.excerpts.length > 0 && source.excerpts[0] && purposeDisplay.showQuotes && (
-                              <div className="mt-2 pl-3 border-l-2 border-blue-300">
-                                <p className="text-xs text-gray-600 italic">
-                                  "{source.excerpts[0]!.substring(0, 150)}
-                                  {source.excerpts[0]!.length > 150 ? '...' : ''}"
-                                </p>
-                              </div>
-                            )}
+                            <p className="text-sm font-medium text-gray-900">
+                              {source.sourceTitle}
+                            </p>
+                            {source.excerpts &&
+                              source.excerpts.length > 0 &&
+                              source.excerpts[0] &&
+                              purposeDisplay.showQuotes && (
+                                <div className="mt-2 pl-3 border-l-2 border-blue-300">
+                                  <p className="text-xs text-gray-600 italic">
+                                    "{source.excerpts[0]!.substring(0, 150)}
+                                    {source.excerpts[0]!.length > 150
+                                      ? '...'
+                                      : ''}
+                                    "
+                                  </p>
+                                </div>
+                              )}
                           </div>
                           <div className="flex flex-col items-end gap-1">
                             <span className="text-xs font-bold text-blue-600">
                               {(source.influence * 100).toFixed(0)}%
                             </span>
-                            <span className="text-xs text-gray-500">influence</span>
+                            <span className="text-xs text-gray-500">
+                              influence
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -354,7 +383,9 @@ export default function EnterpriseThemeCard({
                       <BookOpen className="w-4 h-4 text-gray-600" />
                       <p className="text-xs text-gray-600">Sources</p>
                     </div>
-                    <p className="text-xl font-bold text-gray-900">{theme.sources.length}</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {theme.sources.length}
+                    </p>
                   </div>
                   <div className="bg-white rounded-lg border border-gray-200 p-3">
                     <div className="flex items-center gap-2 mb-1">
@@ -362,7 +393,10 @@ export default function EnterpriseThemeCard({
                       <p className="text-xs text-gray-600">Evidence</p>
                     </div>
                     <p className="text-xl font-bold text-gray-900">
-                      {theme.sources?.reduce((sum, s) => sum + (s.excerpts?.length || 0), 0) || 0}
+                      {theme.sources?.reduce(
+                        (sum, s) => sum + (s.excerpts?.length || 0),
+                        0
+                      ) || 0}
                     </p>
                   </div>
                   <div className="bg-white rounded-lg border border-gray-200 p-3">
@@ -385,32 +419,37 @@ export default function EnterpriseThemeCard({
                 <p className="text-sm text-gray-700">
                   {purpose === 'q_methodology' && (
                     <>
-                      <strong>Q-Methodology Usage:</strong> This statement can be used in your Q-sort. Ensure
-                      it's distinct from other statements and represents a clear viewpoint.
+                      <strong>Q-Methodology Usage:</strong> This statement can
+                      be used in your Q-sort. Ensure it's distinct from other
+                      statements and represents a clear viewpoint.
                     </>
                   )}
                   {purpose === 'survey_construction' && (
                     <>
-                      <strong>Survey Construction:</strong> Use this construct to generate 4-6 survey items.
-                      Ensure items are clear, unidimensional, and suitable for factor analysis.
+                      <strong>Survey Construction:</strong> Use this construct
+                      to generate 4-6 survey items. Ensure items are clear,
+                      unidimensional, and suitable for factor analysis.
                     </>
                   )}
                   {purpose === 'qualitative_analysis' && (
                     <>
-                      <strong>Qualitative Analysis:</strong> This theme should be supported by rich evidence
-                      from your data. Consider adding vivid quotes to your report.
+                      <strong>Qualitative Analysis:</strong> This theme should
+                      be supported by rich evidence from your data. Consider
+                      adding vivid quotes to your report.
                     </>
                   )}
                   {purpose === 'literature_synthesis' && (
                     <>
-                      <strong>Literature Synthesis:</strong> This meta-theme synthesizes findings across
-                      multiple studies. Check for consistency and note any contradictions.
+                      <strong>Literature Synthesis:</strong> This meta-theme
+                      synthesizes findings across multiple studies. Check for
+                      consistency and note any contradictions.
                     </>
                   )}
                   {purpose === 'hypothesis_generation' && (
                     <>
-                      <strong>Hypothesis Generation:</strong> Use this theme to formulate testable hypotheses.
-                      Consider relationships with other themes and potential operationalizations.
+                      <strong>Hypothesis Generation:</strong> Use this theme to
+                      formulate testable hypotheses. Consider relationships with
+                      other themes and potential operationalizations.
                     </>
                   )}
                 </p>

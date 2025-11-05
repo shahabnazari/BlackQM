@@ -23,12 +23,14 @@
 **Current Claim:** "Works well with abstracts"
 
 **Reality Check:**
+
 - **What it needs:** DIVERSE viewpoints across the discourse space
 - **Content requirement:** **ABSTRACTS SUFFICIENT** ✅
 - **Why:** Q-methodology prioritizes breadth over depth
 - **Evidence:** Stephenson (1953) - concourse should represent variety of positions, not depth of argumentation
 
 **Verdict:**
+
 - ✅ Abstracts are SUFFICIENT
 - ⚠️ Full-text might actually HARM quality (too much depth, not enough breadth)
 
@@ -39,12 +41,14 @@
 **Current Claim:** "Strongly benefits from full-text"
 
 **Reality Check:**
+
 - **What it needs:** DEEP understanding of latent constructs and how to measure them
 - **Content requirement:** **FULL-TEXT STRONGLY RECOMMENDED** ⚠️
 - **Why:** Abstracts rarely discuss measurement operationalization in detail
 - **Evidence:** Churchill (1979), DeVellis (2016) - scale development requires understanding construct dimensionality
 
 **Verdict:**
+
 - ⚠️ Abstracts CAN work but produce shallow constructs
 - ✅ Full-text provides: measurement approaches, item examples, construct facets
 
@@ -55,12 +59,14 @@
 **Current Claim:** "Better with full-text"
 
 **Reality Check:**
+
 - **What it needs:** Rich descriptions for theoretical saturation
 - **Content requirement:** **DEPENDS ON RESEARCH QUESTION** 🤷
 - **Why:** Exploratory questions can work with abstracts; explanatory questions need full-text
 - **Evidence:** Braun & Clarke (2019) - saturation depends on analytical depth required
 
 **Verdict:**
+
 - ✅ Abstracts sufficient for: Descriptive themes, pattern identification
 - ⚠️ Full-text needed for: Explanatory mechanisms, lived experiences
 
@@ -71,12 +77,14 @@
 **Current Claim:** "Requires full-text"
 
 **Reality Check:**
+
 - **What it needs:** FINDINGS from multiple studies to synthesize
 - **Content requirement:** **FULL-TEXT ABSOLUTELY REQUIRED** 🔥
 - **Why:** Abstracts don't contain detailed findings—only conclusions
 - **Evidence:** Noblit & Hare (1988) - meta-ethnography synthesizes study findings, not abstracts
 
 **Verdict:**
+
 - ❌ Abstracts are INSUFFICIENT
 - ✅ Full-text is MANDATORY (need Results sections)
 
@@ -87,12 +95,14 @@
 **Current Claim:** "Requires full-text"
 
 **Reality Check:**
+
 - **What it needs:** MECHANISMS, relationships, contextual factors for grounded theory
 - **Content requirement:** **FULL-TEXT ABSOLUTELY REQUIRED** 🔥
 - **Why:** Hypotheses require understanding of causal mechanisms and boundary conditions
 - **Evidence:** Glaser & Strauss (1967) - grounded theory needs rich contextual data
 
 **Verdict:**
+
 - ❌ Abstracts are INSUFFICIENT
 - ✅ Full-text is MANDATORY (need detailed descriptions of processes)
 
@@ -100,13 +110,13 @@
 
 ### Summary Table: Content Requirements
 
-| Purpose | Abstract Quality | Full-Text Quality | Recommendation |
-|---------|-----------------|-------------------|----------------|
-| **Q-Methodology** | ⭐⭐⭐⭐⭐ Excellent | ⭐⭐⭐ Good (but overkill) | **Use abstracts** |
-| **Survey Construction** | ⭐⭐ Limited | ⭐⭐⭐⭐⭐ Excellent | **Recommend full-text** |
-| **Qualitative Analysis** | ⭐⭐⭐ Good | ⭐⭐⭐⭐⭐ Excellent | **Depends on RQ** |
-| **Literature Synthesis** | ⭐ Insufficient | ⭐⭐⭐⭐⭐ Required | **REQUIRE full-text** |
-| **Hypothesis Generation** | ⭐ Insufficient | ⭐⭐⭐⭐⭐ Required | **REQUIRE full-text** |
+| Purpose                   | Abstract Quality     | Full-Text Quality          | Recommendation          |
+| ------------------------- | -------------------- | -------------------------- | ----------------------- |
+| **Q-Methodology**         | ⭐⭐⭐⭐⭐ Excellent | ⭐⭐⭐ Good (but overkill) | **Use abstracts**       |
+| **Survey Construction**   | ⭐⭐ Limited         | ⭐⭐⭐⭐⭐ Excellent       | **Recommend full-text** |
+| **Qualitative Analysis**  | ⭐⭐⭐ Good          | ⭐⭐⭐⭐⭐ Excellent       | **Depends on RQ**       |
+| **Literature Synthesis**  | ⭐ Insufficient      | ⭐⭐⭐⭐⭐ Required        | **REQUIRE full-text**   |
+| **Hypothesis Generation** | ⭐ Insufficient      | ⭐⭐⭐⭐⭐ Required        | **REQUIRE full-text**   |
 
 **KEY FINDING:** We do NOT always need full-text. It's purpose-specific.
 
@@ -143,17 +153,18 @@
 
 ### Benefits of Upfront Purpose Selection
 
-| Aspect | Current | With Upfront Purpose | Improvement |
-|--------|---------|---------------------|-------------|
-| **API Calls** | Fetch all PDFs | Fetch only if needed | -60% PDF API calls |
-| **User Time** | Wait for PDFs always | Skip wait for Q-method | -2 minutes |
-| **Cost** | $0.10/paper (Unpaywall) | $0.10 only if needed | -60% cost |
-| **UX Clarity** | "Why fetching PDFs?" | "Purpose needs full-text" | Clear intent |
-| **Paper Selection** | No guidance | "Your purpose needs ≥10 full-text" | Better choices |
+| Aspect              | Current                 | With Upfront Purpose               | Improvement        |
+| ------------------- | ----------------------- | ---------------------------------- | ------------------ |
+| **API Calls**       | Fetch all PDFs          | Fetch only if needed               | -60% PDF API calls |
+| **User Time**       | Wait for PDFs always    | Skip wait for Q-method             | -2 minutes         |
+| **Cost**            | $0.10/paper (Unpaywall) | $0.10 only if needed               | -60% cost          |
+| **UX Clarity**      | "Why fetching PDFs?"    | "Purpose needs full-text"          | Clear intent       |
+| **Paper Selection** | No guidance             | "Your purpose needs ≥10 full-text" | Better choices     |
 
 ### Implementation Approach
 
 **Option A: Purpose-First Wizard (Recommended)**
+
 ```
 Homepage → [Start Research] →
   Step 1: Select Purpose
@@ -163,15 +174,18 @@ Homepage → [Start Research] →
 ```
 
 **Benefits:**
+
 - Users think about research goal first (best practice)
 - System can optimize entire flow
 - Can show purpose-specific search filters
 
 **Drawbacks:**
+
 - Users exploring might not know purpose yet
 - Less flexible for exploratory research
 
 **Option B: Purpose-Aware Search (Compromise)**
+
 ```
 Search page → "What's your research purpose?" (optional dropdown)
   - If selected: Optimize for that purpose
@@ -179,16 +193,19 @@ Search page → "What's your research purpose?" (optional dropdown)
 ```
 
 **Benefits:**
+
 - Flexible for exploration
 - Still optimizes when user knows purpose
 
 **Drawbacks:**
+
 - Users might skip dropdown
 - Less optimization benefit
 
 ### Recommended Approach
 
 **Implement Option B with intelligent defaults:**
+
 1. Add purpose dropdown to Universal Search (optional)
 2. Default: "Exploratory (fetch full-text when available)"
 3. If purpose selected: Show content requirements banner
@@ -215,6 +232,7 @@ Search page → "What's your research purpose?" (optional dropdown)
 **File:** `backend/src/modules/literature/services/unified-theme-extraction.service.ts`
 
 **Stage 1 - Familiarization (Lines 2014-2051):**
+
 ```typescript
 private async generateSemanticEmbeddings(sources: SourceContent[]) {
   const embeddings = new Map<string, number[]>();
@@ -241,6 +259,7 @@ private async generateSemanticEmbeddings(sources: SourceContent[]) {
 ```
 
 **Stage 2 - Code Extraction (Lines 2059-2121):**
+
 ```typescript
 private async extractInitialCodes(sources: SourceContent[]) {
   const prompt = `Analyze these research sources and extract initial codes.
@@ -270,20 +289,24 @@ For each source, identify 5-10 key codes (concepts that appear in the content).
 #### Familiarization (<1 Second)
 
 **Process:**
+
 1. Takes full content (e.g., 10,000 words = ~50,000 chars)
 2. Sends to OpenAI text-embedding-3-large
 3. Gets back 3072-dimensional vector
 
 **Time:**
+
 - **Per source:** ~100-200ms (embedding API is FAST)
 - **10 sources in parallel:** ~200-500ms total
 - **Why so fast:** Not "reading" in human sense—creating vector representation
 
 **Is it "reading" the paper?**
+
 - ❌ NO in the human sense (comprehension, interpretation)
 - ✅ YES in the computational sense (semantic representation captured)
 
 **What the embedding captures:**
+
 - ✅ Semantic meaning of full text
 - ✅ Relationships between concepts
 - ✅ Topical content
@@ -292,15 +315,18 @@ For each source, identify 5-10 key codes (concepts that appear in the content).
 #### Code Extraction (10-30 Seconds)
 
 **Process:**
+
 1. Sends batches of 5 sources with FULL content to GPT-4
 2. GPT-4 "reads" and extracts 5-10 codes per source
 3. Takes ~2-6 seconds per batch
 
 **Time:**
+
 - **Per batch (5 sources):** 2-6 seconds
 - **10 sources (2 batches):** 4-12 seconds total
 
 **Is it "reading" the paper?**
+
 - ✅ YES—GPT-4 processes the full text
 - ⚠️ BUT: Limited by context window and attention mechanisms
 - ⚠️ BUT: Extracts surface-level codes, not deep analysis
@@ -347,20 +373,24 @@ For each source, identify 5-10 key codes (concepts that appear in the content).
 ### So: Does Full-Text Matter?
 
 **For Embeddings (Stage 1):**
+
 - ✅ YES—full-text creates richer semantic representation
 - 📊 **Impact:** 10,000 words → better concept coverage than 500-word abstract
 
 **For Code Extraction (Stage 2):**
+
 - ✅ YES—GPT-4 extracts codes from full text
 - ⚠️ **BUT:** May not deeply analyze all 10,000 words equally
 - 📊 **Impact:** More codes, more specific concepts
 
 **For Theme Quality:**
+
 - ✅ YES—more content = more codes = richer themes
 - ⚠️ **BUT:** Quality depends on GPT-4's attention, not just quantity
 - 📊 **Impact:** Especially valuable for Literature Synthesis, Hypothesis Generation
 
 **For Q-Methodology:**
+
 - ❌ NO—extra 9,500 words don't add much for breadth-focused extraction
 - 📊 **Impact:** Abstracts capture viewpoint diversity just fine
 
@@ -371,6 +401,7 @@ For each source, identify 5-10 key codes (concepts that appear in the content).
 ### Immediate Actions (Phase 10 Day 5.17)
 
 #### 1. Add Purpose-Content Warnings ⚠️
+
 **File:** `frontend/components/literature/PurposeSelectionWizard.tsx` (Step 1)
 
 ```typescript
@@ -415,12 +446,14 @@ For each source, identify 5-10 key codes (concepts that appear in the content).
 #### 2. Update Step 0 Content Requirements
 
 **Current (Generic):**
+
 ```
 • Q-Methodology: Works well with abstracts
 • Literature Synthesis: Requires full-text
 ```
 
 **Improved (Specific):**
+
 ```
 • Q-Methodology: ✅ Abstracts sufficient (breadth > depth)
 • Survey Construction: ⚠️ Full-text strongly recommended (≥5 papers)
@@ -446,9 +479,13 @@ const purposeRequirements = {
 };
 
 const requirement = purposeRequirements[purpose];
-const fullTextCount = contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
+const fullTextCount =
+  contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
 
-if (requirement.level === 'required' && fullTextCount < requirement.minFullText) {
+if (
+  requirement.level === 'required' &&
+  fullTextCount < requirement.minFullText
+) {
   // Show blocking modal
   setShowContentWarningModal(true);
   return; // Don't proceed
@@ -464,6 +501,7 @@ if (requirement.level === 'required' && fullTextCount < requirement.minFullText)
 #### 4. Purpose-Aware Search (Optional Dropdown)
 
 **Add to Universal Search:**
+
 ```typescript
 <select onChange={(e) => setResearchPurpose(e.target.value)}>
   <option value="">Exploratory (fetch full-text when available)</option>
@@ -482,6 +520,7 @@ if (requirement.level === 'required' && fullTextCount < requirement.minFullText)
 ```
 
 **PDF Fetching Logic:**
+
 ```typescript
 const shouldFetchPDF = (purpose: string | null, paper: Paper) => {
   if (!purpose) return paper.pdfUrl; // Exploratory: fetch if available
@@ -496,6 +535,7 @@ const shouldFetchPDF = (purpose: string | null, paper: Paper) => {
 ```
 
 **Impact:**
+
 - Q-Methodology users save 60% PDF API costs
 - Literature Synthesis users get clear expectations upfront
 
@@ -504,11 +544,13 @@ const shouldFetchPDF = (purpose: string | null, paper: Paper) => {
 #### 5. Transparent Processing Feedback
 
 **Update Stage 1 Message (Current):**
+
 ```
 "Reading ALL source content together to understand the breadth and depth of your dataset..."
 ```
 
 **Updated (Honest):**
+
 ```
 "Creating semantic representations of your sources:
 • Embedding {fullTextCount} full-text papers (avg 10,000 words each)
@@ -530,6 +572,7 @@ Next: GPT-4 will extract codes from the full content (2-6 sec per batch)."
 #### 6. Purpose-First Workflow (Major UX Change)
 
 **Redesign user flow:**
+
 ```
 Landing Page:
   "What do you want to do?"
@@ -549,6 +592,7 @@ Purpose Page:
 ```
 
 **Impact:**
+
 - Better user guidance
 - Optimized API usage
 - Higher success rates
@@ -561,30 +605,31 @@ Purpose Page:
 
 **Scenario: User does Q-Methodology with 20 papers**
 
-| Step | Action | Cost | Benefit |
-|------|--------|------|---------|
-| Search | Get 20 papers | $0 | ✅ Find papers |
-| PDF Fetch | Fetch 20 PDFs | $2.00 | ⚠️ Not needed for Q-method |
-| Embedding | Embed 20 full papers | $0.20 | ⚠️ Abstracts would suffice |
-| Code Extraction | Extract from full text | $1.50 | ⚠️ Overkill for breadth focus |
-| Extraction | Generate 40-80 statements | - | ✅ Output |
-| **Total** | | **$3.70** | **33% wasted** |
+| Step            | Action                    | Cost      | Benefit                       |
+| --------------- | ------------------------- | --------- | ----------------------------- |
+| Search          | Get 20 papers             | $0        | ✅ Find papers                |
+| PDF Fetch       | Fetch 20 PDFs             | $2.00     | ⚠️ Not needed for Q-method    |
+| Embedding       | Embed 20 full papers      | $0.20     | ⚠️ Abstracts would suffice    |
+| Code Extraction | Extract from full text    | $1.50     | ⚠️ Overkill for breadth focus |
+| Extraction      | Generate 40-80 statements | -         | ✅ Output                     |
+| **Total**       |                           | **$3.70** | **33% wasted**                |
 
 ### With Purpose-Aware Optimization
 
 **Same scenario with purpose-first:**
 
-| Step | Action | Cost | Benefit |
-|------|--------|------|---------|
-| Purpose | Select Q-Methodology | $0 | ✅ Know requirements |
-| Search | Get 20 papers | $0 | ✅ Find papers |
-| PDF Fetch | Skip (abstracts sufficient) | **$0** | ✅ Saved $2.00 |
-| Embedding | Embed 20 abstracts | **$0.02** | ✅ Sufficient |
-| Code Extraction | Extract from abstracts | **$0.15** | ✅ Sufficient |
-| Extraction | Generate 40-80 statements | - | ✅ Output |
-| **Total** | | **$0.17** | **95% cost savings** |
+| Step            | Action                      | Cost      | Benefit              |
+| --------------- | --------------------------- | --------- | -------------------- |
+| Purpose         | Select Q-Methodology        | $0        | ✅ Know requirements |
+| Search          | Get 20 papers               | $0        | ✅ Find papers       |
+| PDF Fetch       | Skip (abstracts sufficient) | **$0**    | ✅ Saved $2.00       |
+| Embedding       | Embed 20 abstracts          | **$0.02** | ✅ Sufficient        |
+| Code Extraction | Extract from abstracts      | **$0.15** | ✅ Sufficient        |
+| Extraction      | Generate 40-80 statements   | -         | ✅ Output            |
+| **Total**       |                             | **$0.17** | **95% cost savings** |
 
 **Annual Savings (if 30% of users do Q-Methodology):**
+
 - 1000 users/month × 0.3 Q-method × $3.53 savings = **$1,059/month**
 - **$12,708/year**
 
@@ -593,16 +638,19 @@ Purpose Page:
 ## ✅ IMPLEMENTATION PRIORITY
 
 ### Phase 10 Day 5.17 (IMMEDIATE - 2 hours)
+
 1. ✅ Add purpose-content mismatch warnings (Step 1 of wizard)
 2. ✅ Update Step 0 content requirements with specifics
 3. ✅ Add content sufficiency validation before extraction
 
 ### Phase 10 Day 6 (THIS WEEK - 4 hours)
+
 4. ⚠️ Add purpose dropdown to Universal Search (optional)
 5. ⚠️ Implement purpose-aware PDF fetching logic
 6. ⚠️ Update Stage 1 progress message with honest explanation
 
 ### Phase 11 (NEXT PHASE - 1 week)
+
 7. 🔄 Redesign user flow to purpose-first
 8. 🔄 A/B test purpose-first vs exploratory-first
 9. 🔄 Gather metrics on content type × purpose success rates
@@ -632,12 +680,14 @@ Purpose Page:
 ### Strategic Recommendation
 
 **Implement purpose-aware content optimization:**
+
 1. Add warnings when content doesn't match purpose
 2. Add optional purpose dropdown to search
 3. Optimize PDF fetching based on purpose
 4. Update messaging to set realistic expectations
 
 **Expected Impact:**
+
 - 📉 60% cost reduction for Q-Methodology
 - 📈 Higher user satisfaction (clear expectations)
 - 📈 Better paper selection (purpose-specific guidance)

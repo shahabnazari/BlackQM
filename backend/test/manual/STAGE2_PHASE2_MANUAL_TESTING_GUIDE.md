@@ -10,12 +10,14 @@
 ## 📋 Overview
 
 Stage 2 Phase 2 focuses on human-validated testing that automated tests cannot adequately cover:
+
 1. Real research topic diversity and relevance
 2. Academic theme quality (Cohen's kappa >0.6)
 3. Accessibility compliance (WCAG AA)
 4. Mobile responsive design (3 breakpoints)
 
 **Success Criteria:**
+
 - ✅ 10/10 research topics return relevant results (≥80% relevance)
 - ✅ Theme quality Cohen's kappa ≥0.6 (substantial agreement)
 - ✅ Accessibility score ≥90/100 (Lighthouse)
@@ -28,6 +30,7 @@ Stage 2 Phase 2 focuses on human-validated testing that automated tests cannot a
 ### Test Scenarios (10 Diverse Research Domains)
 
 #### Test 1: Medical Research - Diabetes Management
+
 ```
 Topic: "Type 2 diabetes management interventions"
 Expected: Papers about lifestyle, medication, diet, exercise
@@ -41,6 +44,7 @@ Validation:
 ```
 
 #### Test 2: Climate Science - Ocean Acidification
+
 ```
 Topic: "Ocean acidification impact on marine ecosystems"
 Expected: Papers about pH changes, coral reefs, marine life
@@ -54,6 +58,7 @@ Validation:
 ```
 
 #### Test 3: Computer Science - Quantum Computing
+
 ```
 Topic: "Quantum computing algorithms for cryptography"
 Expected: Papers about Shor's algorithm, post-quantum crypto
@@ -67,6 +72,7 @@ Validation:
 ```
 
 #### Test 4: Social Sciences - Remote Work Productivity
+
 ```
 Topic: "Remote work productivity and employee wellbeing"
 Expected: Papers about WFH, productivity metrics, mental health
@@ -80,6 +86,7 @@ Validation:
 ```
 
 #### Test 5: Education - Active Learning Strategies
+
 ```
 Topic: "Active learning strategies in STEM education"
 Expected: Papers about pedagogy, student engagement, outcomes
@@ -93,6 +100,7 @@ Validation:
 ```
 
 #### Test 6: Environmental Science - Renewable Energy Policy
+
 ```
 Topic: "Renewable energy policy effectiveness solar wind"
 Expected: Papers about policy analysis, adoption rates, barriers
@@ -106,6 +114,7 @@ Validation:
 ```
 
 #### Test 7: Psychology - Cognitive Behavioral Therapy
+
 ```
 Topic: "Cognitive behavioral therapy for anxiety disorders"
 Expected: Papers about CBT techniques, efficacy, randomized trials
@@ -119,6 +128,7 @@ Validation:
 ```
 
 #### Test 8: Economics - Universal Basic Income
+
 ```
 Topic: "Universal basic income pilot programs outcomes"
 Expected: Papers about UBI trials, economic impacts, social effects
@@ -132,6 +142,7 @@ Validation:
 ```
 
 #### Test 9: Neuroscience - Brain Plasticity
+
 ```
 Topic: "Neuroplasticity adult brain recovery after injury"
 Expected: Papers about brain recovery, rehabilitation, neural rewiring
@@ -145,6 +156,7 @@ Validation:
 ```
 
 #### Test 10: Artificial Intelligence - Explainable AI
+
 ```
 Topic: "Explainable artificial intelligence interpretability healthcare"
 Expected: Papers about XAI, LIME, SHAP, medical AI transparency
@@ -162,6 +174,7 @@ Validation:
 For each research topic:
 
 1. **Execute Search**
+
    ```
    - Navigate to literature search page
    - Enter topic query verbatim
@@ -171,6 +184,7 @@ For each research topic:
    ```
 
 2. **Evaluate Relevance**
+
    ```
    - Review first 10 paper titles
    - Count how many are directly relevant
@@ -179,6 +193,7 @@ For each research topic:
    ```
 
 3. **Validate Metadata Quality**
+
    ```
    - [ ] All papers have titles
    - [ ] ≥80% have author information
@@ -206,6 +221,7 @@ For each research topic:
 **Purpose:** Validate that AI-extracted themes match expert judgment
 
 **Methodology:**
+
 1. Select 3 paper sets from Test Scenarios above
 2. Extract themes using unified theme extraction
 3. Have 2 independent raters classify themes
@@ -217,6 +233,7 @@ For each research topic:
 **Papers:** Use 5 papers from Test 1 results
 
 **AI-Extracted Themes:**
+
 ```
 Run theme extraction and record results:
 
@@ -236,6 +253,7 @@ Theme 3: ___________________
 ```
 
 **Rater 1 Validation:**
+
 ```
 For each AI theme, rate:
 1 = Highly Relevant (theme directly represents paper content)
@@ -250,6 +268,7 @@ Theme 3 Rating: ___
 ```
 
 **Rater 2 Validation:**
+
 ```
 [Same rating scale, independent from Rater 1]
 
@@ -260,6 +279,7 @@ Theme 3 Rating: ___
 ```
 
 **Cohen's Kappa Calculation:**
+
 ```
 Formula: κ = (P_o - P_e) / (1 - P_e)
 
@@ -309,12 +329,14 @@ Qualitative Assessment:
 **Tool:** Lighthouse (Chrome DevTools)
 
 **Pages to Test:**
+
 1. Literature search page (`/discover/literature`)
 2. Search results view
 3. Theme extraction results
 4. Paper library view
 
 **Procedure:**
+
 ```bash
 1. Open Chrome DevTools (F12)
 2. Navigate to "Lighthouse" tab
@@ -324,6 +346,7 @@ Qualitative Assessment:
 ```
 
 **Results Template:**
+
 ```
 Page 1: Literature Search
   Score: ___/100
@@ -387,6 +410,7 @@ Library:
 **Tool:** NVDA (Windows) or VoiceOver (Mac)
 
 **Test Checklist:**
+
 ```
 [ ] Page titles announced correctly
 [ ] Headings have proper hierarchy (h1 → h2 → h3)
@@ -405,6 +429,7 @@ Library:
 **Tool:** axe DevTools or WAVE
 
 **Requirements:**
+
 ```
 - Normal text: 4.5:1 contrast ratio minimum
 - Large text (18pt+): 3:1 contrast ratio minimum
@@ -432,6 +457,7 @@ Test Areas:
 ### Testing Procedure
 
 **Setup:**
+
 ```
 1. Open Chrome DevTools (F12)
 2. Click "Toggle device toolbar" (Ctrl+Shift+M)
@@ -442,6 +468,7 @@ Test Areas:
 ### Mobile (375px) Testing Checklist
 
 **Literature Search Page:**
+
 ```
 [ ] Search input full width and properly sized
 [ ] Source checkboxes visible and tappable (44px min touch target)
@@ -453,6 +480,7 @@ Test Areas:
 ```
 
 **Search Results:**
+
 ```
 [ ] Paper cards stack vertically
 [ ] Paper titles wrap properly (no overflow)
@@ -464,6 +492,7 @@ Test Areas:
 ```
 
 **Theme Extraction Results:**
+
 ```
 [ ] Theme cards stack vertically
 [ ] Keywords wrap to multiple lines if needed
@@ -474,6 +503,7 @@ Test Areas:
 ```
 
 **Library View:**
+
 ```
 [ ] Saved papers display in card layout
 [ ] Actions accessible (delete, edit via menu/icons)
@@ -510,6 +540,7 @@ Test Areas:
 ### Orientation Testing
 
 **Portrait Mode:**
+
 ```
 [ ] All content accessible without horizontal scroll
 [ ] Navigation remains accessible
@@ -518,6 +549,7 @@ Test Areas:
 ```
 
 **Landscape Mode:**
+
 ```
 [ ] Content reflows to utilize horizontal space
 [ ] Navigation adapts (may use horizontal layout)
@@ -553,58 +585,59 @@ Recommendation:
 
 #### Research Topic Results
 
-| Topic | Papers | Search Time | Relevance | Metadata | Status |
-|-------|--------|-------------|-----------|----------|--------|
-| 1. Diabetes | ___ | ___s | ___% | ✅/❌ | ✅/❌ |
-| 2. Ocean Acidification | ___ | ___s | ___% | ✅/❌ | ✅/❌ |
-| 3. Quantum Computing | ___ | ___s | ___% | ✅/❌ | ✅/❌ |
-| 4. Remote Work | ___ | ___s | ___% | ✅/❌ | ✅/❌ |
-| 5. Active Learning | ___ | ___s | ___% | ✅/❌ | ✅/❌ |
-| 6. Renewable Energy | ___ | ___s | ___% | ✅/❌ | ✅/❌ |
-| 7. CBT Therapy | ___ | ___s | ___% | ✅/❌ | ✅/❌ |
-| 8. UBI Programs | ___ | ___s | ___% | ✅/❌ | ✅/❌ |
-| 9. Neuroplasticity | ___ | ___s | ___% | ✅/❌ | ✅/❌ |
-| 10. Explainable AI | ___ | ___s | ___% | ✅/❌ | ✅/❌ |
+| Topic                  | Papers | Search Time | Relevance | Metadata | Status |
+| ---------------------- | ------ | ----------- | --------- | -------- | ------ |
+| 1. Diabetes            | \_\_\_ | \_\_\_s     | \_\_\_%   | ✅/❌    | ✅/❌  |
+| 2. Ocean Acidification | \_\_\_ | \_\_\_s     | \_\_\_%   | ✅/❌    | ✅/❌  |
+| 3. Quantum Computing   | \_\_\_ | \_\_\_s     | \_\_\_%   | ✅/❌    | ✅/❌  |
+| 4. Remote Work         | \_\_\_ | \_\_\_s     | \_\_\_%   | ✅/❌    | ✅/❌  |
+| 5. Active Learning     | \_\_\_ | \_\_\_s     | \_\_\_%   | ✅/❌    | ✅/❌  |
+| 6. Renewable Energy    | \_\_\_ | \_\_\_s     | \_\_\_%   | ✅/❌    | ✅/❌  |
+| 7. CBT Therapy         | \_\_\_ | \_\_\_s     | \_\_\_%   | ✅/❌    | ✅/❌  |
+| 8. UBI Programs        | \_\_\_ | \_\_\_s     | \_\_\_%   | ✅/❌    | ✅/❌  |
+| 9. Neuroplasticity     | \_\_\_ | \_\_\_s     | \_\_\_%   | ✅/❌    | ✅/❌  |
+| 10. Explainable AI     | \_\_\_ | \_\_\_s     | \_\_\_%   | ✅/❌    | ✅/❌  |
 
-**Average Relevance:** _____%
+**Average Relevance:** **\_**%
 **Status:** [ ] Pass (≥80%) [ ] Fail (<80%)
 
 #### Theme Quality Results
 
-| Test Set | Papers | Themes | Rater 1 Avg | Rater 2 Avg | Cohen's κ | Status |
-|----------|--------|--------|-------------|-------------|-----------|--------|
-| Medical | 5 | ___ | ___ | ___ | ___ | ✅/❌ |
-| Climate | 5 | ___ | ___ | ___ | ___ | ✅/❌ |
-| Computer Sci | 5 | ___ | ___ | ___ | ___ | ✅/❌ |
+| Test Set     | Papers | Themes | Rater 1 Avg | Rater 2 Avg | Cohen's κ | Status |
+| ------------ | ------ | ------ | ----------- | ----------- | --------- | ------ |
+| Medical      | 5      | \_\_\_ | \_\_\_      | \_\_\_      | \_\_\_    | ✅/❌  |
+| Climate      | 5      | \_\_\_ | \_\_\_      | \_\_\_      | \_\_\_    | ✅/❌  |
+| Computer Sci | 5      | \_\_\_ | \_\_\_      | \_\_\_      | \_\_\_    | ✅/❌  |
 
-**Overall Cohen's κ:** ______
+**Overall Cohen's κ:** **\_\_**
 **Status:** [ ] Pass (≥0.6) [ ] Fail (<0.6)
 
 #### Accessibility Results
 
-| Page | Lighthouse Score | Critical Issues | Keyboard Nav | Screen Reader | Color Contrast |
-|------|-----------------|-----------------|--------------|---------------|----------------|
-| Search | ___/100 | ___ | ✅/❌ | ✅/❌ | ✅/❌ |
-| Results | ___/100 | ___ | ✅/❌ | ✅/❌ | ✅/❌ |
-| Themes | ___/100 | ___ | ✅/❌ | ✅/❌ | ✅/❌ |
-| Library | ___/100 | ___ | ✅/❌ | ✅/❌ | ✅/❌ |
+| Page    | Lighthouse Score | Critical Issues | Keyboard Nav | Screen Reader | Color Contrast |
+| ------- | ---------------- | --------------- | ------------ | ------------- | -------------- |
+| Search  | \_\_\_/100       | \_\_\_          | ✅/❌        | ✅/❌         | ✅/❌          |
+| Results | \_\_\_/100       | \_\_\_          | ✅/❌        | ✅/❌         | ✅/❌          |
+| Themes  | \_\_\_/100       | \_\_\_          | ✅/❌        | ✅/❌         | ✅/❌          |
+| Library | \_\_\_/100       | \_\_\_          | ✅/❌        | ✅/❌         | ✅/❌          |
 
-**Average Score:** ___/100
+**Average Score:** \_\_\_/100
 **Status:** [ ] Pass (≥90) [ ] Fail (<90)
 
 #### Mobile Responsive Results
 
-| Breakpoint | Layout | Navigation | Touch Targets | Readability | Functionality | Status |
-|------------|--------|------------|---------------|-------------|---------------|--------|
-| 375px (Mobile) | ✅/❌ | ✅/❌ | ✅/❌ | ✅/❌ | ✅/❌ | ✅/❌ |
-| 768px (Tablet) | ✅/❌ | ✅/❌ | ✅/❌ | ✅/❌ | ✅/❌ | ✅/❌ |
-| 1920px (Desktop) | ✅/❌ | ✅/❌ | ✅/❌ | ✅/❌ | ✅/❌ | ✅/❌ |
+| Breakpoint       | Layout | Navigation | Touch Targets | Readability | Functionality | Status |
+| ---------------- | ------ | ---------- | ------------- | ----------- | ------------- | ------ |
+| 375px (Mobile)   | ✅/❌  | ✅/❌      | ✅/❌         | ✅/❌       | ✅/❌         | ✅/❌  |
+| 768px (Tablet)   | ✅/❌  | ✅/❌      | ✅/❌         | ✅/❌       | ✅/❌         | ✅/❌  |
+| 1920px (Desktop) | ✅/❌  | ✅/❌      | ✅/❌         | ✅/❌       | ✅/❌         | ✅/❌  |
 
 **Status:** [ ] All 3 passed [ ] 2/3 passed [ ] <2/3 passed
 
 ### Issues Log
 
 #### Critical Issues (Block Progression)
+
 ```
 1. _______________________
    Impact: High
@@ -615,6 +648,7 @@ Recommendation:
 ```
 
 #### High Priority Issues (Should Fix)
+
 ```
 1. _______________________
    Impact: Medium
@@ -625,6 +659,7 @@ Recommendation:
 ```
 
 #### Low Priority Issues (Nice to Have)
+
 ```
 1. _______________________
    Impact: Low
@@ -667,12 +702,14 @@ Status: [ ] Approved for Stage 2 Phase 3
 ## 📝 Next Steps After Manual Testing
 
 If manual testing passes (≥90% overall success):
+
 1. ✅ Proceed to Stage 2 Phase 3 (Expert Review)
 2. Document all findings in test report
 3. Log any non-critical issues for future sprints
 4. Update Phase Tracker with results
 
 If manual testing fails (<90% overall success):
+
 1. ❌ Fix critical and high priority issues
 2. Re-run failed test scenarios
 3. Document fixes and re-test results

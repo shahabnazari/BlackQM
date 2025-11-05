@@ -6,8 +6,8 @@ import { TextField } from '@/components/apple-ui/TextField';
 import RichTextEditor from '@/components/editors/RichTextEditorV2';
 import { AppleUIGridBuilderV5 as AppleUIGridBuilder } from '@/components/grid/AppleUIGridBuilderV5';
 import {
-    StimuliUploadSystemV7,
-    type Stimulus,
+  StimuliUploadSystemV7,
+  type Stimulus,
 } from '@/components/stimuli/StimuliUploadSystemV7';
 import { UploadProgressTracker } from '@/components/stimuli/UploadProgressTracker';
 import ParticipantPreview from '@/components/study-creation/ParticipantPreview';
@@ -21,38 +21,36 @@ import { apiHealthService } from '@/lib/services/api-health.service';
 import { DraftService } from '@/lib/services/draft.service';
 import { uploadLogo } from '@/lib/services/upload.service';
 import {
-    consentTemplates,
-    getConsentTemplateById,
+  consentTemplates,
+  getConsentTemplateById,
 } from '@/lib/templates/consent-templates';
 import {
-    getTemplateById,
-    welcomeTemplates,
+  getTemplateById,
+  welcomeTemplates,
 } from '@/lib/templates/welcome-templates';
+import { getTooltip } from '@/lib/tooltips/study-creation-tooltips';
 import {
-    getTooltip,
-} from '@/lib/tooltips/study-creation-tooltips';
-import {
-    getAriaKeyShortcuts,
-    getPlatformShortcut,
-    matchesPlatformShortcut,
-    matchesShortcut,
+  getAriaKeyShortcuts,
+  getPlatformShortcut,
+  matchesPlatformShortcut,
+  matchesShortcut,
 } from '@/lib/utils/keyboard';
 import {
-    AlertCircle,
-    Check,
-    ChevronLeft,
-    ChevronRight,
-    Cloud,
-    Monitor,
-    RefreshCw,
-    Save,
-    Smartphone,
-    Sparkles,
-    Tablet,
-    Upload,
-    X,
-    ZoomIn,
-    ZoomOut,
+  AlertCircle,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Cloud,
+  Monitor,
+  RefreshCw,
+  Save,
+  Smartphone,
+  Sparkles,
+  Tablet,
+  Upload,
+  X,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -198,8 +196,70 @@ export default function EnhancedCreateStudyPage() {
     // Check if we're loading a specific draft from URL params
     const urlParams = new URLSearchParams(window.location.search);
     const loadDraftId = urlParams.get('draft');
+    const fromLiterature = urlParams.get('from');
+    const statementsReady = urlParams.get('statementsReady');
 
-    if (loadDraftId) {
+    // Phase 10 Day 5.17.5: Load Q-statements from literature review theme extraction
+    if (fromLiterature === 'literature' && statementsReady === 'true') {
+      console.log(
+        '🎯 [Study Creation] Loading Q-statements from literature review'
+      );
+
+      try {
+        const statementsData = sessionStorage.getItem('generatedStatements');
+        const sourceData = sessionStorage.getItem('statementSource');
+
+        if (statementsData) {
+          const statements = JSON.parse(statementsData);
+          console.log(
+            `   ✅ Loaded ${statements.length} Q-statements from sessionStorage`
+          );
+
+          // Convert statements to stimuli format
+          const literatureStimuli: Stimulus[] = statements.map(
+            (text: string, index: number) => ({
+              id: `stmt-${Date.now()}-${index}`,
+              type: 'text' as const,
+              content: text,
+              label: `Statement ${index + 1}`,
+              metadata: {
+                source: 'literature_themes',
+                generatedAt: new Date().toISOString(),
+                ...(sourceData ? JSON.parse(sourceData) : {}),
+              },
+            })
+          );
+
+          setStimuli(literatureStimuli);
+
+          if (sourceData) {
+            const source = JSON.parse(sourceData);
+            showInfo(
+              `Loaded ${statements.length} Q-statements from ${source.themeCount || 'N/A'} literature themes. ` +
+                `Search query: "${source.query || 'N/A'}"`
+            );
+          } else {
+            showInfo(
+              `Loaded ${statements.length} Q-statements from literature themes`
+            );
+          }
+
+          // Clear sessionStorage after loading
+          sessionStorage.removeItem('generatedStatements');
+          sessionStorage.removeItem('statementSource');
+        } else {
+          console.warn('   ⚠️ No statements found in sessionStorage');
+          showError(
+            'No Q-statements found. Please generate statements from the literature page first.'
+          );
+        }
+      } catch (error) {
+        console.error('❌ Failed to load Q-statements:', error);
+        showError(
+          'Failed to load Q-statements. Please try generating them again.'
+        );
+      }
+    } else if (loadDraftId) {
       // Load specific draft
       const draft = DraftService.getDraft(loadDraftId);
       if (draft) {
@@ -910,7 +970,9 @@ export default function EnhancedCreateStudyPage() {
                     });
                   }
                 }}
-                {...(validationErrors.title && { error: validationErrors.title })}
+                {...(validationErrors.title && {
+                  error: validationErrors.title,
+                })}
                 aria-label="Study title"
                 aria-required="true"
                 aria-invalid={!!validationErrors.title}
@@ -1244,7 +1306,9 @@ export default function EnhancedCreateStudyPage() {
                     {/* Researcher Signature (Draw, Type, or Upload) */}
                     <ResearcherSignature
                       onSignatureComplete={handleSignatureComplete}
-                      {...(studyConfig.researcherSignatureUrl && { currentSignatureUrl: studyConfig.researcherSignatureUrl })}
+                      {...(studyConfig.researcherSignatureUrl && {
+                        currentSignatureUrl: studyConfig.researcherSignatureUrl,
+                      })}
                       onRemove={handleSignatureRemove}
                     />
 

@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import type {
   QuestionnaireData,
   ImportableItem,
-  QuestionnaireBuilderWithImportProps
+  QuestionnaireBuilderWithImportProps,
 } from '@/lib/types/questionnaire-import.types';
 
 /**
@@ -25,7 +25,9 @@ import type {
  * - Integration with theme-to-survey conversion
  * - Future support for research question and hypothesis imports
  */
-export const QuestionnaireBuilderWithImport: React.FC<QuestionnaireBuilderWithImportProps> = (props) => {
+export const QuestionnaireBuilderWithImport: React.FC<
+  QuestionnaireBuilderWithImportProps
+> = props => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importedItems, setImportedItems] = useState<ImportableItem[]>([]);
 
@@ -57,25 +59,22 @@ export const QuestionnaireBuilderWithImport: React.FC<QuestionnaireBuilderWithIm
     }
 
     // Create a deep copy to avoid mutations
-    const baseData: QuestionnaireData = props.initialData ?
-      JSON.parse(JSON.stringify(props.initialData)) :
-      {
-        title: 'New Questionnaire',
-        description: '',
-        questions: [],
-        settings: {
-          showProgressBar: true,
-          allowBackNavigation: true,
-          autoSave: false,
-        }
-      };
+    const baseData: QuestionnaireData = props.initialData
+      ? JSON.parse(JSON.stringify(props.initialData))
+      : {
+          title: 'New Questionnaire',
+          description: '',
+          questions: [],
+          settings: {
+            showProgressBar: true,
+            allowBackNavigation: true,
+            autoSave: false,
+          },
+        };
 
     // Add imported items to questions
     if (importedItems.length > 0) {
-      baseData.questions = [
-        ...(baseData.questions || []),
-        ...importedItems
-      ];
+      baseData.questions = [...(baseData.questions || []), ...importedItems];
     }
 
     return baseData;
@@ -99,10 +98,7 @@ export const QuestionnaireBuilderWithImport: React.FC<QuestionnaireBuilderWithIm
         </div>
 
         {/* Original Builder */}
-        <QuestionnaireBuilderPro
-          {...props}
-          initialData={enhancedInitialData}
-        />
+        <QuestionnaireBuilderPro {...props} initialData={enhancedInitialData} />
       </div>
 
       {/* Import Manager Modal */}

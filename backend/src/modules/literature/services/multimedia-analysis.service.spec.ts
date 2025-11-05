@@ -47,7 +47,10 @@ describe('MultiMediaAnalysisService', () => {
         MultiMediaAnalysisService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: ConfigService, useValue: mockConfigService },
-        { provide: UnifiedThemeExtractionService, useValue: mockUnifiedThemeService },
+        {
+          provide: UnifiedThemeExtractionService,
+          useValue: mockUnifiedThemeService,
+        },
       ],
     }).compile();
 

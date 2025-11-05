@@ -61,7 +61,7 @@ export const ThemeActionPanel: React.FC<ThemeActionPanelProps> = ({
   className = '',
 }) => {
   const [selectedThemeIds, setSelectedThemeIds] = useState<Set<string>>(
-    new Set(themes.map((t) => t.id)),
+    new Set(themes.map(t => t.id))
   );
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
@@ -76,7 +76,7 @@ export const ThemeActionPanel: React.FC<ThemeActionPanelProps> = ({
   };
 
   const selectAllThemes = () => {
-    setSelectedThemeIds(new Set(themes.map((t) => t.id)));
+    setSelectedThemeIds(new Set(themes.map(t => t.id)));
   };
 
   const deselectAllThemes = () => {
@@ -84,12 +84,12 @@ export const ThemeActionPanel: React.FC<ThemeActionPanelProps> = ({
   };
 
   const getSelectedThemes = (): Theme[] => {
-    return themes.filter((t) => selectedThemeIds.has(t.id));
+    return themes.filter(t => selectedThemeIds.has(t.id));
   };
 
   const handleAction = async (
     actionName: string,
-    actionFn?: (themes: Theme[]) => Promise<void>,
+    actionFn?: (themes: Theme[]) => Promise<void>
   ) => {
     if (!actionFn) return;
     if (selectedThemeIds.size === 0) {
@@ -143,7 +143,9 @@ export const ThemeActionPanel: React.FC<ThemeActionPanelProps> = ({
   ];
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}>
+    <div
+      className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}
+    >
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
@@ -181,7 +183,7 @@ export const ThemeActionPanel: React.FC<ThemeActionPanelProps> = ({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {themes.map((theme) => (
+          {themes.map(theme => (
             <button
               key={theme.id}
               onClick={() => toggleThemeSelection(theme.id)}
@@ -207,7 +209,7 @@ export const ThemeActionPanel: React.FC<ThemeActionPanelProps> = ({
         </h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {actions.map((action) => {
+          {actions.map(action => {
             const Icon = action.icon;
             const isLoading = loadingAction === action.id;
 
@@ -272,7 +274,9 @@ export const ThemeActionPanel: React.FC<ThemeActionPanelProps> = ({
                     >
                       <div className="flex items-center gap-2 text-purple-600">
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        <span className="text-sm font-medium">Processing...</span>
+                        <span className="text-sm font-medium">
+                          Processing...
+                        </span>
                       </div>
                     </motion.div>
                   )}
@@ -286,8 +290,8 @@ export const ThemeActionPanel: React.FC<ThemeActionPanelProps> = ({
       {/* Help Text */}
       <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
         <p className="text-xs text-gray-600">
-          💡 <strong>Tip:</strong> Select 2-5 themes for focused research questions,
-          or select all themes for comprehensive survey generation.
+          💡 <strong>Tip:</strong> Select 2-5 themes for focused research
+          questions, or select all themes for comprehensive survey generation.
         </p>
       </div>
     </div>

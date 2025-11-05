@@ -233,10 +233,16 @@ describe('ThemeToStatementService', () => {
     it('should generate paired statements for controversial themes', async () => {
       statementGeneratorService.generateStatements
         .mockResolvedValueOnce([
-          { id: 'stmt-r1', text: 'Renewables are cost-effective and sustainable' },
+          {
+            id: 'stmt-r1',
+            text: 'Renewables are cost-effective and sustainable',
+          },
         ])
         .mockResolvedValueOnce([
-          { id: 'stmt-r2', text: 'Fossil fuels ensure energy security and affordability' },
+          {
+            id: 'stmt-r2',
+            text: 'Fossil fuels ensure energy security and affordability',
+          },
         ]);
 
       const result = await service['generateControversyPairs'](

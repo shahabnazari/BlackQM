@@ -105,13 +105,15 @@ export const ROUTE_CONSOLIDATION_MAP: RouteMapping[] = [
   },
 
   // BUILD Phase
-  {
-    source: '/studies/create',
-    destination: '/build/study',
-    permanent: false,
-    phase: 'build',
-    description: 'Study creation under build phase',
-  },
+  // PHASE 10 DAY 5.17.5: DISABLED - /studies/create exists and is actively used
+  // Q-statements from literature themes navigate here
+  // {
+  //   source: '/studies/create',
+  //   destination: '/build/study',
+  //   permanent: false,
+  //   phase: 'build',
+  //   description: 'Study creation under build phase',
+  // },
   {
     source: '/questionnaire/builder-pro',
     destination: '/build/questionnaire',

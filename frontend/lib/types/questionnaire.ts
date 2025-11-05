@@ -425,6 +425,3 @@ export interface QuestionSearchParams {
   page?: number;
   limit?: number;
 }
-
-
-

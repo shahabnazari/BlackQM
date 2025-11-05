@@ -62,7 +62,11 @@ export interface ResearchQuestionSuggestion {
     timely: number;
     overallScore: number;
   };
-  suggestedMethodology: 'qualitative' | 'quantitative' | 'mixed_methods' | 'q_methodology';
+  suggestedMethodology:
+    | 'qualitative'
+    | 'quantitative'
+    | 'mixed_methods'
+    | 'q_methodology';
 }
 
 export interface HypothesisSuggestion {
@@ -91,7 +95,12 @@ export interface ConstructMapping {
   relatedConstructs: Array<{
     constructId: string;
     constructName: string;
-    relationshipType: 'causes' | 'influences' | 'correlates' | 'moderates' | 'mediates';
+    relationshipType:
+      | 'causes'
+      | 'influences'
+      | 'correlates'
+      | 'moderates'
+      | 'mediates';
     strength: 'weak' | 'moderate' | 'strong';
     confidence: number;
   }>;
@@ -104,7 +113,11 @@ export interface CompleteSurvey {
     description: string;
     items: Array<{
       id: string;
-      type: 'likert' | 'multiple_choice' | 'semantic_differential' | 'open_ended';
+      type:
+        | 'likert'
+        | 'multiple_choice'
+        | 'semantic_differential'
+        | 'open_ended';
       text: string;
       scaleType?: string;
       options?: string[];
@@ -127,7 +140,12 @@ export interface CompleteSurvey {
 
 export interface SuggestQuestionsRequest {
   themes: Theme[];
-  questionTypes?: ('exploratory' | 'explanatory' | 'evaluative' | 'descriptive')[];
+  questionTypes?: (
+    | 'exploratory'
+    | 'explanatory'
+    | 'evaluative'
+    | 'descriptive'
+  )[];
   maxQuestions?: number;
   researchDomain?: string;
   researchGoal?: string;
@@ -135,7 +153,13 @@ export interface SuggestQuestionsRequest {
 
 export interface SuggestHypothesesRequest {
   themes: Theme[];
-  hypothesisTypes?: ('correlational' | 'causal' | 'mediation' | 'moderation' | 'interaction')[];
+  hypothesisTypes?: (
+    | 'correlational'
+    | 'causal'
+    | 'mediation'
+    | 'moderation'
+    | 'interaction'
+  )[];
   maxHypotheses?: number;
   researchDomain?: string;
   researchContext?: string;
@@ -161,7 +185,7 @@ export interface GenerateCompleteSurveyRequest {
  * Suggest research questions from themes
  */
 export async function suggestResearchQuestions(
-  request: SuggestQuestionsRequest,
+  request: SuggestQuestionsRequest
 ): Promise<ResearchQuestionSuggestion[]> {
   try {
     log('Calling suggest-questions API with', request);
@@ -195,7 +219,9 @@ export async function suggestResearchQuestions(
     error('Error response:', err.response?.data);
     error('Request was:', request);
     throw new Error(
-      err.response?.data?.message || err.message || 'Failed to generate research questions',
+      err.response?.data?.message ||
+        err.message ||
+        'Failed to generate research questions'
     );
   }
 }
@@ -204,7 +230,7 @@ export async function suggestResearchQuestions(
  * Suggest hypotheses from themes
  */
 export async function suggestHypotheses(
-  request: SuggestHypothesesRequest,
+  request: SuggestHypothesesRequest
 ): Promise<HypothesisSuggestion[]> {
   try {
     log('Calling suggest-hypotheses API with', request);
@@ -236,7 +262,9 @@ export async function suggestHypotheses(
     error('Error response:', err.response?.data);
     error('Request was:', request);
     throw new Error(
-      err.response?.data?.message || err.message || 'Failed to generate hypotheses',
+      err.response?.data?.message ||
+        err.message ||
+        'Failed to generate hypotheses'
     );
   }
 }
@@ -245,7 +273,7 @@ export async function suggestHypotheses(
  * Map themes to psychological constructs
  */
 export async function mapThemesToConstructs(
-  request: MapConstructsRequest,
+  request: MapConstructsRequest
 ): Promise<ConstructMapping[]> {
   try {
     log('Calling map-constructs API with', request);
@@ -277,7 +305,7 @@ export async function mapThemesToConstructs(
     error('Error response:', err.response?.data);
     error('Request was:', request);
     throw new Error(
-      err.response?.data?.message || err.message || 'Failed to map constructs',
+      err.response?.data?.message || err.message || 'Failed to map constructs'
     );
   }
 }
@@ -286,7 +314,7 @@ export async function mapThemesToConstructs(
  * Generate complete survey from themes
  */
 export async function generateCompleteSurvey(
-  request: GenerateCompleteSurveyRequest,
+  request: GenerateCompleteSurveyRequest
 ): Promise<CompleteSurvey> {
   try {
     log('Calling generate-complete-survey API with', request);
@@ -307,12 +335,18 @@ export async function generateCompleteSurvey(
     }
 
     const responseData = response as any;
-    if (!responseData.sections || !responseData.metadata || !responseData.methodology) {
+    if (
+      !responseData.sections ||
+      !responseData.metadata ||
+      !responseData.methodology
+    ) {
       error('Missing required fields in response:', responseData);
       throw new Error('API returned incomplete survey data');
     }
 
-    log(`Successfully received survey with ${responseData.sections.length} sections`);
+    log(
+      `Successfully received survey with ${responseData.sections.length} sections`
+    );
     return {
       sections: responseData.sections,
       metadata: responseData.metadata,
@@ -323,7 +357,9 @@ export async function generateCompleteSurvey(
     error('Error response:', err.response?.data);
     error('Request was:', request);
     throw new Error(
-      err.response?.data?.message || err.message || 'Failed to generate complete survey',
+      err.response?.data?.message ||
+        err.message ||
+        'Failed to generate complete survey'
     );
   }
 }
@@ -333,7 +369,7 @@ export async function generateCompleteSurvey(
  */
 export function saveResearchQuestions(
   questions: ResearchQuestionSuggestion[],
-  themesUsed: Theme[],
+  themesUsed: Theme[]
 ): void {
   try {
     const data = {
@@ -369,7 +405,7 @@ export function getSavedResearchQuestions(): {
  */
 export function saveHypotheses(
   hypotheses: HypothesisSuggestion[],
-  themesUsed: Theme[],
+  themesUsed: Theme[]
 ): void {
   try {
     const data = {
@@ -405,7 +441,7 @@ export function getSavedHypotheses(): {
  */
 export function saveConstructMapping(
   constructs: ConstructMapping[],
-  themesUsed: Theme[],
+  themesUsed: Theme[]
 ): void {
   try {
     const data = {
@@ -442,7 +478,7 @@ export function getSavedConstructMapping(): {
 export function saveCompleteSurvey(
   survey: CompleteSurvey,
   themesUsed: Theme[],
-  purpose: string,
+  purpose: string
 ): void {
   try {
     const data = {

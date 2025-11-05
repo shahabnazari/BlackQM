@@ -45,7 +45,8 @@ describe('HypothesisToItemService', () => {
   describe('Basic Hypothesis Processing', () => {
     it('should convert simple hypothesis to survey items', async () => {
       const request: HypothesisToItemRequest = {
-        hypothesis: 'Social media usage positively influences employee productivity',
+        hypothesis:
+          'Social media usage positively influences employee productivity',
         hypothesisType: 'correlational',
         itemsPerVariable: 5,
       };
@@ -68,8 +69,8 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      const ivs = result.variables.filter(v => v.role === 'independent');
-      const dvs = result.variables.filter(v => v.role === 'dependent');
+      const ivs = result.variables.filter((v) => v.role === 'independent');
+      const dvs = result.variables.filter((v) => v.role === 'dependent');
 
       expect(ivs.length).toBeGreaterThan(0);
       expect(dvs.length).toBeGreaterThan(0);
@@ -84,10 +85,10 @@ describe('HypothesisToItemService', () => {
       const result = await service.convertHypothesisToItems(request);
 
       expect(result.scales.length).toBeGreaterThan(0);
-      result.scales.forEach(scale => {
+      result.scales.forEach((scale) => {
         expect(scale.items.length).toBe(7);
         expect(scale.reliability).toBeDefined();
-        expect(scale.reliability.expectedAlpha).toBeGreaterThan(0.60);
+        expect(scale.reliability.expectedAlpha).toBeGreaterThan(0.6);
       });
     });
 
@@ -100,7 +101,7 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      const reversedItems = result.allItems.filter(item => item.reversed);
+      const reversedItems = result.allItems.filter((item) => item.reversed);
       expect(reversedItems.length).toBeGreaterThan(0);
     });
 
@@ -113,7 +114,7 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      const reversedItems = result.allItems.filter(item => item.reversed);
+      const reversedItems = result.allItems.filter((item) => item.reversed);
       expect(reversedItems.length).toBe(0);
     });
   });
@@ -121,7 +122,8 @@ describe('HypothesisToItemService', () => {
   describe('Hypothesis Type Detection', () => {
     it('should detect correlational hypotheses', async () => {
       const request: HypothesisToItemRequest = {
-        hypothesis: 'There is a relationship between sleep quality and cognitive performance',
+        hypothesis:
+          'There is a relationship between sleep quality and cognitive performance',
         hypothesisType: 'correlational',
       };
 
@@ -143,20 +145,22 @@ describe('HypothesisToItemService', () => {
 
     it('should detect mediation hypotheses', async () => {
       const request: HypothesisToItemRequest = {
-        hypothesis: 'Leadership affects performance through employee engagement as a mediator',
+        hypothesis:
+          'Leadership affects performance through employee engagement as a mediator',
         hypothesisType: 'mediation',
       };
 
       const result = await service.convertHypothesisToItems(request);
 
       expect(result.hypothesisType).toBe('mediation');
-      const mediators = result.variables.filter(v => v.role === 'mediator');
+      const mediators = result.variables.filter((v) => v.role === 'mediator');
       expect(mediators.length).toBeGreaterThanOrEqual(0); // Template mode may not detect mediator
     });
 
     it('should detect moderation hypotheses', async () => {
       const request: HypothesisToItemRequest = {
-        hypothesis: 'Age moderates the relationship between technology adoption and productivity',
+        hypothesis:
+          'Age moderates the relationship between technology adoption and productivity',
         hypothesisType: 'moderation',
       };
 
@@ -167,7 +171,8 @@ describe('HypothesisToItemService', () => {
 
     it('should detect interaction hypotheses', async () => {
       const request: HypothesisToItemRequest = {
-        hypothesis: 'The interaction between gender and education predicts income',
+        hypothesis:
+          'The interaction between gender and education predicts income',
         hypothesisType: 'interaction',
       };
 
@@ -185,44 +190,49 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      result.variables.forEach(variable => {
-        expect(['nominal', 'ordinal', 'interval', 'ratio']).toContain(variable.measurementLevel);
+      result.variables.forEach((variable) => {
+        expect(['nominal', 'ordinal', 'interval', 'ratio']).toContain(
+          variable.measurementLevel,
+        );
       });
     });
 
     it('should identify moderators when present', async () => {
       const request: HypothesisToItemRequest = {
-        hypothesis: 'Experience moderates the effect of training on performance',
+        hypothesis:
+          'Experience moderates the effect of training on performance',
         hypothesisType: 'moderation',
       };
 
       const result = await service.convertHypothesisToItems(request);
 
-      const moderators = result.variables.filter(v => v.role === 'moderator');
+      const moderators = result.variables.filter((v) => v.role === 'moderator');
       expect(moderators.length).toBeGreaterThanOrEqual(0);
     });
 
     it('should identify mediators when present', async () => {
       const request: HypothesisToItemRequest = {
-        hypothesis: 'Organizational culture mediates the relationship between leadership and satisfaction',
+        hypothesis:
+          'Organizational culture mediates the relationship between leadership and satisfaction',
         hypothesisType: 'mediation',
       };
 
       const result = await service.convertHypothesisToItems(request);
 
-      const mediators = result.variables.filter(v => v.role === 'mediator');
+      const mediators = result.variables.filter((v) => v.role === 'mediator');
       expect(mediators.length).toBeGreaterThanOrEqual(0);
     });
 
     it('should handle covariates appropriately', async () => {
       const request: HypothesisToItemRequest = {
-        hypothesis: 'Marketing spend influences sales, controlling for seasonality',
+        hypothesis:
+          'Marketing spend influences sales, controlling for seasonality',
         studyContext: 'Include seasonality as covariate',
       };
 
       const result = await service.convertHypothesisToItems(request);
 
-      const covariates = result.variables.filter(v => v.role === 'covariate');
+      const covariates = result.variables.filter((v) => v.role === 'covariate');
       expect(covariates.length).toBeGreaterThanOrEqual(0);
     });
   });
@@ -235,21 +245,21 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      result.scales.forEach(scale => {
-        expect(scale.reliability.targetAlpha).toBeCloseTo(0.80, 2);
+      result.scales.forEach((scale) => {
+        expect(scale.reliability.targetAlpha).toBeCloseTo(0.8, 2);
       });
     });
 
     it('should respect custom reliability targets', async () => {
       const request: HypothesisToItemRequest = {
         hypothesis: 'Quality affects satisfaction',
-        targetReliability: 0.90,
+        targetReliability: 0.9,
       };
 
       const result = await service.convertHypothesisToItems(request);
 
-      result.scales.forEach(scale => {
-        expect(scale.reliability.targetAlpha).toBeCloseTo(0.90, 2);
+      result.scales.forEach((scale) => {
+        expect(scale.reliability.targetAlpha).toBeCloseTo(0.9, 2);
       });
     });
 
@@ -261,8 +271,8 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      result.scales.forEach(scale => {
-        expect(scale.reliability.expectedAlpha).toBeGreaterThan(0.60);
+      result.scales.forEach((scale) => {
+        expect(scale.reliability.expectedAlpha).toBeGreaterThan(0.6);
         expect(scale.reliability.expectedAlpha).toBeLessThanOrEqual(0.95);
       });
     });
@@ -275,11 +285,13 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      result.scales.forEach(scale => {
+      result.scales.forEach((scale) => {
         expect(scale.reliability.itemTotalCorrelations).toBeDefined();
-        expect(scale.reliability.itemTotalCorrelations.length).toBe(scale.items.length);
-        scale.reliability.itemTotalCorrelations.forEach(corr => {
-          expect(corr).toBeGreaterThanOrEqual(0.30); // Minimum acceptable
+        expect(scale.reliability.itemTotalCorrelations.length).toBe(
+          scale.items.length,
+        );
+        scale.reliability.itemTotalCorrelations.forEach((corr) => {
+          expect(corr).toBeGreaterThanOrEqual(0.3); // Minimum acceptable
           expect(corr).toBeLessThanOrEqual(1.0);
         });
       });
@@ -294,7 +306,7 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      result.scales.forEach(scale => {
+      result.scales.forEach((scale) => {
         expect(scale.validity.contentValidity).toBeDefined();
         expect(scale.validity.contentValidity.length).toBeGreaterThan(0);
       });
@@ -307,10 +319,14 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      result.scales.forEach(scale => {
+      result.scales.forEach((scale) => {
         expect(scale.validity.constructValidity).toBeDefined();
-        expect(scale.validity.constructValidity).toContain('Convergent validity');
-        expect(scale.validity.constructValidity).toContain('Discriminant validity');
+        expect(scale.validity.constructValidity).toContain(
+          'Convergent validity',
+        );
+        expect(scale.validity.constructValidity).toContain(
+          'Discriminant validity',
+        );
       });
     });
 
@@ -321,7 +337,7 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      result.scales.forEach(scale => {
+      result.scales.forEach((scale) => {
         expect(scale.validity.criterionValidity).toBeDefined();
         expect(scale.validity.criterionValidity.length).toBeGreaterThan(0);
       });
@@ -354,7 +370,8 @@ describe('HypothesisToItemService', () => {
 
     it('should recommend mediation analysis for mediation hypotheses', async () => {
       const request: HypothesisToItemRequest = {
-        hypothesis: 'Trust mediates the relationship between transparency and commitment',
+        hypothesis:
+          'Trust mediates the relationship between transparency and commitment',
         hypothesisType: 'mediation',
       };
 
@@ -382,7 +399,9 @@ describe('HypothesisToItemService', () => {
       const result = await service.convertHypothesisToItems(request);
 
       expect(result.testBattery.primaryTest.assumptions).toBeDefined();
-      expect(result.testBattery.primaryTest.assumptions.length).toBeGreaterThan(0);
+      expect(result.testBattery.primaryTest.assumptions.length).toBeGreaterThan(
+        0,
+      );
     });
 
     it('should calculate appropriate sample size', async () => {
@@ -393,8 +412,12 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      expect(result.testBattery.primaryTest.requiredSampleSize).toBeGreaterThan(0);
-      expect(result.testBattery.primaryTest.requiredSampleSize).toBeGreaterThanOrEqual(30);
+      expect(result.testBattery.primaryTest.requiredSampleSize).toBeGreaterThan(
+        0,
+      );
+      expect(
+        result.testBattery.primaryTest.requiredSampleSize,
+      ).toBeGreaterThanOrEqual(30);
     });
 
     it('should target 80% statistical power', async () => {
@@ -404,7 +427,7 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      expect(result.testBattery.primaryTest.expectedPower).toBeCloseTo(0.80, 2);
+      expect(result.testBattery.primaryTest.expectedPower).toBeCloseTo(0.8, 2);
     });
 
     it('should provide alternative test methods', async () => {
@@ -428,9 +451,9 @@ describe('HypothesisToItemService', () => {
 
       expect(result.testBattery.reliabilityChecks).toBeDefined();
       expect(result.testBattery.reliabilityChecks.length).toBeGreaterThan(0);
-      result.testBattery.reliabilityChecks.forEach(check => {
+      result.testBattery.reliabilityChecks.forEach((check) => {
         expect(check.method).toContain('Cronbach');
-        expect(check.threshold).toBeGreaterThanOrEqual(0.70);
+        expect(check.threshold).toBeGreaterThanOrEqual(0.7);
       });
     });
 
@@ -444,7 +467,9 @@ describe('HypothesisToItemService', () => {
       expect(result.testBattery.validityChecks).toBeDefined();
       expect(result.testBattery.validityChecks.length).toBeGreaterThan(0);
 
-      const validityTypes = result.testBattery.validityChecks.map(v => v.type);
+      const validityTypes = result.testBattery.validityChecks.map(
+        (v) => v.type,
+      );
       expect(validityTypes).toContain('Convergent Validity');
     });
   });
@@ -503,7 +528,9 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      const hasPilotRecommendation = result.recommendations.some(r => r.toLowerCase().includes('pilot'));
+      const hasPilotRecommendation = result.recommendations.some((r) =>
+        r.toLowerCase().includes('pilot'),
+      );
       expect(hasPilotRecommendation).toBe(true);
     });
 
@@ -514,7 +541,9 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      const hasSampleSizeRecommendation = result.recommendations.some(r => r.toLowerCase().includes('sample size'));
+      const hasSampleSizeRecommendation = result.recommendations.some((r) =>
+        r.toLowerCase().includes('sample size'),
+      );
       expect(hasSampleSizeRecommendation).toBe(true);
     });
   });
@@ -567,7 +596,8 @@ describe('HypothesisToItemService', () => {
 
     it('should handle complex multi-variable hypotheses', async () => {
       const request: HypothesisToItemRequest = {
-        hypothesis: 'Leadership, culture, and resources jointly predict organizational performance through employee engagement',
+        hypothesis:
+          'Leadership, culture, and resources jointly predict organizational performance through employee engagement',
         hypothesisType: 'mediation',
       };
 
@@ -585,7 +615,7 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      result.scales.forEach(scale => {
+      result.scales.forEach((scale) => {
         expect(scale.items.length).toBe(3);
       });
     });
@@ -598,7 +628,7 @@ describe('HypothesisToItemService', () => {
 
       const result = await service.convertHypothesisToItems(request);
 
-      result.scales.forEach(scale => {
+      result.scales.forEach((scale) => {
         expect(scale.items.length).toBe(10);
       });
     });

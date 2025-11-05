@@ -139,11 +139,14 @@ export default function EnhancedThemeExtractionProgress({
   onRefinementRequest,
   allowIterativeRefinement = false,
 }: EnhancedThemeExtractionProgressProps) {
-  const [expertiseLevel, setExpertiseLevel] = useState<UserExpertiseLevel>('researcher');
-  const [expandedStages, setExpandedStages] = useState<Set<number>>(new Set([currentStage]));
+  const [expertiseLevel, setExpertiseLevel] =
+    useState<UserExpertiseLevel>('researcher');
+  const [expandedStages, setExpandedStages] = useState<Set<number>>(
+    new Set([currentStage])
+  );
 
   const toggleStageExpansion = (stageNumber: number) => {
-    setExpandedStages((prev) => {
+    setExpandedStages(prev => {
       const newSet = new Set(prev);
       if (newSet.has(stageNumber)) {
         newSet.delete(stageNumber);
@@ -154,16 +157,19 @@ export default function EnhancedThemeExtractionProgress({
     });
   };
 
-  const currentStageConfig = STAGES.find((s) => s.number === currentStage);
+  const currentStageConfig = STAGES.find(s => s.number === currentStage);
 
   return (
     <div className="w-full space-y-6">
       {/* Header with Progressive Disclosure Toggle */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Theme Extraction in Progress</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Theme Extraction in Progress
+          </h3>
           <p className="text-sm text-gray-600 mt-1">
-            Stage {currentStage} of {totalStages} • {Math.round(percentage)}% Complete
+            Stage {currentStage} of {totalStages} • {Math.round(percentage)}%
+            Complete
           </p>
         </div>
 
@@ -171,19 +177,21 @@ export default function EnhancedThemeExtractionProgress({
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Detail Level:</span>
           <div className="flex items-center bg-gray-100 rounded-lg p-1">
-            {(['novice', 'researcher', 'expert'] as UserExpertiseLevel[]).map((level) => (
-              <button
-                key={level}
-                onClick={() => setExpertiseLevel(level)}
-                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                  expertiseLevel === level
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                {level.charAt(0).toUpperCase() + level.slice(1)}
-              </button>
-            ))}
+            {(['novice', 'researcher', 'expert'] as UserExpertiseLevel[]).map(
+              level => (
+                <button
+                  key={level}
+                  onClick={() => setExpertiseLevel(level)}
+                  className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                    expertiseLevel === level
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {level.charAt(0).toUpperCase() + level.slice(1)}
+                </button>
+              )
+            )}
           </div>
         </div>
       </div>
@@ -199,15 +207,15 @@ export default function EnhancedThemeExtractionProgress({
           />
         </div>
         <div className="absolute top-0 left-0 right-0 flex justify-between px-1 -mt-1">
-          {STAGES.map((stage) => (
+          {STAGES.map(stage => (
             <div
               key={stage.number}
               className={`w-5 h-5 rounded-full border-2 transition-all ${
                 stage.number < currentStage
                   ? 'bg-green-500 border-green-500'
                   : stage.number === currentStage
-                  ? 'bg-blue-500 border-blue-500 animate-pulse'
-                  : 'bg-white border-gray-300'
+                    ? 'bg-blue-500 border-blue-500 animate-pulse'
+                    : 'bg-white border-gray-300'
               }`}
             />
           ))}
@@ -223,8 +231,13 @@ export default function EnhancedThemeExtractionProgress({
         >
           <div className="flex items-start gap-4">
             {/* Icon */}
-            <div className={`p-3 rounded-lg bg-white shadow-sm ${currentStageConfig?.color}`}>
-              {currentStageConfig && React.createElement(currentStageConfig.icon, { className: 'w-6 h-6' })}
+            <div
+              className={`p-3 rounded-lg bg-white shadow-sm ${currentStageConfig?.color}`}
+            >
+              {currentStageConfig &&
+                React.createElement(currentStageConfig.icon, {
+                  className: 'w-6 h-6',
+                })}
             </div>
 
             {/* 4-Part Message */}
@@ -235,7 +248,8 @@ export default function EnhancedThemeExtractionProgress({
                   {transparentMessage.stageName}
                 </h4>
                 <p className="text-sm text-gray-600">
-                  Stage {transparentMessage.stageNumber} of {transparentMessage.totalStages}
+                  Stage {transparentMessage.stageNumber} of{' '}
+                  {transparentMessage.totalStages}
                 </p>
               </div>
 
@@ -244,8 +258,12 @@ export default function EnhancedThemeExtractionProgress({
                 <div className="flex items-start gap-2">
                   <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 mb-1">What we're doing:</p>
-                    <p className="text-sm text-gray-700">{transparentMessage.whatWeAreDoing}</p>
+                    <p className="text-sm font-semibold text-gray-900 mb-1">
+                      What we're doing:
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      {transparentMessage.whatWeAreDoing}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -255,8 +273,12 @@ export default function EnhancedThemeExtractionProgress({
                 <div className="flex items-start gap-2">
                   <Info className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 mb-1">Why it matters:</p>
-                    <p className="text-sm text-gray-700">{transparentMessage.whyItMatters}</p>
+                    <p className="text-sm font-semibold text-gray-900 mb-1">
+                      Why it matters:
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      {transparentMessage.whyItMatters}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -271,13 +293,16 @@ export default function EnhancedThemeExtractionProgress({
                 </div>
                 {transparentMessage.liveStats.codesGenerated !== undefined && (
                   <div className="bg-white rounded-lg p-3 shadow-sm">
-                    <p className="text-xs text-gray-600 mb-1">Codes Generated</p>
+                    <p className="text-xs text-gray-600 mb-1">
+                      Codes Generated
+                    </p>
                     <p className="text-xl font-bold text-gray-900">
                       {transparentMessage.liveStats.codesGenerated}
                     </p>
                   </div>
                 )}
-                {transparentMessage.liveStats.themesIdentified !== undefined && (
+                {transparentMessage.liveStats.themesIdentified !==
+                  undefined && (
                   <div className="bg-white rounded-lg p-3 shadow-sm">
                     <p className="text-xs text-gray-600 mb-1">Themes Found</p>
                     <p className="text-xl font-bold text-gray-900">
@@ -310,8 +335,10 @@ export default function EnhancedThemeExtractionProgress({
 
       {/* All Stages Accordion */}
       <div className="space-y-2">
-        <h4 className="text-sm font-semibold text-gray-700 mb-3">All Stages (Braun & Clarke 2019)</h4>
-        {STAGES.map((stage) => {
+        <h4 className="text-sm font-semibold text-gray-700 mb-3">
+          All Stages (Braun & Clarke 2019)
+        </h4>
+        {STAGES.map(stage => {
           const isExpanded = expandedStages.has(stage.number);
           const isCompleted = stage.number < currentStage;
           const isCurrent = stage.number === currentStage;
@@ -326,8 +353,8 @@ export default function EnhancedThemeExtractionProgress({
                 isCurrent
                   ? `${stage.bgColor} ${stage.color.replace('text-', 'border-')}`
                   : isCompleted
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-gray-50 border-gray-200'
+                    ? 'bg-green-50 border-green-200'
+                    : 'bg-gray-50 border-gray-200'
               }`}
             >
               {/* Stage Header */}
@@ -341,8 +368,8 @@ export default function EnhancedThemeExtractionProgress({
                       isCurrent
                         ? 'bg-white shadow-sm'
                         : isCompleted
-                        ? 'bg-green-100'
-                        : 'bg-gray-100'
+                          ? 'bg-green-100'
+                          : 'bg-gray-100'
                     }`}
                   >
                     {isCompleted ? (
@@ -358,14 +385,18 @@ export default function EnhancedThemeExtractionProgress({
                   <div>
                     <p
                       className={`font-semibold ${
-                        isCurrent || isCompleted ? 'text-gray-900' : 'text-gray-500'
+                        isCurrent || isCompleted
+                          ? 'text-gray-900'
+                          : 'text-gray-500'
                       }`}
                     >
                       Stage {stage.number}: {stage.name}
                     </p>
                     <p
                       className={`text-sm ${
-                        isCurrent || isCompleted ? 'text-gray-600' : 'text-gray-400'
+                        isCurrent || isCompleted
+                          ? 'text-gray-600'
+                          : 'text-gray-400'
                       }`}
                     >
                       {stage.description}
@@ -411,32 +442,50 @@ export default function EnhancedThemeExtractionProgress({
                       <div className="bg-white/50 rounded-lg p-3 text-sm text-gray-700">
                         {expertiseLevel === 'novice' && (
                           <p>
-                            {stage.number === 1 && "We're carefully reading all your sources to understand the content."}
-                            {stage.number === 2 && "We're highlighting important parts of the text with codes."}
-                            {stage.number === 3 && "We're grouping similar codes together to form themes."}
-                            {stage.number === 4 && "We're double-checking that themes make sense with the data."}
-                            {stage.number === 5 && "We're giving each theme a clear name and definition."}
-                            {stage.number === 6 && "We're writing up the final analysis with all details."}
+                            {stage.number === 1 &&
+                              "We're carefully reading all your sources to understand the content."}
+                            {stage.number === 2 &&
+                              "We're highlighting important parts of the text with codes."}
+                            {stage.number === 3 &&
+                              "We're grouping similar codes together to form themes."}
+                            {stage.number === 4 &&
+                              "We're double-checking that themes make sense with the data."}
+                            {stage.number === 5 &&
+                              "We're giving each theme a clear name and definition."}
+                            {stage.number === 6 &&
+                              "We're writing up the final analysis with all details."}
                           </p>
                         )}
                         {expertiseLevel === 'researcher' && (
                           <p>
-                            {stage.number === 1 && "Immersive reading of full dataset with note-taking on patterns and meanings (Braun & Clarke 2006)."}
-                            {stage.number === 2 && "Systematic coding across entire corpus using open coding approach (Charmaz 2006)."}
-                            {stage.number === 3 && "Collating codes into candidate themes via semantic clustering (Braun & Clarke 2019)."}
-                            {stage.number === 4 && "Reviewing themes at code level (coherence) and dataset level (distinctiveness)."}
-                            {stage.number === 5 && "Defining essence of each theme and refining names to capture meaning accurately."}
-                            {stage.number === 6 && "Producing scholarly report with vivid extracts demonstrating each theme."}
+                            {stage.number === 1 &&
+                              'Immersive reading of full dataset with note-taking on patterns and meanings (Braun & Clarke 2006).'}
+                            {stage.number === 2 &&
+                              'Systematic coding across entire corpus using open coding approach (Charmaz 2006).'}
+                            {stage.number === 3 &&
+                              'Collating codes into candidate themes via semantic clustering (Braun & Clarke 2019).'}
+                            {stage.number === 4 &&
+                              'Reviewing themes at code level (coherence) and dataset level (distinctiveness).'}
+                            {stage.number === 5 &&
+                              'Defining essence of each theme and refining names to capture meaning accurately.'}
+                            {stage.number === 6 &&
+                              'Producing scholarly report with vivid extracts demonstrating each theme.'}
                           </p>
                         )}
                         {expertiseLevel === 'expert' && (
                           <p>
-                            {stage.number === 1 && "Corpus-level semantic embedding: OpenAI text-embedding-3-large (3072 dims). Initial pattern notation."}
-                            {stage.number === 2 && "Exhaustive systematic coding with GPT-4 Turbo. Inductive + deductive coding strategies. Saturation tracking."}
-                            {stage.number === 3 && "Hierarchical clustering (cosine similarity ≥0.7) + manual theme boundary refinement. Candidate theme generation."}
-                            {stage.number === 4 && "Internal homogeneity validation (within-theme coherence) + external heterogeneity (between-theme distinctiveness). Iterative refinement supported."}
-                            {stage.number === 5 && "Thematic essence capture with operational definitions. Semantic vs. latent theme distinction. Name finalization."}
-                            {stage.number === 6 && "Report generation: theme descriptions + prevalence + supporting quotes + methodology documentation. AI disclosure included (Nature/Science 2024)."}
+                            {stage.number === 1 &&
+                              'Corpus-level semantic embedding: OpenAI text-embedding-3-large (3072 dims). Initial pattern notation.'}
+                            {stage.number === 2 &&
+                              'Exhaustive systematic coding with GPT-4 Turbo. Inductive + deductive coding strategies. Saturation tracking.'}
+                            {stage.number === 3 &&
+                              'Hierarchical clustering (cosine similarity ≥0.7) + manual theme boundary refinement. Candidate theme generation.'}
+                            {stage.number === 4 &&
+                              'Internal homogeneity validation (within-theme coherence) + external heterogeneity (between-theme distinctiveness). Iterative refinement supported.'}
+                            {stage.number === 5 &&
+                              'Thematic essence capture with operational definitions. Semantic vs. latent theme distinction. Name finalization.'}
+                            {stage.number === 6 &&
+                              'Report generation: theme descriptions + prevalence + supporting quotes + methodology documentation. AI disclosure included (Nature/Science 2024).'}
                           </p>
                         )}
                       </div>
@@ -450,7 +499,11 @@ export default function EnhancedThemeExtractionProgress({
                             <div className="flex items-start gap-2 mb-2">
                               <Info className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
                               <p className="text-xs text-orange-900">
-                                <strong>Non-linear Thematic Analysis:</strong> You can request refinement to revisit earlier stages. This aligns with Braun & Clarke's (2019) updated guidance that TA is recursive, not strictly linear.
+                                <strong>Non-linear Thematic Analysis:</strong>{' '}
+                                You can request refinement to revisit earlier
+                                stages. This aligns with Braun & Clarke's (2019)
+                                updated guidance that TA is recursive, not
+                                strictly linear.
                               </p>
                             </div>
                             <button
@@ -474,8 +527,9 @@ export default function EnhancedThemeExtractionProgress({
       {/* Methodology Citation */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-600">
         <p>
-          <strong>Methodology:</strong> Reflexive Thematic Analysis (Braun & Clarke, 2006, 2019).
-          AI-assisted semantic clustering with full human oversight required for publication.
+          <strong>Methodology:</strong> Reflexive Thematic Analysis (Braun &
+          Clarke, 2006, 2019). AI-assisted semantic clustering with full human
+          oversight required for publication.
         </p>
       </div>
     </div>

@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { QuestionOperationalizationService, OperationalizationRequest } from '../question-operationalization.service';
+import {
+  QuestionOperationalizationService,
+  OperationalizationRequest,
+} from '../question-operationalization.service';
 import { ResearchQuestionService } from '../research-question.service';
 import { PrismaService } from '../../../../common/prisma.service';
 
@@ -33,8 +36,12 @@ describe('QuestionOperationalizationService', () => {
       ],
     }).compile();
 
-    service = module.get<QuestionOperationalizationService>(QuestionOperationalizationService);
-    researchQuestionService = module.get<ResearchQuestionService>(ResearchQuestionService);
+    service = module.get<QuestionOperationalizationService>(
+      QuestionOperationalizationService,
+    );
+    researchQuestionService = module.get<ResearchQuestionService>(
+      ResearchQuestionService,
+    );
     configService = module.get<ConfigService>(ConfigService);
   });
 
@@ -45,7 +52,8 @@ describe('QuestionOperationalizationService', () => {
   describe('Construct Extraction', () => {
     it('should extract constructs from exploratory research question', async () => {
       const request: OperationalizationRequest = {
-        researchQuestion: 'What factors influence employee job satisfaction in remote work environments?',
+        researchQuestion:
+          'What factors influence employee job satisfaction in remote work environments?',
         studyType: 'exploratory',
       };
 
@@ -67,25 +75,31 @@ describe('QuestionOperationalizationService', () => {
 
       const result = await service.operationalizeQuestion(request);
 
-      const dependentVars = result.constructs.filter(c => c.type === 'dependent_variable');
+      const dependentVars = result.constructs.filter(
+        (c) => c.type === 'dependent_variable',
+      );
       expect(dependentVars.length).toBeGreaterThan(0);
     });
 
     it('should identify independent variables correctly', async () => {
       const request: OperationalizationRequest = {
-        researchQuestion: 'Does social media usage predict student academic performance?',
+        researchQuestion:
+          'Does social media usage predict student academic performance?',
         studyType: 'predictive',
       };
 
       const result = await service.operationalizeQuestion(request);
 
-      const independentVars = result.constructs.filter(c => c.type === 'independent_variable');
+      const independentVars = result.constructs.filter(
+        (c) => c.type === 'independent_variable',
+      );
       expect(independentVars.length).toBeGreaterThan(0);
     });
 
     it('should handle questions with moderators', async () => {
       const request: OperationalizationRequest = {
-        researchQuestion: 'How does age moderate the relationship between exercise and mental health?',
+        researchQuestion:
+          'How does age moderate the relationship between exercise and mental health?',
         studyType: 'explanatory',
       };
 
@@ -97,7 +111,8 @@ describe('QuestionOperationalizationService', () => {
 
     it('should handle questions with mediators', async () => {
       const request: OperationalizationRequest = {
-        researchQuestion: 'Does motivation mediate the effect of rewards on productivity?',
+        researchQuestion:
+          'Does motivation mediate the effect of rewards on productivity?',
         studyType: 'explanatory',
       };
 
@@ -111,7 +126,8 @@ describe('QuestionOperationalizationService', () => {
   describe('Variable Operationalization', () => {
     it('should operationalize constructs into measurable variables', async () => {
       const request: OperationalizationRequest = {
-        researchQuestion: 'What is the relationship between stress and productivity?',
+        researchQuestion:
+          'What is the relationship between stress and productivity?',
         studyType: 'explanatory',
       };
 
@@ -132,8 +148,10 @@ describe('QuestionOperationalizationService', () => {
 
       const result = await service.operationalizeQuestion(request);
 
-      result.variables.forEach(variable => {
-        expect(['nominal', 'ordinal', 'interval', 'ratio']).toContain(variable.measurementLevel);
+      result.variables.forEach((variable) => {
+        expect(['nominal', 'ordinal', 'interval', 'ratio']).toContain(
+          variable.measurementLevel,
+        );
       });
     });
 
@@ -145,7 +163,7 @@ describe('QuestionOperationalizationService', () => {
 
       const result = await service.operationalizeQuestion(request);
 
-      result.variables.forEach(variable => {
+      result.variables.forEach((variable) => {
         expect(variable.operationalDefinition).toBeDefined();
         expect(variable.operationalDefinition.length).toBeGreaterThan(10);
       });
@@ -153,16 +171,17 @@ describe('QuestionOperationalizationService', () => {
 
     it('should include reliability information for each variable', async () => {
       const request: OperationalizationRequest = {
-        researchQuestion: 'How does organizational culture affect employee engagement?',
+        researchQuestion:
+          'How does organizational culture affect employee engagement?',
         studyType: 'explanatory',
         itemsPerVariable: 5,
       };
 
       const result = await service.operationalizeQuestion(request);
 
-      result.variables.forEach(variable => {
+      result.variables.forEach((variable) => {
         expect(variable.reliability).toBeDefined();
-        expect(variable.reliability.targetAlpha).toBeGreaterThanOrEqual(0.70);
+        expect(variable.reliability.targetAlpha).toBeGreaterThanOrEqual(0.7);
         expect(variable.reliability.expectedAlpha).toBeDefined();
         expect(variable.reliability.itemCount).toBe(5);
       });
@@ -193,7 +212,9 @@ describe('QuestionOperationalizationService', () => {
 
       const result = await service.operationalizeQuestion(request);
 
-      const reversedItems = result.measurementItems.filter(item => item.reversed);
+      const reversedItems = result.measurementItems.filter(
+        (item) => item.reversed,
+      );
       expect(reversedItems.length).toBeGreaterThan(0);
     });
 
@@ -207,7 +228,9 @@ describe('QuestionOperationalizationService', () => {
 
       const result = await service.operationalizeQuestion(request);
 
-      const reversedItems = result.measurementItems.filter(item => item.reversed);
+      const reversedItems = result.measurementItems.filter(
+        (item) => item.reversed,
+      );
       expect(reversedItems.length).toBe(0);
     });
 
@@ -219,9 +242,17 @@ describe('QuestionOperationalizationService', () => {
 
       const result = await service.operationalizeQuestion(request);
 
-      result.measurementItems.forEach(item => {
+      result.measurementItems.forEach((item) => {
         expect(item.scaleType).toBeDefined();
-        expect(['likert_5', 'likert_7', 'semantic_differential', 'frequency', 'agreement', 'satisfaction', 'importance']).toContain(item.scaleType);
+        expect([
+          'likert_5',
+          'likert_7',
+          'semantic_differential',
+          'frequency',
+          'agreement',
+          'satisfaction',
+          'importance',
+        ]).toContain(item.scaleType);
       });
     });
 
@@ -233,7 +264,7 @@ describe('QuestionOperationalizationService', () => {
 
       const result = await service.operationalizeQuestion(request);
 
-      result.measurementItems.forEach(item => {
+      result.measurementItems.forEach((item) => {
         expect(item.scaleLabels).toBeDefined();
         expect(item.scaleLabels.length).toBeGreaterThan(0);
       });
@@ -249,14 +280,14 @@ describe('QuestionOperationalizationService', () => {
       const result = await service.operationalizeQuestion(request);
 
       const variableGroups = new Map<string, typeof result.measurementItems>();
-      result.measurementItems.forEach(item => {
+      result.measurementItems.forEach((item) => {
         if (!variableGroups.has(item.variableId)) {
           variableGroups.set(item.variableId, []);
         }
         variableGroups.get(item.variableId)!.push(item);
       });
 
-      variableGroups.forEach(items => {
+      variableGroups.forEach((items) => {
         items.forEach((item, index) => {
           expect(item.itemNumber).toBe(index + 1);
         });
@@ -271,7 +302,7 @@ describe('QuestionOperationalizationService', () => {
 
       const result = await service.operationalizeQuestion(request);
 
-      result.measurementItems.forEach(item => {
+      result.measurementItems.forEach((item) => {
         expect(item.psychometricNote).toBeDefined();
       });
     });
@@ -280,33 +311,44 @@ describe('QuestionOperationalizationService', () => {
   describe('Statistical Analysis Planning', () => {
     it('should recommend appropriate analysis for exploratory studies', async () => {
       const request: OperationalizationRequest = {
-        researchQuestion: 'What are the key dimensions of organizational culture?',
+        researchQuestion:
+          'What are the key dimensions of organizational culture?',
         studyType: 'exploratory',
       };
 
       const result = await service.operationalizeQuestion(request);
 
       expect(result.statisticalPlan).toBeDefined();
-      expect(result.statisticalPlan.primaryAnalysis.method).toContain('Exploratory Factor Analysis');
+      expect(result.statisticalPlan.primaryAnalysis.method).toContain(
+        'Exploratory Factor Analysis',
+      );
     });
 
     it('should recommend appropriate analysis for predictive studies', async () => {
       const request: OperationalizationRequest = {
-        researchQuestion: 'Does employee engagement predict turnover intention?',
+        researchQuestion:
+          'Does employee engagement predict turnover intention?',
         studyType: 'predictive',
       };
 
       const result = await service.operationalizeQuestion(request);
 
       expect(result.statisticalPlan.primaryAnalysis).toBeDefined();
-      expect(['Multiple Regression', 'SEM', 'Structural Equation Modeling']).toContainEqual(
-        expect.stringContaining(result.statisticalPlan.primaryAnalysis.method.split(' ')[0])
+      expect([
+        'Multiple Regression',
+        'SEM',
+        'Structural Equation Modeling',
+      ]).toContainEqual(
+        expect.stringContaining(
+          result.statisticalPlan.primaryAnalysis.method.split(' ')[0],
+        ),
       );
     });
 
     it('should recommend appropriate analysis for explanatory studies', async () => {
       const request: OperationalizationRequest = {
-        researchQuestion: 'What is the relationship between trust and collaboration?',
+        researchQuestion:
+          'What is the relationship between trust and collaboration?',
         studyType: 'explanatory',
       };
 
@@ -323,8 +365,12 @@ describe('QuestionOperationalizationService', () => {
 
       const result = await service.operationalizeQuestion(request);
 
-      expect(result.statisticalPlan.primaryAnalysis.sampleSizeRecommendation).toBeDefined();
-      expect(result.statisticalPlan.primaryAnalysis.sampleSizeRecommendation).toBeGreaterThan(50);
+      expect(
+        result.statisticalPlan.primaryAnalysis.sampleSizeRecommendation,
+      ).toBeDefined();
+      expect(
+        result.statisticalPlan.primaryAnalysis.sampleSizeRecommendation,
+      ).toBeGreaterThan(50);
     });
 
     it('should include statistical assumptions', async () => {
@@ -336,7 +382,9 @@ describe('QuestionOperationalizationService', () => {
       const result = await service.operationalizeQuestion(request);
 
       expect(result.statisticalPlan.primaryAnalysis.assumptions).toBeDefined();
-      expect(result.statisticalPlan.primaryAnalysis.assumptions.length).toBeGreaterThan(0);
+      expect(
+        result.statisticalPlan.primaryAnalysis.assumptions.length,
+      ).toBeGreaterThan(0);
     });
 
     it('should include reliability checks for all constructs', async () => {
@@ -348,7 +396,9 @@ describe('QuestionOperationalizationService', () => {
       const result = await service.operationalizeQuestion(request);
 
       expect(result.statisticalPlan.reliabilityChecks).toBeDefined();
-      expect(result.statisticalPlan.reliabilityChecks.length).toBe(result.variables.length);
+      expect(result.statisticalPlan.reliabilityChecks.length).toBe(
+        result.variables.length,
+      );
     });
 
     it('should include validity checks', async () => {
@@ -372,7 +422,9 @@ describe('QuestionOperationalizationService', () => {
       const result = await service.operationalizeQuestion(request);
 
       expect(result.statisticalPlan.secondaryAnalyses).toBeDefined();
-      expect(result.statisticalPlan.secondaryAnalyses.length).toBeGreaterThan(0);
+      expect(result.statisticalPlan.secondaryAnalyses.length).toBeGreaterThan(
+        0,
+      );
     });
   });
 
@@ -393,7 +445,8 @@ describe('QuestionOperationalizationService', () => {
 
     it('should recommend appropriate sample sizes based on complexity', async () => {
       const request: OperationalizationRequest = {
-        researchQuestion: 'What factors predict career success among millennials?',
+        researchQuestion:
+          'What factors predict career success among millennials?',
         studyType: 'predictive',
       };
 
@@ -404,7 +457,8 @@ describe('QuestionOperationalizationService', () => {
 
     it('should provide data collection recommendations', async () => {
       const request: OperationalizationRequest = {
-        researchQuestion: 'How does workplace culture affect employee retention?',
+        researchQuestion:
+          'How does workplace culture affect employee retention?',
         studyType: 'explanatory',
         methodology: 'survey',
       };
@@ -440,8 +494,12 @@ describe('QuestionOperationalizationService', () => {
       const result = await service.operationalizeQuestion(request);
 
       expect(result.qualityMetrics.reliabilityExpectation).toBeDefined();
-      expect(result.qualityMetrics.reliabilityExpectation).toBeGreaterThanOrEqual(0);
-      expect(result.qualityMetrics.reliabilityExpectation).toBeLessThanOrEqual(1);
+      expect(
+        result.qualityMetrics.reliabilityExpectation,
+      ).toBeGreaterThanOrEqual(0);
+      expect(result.qualityMetrics.reliabilityExpectation).toBeLessThanOrEqual(
+        1,
+      );
     });
 
     it('should provide validity indicators', async () => {
@@ -453,14 +511,17 @@ describe('QuestionOperationalizationService', () => {
       const result = await service.operationalizeQuestion(request);
 
       expect(result.qualityMetrics.validityIndicators).toBeDefined();
-      expect(result.qualityMetrics.validityIndicators.length).toBeGreaterThan(0);
+      expect(result.qualityMetrics.validityIndicators.length).toBeGreaterThan(
+        0,
+      );
     });
   });
 
   describe('Recommendations', () => {
     it('should provide pilot testing recommendations', async () => {
       const request: OperationalizationRequest = {
-        researchQuestion: 'How does digital transformation affect business outcomes?',
+        researchQuestion:
+          'How does digital transformation affect business outcomes?',
         studyType: 'explanatory',
       };
 
@@ -479,7 +540,9 @@ describe('QuestionOperationalizationService', () => {
       const result = await service.operationalizeQuestion(request);
 
       expect(result.recommendations.validationStrategy).toBeDefined();
-      expect(result.recommendations.validationStrategy.length).toBeGreaterThan(20);
+      expect(result.recommendations.validationStrategy.length).toBeGreaterThan(
+        20,
+      );
     });
 
     it('should provide improvement suggestions', async () => {
@@ -492,7 +555,9 @@ describe('QuestionOperationalizationService', () => {
       const result = await service.operationalizeQuestion(request);
 
       expect(result.recommendations.improvementSuggestions).toBeDefined();
-      expect(Array.isArray(result.recommendations.improvementSuggestions)).toBe(true);
+      expect(Array.isArray(result.recommendations.improvementSuggestions)).toBe(
+        true,
+      );
     });
   });
 
@@ -518,7 +583,9 @@ describe('QuestionOperationalizationService', () => {
         studyType: 'exploratory',
       };
 
-      await expect(service.operationalizeQuestion(request)).resolves.toBeDefined();
+      await expect(
+        service.operationalizeQuestion(request),
+      ).resolves.toBeDefined();
     });
 
     it('should handle empty research questions', async () => {
@@ -527,7 +594,9 @@ describe('QuestionOperationalizationService', () => {
         studyType: 'exploratory',
       };
 
-      await expect(service.operationalizeQuestion(request)).resolves.toBeDefined();
+      await expect(
+        service.operationalizeQuestion(request),
+      ).resolves.toBeDefined();
     });
   });
 

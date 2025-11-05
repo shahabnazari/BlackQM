@@ -111,10 +111,14 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
         expect(firstPaper.title).toBeTruthy();
 
         // Check that at least some papers have abstracts (not all sources provide abstracts)
-        const papersWithAbstracts = response.body.papers.filter((p: any) => p.abstract && p.abstract.length > 0);
+        const papersWithAbstracts = response.body.papers.filter(
+          (p: any) => p.abstract && p.abstract.length > 0,
+        );
         expect(papersWithAbstracts.length).toBeGreaterThan(0); // At least 1 paper should have an abstract
 
-        console.log(`✅ TEST-001 PASSED: ${response.body.papers.length} papers in ${elapsedTime}ms`);
+        console.log(
+          `✅ TEST-001 PASSED: ${response.body.papers.length} papers in ${elapsedTime}ms`,
+        );
       }, 10000);
 
       it('should return papers from multiple databases', async () => {
@@ -127,9 +131,7 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
           })
           .expect(200);
 
-        const sources = new Set(
-          response.body.papers.map((p: any) => p.source)
-        );
+        const sources = new Set(response.body.papers.map((p: any) => p.source));
 
         // Should have at least 2 different sources
         expect(sources.size).toBeGreaterThanOrEqual(2);
@@ -149,14 +151,18 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
           })
           .expect(200);
 
-        const titles = response.body.papers.map((p: any) => p.title.toLowerCase());
+        const titles = response.body.papers.map((p: any) =>
+          p.title.toLowerCase(),
+        );
         const uniqueTitles = new Set(titles);
 
         // Should have minimal duplicates (≥90% unique - cross-database matching is complex)
         const deduplicationRate = (uniqueTitles.size / titles.length) * 100;
         expect(deduplicationRate).toBeGreaterThanOrEqual(90);
 
-        console.log(`✅ TEST-004 PASSED: ${uniqueTitles.size}/${titles.length} unique papers (${deduplicationRate.toFixed(1)}% deduplication)`);
+        console.log(
+          `✅ TEST-004 PASSED: ${uniqueTitles.size}/${titles.length} unique papers (${deduplicationRate.toFixed(1)}% deduplication)`,
+        );
       }, 15000);
     });
 
@@ -187,7 +193,9 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
 
         expect(response.body.papers).toBeDefined();
         // Filter may not be implemented - test should verify graceful handling
-        console.log(`✅ TEST-008 PASSED: Filter parameter handled gracefully (${response.body.papers.length} papers)`);
+        console.log(
+          `✅ TEST-008 PASSED: Filter parameter handled gracefully (${response.body.papers.length} papers)`,
+        );
       }, 10000);
     });
 
@@ -207,14 +215,16 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
 
         // Papers with citation data should meet threshold
         const papersWithCitations = response.body.papers.filter(
-          (p: any) => p.citationCount !== null && p.citationCount !== undefined
+          (p: any) => p.citationCount !== null && p.citationCount !== undefined,
         );
 
         papersWithCitations.forEach((paper: any) => {
           expect(paper.citationCount).toBeGreaterThanOrEqual(50);
         });
 
-        console.log(`✅ TEST-010 PASSED: ${papersWithCitations.length} papers with ≥50 citations`);
+        console.log(
+          `✅ TEST-010 PASSED: ${papersWithCitations.length} papers with ≥50 citations`,
+        );
       }, 10000);
     });
   });
@@ -341,7 +351,9 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
           .expect(200);
 
         // The old /themes/extract endpoint returns themes directly, not wrapped in themes property
-        const themes = Array.isArray(extractResponse.body) ? extractResponse.body : extractResponse.body.themes || [];
+        const themes = Array.isArray(extractResponse.body)
+          ? extractResponse.body
+          : extractResponse.body.themes || [];
         expect(themes).toBeDefined();
         expect(themes.length).toBeGreaterThanOrEqual(3);
         expect(themes.length).toBeLessThanOrEqual(8);
@@ -406,7 +418,9 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
         expect(extractResponse.body.themes.length).toBeLessThanOrEqual(20);
 
         // Verify themes have provenance structure (Phase 9 Day 20 feature)
-        const themesWithProvenance = extractResponse.body.themes.filter((t: any) => t.provenance);
+        const themesWithProvenance = extractResponse.body.themes.filter(
+          (t: any) => t.provenance,
+        );
         expect(themesWithProvenance.length).toBeGreaterThan(0);
 
         // Verify provenance structure exists (even if source counts are 0 during testing)
@@ -416,7 +430,9 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
           expect(Array.isArray(theme.provenance.citationChain)).toBe(true);
         });
 
-        console.log(`✅ TEST-026 PASSED: ${extractResponse.body.themes.length} themes in ${(elapsedTime / 1000).toFixed(1)}s`);
+        console.log(
+          `✅ TEST-026 PASSED: ${extractResponse.body.themes.length} themes in ${(elapsedTime / 1000).toFixed(1)}s`,
+        );
       }, 200000); // 200 second timeout for this test
     });
 
@@ -455,26 +471,44 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
         const themes = extractResponse.body.themes;
 
         // Validate no generic structural themes
-        const genericThemes = ['methodology', 'results', 'conclusion', 'discussion', 'introduction'];
+        const genericThemes = [
+          'methodology',
+          'results',
+          'conclusion',
+          'discussion',
+          'introduction',
+        ];
         const themeNames = themes.map((t: any) => t.label.toLowerCase());
 
         genericThemes.forEach((generic) => {
-          const hasGeneric = themeNames.some((name: string) => name.includes(generic));
+          const hasGeneric = themeNames.some((name: string) =>
+            name.includes(generic),
+          );
           expect(hasGeneric).toBe(false);
         });
 
         // Check for domain-specific themes (diabetes-related)
         // Keywords are strings, not objects
-        const domainKeywords = ['insulin', 'glucose', 'glycemic', 'treatment', 'lifestyle', 'medication', 'diabetes'];
+        const domainKeywords = [
+          'insulin',
+          'glucose',
+          'glycemic',
+          'treatment',
+          'lifestyle',
+          'medication',
+          'diabetes',
+        ];
         const hasRelevantThemes = themes.some((theme: any) =>
           theme.keywords.some((kw: string) =>
-            domainKeywords.some((dk) => kw.toLowerCase().includes(dk))
-          )
+            domainKeywords.some((dk) => kw.toLowerCase().includes(dk)),
+          ),
         );
 
         expect(hasRelevantThemes).toBe(true);
 
-        console.log(`✅ TEST-034 PASSED: Themes are research constructs, not structural`);
+        console.log(
+          `✅ TEST-034 PASSED: Themes are research constructs, not structural`,
+        );
       }, 200000);
     });
   });
@@ -494,13 +528,15 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
                 type: 'youtube',
                 id: 'test-video-1',
                 title: 'Climate Change Solutions',
-                content: 'This is a sample transcript about climate change mitigation strategies including renewable energy, carbon capture, and sustainable agriculture.',
+                content:
+                  'This is a sample transcript about climate change mitigation strategies including renewable energy, carbon capture, and sustainable agriculture.',
               },
               {
                 type: 'youtube',
                 id: 'test-video-2',
                 title: 'Renewable Energy Technologies',
-                content: 'Discussion about solar panels, wind turbines, and battery storage technologies for clean energy transition.',
+                content:
+                  'Discussion about solar panels, wind turbines, and battery storage technologies for clean energy transition.',
               },
             ],
             options: {
@@ -519,10 +555,21 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
         const hasRelevantThemes = extractResponse.body.themes.some((t: any) => {
           const labelLower = t.label.toLowerCase();
           const keywordsLower = t.keywords.map((k: string) => k.toLowerCase());
-          const relevantTerms = ['climate', 'energy', 'renewable', 'solar', 'wind', 'carbon', 'sustainability', 'mitigation'];
+          const relevantTerms = [
+            'climate',
+            'energy',
+            'renewable',
+            'solar',
+            'wind',
+            'carbon',
+            'sustainability',
+            'mitigation',
+          ];
 
-          return relevantTerms.some(term =>
-            labelLower.includes(term) || keywordsLower.some((kw: string) => kw.includes(term))
+          return relevantTerms.some(
+            (term) =>
+              labelLower.includes(term) ||
+              keywordsLower.some((kw: string) => kw.includes(term)),
           );
         });
 
@@ -559,9 +606,7 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
       it('should have responsive API endpoints', async () => {
         const startTime = Date.now();
 
-        await request(app.getHttpServer())
-          .get('/api/health')
-          .expect(200);
+        await request(app.getHttpServer()).get('/api/health').expect(200);
 
         const elapsedTime = Date.now() - startTime;
 
@@ -607,7 +652,9 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
         // Should either truncate or return 400, not crash
         expect([200, 400]).toContain(response.status);
 
-        console.log(`✅ TEST-061 PASSED: Long query handled gracefully (${response.status})`);
+        console.log(
+          `✅ TEST-061 PASSED: Long query handled gracefully (${response.status})`,
+        );
       }, 10000);
     });
 
@@ -635,7 +682,9 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
           expect(response.body.themes).toBeDefined();
         }
 
-        console.log(`✅ TEST-063 PASSED: Empty content handled (${response.status})`);
+        console.log(
+          `✅ TEST-063 PASSED: Empty content handled (${response.status})`,
+        );
       }, 30000);
     });
   });
@@ -659,7 +708,14 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
         await request(app.getHttpServer())
           .post('/api/literature/themes/extract')
           .send({
-            papers: [{ title: 'Test', abstract: 'Test', authors: ['Test'], year: 2024 }],
+            papers: [
+              {
+                title: 'Test',
+                abstract: 'Test',
+                authors: ['Test'],
+                year: 2024,
+              },
+            ],
           })
           .expect(401);
 
@@ -689,12 +745,14 @@ describe('Literature Critical Path E2E Tests (Phase 10 Day 5.7 Stage 1)', () => 
           .expect(200);
 
         const papersWithDOI = response.body.papers.filter(
-          (p: any) => p.doi && p.doi.length > 0
+          (p: any) => p.doi && p.doi.length > 0,
         );
 
         expect(papersWithDOI.length).toBeGreaterThan(0);
 
-        console.log(`✅ TEST-085 PASSED: ${papersWithDOI.length}/${response.body.papers.length} papers have DOI`);
+        console.log(
+          `✅ TEST-085 PASSED: ${papersWithDOI.length}/${response.body.papers.length} papers have DOI`,
+        );
       }, 10000);
     });
   });

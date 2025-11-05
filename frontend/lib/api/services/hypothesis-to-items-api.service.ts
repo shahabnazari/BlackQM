@@ -22,12 +22,12 @@ class HypothesisToItemsApiService {
    * Convert hypothesis into testable survey items
    */
   async convertHypothesisToItems(
-    request: HypothesisToItemRequest,
+    request: HypothesisToItemRequest
   ): Promise<HypothesisToItemResult> {
     try {
       const response = await apiClient.post<HypothesisToItemResult>(
         '/research-design/hypothesis-to-items',
-        request,
+        request
       );
 
       // Cache the result for later use
@@ -59,7 +59,7 @@ class HypothesisToItemsApiService {
    */
   convertToImportableItems(
     items: HypothesisSurveyItem[],
-    variableName?: string,
+    variableName?: string
   ): ImportableItem[] {
     return items.map((item, index) => ({
       id: `hyp-item-${item.id}`,
@@ -71,7 +71,7 @@ class HypothesisToItemsApiService {
       options: item.scaleLabels,
       metadata: {
         source: 'hypothesis' as const,
-        confidence: 0.90,
+        confidence: 0.9,
         reversed: item.reversed,
         generationMethod: item.researchBacking,
       },
@@ -87,9 +87,12 @@ class HypothesisToItemsApiService {
    * Map hypothesis scale types to frontend question types
    */
   private mapScaleTypeToQuestionType(
-    scaleType: HypothesisSurveyItem['scaleType'],
+    scaleType: HypothesisSurveyItem['scaleType']
   ): ImportableItem['type'] {
-    const mapping: Record<HypothesisSurveyItem['scaleType'], ImportableItem['type']> = {
+    const mapping: Record<
+      HypothesisSurveyItem['scaleType'],
+      ImportableItem['type']
+    > = {
       likert_5: 'likert',
       likert_7: 'likert',
       semantic_differential: 'scale',
@@ -104,7 +107,7 @@ class HypothesisToItemsApiService {
    * Map hypothesis scale types to frontend settings
    */
   private mapScaleTypeToSettings(
-    scaleType: HypothesisSurveyItem['scaleType'],
+    scaleType: HypothesisSurveyItem['scaleType']
   ): '1-5' | '1-7' | '1-10' | 'agree-disagree' | 'frequency' | 'satisfaction' {
     const mapping: Record<HypothesisSurveyItem['scaleType'], string> = {
       likert_5: '1-5',
@@ -120,7 +123,10 @@ class HypothesisToItemsApiService {
   /**
    * Save hypothesis for later use
    */
-  async saveHypothesis(hypothesis: string, hypothesisType: string): Promise<void> {
+  async saveHypothesis(
+    hypothesis: string,
+    hypothesisType: string
+  ): Promise<void> {
     try {
       const history = secureStorage.getHypothesesList();
       history.push({ hypothesis, hypothesisType, timestamp: Date.now() });
@@ -133,7 +139,11 @@ class HypothesisToItemsApiService {
   /**
    * Get saved hypotheses
    */
-  getSavedHypotheses(): Array<{ hypothesis: string; hypothesisType: string; timestamp: number }> {
+  getSavedHypotheses(): Array<{
+    hypothesis: string;
+    hypothesisType: string;
+    timestamp: number;
+  }> {
     try {
       return secureStorage.getHypothesesList();
     } catch (error: any) {

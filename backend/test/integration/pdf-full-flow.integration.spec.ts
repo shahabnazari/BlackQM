@@ -82,7 +82,9 @@ describe('PDF Full Flow Integration (e2e)', () => {
   describe('Complete PDF Fetching Flow', () => {
     it('should complete full PDF fetch lifecycle', async () => {
       // STEP 1: Setup - Paper exists in database
-      (prismaService.paper.findUnique as jest.Mock).mockResolvedValue(mockPaper);
+      (prismaService.paper.findUnique as jest.Mock).mockResolvedValue(
+        mockPaper,
+      );
       (prismaService.paper.update as jest.Mock).mockImplementation((params) => {
         return Promise.resolve({
           ...mockPaper,
@@ -92,12 +94,14 @@ describe('PDF Full Flow Integration (e2e)', () => {
       (prismaService.paper.findFirst as jest.Mock).mockResolvedValue(null); // No duplicates
 
       // Mock successful PDF fetching
-      jest.spyOn(pdfParsingService, 'fetchPDF').mockResolvedValue(
-        Buffer.from('Mock PDF content')
-      );
-      jest.spyOn(pdfParsingService, 'extractText').mockResolvedValue(
-        'Sample extracted text from PDF document.\n\nMain content here.\n\nReferences\n[1] Citation'
-      );
+      jest
+        .spyOn(pdfParsingService, 'fetchPDF')
+        .mockResolvedValue(Buffer.from('Mock PDF content'));
+      jest
+        .spyOn(pdfParsingService, 'extractText')
+        .mockResolvedValue(
+          'Sample extracted text from PDF document.\n\nMain content here.\n\nReferences\n[1] Citation',
+        );
 
       // STEP 2: Trigger PDF fetch via API
       const fetchResponse = await request(app.getHttpServer())
@@ -121,10 +125,13 @@ describe('PDF Full Flow Integration (e2e)', () => {
 
       while (Date.now() - startTime < timeout) {
         const currentJob = pdfQueueService.getJob(jobId);
-        if (currentJob?.status === 'completed' || currentJob?.status === 'failed') {
+        if (
+          currentJob?.status === 'completed' ||
+          currentJob?.status === 'failed'
+        ) {
           break;
         }
-        await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
+        await new Promise((resolve) => setTimeout(resolve, 100)); // Wait 100ms
       }
 
       const finalJob = pdfQueueService.getJob(jobId);
@@ -141,7 +148,7 @@ describe('PDF Full Flow Integration (e2e)', () => {
             fullTextWordCount: expect.any(Number),
             fullTextHash: expect.any(String),
           }),
-        })
+        }),
       );
 
       // STEP 6: Check status endpoint
@@ -154,7 +161,7 @@ describe('PDF Full Flow Integration (e2e)', () => {
           status: expect.any(String),
           jobStatus: 'completed',
           jobProgress: 100,
-        })
+        }),
       );
 
       // STEP 7: Check queue stats
@@ -173,7 +180,9 @@ describe('PDF Full Flow Integration (e2e)', () => {
         doi: '10.1234/paywall.test',
       };
 
-      (prismaService.paper.findUnique as jest.Mock).mockResolvedValue(failPaper);
+      (prismaService.paper.findUnique as jest.Mock).mockResolvedValue(
+        failPaper,
+      );
       (prismaService.paper.update as jest.Mock).mockResolvedValue(failPaper);
 
       // Mock failed PDF fetch (paywall)
@@ -195,7 +204,7 @@ describe('PDF Full Flow Integration (e2e)', () => {
         if (currentJob?.status === 'failed') {
           break;
         }
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
       const finalJob = pdfQueueService.getJob(jobId);
@@ -209,7 +218,7 @@ describe('PDF Full Flow Integration (e2e)', () => {
           data: expect.objectContaining({
             fullTextStatus: 'failed',
           }),
-        })
+        }),
       );
     });
   });
@@ -224,12 +233,12 @@ describe('PDF Full Flow Integration (e2e)', () => {
       ];
 
       (prismaService.paper.findMany as jest.Mock).mockResolvedValue(
-        papers.map(p => ({ id: p.id, fullTextStatus: p.fullTextStatus }))
+        papers.map((p) => ({ id: p.id, fullTextStatus: p.fullTextStatus })),
       );
 
       const response = await request(app.getHttpServer())
         .post('/pdf/bulk-status')
-        .send({ paperIds: papers.map(p => p.id) })
+        .send({ paperIds: papers.map((p) => p.id) })
         .expect(201);
 
       expect(response.body).toEqual({
@@ -268,7 +277,7 @@ describe('PDF Full Flow Integration (e2e)', () => {
   describe('Error Handling', () => {
     it('should return 500 if paper processing throws unexpected error', async () => {
       (prismaService.paper.findUnique as jest.Mock).mockRejectedValue(
-        new Error('Database connection failed')
+        new Error('Database connection failed'),
       );
 
       await request(app.getHttpServer())
@@ -277,12 +286,16 @@ describe('PDF Full Flow Integration (e2e)', () => {
     });
 
     it('should handle concurrent fetches for same paper', async () => {
-      (prismaService.paper.findUnique as jest.Mock).mockResolvedValue(mockPaper);
-      (prismaService.paper.update as jest.Mock).mockResolvedValue(mockPaper);
-      jest.spyOn(pdfParsingService, 'fetchPDF').mockResolvedValue(
-        Buffer.from('PDF content')
+      (prismaService.paper.findUnique as jest.Mock).mockResolvedValue(
+        mockPaper,
       );
-      jest.spyOn(pdfParsingService, 'extractText').mockResolvedValue('Sample text');
+      (prismaService.paper.update as jest.Mock).mockResolvedValue(mockPaper);
+      jest
+        .spyOn(pdfParsingService, 'fetchPDF')
+        .mockResolvedValue(Buffer.from('PDF content'));
+      jest
+        .spyOn(pdfParsingService, 'extractText')
+        .mockResolvedValue('Sample text');
 
       // Trigger two fetches concurrently
       const [response1, response2] = await Promise.all([
@@ -305,19 +318,21 @@ describe('PDF Full Flow Integration (e2e)', () => {
 
   describe('Performance & Rate Limiting', () => {
     it('should queue multiple jobs without blocking', async () => {
-      (prismaService.paper.findUnique as jest.Mock).mockResolvedValue(mockPaper);
+      (prismaService.paper.findUnique as jest.Mock).mockResolvedValue(
+        mockPaper,
+      );
       (prismaService.paper.update as jest.Mock).mockResolvedValue(mockPaper);
 
       const promises = [];
       for (let i = 0; i < 5; i++) {
         promises.push(
-          request(app.getHttpServer()).post(`/pdf/fetch/paper-${i}`)
+          request(app.getHttpServer()).post(`/pdf/fetch/paper-${i}`),
         );
       }
 
       const responses = await Promise.all(promises);
 
-      responses.forEach(response => {
+      responses.forEach((response) => {
         expect(response.status).toBe(201);
         expect(response.body.success).toBe(true);
       });

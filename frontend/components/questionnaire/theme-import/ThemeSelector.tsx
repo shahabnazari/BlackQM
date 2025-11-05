@@ -31,7 +31,8 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
     <Card
       className={cn(
         'p-4 transition-all',
-        isSelected && 'ring-2 ring-purple-500 bg-purple-50/50 dark:bg-purple-900/20'
+        isSelected &&
+          'ring-2 ring-purple-500 bg-purple-50/50 dark:bg-purple-900/20'
       )}
     >
       <div className="space-y-3">

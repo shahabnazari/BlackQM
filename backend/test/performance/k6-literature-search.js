@@ -20,32 +20,48 @@ const cacheHits = new Rate('cache_hits');
 // Test configuration
 export const options = {
   stages: [
-    { duration: '2m', target: 10 },  // Warm-up: Ramp to 10 users
-    { duration: '3m', target: 50 },  // Load: Ramp to 50 users
-    { duration: '5m', target: 50 },  // Sustain: Hold at 50 users
-    { duration: '2m', target: 10 },  // Ramp down: Cool down to 10 users
-    { duration: '1m', target: 0 },   // End: Ramp to 0
+    { duration: '2m', target: 10 }, // Warm-up: Ramp to 10 users
+    { duration: '3m', target: 50 }, // Load: Ramp to 50 users
+    { duration: '5m', target: 50 }, // Sustain: Hold at 50 users
+    { duration: '2m', target: 10 }, // Ramp down: Cool down to 10 users
+    { duration: '1m', target: 0 }, // End: Ramp to 0
   ],
   thresholds: {
-    'http_req_duration': ['p(95)<3000'], // 95% of requests must complete below 3s
-    'http_req_failed': ['rate<0.01'],    // Error rate must be below 1%
-    'search_latency': ['p(95)<3000'],    // Custom metric threshold
-    'search_errors': ['rate<0.01'],      // Custom error rate
+    http_req_duration: ['p(95)<3000'], // 95% of requests must complete below 3s
+    http_req_failed: ['rate<0.01'], // Error rate must be below 1%
+    search_latency: ['p(95)<3000'], // Custom metric threshold
+    search_errors: ['rate<0.01'], // Custom error rate
     'http_req_duration{status:200}': ['p(95)<3000'], // Only successful requests
   },
 };
 
 // Test data: Diverse research queries
 const searchQueries = [
-  { query: 'machine learning healthcare', sources: ['arxiv', 'pubmed'], limit: 20 },
-  { query: 'climate change agriculture', sources: ['crossref', 'pubmed'], limit: 15 },
+  {
+    query: 'machine learning healthcare',
+    sources: ['arxiv', 'pubmed'],
+    limit: 20,
+  },
+  {
+    query: 'climate change agriculture',
+    sources: ['crossref', 'pubmed'],
+    limit: 15,
+  },
   { query: 'quantum computing algorithms', sources: ['arxiv'], limit: 25 },
-  { query: 'neural networks deep learning', sources: ['arxiv', 'crossref'], limit: 20 },
+  {
+    query: 'neural networks deep learning',
+    sources: ['arxiv', 'crossref'],
+    limit: 20,
+  },
   { query: 'CRISPR gene editing', sources: ['pubmed'], limit: 10 },
   { query: 'renewable energy policy', sources: ['crossref'], limit: 20 },
   { query: 'natural language processing', sources: ['arxiv'], limit: 20 },
   { query: 'covid-19 vaccine efficacy', sources: ['pubmed'], limit: 15 },
-  { query: 'blockchain distributed systems', sources: ['arxiv', 'crossref'], limit: 20 },
+  {
+    query: 'blockchain distributed systems',
+    sources: ['arxiv', 'crossref'],
+    limit: 20,
+  },
   { query: 'microbiome gut health', sources: ['pubmed'], limit: 20 },
 ];
 
@@ -54,7 +70,8 @@ const BASE_URL = __ENV.BASE_URL || 'http://localhost:4000';
 
 export default function () {
   // Select random query
-  const queryData = searchQueries[Math.floor(Math.random() * searchQueries.length)];
+  const queryData =
+    searchQueries[Math.floor(Math.random() * searchQueries.length)];
 
   // Execute search request
   const startTime = new Date().getTime();
@@ -66,7 +83,7 @@ export default function () {
         'Content-Type': 'application/json',
       },
       tags: { name: 'literature_search' },
-    }
+    },
   );
   const endTime = new Date().getTime();
   const duration = endTime - startTime;

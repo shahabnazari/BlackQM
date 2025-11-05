@@ -54,7 +54,8 @@ const importOptions: ImportOption[] = [
   {
     id: 'research-question',
     title: 'Import from Research Question',
-    description: 'Operationalize research questions into measurable survey items',
+    description:
+      'Operationalize research questions into measurable survey items',
     icon: Target,
     color: 'from-blue-500 to-cyan-600',
     badge: 'Day 5.10',
@@ -100,7 +101,9 @@ export const ImportSourceSelector: React.FC<ImportSourceSelectorProps> = ({
   onClose,
   onSelectSource,
 }) => {
-  const [selectedSource, setSelectedSource] = useState<ImportSource | null>(null);
+  const [selectedSource, setSelectedSource] = useState<ImportSource | null>(
+    null
+  );
   const [recentImports] = useState([
     {
       id: '1',
@@ -163,7 +166,7 @@ export const ImportSourceSelector: React.FC<ImportSourceSelectorProps> = ({
         <div className="flex-1 overflow-y-auto p-6">
           {/* Import Options Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {importOptions.map((option) => {
+            {importOptions.map(option => {
               const Icon = option.icon;
               const isSelected = selectedSource === option.id;
 
@@ -174,9 +177,14 @@ export const ImportSourceSelector: React.FC<ImportSourceSelectorProps> = ({
                     'relative overflow-hidden cursor-pointer transition-all duration-300',
                     'hover:shadow-lg hover:scale-[1.02]',
                     isSelected && 'ring-2 ring-blue-500 shadow-lg scale-[1.02]',
-                    (option.disabled || option.comingSoon) && 'opacity-60 cursor-not-allowed'
+                    (option.disabled || option.comingSoon) &&
+                      'opacity-60 cursor-not-allowed'
                   )}
-                  onClick={() => !option.disabled && !option.comingSoon && handleSelectSource(option.id)}
+                  onClick={() =>
+                    !option.disabled &&
+                    !option.comingSoon &&
+                    handleSelectSource(option.id)
+                  }
                 >
                   {/* Gradient Background */}
                   <div
@@ -188,10 +196,12 @@ export const ImportSourceSelector: React.FC<ImportSourceSelectorProps> = ({
 
                   <div className="relative p-6">
                     <div className="flex items-start gap-4">
-                      <div className={cn(
-                        'p-3 rounded-xl bg-gradient-to-br text-white',
-                        option.color
-                      )}>
+                      <div
+                        className={cn(
+                          'p-3 rounded-xl bg-gradient-to-br text-white',
+                          option.color
+                        )}
+                      >
                         <Icon className="w-6 h-6" />
                       </div>
 
@@ -206,7 +216,10 @@ export const ImportSourceSelector: React.FC<ImportSourceSelectorProps> = ({
                             </Badge>
                           )}
                           {option.comingSoon && (
-                            <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-orange-300 text-orange-600"
+                            >
                               Coming Soon
                             </Badge>
                           )}
@@ -222,10 +235,12 @@ export const ImportSourceSelector: React.FC<ImportSourceSelectorProps> = ({
                       </div>
 
                       {!option.disabled && !option.comingSoon && (
-                        <ArrowRight className={cn(
-                          'w-5 h-5 text-gray-400 transition-transform',
-                          isSelected && 'translate-x-1 text-blue-500'
-                        )} />
+                        <ArrowRight
+                          className={cn(
+                            'w-5 h-5 text-gray-400 transition-transform',
+                            isSelected && 'translate-x-1 text-blue-500'
+                          )}
+                        />
                       )}
                     </div>
                   </div>
@@ -242,13 +257,15 @@ export const ImportSourceSelector: React.FC<ImportSourceSelectorProps> = ({
                 Recent Imports
               </h3>
               <div className="space-y-2">
-                {recentImports.map((recent) => {
+                {recentImports.map(recent => {
                   const Icon = getSourceIcon(recent.source);
                   return (
                     <div
                       key={recent.id}
                       className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
-                      onClick={() => handleSelectSource(recent.source as ImportSource)}
+                      onClick={() =>
+                        handleSelectSource(recent.source as ImportSource)
+                      }
                     >
                       <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
                         <Icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />

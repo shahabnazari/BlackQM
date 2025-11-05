@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { EnhancedThemeIntegrationService, Theme } from '../enhanced-theme-integration.service';
+import {
+  EnhancedThemeIntegrationService,
+  Theme,
+} from '../enhanced-theme-integration.service';
 import { PrismaService } from '../../../../common/prisma.service';
 
 /**
@@ -29,14 +32,17 @@ describe('EnhancedThemeIntegrationService', () => {
       name: 'Work-Life Balance',
       description: 'Balancing professional responsibilities with personal life',
       prevalence: 0.85,
-      confidence: 0.90,
+      confidence: 0.9,
       sources: [
         { id: 'paper1', title: 'Work-Life Balance Study', type: 'academic' },
         { id: 'paper2', title: 'Professional Wellbeing', type: 'academic' },
       ],
       keyPhrases: ['work-life balance', 'professional boundaries', 'wellbeing'],
       subthemes: [
-        { name: 'Flexible Work', description: 'Remote and flexible working arrangements' },
+        {
+          name: 'Flexible Work',
+          description: 'Remote and flexible working arrangements',
+        },
         { name: 'Time Management', description: 'Managing time effectively' },
       ],
     },
@@ -49,18 +55,30 @@ describe('EnhancedThemeIntegrationService', () => {
       sources: [
         { id: 'paper3', title: 'Job Satisfaction Research', type: 'academic' },
       ],
-      keyPhrases: ['job satisfaction', 'career fulfillment', 'workplace happiness'],
+      keyPhrases: [
+        'job satisfaction',
+        'career fulfillment',
+        'workplace happiness',
+      ],
     },
     {
       id: 'theme3',
       name: 'Organizational Culture',
       description: 'Values, norms, and practices within the organization',
       prevalence: 0.72,
-      confidence: 0.80,
+      confidence: 0.8,
       sources: [
-        { id: 'paper4', title: 'Organizational Culture Analysis', type: 'academic' },
+        {
+          id: 'paper4',
+          title: 'Organizational Culture Analysis',
+          type: 'academic',
+        },
       ],
-      keyPhrases: ['organizational culture', 'company values', 'workplace norms'],
+      keyPhrases: [
+        'organizational culture',
+        'company values',
+        'workplace norms',
+      ],
     },
   ];
 
@@ -89,7 +107,9 @@ describe('EnhancedThemeIntegrationService', () => {
       ],
     }).compile();
 
-    service = module.get<EnhancedThemeIntegrationService>(EnhancedThemeIntegrationService);
+    service = module.get<EnhancedThemeIntegrationService>(
+      EnhancedThemeIntegrationService,
+    );
     prismaService = module.get<PrismaService>(PrismaService);
     configService = module.get<ConfigService>(ConfigService);
   });
@@ -482,7 +502,9 @@ describe('EnhancedThemeIntegrationService', () => {
         includeValidityChecks: true,
       });
 
-      const validitySection = result.sections.find((s) => s.id === 'validity_checks');
+      const validitySection = result.sections.find(
+        (s) => s.id === 'validity_checks',
+      );
       expect(validitySection).toBeDefined();
     });
 

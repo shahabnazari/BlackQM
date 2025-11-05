@@ -24,17 +24,17 @@ const rateLimitHits = new Counter('rate_limit_429_errors');
 // Test configuration
 export const options = {
   stages: [
-    { duration: '2m', target: 2 },   // Warm-up: Ramp to 2 users
-    { duration: '3m', target: 5 },   // Load: Ramp to 5 users (respects rate limits)
-    { duration: '8m', target: 5 },   // Sustain: Hold at 5 users
-    { duration: '2m', target: 0 },   // End: Ramp to 0
+    { duration: '2m', target: 2 }, // Warm-up: Ramp to 2 users
+    { duration: '3m', target: 5 }, // Load: Ramp to 5 users (respects rate limits)
+    { duration: '8m', target: 5 }, // Sustain: Hold at 5 users
+    { duration: '2m', target: 0 }, // End: Ramp to 0
   ],
   thresholds: {
-    'http_req_duration': ['p(95)<30000'], // 95% of requests must complete below 30s
-    'http_req_failed': ['rate<0.02'],     // Error rate must be below 2%
-    'extraction_latency': ['p(95)<30000'],
-    'extraction_errors': ['rate<0.02'],
-    'rate_limit_429_errors': ['count<5'], // Should have <5 rate limit errors total
+    http_req_duration: ['p(95)<30000'], // 95% of requests must complete below 30s
+    http_req_failed: ['rate<0.02'], // Error rate must be below 2%
+    extraction_latency: ['p(95)<30000'],
+    extraction_errors: ['rate<0.02'],
+    rate_limit_429_errors: ['count<5'], // Should have <5 rate limit errors total
   },
 };
 
@@ -48,7 +48,8 @@ const samplePapers = [
     type: 'paper',
     id: 'test-paper-ml-1',
     title: 'Deep Learning for Medical Image Analysis: A Comprehensive Review',
-    content: 'Deep learning has revolutionized medical image analysis, enabling automated detection of diseases from X-rays, MRIs, and CT scans. Convolutional neural networks (CNNs) have shown remarkable accuracy in identifying tumors, lesions, and other abnormalities. This review examines the state-of-the-art deep learning architectures used in radiology, pathology, and ophthalmology.',
+    content:
+      'Deep learning has revolutionized medical image analysis, enabling automated detection of diseases from X-rays, MRIs, and CT scans. Convolutional neural networks (CNNs) have shown remarkable accuracy in identifying tumors, lesions, and other abnormalities. This review examines the state-of-the-art deep learning architectures used in radiology, pathology, and ophthalmology.',
     authors: ['Smith, J.', 'Johnson, M.', 'Lee, K.'],
     year: 2024,
   },
@@ -56,7 +57,8 @@ const samplePapers = [
     type: 'paper',
     id: 'test-paper-climate-2',
     title: 'Climate Change Impacts on Global Agricultural Productivity',
-    content: 'Climate change poses significant threats to global food security. Rising temperatures, altered precipitation patterns, and increased frequency of extreme weather events are reducing crop yields worldwide. This study analyzes the vulnerability of major staple crops (wheat, rice, maize) to climate variability and proposes adaptation strategies.',
+    content:
+      'Climate change poses significant threats to global food security. Rising temperatures, altered precipitation patterns, and increased frequency of extreme weather events are reducing crop yields worldwide. This study analyzes the vulnerability of major staple crops (wheat, rice, maize) to climate variability and proposes adaptation strategies.',
     authors: ['Garcia, A.', 'Martinez, L.'],
     year: 2023,
   },
@@ -64,23 +66,28 @@ const samplePapers = [
     type: 'paper',
     id: 'test-paper-quantum-3',
     title: 'Quantum Algorithms for Optimization Problems: A Survey',
-    content: 'Quantum computing promises exponential speedups for certain computational problems. This survey reviews quantum algorithms for combinatorial optimization, including quantum annealing, QAOA (Quantum Approximate Optimization Algorithm), and variational quantum eigensolvers. We discuss applications in logistics, finance, and drug discovery.',
+    content:
+      'Quantum computing promises exponential speedups for certain computational problems. This survey reviews quantum algorithms for combinatorial optimization, including quantum annealing, QAOA (Quantum Approximate Optimization Algorithm), and variational quantum eigensolvers. We discuss applications in logistics, finance, and drug discovery.',
     authors: ['Chen, W.', 'Patel, R.', 'Kim, S.'],
     year: 2024,
   },
   {
     type: 'paper',
     id: 'test-paper-nlp-4',
-    title: 'Transformer Models in Natural Language Understanding: BERT to GPT-4',
-    content: 'Transformer architectures have become the foundation of modern NLP. This paper traces the evolution from BERT (bidirectional encoding) to GPT (autoregressive generation), examining their strengths, limitations, and applications. We analyze performance on tasks including question answering, sentiment analysis, and text summarization.',
+    title:
+      'Transformer Models in Natural Language Understanding: BERT to GPT-4',
+    content:
+      'Transformer architectures have become the foundation of modern NLP. This paper traces the evolution from BERT (bidirectional encoding) to GPT (autoregressive generation), examining their strengths, limitations, and applications. We analyze performance on tasks including question answering, sentiment analysis, and text summarization.',
     authors: ['Brown, T.', 'Wilson, D.'],
     year: 2023,
   },
   {
     type: 'paper',
     id: 'test-paper-crispr-5',
-    title: 'CRISPR-Cas9 Gene Editing: Therapeutic Applications and Ethical Considerations',
-    content: 'CRISPR-Cas9 technology enables precise genome editing with applications in treating genetic disorders, cancer, and infectious diseases. This review discusses recent clinical trials, off-target effects, and delivery mechanisms. We also address ethical concerns regarding germline editing and equitable access to gene therapies.',
+    title:
+      'CRISPR-Cas9 Gene Editing: Therapeutic Applications and Ethical Considerations',
+    content:
+      'CRISPR-Cas9 technology enables precise genome editing with applications in treating genetic disorders, cancer, and infectious diseases. This review discusses recent clinical trials, off-target effects, and delivery mechanisms. We also address ethical concerns regarding germline editing and equitable access to gene therapies.',
     authors: ['Young, B.', 'King, V.', 'Scott, T.'],
     year: 2024,
   },
@@ -90,7 +97,9 @@ export default function () {
   // Check if auth token is provided
   if (!AUTH_TOKEN) {
     console.error('❌ ERROR: AUTH_TOKEN environment variable not set');
-    console.error('   Run: k6 run -e AUTH_TOKEN=your_jwt_token k6-theme-extraction.js');
+    console.error(
+      '   Run: k6 run -e AUTH_TOKEN=your_jwt_token k6-theme-extraction.js',
+    );
     return;
   }
 
@@ -114,11 +123,11 @@ export default function () {
     {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${AUTH_TOKEN}`,
+        Authorization: `Bearer ${AUTH_TOKEN}`,
       },
       tags: { name: 'theme_extraction' },
       timeout: '60s', // 60 second timeout
-    }
+    },
   );
   const endTime = new Date().getTime();
   const duration = endTime - startTime;
@@ -129,7 +138,9 @@ export default function () {
   // Check for rate limit errors
   if (res.status === 429) {
     rateLimitHits.add(1);
-    console.warn(`⚠️  Rate limit hit (429 Too Many Requests) - VU: ${__VU}, Iteration: ${__ITER}`);
+    console.warn(
+      `⚠️  Rate limit hit (429 Too Many Requests) - VU: ${__VU}, Iteration: ${__ITER}`,
+    );
   }
 
   // Check response
@@ -151,7 +162,7 @@ export default function () {
       if (r.status !== 200) return false;
       try {
         const body = JSON.parse(r.body);
-        return body.themes.every(theme => theme.confidence !== undefined);
+        return body.themes.every((theme) => theme.confidence !== undefined);
       } catch (e) {
         return false;
       }
@@ -198,7 +209,9 @@ export function setup() {
   // Verify auth token
   if (!AUTH_TOKEN) {
     console.error('❌ SETUP FAILED: No AUTH_TOKEN provided');
-    console.error('   Set environment variable: k6 run -e AUTH_TOKEN=your_jwt k6-theme-extraction.js');
+    console.error(
+      '   Set environment variable: k6 run -e AUTH_TOKEN=your_jwt k6-theme-extraction.js',
+    );
     throw new Error('AUTH_TOKEN required');
   }
 }

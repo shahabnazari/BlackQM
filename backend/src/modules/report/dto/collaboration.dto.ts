@@ -272,28 +272,47 @@ export interface ApprovalResponse {
 
 // Sharing DTOs - Phase 10 Day 4
 export class GenerateShareLinkDto {
-  @ApiProperty({ enum: ['view', 'comment', 'edit'], description: 'Access level for shared link' })
+  @ApiProperty({
+    enum: ['view', 'comment', 'edit'],
+    description: 'Access level for shared link',
+  })
   @IsEnum(['view', 'comment', 'edit'])
   accessLevel!: 'view' | 'comment' | 'edit';
 
-  @ApiProperty({ example: 7, description: 'Link expiration in days (optional)', required: false })
+  @ApiProperty({
+    example: 7,
+    description: 'Link expiration in days (optional)',
+    required: false,
+  })
   @IsOptional()
   @IsInt()
   @Min(1)
   expiresIn?: number;
 
-  @ApiProperty({ example: 'secure123', description: 'Password protection (optional)', required: false })
+  @ApiProperty({
+    example: 'secure123',
+    description: 'Password protection (optional)',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   password?: string;
 
-  @ApiProperty({ example: ['company.com', 'university.edu'], description: 'Allowed email domains (optional)', required: false })
+  @ApiProperty({
+    example: ['company.com', 'university.edu'],
+    description: 'Allowed email domains (optional)',
+    required: false,
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   allowedDomains?: string[];
 
-  @ApiProperty({ example: 100, description: 'Maximum access count (optional)', required: false })
+  @ApiProperty({
+    example: 100,
+    description: 'Maximum access count (optional)',
+    required: false,
+  })
   @IsOptional()
   @IsInt()
   @Min(1)

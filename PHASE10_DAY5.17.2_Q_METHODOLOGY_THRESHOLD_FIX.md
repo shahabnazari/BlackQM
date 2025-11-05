@@ -11,6 +11,7 @@
 Fixed critical bug where **Q-Methodology theme extraction was failing** even though we told users "abstracts are sufficient." The validation thresholds were NOT purpose-aware, causing all themes to be filtered out during validation.
 
 **Issue:** User reported:
+
 ```
 "⚠️ 0 themes extracted. Themes were generated but filtered out during validation."
 ```
@@ -26,11 +27,13 @@ Fixed critical bug where **Q-Methodology theme extraction was failing** even tho
 ### The Bug
 
 **What We Told Users (Day 5.17):**
+
 ```
 ✅ Q-Methodology: Abstracts sufficient (breadth > depth). Min: 0 full-text
 ```
 
 **What Actually Happened:**
+
 1. User extracted themes with abstract-only content for Q-Methodology
 2. Themes were generated in Stages 1-3 (familiarization, coding, clustering)
 3. In Stage 4 (validation), ALL themes were rejected
@@ -38,6 +41,7 @@ Fixed critical bug where **Q-Methodology theme extraction was failing** even tho
 
 **Why Themes Were Rejected:**
 The validation function used these thresholds (even for abstracts):
+
 - `minSources`: 2 papers per theme
 - `minCoherence`: 0.48 (semantic relatedness of codes)
 - `minEvidence`: 0.35 (35% of codes need excerpts)
@@ -51,6 +55,7 @@ For Q-Methodology generating 40-80 diverse statements, these thresholds were **T
 ### Changed Function Signature
 
 **Before:**
+
 ```typescript
 private calculateAdaptiveThresholds(
   sources: SourceContent[],
@@ -59,6 +64,7 @@ private calculateAdaptiveThresholds(
 ```
 
 **After:**
+
 ```typescript
 private calculateAdaptiveThresholds(
   sources: SourceContent[],
@@ -76,10 +82,18 @@ private calculateAdaptiveThresholds(
 // PHASE 10 DAY 5.17.2: Purpose-specific threshold adjustments
 if (purpose === ResearchPurpose.Q_METHODOLOGY) {
   this.logger.log('');
-  this.logger.log('🎯 ═══════════════════════════════════════════════════════════════');
-  this.logger.log('🎯 Q-METHODOLOGY: Further relaxing thresholds for breadth-focused extraction');
-  this.logger.log('🎯 ═══════════════════════════════════════════════════════════════');
-  this.logger.log(`   Purpose: Generate 40-80 diverse statements (breadth > depth)`);
+  this.logger.log(
+    '🎯 ═══════════════════════════════════════════════════════════════'
+  );
+  this.logger.log(
+    '🎯 Q-METHODOLOGY: Further relaxing thresholds for breadth-focused extraction'
+  );
+  this.logger.log(
+    '🎯 ═══════════════════════════════════════════════════════════════'
+  );
+  this.logger.log(
+    `   Purpose: Generate 40-80 diverse statements (breadth > depth)`
+  );
   this.logger.log(`   Focus: Capture full discourse space, not deep coherence`);
   this.logger.log('');
 
@@ -93,14 +107,28 @@ if (purpose === ResearchPurpose.Q_METHODOLOGY) {
   minEvidence = Math.min(minEvidence * 0.6, 0.2); // Very low evidence requirement (breadth focus)
 
   this.logger.log('   Q-Methodology Adjustments:');
-  this.logger.log(`   • minSources: ${originalMinSources} → ${minSources} (single-source themes OK for diverse statements)`);
-  this.logger.log(`   • minCoherence: ${originalMinCoherence.toFixed(2)} → ${minCoherence.toFixed(2)} (diversity prioritized over coherence)`);
-  this.logger.log(`   • minEvidence: ${originalMinEvidence.toFixed(2)} → ${minEvidence.toFixed(2)} (lower requirement for statement generation)`);
+  this.logger.log(
+    `   • minSources: ${originalMinSources} → ${minSources} (single-source themes OK for diverse statements)`
+  );
+  this.logger.log(
+    `   • minCoherence: ${originalMinCoherence.toFixed(2)} → ${minCoherence.toFixed(2)} (diversity prioritized over coherence)`
+  );
+  this.logger.log(
+    `   • minEvidence: ${originalMinEvidence.toFixed(2)} → ${minEvidence.toFixed(2)} (lower requirement for statement generation)`
+  );
   this.logger.log('');
-  this.logger.log('   Rationale: Q-Methodology requires broad concourse of diverse viewpoints.');
-  this.logger.log('   Goal is 40-80 statements covering full discourse space, NOT deep coherent themes.');
-  this.logger.log('   Abstracts provide sufficient breadth for statement generation.');
-  this.logger.log('🎯 ═══════════════════════════════════════════════════════════════');
+  this.logger.log(
+    '   Rationale: Q-Methodology requires broad concourse of diverse viewpoints.'
+  );
+  this.logger.log(
+    '   Goal is 40-80 statements covering full discourse space, NOT deep coherent themes.'
+  );
+  this.logger.log(
+    '   Abstracts provide sufficient breadth for statement generation.'
+  );
+  this.logger.log(
+    '🎯 ═══════════════════════════════════════════════════════════════'
+  );
   this.logger.log('');
 }
 ```
@@ -109,13 +137,22 @@ if (purpose === ResearchPurpose.Q_METHODOLOGY) {
 
 **Location:** Line 2430
 **Before:**
+
 ```typescript
-const thresholds = this.calculateAdaptiveThresholds(sources, options.validationLevel);
+const thresholds = this.calculateAdaptiveThresholds(
+  sources,
+  options.validationLevel
+);
 ```
 
 **After:**
+
 ```typescript
-const thresholds = this.calculateAdaptiveThresholds(sources, options.validationLevel, options.purpose);
+const thresholds = this.calculateAdaptiveThresholds(
+  sources,
+  options.validationLevel,
+  options.purpose
+);
 ```
 
 ---
@@ -124,21 +161,21 @@ const thresholds = this.calculateAdaptiveThresholds(sources, options.validationL
 
 ### Before Fix (Abstract-only content)
 
-| Metric | Value | Issue |
-|--------|-------|-------|
-| minSources | 2 | Rejected single-source themes |
-| minCoherence | 0.48 | Rejected diverse viewpoints |
-| minEvidence | 0.35 | Rejected themes with sparse excerpts |
+| Metric       | Value | Issue                                |
+| ------------ | ----- | ------------------------------------ |
+| minSources   | 2     | Rejected single-source themes        |
+| minCoherence | 0.48  | Rejected diverse viewpoints          |
+| minEvidence  | 0.35  | Rejected themes with sparse excerpts |
 
 **Result:** All themes rejected, 0 extracted
 
 ### After Fix (Q-Methodology with abstracts)
 
-| Metric | Before | After | Change |
-|--------|--------|-------|--------|
-| minSources | 2 | **1** | ✅ -50% (single-source OK) |
-| minCoherence | 0.48 | **0.24** | ✅ -50% (diversity prioritized) |
-| minEvidence | 0.35 | **0.20** | ✅ -43% (lower requirement) |
+| Metric       | Before | After    | Change                          |
+| ------------ | ------ | -------- | ------------------------------- |
+| minSources   | 2      | **1**    | ✅ -50% (single-source OK)      |
+| minCoherence | 0.48   | **0.24** | ✅ -50% (diversity prioritized) |
+| minEvidence  | 0.35   | **0.20** | ✅ -43% (lower requirement)     |
 
 **Result:** Themes pass validation, 40-80 diverse statements generated
 
@@ -146,15 +183,15 @@ const thresholds = this.calculateAdaptiveThresholds(sources, options.validationL
 
 ## 🎯 PURPOSE-SPECIFIC THRESHOLD MATRIX
 
-| Purpose | minSources | minCoherence | minEvidence | Rationale |
-|---------|------------|--------------|-------------|-----------|
-| **Q-Methodology** | 1 | 0.24-0.42 | 0.20 | Breadth > depth, diverse statements |
-| **Survey Construction** | 2 | 0.48 | 0.35 | Balanced rigor for construct depth |
-| **Qualitative Analysis** | 2 | 0.48 | 0.35 | Saturation-driven extraction |
-| **Literature Synthesis** | 2-3 | 0.60 | 0.50 | High rigor for meta-ethnography |
-| **Hypothesis Generation** | 2-3 | 0.60 | 0.50 | High rigor for grounded theory |
+| Purpose                   | minSources | minCoherence | minEvidence | Rationale                           |
+| ------------------------- | ---------- | ------------ | ----------- | ----------------------------------- |
+| **Q-Methodology**         | 1          | 0.24-0.42    | 0.20        | Breadth > depth, diverse statements |
+| **Survey Construction**   | 2          | 0.48         | 0.35        | Balanced rigor for construct depth  |
+| **Qualitative Analysis**  | 2          | 0.48         | 0.35        | Saturation-driven extraction        |
+| **Literature Synthesis**  | 2-3        | 0.60         | 0.50        | High rigor for meta-ethnography     |
+| **Hypothesis Generation** | 2-3        | 0.60         | 0.50        | High rigor for grounded theory      |
 
-*Note: Values shown are for abstract-only content. Full-text content uses stricter thresholds.*
+_Note: Values shown are for abstract-only content. Full-text content uses stricter thresholds._
 
 ---
 
@@ -163,6 +200,7 @@ const thresholds = this.calculateAdaptiveThresholds(sources, options.validationL
 ### User Experience
 
 **Before Fix:**
+
 ```
 1. User selects Q-Methodology
 2. System says "abstracts are sufficient"
@@ -172,6 +210,7 @@ const thresholds = this.calculateAdaptiveThresholds(sources, options.validationL
 ```
 
 **After Fix:**
+
 ```
 1. User selects Q-Methodology
 2. System says "abstracts are sufficient"
@@ -184,10 +223,12 @@ const thresholds = this.calculateAdaptiveThresholds(sources, options.validationL
 ### Methodological Soundness
 
 **Q-Methodology Definition:**
+
 > "Q-methodology requires a broad concourse (40-80 statements) representing the full diversity of viewpoints on a topic. The algorithm prioritizes breadth over depth, ensuring comprehensive coverage of the discourse space."
 > — Stephenson, W. (1953)
 
 **Why Lenient Thresholds Are Correct:**
+
 - ✅ Q-Methodology needs **diverse viewpoints**, not coherent themes
 - ✅ Abstracts provide sufficient **breadth** for statement generation
 - ✅ Single-source themes capture **unique perspectives** (methodologically valid)
@@ -200,6 +241,7 @@ const thresholds = this.calculateAdaptiveThresholds(sources, options.validationL
 ### Backend (1 file, 2 sections)
 
 **`backend/src/modules/literature/services/unified-theme-extraction.service.ts`**
+
 1. Lines 2309-2313: Added `purpose?` parameter to `calculateAdaptiveThresholds`
 2. Lines 2376-2405: Added Q-Methodology threshold adjustments (30 lines)
 3. Line 2430: Updated call site to pass `options.purpose`
@@ -211,12 +253,14 @@ const thresholds = this.calculateAdaptiveThresholds(sources, options.validationL
 ## ✅ VERIFICATION
 
 ### TypeScript Compilation
+
 ```bash
 npx tsc --noEmit
 # Result: ✅ 0 errors
 ```
 
 ### Backend Restart
+
 ```bash
 pkill -f "nest start"
 npm run start:dev
@@ -224,6 +268,7 @@ npm run start:dev
 ```
 
 ### Health Check
+
 ```bash
 curl http://localhost:4000/api/health
 # Result: {"status":"healthy"}
@@ -236,6 +281,7 @@ curl http://localhost:4000/api/health
 ### Test Scenario: Q-Methodology with Abstracts
 
 **Setup:**
+
 1. Go to http://localhost:3000/discover/literature
 2. Search for papers on any topic
 3. Select 8-10 papers (abstracts-only is fine)
@@ -244,19 +290,24 @@ curl http://localhost:4000/api/health
 **Expected Behavior:**
 
 **Step 0: Content Analysis**
+
 - Shows "8 abstracts, 0 full-text"
 - Message: "Abstracts provide sufficient breadth for Q-Methodology"
 
 **Step 1: Select Purpose**
+
 - Choose "Q-Methodology"
 
 **Step 2: Review Method**
+
 - Shows: ✅ "Q-Methodology: Abstracts sufficient. Min: 0 full-text"
 - NO warning (you have enough content)
 - Button: ENABLED
 
 **Step 3: Extraction**
+
 - Backend logs show:
+
 ```
 🎯 Q-METHODOLOGY: Further relaxing thresholds for breadth-focused extraction
    • minSources: 2 → 1
@@ -265,6 +316,7 @@ curl http://localhost:4000/api/health
 ```
 
 **Result:**
+
 - ✅ **40-60 themes extracted** (not 0!)
 - Themes are diverse viewpoints
 - Each theme can be turned into Q-statements
@@ -286,6 +338,7 @@ While Q-Methodology fix is complete, other purposes might benefit from tuning:
 ### Logging Improvements
 
 Add purpose-specific extraction statistics:
+
 ```
 Q-Methodology Stats:
 • 52 themes generated
@@ -307,6 +360,7 @@ Q-Methodology Stats:
 **Production Status:** 🟢 READY
 
 **Expected User Experience:**
+
 - ✅ Q-Methodology extracts 40-80 diverse statements from abstracts
 - ✅ No more "all themes filtered out" errors
 - ✅ System behavior matches user expectations
@@ -316,4 +370,4 @@ Q-Methodology Stats:
 
 **Phase 10 Day 5.17.2 Complete** ✅
 
-*Q-Methodology threshold bug fixed. Abstract-only content now works as documented.*
+_Q-Methodology threshold bug fixed. Abstract-only content now works as documented._

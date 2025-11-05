@@ -17,11 +17,13 @@ User is selecting papers and attempting to extract themes, but consistently gett
 ### ✅ 1. API Endpoint Verification
 
 **Frontend URL:** `/literature/themes/extract-themes-v2`
+
 - Base URL: `/literature/themes` (line 237 in unified-theme-api.service.ts)
 - Endpoint: `/extract-themes-v2` (line 423)
 - Full URL: `/literature/themes/extract-themes-v2` ✅
 
 **Backend URL:** `/literature/themes/extract-themes-v2`
+
 - Controller: `@Controller('literature')` (line 64 in literature.controller.ts)
 - Method: `@Post('/themes/extract-themes-v2')` (line 2532)
 - Full URL: `/literature/themes/extract-themes-v2` ✅
@@ -35,6 +37,7 @@ User is selecting papers and attempting to extract themes, but consistently gett
 **Key Question:** Do selected papers have abstracts?
 
 **Code Evidence (page.tsx lines 729-810):**
+
 ```typescript
 const paperSources: SourceContent[] = selectedPaperObjects.map(paper => {
   const hasAbstract = paper.abstract && paper.abstract.length > 0;
@@ -63,6 +66,7 @@ if (sourcesWithContent.length === 0 && videoSources.length === 0) {
 ```
 
 **Potential Issue #1:** Papers from search might not have abstracts
+
 - Semantic Scholar: Sometimes returns papers without abstracts
 - CrossRef: Often has no abstracts
 - PubMed: Usually has abstracts
@@ -74,6 +78,7 @@ if (sourcesWithContent.length === 0 && videoSources.length === 0) {
 
 **Step 1: Check Console Logs**
 When user attempts extraction, console should show:
+
 ```
 ✅ Sources WITH content (>50 chars): X
 ❌ Sources WITHOUT content (<50 chars): Y
@@ -84,6 +89,7 @@ When user attempts extraction, console should show:
 → Root cause: Selected papers have NO abstracts
 
 **Step 2: Check Network Tab**
+
 - Does API call go out?
 - What's the request payload?
 - What's the response?
@@ -93,7 +99,9 @@ When user attempts extraction, console should show:
 ### 📊 4. Common Failure Scenarios
 
 #### Scenario A: Papers Have No Abstracts (Most Likely)
+
 **Symptoms:**
+
 - Console shows: "Sources WITH content (>50 chars): 0"
 - Error toast: "Selected papers have no abstracts"
 - Function returns early before API call
@@ -101,17 +109,22 @@ When user attempts extraction, console should show:
 **Fix:** User needs to select papers WITH abstracts
 
 #### Scenario B: Backend Returns Empty Array
+
 **Symptoms:**
+
 - API call succeeds (200)
 - Response: `{ success: true, themes: [] }`
 
 **Possible Causes:**
+
 - Content too short for meaningful theme extraction
 - AI service failure
 - Minimum threshold not met
 
 #### Scenario C: API Call Fails
+
 **Symptoms:**
+
 - Network error
 - 401 Unauthorized
 - 500 Server Error
@@ -132,6 +145,7 @@ node test-extraction.js
 ```
 
 Expected output if backend works:
+
 ```
 ✅ Login successful
 🧪 Testing V2 extraction endpoint...
@@ -163,7 +177,7 @@ selectedPaperObjects.forEach((paper, idx) => {
     title: paper.title,
     hasAbstract: !!paper.abstract,
     abstractLength: paper.abstract?.length || 0,
-    wordCount: paper.wordCount
+    wordCount: paper.wordCount,
   });
 });
 ```
@@ -173,19 +187,24 @@ selectedPaperObjects.forEach((paper, idx) => {
 Show users which papers have abstracts BEFORE extraction:
 
 **In Paper Card (after line 1565):**
+
 ```tsx
-{/* Abstract availability indicator */}
-{paper.abstract && paper.abstract.length > 100 ? (
-  <span className="flex items-center gap-1 text-green-600 text-xs">
-    <Check className="w-3 h-3" />
-    Has abstract ({paper.abstract.length} chars)
-  </span>
-) : (
-  <span className="flex items-center gap-1 text-red-600 text-xs">
-    <X className="w-3 h-3" />
-    No abstract - cannot extract themes
-  </span>
-)}
+{
+  /* Abstract availability indicator */
+}
+{
+  paper.abstract && paper.abstract.length > 100 ? (
+    <span className="flex items-center gap-1 text-green-600 text-xs">
+      <Check className="w-3 h-3" />
+      Has abstract ({paper.abstract.length} chars)
+    </span>
+  ) : (
+    <span className="flex items-center gap-1 text-red-600 text-xs">
+      <X className="w-3 h-3" />
+      No abstract - cannot extract themes
+    </span>
+  );
+}
 ```
 
 ### Action 3: Filter Papers Without Abstracts
@@ -218,6 +237,7 @@ Add checkbox option to filter out papers without abstracts:
 ## Expected User Workflow Issues
 
 **Current UX Problem:**
+
 1. User searches for papers
 2. Papers appear (some without abstracts)
 3. User selects papers
@@ -226,6 +246,7 @@ Add checkbox option to filter out papers without abstracts:
 6. No clear feedback on WHY
 
 **Improved UX:**
+
 1. User searches for papers
 2. Papers show abstract availability indicator ✅ NEW
 3. User sees which papers are extractable

@@ -98,7 +98,10 @@ export class PDFQueueService {
     const oneMinuteAgo = now - 60000;
 
     // Remove timestamps older than 1 minute
-    while (this.requestTimes.length > 0 && this.requestTimes[0] < oneMinuteAgo) {
+    while (
+      this.requestTimes.length > 0 &&
+      this.requestTimes[0] < oneMinuteAgo
+    ) {
       this.requestTimes.shift();
     }
 
@@ -154,7 +157,7 @@ export class PDFQueueService {
     job.progress = 10;
 
     this.logger.log(
-      `Processing PDF job ${job.id} for paper ${job.paperId} (attempt ${job.attempts}/${job.maxAttempts})`
+      `Processing PDF job ${job.id} for paper ${job.paperId} (attempt ${job.attempts}/${job.maxAttempts})`,
     );
 
     // Record request time for rate limiting
@@ -188,7 +191,7 @@ export class PDFQueueService {
         job.completedAt = new Date();
 
         this.logger.log(
-          `✅ PDF job ${job.id} completed successfully (${result.wordCount} words)`
+          `✅ PDF job ${job.id} completed successfully (${result.wordCount} words)`,
         );
 
         // Emit success event
@@ -204,7 +207,7 @@ export class PDFQueueService {
           // Retry with exponential backoff
           const backoffMs = Math.pow(2, job.attempts) * 1000; // 2s, 4s, 8s
           this.logger.warn(
-            `PDF job ${job.id} failed (attempt ${job.attempts}), retrying in ${backoffMs}ms`
+            `PDF job ${job.id} failed (attempt ${job.attempts}), retrying in ${backoffMs}ms`,
           );
 
           job.status = 'queued';
@@ -230,7 +233,7 @@ export class PDFQueueService {
           job.completedAt = new Date();
 
           this.logger.error(
-            `❌ PDF job ${job.id} failed after ${job.maxAttempts} attempts: ${result.error}`
+            `❌ PDF job ${job.id} failed after ${job.maxAttempts} attempts: ${result.error}`,
           );
 
           // Emit failed event

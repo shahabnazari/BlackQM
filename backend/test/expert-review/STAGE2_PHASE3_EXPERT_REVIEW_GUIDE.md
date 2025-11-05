@@ -10,10 +10,12 @@
 ## 📋 Overview
 
 Stage 2 Phase 3 brings in domain experts to validate aspects that automated and manual testing cannot adequately assess:
+
 1. **Academic Researcher:** Search relevance, theme quality, academic rigor
 2. **UX Designer:** Visual hierarchy, consistency, user experience
 
 **Success Criteria:**
+
 - ✅ Search relevance ≥80% (academic researcher validation)
 - ✅ Theme quality Cohen's kappa ≥0.6 (inter-rater reliability)
 - ✅ UX consistency score ≥85/100 (designer evaluation)
@@ -26,12 +28,14 @@ Stage 2 Phase 3 brings in domain experts to validate aspects that automated and 
 ### Expert Profile Requirements
 
 **Qualifications:**
+
 - PhD in any research field (preferably STEM or social sciences)
 - Experience conducting literature reviews
 - Familiarity with academic databases (PubMed, Crossref, arXiv)
 - Understanding of research methodology
 
 **Evaluation Focus:**
+
 - Search relevance and precision
 - Theme extraction quality
 - Academic integrity and rigor
@@ -46,6 +50,7 @@ Stage 2 Phase 3 brings in domain experts to validate aspects that automated and 
 #### Test Procedure
 
 **Step 1: Select 3 Research Topics**
+
 ```
 From the 10 test scenarios, select:
 1. One medical/biological topic (e.g., diabetes, neuroplasticity)
@@ -54,6 +59,7 @@ From the 10 test scenarios, select:
 ```
 
 **Step 2: Execute Searches**
+
 ```
 For each topic:
 1. Navigate to literature search page
@@ -64,6 +70,7 @@ For each topic:
 ```
 
 **Step 3: Evaluate Relevance**
+
 ```
 For each search result (first 10 papers):
 
@@ -80,6 +87,7 @@ Document:
 ```
 
 **Step 4: Calculate Relevance Score**
+
 ```
 For each topic:
   Total Points = Sum of all ratings
@@ -134,12 +142,14 @@ Overall Search Relevance:
 #### Test Procedure
 
 **Step 1: Select Paper Set**
+
 ```
 Use papers from one of the search relevance tests above
 Select 5 papers with highest relevance ratings (3 or 2)
 ```
 
 **Step 2: Extract Themes**
+
 ```
 1. Select the 5 papers in the interface
 2. Click "Extract Themes" button
@@ -148,6 +158,7 @@ Select 5 papers with highest relevance ratings (3 or 2)
 ```
 
 **Step 3: Independent Theme Identification**
+
 ```
 Academic Researcher (as Rater 1):
   Read abstracts of the 5 papers
@@ -162,6 +173,7 @@ Document your themes:
 ```
 
 **Step 4: Compare and Rate AI Themes**
+
 ```
 For each AI-extracted theme, evaluate:
 
@@ -180,6 +192,7 @@ AI Theme 1: _______________________
 ```
 
 **Step 5: Calculate Theme Quality Metrics**
+
 ```
 Precision: What % of AI themes are relevant (rated 1 or 2)?
   Relevant AI Themes / Total AI Themes × 100
@@ -257,12 +270,14 @@ Overall Theme Quality: [ ] Excellent [ ] Good [ ] Acceptable [ ] Poor
 #### Test Procedure
 
 **Step 1: Select 10 Papers**
+
 ```
 From search results, select 10 random papers
 Ensure mix of sources (PubMed, Crossref, arXiv, OpenAlex)
 ```
 
 **Step 2: Verify Metadata**
+
 ```
 For each paper, check:
 
@@ -296,6 +311,7 @@ Venue/Journal:
 ```
 
 **Step 3: Calculate Accuracy**
+
 ```
 For each paper:
   Metadata Fields Correct / Total Fields × 100
@@ -376,12 +392,14 @@ Signature: _____________________________
 ### Expert Profile Requirements
 
 **Qualifications:**
+
 - Professional UX/UI designer (3+ years experience)
 - Experience with complex data-heavy interfaces
 - Understanding of information architecture
 - Familiarity with design systems
 
 **Evaluation Focus:**
+
 - Visual hierarchy and layout
 - Consistency across pages
 - User experience flow
@@ -396,6 +414,7 @@ Signature: _____________________________
 #### Test Procedure
 
 **Step 1: Identify Key User Goals**
+
 ```
 Primary Goals:
 1. Search for academic papers
@@ -407,6 +426,7 @@ For each goal, identify critical UI elements
 ```
 
 **Step 2: Evaluate Visual Prominence**
+
 ```
 For each critical element, assess:
 
@@ -429,6 +449,7 @@ Elements to Evaluate:
 ```
 
 **Step 3: Calculate Hierarchy Score**
+
 ```
 Average Visual Prominence Score:
   Sum of all ratings / Number of elements
@@ -515,6 +536,7 @@ Status: [ ] Pass (≥90) [ ] Fail (<90)
 #### Test Procedure
 
 **Step 1: Document Design Patterns**
+
 ```
 Identify recurring patterns:
 1. Button styles (primary, secondary, text)
@@ -528,6 +550,7 @@ Identify recurring patterns:
 ```
 
 **Step 2: Evaluate Consistency**
+
 ```
 For each pattern, rate consistency across pages:
 
@@ -546,6 +569,7 @@ Check across 4 pages:
 ```
 
 **Step 3: Calculate Consistency Score**
+
 ```
 Average Consistency Score:
   Sum of all pattern ratings / Number of patterns
@@ -644,6 +668,7 @@ Status: [ ] Pass (≥85) [ ] Fail (<85)
 #### Test Procedure
 
 **Step 1: Complete Core User Journey**
+
 ```
 Execute complete workflow:
 1. Start at home/dashboard
@@ -663,6 +688,7 @@ Document:
 ```
 
 **Step 2: Rate Each Step**
+
 ```
 Rating Scale:
   5 = Seamless: Intuitive, no friction
@@ -680,6 +706,7 @@ Rate:
 ```
 
 **Step 3: Calculate UX Flow Score**
+
 ```
 Average UX Flow Score:
   Sum of all step ratings / Number of steps
@@ -850,11 +877,13 @@ Next Steps:
 **To Pass Stage 2 Phase 3:**
 
 Academic Researcher:
+
 - ✅ Search relevance ≥80%
 - ✅ Theme quality F1 ≥ 70%
 - ✅ Metadata accuracy ≥95%
 
 UX Designer:
+
 - ✅ Visual hierarchy ≥90/100
 - ✅ Design consistency ≥85/100
 - ✅ UX flow ≥80/100

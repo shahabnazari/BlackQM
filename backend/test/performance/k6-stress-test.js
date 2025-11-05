@@ -20,17 +20,17 @@ const responseTime = new Trend('response_time_ms');
 // Test configuration - gradually increase load to find breaking point
 export const options = {
   stages: [
-    { duration: '2m', target: 50 },   // Stage 1: Baseline (expected load)
-    { duration: '2m', target: 100 },  // Stage 2: Peak load
-    { duration: '2m', target: 150 },  // Stage 3: Stress
-    { duration: '2m', target: 200 },  // Stage 4: Breaking point
-    { duration: '5m', target: 200 },  // Stage 5: Sustained stress
-    { duration: '2m', target: 0 },    // Stage 6: Recovery
+    { duration: '2m', target: 50 }, // Stage 1: Baseline (expected load)
+    { duration: '2m', target: 100 }, // Stage 2: Peak load
+    { duration: '2m', target: 150 }, // Stage 3: Stress
+    { duration: '2m', target: 200 }, // Stage 4: Breaking point
+    { duration: '5m', target: 200 }, // Stage 5: Sustained stress
+    { duration: '2m', target: 0 }, // Stage 6: Recovery
   ],
   thresholds: {
     // Intentionally lenient thresholds - we expect degradation
-    'http_req_duration': ['p(95)<10000'], // 10s (degraded, but still responsive)
-    'http_req_failed': ['rate<0.20'],     // 20% error rate acceptable during stress
+    http_req_duration: ['p(95)<10000'], // 10s (degraded, but still responsive)
+    http_req_failed: ['rate<0.20'], // 20% error rate acceptable during stress
   },
 };
 
@@ -40,11 +40,16 @@ const BASE_URL = __ENV.BASE_URL || 'http://localhost:4000';
 const endpoints = [
   { method: 'GET', url: '/api/health/ready', name: 'health_check' },
   { method: 'GET', url: '/api/health/live', name: 'liveness' },
-  { method: 'POST', url: '/api/literature/search/public', name: 'search', body: JSON.stringify({
-    query: 'machine learning',
-    sources: ['arxiv'],
-    limit: 10,
-  })},
+  {
+    method: 'POST',
+    url: '/api/literature/search/public',
+    name: 'search',
+    body: JSON.stringify({
+      query: 'machine learning',
+      sources: ['arxiv'],
+      limit: 10,
+    }),
+  },
 ];
 
 export default function () {
@@ -79,7 +84,9 @@ export default function () {
 
     // Log critical errors (but not rate limits - those are expected under stress)
     if (res.status !== 429 && res.status !== 503) {
-      console.error(`❌ Unexpected error: ${res.status} - ${endpoint.name} - VU:${__VU}`);
+      console.error(
+        `❌ Unexpected error: ${res.status} - ${endpoint.name} - VU:${__VU}`,
+      );
     }
   }
 
@@ -104,7 +111,7 @@ export function setup() {
   console.log('     Stage 5: 200 VUs      (Sustained Stress)');
   console.log('     Stage 6: 200 → 0 VUs  (Recovery)');
   console.log('');
-  console.log('📊 What We\'re Testing:');
+  console.log("📊 What We're Testing:");
   console.log('   • System capacity limits');
   console.log('   • Graceful degradation patterns');
   console.log('   • Error handling under extreme load');
@@ -131,6 +138,8 @@ export function teardown(data) {
   console.log('');
   console.log('💡 Recommendation:');
   console.log('   Set production rate limit to 70% of breaking point');
-  console.log('   Example: If breaking point = 150 VUs, limit = ~105 concurrent users');
+  console.log(
+    '   Example: If breaking point = 150 VUs, limit = ~105 concurrent users',
+  );
   console.log('');
 }

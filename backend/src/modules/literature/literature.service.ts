@@ -2595,11 +2595,11 @@ ER  -`;
   async generateStatementsFromThemes(
     themes: string[],
     studyContext: any,
-    userId: string,
+    userId?: string,
   ): Promise<string[]> {
     try {
       this.logger.log(
-        `Generating Q-statements from ${themes.length} themes for user ${userId}`,
+        `Generating Q-statements from ${themes.length} themes${userId ? ` for user ${userId}` : ' (public endpoint)'}`,
       );
 
       // Phase 10 Day 5.17.5: Use AI StatementGeneratorService for Q-methodology statement generation

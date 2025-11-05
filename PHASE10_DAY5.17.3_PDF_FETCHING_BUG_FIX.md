@@ -1,8 +1,11 @@
-# ✅ Phase 10 Day 5.17.3: PDF Fetching Bug Fix - COMPLETE
+# ❌ Phase 10 Day 5.17.3: PDF Fetching Bug Fix - NOT IMPLEMENTED
+
+**⚠️ DOCUMENTATION ONLY - THIS FEATURE WAS NOT IMPLEMENTED IN THE CODEBASE**
 
 **Date:** November 3, 2025
-**Status:** 🚀 **PRODUCTION-READY** - Users can now fetch full-text PDFs with one click
-**Bug Severity:** 🔴 CRITICAL - Users couldn't access full-text content that was available
+**Status:** 🔴 **NOT IMPLEMENTED** - This document describes a feature that was planned but not coded
+**Original Claim:** Users can fetch full-text PDFs with one click
+**Reality:** The button and UI described here DO NOT exist in `frontend/app/(researcher)/discover/literature/page.tsx`
 
 ---
 
@@ -11,6 +14,7 @@
 Fixed critical UX gap where users saw papers with PDF URLs but had no way to fetch the full-text content. The backend infrastructure was complete (PDF parsing service, queue system, API endpoints, React hooks), but the **frontend UI was missing** the button to trigger it.
 
 **User Report:**
+
 ```
 "I think word count does not work again. For example, search for 'cosmic microwave
 background research' you will see an article with a PDF link but it counts 227 words
@@ -28,6 +32,7 @@ background research' you will see an article with a PDF link but it counts 227 w
 ### The Infrastructure That Already Existed
 
 **1. Backend Services (Day 5.15):**
+
 - ✅ `PDFParsingService` - Fetches PDFs from Unpaywall API using DOI
 - ✅ `PDFQueueService` - Background job queue with retry logic
 - ✅ `PDFController` - REST API endpoints at `/api/pdf/*`
@@ -35,11 +40,13 @@ background research' you will see an article with a PDF link but it counts 227 w
 - ✅ Server-Sent Events for real-time progress
 
 **2. Frontend Hooks (Day 5.15):**
+
 - ✅ `useFullTextProgress` - SSE subscription for real-time progress
 - ✅ `useTriggerFullTextFetch` - API call to trigger fetching
 - ✅ `useFullTextBulkStatus` - Check status for multiple papers
 
 **3. Frontend UI (Day 5.15.2):**
+
 - ✅ Full-text badges showing fetch status
 - ✅ Word count display for fetched papers
 - ✅ "Fetching..." animation for in-progress jobs
@@ -85,7 +92,8 @@ import { useTriggerFullTextFetch } from '@/lib/hooks/useFullTextProgress';
 
 ```typescript
 // Phase 10 Day 5.17.3: PDF full-text fetching hook
-const { trigger: triggerPDFFetch, loading: pdfFetchLoading } = useTriggerFullTextFetch();
+const { trigger: triggerPDFFetch, loading: pdfFetchLoading } =
+  useTriggerFullTextFetch();
 ```
 
 ### Step 3: Add the Button
@@ -145,6 +153,7 @@ const { trigger: triggerPDFFetch, loading: pdfFetchLoading } = useTriggerFullTex
 ### When Button Appears
 
 The "Fetch Full Text" button shows when:
+
 1. ✅ Paper has a DOI (required for Unpaywall API)
 2. ✅ Full-text status is one of:
    - `not_fetched` (never tried)
@@ -154,18 +163,19 @@ The "Fetch Full Text" button shows when:
 ### When Button Hides
 
 The button hides when:
+
 - ❌ No DOI available
 - ❌ Full-text status is `success` (already fetched)
 - ❌ Full-text status is `fetching` (currently in progress)
 
 ### Button States
 
-| State | Visual | Action |
-|-------|--------|--------|
-| **Ready** | Purple outline, "Fetch Full Text" | Clickable, triggers fetch |
-| **Loading** | Spinning loader, "Fetching..." | Disabled |
-| **Success** | Button hides, badge shows "Full-text (5,432 words)" | N/A |
-| **Failed** | Button reappears | Clickable, allows retry |
+| State       | Visual                                              | Action                    |
+| ----------- | --------------------------------------------------- | ------------------------- |
+| **Ready**   | Purple outline, "Fetch Full Text"                   | Clickable, triggers fetch |
+| **Loading** | Spinning loader, "Fetching..."                      | Disabled                  |
+| **Success** | Button hides, badge shows "Full-text (5,432 words)" | N/A                       |
+| **Failed**  | Button reappears                                    | Clickable, allows retry   |
 
 ---
 
@@ -224,6 +234,7 @@ async processFullText(paperId: string): Promise<{
 ```
 
 **Steps:**
+
 1. **Get paper from database** (requires DOI)
 2. **Query Unpaywall API** → `https://api.unpaywall.org/v2/{DOI}?email=research@blackq.app`
 3. **Check if open access** → `data.is_oa`
@@ -250,12 +261,14 @@ async processFullText(paperId: string): Promise<{
 **Service:** `backend/src/modules/literature/services/pdf-queue.service.ts`
 
 **Features:**
+
 - ✅ Async processing (non-blocking)
 - ✅ Retry logic (3 attempts with exponential backoff: 2s, 4s, 8s)
 - ✅ Rate limiting (10 PDFs/minute)
 - ✅ Real-time progress via EventEmitter → Server-Sent Events
 
 **Job States:**
+
 - `queued` → Job added to queue
 - `processing` → Currently downloading/extracting
 - `completed` → Success, full-text stored
@@ -266,13 +279,15 @@ async processFullText(paperId: string): Promise<{
 **Hook:** `frontend/lib/hooks/useFullTextProgress.ts`
 
 ```typescript
-const { status, progress, wordCount, error, message } = useFullTextProgress(paperId);
+const { status, progress, wordCount, error, message } =
+  useFullTextProgress(paperId);
 
 // Status: 'not_fetched' | 'queued' | 'processing' | 'success' | 'failed'
 // Progress: 0-100
 ```
 
 **Events:**
+
 - `pdf.job.queued` → "Full-text fetch queued"
 - `pdf.job.processing` → "Downloading PDF..." (10%)
 - `pdf.job.progress` → "Extracting text..." (30%)
@@ -321,6 +336,7 @@ npm run dev
 ### Test Scenario: Fetch Full-Text for Cosmic Microwave Background Paper
 
 **Setup:**
+
 1. Go to http://localhost:3000/discover/literature
 2. Search for "cosmic microwave background research"
 3. Find paper: "About Cosmic Microwave Background Radiation (CMBR)"
@@ -330,6 +346,7 @@ npm run dev
 **Expected Behavior:**
 
 **Step 1: Initial State**
+
 - Paper card shows: "Abstract (227 chars)" badge (gray)
 - Action buttons:
   - "View Paper" → Opens publisher website
@@ -337,12 +354,14 @@ npm run dev
   - "Save" → Star icon
 
 **Step 2: Click "Fetch Full Text"**
+
 - Toast appears: "Fetching full-text PDF from open-access sources..."
 - Button changes to "Fetching..." (spinner icon)
 - Badge changes to "Fetching full-text..." (blue, animated pulse)
 
 **Step 3: Backend Processing**
 Backend logs show:
+
 ```
 [PDFParsingService] Fetching PDF for DOI: 10.xxxx/xxxx
 [PDFParsingService] Downloading PDF from: https://...
@@ -354,12 +373,14 @@ Backend logs show:
 ```
 
 **Step 4: Success**
+
 - Badge updates to: "Full-text (5,432 words)" (green checkmark)
 - Button disappears (no longer needed)
 - Toast: "Full-text fetch started! Word count will update when complete."
 - Paper can now be used for deep theme extraction (40-50x more content!)
 
 **Step 5: Verify in Theme Extraction**
+
 1. Select the paper (checkbox)
 2. Click "Extract Themes"
 3. Content Analysis shows:
@@ -375,12 +396,18 @@ Backend logs show:
 **Scenario:** User clicks "Fetch Full Text" for non-open-access paper
 
 **Backend Response:**
+
 ```typescript
 // Unpaywall API returns: is_oa = false
-return { success: false, status: 'failed', error: 'PDF not available or behind paywall' };
+return {
+  success: false,
+  status: 'failed',
+  error: 'PDF not available or behind paywall',
+};
 ```
 
 **User Experience:**
+
 - Toast: "Failed to start full-text fetch. Paper may be behind paywall."
 - Button remains visible (can retry later)
 - Badge shows: "Abstract (227 chars)" (unchanged)
@@ -390,11 +417,13 @@ return { success: false, status: 'failed', error: 'PDF not available or behind p
 **Scenario:** PDF server is slow or unresponsive
 
 **Backend Handling:**
+
 - Timeout after 30 seconds
 - Retry logic: 3 attempts with exponential backoff (2s, 4s, 8s)
 - After 3 failures: Mark as `failed`
 
 **User Experience:**
+
 - Badge shows: "Fetching full-text..." for ~1 minute
 - After retries exhausted:
   - Toast: "Full-text unavailable"
@@ -405,13 +434,19 @@ return { success: false, status: 'failed', error: 'PDF not available or behind p
 **Scenario:** PDF is scanned images without OCR
 
 **Backend Response:**
+
 ```typescript
 if (!data.text || data.text.trim().length === 0) {
-  return { success: false, status: 'failed', error: 'PDF extraction returned empty text' };
+  return {
+    success: false,
+    status: 'failed',
+    error: 'PDF extraction returned empty text',
+  };
 }
 ```
 
 **User Experience:**
+
 - Same as paywall scenario (button remains, user can try different source)
 
 ### 4. Rate Limit Reached
@@ -419,11 +454,13 @@ if (!data.text || data.text.trim().length === 0) {
 **Scenario:** User clicks "Fetch Full Text" on 15 papers simultaneously
 
 **Backend Handling:**
+
 - Queue enforces: 10 PDFs/minute
 - Jobs 11-15 wait in queue
 - Automatic retry after 60 seconds
 
 **User Experience:**
+
 - All papers show "Fetching full-text..." badge
 - First 10 process immediately
 - Jobs 11-15 show "Retrying in 60s..." briefly
@@ -434,13 +471,14 @@ if (!data.text || data.text.trim().length === 0) {
 **Scenario:** Same paper exists with different IDs
 
 **Backend Handling:**
+
 - Calculates SHA256 hash of cleaned text
 - Checks for duplicate hash in database
 - Logs warning but stores anyway
 
 ```typescript
 const duplicate = await this.prisma.paper.findFirst({
-  where: { fullTextHash, id: { not: paperId } }
+  where: { fullTextHash, id: { not: paperId } },
 });
 
 if (duplicate) {
@@ -454,44 +492,47 @@ if (duplicate) {
 
 ### Before Fix: Manual PDF Workflow
 
-| Step | Time | Success Rate | User Effort |
-|------|------|--------------|-------------|
-| Find paper with PDF | 1 min | 100% | Easy |
-| Click "View Paper" | 5s | 100% | Easy |
-| Navigate publisher site | 1 min | 70% | Medium (paywalls) |
-| Find download link | 30s | 60% | Medium (confusing) |
-| Download PDF | 15s | 90% | Easy |
-| Upload to system | 30s | 100% | Medium |
-| **TOTAL** | **~4 min** | **38%** | **High friction** |
+| Step                    | Time       | Success Rate | User Effort        |
+| ----------------------- | ---------- | ------------ | ------------------ |
+| Find paper with PDF     | 1 min      | 100%         | Easy               |
+| Click "View Paper"      | 5s         | 100%         | Easy               |
+| Navigate publisher site | 1 min      | 70%          | Medium (paywalls)  |
+| Find download link      | 30s        | 60%          | Medium (confusing) |
+| Download PDF            | 15s        | 90%          | Easy               |
+| Upload to system        | 30s        | 100%         | Medium             |
+| **TOTAL**               | **~4 min** | **38%**      | **High friction**  |
 
 **Result:** Most users gave up, used abstracts only
 
 ### After Fix: Automated PDF Workflow
 
-| Step | Time | Success Rate | User Effort |
-|------|------|--------------|-------------|
-| Find paper with PDF | 1 min | 100% | Easy |
-| Click "Fetch Full Text" | 5s | 100% | Easy |
-| Wait for fetch | 10s | 85% | Zero (automated) |
-| **TOTAL** | **~1 min** | **85%** | **Zero friction** |
+| Step                    | Time       | Success Rate | User Effort       |
+| ----------------------- | ---------- | ------------ | ----------------- |
+| Find paper with PDF     | 1 min      | 100%         | Easy              |
+| Click "Fetch Full Text" | 5s         | 100%         | Easy              |
+| Wait for fetch          | 10s        | 85%          | Zero (automated)  |
+| **TOTAL**               | **~1 min** | **85%**      | **Zero friction** |
 
 **Result:** ✅ **94% faster**, **223% higher success rate**, **zero user effort**
 
 ### Content Quality Impact
 
 **Before:** Users extracted themes from abstracts only (150-300 words)
+
 - Theme quality: MODERATE
 - Theme count: 5-10 themes (limited by abstract brevity)
 - Validation: Lenient thresholds required
 
 **After:** Users extract themes from full-text (4,000-8,000 words)
+
 - Theme quality: HIGH
 - Theme count: 15-30 themes (rich corpus enables saturation)
 - Validation: Rigorous thresholds enforced
 
 **Scientific Justification:**
+
 > "Thematic analysis requires data saturation to identify recurring patterns. Abstracts provide insufficient depth for saturation. Full-text analysis yields 40-50x more content, enabling robust theme identification."
-> — Braun & Clarke (2006), *Using thematic analysis in psychology*
+> — Braun & Clarke (2006), _Using thematic analysis in psychology_
 
 ---
 
@@ -536,6 +577,7 @@ if (duplicate) {
 **Root Cause:** Complete PDF infrastructure existed (backend services, API, hooks) but missing UI button to trigger it.
 
 **Solution:** Added "Fetch Full Text" button that:
+
 1. Triggers automated PDF fetch from Unpaywall API
 2. Shows real-time progress via SSE
 3. Updates word count when complete
@@ -544,6 +586,7 @@ if (duplicate) {
 **Production Status:** 🟢 READY
 
 **Expected User Experience:**
+
 - ✅ One-click PDF fetching (zero manual steps)
 - ✅ Real-time progress feedback
 - ✅ Automatic word count updates
@@ -555,4 +598,4 @@ if (duplicate) {
 
 **Phase 10 Day 5.17.3 Complete** ✅
 
-*PDF fetching bug fixed. Users can now fetch full-text with one click.*
+_PDF fetching bug fixed. Users can now fetch full-text with one click._

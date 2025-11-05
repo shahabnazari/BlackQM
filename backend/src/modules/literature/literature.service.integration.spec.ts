@@ -71,9 +71,18 @@ describe('LiteratureService Integration Tests', () => {
         { provide: CACHE_MANAGER, useValue: mockCacheManager },
         { provide: CacheService, useValue: mockCacheService },
         { provide: TranscriptionService, useValue: mockTranscriptionService },
-        { provide: MultiMediaAnalysisService, useValue: mockMultiMediaAnalysisService },
-        { provide: SearchCoalescerService, useValue: mockSearchCoalescerService },
-        { provide: APIQuotaMonitorService, useValue: mockAPIQuotaMonitorService },
+        {
+          provide: MultiMediaAnalysisService,
+          useValue: mockMultiMediaAnalysisService,
+        },
+        {
+          provide: SearchCoalescerService,
+          useValue: mockSearchCoalescerService,
+        },
+        {
+          provide: APIQuotaMonitorService,
+          useValue: mockAPIQuotaMonitorService,
+        },
       ],
     }).compile();
 

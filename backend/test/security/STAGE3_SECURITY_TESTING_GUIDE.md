@@ -1,4 +1,5 @@
 # Stage 3: Security Testing Guide
+
 ## Phase 10 Day 5.7 - Enterprise-Grade Security Validation
 
 **Purpose:** Identify and remediate security vulnerabilities before production deployment
@@ -13,6 +14,7 @@
 Security testing is not optional for enterprise applications handling academic research data. This guide validates **OWASP Top 10** compliance and identifies common web application vulnerabilities.
 
 **Key Questions:**
+
 - Can an attacker gain unauthorized access to research data?
 - Is user authentication and session management secure?
 - Are API endpoints protected against injection attacks?
@@ -25,12 +27,14 @@ Security testing is not optional for enterprise applications handling academic r
 ### In-Scope (Automated + Manual Testing)
 
 ✅ **Authentication & Authorization**
+
 - JWT token security (expiration, signature validation)
 - Password hashing (bcrypt strength)
 - Session management
 - RBAC (Role-Based Access Control) enforcement
 
 ✅ **Input Validation & Injection**
+
 - SQL injection (Prisma ORM protection)
 - NoSQL injection (if applicable)
 - XSS (Cross-Site Scripting)
@@ -38,18 +42,21 @@ Security testing is not optional for enterprise applications handling academic r
 - LDAP injection
 
 ✅ **API Security**
+
 - Rate limiting effectiveness
 - CORS configuration
 - Authentication bypass attempts
 - Insecure direct object references (IDOR)
 
 ✅ **Data Protection**
+
 - Sensitive data exposure
 - Encryption in transit (HTTPS)
 - Secure headers (CSP, HSTS, X-Frame-Options)
 - Cookie security (HttpOnly, Secure, SameSite)
 
 ✅ **Error Handling**
+
 - Stack trace leakage
 - Detailed error messages in production
 - Logging of sensitive data
@@ -57,6 +64,7 @@ Security testing is not optional for enterprise applications handling academic r
 ### Out-of-Scope (Separate Penetration Testing)
 
 ❌ **Infrastructure Security** (requires separate assessment)
+
 - Server hardening
 - Network segmentation
 - Firewall configuration
@@ -73,6 +81,7 @@ Security testing is not optional for enterprise applications handling academic r
 ### Installation
 
 **macOS:**
+
 ```bash
 brew install --cask owasp-zap
 
@@ -80,6 +89,7 @@ brew install --cask owasp-zap
 ```
 
 **Linux (Debian/Ubuntu):**
+
 ```bash
 sudo snap install zaproxy --classic
 
@@ -90,11 +100,13 @@ chmod +x ZAP_2_14_0_unix.sh
 ```
 
 **Docker:**
+
 ```bash
 docker pull zaproxy/zap-stable
 ```
 
 **Verify Installation:**
+
 ```bash
 # GUI mode
 /Applications/OWASP\ ZAP.app/Contents/MacOS/OWASP\ ZAP
@@ -140,6 +152,7 @@ zap.sh -cmd -quickurl http://localhost:3000 -quickprogress
 ```
 
 **2. Import Context into ZAP:**
+
 - Open ZAP GUI
 - File → Import Context → Select `vqmethod-zap-context.xml`
 - Right-click context → Include in Context → Add URL regex patterns
@@ -153,6 +166,7 @@ zap.sh -cmd -quickurl http://localhost:3000 -quickprogress
 **Objective:** Identify obvious security issues in 5-10 minutes
 
 **Execution (Command Line):**
+
 ```bash
 docker run -v $(pwd):/zap/wrk/:rw \
   -t zaproxy/zap-stable \
@@ -165,6 +179,7 @@ docker run -v $(pwd):/zap/wrk/:rw \
 ```
 
 **Execution (GUI):**
+
 1. Quick Start → Automated Scan
 2. URL: `http://localhost:3000`
 3. Select "Attack Mode"
@@ -172,6 +187,7 @@ docker run -v $(pwd):/zap/wrk/:rw \
 5. Wait 5-10 minutes
 
 **Expected Results:**
+
 ```
 Baseline Scan Summary:
   High Alerts:    0   ✅
@@ -192,12 +208,14 @@ Common Medium Alerts (Expected):
 **Objective:** Deep security testing including injection attacks
 
 **⚠️ WARNING:** Active scan will:
+
 - Submit malicious payloads to all forms
 - Attempt SQL injection, XSS, command injection
 - May trigger rate limits or alarms
 - **Only run on test environment, NEVER production**
 
 **Execution:**
+
 ```bash
 # 1. Start backend in test mode
 cd backend
@@ -220,6 +238,7 @@ docker run -v $(pwd):/zap/wrk/:rw \
 ```
 
 **Scan Configuration (GUI):**
+
 1. Tools → Options → Active Scan
 2. Number of hosts scanned concurrently: 5
 3. Concurrent scanning threads per host: 10
@@ -227,9 +246,10 @@ docker run -v $(pwd):/zap/wrk/:rw \
 5. Delay when scanning (in ms): 0
 
 **Success Criteria:**
+
 - ✅ **Pass:** Zero Critical/High vulnerabilities
 - ⚠️ **Review:** <10 Medium vulnerabilities (all documented)
-- ℹ️  **Acceptable:** Any number of Low/Info alerts
+- ℹ️ **Acceptable:** Any number of Low/Info alerts
 
 ---
 
@@ -238,6 +258,7 @@ docker run -v $(pwd):/zap/wrk/:rw \
 **Objective:** Validate REST API security (authentication, authorization, injection)
 
 **Setup API Definition (OpenAPI/Swagger):**
+
 ```yaml
 # Save as: api-definition.yaml (if you have Swagger docs)
 openapi: 3.0.0
@@ -267,6 +288,7 @@ paths:
 ```
 
 **Execution with ZAP API Scan:**
+
 ```bash
 docker run -v $(pwd):/zap/wrk/:rw \
   -t zaproxy/zap-stable \
@@ -283,6 +305,7 @@ docker run -v $(pwd):/zap/wrk/:rw \
 **Manual API Testing Checklist:**
 
 - [ ] **Broken Authentication**
+
   ```bash
   # Test 1: Try accessing protected endpoint without token
   curl http://localhost:4000/api/papers
@@ -301,6 +324,7 @@ docker run -v $(pwd):/zap/wrk/:rw \
   ```
 
 - [ ] **Broken Authorization (IDOR)**
+
   ```bash
   # Test: Try accessing another user's paper
   # 1. Login as User A, create paper, note paper ID
@@ -312,6 +336,7 @@ docker run -v $(pwd):/zap/wrk/:rw \
   ```
 
 - [ ] **SQL Injection**
+
   ```bash
   # Test: Malicious input in search query
   curl -X POST http://localhost:4000/api/literature/search/public \
@@ -322,6 +347,7 @@ docker run -v $(pwd):/zap/wrk/:rw \
   ```
 
 - [ ] **XSS (Cross-Site Scripting)**
+
   ```bash
   # Test: Script injection in paper title
   curl -X POST http://localhost:4000/api/papers \
@@ -389,6 +415,7 @@ curl -X PATCH http://localhost:4000/api/users/other_user_id \
 ```
 
 **Result:**
+
 - [ ] ✅ PASS: All unauthorized access attempts blocked
 - [ ] ❌ FAIL: Able to access other users' data
 
@@ -418,6 +445,7 @@ psql -d vqmethod_db -c \
 ```
 
 **Result:**
+
 - [ ] ✅ PASS: Passwords are bcrypt hashed
 - [ ] ✅ PASS: Sensitive data not in logs
 - [ ] ❌ FAIL: Plaintext passwords found
@@ -452,6 +480,7 @@ curl -X POST http://localhost:4000/api/auth/login \
 ```
 
 **Result:**
+
 - [ ] ✅ PASS: All injection attempts sanitized/blocked
 - [ ] ❌ FAIL: Injection successful (CRITICAL - fix immediately)
 
@@ -479,6 +508,7 @@ curl -X POST http://localhost:4000/api/auth/forgot-password \
 ```
 
 **Result:**
+
 - [ ] ✅ PASS: No excessive data exposure
 - [ ] ✅ PASS: No account enumeration
 - [ ] ❌ FAIL: Business logic flaws found
@@ -514,6 +544,7 @@ curl -X POST http://localhost:4000/api/papers \
 ```
 
 **Result:**
+
 - [ ] ✅ PASS: All security headers present
 - [ ] ✅ PASS: No stack traces leaked
 - [ ] ⚠️ WARNING: Some headers missing (document and fix)
@@ -541,6 +572,7 @@ npm audit
 ```
 
 **Also check:**
+
 ```bash
 # Check Node.js version
 node --version
@@ -552,6 +584,7 @@ npm --version
 ```
 
 **Result:**
+
 - [ ] ✅ PASS: 0 critical/high vulnerabilities
 - [ ] ⚠️ WARNING: 1-3 medium vulnerabilities (document)
 - [ ] ❌ FAIL: Critical/high vulnerabilities (fix before production)
@@ -587,6 +620,7 @@ wait
 ```
 
 **Result:**
+
 - [ ] ✅ PASS: Strong password policy enforced
 - [ ] ✅ PASS: Brute force protection active
 - [ ] ❌ FAIL: Weak authentication found
@@ -612,9 +646,10 @@ git log --show-signature | grep -A 2 "Signature"
 ```
 
 **Result:**
+
 - [ ] ✅ PASS: All dependencies from official sources
 - [ ] ✅ PASS: Package signatures verified
-- [ ] ℹ️  INFO: Unsigned commits (acceptable for now)
+- [ ] ℹ️ INFO: Unsigned commits (acceptable for now)
 
 ---
 
@@ -643,6 +678,7 @@ tail -n 50 backend/logs/app.log | grep -i "login"
 ```
 
 **Result:**
+
 - [ ] ✅ PASS: Security events logged
 - [ ] ⚠️ WARNING: Logging exists but incomplete
 - [ ] ❌ FAIL: No security logging
@@ -674,6 +710,7 @@ curl -X POST http://localhost:4000/api/videos/fetch-captions \
 ```
 
 **Result:**
+
 - [ ] ✅ PASS: SSRF attempts blocked
 - [ ] ⚠️ WARNING: URL validation exists but incomplete
 - [ ] ❌ FAIL: SSRF vulnerability found
@@ -682,7 +719,7 @@ curl -X POST http://localhost:4000/api/videos/fetch-captions \
 
 ## Part 4: Security Test Results Template
 
-```markdown
+````markdown
 # Security Test Results - [Date]
 
 ## Executive Summary
@@ -690,6 +727,7 @@ curl -X POST http://localhost:4000/api/videos/fetch-captions \
 **Overall Risk Level:** [LOW / MEDIUM / HIGH / CRITICAL]
 
 **Vulnerabilities Found:**
+
 - Critical: 0 ✅
 - High: 0 ✅
 - Medium: 2 ⚠️
@@ -704,19 +742,20 @@ curl -X POST http://localhost:4000/api/videos/fetch-captions \
 
 ### Critical Vulnerabilities (P0 - Fix Immediately)
 
-*None found ✅*
+_None found ✅_
 
 ---
 
 ### High Vulnerabilities (P1 - Fix Before Production)
 
-*None found ✅*
+_None found ✅_
 
 ---
 
 ### Medium Vulnerabilities (P2 - Fix Within 30 Days)
 
 #### VULN-001: Content Security Policy Not Set
+
 - **Severity:** Medium
 - **CVSS Score:** 5.3
 - **Affected:** Frontend (http://localhost:3000)
@@ -728,13 +767,16 @@ curl -X POST http://localhost:4000/api/videos/fetch-captions \
   const securityHeaders = [
     {
       key: 'Content-Security-Policy',
-      value: "default-src 'self'; script-src 'self' 'unsafe-inline'; ..."
-    }
+      value: "default-src 'self'; script-src 'self' 'unsafe-inline'; ...",
+    },
   ];
   ```
+````
+
 - **Status:** Documented, fix scheduled
 
 #### VULN-002: X-Frame-Options Not Set
+
 - **Severity:** Medium
 - **CVSS Score:** 4.3
 - **Affected:** Frontend
@@ -742,9 +784,7 @@ curl -X POST http://localhost:4000/api/videos/fetch-captions \
 - **Impact:** Site can be embedded in malicious iframe
 - **Remediation:**
   ```typescript
-  headers: [
-    { key: 'X-Frame-Options', value: 'DENY' }
-  ]
+  headers: [{ key: 'X-Frame-Options', value: 'DENY' }];
   ```
 - **Status:** Documented, fix scheduled
 
@@ -767,11 +807,11 @@ curl -X POST http://localhost:4000/api/videos/fetch-captions \
 2. ✅ Cryptographic Failures - PASS
 3. ✅ Injection - PASS (Prisma ORM protection)
 4. ✅ Insecure Design - PASS
-5. ⚠️  Security Misconfiguration - PARTIAL (missing CSP, HSTS)
+5. ⚠️ Security Misconfiguration - PARTIAL (missing CSP, HSTS)
 6. ✅ Vulnerable Components - PASS (0 critical/high)
 7. ✅ Authentication Failures - PASS
 8. ✅ Data Integrity Failures - PASS
-9. ⚠️  Logging Failures - PARTIAL (incomplete logging)
+9. ⚠️ Logging Failures - PARTIAL (incomplete logging)
 10. ✅ SSRF - PASS (URL validation in place)
 
 **Overall Compliance:** 80% (8/10 PASS, 2/10 PARTIAL)
@@ -781,20 +821,24 @@ curl -X POST http://localhost:4000/api/videos/fetch-captions \
 ## Recommendations
 
 ### Immediate Actions (Before Production)
+
 1. Add Content-Security-Policy header
 2. Add X-Frame-Options header
 3. Add Strict-Transport-Security header
 4. Enhance security event logging
 
 ### Short-term (30 days)
+
 1. Implement security monitoring alerts
 2. Add automated security scanning to CI/CD
 3. Conduct penetration testing by third party
 
 ### Long-term (90 days)
+
 1. Annual security audit
 2. Bug bounty program
 3. Security awareness training for dev team
+
 ```
 
 ---
@@ -814,3 +858,4 @@ After completing security testing:
 **Testing Guide Version:** 1.0
 **Last Updated:** October 29, 2025
 **Owner:** Phase 10 Day 5.7 Stage 3
+```

@@ -2,7 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { PrismaService } from '../../../common/prisma.service';
-import { ResearchQuestionService, SQUAREITScore } from './research-question.service';
+import {
+  ResearchQuestionService,
+  SQUAREITScore,
+} from './research-question.service';
 
 /**
  * Phase 10 Day 5.10: Research Question Operationalization Service
@@ -29,7 +32,13 @@ export interface Construct {
   id: string;
   name: string;
   definition: string;
-  type: 'independent_variable' | 'dependent_variable' | 'moderator' | 'mediator' | 'control' | 'outcome';
+  type:
+    | 'independent_variable'
+    | 'dependent_variable'
+    | 'moderator'
+    | 'mediator'
+    | 'control'
+    | 'outcome';
   confidence: number; // 0-1
   source: 'extracted' | 'inferred' | 'user_defined';
   relatedConcepts: string[];
@@ -56,7 +65,14 @@ export interface SurveyMeasurementItem {
   variableId: string;
   constructId: string;
   itemNumber: number;
-  scaleType: 'likert_5' | 'likert_7' | 'semantic_differential' | 'frequency' | 'agreement' | 'satisfaction' | 'importance';
+  scaleType:
+    | 'likert_5'
+    | 'likert_7'
+    | 'semantic_differential'
+    | 'frequency'
+    | 'agreement'
+    | 'satisfaction'
+    | 'importance';
   scaleLabels: string[];
   reversed: boolean;
   psychometricNote: string;
@@ -88,7 +104,12 @@ export interface StatisticalAnalysisPlan {
 
 export interface OperationalizationRequest {
   researchQuestion: string;
-  studyType: 'exploratory' | 'explanatory' | 'evaluative' | 'predictive' | 'descriptive';
+  studyType:
+    | 'exploratory'
+    | 'explanatory'
+    | 'evaluative'
+    | 'predictive'
+    | 'descriptive';
   methodology?: 'survey' | 'experiment' | 'mixed_methods';
   targetPopulation?: string;
   existingConstructs?: Construct[]; // User can override AI-detected constructs
@@ -137,7 +158,9 @@ export class QuestionOperationalizationService {
   ) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
     if (!apiKey) {
-      this.logger.warn('OPENAI_API_KEY not configured - AI features will be limited');
+      this.logger.warn(
+        'OPENAI_API_KEY not configured - AI features will be limited',
+      );
     } else {
       this.openai = new OpenAI({ apiKey });
     }
@@ -156,7 +179,9 @@ export class QuestionOperationalizationService {
       return this.operationalizationCache.get(cacheKey)!;
     }
 
-    this.logger.log(`Operationalizing research question: "${request.researchQuestion}"`);
+    this.logger.log(
+      `Operationalizing research question: "${request.researchQuestion}"`,
+    );
 
     try {
       // Step 1: Extract constructs from research question
@@ -165,13 +190,23 @@ export class QuestionOperationalizationService {
         : await this.extractConstructs(request);
 
       // Step 2: Operationalize each construct into variables
-      const variables = await this.operationalizeConstructs(constructs, request);
+      const variables = await this.operationalizeConstructs(
+        constructs,
+        request,
+      );
 
       // Step 3: Generate measurement items for each variable
-      const measurementItems = await this.generateMeasurementItems(variables, request);
+      const measurementItems = await this.generateMeasurementItems(
+        variables,
+        request,
+      );
 
       // Step 4: Create statistical analysis plan
-      const statisticalPlan = await this.createAnalysisPlan(constructs, variables, request);
+      const statisticalPlan = await this.createAnalysisPlan(
+        constructs,
+        variables,
+        request,
+      );
 
       // Step 5: Generate methodology recommendations
       const methodology = await this.generateMethodology(request, constructs);
@@ -184,7 +219,10 @@ export class QuestionOperationalizationService {
       );
 
       // Step 7: Generate recommendations
-      const recommendations = this.generateRecommendations(qualityMetrics, measurementItems);
+      const recommendations = this.generateRecommendations(
+        qualityMetrics,
+        measurementItems,
+      );
 
       const result: OperationalizationResult = {
         id: `op_${Date.now()}`,
@@ -203,7 +241,10 @@ export class QuestionOperationalizationService {
       this.operationalizationCache.set(cacheKey, result);
 
       // Track cost
-      await this.trackCost(request.researchQuestion, 'question_operationalization');
+      await this.trackCost(
+        request.researchQuestion,
+        'question_operationalization',
+      );
 
       return result;
     } catch (error: any) {
@@ -360,9 +401,10 @@ Return JSON: {
           measurementApproach: parsed.measurementApproach || 'Survey items',
           suggestedItems: [], // Will be populated in next step
           reliability: {
-            targetAlpha: 0.70,
+            targetAlpha: 0.7,
             expectedAlpha: parsed.expectedAlpha || 0.75,
-            itemCount: parsed.recommendedItemCount || request.itemsPerVariable || 5,
+            itemCount:
+              parsed.recommendedItemCount || request.itemsPerVariable || 5,
           },
         });
       } catch (error: any) {
@@ -458,7 +500,8 @@ Return JSON: {
           scaleLabels: this.getScaleLabels(this.getDefaultScaleType()),
           reversed: item.reversed || false,
           psychometricNote: item.psychometricNote || '',
-          researchBacking: item.researchBacking || 'Generated based on construct definition',
+          researchBacking:
+            item.researchBacking || 'Generated based on construct definition',
         }));
 
         allItems.push(...items);
@@ -565,8 +608,13 @@ Return JSON: {
     return {
       approach: request.methodology || 'survey',
       justification: `Based on the research question and ${constructs.length} identified constructs, a ${request.methodology || 'survey'} approach is recommended for ${request.studyType} research.`,
-      sampleSize: this.calculateSampleSize(constructs.length, request.studyType),
-      dataCollection: this.getDataCollectionRecommendation(request.methodology || 'survey'),
+      sampleSize: this.calculateSampleSize(
+        constructs.length,
+        request.studyType,
+      ),
+      dataCollection: this.getDataCollectionRecommendation(
+        request.methodology || 'survey',
+      ),
     };
   }
 
@@ -588,9 +636,15 @@ Return JSON: {
       constructCoverage: Math.min(1, itemsPerConstruct / 4), // Aim for 4+ items per construct
       reliabilityExpectation: avgAlpha,
       validityIndicators: [
-        avgAlpha > 0.70 ? 'Good internal consistency expected' : 'May need more items',
-        items.length >= 15 ? 'Sufficient items for factor analysis' : 'Consider adding items',
-        variables.length > 0 ? 'All constructs operationalized' : 'Missing operationalizations',
+        avgAlpha > 0.7
+          ? 'Good internal consistency expected'
+          : 'May need more items',
+        items.length >= 15
+          ? 'Sufficient items for factor analysis'
+          : 'Consider adding items',
+        variables.length > 0
+          ? 'All constructs operationalized'
+          : 'Missing operationalizations',
       ],
     };
   }
@@ -598,21 +652,31 @@ Return JSON: {
   /**
    * Generate recommendations
    */
-  private generateRecommendations(qualityMetrics: any, items: SurveyMeasurementItem[]): any {
+  private generateRecommendations(
+    qualityMetrics: any,
+    items: SurveyMeasurementItem[],
+  ): any {
     const recommendations: string[] = [];
 
-    if (qualityMetrics.reliabilityExpectation < 0.70) {
-      recommendations.push('Add more items per construct to improve reliability');
+    if (qualityMetrics.reliabilityExpectation < 0.7) {
+      recommendations.push(
+        'Add more items per construct to improve reliability',
+      );
     }
     if (items.length < 12) {
-      recommendations.push('Consider generating additional items for more robust measurement');
+      recommendations.push(
+        'Consider generating additional items for more robust measurement',
+      );
     }
     if (!items.some((i) => i.reversed)) {
-      recommendations.push('Add reverse-coded items to check for response bias');
+      recommendations.push(
+        'Add reverse-coded items to check for response bias',
+      );
     }
 
     return {
-      pilotTesting: 'Conduct pilot test with N=30-50 to assess item clarity and reliability',
+      pilotTesting:
+        'Conduct pilot test with N=30-50 to assess item clarity and reliability',
       validationStrategy:
         'Use split-half sample: exploratory factor analysis (EFA) on first half, confirmatory factor analysis (CFA) on second half',
       improvementSuggestions: recommendations,
@@ -620,7 +684,9 @@ Return JSON: {
   }
 
   // Helper methods
-  private getFallbackConstructs(request: OperationalizationRequest): Construct[] {
+  private getFallbackConstructs(
+    request: OperationalizationRequest,
+  ): Construct[] {
     // Simple fallback when AI is unavailable
     return [
       {
@@ -635,7 +701,9 @@ Return JSON: {
     ];
   }
 
-  private getFallbackVariables(constructs: Construct[]): OperationalizedVariable[] {
+  private getFallbackVariables(
+    constructs: Construct[],
+  ): OperationalizedVariable[] {
     return constructs.map((c) => ({
       id: `var_${c.id}`,
       constructId: c.id,
@@ -645,14 +713,16 @@ Return JSON: {
       measurementApproach: 'Survey items with Likert scale',
       suggestedItems: [],
       reliability: {
-        targetAlpha: 0.70,
+        targetAlpha: 0.7,
         expectedAlpha: 0.75,
         itemCount: 5,
       },
     }));
   }
 
-  private getFallbackItems(variables: OperationalizedVariable[]): SurveyMeasurementItem[] {
+  private getFallbackItems(
+    variables: OperationalizedVariable[],
+  ): SurveyMeasurementItem[] {
     const items: SurveyMeasurementItem[] = [];
     variables.forEach((v, vIdx) => {
       for (let i = 0; i < v.reliability.itemCount; i++) {
@@ -663,7 +733,13 @@ Return JSON: {
           constructId: v.constructId,
           itemNumber: i + 1,
           scaleType: 'likert_5',
-          scaleLabels: ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'],
+          scaleLabels: [
+            'Strongly Disagree',
+            'Disagree',
+            'Neutral',
+            'Agree',
+            'Strongly Agree',
+          ],
           reversed: false,
           psychometricNote: 'Fallback item - AI unavailable',
           researchBacking: 'Standard Likert item',
@@ -677,9 +753,17 @@ Return JSON: {
     return 'likert_5';
   }
 
-  private getScaleLabels(scaleType: SurveyMeasurementItem['scaleType']): string[] {
+  private getScaleLabels(
+    scaleType: SurveyMeasurementItem['scaleType'],
+  ): string[] {
     const labels = {
-      likert_5: ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'],
+      likert_5: [
+        'Strongly Disagree',
+        'Disagree',
+        'Neutral',
+        'Agree',
+        'Strongly Agree',
+      ],
       likert_7: [
         'Strongly Disagree',
         'Disagree',
@@ -689,9 +773,21 @@ Return JSON: {
         'Agree',
         'Strongly Agree',
       ],
-      semantic_differential: ['Very Negative', 'Negative', 'Neutral', 'Positive', 'Very Positive'],
+      semantic_differential: [
+        'Very Negative',
+        'Negative',
+        'Neutral',
+        'Positive',
+        'Very Positive',
+      ],
       frequency: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'],
-      agreement: ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'],
+      agreement: [
+        'Strongly Disagree',
+        'Disagree',
+        'Neutral',
+        'Agree',
+        'Strongly Agree',
+      ],
       satisfaction: [
         'Very Dissatisfied',
         'Dissatisfied',
@@ -723,7 +819,10 @@ Return JSON: {
       'Independent Samples t-test or ANOVA':
         'Compares means across groups to test for significant differences',
     };
-    return descriptions[method] || 'Statistical analysis appropriate for research question';
+    return (
+      descriptions[method] ||
+      'Statistical analysis appropriate for research question'
+    );
   }
 
   private getAnalysisAssumptions(method: string): string[] {
@@ -761,7 +860,10 @@ Return JSON: {
     return assumptions[method] || ['Standard statistical assumptions apply'];
   }
 
-  private calculateSampleSize(constructCount: number, studyType: string): number {
+  private calculateSampleSize(
+    constructCount: number,
+    studyType: string,
+  ): number {
     const base = {
       exploratory: 200,
       explanatory: 150,
@@ -774,13 +876,17 @@ Return JSON: {
 
   private getDataCollectionRecommendation(methodology: string): string {
     const recommendations: Record<string, string> = {
-      survey: 'Online survey platform (Qualtrics, SurveyMonkey) for efficient data collection',
+      survey:
+        'Online survey platform (Qualtrics, SurveyMonkey) for efficient data collection',
       experiment:
         'Controlled laboratory or field setting with random assignment to conditions',
       mixed_methods:
         'Sequential or concurrent combination of survey and qualitative data collection',
     };
-    return recommendations[methodology] || 'Appropriate data collection method for research design';
+    return (
+      recommendations[methodology] ||
+      'Appropriate data collection method for research design'
+    );
   }
 
   private getCacheKey(request: OperationalizationRequest): string {

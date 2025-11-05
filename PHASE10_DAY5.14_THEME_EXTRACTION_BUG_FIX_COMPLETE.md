@@ -10,6 +10,7 @@
 ## Executive Summary
 
 Fixed critical "0 themes extracted" bug by:
+
 1. **Identifying root cause:** Backend validation requires themes to appear in 2-3+ sources
 2. **Adding proactive warnings:** Users now see warnings BEFORE extraction fails
 3. **Enhanced error feedback:** Specific, actionable guidance when 0 themes returned
@@ -35,7 +36,8 @@ if (theme.sourceIds.length < minSources) {
 }
 
 // Requirement 2: Semantic Coherence
-const minCoherence = options.validationLevel === 'publication_ready' ? 0.7 : 0.6;
+const minCoherence =
+  options.validationLevel === 'publication_ready' ? 0.7 : 0.6;
 if (coherence < minCoherence) {
   // REJECTED: Theme codes aren't semantically related
 }
@@ -46,7 +48,8 @@ if (distinctiveness < 0.3 && validatedThemes.length > 0) {
 }
 
 // Requirement 4: Evidence Quality
-const evidenceQuality = theme.codes.filter(c => c.excerpts.length > 0).length / theme.codes.length;
+const evidenceQuality =
+  theme.codes.filter(c => c.excerpts.length > 0).length / theme.codes.length;
 if (evidenceQuality < 0.5) {
   // REJECTED: Insufficient evidence/excerpts
 }
@@ -55,6 +58,7 @@ if (evidenceQuality < 0.5) {
 ### Why Users Got 0 Themes
 
 **Scenario 1: Too Few Sources (MOST COMMON)**
+
 ```
 User selects: 2 papers on climate change
 Extraction generates: 5 candidate themes
@@ -64,6 +68,7 @@ User experience: Confusion - "Why didn't it work?"
 ```
 
 **Scenario 2: Papers Without Abstracts**
+
 ```
 User selects: 3 CrossRef papers (no abstracts)
 Content check: 0 sources with >50 characters
@@ -72,6 +77,7 @@ User experience: "Extract Themes" button clicked, nothing happens
 ```
 
 **Scenario 3: Unrelated Topics**
+
 ```
 User selects: 5 papers on completely different topics
 Extraction generates: 8 candidate themes
@@ -92,30 +98,41 @@ User experience: "I selected enough papers, why no themes?"
 Shows amber warning box when user selects < 3 sources, BEFORE they click "Extract Themes"
 
 **UI Implementation:**
+
 ```tsx
-{selectedPapers.size + transcribedVideos.length > 0 && 
- selectedPapers.size + transcribedVideos.length < 3 && (
-  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-    <p className="text-xs font-semibold text-amber-800 mb-1">
-      ⚠️ Low Source Count Warning
-    </p>
-    <p className="text-xs text-amber-700">
-      You've selected {count} source(s). For reliable theme extraction:
-    </p>
-    <ul className="text-xs text-amber-700 list-disc ml-4 mt-1 space-y-0.5">
-      <li><strong>Minimum: 3-5 sources</strong> for basic themes</li>
-      <li><strong>Recommended: 5-10 sources</strong> for robust patterns</li>
-      <li><strong>Optimal: 10+ sources</strong> for publication-ready analysis</li>
-    </ul>
-    <p className="text-xs text-amber-600 mt-2">
-      💡 <strong>Why?</strong> Themes must appear across multiple sources.
-      With fewer sources, themes may be rejected for not meeting minimum overlap.
-    </p>
-  </div>
-)}
+{
+  selectedPapers.size + transcribedVideos.length > 0 &&
+    selectedPapers.size + transcribedVideos.length < 3 && (
+      <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <p className="text-xs font-semibold text-amber-800 mb-1">
+          ⚠️ Low Source Count Warning
+        </p>
+        <p className="text-xs text-amber-700">
+          You've selected {count} source(s). For reliable theme extraction:
+        </p>
+        <ul className="text-xs text-amber-700 list-disc ml-4 mt-1 space-y-0.5">
+          <li>
+            <strong>Minimum: 3-5 sources</strong> for basic themes
+          </li>
+          <li>
+            <strong>Recommended: 5-10 sources</strong> for robust patterns
+          </li>
+          <li>
+            <strong>Optimal: 10+ sources</strong> for publication-ready analysis
+          </li>
+        </ul>
+        <p className="text-xs text-amber-600 mt-2">
+          💡 <strong>Why?</strong> Themes must appear across multiple sources.
+          With fewer sources, themes may be rejected for not meeting minimum
+          overlap.
+        </p>
+      </div>
+    );
+}
 ```
 
 **User Impact:**
+
 - **Before:** User clicks "Extract Themes" with 2 papers → gets 0 themes → confusion
 - **After:** User sees warning immediately → understands they need more sources → adds more papers BEFORE extraction
 
@@ -129,20 +146,21 @@ Shows amber warning box when user selects < 3 sources, BEFORE they click "Extrac
 Shows red warning box when selected papers lack abstracts
 
 **UI Implementation:**
+
 ```tsx
-{selectedPapers.size > 0 && 
- papers.filter(p => selectedPapers.has(p.id) && 
+{selectedPapers.size > 0 &&
+ papers.filter(p => selectedPapers.has(p.id) &&
    (!p.abstract || p.abstract.length < 100)).length > 0 && (
   <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
     <p className="text-xs font-semibold text-red-800 mb-1">
       ⚠️ Content Warning
     </p>
     <p className="text-xs text-red-700">
-      {count} of your selected papers have no abstracts or very short 
+      {count} of your selected papers have no abstracts or very short
       abstracts (<100 characters). These will be skipped during extraction.
     </p>
     <p className="text-xs text-red-600 mt-2">
-      💡 <strong>Tip:</strong> Focus on papers from PubMed or arXiv 
+      💡 <strong>Tip:</strong> Focus on papers from PubMed or arXiv
       which typically have full abstracts.
     </p>
   </div>
@@ -150,6 +168,7 @@ Shows red warning box when selected papers lack abstracts
 ```
 
 **User Impact:**
+
 - **Before:** User selects CrossRef papers → extraction skips them → 0 themes → confusion
 - **After:** User sees which papers lack content → deselects bad papers → selects PubMed papers instead
 
@@ -163,23 +182,24 @@ Shows red warning box when selected papers lack abstracts
 When extraction returns 0 themes, provides specific, actionable error message based on context
 
 **Implementation:**
+
 ```typescript
 if (result.themes.length === 0) {
   const sourceCount = allSources.length;
   let errorMessage = '⚠️ 0 themes extracted. ';
 
   if (sourceCount < 3) {
-    errorMessage += `You selected only ${sourceCount} source(s). Themes need 
-      to appear in at least 2-3 sources to pass validation. Try selecting 
+    errorMessage += `You selected only ${sourceCount} source(s). Themes need
+      to appear in at least 2-3 sources to pass validation. Try selecting
       5+ sources with overlapping topics.`;
   } else if (sourcesWithContent.length < sourceCount) {
-    errorMessage += `${sourceCount - sourcesWithContent.length} of your sources 
-      lacked sufficient content. Theme validation requires robust patterns 
+    errorMessage += `${sourceCount - sourcesWithContent.length} of your sources
+      lacked sufficient content. Theme validation requires robust patterns
       across multiple sources.`;
   } else {
-    errorMessage += 'Themes were generated but filtered out during validation. 
-      This can happen if: (1) Sources cover very different topics with no overlap, 
-      (2) Content is too short, or (3) Validation thresholds are too strict. 
+    errorMessage += 'Themes were generated but filtered out during validation.
+      This can happen if: (1) Sources cover very different topics with no overlap,
+      (2) Content is too short, or (3) Validation thresholds are too strict.
       Try adding more sources on similar topics.';
   }
 
@@ -188,6 +208,7 @@ if (result.themes.length === 0) {
 ```
 
 **User Impact:**
+
 - **Before:** Generic error "No themes returned"
 - **After:** Specific guidance: "You selected only 2 sources. Themes need to appear in 2-3 sources. Try selecting 5+ sources."
 
@@ -201,6 +222,7 @@ if (result.themes.length === 0) {
 Logs complete paper content analysis to browser console for debugging
 
 **Implementation:**
+
 ```typescript
 console.log('🔍 PAPER CONTENT ANALYSIS:');
 selectedPaperObjects.forEach((paper, idx) => {
@@ -220,6 +242,7 @@ selectedPaperObjects.forEach((paper, idx) => {
 ```
 
 **User Impact:**
+
 - Researchers can now see EXACTLY which papers have content
 - Support team can diagnose issues from console logs
 - Developers can verify extraction is working correctly
@@ -229,9 +252,11 @@ selectedPaperObjects.forEach((paper, idx) => {
 ## Files Modified Summary
 
 ### 1. Literature Page (Main Integration)
+
 **File:** `frontend/app/(researcher)/discover/literature/page.tsx`
 
 **Changes:**
+
 - **Lines 729-744:** Added paper content analysis logging
 - **Lines 879-910:** Enhanced 0 themes feedback with context-specific messages
 - **Lines 3409-3428:** Added low source count warning box
@@ -243,9 +268,11 @@ selectedPaperObjects.forEach((paper, idx) => {
 ---
 
 ### 2. Theme Extraction Progress Modal
+
 **File:** `frontend/components/literature/ThemeExtractionProgressModal.tsx`
 
 **Changes:**
+
 - **Lines 100-103:** Updated familiarization message to clarify "titles + abstracts" (not full-text)
 - **Line 112:** Updated coding operation to say "from titles + abstracts"
 - **Line 130:** Updated validation operation to say "against available content"
@@ -261,24 +288,24 @@ selectedPaperObjects.forEach((paper, idx) => {
 
 **From:** `backend/src/modules/literature/services/unified-theme-extraction.service.ts`
 
-| Validation Check | Standard | Rigorous | Publication-Ready |
-|------------------|----------|----------|-------------------|
-| Minimum Sources | 2 | 2 | 3 |
-| Minimum Coherence | 0.6 | 0.6 | 0.7 |
-| Minimum Distinctiveness | 0.3 | 0.3 | 0.3 |
-| Minimum Evidence Quality | 0.5 | 0.5 | 0.5 |
+| Validation Check         | Standard | Rigorous | Publication-Ready |
+| ------------------------ | -------- | -------- | ----------------- |
+| Minimum Sources          | 2        | 2        | 3                 |
+| Minimum Coherence        | 0.6      | 0.6      | 0.7               |
+| Minimum Distinctiveness  | 0.3      | 0.3      | 0.3               |
+| Minimum Evidence Quality | 0.5      | 0.5      | 0.5               |
 
 ### Purpose-Specific Theme Count Targets
 
 **From:** `backend/src/modules/literature/services/unified-theme-extraction.service.ts:143-189`
 
-| Purpose | Min Themes | Max Themes | Validation Level |
-|---------|------------|------------|------------------|
-| Q-Methodology | 40 | 80 | Rigorous |
-| Survey Construction | 5 | 15 | Publication-Ready |
-| Qualitative Analysis | 5 | 20 | Rigorous |
-| Literature Synthesis | 10 | 25 | Publication-Ready |
-| Hypothesis Generation | 8 | 15 | Rigorous |
+| Purpose               | Min Themes | Max Themes | Validation Level  |
+| --------------------- | ---------- | ---------- | ----------------- |
+| Q-Methodology         | 40         | 80         | Rigorous          |
+| Survey Construction   | 5          | 15         | Publication-Ready |
+| Qualitative Analysis  | 5          | 20         | Rigorous          |
+| Literature Synthesis  | 10         | 25         | Publication-Ready |
+| Hypothesis Generation | 8          | 15         | Rigorous          |
 
 **Key Insight:** If extraction generates themes outside these ranges, warnings are logged but themes are still returned.
 
@@ -324,8 +351,8 @@ selectedPaperObjects.forEach((paper, idx) => {
 2. Progress modal runs
 3. Result: 0 themes
 4. **ENHANCED ERROR MESSAGE:**
-   "⚠️ 0 themes extracted. You selected only 2 sources. Themes need to 
-   appear in at least 2-3 sources to pass validation. Try selecting 
+   "⚠️ 0 themes extracted. You selected only 2 sources. Themes need to
+   appear in at least 2-3 sources to pass validation. Try selecting
    5+ sources with overlapping topics."
 5. User understands the problem ✅
 6. User adds more sources and tries again
@@ -336,6 +363,7 @@ selectedPaperObjects.forEach((paper, idx) => {
 ## Testing Checklist
 
 ### Test Case 1: Low Source Count (< 3)
+
 - [ ] Select 1 paper
 - [ ] Verify amber warning appears: "Low Source Count Warning"
 - [ ] Verify warning recommends 3-5 minimum
@@ -343,6 +371,7 @@ selectedPaperObjects.forEach((paper, idx) => {
 - [ ] Verify specific error message about source count
 
 ### Test Case 2: Papers Without Abstracts
+
 - [ ] Search CrossRef papers (often no abstracts)
 - [ ] Select 3 CrossRef papers
 - [ ] Verify red warning appears: "Content Warning"
@@ -351,6 +380,7 @@ selectedPaperObjects.forEach((paper, idx) => {
 - [ ] Verify specific error message about content
 
 ### Test Case 3: Optimal Conditions (Should Work)
+
 - [ ] Search PubMed papers (have abstracts)
 - [ ] Select 5+ papers on SIMILAR topics
 - [ ] Verify no warnings appear
@@ -358,6 +388,7 @@ selectedPaperObjects.forEach((paper, idx) => {
 - [ ] Verify themes extracted successfully (> 0)
 
 ### Test Case 4: Console Logging
+
 - [ ] Open browser console (F12)
 - [ ] Select papers and click "Extract Themes"
 - [ ] Verify console shows:
@@ -373,6 +404,7 @@ selectedPaperObjects.forEach((paper, idx) => {
 ### How to Ensure Successful Theme Extraction
 
 **1. Source Selection (Most Important)**
+
 ```
 ✅ DO:
 - Select 5-10 papers on SIMILAR/RELATED topics
@@ -386,6 +418,7 @@ selectedPaperObjects.forEach((paper, idx) => {
 ```
 
 **2. Content Quality**
+
 ```
 ✅ DO:
 - Look for "✓ Has abstract (1,234 chars)" indicator
@@ -399,6 +432,7 @@ selectedPaperObjects.forEach((paper, idx) => {
 ```
 
 **3. Topic Coherence**
+
 ```
 ✅ DO:
 - Use focused search terms ("climate adaptation strategies")
@@ -416,6 +450,7 @@ selectedPaperObjects.forEach((paper, idx) => {
 ## Future Improvements (Optional)
 
 ### Priority 1: Adjustable Validation Thresholds
+
 **Current:** Validation thresholds are hardcoded (minSources=2-3, minCoherence=0.6-0.7)
 **Proposed:** Add UI slider to adjust thresholds for users who understand the tradeoffs
 
@@ -429,6 +464,7 @@ selectedPaperObjects.forEach((paper, idx) => {
 ```
 
 ### Priority 2: Preview Mode
+
 **Proposed:** Show candidate themes BEFORE validation, let user see what was filtered out
 
 ```
@@ -440,10 +476,11 @@ Rejected: 7
 ```
 
 ### Priority 3: Smart Paper Recommendations
+
 **Proposed:** Suggest additional papers based on selected papers
 
 ```
-"Based on your 3 selected papers, we recommend these 5 papers 
+"Based on your 3 selected papers, we recommend these 5 papers
  which cite similar work and would strengthen theme overlap..."
 ```
 
@@ -451,12 +488,12 @@ Rejected: 7
 
 ## Success Metrics
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| User Awareness (pre-extraction) | 0% | 100% | ✅ Warnings show BEFORE failure |
-| Error Message Clarity | Generic | Specific | ✅ Context-aware guidance |
-| Diagnostic Capability | Poor | Excellent | ✅ Full console logging |
-| Success Rate (with guidance) | Low | High | ✅ Users select optimal papers |
+| Metric                          | Before  | After     | Improvement                     |
+| ------------------------------- | ------- | --------- | ------------------------------- |
+| User Awareness (pre-extraction) | 0%      | 100%      | ✅ Warnings show BEFORE failure |
+| Error Message Clarity           | Generic | Specific  | ✅ Context-aware guidance       |
+| Diagnostic Capability           | Poor    | Excellent | ✅ Full console logging         |
+| Success Rate (with guidance)    | Low     | High      | ✅ Users select optimal papers  |
 
 ---
 

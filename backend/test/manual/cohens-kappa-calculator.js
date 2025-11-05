@@ -50,7 +50,8 @@ function calculateCohensKappa(ratings) {
   }
 
   // Calculate Cohen's Kappa
-  const kappa = (observedAgreement - expectedAgreement) / (1 - expectedAgreement);
+  const kappa =
+    (observedAgreement - expectedAgreement) / (1 - expectedAgreement);
 
   // Interpretation
   let interpretation, status;
@@ -66,7 +67,7 @@ function calculateCohensKappa(ratings) {
   } else if (kappa >= 0.21) {
     interpretation = 'Fair agreement';
     status = 'FAIL';
-  } else if (kappa >= 0.00) {
+  } else if (kappa >= 0.0) {
     interpretation = 'Slight agreement';
     status = 'FAIL';
   } else {
@@ -94,7 +95,7 @@ function calculateCohensKappa(ratings) {
  */
 function exampleUsage() {
   console.log('═══════════════════════════════════════════════════');
-  console.log('Cohen\'s Kappa Calculator - Theme Quality Validation');
+  console.log("Cohen's Kappa Calculator - Theme Quality Validation");
   console.log('═══════════════════════════════════════════════════\n');
 
   // Example: Test Set 1 (Medical Research - Diabetes)
@@ -124,7 +125,9 @@ function exampleUsage() {
   console.log(`  Expected Agreement: ${result1.expectedAgreement}`);
   console.log(`  Interpretation: ${result1.interpretation}`);
   console.log(`  Status: ${result1.status}`);
-  console.log(`  Meets Threshold (≥0.6): ${result1.meetsThreshold ? '✅ YES' : '❌ NO'}\n`);
+  console.log(
+    `  Meets Threshold (≥0.6): ${result1.meetsThreshold ? '✅ YES' : '❌ NO'}\n`,
+  );
 
   // Example: Test Set 2 (Climate Science - Ocean Acidification)
   console.log('═══════════════════════════════════════════════════\n');
@@ -154,7 +157,9 @@ function exampleUsage() {
   console.log(`  Expected Agreement: ${result2.expectedAgreement}`);
   console.log(`  Interpretation: ${result2.interpretation}`);
   console.log(`  Status: ${result2.status}`);
-  console.log(`  Meets Threshold (≥0.6): ${result2.meetsThreshold ? '✅ YES' : '❌ NO'}\n`);
+  console.log(
+    `  Meets Threshold (≥0.6): ${result2.meetsThreshold ? '✅ YES' : '❌ NO'}\n`,
+  );
 
   // Example: Test Set 3 (Computer Science - Quantum Computing)
   console.log('═══════════════════════════════════════════════════\n');
@@ -182,7 +187,9 @@ function exampleUsage() {
   console.log(`  Expected Agreement: ${result3.expectedAgreement}`);
   console.log(`  Interpretation: ${result3.interpretation}`);
   console.log(`  Status: ${result3.status}`);
-  console.log(`  Meets Threshold (≥0.6): ${result3.meetsThreshold ? '✅ YES' : '❌ NO'}\n`);
+  console.log(
+    `  Meets Threshold (≥0.6): ${result3.meetsThreshold ? '✅ YES' : '❌ NO'}\n`,
+  );
 
   // Overall Summary
   console.log('═══════════════════════════════════════════════════');
@@ -194,12 +201,20 @@ function exampleUsage() {
     parseFloat(result2.kappa),
     parseFloat(result3.kappa),
   ];
-  const avgKappa = (allKappas.reduce((sum, k) => sum + k, 0) / allKappas.length).toFixed(3);
+  const avgKappa = (
+    allKappas.reduce((sum, k) => sum + k, 0) / allKappas.length
+  ).toFixed(3);
 
   console.log('Test Set Results:');
-  console.log(`  Test Set 1 (Medical): κ = ${result1.kappa} (${result1.status})`);
-  console.log(`  Test Set 2 (Climate): κ = ${result2.kappa} (${result2.status})`);
-  console.log(`  Test Set 3 (Computer Sci): κ = ${result3.kappa} (${result3.status})`);
+  console.log(
+    `  Test Set 1 (Medical): κ = ${result1.kappa} (${result1.status})`,
+  );
+  console.log(
+    `  Test Set 2 (Climate): κ = ${result2.kappa} (${result2.status})`,
+  );
+  console.log(
+    `  Test Set 3 (Computer Sci): κ = ${result3.kappa} (${result3.status})`,
+  );
   console.log('\nOverall:');
   console.log(`  Average Cohen's Kappa: ${avgKappa}`);
   console.log(`  Threshold: ≥0.6 (Substantial Agreement)`);
@@ -209,10 +224,14 @@ function exampleUsage() {
 
   if (overallPass) {
     console.log('\n🎉 Theme quality validation PASSED!');
-    console.log('   AI-extracted themes show substantial agreement with expert judgment.');
+    console.log(
+      '   AI-extracted themes show substantial agreement with expert judgment.',
+    );
   } else {
     console.log('\n⚠️  Theme quality validation FAILED.');
-    console.log('   AI-extracted themes need improvement to match expert judgment.');
+    console.log(
+      '   AI-extracted themes need improvement to match expert judgment.',
+    );
   }
 
   console.log('\n═══════════════════════════════════════════════════\n');

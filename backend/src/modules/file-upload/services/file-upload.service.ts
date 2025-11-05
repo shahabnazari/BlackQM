@@ -32,8 +32,11 @@ export class FileUploadService {
     private virusScanService: VirusScanService,
   ) {
     this.uploadDir = this.configService.get<string>('UPLOAD_DIR', './uploads');
-    this.maxFileSize = this.configService.get<number>('MAX_FILE_SIZE', 10 * 1024 * 1024); // 10MB
-    
+    this.maxFileSize = this.configService.get<number>(
+      'MAX_FILE_SIZE',
+      10 * 1024 * 1024,
+    ); // 10MB
+
     // Define allowed MIME types
     this.allowedMimeTypes = new Set([
       // Images
@@ -75,7 +78,7 @@ export class FileUploadService {
     if (!fs.existsSync(this.uploadDir)) {
       fs.mkdirSync(this.uploadDir, { recursive: true });
     }
-    
+
     // Create quarantine directory
     const quarantineDir = path.join(this.uploadDir, 'quarantine');
     if (!fs.existsSync(quarantineDir)) {
@@ -97,13 +100,20 @@ export class FileUploadService {
     try {
       // 1. Validate file size
       if (file.size > this.maxFileSize) {
-        throw new BadRequestException(`File size exceeds maximum allowed size of ${this.maxFileSize} bytes`);
+        throw new BadRequestException(
+          `File size exceeds maximum allowed size of ${this.maxFileSize} bytes`,
+        );
       }
 
       // 2. Validate MIME type from file content (not just extension)
-      const mimeValidation = await this.validateMimeType(tempPath, file.mimetype);
+      const mimeValidation = await this.validateMimeType(
+        tempPath,
+        file.mimetype,
+      );
       if (!mimeValidation.isValid) {
-        throw new BadRequestException(mimeValidation.error || 'Invalid file type');
+        throw new BadRequestException(
+          mimeValidation.error || 'Invalid file type',
+        );
       }
 
       // 3. Check for disguised executables
@@ -121,9 +131,13 @@ export class FileUploadService {
       const scanResult = await this.virusScanService.scanFile(tempPath);
       if (!scanResult.isClean) {
         // Move to quarantine
-        const quarantinePath = path.join(this.uploadDir, 'quarantine', `${Date.now()}_${file.originalname}`);
+        const quarantinePath = path.join(
+          this.uploadDir,
+          'quarantine',
+          `${Date.now()}_${file.originalname}`,
+        );
         fs.renameSync(tempPath, quarantinePath);
-        
+
         await this.auditService.log({
           userId,
           action: 'FILE_UPLOAD_VIRUS_DETECTED',
@@ -136,7 +150,9 @@ export class FileUploadService {
           ipAddress,
         });
 
-        throw new BadRequestException('File contains malware and has been quarantined');
+        throw new BadRequestException(
+          'File contains malware and has been quarantined',
+        );
       }
 
       // 6. Generate secure filename and move to final location
@@ -144,7 +160,7 @@ export class FileUploadService {
       const ext = path.extname(file.originalname);
       const secureFilename = `${fileHash}${ext}`;
       finalPath = path.join(this.uploadDir, secureFilename);
-      
+
       fs.renameSync(tempPath, finalPath);
 
       // 7. Create database record
@@ -194,17 +210,20 @@ export class FileUploadService {
   /**
    * Validate MIME type using magic bytes
    */
-  private async validateMimeType(filePath: string, declaredMimeType: string): Promise<FileValidationResult> {
+  private async validateMimeType(
+    filePath: string,
+    declaredMimeType: string,
+  ): Promise<FileValidationResult> {
     try {
       // Check actual file type from magic bytes
       const { fromFile } = await import('file-type');
       const fileType = await fromFile(filePath);
-      
+
       if (!fileType) {
         // Try magic-bytes as fallback
         const buffer = fs.readFileSync(filePath);
         const magicResult = magicBytes.filetypeinfo(buffer);
-        
+
         if (!magicResult || magicResult.length === 0) {
           return {
             isValid: false,
@@ -225,9 +244,14 @@ export class FileUploadService {
 
       // Check for MIME type mismatch (potential attack)
       if (fileType && fileType.mime !== declaredMimeType) {
-        this.logger.warn(`MIME type mismatch: declared=${declaredMimeType}, actual=${fileType.mime}`);
+        this.logger.warn(
+          `MIME type mismatch: declared=${declaredMimeType}, actual=${fileType.mime}`,
+        );
         // Allow some common mismatches (e.g., text files)
-        if (!declaredMimeType.startsWith('text/') && !fileType.mime.startsWith('text/')) {
+        if (
+          !declaredMimeType.startsWith('text/') &&
+          !fileType.mime.startsWith('text/')
+        ) {
           return {
             isValid: false,
             error: 'File type does not match declared type',
@@ -250,14 +274,14 @@ export class FileUploadService {
    */
   private async checkForExecutable(filePath: string): Promise<boolean> {
     const buffer = fs.readFileSync(filePath, { encoding: null }).slice(0, 4);
-    
+
     // Check for common executable signatures
     const executableSignatures = [
-      Buffer.from([0x4D, 0x5A]), // PE/COFF (Windows .exe, .dll)
-      Buffer.from([0x7F, 0x45, 0x4C, 0x46]), // ELF (Linux/Unix executables)
-      Buffer.from([0xCF, 0xFA, 0xED, 0xFE]), // Mach-O (macOS executables)
-      Buffer.from([0xCA, 0xFE, 0xBA, 0xBE]), // Mach-O fat binary
-      Buffer.from([0xCE, 0xFA, 0xED, 0xFE]), // Mach-O 32-bit
+      Buffer.from([0x4d, 0x5a]), // PE/COFF (Windows .exe, .dll)
+      Buffer.from([0x7f, 0x45, 0x4c, 0x46]), // ELF (Linux/Unix executables)
+      Buffer.from([0xcf, 0xfa, 0xed, 0xfe]), // Mach-O (macOS executables)
+      Buffer.from([0xca, 0xfe, 0xba, 0xbe]), // Mach-O fat binary
+      Buffer.from([0xce, 0xfa, 0xed, 0xfe]), // Mach-O 32-bit
       Buffer.from([0x23, 0x21]), // Shebang (#!)
     ];
 
@@ -270,8 +294,23 @@ export class FileUploadService {
     // Check file extension
     const ext = path.extname(filePath).toLowerCase();
     const dangerousExtensions = [
-      '.exe', '.dll', '.bat', '.cmd', '.com', '.scr', '.vbs', '.js', '.jar',
-      '.app', '.dmg', '.pkg', '.deb', '.rpm', '.sh', '.run', '.msi',
+      '.exe',
+      '.dll',
+      '.bat',
+      '.cmd',
+      '.com',
+      '.scr',
+      '.vbs',
+      '.js',
+      '.jar',
+      '.app',
+      '.dmg',
+      '.pkg',
+      '.deb',
+      '.rpm',
+      '.sh',
+      '.run',
+      '.msi',
     ];
 
     return dangerousExtensions.includes(ext);
@@ -319,7 +358,11 @@ export class FileUploadService {
   /**
    * Delete file
    */
-  async deleteFile(fileId: string, userId: string, ipAddress?: string): Promise<{ message: string }> {
+  async deleteFile(
+    fileId: string,
+    userId: string,
+    ipAddress?: string,
+  ): Promise<{ message: string }> {
     const file = await this.getFile(fileId, userId);
 
     // Delete physical file

@@ -40,9 +40,15 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
 
     prisma = app.get<PrismaService>(PrismaService);
     literatureService = app.get<LiteratureService>(LiteratureService);
-    themeExtractionService = app.get<UnifiedThemeExtractionService>(UnifiedThemeExtractionService);
-    synthesisService = app.get<CrossPlatformSynthesisService>(CrossPlatformSynthesisService);
-    knowledgeGraphService = app.get<KnowledgeGraphService>(KnowledgeGraphService);
+    themeExtractionService = app.get<UnifiedThemeExtractionService>(
+      UnifiedThemeExtractionService,
+    );
+    synthesisService = app.get<CrossPlatformSynthesisService>(
+      CrossPlatformSynthesisService,
+    );
+    knowledgeGraphService = app.get<KnowledgeGraphService>(
+      KnowledgeGraphService,
+    );
     gapAnalyzerService = app.get<GapAnalyzerService>(GapAnalyzerService);
 
     // Create test user
@@ -84,11 +90,14 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
     });
 
     it('should search papers and save to database', async () => {
-      const searchResults = await literatureService.searchLiterature({
-        query: 'machine learning healthcare',
-        sources: ['arxiv'],
-        limit: 3,
-      }, testUserId);
+      const searchResults = await literatureService.searchLiterature(
+        {
+          query: 'machine learning healthcare',
+          sources: ['arxiv'],
+          limit: 3,
+        },
+        testUserId,
+      );
 
       expect(searchResults).toBeDefined();
       expect(searchResults.papers).toBeDefined();
@@ -124,7 +133,9 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
       expect(papers.length).toBeGreaterThan(0);
       expect(papers[0].userId).toBe(testUserId);
 
-      console.log(`✅ Integration: Retrieved ${papers.length} papers from database`);
+      console.log(
+        `✅ Integration: Retrieved ${papers.length} papers from database`,
+      );
     });
   });
 
@@ -142,7 +153,8 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
             title: 'Integration Test Paper',
             authors: ['Test Author'],
             year: 2024,
-            abstract: 'This is a test paper about machine learning applications in healthcare diagnostics.',
+            abstract:
+              'This is a test paper about machine learning applications in healthcare diagnostics.',
             userId: testUserId,
           },
         });
@@ -159,16 +171,19 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
         year: p.year,
       }));
 
-      const result = await themeExtractionService.extractThemesFromMultipleSources(sources, {
-        researchContext: 'healthcare',
-        minConfidence: 0.5,
-      });
+      const result =
+        await themeExtractionService.extractThemesFromMultipleSources(sources, {
+          researchContext: 'healthcare',
+          minConfidence: 0.5,
+        });
 
       expect(result.themes).toBeDefined();
       expect(result.themes.length).toBeGreaterThan(0);
       expect(result.metadata.totalSources).toBe(papers.length);
 
-      console.log(`✅ Integration: Extracted ${result.themes.length} themes from ${papers.length} papers`);
+      console.log(
+        `✅ Integration: Extracted ${result.themes.length} themes from ${papers.length} papers`,
+      );
     }, 120000);
 
     it('should integrate with cross-platform synthesis', async () => {
@@ -184,7 +199,8 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
             title: 'Another Integration Test Paper',
             authors: ['Test Author 2'],
             year: 2024,
-            abstract: 'Research about artificial intelligence in medical imaging.',
+            abstract:
+              'Research about artificial intelligence in medical imaging.',
             userId: testUserId,
           },
         });
@@ -206,7 +222,8 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
         type: 'youtube' as const,
         id: 'test-video-1',
         title: 'Healthcare AI Applications',
-        content: 'Discussion about AI usage in healthcare diagnostics and treatment planning.',
+        content:
+          'Discussion about AI usage in healthcare diagnostics and treatment planning.',
       });
 
       const result = await synthesisService.synthesizeAcrossPlatforms(sources, {
@@ -236,7 +253,8 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
           year: p.year,
         }));
 
-        const graph = await knowledgeGraphService.buildKnowledgeGraph(paperData);
+        const graph =
+          await knowledgeGraphService.buildKnowledgeGraph(paperData);
 
         expect(graph).toBeDefined();
         expect(graph.nodes).toBeDefined();
@@ -245,9 +263,13 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
         expect(Array.isArray(graph.edges)).toBe(true);
 
         if (graph.nodes.length > 0) {
-          console.log(`✅ Integration: Knowledge graph built with ${graph.nodes.length} nodes and ${graph.edges.length} edges`);
+          console.log(
+            `✅ Integration: Knowledge graph built with ${graph.nodes.length} nodes and ${graph.edges.length} edges`,
+          );
         } else {
-          console.log(`⚠️  Integration: Knowledge graph empty (may need more papers or better connectivity)`);
+          console.log(
+            `⚠️  Integration: Knowledge graph empty (may need more papers or better connectivity)`,
+          );
         }
       } else {
         console.log(`⚠️  Integration: No papers available for knowledge graph`);
@@ -280,9 +302,13 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
           expect(firstGap).toHaveProperty('description');
           expect(firstGap).toHaveProperty('type');
 
-          console.log(`✅ Integration: Gap analysis identified ${gaps.length} research gaps`);
+          console.log(
+            `✅ Integration: Gap analysis identified ${gaps.length} research gaps`,
+          );
         } else {
-          console.log(`⚠️  Integration: No gaps identified (papers may be too similar)`);
+          console.log(
+            `⚠️  Integration: No gaps identified (papers may be too similar)`,
+          );
         }
       } else {
         console.log(`⚠️  Integration: No papers available for gap analysis`);
@@ -295,11 +321,14 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
       const startTime = Date.now();
 
       // Step 1: Search for papers
-      const searchResults = await literatureService.searchLiterature({
-        query: 'renewable energy solar panels',
-        sources: ['arxiv'],
-        limit: 3,
-      }, testUserId);
+      const searchResults = await literatureService.searchLiterature(
+        {
+          query: 'renewable energy solar panels',
+          sources: ['arxiv'],
+          limit: 3,
+        },
+        testUserId,
+      );
 
       expect(searchResults.papers.length).toBeGreaterThan(0);
 
@@ -333,16 +362,22 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
         year: p.year,
       }));
 
-      const themeResult = await themeExtractionService.extractThemesFromMultipleSources(sources, {
-        researchContext: 'renewable energy',
-        minConfidence: 0.5,
-      });
+      const themeResult =
+        await themeExtractionService.extractThemesFromMultipleSources(sources, {
+          researchContext: 'renewable energy',
+          minConfidence: 0.5,
+        });
 
       expect(themeResult.themes.length).toBeGreaterThan(0);
 
       // Step 4: Analyze gaps
       const gaps = await gapAnalyzerService.analyzeResearchGaps(
-        sources.map((s) => ({ type: s.type, id: s.id, title: s.title, content: s.content })),
+        sources.map((s) => ({
+          type: s.type,
+          id: s.id,
+          title: s.title,
+          content: s.content,
+        })),
       );
 
       expect(Array.isArray(gaps)).toBe(true);
@@ -362,7 +397,9 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
 
       const elapsedTime = Date.now() - startTime;
 
-      console.log(`✅ Integration: Full pipeline completed in ${(elapsedTime / 1000).toFixed(1)}s`);
+      console.log(
+        `✅ Integration: Full pipeline completed in ${(elapsedTime / 1000).toFixed(1)}s`,
+      );
       console.log(`   - Papers searched: ${searchResults.papers.length}`);
       console.log(`   - Papers saved: ${savedPapers.length}`);
       console.log(`   - Themes extracted: ${themeResult.themes.length}`);
@@ -384,7 +421,9 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
         expect(paper.userId).toBe(testUserId);
       });
 
-      console.log(`✅ Integration: Referential integrity validated for ${papers.length} papers`);
+      console.log(
+        `✅ Integration: Referential integrity validated for ${papers.length} papers`,
+      );
     });
 
     it('should handle concurrent operations safely', async () => {
@@ -466,10 +505,13 @@ describe('Literature Pipeline Integration Tests (Stage 2 Phase 1)', () => {
       ];
 
       try {
-        await themeExtractionService.extractThemesFromMultipleSources(invalidSources, {
-          researchContext: 'test',
-          minConfidence: 0.5,
-        });
+        await themeExtractionService.extractThemesFromMultipleSources(
+          invalidSources,
+          {
+            researchContext: 'test',
+            minConfidence: 0.5,
+          },
+        );
       } catch (error) {
         expect(error).toBeDefined();
         console.log(`✅ Integration: Failed extraction handled gracefully`);

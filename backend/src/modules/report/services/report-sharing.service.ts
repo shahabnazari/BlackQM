@@ -76,7 +76,9 @@ export class ReportSharingService {
         createdBy: userId,
         accessLevel: options.accessLevel,
         expiresAt,
-        password: options.password ? await this.hashPassword(options.password) : null,
+        password: options.password
+          ? await this.hashPassword(options.password)
+          : null,
         allowedDomains: options.allowedDomains as any,
         maxAccess: options.maxAccess,
         accessCount: 0,
@@ -162,7 +164,11 @@ export class ReportSharingService {
     }
 
     const allowedDomains = shareLink.allowedDomains as string[] | null;
-    if (allowedDomains && Array.isArray(allowedDomains) && allowedDomains.length > 0) {
+    if (
+      allowedDomains &&
+      Array.isArray(allowedDomains) &&
+      allowedDomains.length > 0
+    ) {
       if (!userEmail) {
         throw new ForbiddenException(
           'Email verification required for domain-restricted links',
@@ -239,10 +245,11 @@ export class ReportSharingService {
       throw new NotFoundException('Share link not found');
     }
 
-    await this.collaborationService.checkPermission(shareLink.reportId, userId, [
-      'owner',
-      'editor',
-    ]);
+    await this.collaborationService.checkPermission(
+      shareLink.reportId,
+      userId,
+      ['owner', 'editor'],
+    );
 
     await this.prisma.reportShareLink.update({
       where: { id: linkId },
@@ -268,9 +275,11 @@ export class ReportSharingService {
       throw new NotFoundException('Share link not found');
     }
 
-    await this.collaborationService.checkPermission(shareLink.reportId, userId, [
-      'owner',
-    ]);
+    await this.collaborationService.checkPermission(
+      shareLink.reportId,
+      userId,
+      ['owner'],
+    );
 
     await this.prisma.reportShareLink.delete({
       where: { id: linkId },
@@ -305,10 +314,11 @@ export class ReportSharingService {
       throw new NotFoundException('Share link not found');
     }
 
-    await this.collaborationService.checkPermission(shareLink.reportId, userId, [
-      'owner',
-      'editor',
-    ]);
+    await this.collaborationService.checkPermission(
+      shareLink.reportId,
+      userId,
+      ['owner', 'editor'],
+    );
 
     const updated = await this.prisma.reportShareLink.update({
       where: { id: linkId },
@@ -341,7 +351,9 @@ export class ReportSharingService {
    * Make report publicly accessible
    */
   async makeReportPublic(reportId: string, userId: string) {
-    await this.collaborationService.checkPermission(reportId, userId, ['owner']);
+    await this.collaborationService.checkPermission(reportId, userId, [
+      'owner',
+    ]);
 
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
@@ -365,7 +377,9 @@ export class ReportSharingService {
    * Make report private
    */
   async makeReportPrivate(reportId: string, userId: string) {
-    await this.collaborationService.checkPermission(reportId, userId, ['owner']);
+    await this.collaborationService.checkPermission(reportId, userId, [
+      'owner',
+    ]);
 
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
@@ -443,7 +457,7 @@ export class ReportSharingService {
    */
   private async hashPassword(password: string): Promise<string> {
     // @ts-expect-error - bcrypt types not available, using any
-    const bcrypt = await import('bcrypt').then(m => m.default || m) as any;
+    const bcrypt = (await import('bcrypt').then((m) => m.default || m)) as any;
     return bcrypt.hash(password, 10);
   }
 
@@ -455,7 +469,7 @@ export class ReportSharingService {
     hashedPassword: string,
   ): Promise<boolean> {
     // @ts-expect-error - bcrypt types not available, using any
-    const bcrypt = await import('bcrypt').then(m => m.default || m) as any;
+    const bcrypt = (await import('bcrypt').then((m) => m.default || m)) as any;
     return bcrypt.compare(password, hashedPassword);
   }
 }

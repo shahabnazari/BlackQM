@@ -46,7 +46,11 @@ export interface ResearchQuestionSuggestion {
     timely: number;
     overallScore: number;
   };
-  suggestedMethodology: 'qualitative' | 'quantitative' | 'mixed_methods' | 'q_methodology';
+  suggestedMethodology:
+    | 'qualitative'
+    | 'quantitative'
+    | 'mixed_methods'
+    | 'q_methodology';
 }
 
 interface AIResearchQuestionSuggestionsProps {
@@ -87,7 +91,12 @@ const complexityConfig = {
 
 export const AIResearchQuestionSuggestions: React.FC<
   AIResearchQuestionSuggestionsProps
-> = ({ questions, onSelectQuestion, onOperationalizeQuestion, className = '' }) => {
+> = ({
+  questions,
+  onSelectQuestion,
+  onOperationalizeQuestion,
+  className = '',
+}) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showSquareItHelp, setShowSquareItHelp] = useState(false);
 
@@ -108,7 +117,9 @@ export const AIResearchQuestionSuggestions: React.FC<
   };
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}>
+    <div
+      className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}
+    >
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
@@ -124,7 +135,8 @@ export const AIResearchQuestionSuggestions: React.FC<
         </div>
         <div className="flex items-center gap-2 mt-1">
           <p className="text-sm text-gray-600">
-            AI-generated questions using SQUARE-IT framework for research quality
+            AI-generated questions using SQUARE-IT framework for research
+            quality
           </p>
           <button
             onClick={() => setShowSquareItHelp(true)}
@@ -182,7 +194,9 @@ export const AIResearchQuestionSuggestions: React.FC<
                     >
                       {typeConfig.label}
                     </span>
-                    <span className={`text-xs font-medium ${complexityConf.color}`}>
+                    <span
+                      className={`text-xs font-medium ${complexityConf.color}`}
+                    >
                       {complexityConf.label}
                     </span>
                     <span className="text-xs text-gray-500">
@@ -283,24 +297,30 @@ export const AIResearchQuestionSuggestions: React.FC<
       )}
 
       {/* SQUARE-IT Help Modal */}
-      {showSquareItHelp && questions.length > 0 && questions[0]?.squareItScore && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-y-auto">
-            <SquareItScoreExplainer score={questions[0].squareItScore} compact={false} />
-            <div className="p-4 border-t flex justify-between items-center">
-              <p className="text-xs text-gray-600">
-                This framework helps evaluate research question quality across 8 critical dimensions
-              </p>
-              <button
-                onClick={() => setShowSquareItHelp(false)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Got it
-              </button>
+      {showSquareItHelp &&
+        questions.length > 0 &&
+        questions[0]?.squareItScore && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-y-auto">
+              <SquareItScoreExplainer
+                score={questions[0].squareItScore}
+                compact={false}
+              />
+              <div className="p-4 border-t flex justify-between items-center">
+                <p className="text-xs text-gray-600">
+                  This framework helps evaluate research question quality across
+                  8 critical dimensions
+                </p>
+                <button
+                  onClick={() => setShowSquareItHelp(false)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Got it
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 };

@@ -13,6 +13,7 @@
 During comprehensive integration audit, discovered **critical metadata bug** preventing end-to-end content type detection:
 
 **Symptom:**
+
 - ✅ Frontend sends content type metadata
 - ✅ Backend DTO receives metadata
 - ❌ **Controller drops metadata** during mapping
@@ -20,6 +21,7 @@ During comprehensive integration audit, discovered **critical metadata bug** pre
 - ⚠️ Adaptive thresholds fall back to length-based detection only
 
 **Impact:**
+
 - **Frontend → Backend integration broken**
 - Metadata sent by frontend was being dropped
 - Service couldn't distinguish full-text from abstracts using explicit metadata
@@ -35,8 +37,9 @@ During comprehensive integration audit, discovered **critical metadata bug** pre
 **Lines:** 2579-2590 (authenticated endpoint), 2691-2702 (public endpoint)
 
 **Before (BROKEN):**
+
 ```typescript
-const sources = dto.sources.map((s) => ({
+const sources = dto.sources.map(s => ({
   id: s.id || `source_${Date.now()}_${Math.random()}`,
   type: s.type,
   title: s.title || '',
@@ -52,8 +55,9 @@ const sources = dto.sources.map((s) => ({
 ```
 
 **After (FIXED):**
+
 ```typescript
-const sources = dto.sources.map((s) => ({
+const sources = dto.sources.map(s => ({
   id: s.id || `source_${Date.now()}_${Math.random()}`,
   type: s.type,
   title: s.title || '',
@@ -79,6 +83,7 @@ const sources = dto.sources.map((s) => ({
 **Lines:** 88-96
 
 **Before (MISSING):**
+
 ```typescript
 export interface SourceContent {
   id: string;
@@ -92,6 +97,7 @@ export interface SourceContent {
 ```
 
 **After (FIXED):**
+
 ```typescript
 export interface SourceContent {
   id: string;
@@ -123,6 +129,7 @@ export interface SourceContent {
 **Lines:** 2321-2361
 
 **Before (BROKEN):**
+
 ```typescript
 if (isAbstractOnly) {
   this.logger.log(...);
@@ -142,6 +149,7 @@ this.logger.log('');
 ```
 
 **After (FIXED):**
+
 ```typescript
 if (isAbstractOnly) {
   this.logger.log('');
@@ -153,7 +161,7 @@ if (isAbstractOnly) {
   const originalMinEvidence = minEvidence;
 
   minSources = Math.max(2, minSources - 1);
-  minCoherence = isVeryShort ? minCoherence * 0.70 : minCoherence * 0.80;
+  minCoherence = isVeryShort ? minCoherence * 0.7 : minCoherence * 0.8;
   minEvidence = isVeryShort ? 0.25 : 0.35;
 
   this.logger.log('   Threshold Adjustments:');
@@ -176,12 +184,14 @@ if (isAbstractOnly) {
 **Line:** 2309
 
 **Before (TYPE ERROR):**
+
 ```typescript
 private calculateAdaptiveThresholds(sources: SourceContent[], validationLevel: string) {
   // ❌ validationLevel can be undefined (it's optional in AcademicExtractionOptions)
 ```
 
 **After (FIXED):**
+
 ```typescript
 private calculateAdaptiveThresholds(sources: SourceContent[], validationLevel: string = 'rigorous') {
   // ✅ Default value prevents undefined errors
@@ -195,6 +205,7 @@ private calculateAdaptiveThresholds(sources: SourceContent[], validationLevel: s
 ## 📊 VERIFICATION
 
 ### TypeScript Compilation
+
 ```bash
 # Frontend
 cd frontend && npx tsc --noEmit
@@ -206,6 +217,7 @@ cd backend && npx tsc --noEmit
 ```
 
 ### Integration Test
+
 ```bash
 cd backend && npx ts-node integration-test-fulltext-adaptive.ts
 ⏳ RUNNING - Verifying end-to-end metadata flow
@@ -256,25 +268,25 @@ Response
 
 ### Before Fix
 
-| Layer | Status | Detection Method |
-|-------|--------|------------------|
-| Frontend | ✅ Sends metadata | Detects full-text, overflow, abstracts |
-| DTO | ✅ Receives | Has metadata field |
-| Controller | ❌ **DROPS** | Doesn't map metadata |
-| Service | ⚠️ Degraded | Length-based fallback only |
-| Adaptive | ⚠️ Works | But less accurate |
+| Layer      | Status            | Detection Method                       |
+| ---------- | ----------------- | -------------------------------------- |
+| Frontend   | ✅ Sends metadata | Detects full-text, overflow, abstracts |
+| DTO        | ✅ Receives       | Has metadata field                     |
+| Controller | ❌ **DROPS**      | Doesn't map metadata                   |
+| Service    | ⚠️ Degraded       | Length-based fallback only             |
+| Adaptive   | ⚠️ Works          | But less accurate                      |
 
 **Overall Score:** 60% ⚠️
 
 ### After Fix
 
-| Layer | Status | Detection Method |
-|-------|--------|------------------|
-| Frontend | ✅ Sends metadata | Detects full-text, overflow, abstracts |
-| DTO | ✅ Receives | Has metadata field |
-| Controller | ✅ **PASSES** | Maps s.metadata |
-| Service | ✅ Optimal | Uses explicit metadata |
-| Adaptive | ✅ Accurate | Metadata-first, length-fallback |
+| Layer      | Status            | Detection Method                       |
+| ---------- | ----------------- | -------------------------------------- |
+| Frontend   | ✅ Sends metadata | Detects full-text, overflow, abstracts |
+| DTO        | ✅ Receives       | Has metadata field                     |
+| Controller | ✅ **PASSES**     | Maps s.metadata                        |
+| Service    | ✅ Optimal        | Uses explicit metadata                 |
+| Adaptive   | ✅ Accurate       | Metadata-first, length-fallback        |
 
 **Overall Score:** 100% ✅
 
@@ -283,6 +295,7 @@ Response
 ## 🎯 WHAT'S NOW WORKING
 
 ### End-to-End Metadata Flow
+
 1. ✅ Frontend detects content type (full_text | abstract_overflow | abstract | none)
 2. ✅ Frontend sends in API request body
 3. ✅ DTO validates and accepts metadata
@@ -291,6 +304,7 @@ Response
 6. ✅ Validation adjusts based on actual content type
 
 ### Adaptive Threshold Detection
+
 ```typescript
 // BEFORE FIX (length-only)
 const avgContentLength = 8500; // Could be full-text OR long abstract
@@ -298,12 +312,15 @@ const isFullText = avgContentLength > 2000; // Guessing
 
 // AFTER FIX (metadata-first)
 const contentTypes = sources.map(s => s.metadata?.contentType || 'unknown');
-const hasFullText = contentTypes.some(t => t === 'full_text' || t === 'abstract_overflow');
+const hasFullText = contentTypes.some(
+  t => t === 'full_text' || t === 'abstract_overflow'
+);
 // ✅ Explicit knowledge from frontend
 // ✅ Falls back to length if metadata missing
 ```
 
 ### User Benefits
+
 - **More accurate validation:** System knows if content is actually full-text vs just long abstract
 - **Better threshold adjustment:** Abstracts get appropriate relaxed thresholds
 - **Abstract overflow detection:** Full articles in abstract field treated correctly
@@ -327,6 +344,7 @@ const hasFullText = contentTypes.some(t => t === 'full_text' || t === 'abstract_
    - **Change:** Interface update + syntax fix + default param
 
 ### No Frontend Changes
+
 - Frontend metadata generation already working ✅
 - Frontend interface already updated (Day 5.16 Part 1) ✅
 
@@ -337,6 +355,7 @@ const hasFullText = contentTypes.some(t => t === 'full_text' || t === 'abstract_
 ### Manual Testing (Recommended)
 
 **Test 1: Full-Text Papers**
+
 ```
 1. Select 3 papers with full-text
 2. Click "Extract Themes"
@@ -347,6 +366,7 @@ const hasFullText = contentTypes.some(t => t === 'full_text' || t === 'abstract_
 ```
 
 **Test 2: Abstract Overflow**
+
 ```
 1. Select 2 papers with >2000 char abstracts
 2. Click "Extract Themes"
@@ -356,6 +376,7 @@ const hasFullText = contentTypes.some(t => t === 'full_text' || t === 'abstract_
 ```
 
 **Test 3: Abstract-Only**
+
 ```
 1. Select 8 papers with standard abstracts
 2. Click "Extract Themes"
@@ -366,6 +387,7 @@ const hasFullText = contentTypes.some(t => t === 'full_text' || t === 'abstract_
 ```
 
 ### Integration Test (Automated)
+
 ```bash
 cd backend
 npx ts-node integration-test-fulltext-adaptive.ts
@@ -381,14 +403,17 @@ Expected output:
 ## 📝 SUMMARY OF CRITICAL FIXES
 
 ### 3 Critical Bugs Fixed
+
 1. ✅ **Controller dropped metadata** (1-line fix × 2 endpoints)
 2. ✅ **Backend interface missing metadata field** (interface extension)
 3. ✅ **Pre-existing TypeScript syntax error** (if block structure)
 
 ### 1 Type Safety Improvement
+
 4. ✅ **Optional parameter handling** (default value added)
 
 ### Result
+
 - **TypeScript compilation:** 7 errors → 0 errors ✅
 - **Metadata integration:** 60% → 100% ✅
 - **Adaptive threshold accuracy:** Degraded → Optimal ✅
@@ -414,4 +439,4 @@ Expected output:
 
 **Impact:** Metadata now flows correctly from frontend → backend → service, enabling accurate content-type detection and optimal adaptive threshold adjustment.
 
-*The 1-line bug fix (adding `metadata: s.metadata`) was critical for enterprise-grade content analysis.*
+_The 1-line bug fix (adding `metadata: s.metadata`) was critical for enterprise-grade content analysis._

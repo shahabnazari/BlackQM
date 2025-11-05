@@ -46,7 +46,12 @@ export interface ConstructMapping {
   relatedConstructs: Array<{
     constructId: string;
     constructName: string;
-    relationshipType: 'causes' | 'influences' | 'correlates' | 'moderates' | 'mediates';
+    relationshipType:
+      | 'causes'
+      | 'influences'
+      | 'correlates'
+      | 'moderates'
+      | 'mediates';
     strength: 'weak' | 'moderate' | 'strong';
     confidence: number;
   }>;
@@ -109,7 +114,9 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
   onRelationshipClick,
   className = '',
 }) => {
-  const [selectedConstructId, setSelectedConstructId] = useState<string | null>(null);
+  const [selectedConstructId, setSelectedConstructId] = useState<string | null>(
+    null
+  );
   const [visibleRelationships, setVisibleRelationships] = useState<Set<string>>(
     new Set(['causes', 'influences', 'correlates', 'moderates', 'mediates'])
   );
@@ -143,7 +150,9 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
   };
 
   const handleConstructClick = (constructId: string) => {
-    setSelectedConstructId(selectedConstructId === constructId ? null : constructId);
+    setSelectedConstructId(
+      selectedConstructId === constructId ? null : constructId
+    );
     onConstructClick?.(constructId);
   };
 
@@ -151,20 +160,25 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
     return (
       <div className={`p-8 text-center ${className}`}>
         <Network className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600 font-medium">No construct mappings available</p>
+        <p className="text-gray-600 font-medium">
+          No construct mappings available
+        </p>
         <p className="text-sm text-gray-500 mt-2">
-          Extract themes and generate construct mappings to visualize relationships.
+          Extract themes and generate construct mappings to visualize
+          relationships.
         </p>
       </div>
     );
   }
 
   const selectedMapping = selectedConstructId
-    ? mappings.find((m) => m.construct.id === selectedConstructId)
+    ? mappings.find(m => m.construct.id === selectedConstructId)
     : null;
 
   return (
-    <div className={`${className} ${isFullScreen ? 'fixed inset-0 z-50 bg-white p-6' : ''}`}>
+    <div
+      className={`${className} ${isFullScreen ? 'fixed inset-0 z-50 bg-white p-6' : ''}`}
+    >
       {/* Header Section */}
       <div className="flex items-start justify-between mb-4">
         <div>
@@ -173,7 +187,8 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
             Theme → Construct Map ({mappings.length} constructs)
           </h3>
           <p className="text-sm text-gray-600 mt-1">
-            Visual representation of theoretical constructs and their relationships
+            Visual representation of theoretical constructs and their
+            relationships
           </p>
         </div>
         <button
@@ -187,7 +202,9 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
 
       {/* Relationship Type Filters */}
       <div className="mb-4 flex flex-wrap gap-2">
-        <span className="text-sm font-medium text-gray-700 mr-2">Show Relationships:</span>
+        <span className="text-sm font-medium text-gray-700 mr-2">
+          Show Relationships:
+        </span>
         {Object.entries(relationshipTypeConfig).map(([type, config]) => {
           const isVisible = visibleRelationships.has(type);
           const RelIcon = config.icon;
@@ -202,7 +219,11 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
               title={config.description}
             >
               <span className="flex items-center gap-1">
-                {isVisible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                {isVisible ? (
+                  <Eye className="w-3 h-3" />
+                ) : (
+                  <EyeOff className="w-3 h-3" />
+                )}
                 <RelIcon className="w-3 h-3" />
                 {config.label}
               </span>
@@ -222,12 +243,13 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
           >
             {/* Draw Relationship Lines */}
             <g className="relationships">
-              {mappings.map((mapping) => {
+              {mappings.map(mapping => {
                 const sourcePos = nodePositions.get(mapping.construct.id);
                 if (!sourcePos) return null;
 
                 return mapping.relatedConstructs.map((rel, idx) => {
-                  if (!visibleRelationships.has(rel.relationshipType)) return null;
+                  if (!visibleRelationships.has(rel.relationshipType))
+                    return null;
 
                   const targetPos = nodePositions.get(rel.constructId);
                   if (!targetPos) return null;
@@ -236,7 +258,9 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
                   const strengthCfg = strengthConfig[rel.strength];
 
                   return (
-                    <g key={`${mapping.construct.id}-${rel.constructId}-${idx}`}>
+                    <g
+                      key={`${mapping.construct.id}-${rel.constructId}-${idx}`}
+                    >
                       <line
                         x1={sourcePos.x}
                         y1={sourcePos.y}
@@ -246,7 +270,12 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
                         strokeWidth="2"
                         opacity={strengthCfg.opacity}
                         strokeDasharray={strengthCfg.dashArray}
-                        onClick={() => onRelationshipClick?.(mapping.construct.id, rel.constructId)}
+                        onClick={() =>
+                          onRelationshipClick?.(
+                            mapping.construct.id,
+                            rel.constructId
+                          )
+                        }
                         style={{ cursor: 'pointer' }}
                       />
                       {/* Direction Arrow */}
@@ -263,7 +292,7 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
 
             {/* Draw Construct Nodes */}
             <g className="nodes">
-              {mappings.map((mapping) => {
+              {mappings.map(mapping => {
                 const pos = nodePositions.get(mapping.construct.id);
                 if (!pos) return null;
 
@@ -350,11 +379,17 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
               <span>Strong</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-8 h-0.5 bg-gray-400 opacity-60" style={{ borderTop: '2px dashed gray' }}></div>
+              <div
+                className="w-8 h-0.5 bg-gray-400 opacity-60"
+                style={{ borderTop: '2px dashed gray' }}
+              ></div>
               <span>Moderate</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-8 h-0.5 bg-gray-400 opacity-30" style={{ borderTop: '2px dashed gray' }}></div>
+              <div
+                className="w-8 h-0.5 bg-gray-400 opacity-30"
+                style={{ borderTop: '2px dashed gray' }}
+              ></div>
               <span>Weak</span>
             </div>
           </div>
@@ -391,7 +426,9 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
               {/* Relationships List */}
               {selectedMapping.relatedConstructs.length > 0 && (
                 <div className="mt-3 space-y-2">
-                  <p className="text-xs font-medium text-blue-900">Relationships:</p>
+                  <p className="text-xs font-medium text-blue-900">
+                    Relationships:
+                  </p>
                   {selectedMapping.relatedConstructs.map((rel, idx) => {
                     const config = relationshipTypeConfig[rel.relationshipType];
                     const RelIcon = config.icon;
@@ -404,9 +441,12 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
                         <span className={`font-medium ${config.color}`}>
                           {config.label}
                         </span>
-                        <span className="text-gray-700">{rel.constructName}</span>
+                        <span className="text-gray-700">
+                          {rel.constructName}
+                        </span>
                         <span className="ml-auto text-gray-500">
-                          ({strengthConfig[rel.strength].label}, {(rel.confidence * 100).toFixed(0)}%)
+                          ({strengthConfig[rel.strength].label},{' '}
+                          {(rel.confidence * 100).toFixed(0)}%)
                         </span>
                       </div>
                     );
@@ -421,7 +461,9 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
       {/* Summary Stats */}
       <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-          <div className="text-2xl font-bold text-gray-900">{mappings.length}</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {mappings.length}
+          </div>
           <div className="text-xs text-gray-600">Constructs</div>
         </div>
         <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
@@ -439,7 +481,9 @@ export const ThemeConstructMap: React.FC<ThemeConstructMapProps> = ({
         <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
           <div className="text-2xl font-bold text-gray-900">
             {mappings.reduce(
-              (sum, m) => sum + m.relatedConstructs.filter((r) => r.strength === 'strong').length,
+              (sum, m) =>
+                sum +
+                m.relatedConstructs.filter(r => r.strength === 'strong').length,
               0
             )}
           </div>

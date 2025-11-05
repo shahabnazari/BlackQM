@@ -19,7 +19,9 @@ export interface FullTextProgressState {
   message?: string;
 }
 
-export function useFullTextProgress(paperId: string | null): FullTextProgressState {
+export function useFullTextProgress(
+  paperId: string | null
+): FullTextProgressState {
   const [state, setState] = useState<FullTextProgressState>({
     status: 'not_fetched',
     progress: 0,
@@ -31,16 +33,14 @@ export function useFullTextProgress(paperId: string | null): FullTextProgressSta
     }
 
     // Set up Server-Sent Events connection
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-    const eventSource = new EventSource(
-      `${apiUrl}/pdf/events/${paperId}`,
-      {
-        withCredentials: true,
-      }
-    );
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+    const eventSource = new EventSource(`${apiUrl}/pdf/events/${paperId}`, {
+      withCredentials: true,
+    });
 
     // Handle incoming events
-    eventSource.onmessage = (event) => {
+    eventSource.onmessage = event => {
       try {
         const data = JSON.parse(event.data);
 
@@ -62,7 +62,7 @@ export function useFullTextProgress(paperId: string | null): FullTextProgressSta
             break;
 
           case 'progress':
-            setState((prev) => ({
+            setState(prev => ({
               ...prev,
               status: 'processing',
               progress: data.progress,
@@ -93,7 +93,7 @@ export function useFullTextProgress(paperId: string | null): FullTextProgressSta
             break;
 
           case 'retry':
-            setState((prev) => ({
+            setState(prev => ({
               ...prev,
               status: 'queued',
               progress: 0,
@@ -107,7 +107,7 @@ export function useFullTextProgress(paperId: string | null): FullTextProgressSta
     };
 
     // Handle connection errors
-    eventSource.onerror = (error) => {
+    eventSource.onerror = error => {
       console.error('SSE connection error:', error);
       eventSource.close();
     };
@@ -145,18 +145,16 @@ export function useFullTextBulkStatus(paperIds: string[]) {
 
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-      const response = await fetch(
-        `${apiUrl}/pdf/bulk-status`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({ paperIds }),
-        }
-      );
+      const apiUrl =
+        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+      const response = await fetch(`${apiUrl}/pdf/bulk-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ paperIds }),
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -185,14 +183,12 @@ export function useTriggerFullTextFetch() {
   const trigger = useCallback(async (paperId: string) => {
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-      const response = await fetch(
-        `${apiUrl}/pdf/fetch/${paperId}`,
-        {
-          method: 'POST',
-          credentials: 'include',
-        }
-      );
+      const apiUrl =
+        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+      const response = await fetch(`${apiUrl}/pdf/fetch/${paperId}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
 
       if (response.ok) {
         const data = await response.json();

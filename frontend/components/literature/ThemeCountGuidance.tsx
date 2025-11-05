@@ -83,7 +83,8 @@ const PURPOSE_GUIDANCE: Record<ResearchPurpose, PurposeGuidanceConfig> = {
     targetRange: { min: 30, max: 80 },
     rationale:
       'Q-methodology requires a broad concourse of 30-80 statements representing the full diversity of viewpoints. While 40-60 is typical, focused studies can use as few as 30 statements. Too few statements limit participant expression; too many cause cognitive overload during sorting.',
-    citation: 'Stephenson, W. (1953). The Study of Behavior: Q-Technique and Its Methodology.',
+    citation:
+      'Stephenson, W. (1953). The Study of Behavior: Q-Technique and Its Methodology.',
     tooFewWarning:
       'Below 30 statements may not capture the full diversity of perspectives. Consider analyzing more sources or adjusting extraction parameters.',
     tooManyWarning:
@@ -96,7 +97,8 @@ const PURPOSE_GUIDANCE: Record<ResearchPurpose, PurposeGuidanceConfig> = {
     targetRange: { min: 5, max: 15 },
     rationale:
       'Survey construction paradigm recommends 5-15 latent constructs, each measured by 4-6 items. Too few constructs oversimplify; too many create participant burden and statistical challenges.',
-    citation: 'Churchill, G. A. (1979); DeVellis, R. F. (2016). Scale Development.',
+    citation:
+      'Churchill, G. A. (1979); DeVellis, R. F. (2016). Scale Development.',
     tooFewWarning:
       'Fewer than 5 constructs may oversimplify complex phenomena. Consider broader extraction or additional sources.',
     tooManyWarning:
@@ -122,7 +124,8 @@ const PURPOSE_GUIDANCE: Record<ResearchPurpose, PurposeGuidanceConfig> = {
     targetRange: { min: 10, max: 25 },
     rationale:
       'Meta-ethnography synthesizes 10-25 cross-study themes, balancing comprehensiveness with interpretive parsimony. Themes should be abstract enough to span studies yet specific enough to guide synthesis.',
-    citation: 'Noblit & Hare (1988). Meta-Ethnography: Synthesizing Qualitative Studies.',
+    citation:
+      'Noblit & Hare (1988). Meta-Ethnography: Synthesizing Qualitative Studies.',
     tooFewWarning:
       'Fewer than 10 meta-themes may miss important cross-study patterns. Review if key concepts are adequately represented.',
     tooManyWarning:
@@ -203,19 +206,27 @@ export default function ThemeCountGuidance({
   return (
     <div className="space-y-6">
       {/* Header: Current Count vs. Target */}
-      <div className={`rounded-lg border-2 p-5 ${currentStatus.bgColor} ${currentStatus.borderColor}`}>
+      <div
+        className={`rounded-lg border-2 p-5 ${currentStatus.bgColor} ${currentStatus.borderColor}`}
+      >
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className={`p-2 rounded-lg bg-white shadow-sm ${currentStatus.color}`}>
+            <div
+              className={`p-2 rounded-lg bg-white shadow-sm ${currentStatus.color}`}
+            >
               <StatusIcon className="w-6 h-6" />
             </div>
             <div>
               <h3 className="text-lg font-bold text-gray-900 mb-1">
-                {currentThemeCount} Theme{currentThemeCount !== 1 ? 's' : ''} Identified
+                {currentThemeCount} Theme{currentThemeCount !== 1 ? 's' : ''}{' '}
+                Identified
               </h3>
-              <p className={`text-sm font-semibold ${currentStatus.color}`}>{currentStatus.label}</p>
+              <p className={`text-sm font-semibold ${currentStatus.color}`}>
+                {currentStatus.label}
+              </p>
               <p className="text-sm text-gray-600 mt-1">
-                Target: {targetRange.min}-{targetRange.max} themes for {guidance.name}
+                Target: {targetRange.min}-{targetRange.max} themes for{' '}
+                {guidance.name}
               </p>
             </div>
           </div>
@@ -224,7 +235,9 @@ export default function ThemeCountGuidance({
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-2 mb-2">
               <Target className="w-5 h-5 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">Target Range</span>
+              <span className="text-sm font-medium text-gray-700">
+                Target Range
+              </span>
             </div>
             <div className="text-right">
               <p className="text-3xl font-bold text-gray-900">
@@ -251,11 +264,13 @@ export default function ThemeCountGuidance({
                 status === 'optimal'
                   ? 'bg-green-500'
                   : status === 'too_few'
-                  ? 'bg-orange-500'
-                  : 'bg-amber-500'
+                    ? 'bg-orange-500'
+                    : 'bg-amber-500'
               }`}
               initial={{ width: 0 }}
-              animate={{ width: `${(currentThemeCount / targetRange.max) * 100}%` }}
+              animate={{
+                width: `${(currentThemeCount / targetRange.max) * 100}%`,
+              }}
               transition={{ duration: 0.8, ease: 'easeOut' }}
             />
           </div>
@@ -273,9 +288,11 @@ export default function ThemeCountGuidance({
           <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-gray-900 mb-2">
-              {status === 'optimal' && 'Excellent - Your theme count is optimal'}
+              {status === 'optimal' &&
+                'Excellent - Your theme count is optimal'}
               {status === 'too_few' && 'Recommendation: Consider more themes'}
-              {status === 'too_many' && 'Recommendation: Consider consolidation'}
+              {status === 'too_many' &&
+                'Recommendation: Consider consolidation'}
             </p>
             <p className="text-sm text-gray-700 leading-relaxed">
               {status === 'optimal' && guidance.optimal}
@@ -292,8 +309,12 @@ export default function ThemeCountGuidance({
           <BookOpen className="w-4 h-4 text-gray-600" />
           Scientific Rationale
         </h4>
-        <p className="text-sm text-gray-700 leading-relaxed mb-2">{guidance.rationale}</p>
-        <p className="text-xs text-gray-600 italic">Citation: {guidance.citation}</p>
+        <p className="text-sm text-gray-700 leading-relaxed mb-2">
+          {guidance.rationale}
+        </p>
+        <p className="text-xs text-gray-600 italic">
+          Citation: {guidance.citation}
+        </p>
       </div>
 
       {/* Saturation Visualization (Patent Claim #13) */}
@@ -305,7 +326,8 @@ export default function ThemeCountGuidance({
               Theme Saturation Analysis
             </h4>
             <p className="text-sm text-gray-600">
-              Track how many new themes are discovered as each source is analyzed
+              Track how many new themes are discovered as each source is
+              analyzed
             </p>
           </div>
 
@@ -318,18 +340,30 @@ export default function ThemeCountGuidance({
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis
                 dataKey="sourceNumber"
-                label={{ value: 'Source Number', position: 'insideBottom', offset: -5 }}
+                label={{
+                  value: 'Source Number',
+                  position: 'insideBottom',
+                  offset: -5,
+                }}
                 stroke="#6b7280"
               />
               <YAxis
                 yAxisId="left"
-                label={{ value: 'Cumulative Themes', angle: -90, position: 'insideLeft' }}
+                label={{
+                  value: 'Cumulative Themes',
+                  angle: -90,
+                  position: 'insideLeft',
+                }}
                 stroke="#6b7280"
               />
               <YAxis
                 yAxisId="right"
                 orientation="right"
-                label={{ value: 'New Themes', angle: 90, position: 'insideRight' }}
+                label={{
+                  value: 'New Themes',
+                  angle: 90,
+                  position: 'insideRight',
+                }}
                 stroke="#6b7280"
               />
               <Tooltip
@@ -364,20 +398,21 @@ export default function ThemeCountGuidance({
               />
 
               {/* Saturation point marker */}
-              {saturationData.saturationReached && saturationData.saturationPoint && (
-                <ReferenceLine
-                  x={saturationData.saturationPoint}
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  label={{
-                    value: 'Saturation',
-                    position: 'top',
-                    fill: '#10b981',
-                    fontWeight: 'bold',
-                  }}
-                />
-              )}
+              {saturationData.saturationReached &&
+                saturationData.saturationPoint && (
+                  <ReferenceLine
+                    x={saturationData.saturationPoint}
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    label={{
+                      value: 'Saturation',
+                      position: 'top',
+                      fill: '#10b981',
+                      fontWeight: 'bold',
+                    }}
+                  />
+                )}
             </ComposedChart>
           </ResponsiveContainer>
 
@@ -398,14 +433,18 @@ export default function ThemeCountGuidance({
               <div>
                 <p
                   className={`text-sm font-semibold mb-1 ${
-                    saturationData.saturationReached ? 'text-green-900' : 'text-yellow-900'
+                    saturationData.saturationReached
+                      ? 'text-green-900'
+                      : 'text-yellow-900'
                   }`}
                 >
                   {saturationData.saturationReached
                     ? 'Theoretical Saturation Reached'
                     : 'Saturation Not Yet Reached'}
                 </p>
-                <p className="text-sm text-gray-700">{saturationData.recommendation}</p>
+                <p className="text-sm text-gray-700">
+                  {saturationData.recommendation}
+                </p>
               </div>
             </div>
           </div>
@@ -434,7 +473,9 @@ export default function ThemeCountGuidance({
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-sm text-gray-600 mb-1">Current Themes</p>
-          <p className="text-3xl font-bold text-gray-900">{currentThemeCount}</p>
+          <p className="text-3xl font-bold text-gray-900">
+            {currentThemeCount}
+          </p>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-sm text-gray-600 mb-1">Sources Analyzed</p>
@@ -443,7 +484,9 @@ export default function ThemeCountGuidance({
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-sm text-gray-600 mb-1">Themes per Source</p>
           <p className="text-3xl font-bold text-gray-900">
-            {totalSources > 0 ? (currentThemeCount / totalSources).toFixed(1) : '0'}
+            {totalSources > 0
+              ? (currentThemeCount / totalSources).toFixed(1)
+              : '0'}
           </p>
         </div>
       </div>

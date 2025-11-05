@@ -14,9 +14,14 @@ import DatabaseSourcesInfo from '@/components/literature/DatabaseSourcesInfo';
 import EnterpriseThemeCard from '@/components/literature/EnterpriseThemeCard';
 import PurposeSelectionWizard from '@/components/literature/PurposeSelectionWizard';
 import ThemeCountGuidance from '@/components/literature/ThemeCountGuidance';
+import { ThemeMethodologyExplainer } from '@/components/literature/ThemeMethodologyExplainer';
 import ThemeExtractionProgressModal from '@/components/literature/ThemeExtractionProgressModal';
 import { VideoSelectionPanel } from '@/components/literature/VideoSelectionPanel';
 import { YouTubeChannelBrowser } from '@/components/literature/YouTubeChannelBrowser';
+// Phase 10 Day 18: Incremental Theme Extraction Components
+import { CorpusManagementPanel } from '@/components/literature/CorpusManagementPanel';
+import { IncrementalExtractionModal } from '@/components/literature/IncrementalExtractionModal';
+import { SaturationDashboard } from '@/components/literature/SaturationDashboard';
 // Phase 10 Day 5.12: Enhanced Theme Integration Components
 import type {
   ConstructMapping as ConstructMappingType,
@@ -49,10 +54,12 @@ import {
 // Phase 10 Day 5.12: Enhanced Theme Integration API
 import {
   enhancedThemeIntegrationService,
-  saveResearchQuestions,
   saveHypotheses,
+  saveResearchQuestions,
 } from '@/lib/api/services/enhanced-theme-integration-api.service';
 import { useThemeExtractionProgress } from '@/lib/hooks/useThemeExtractionProgress';
+// Phase 10 Day 18: Incremental Extraction Hook
+import { useIncrementalExtraction } from '@/lib/hooks/useIncrementalExtraction';
 import {
   literatureAPI,
   Paper,
@@ -60,13 +67,14 @@ import {
 } from '@/lib/services/literature-api.service';
 // Phase 10 Day 5.17.4: State persistence for back button navigation
 import {
-  saveLiteratureState,
-  loadLiteratureState,
-  getSavedStateSummary,
   clearLiteratureState,
+  getSavedStateSummary,
+  loadLiteratureState,
+  saveLiteratureState,
 } from '@/lib/services/literature-state-persistence.service';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import {
   ArrowRight,
   Award,
@@ -77,6 +85,7 @@ import {
   Database,
   Download,
   ExternalLink,
+  FileText,
   Filter,
   GitBranch,
   Loader2,
@@ -361,6 +370,9 @@ function LiteratureSearchContent() {
     reset: resetExtractionProgress,
   } = useThemeExtractionProgress();
 
+  // Phase 10 Day 18: Incremental extraction state management
+  const incrementalExtraction = useIncrementalExtraction();
+
   // Phase 10 Day 5.12: Enhanced Theme Integration State
   const [selectedThemeIds, setSelectedThemeIds] = useState<string[]>([]);
   const [researchQuestions, setResearchQuestions] = useState<any[]>([]);
@@ -491,7 +503,8 @@ function LiteratureSearchContent() {
     // Restore analysis state
     if (state.unifiedThemes) setUnifiedThemes(state.unifiedThemes);
     if (state.gaps) setGaps(state.gaps);
-    if (state.extractionPurpose) setExtractionPurpose(state.extractionPurpose as ResearchPurpose);
+    if (state.extractionPurpose)
+      setExtractionPurpose(state.extractionPurpose as ResearchPurpose);
     if (state.contentAnalysis) setContentAnalysis(state.contentAnalysis);
 
     // Restore Enhanced Theme Integration
@@ -505,7 +518,9 @@ function LiteratureSearchContent() {
     if (state.youtubeVideos) setYoutubeVideos(state.youtubeVideos);
 
     setShowRestoreBanner(false);
-    toast.success(`Restored ${state.unifiedThemes?.length || 0} themes, ${state.papers?.length || 0} papers`);
+    toast.success(
+      `Restored ${state.unifiedThemes?.length || 0} themes, ${state.papers?.length || 0} papers`
+    );
   }, []);
 
   // PHASE 10 DAY 5.17.4: Dismiss restore banner
@@ -571,6 +586,60 @@ function LiteratureSearchContent() {
     transcribedVideos,
     youtubeVideos,
   ]);
+
+  // PHASE 10 DAY 5.17.5: Clear incompatible results when purpose changes
+  // Prevents stale data from previous purposes persisting in state
+  useEffect(() => {
+    if (extractionPurpose) {
+      console.log(`🔄 [Purpose Change] New purpose: ${extractionPurpose}`);
+
+      // Clear results that are not appropriate for the new purpose
+      switch (extractionPurpose) {
+        case 'q_methodology':
+          // Q-methodology: Only Q-statements allowed, clear all other results
+          if (
+            researchQuestions.length > 0 ||
+            hypotheses.length > 0 ||
+            constructMappings.length > 0 ||
+            generatedSurvey
+          ) {
+            console.log(
+              '   Clearing incompatible results: Questions, Hypotheses, Constructs, Survey'
+            );
+            setResearchQuestions([]);
+            setHypotheses([]);
+            setConstructMappings([]);
+            setGeneratedSurvey(null);
+          }
+          break;
+
+        case 'survey_construction':
+          // Survey construction: Only survey allowed, clear other results
+          if (
+            researchQuestions.length > 0 ||
+            hypotheses.length > 0 ||
+            constructMappings.length > 0
+          ) {
+            console.log(
+              '   Clearing incompatible results: Questions, Hypotheses, Constructs'
+            );
+            setResearchQuestions([]);
+            setHypotheses([]);
+            setConstructMappings([]);
+          }
+          break;
+
+        // literature_synthesis, hypothesis_generation, qualitative_analysis
+        // allow multiple result types, so no clearing needed
+        default:
+          console.log(
+            '   Purpose allows multiple result types - no clearing needed'
+          );
+          break;
+      }
+    }
+  }, [extractionPurpose]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Note: We intentionally omit result state variables from deps to avoid clearing on result updates
 
   // Load saved papers on mount
   useEffect(() => {
@@ -1319,7 +1388,11 @@ function LiteratureSearchContent() {
           // PHASE 10 DAY 5.17.4: Check for backend diagnostic metadata
           // Cast to any to check for optional diagnostic fields not in type definition
           const resultWithDiagnostics = result as any;
-          if (resultWithDiagnostics.metadata || resultWithDiagnostics.debug || resultWithDiagnostics.rejectionDetails) {
+          if (
+            resultWithDiagnostics.metadata ||
+            resultWithDiagnostics.debug ||
+            resultWithDiagnostics.rejectionDetails
+          ) {
             console.warn(`\n   🔬 BACKEND DIAGNOSTICS AVAILABLE:`);
             if (resultWithDiagnostics.metadata) {
               console.warn(`      • Metadata:`, resultWithDiagnostics.metadata);
@@ -1328,33 +1401,67 @@ function LiteratureSearchContent() {
               console.warn(`      • Debug info:`, resultWithDiagnostics.debug);
             }
             if (resultWithDiagnostics.rejectionDetails) {
-              console.warn(`      • Rejection details:`, resultWithDiagnostics.rejectionDetails);
+              console.warn(
+                `      • Rejection details:`,
+                resultWithDiagnostics.rejectionDetails
+              );
             }
           } else {
             console.warn(`\n   ⚠️ No diagnostic metadata in backend response`);
-            console.warn(`      Backend should include rejection details if themes were filtered`);
+            console.warn(
+              `      Backend should include rejection details if themes were filtered`
+            );
           }
 
           // PHASE 10 DAY 5.17.4: Log metadata to diagnose if themes were generated or not
           if (result.metadata) {
             console.warn(`\n   📊 Backend Processing Metadata:`);
-            console.warn(`      • Sources analyzed: ${result.metadata.sourcesAnalyzed || 'N/A'}`);
-            console.warn(`      • Codes generated: ${result.metadata.codesGenerated || 'N/A'}`);
-            console.warn(`      • Candidate themes: ${result.metadata.candidateThemes || 'N/A'}`);
-            console.warn(`      • Final themes: ${result.metadata.finalThemes || 'N/A'}`);
-            console.warn(`      • Processing time: ${result.metadata.processingTimeMs || 'N/A'}ms`);
+            console.warn(
+              `      • Sources analyzed: ${result.metadata.sourcesAnalyzed || 'N/A'}`
+            );
+            console.warn(
+              `      • Codes generated: ${result.metadata.codesGenerated || 'N/A'}`
+            );
+            console.warn(
+              `      • Candidate themes: ${result.metadata.candidateThemes || 'N/A'}`
+            );
+            console.warn(
+              `      • Final themes: ${result.metadata.finalThemes || 'N/A'}`
+            );
+            console.warn(
+              `      • Processing time: ${result.metadata.processingTimeMs || 'N/A'}ms`
+            );
 
             if (result.metadata.candidateThemes === 0) {
-              console.error(`\n   ❌ ROOT CAUSE: No candidate themes were generated`);
-              console.error(`      Theme generation (Stage 3) produced 0 themes`);
-              console.error(`      This is BEFORE validation - themes never made it to validation`);
+              console.error(
+                `\n   ❌ ROOT CAUSE: No candidate themes were generated`
+              );
+              console.error(
+                `      Theme generation (Stage 3) produced 0 themes`
+              );
+              console.error(
+                `      This is BEFORE validation - themes never made it to validation`
+              );
               console.error(`      Likely causes:`);
-              console.error(`        1. No semantic codes found in Stage 2 (Initial Coding)`);
-              console.error(`        2. Codes couldn't be clustered into themes in Stage 3`);
-              console.error(`        3. OpenAI API error during theme generation`);
-            } else if (result.metadata.candidateThemes > 0 && result.metadata.finalThemes === 0) {
-              console.error(`\n   ❌ ROOT CAUSE: ${result.metadata.candidateThemes} themes generated but ALL rejected in validation`);
-              console.error(`      Rejection diagnostics SHOULD be in response - this is a bug if missing`);
+              console.error(
+                `        1. No semantic codes found in Stage 2 (Initial Coding)`
+              );
+              console.error(
+                `        2. Codes couldn't be clustered into themes in Stage 3`
+              );
+              console.error(
+                `        3. OpenAI API error during theme generation`
+              );
+            } else if (
+              result.metadata.candidateThemes > 0 &&
+              result.metadata.finalThemes === 0
+            ) {
+              console.error(
+                `\n   ❌ ROOT CAUSE: ${result.metadata.candidateThemes} themes generated but ALL rejected in validation`
+              );
+              console.error(
+                `      Rejection diagnostics SHOULD be in response - this is a bug if missing`
+              );
             }
           }
 
@@ -1453,6 +1560,14 @@ function LiteratureSearchContent() {
         setActiveTab('analysis');
         setActiveAnalysisSubTab('themes');
         console.log(`   🎯 Auto-navigated to Themes tab`);
+
+        // Phase 10 Day 14: Celebration animation on extraction complete
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#10b981', '#3b82f6', '#8b5cf6', '#ec4899'],
+        });
 
         // Phase 10 Day 5.13: Show V2 success message
         toast.success(
@@ -1562,8 +1677,14 @@ function LiteratureSearchContent() {
     }
 
     console.log('[handleGenerateQuestions] Starting...');
-    console.log('[handleGenerateQuestions] selectedThemeIds:', selectedThemeIds);
-    console.log('[handleGenerateQuestions] unifiedThemes count:', unifiedThemes.length);
+    console.log(
+      '[handleGenerateQuestions] selectedThemeIds:',
+      selectedThemeIds
+    );
+    console.log(
+      '[handleGenerateQuestions] unifiedThemes count:',
+      unifiedThemes.length
+    );
 
     setLoadingQuestions(true);
     try {
@@ -1572,7 +1693,10 @@ function LiteratureSearchContent() {
         .filter(theme => selectedThemeIds.includes(theme.id))
         .map(mapUnifiedThemeToTheme);
 
-      console.log('[handleGenerateQuestions] selectedThemes count:', selectedThemes.length);
+      console.log(
+        '[handleGenerateQuestions] selectedThemes count:',
+        selectedThemes.length
+      );
       console.log('[handleGenerateQuestions] selectedThemes:', selectedThemes);
 
       const requestPayload = {
@@ -1582,14 +1706,18 @@ function LiteratureSearchContent() {
       };
       console.log('[handleGenerateQuestions] Request payload:', requestPayload);
 
-      const result = await enhancedThemeIntegrationService.suggestQuestions(requestPayload);
+      const result =
+        await enhancedThemeIntegrationService.suggestQuestions(requestPayload);
       console.log('[handleGenerateQuestions] Success! Result:', result);
       setResearchQuestions(result);
       toast.success(`Generated ${result.length} research questions`);
     } catch (error: any) {
       console.error('[handleGenerateQuestions] Error:', error);
       console.error('[handleGenerateQuestions] Error message:', error.message);
-      console.error('[handleGenerateQuestions] Error response:', error.response);
+      console.error(
+        '[handleGenerateQuestions] Error response:',
+        error.response
+      );
       toast.error(`Failed to generate questions: ${error.message}`);
     } finally {
       setLoadingQuestions(false);
@@ -1796,6 +1924,9 @@ function LiteratureSearchContent() {
   };
 
   const handleGenerateStatements = async () => {
+    console.log('🎯 [Q-Statements] Button clicked');
+    console.log(`   Themes available: ${unifiedThemes.length}`);
+
     if (unifiedThemes.length === 0) {
       toast.error('Please extract themes first');
       return;
@@ -1803,9 +1934,17 @@ function LiteratureSearchContent() {
 
     try {
       const themeNames = unifiedThemes.map(t => t.label);
+      console.log(`   Theme names: ${themeNames.join(', ')}`);
+      console.log(`   Query: ${query}`);
+      console.log('   Calling API...');
+
       const statements = await literatureAPI.generateStatementsFromThemes(
         themeNames,
         { topic: query }
+      );
+
+      console.log(
+        `✅ [Q-Statements] Generated ${statements.length} statements`
       );
 
       // Store statements in session storage for study creation page
@@ -1822,11 +1961,18 @@ function LiteratureSearchContent() {
 
       toast.success(`Generated ${statements.length} Q-statements from themes`);
 
+      console.log('   Navigating to study creation page...');
       // Navigate to study creation page with generated statements
-      window.location.href =
-        '/create/study?from=literature&statementsReady=true';
-    } catch (error) {
-      toast.error('Statement generation failed');
+      // Phase 10 Day 14 FIX: Use actual existing route (not aspirational consolidation)
+      // Note: /build/study page.tsx doesn't exist yet, /studies/create does
+      router.push('/studies/create?from=literature&statementsReady=true');
+    } catch (error: any) {
+      console.error('❌ [Q-Statements] Generation failed:', error);
+      console.error('   Error message:', error.message);
+      console.error('   Error response:', error.response?.data);
+      toast.error(
+        `Statement generation failed: ${error.message || 'Unknown error'}`
+      );
     }
   };
 
@@ -2525,7 +2671,8 @@ function LiteratureSearchContent() {
                     {restoreSummary.hoursAgo && (
                       <span>
                         {' '}
-                        from {restoreSummary.hoursAgo < 1
+                        from{' '}
+                        {restoreSummary.hoursAgo < 1
                           ? 'less than an hour'
                           : `${Math.floor(restoreSummary.hoursAgo)} ${Math.floor(restoreSummary.hoursAgo) === 1 ? 'hour' : 'hours'}`}{' '}
                         ago
@@ -2534,8 +2681,8 @@ function LiteratureSearchContent() {
                     . Would you like to continue where you left off?
                   </p>
                   <p className="text-xs text-gray-500 mt-2">
-                    This includes your search results, themes, research questions, and selections.
-                    State expires after 24 hours.
+                    This includes your search results, themes, research
+                    questions, and selections. State expires after 24 hours.
                   </p>
                 </div>
               </div>
@@ -3522,6 +3669,38 @@ Quality Tiers:
                 </div>
               )}
             </Button>
+            {/* Phase 10 Day 18: Incremental Extraction Button */}
+            <Button
+              variant="outline"
+              onClick={() => incrementalExtraction.openIncrementalExtraction()}
+              disabled={
+                (selectedPapers.size === 0 && transcribedVideos.length === 0) ||
+                analyzingThemes
+              }
+              className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-300"
+              title="Add papers incrementally to existing corpus and save costs via caching"
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>Extract Incrementally</span>
+              {incrementalExtraction.corpusList.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="text-xs bg-blue-100 dark:bg-blue-900"
+                >
+                  {incrementalExtraction.corpusList.length} corpus
+                </Badge>
+              )}
+            </Button>
+            {/* Phase 10 Day 18: Manage Corpuses Button */}
+            <Button
+              variant="outline"
+              onClick={() => incrementalExtraction.openCorpusManagement()}
+              className="flex items-center gap-2"
+              title="View and manage your research corpuses"
+            >
+              <Database className="w-4 h-4" />
+              <span>Manage Corpuses</span>
+            </Button>
             <Button
               variant="outline"
               onClick={() => handleExportCitations('bibtex')}
@@ -3530,12 +3709,8 @@ Quality Tiers:
               <Download className="w-4 h-4 mr-2" />
               Export BibTeX
             </Button>
-            {unifiedThemes.length > 0 && (
-              <Button onClick={handleGenerateStatements} className="ml-auto">
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generate Q-Statements from Themes
-              </Button>
-            )}
+            {/* Phase 10 Day 5.17.5: Q-Statements button moved to purpose-specific actions section (line 5249) */}
+            {/* Purpose-specific rendering ensures only Q-Methodology users see this button */}
           </div>
         </CardContent>
       </Card>
@@ -5091,6 +5266,9 @@ Quality Tiers:
                     />
                   )}
 
+                  {/* Phase 10 Day 14: Theme Methodology Explainer - Educational transparency */}
+                  <ThemeMethodologyExplainer />
+
                   {/* Phase 10 Day 5.13: Enterprise Theme Cards with Purpose-Specific Display */}
                   {unifiedThemes.map((theme, index) => {
                     // ENTERPRISE: Verify theme data structure before rendering
@@ -5121,16 +5299,26 @@ Quality Tiers:
                     );
                   })}
 
-                  {/* Phase 10 Day 5.12: Theme Actions Section */}
+                  {/* Phase 10 Day 5.17.5: Purpose-Specific Theme Actions Section */}
                   <Card className="border-2 border-blue-300 bg-gradient-to-r from-blue-50 to-purple-50 mt-6">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-blue-600" />
-                        AI-Powered Theme Actions
+                        Purpose-Specific Actions
                       </CardTitle>
                       <p className="text-sm text-gray-600 mt-1">
-                        Transform extracted themes into research questions,
-                        hypotheses, constructs, or complete surveys
+                        {extractionPurpose === 'q_methodology' &&
+                          'Generate Q-methodology statements for sorting studies'}
+                        {extractionPurpose === 'survey_construction' &&
+                          'Transform constructs into validated survey scales'}
+                        {extractionPurpose === 'qualitative_analysis' &&
+                          'Flexible analysis options for qualitative research'}
+                        {extractionPurpose === 'literature_synthesis' &&
+                          'Meta-analytic research questions and synthesis outputs'}
+                        {extractionPurpose === 'hypothesis_generation' &&
+                          'Theory-building outputs for hypothesis development'}
+                        {!extractionPurpose &&
+                          'Transform extracted themes into research outputs'}
                       </p>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -5166,317 +5354,475 @@ Quality Tiers:
                         </div>
                       </div>
 
-                      {/* Action Buttons Grid */}
+                      {/* PHASE 10 DAY 5.17.5: Purpose-Specific Action Buttons Grid */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Generate Research Questions */}
-                        <Card className="border border-blue-200 hover:border-blue-400 transition-colors">
-                          <CardContent className="p-4">
-                            <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                              <TrendingUp className="w-4 h-4 text-blue-600" />
-                              Research Questions
-                            </h4>
-                            <p className="text-xs text-gray-600 mb-3">
-                              Generate AI-suggested research questions from
-                              selected themes
-                            </p>
-                            <Button
-                              onClick={handleGenerateQuestions}
-                              disabled={
-                                selectedThemeIds.length === 0 ||
-                                loadingQuestions
-                              }
-                              className="w-full"
-                              size="sm"
-                            >
-                              {loadingQuestions ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Generating...
-                                </>
-                              ) : (
-                                <>Generate Questions</>
-                              )}
-                            </Button>
-                          </CardContent>
-                        </Card>
+                        {/* Q-Statements (Q-Methodology ONLY) */}
+                        {extractionPurpose === 'q_methodology' && (
+                          <Card className="border border-indigo-200 hover:border-indigo-400 transition-colors">
+                            <CardContent className="p-4">
+                              <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-indigo-600" />
+                                Q-Statements (Primary)
+                              </h4>
+                              <p className="text-xs text-gray-600 mb-3">
+                                Generate 40-60 Q-methodology statements for
+                                participant sorting
+                              </p>
+                              <Button
+                                onClick={handleGenerateStatements}
+                                disabled={unifiedThemes.length === 0}
+                                className="w-full bg-indigo-600 hover:bg-indigo-700"
+                                size="sm"
+                              >
+                                Generate Q-Statements
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        )}
 
-                        {/* Generate Hypotheses */}
-                        <Card className="border border-purple-200 hover:border-purple-400 transition-colors">
-                          <CardContent className="p-4">
-                            <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                              <GitBranch className="w-4 h-4 text-purple-600" />
-                              Hypotheses
-                            </h4>
-                            <p className="text-xs text-gray-600 mb-3">
-                              Generate testable hypotheses with variables
-                              identified
-                            </p>
-                            <Button
-                              onClick={handleGenerateHypotheses}
-                              disabled={
-                                selectedThemeIds.length === 0 ||
-                                loadingHypotheses
-                              }
-                              className="w-full bg-purple-600 hover:bg-purple-700"
-                              size="sm"
-                            >
-                              {loadingHypotheses ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Generating...
-                                </>
-                              ) : (
-                                <>Generate Hypotheses</>
-                              )}
-                            </Button>
-                          </CardContent>
-                        </Card>
+                        {/* Complete Survey (Survey Construction ONLY) */}
+                        {extractionPurpose === 'survey_construction' && (
+                          <Card className="border border-amber-200 hover:border-amber-400 transition-colors">
+                            <CardContent className="p-4">
+                              <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-amber-600" />
+                                Complete Survey (Primary)
+                              </h4>
+                              <p className="text-xs text-gray-600 mb-3">
+                                Generate validated survey scales with
+                                psychometric properties
+                              </p>
+                              <Button
+                                onClick={() => setShowSurveyModal(true)}
+                                disabled={
+                                  selectedThemeIds.length === 0 || loadingSurvey
+                                }
+                                className="w-full bg-amber-600 hover:bg-amber-700"
+                                size="sm"
+                              >
+                                {loadingSurvey ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Generating...
+                                  </>
+                                ) : (
+                                  <>Generate Complete Survey</>
+                                )}
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        )}
 
-                        {/* Map Constructs */}
-                        <Card className="border border-green-200 hover:border-green-400 transition-colors">
-                          <CardContent className="p-4">
-                            <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                              <GitBranch className="w-4 h-4 text-green-600" />
-                              Construct Map
-                            </h4>
-                            <p className="text-xs text-gray-600 mb-3">
-                              Map themes to theoretical constructs with
-                              relationships
-                            </p>
-                            <Button
-                              onClick={handleMapConstructs}
-                              disabled={
-                                selectedThemeIds.length === 0 ||
-                                loadingConstructs
-                              }
-                              className="w-full bg-green-600 hover:bg-green-700"
-                              size="sm"
-                            >
-                              {loadingConstructs ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Mapping...
-                                </>
-                              ) : (
-                                <>Map Constructs</>
-                              )}
-                            </Button>
-                          </CardContent>
-                        </Card>
+                        {/* Research Questions (Literature Synthesis, Qualitative Analysis, Hypothesis Generation) */}
+                        {(extractionPurpose === 'literature_synthesis' ||
+                          extractionPurpose === 'qualitative_analysis' ||
+                          extractionPurpose === 'hypothesis_generation' ||
+                          !extractionPurpose) && (
+                          <Card className="border border-blue-200 hover:border-blue-400 transition-colors">
+                            <CardContent className="p-4">
+                              <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4 text-blue-600" />
+                                Research Questions
+                              </h4>
+                              <p className="text-xs text-gray-600 mb-3">
+                                Generate AI-suggested research questions from
+                                selected themes
+                              </p>
+                              <Button
+                                onClick={handleGenerateQuestions}
+                                disabled={
+                                  selectedThemeIds.length === 0 ||
+                                  loadingQuestions
+                                }
+                                className="w-full"
+                                size="sm"
+                              >
+                                {loadingQuestions ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Generating...
+                                  </>
+                                ) : (
+                                  <>Generate Questions</>
+                                )}
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        )}
 
-                        {/* Generate Complete Survey */}
-                        <Card className="border border-amber-200 hover:border-amber-400 transition-colors">
-                          <CardContent className="p-4">
-                            <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                              <Sparkles className="w-4 h-4 text-amber-600" />
-                              Complete Survey
-                            </h4>
-                            <p className="text-xs text-gray-600 mb-3">
-                              One-click survey generation from themes
-                            </p>
-                            <Button
-                              onClick={() => setShowSurveyModal(true)}
-                              disabled={
-                                selectedThemeIds.length === 0 || loadingSurvey
-                              }
-                              className="w-full bg-amber-600 hover:bg-amber-700"
-                              size="sm"
-                            >
-                              {loadingSurvey ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Generating...
-                                </>
-                              ) : (
-                                'Generate Survey'
-                              )}
-                            </Button>
-                          </CardContent>
-                        </Card>
+                        {/* Hypotheses (Hypothesis Generation, Literature Synthesis, Qualitative Analysis) */}
+                        {(extractionPurpose === 'hypothesis_generation' ||
+                          extractionPurpose === 'literature_synthesis' ||
+                          extractionPurpose === 'qualitative_analysis' ||
+                          !extractionPurpose) && (
+                          <Card className="border border-purple-200 hover:border-purple-400 transition-colors">
+                            <CardContent className="p-4">
+                              <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                <GitBranch className="w-4 h-4 text-purple-600" />
+                                Hypotheses
+                              </h4>
+                              <p className="text-xs text-gray-600 mb-3">
+                                Generate testable hypotheses with variables
+                                identified
+                              </p>
+                              <Button
+                                onClick={handleGenerateHypotheses}
+                                disabled={
+                                  selectedThemeIds.length === 0 ||
+                                  loadingHypotheses
+                                }
+                                className="w-full bg-purple-600 hover:bg-purple-700"
+                                size="sm"
+                              >
+                                {loadingHypotheses ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Generating...
+                                  </>
+                                ) : (
+                                  <>Generate Hypotheses</>
+                                )}
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Construct Map (Hypothesis Generation, Literature Synthesis, Qualitative Analysis) */}
+                        {(extractionPurpose === 'hypothesis_generation' ||
+                          extractionPurpose === 'literature_synthesis' ||
+                          extractionPurpose === 'qualitative_analysis' ||
+                          !extractionPurpose) && (
+                          <Card className="border border-green-200 hover:border-green-400 transition-colors">
+                            <CardContent className="p-4">
+                              <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                <GitBranch className="w-4 h-4 text-green-600" />
+                                Construct Map
+                              </h4>
+                              <p className="text-xs text-gray-600 mb-3">
+                                Map themes to theoretical constructs with
+                                relationships
+                              </p>
+                              <Button
+                                onClick={handleMapConstructs}
+                                disabled={
+                                  selectedThemeIds.length === 0 ||
+                                  loadingConstructs
+                                }
+                                className="w-full bg-green-600 hover:bg-green-700"
+                                size="sm"
+                              >
+                                {loadingConstructs ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Mapping...
+                                  </>
+                                ) : (
+                                  <>Map Constructs</>
+                                )}
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Complete Survey (Qualitative Analysis fallback only - primary is for survey_construction) */}
+                        {(extractionPurpose === 'qualitative_analysis' ||
+                          !extractionPurpose) && (
+                          <Card className="border border-amber-200 hover:border-amber-400 transition-colors">
+                            <CardContent className="p-4">
+                              <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-amber-600" />
+                                Complete Survey
+                              </h4>
+                              <p className="text-xs text-gray-600 mb-3">
+                                One-click survey generation from themes
+                              </p>
+                              <Button
+                                onClick={() => setShowSurveyModal(true)}
+                                disabled={
+                                  selectedThemeIds.length === 0 || loadingSurvey
+                                }
+                                className="w-full bg-amber-600 hover:bg-amber-700"
+                                size="sm"
+                              >
+                                {loadingSurvey ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Generating...
+                                  </>
+                                ) : (
+                                  'Generate Survey'
+                                )}
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        )}
                       </div>
 
-                      {/* Results Display */}
-                      {researchQuestions.length > 0 && (
-                        <div className="mt-6">
-                          <AIResearchQuestionSuggestions
-                            questions={researchQuestions}
-                            onSelectQuestion={q => {
-                              // Phase 10 Day 5.12: Save selected question and navigate to design page
-                              const selectedThemes = unifiedThemes.filter(theme =>
-                                selectedThemeIds.includes(theme.id)
-                              );
-                              saveResearchQuestions([q], selectedThemes.map(mapUnifiedThemeToTheme));
-                              toast.success('Research question saved. Opening design page...');
-                              router.push('/design?source=themes&step=question');
-                            }}
-                            onOperationalizeQuestion={q => {
-                              // Phase 10 Day 5.10: Save and navigate to operationalization
-                              const selectedThemes = unifiedThemes.filter(theme =>
-                                selectedThemeIds.includes(theme.id)
-                              );
-                              saveResearchQuestions([q], selectedThemes.map(mapUnifiedThemeToTheme));
-                              toast.success('Opening operationalization panel...');
-                              router.push('/design?source=themes&step=question');
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {hypotheses.length > 0 && (
-                        <div className="mt-6">
-                          <AIHypothesisSuggestions
-                            hypotheses={hypotheses}
-                            onSelectHypothesis={h => {
-                              // Phase 10 Day 5.12: Save selected hypothesis and navigate to design page
-                              const selectedThemes = unifiedThemes.filter(theme =>
-                                selectedThemeIds.includes(theme.id)
-                              );
-                              saveHypotheses([h], selectedThemes.map(mapUnifiedThemeToTheme));
-                              toast.success('Hypothesis saved. Opening design page...');
-                              router.push('/design?source=themes&step=hypotheses');
-                            }}
-                            onTestHypothesis={h => {
-                              // Phase 10 Day 5.11: Save and navigate to hypothesis testing
-                              const selectedThemes = unifiedThemes.filter(theme =>
-                                selectedThemeIds.includes(theme.id)
-                              );
-                              saveHypotheses([h], selectedThemes.map(mapUnifiedThemeToTheme));
-                              toast.success('Opening hypothesis testing panel...');
-                              router.push('/design?source=themes&step=hypotheses');
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {constructMappings.length > 0 && (
-                        <div className="mt-6">
-                          <ThemeConstructMap
-                            mappings={constructMappings}
-                            onConstructClick={id => {
-                              // Phase 10 Day 5.12: Show construct details
-                              const mapping = constructMappings.find(m => m.construct.id === id);
-                              if (mapping) {
-                                toast.info(
-                                  `${mapping.construct.name}: ${mapping.construct.themes.length} themes, ${mapping.relatedConstructs.length} relationships`,
-                                  { duration: 4000 }
+                      {/* Results Display - PHASE 10 DAY 5.17.5: Only show for appropriate purposes */}
+                      {researchQuestions.length > 0 &&
+                        (extractionPurpose === 'literature_synthesis' ||
+                          extractionPurpose === 'qualitative_analysis' ||
+                          extractionPurpose === 'hypothesis_generation' ||
+                          !extractionPurpose) && (
+                          <div className="mt-6">
+                            <AIResearchQuestionSuggestions
+                              questions={researchQuestions}
+                              onSelectQuestion={q => {
+                                // Phase 10 Day 5.12: Save selected question and navigate to design page
+                                const selectedThemes = unifiedThemes.filter(
+                                  theme => selectedThemeIds.includes(theme.id)
                                 );
-                              }
-                            }}
-                            onRelationshipClick={(source, target) => {
-                              // Phase 10 Day 5.12: Show relationship details
-                              const sourceMapping = constructMappings.find(
-                                m => m.construct.id === source
-                              );
-                              const targetMapping = constructMappings.find(
-                                m => m.construct.id === target
-                              );
-                              if (sourceMapping && targetMapping) {
-                                toast.info(
-                                  `Relationship: ${sourceMapping.construct.name} → ${targetMapping.construct.name}`,
-                                  { duration: 3000 }
+                                saveResearchQuestions(
+                                  [q],
+                                  selectedThemes.map(mapUnifiedThemeToTheme)
                                 );
-                              }
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {generatedSurvey && (
-                        <div className="mt-6">
-                          <GeneratedSurveyPreview
-                            survey={generatedSurvey}
-                            onEdit={() => {
-                              // Phase 10 Day 5.12: Save survey and navigate to questionnaire builder
-                              const selectedThemes = unifiedThemes.filter(theme =>
-                                selectedThemeIds.includes(theme.id)
-                              );
-                              // Save generated survey to localStorage for questionnaire builder import
-                              try {
-                                const surveyData = {
-                                  survey: generatedSurvey,
-                                  themes: selectedThemes.map(mapUnifiedThemeToTheme),
-                                  purpose: extractionPurpose || 'qualitative_analysis',
-                                  generatedAt: new Date().toISOString(),
-                                };
-                                localStorage.setItem('theme_generated_survey', JSON.stringify(surveyData));
-                                toast.success('Survey saved. Opening Questionnaire Builder...');
-                                router.push('/questionnaire/builder-pro?import=survey&source=themes');
-                              } catch (error) {
-                                console.error('Failed to save survey:', error);
-                                toast.error('Failed to save survey. Please try again.');
-                              }
-                            }}
-                            onExport={format => {
-                              // Phase 10 Day 5.12: Export survey in selected format
-                              try {
-                                const selectedThemes = unifiedThemes.filter(theme =>
-                                  selectedThemeIds.includes(theme.id)
+                                toast.success(
+                                  'Research question saved. Opening design page...'
                                 );
+                                router.push(
+                                  '/design?source=themes&step=question'
+                                );
+                              }}
+                              onOperationalizeQuestion={q => {
+                                // Phase 10 Day 5.10: Save and navigate to operationalization
+                                const selectedThemes = unifiedThemes.filter(
+                                  theme => selectedThemeIds.includes(theme.id)
+                                );
+                                saveResearchQuestions(
+                                  [q],
+                                  selectedThemes.map(mapUnifiedThemeToTheme)
+                                );
+                                toast.success(
+                                  'Opening operationalization panel...'
+                                );
+                                router.push(
+                                  '/design?source=themes&step=question'
+                                );
+                              }}
+                            />
+                          </div>
+                        )}
 
-                                if (format === 'json') {
-                                  const data = {
-                                    survey: generatedSurvey,
-                                    themes: selectedThemes.map(mapUnifiedThemeToTheme),
-                                    metadata: {
-                                      generatedAt: new Date().toISOString(),
-                                      purpose: extractionPurpose || 'qualitative_analysis',
-                                      platform: 'VQMethod',
-                                    },
-                                  };
-                                  const blob = new Blob([JSON.stringify(data, null, 2)], {
-                                    type: 'application/json',
-                                  });
-                                  const url = URL.createObjectURL(blob);
-                                  const a = document.createElement('a');
-                                  a.href = url;
-                                  a.download = `survey-${Date.now()}.json`;
-                                  document.body.appendChild(a);
-                                  a.click();
-                                  document.body.removeChild(a);
-                                  URL.revokeObjectURL(url);
-                                  toast.success('Survey exported as JSON');
-                                } else if (format === 'csv') {
-                                  const csvRows: string[] = [];
-                                  csvRows.push('Section,Item ID,Text,Type,Scale');
+                      {/* Hypotheses Results - PHASE 10 DAY 5.17.5: Only show for appropriate purposes */}
+                      {hypotheses.length > 0 &&
+                        (extractionPurpose === 'hypothesis_generation' ||
+                          extractionPurpose === 'literature_synthesis' ||
+                          extractionPurpose === 'qualitative_analysis' ||
+                          !extractionPurpose) && (
+                          <div className="mt-6">
+                            <AIHypothesisSuggestions
+                              hypotheses={hypotheses}
+                              onSelectHypothesis={h => {
+                                // Phase 10 Day 5.12: Save selected hypothesis and navigate to design page
+                                const selectedThemes = unifiedThemes.filter(
+                                  theme => selectedThemeIds.includes(theme.id)
+                                );
+                                saveHypotheses(
+                                  [h],
+                                  selectedThemes.map(mapUnifiedThemeToTheme)
+                                );
+                                toast.success(
+                                  'Hypothesis saved. Opening design page...'
+                                );
+                                router.push(
+                                  '/design?source=themes&step=hypotheses'
+                                );
+                              }}
+                              onTestHypothesis={h => {
+                                // Phase 10 Day 5.11: Save and navigate to hypothesis testing
+                                const selectedThemes = unifiedThemes.filter(
+                                  theme => selectedThemeIds.includes(theme.id)
+                                );
+                                saveHypotheses(
+                                  [h],
+                                  selectedThemes.map(mapUnifiedThemeToTheme)
+                                );
+                                toast.success(
+                                  'Opening hypothesis testing panel...'
+                                );
+                                router.push(
+                                  '/design?source=themes&step=hypotheses'
+                                );
+                              }}
+                            />
+                          </div>
+                        )}
 
-                                  generatedSurvey.sections.forEach(section => {
-                                    section.items.forEach(item => {
-                                      const scaleText = item.options
-                                        ? item.options.join(' | ')
-                                        : item.scaleType || '';
-                                      csvRows.push(
-                                        `"${section.title}","${item.id}","${item.text.replace(/"/g, '""')}","${item.type}","${scaleText}"`
-                                      );
-                                    });
-                                  });
-
-                                  const blob = new Blob([csvRows.join('\n')], {
-                                    type: 'text/csv',
-                                  });
-                                  const url = URL.createObjectURL(blob);
-                                  const a = document.createElement('a');
-                                  a.href = url;
-                                  a.download = `survey-${Date.now()}.csv`;
-                                  document.body.appendChild(a);
-                                  a.click();
-                                  document.body.removeChild(a);
-                                  URL.revokeObjectURL(url);
-                                  toast.success('Survey exported as CSV');
-                                } else if (format === 'pdf' || format === 'word') {
+                      {/* Construct Map Results - PHASE 10 DAY 5.17.5: Only show for appropriate purposes */}
+                      {constructMappings.length > 0 &&
+                        (extractionPurpose === 'hypothesis_generation' ||
+                          extractionPurpose === 'literature_synthesis' ||
+                          extractionPurpose === 'qualitative_analysis' ||
+                          !extractionPurpose) && (
+                          <div className="mt-6">
+                            <ThemeConstructMap
+                              mappings={constructMappings}
+                              onConstructClick={id => {
+                                // Phase 10 Day 5.12: Show construct details
+                                const mapping = constructMappings.find(
+                                  m => m.construct.id === id
+                                );
+                                if (mapping) {
                                   toast.info(
-                                    `${format.toUpperCase()} export coming soon! Use JSON/CSV for now.`
+                                    `${mapping.construct.name}: ${mapping.construct.themes.length} themes, ${mapping.relatedConstructs.length} relationships`,
+                                    { duration: 4000 }
                                   );
-                                } else {
-                                  toast.error('Unsupported export format');
                                 }
-                              } catch (error) {
-                                console.error('Export failed:', error);
-                                toast.error('Failed to export survey. Please try again.');
-                              }
-                            }}
-                          />
-                        </div>
-                      )}
+                              }}
+                              onRelationshipClick={(source, target) => {
+                                // Phase 10 Day 5.12: Show relationship details
+                                const sourceMapping = constructMappings.find(
+                                  m => m.construct.id === source
+                                );
+                                const targetMapping = constructMappings.find(
+                                  m => m.construct.id === target
+                                );
+                                if (sourceMapping && targetMapping) {
+                                  toast.info(
+                                    `Relationship: ${sourceMapping.construct.name} → ${targetMapping.construct.name}`,
+                                    { duration: 3000 }
+                                  );
+                                }
+                              }}
+                            />
+                          </div>
+                        )}
+
+                      {/* Generated Survey Results - PHASE 10 DAY 5.17.5: Only show for appropriate purposes */}
+                      {generatedSurvey &&
+                        (extractionPurpose === 'survey_construction' ||
+                          extractionPurpose === 'qualitative_analysis' ||
+                          !extractionPurpose) && (
+                          <div className="mt-6">
+                            <GeneratedSurveyPreview
+                              survey={generatedSurvey}
+                              onEdit={() => {
+                                // Phase 10 Day 5.12: Save survey and navigate to questionnaire builder
+                                const selectedThemes = unifiedThemes.filter(
+                                  theme => selectedThemeIds.includes(theme.id)
+                                );
+                                // Save generated survey to localStorage for questionnaire builder import
+                                try {
+                                  const surveyData = {
+                                    survey: generatedSurvey,
+                                    themes: selectedThemes.map(
+                                      mapUnifiedThemeToTheme
+                                    ),
+                                    purpose:
+                                      extractionPurpose ||
+                                      'qualitative_analysis',
+                                    generatedAt: new Date().toISOString(),
+                                  };
+                                  localStorage.setItem(
+                                    'theme_generated_survey',
+                                    JSON.stringify(surveyData)
+                                  );
+                                  toast.success(
+                                    'Survey saved. Opening Questionnaire Builder...'
+                                  );
+                                  router.push(
+                                    '/questionnaire/builder-pro?import=survey&source=themes'
+                                  );
+                                } catch (error) {
+                                  console.error(
+                                    'Failed to save survey:',
+                                    error
+                                  );
+                                  toast.error(
+                                    'Failed to save survey. Please try again.'
+                                  );
+                                }
+                              }}
+                              onExport={format => {
+                                // Phase 10 Day 5.12: Export survey in selected format
+                                try {
+                                  const selectedThemes = unifiedThemes.filter(
+                                    theme => selectedThemeIds.includes(theme.id)
+                                  );
+
+                                  if (format === 'json') {
+                                    const data = {
+                                      survey: generatedSurvey,
+                                      themes: selectedThemes.map(
+                                        mapUnifiedThemeToTheme
+                                      ),
+                                      metadata: {
+                                        generatedAt: new Date().toISOString(),
+                                        purpose:
+                                          extractionPurpose ||
+                                          'qualitative_analysis',
+                                        platform: 'VQMethod',
+                                      },
+                                    };
+                                    const blob = new Blob(
+                                      [JSON.stringify(data, null, 2)],
+                                      {
+                                        type: 'application/json',
+                                      }
+                                    );
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `survey-${Date.now()}.json`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                    toast.success('Survey exported as JSON');
+                                  } else if (format === 'csv') {
+                                    const csvRows: string[] = [];
+                                    csvRows.push(
+                                      'Section,Item ID,Text,Type,Scale'
+                                    );
+
+                                    generatedSurvey.sections.forEach(
+                                      section => {
+                                        section.items.forEach(item => {
+                                          const scaleText = item.options
+                                            ? item.options.join(' | ')
+                                            : item.scaleType || '';
+                                          csvRows.push(
+                                            `"${section.title}","${item.id}","${item.text.replace(/"/g, '""')}","${item.type}","${scaleText}"`
+                                          );
+                                        });
+                                      }
+                                    );
+
+                                    const blob = new Blob(
+                                      [csvRows.join('\n')],
+                                      {
+                                        type: 'text/csv',
+                                      }
+                                    );
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `survey-${Date.now()}.csv`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                    toast.success('Survey exported as CSV');
+                                  } else if (
+                                    format === 'pdf' ||
+                                    format === 'word'
+                                  ) {
+                                    toast.info(
+                                      `${format.toUpperCase()} export coming soon! Use JSON/CSV for now.`
+                                    );
+                                  } else {
+                                    toast.error('Unsupported export format');
+                                  }
+                                } catch (error) {
+                                  console.error('Export failed:', error);
+                                  toast.error(
+                                    'Failed to export survey. Please try again.'
+                                  );
+                                }
+                              }}
+                            />
+                          </div>
+                        )}
                     </CardContent>
                   </Card>
                 </div>
@@ -5843,6 +6189,84 @@ Quality Tiers:
         progress={extractionProgress}
         onClose={resetExtractionProgress}
       />
+
+      {/* Phase 10 Day 19: Incremental Extraction Modals */}
+      {incrementalExtraction.showCorpusManagementModal && (
+        <CorpusManagementPanel
+          onSelectCorpus={(corpus: any) => {
+            incrementalExtraction.selectCorpus(corpus);
+            incrementalExtraction.closeCorpusManagement();
+            incrementalExtraction.openIncrementalExtraction(corpus);
+          }}
+          onCreateCorpus={() => {
+            incrementalExtraction.closeCorpusManagement();
+            incrementalExtraction.openIncrementalExtraction();
+          }}
+        />
+      )}
+
+      {incrementalExtraction.showIncrementalExtractionModal && (
+        <IncrementalExtractionModal
+          isOpen={incrementalExtraction.showIncrementalExtractionModal}
+          onClose={incrementalExtraction.closeIncrementalExtraction}
+          availablePapers={papers}
+          {...(incrementalExtraction.selectedCorpus && {
+            existingCorpus: incrementalExtraction.selectedCorpus,
+          })}
+          onComplete={async result => {
+            // Update themes with the new incremental results
+            if (result && result.themes) {
+              setUnifiedThemes(result.themes);
+              toast.success(
+                `Incremental extraction complete! ${result.themes.length} themes identified. ` +
+                  `$${result.costSavings.estimatedDollarsSaved.toFixed(2)} saved via caching.`
+              );
+            }
+            incrementalExtraction.closeIncrementalExtraction();
+          }}
+        />
+      )}
+
+      {incrementalExtraction.showSaturationDashboard &&
+        incrementalExtraction.extractionResult?.saturation && (
+          <SaturationDashboard
+            saturation={incrementalExtraction.extractionResult.saturation}
+            themeHistory={[]}
+            onAddMorePapers={() => {
+              incrementalExtraction.closeSaturationDashboard();
+              incrementalExtraction.openIncrementalExtraction();
+            }}
+          />
+        )}
+
+      {/* Phase 10 Day 18: Saturation Celebration Animation */}
+      {incrementalExtraction.showCelebrationAnimation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            exit={{ scale: 0, rotate: 180 }}
+            className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-2xl max-w-md"
+          >
+            <div className="text-center">
+              <div className="text-6xl mb-4">🎉</div>
+              <h3 className="text-2xl font-bold mb-2">
+                Theoretical Saturation Reached!
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                No new themes emerged from the latest sources. Your research
+                corpus has reached theoretical saturation.
+              </p>
+              <Button
+                onClick={incrementalExtraction.dismissCelebration}
+                className="w-full"
+              >
+                Continue Research
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Phase 10 Day 5.12: Survey Generation Modal */}
       {showSurveyModal && (

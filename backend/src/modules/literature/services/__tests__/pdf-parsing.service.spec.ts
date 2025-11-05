@@ -88,7 +88,7 @@ describe('PDFParsingService', () => {
       expect(mockedAxios.get).toHaveBeenNthCalledWith(
         1,
         expect.stringContaining('unpaywall.org'),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -211,7 +211,10 @@ describe('PDFParsingService', () => {
         { text: 'Content\nBibliography\n[1] Citation', expected: 'Content' },
         { text: 'Content\nReferências\n[1] Citação', expected: 'Content' },
         { text: 'Content\nRéférences\n[1] Citation', expected: 'Content' },
-        { text: 'Content\nLiteraturverzeichnis\n[1] Zitat', expected: 'Content' },
+        {
+          text: 'Content\nLiteraturverzeichnis\n[1] Zitat',
+          expected: 'Content',
+        },
       ];
 
       testCases.forEach(({ text, expected }) => {
@@ -260,15 +263,25 @@ describe('PDFParsingService', () => {
       const mockCleanedText = 'Sample cleaned text for testing purposes.';
 
       // Mock database calls
-      (prismaService.paper.findUnique as jest.Mock).mockResolvedValueOnce(mockPaper);
+      (prismaService.paper.findUnique as jest.Mock).mockResolvedValueOnce(
+        mockPaper,
+      );
       (prismaService.paper.update as jest.Mock)
         .mockResolvedValueOnce({ ...mockPaper, fullTextStatus: 'fetching' })
-        .mockResolvedValueOnce({ ...mockPaper, fullTextStatus: 'success', fullText: mockCleanedText });
+        .mockResolvedValueOnce({
+          ...mockPaper,
+          fullTextStatus: 'success',
+          fullText: mockCleanedText,
+        });
       (prismaService.paper.findFirst as jest.Mock).mockResolvedValueOnce(null); // No duplicates
 
       // Mock PDF fetching
       jest.spyOn(service, 'fetchPDF').mockResolvedValueOnce(mockPdfBuffer);
-      jest.spyOn(service, 'extractText').mockResolvedValueOnce('Sample PDF text with references section\nReferences\n[1] Citation');
+      jest
+        .spyOn(service, 'extractText')
+        .mockResolvedValueOnce(
+          'Sample PDF text with references section\nReferences\n[1] Citation',
+        );
       jest.spyOn(service, 'cleanText').mockReturnValueOnce(mockCleanedText);
 
       const result = await service.processFullText('test-paper-1');
@@ -283,7 +296,7 @@ describe('PDFParsingService', () => {
             fullTextStatus: 'success',
             hasFullText: true,
           }),
-        })
+        }),
       );
     });
 
@@ -310,7 +323,9 @@ describe('PDFParsingService', () => {
     });
 
     it('should fail if PDF fetch returns null', async () => {
-      (prismaService.paper.findUnique as jest.Mock).mockResolvedValueOnce(mockPaper);
+      (prismaService.paper.findUnique as jest.Mock).mockResolvedValueOnce(
+        mockPaper,
+      );
       (prismaService.paper.update as jest.Mock).mockResolvedValue(mockPaper);
 
       jest.spyOn(service, 'fetchPDF').mockResolvedValueOnce(null);
@@ -325,7 +340,9 @@ describe('PDFParsingService', () => {
     it('should fail if text extraction returns null', async () => {
       const mockPdfBuffer = Buffer.from('PDF content');
 
-      (prismaService.paper.findUnique as jest.Mock).mockResolvedValueOnce(mockPaper);
+      (prismaService.paper.findUnique as jest.Mock).mockResolvedValueOnce(
+        mockPaper,
+      );
       (prismaService.paper.update as jest.Mock).mockResolvedValue(mockPaper);
 
       jest.spyOn(service, 'fetchPDF').mockResolvedValueOnce(mockPdfBuffer);
@@ -376,7 +393,12 @@ describe('PDFParsingService', () => {
 
       (prismaService.paper.findMany as jest.Mock).mockResolvedValueOnce(papers);
 
-      const result = await service.getBulkStatus(['paper-1', 'paper-2', 'paper-3', 'paper-4']);
+      const result = await service.getBulkStatus([
+        'paper-1',
+        'paper-2',
+        'paper-3',
+        'paper-4',
+      ]);
 
       expect(result).toEqual({
         ready: ['paper-1'],

@@ -165,10 +165,7 @@ export class ReportController {
   })
   @ApiBody({ type: GenerateReportDto })
   @ApiResponse({ status: 200, description: 'Preview generated successfully' })
-  async previewReport(
-    @Body() dto: GenerateReportDto,
-    @Request() req: any,
-  ) {
+  async previewReport(@Body() dto: GenerateReportDto, @Request() req: any) {
     try {
       // Fetch study data for preview
       const study = await this.reportService['fetchStudyData'](dto.studyId);
@@ -176,9 +173,15 @@ export class ReportController {
         throw new NotFoundException(`Study ${dto.studyId} not found`);
       }
 
-      const literatureData = await this.reportService['fetchPhase9Data'](dto.studyId);
-      const researchDesignData = await this.reportService['fetchPhase95Data'](dto.studyId);
-      const provenance = await this.reportService['buildProvenanceChain'](dto.studyId);
+      const literatureData = await this.reportService['fetchPhase9Data'](
+        dto.studyId,
+      );
+      const researchDesignData = await this.reportService['fetchPhase95Data'](
+        dto.studyId,
+      );
+      const provenance = await this.reportService['buildProvenanceChain'](
+        dto.studyId,
+      );
 
       // Generate sections for preview
       const sections = await this.reportService['generateSections']({
@@ -220,7 +223,9 @@ export class ReportController {
         provenanceChainCount: provenance.length,
         literatureCount: literatureData?.papers?.length || 0,
         researchQuestionsCount: researchDesignData?.refinedQuestion ? 1 : 0,
-        hypothesesCount: Array.isArray(researchDesignData?.hypotheses) ? researchDesignData.hypotheses.length : 0,
+        hypothesesCount: Array.isArray(researchDesignData?.hypotheses)
+          ? researchDesignData.hypotheses.length
+          : 0,
         format: dto.format || 'html',
         templateType: dto.templateType || 'apa',
       };
@@ -1502,7 +1507,11 @@ export class ReportController {
     @Body() body: CollaborationDto.GenerateShareLinkDto,
     @Request() req: any,
   ) {
-    return await this.sharingService.generateShareLink(reportId, req.user.userId, body);
+    return await this.sharingService.generateShareLink(
+      reportId,
+      req.user.userId,
+      body,
+    );
   }
 
   /**
@@ -1580,7 +1589,11 @@ export class ReportController {
     @Body() body: CollaborationDto.UpdateShareLinkDto,
     @Request() req: any,
   ) {
-    return await this.sharingService.updateShareLink(linkId, req.user.userId, body);
+    return await this.sharingService.updateShareLink(
+      linkId,
+      req.user.userId,
+      body,
+    );
   }
 
   /**
@@ -1595,7 +1608,10 @@ export class ReportController {
     @Param('reportId', ParseUUIDPipe) reportId: string,
     @Request() req: any,
   ) {
-    return await this.sharingService.makeReportPublic(reportId, req.user.userId);
+    return await this.sharingService.makeReportPublic(
+      reportId,
+      req.user.userId,
+    );
   }
 
   /**
@@ -1610,7 +1626,10 @@ export class ReportController {
     @Param('reportId', ParseUUIDPipe) reportId: string,
     @Request() req: any,
   ) {
-    return await this.sharingService.makeReportPrivate(reportId, req.user.userId);
+    return await this.sharingService.makeReportPrivate(
+      reportId,
+      req.user.userId,
+    );
   }
 
   /**
@@ -1624,6 +1643,9 @@ export class ReportController {
     @Param('reportId', ParseUUIDPipe) reportId: string,
     @Request() req: any,
   ) {
-    return await this.sharingService.getSharingStatistics(reportId, req.user.userId);
+    return await this.sharingService.getSharingStatistics(
+      reportId,
+      req.user.userId,
+    );
   }
 }

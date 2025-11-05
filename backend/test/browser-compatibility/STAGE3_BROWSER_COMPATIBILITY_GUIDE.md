@@ -1,4 +1,5 @@
 # Stage 3: Browser Compatibility Testing Guide
+
 ## Phase 10 Day 5.7 - Enterprise-Grade Cross-Browser Validation
 
 **Purpose:** Ensure consistent user experience across all major browsers and devices
@@ -13,6 +14,7 @@
 Academic researchers use diverse computing environments - from institutional Windows desktops to personal MacBooks to Linux research servers. The VQMethod platform must work flawlessly across all major browsers.
 
 **Target Browser Support:**
+
 - ✅ **Chrome/Chromium:** 95% (Latest 2 versions)
 - ✅ **Firefox:** 90% (Latest 2 versions)
 - ✅ **Safari:** 85% (macOS + iOS, Latest 2 versions)
@@ -27,6 +29,7 @@ Academic researchers use diverse computing environments - from institutional Win
 ### Setup Playwright Test Suite
 
 **Installation:**
+
 ```bash
 cd frontend
 npm install -D @playwright/test
@@ -37,6 +40,7 @@ npx playwright --version
 ```
 
 **Configure Playwright:**
+
 ```typescript
 // frontend/playwright.config.ts (update existing or create)
 import { defineConfig, devices } from '@playwright/test';
@@ -116,7 +120,6 @@ Create test file: `frontend/tests/browser-compatibility/core-features.spec.ts`
 import { test, expect } from '@playwright/test';
 
 test.describe('Cross-Browser Compatibility Tests', () => {
-
   test('should render homepage correctly', async ({ page, browserName }) => {
     await page.goto('/');
 
@@ -131,7 +134,7 @@ test.describe('Cross-Browser Compatibility Tests', () => {
 
     // Test 4: No console errors (except known warnings)
     const consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       if (msg.type() === 'error') consoleErrors.push(msg.text());
     });
 
@@ -163,23 +166,31 @@ test.describe('Cross-Browser Compatibility Tests', () => {
     await searchButton.click();
 
     // Test 5: Results load (wait for spinner to disappear)
-    await page.waitForSelector('[data-testid="search-spinner"]', {
-      state: 'hidden',
-      timeout: 10000
-    }).catch(() => {
-      console.log(`⚠️  ${browserName}: Search spinner timeout (may be cached)`);
-    });
+    await page
+      .waitForSelector('[data-testid="search-spinner"]', {
+        state: 'hidden',
+        timeout: 10000,
+      })
+      .catch(() => {
+        console.log(
+          `⚠️  ${browserName}: Search spinner timeout (may be cached)`,
+        );
+      });
 
     console.log(`✅ ${browserName}: Literature search works`);
   });
 
-  test('should handle responsive design', async ({ page, viewport, browserName }) => {
+  test('should handle responsive design', async ({
+    page,
+    viewport,
+    browserName,
+  }) => {
     await page.goto('/discover/literature');
 
     // Test different viewport sizes
     const viewports = [
-      { width: 375, height: 667, name: 'Mobile' },   // iPhone SE
-      { width: 768, height: 1024, name: 'Tablet' },  // iPad
+      { width: 375, height: 667, name: 'Mobile' }, // iPhone SE
+      { width: 768, height: 1024, name: 'Tablet' }, // iPad
       { width: 1920, height: 1080, name: 'Desktop' },
     ];
 
@@ -193,12 +204,17 @@ test.describe('Cross-Browser Compatibility Tests', () => {
 
       // Check for horizontal scrollbar (should not exist)
       const hasHorizontalScroll = await page.evaluate(() => {
-        return document.documentElement.scrollWidth > document.documentElement.clientWidth;
+        return (
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth
+        );
       });
 
       expect(hasHorizontalScroll).toBe(false);
 
-      console.log(`✅ ${browserName} @ ${vp.name} (${vp.width}x${vp.height}): No horizontal scroll`);
+      console.log(
+        `✅ ${browserName} @ ${vp.name} (${vp.width}x${vp.height}): No horizontal scroll`,
+      );
     }
   });
 
@@ -265,7 +281,10 @@ test.describe('Cross-Browser Compatibility Tests', () => {
         fetch: typeof fetch !== 'undefined',
         arrow: (() => true)(),
         spread: [...[1, 2]].length === 2,
-        destructuring: (() => { const { a } = { a: 1 }; return a === 1; })(),
+        destructuring: (() => {
+          const { a } = { a: 1 };
+          return a === 1;
+        })(),
         async: (async () => true) instanceof Promise,
       };
       return results;
@@ -297,7 +316,9 @@ test.describe('Cross-Browser Compatibility Tests', () => {
 
       console.log(`✅ ${browserName}: Theme extraction UI works`);
     } else {
-      console.log(`⚠️  ${browserName}: Theme extraction requires auth (skipped)`);
+      console.log(
+        `⚠️  ${browserName}: Theme extraction requires auth (skipped)`,
+      );
     }
   });
 
@@ -311,8 +332,9 @@ test.describe('Cross-Browser Compatibility Tests', () => {
 
     // Check font loading
     const fontsLoaded = await page.evaluate(() => {
-      return document.fonts.check('1em Inter') ||
-             document.fonts.check('1em Arial'); // Fallback
+      return (
+        document.fonts.check('1em Inter') || document.fonts.check('1em Arial')
+      ); // Fallback
     });
 
     expect(fontsLoaded).toBe(true);
@@ -346,6 +368,7 @@ npx playwright show-report
 ```
 
 **Expected Output:**
+
 ```
 Running 56 tests using 7 workers
 
@@ -370,15 +393,16 @@ Report available at: playwright-report/index.html
 
 ### Test Matrix Template
 
-| Feature | Chrome 120 | Firefox 121 | Safari 17 | Edge 120 | Mobile Chrome | Mobile Safari |
-|---------|-----------|-------------|-----------|----------|---------------|---------------|
-| Homepage Load | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Literature Search | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ |
-| Theme Extraction | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| PDF Export | ✅ | ⚠️ | ✅ | ✅ | ❌ | ❌ |
-| Login/Auth | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Feature           | Chrome 120 | Firefox 121 | Safari 17 | Edge 120 | Mobile Chrome | Mobile Safari |
+| ----------------- | ---------- | ----------- | --------- | -------- | ------------- | ------------- |
+| Homepage Load     | ✅         | ✅          | ✅        | ✅       | ✅            | ✅            |
+| Literature Search | ✅         | ✅          | ⚠️        | ✅       | ✅            | ⚠️            |
+| Theme Extraction  | ✅         | ✅          | ✅        | ✅       | ❌            | ❌            |
+| PDF Export        | ✅         | ⚠️          | ✅        | ✅       | ❌            | ❌            |
+| Login/Auth        | ✅         | ✅          | ✅        | ✅       | ✅            | ✅            |
 
 Legend:
+
 - ✅ = Works perfectly
 - ⚠️ = Works with minor issues (document below)
 - ❌ = Broken or unsupported (blocker)
@@ -390,6 +414,7 @@ Legend:
 #### Feature 1: Literature Search
 
 **Test on each browser:**
+
 1. Navigate to http://localhost:3000/discover/literature
 2. Enter query: "machine learning healthcare"
 3. Select sources: arXiv + PubMed
@@ -403,11 +428,13 @@ Legend:
    - [ ] No console errors (F12 → Console tab)
 
 **Known Browser-Specific Issues:**
+
 - **Safari:** May cache aggressively (force reload: Cmd+Shift+R)
 - **Firefox:** DevTools may show CORS warnings (harmless)
 - **Mobile:** Long abstracts may need "Read more" expansion
 
 **Result Template:**
+
 ```
 Browser: Chrome 120
   ✅ PASS - All features work
@@ -425,6 +452,7 @@ Browser: Safari 17
 #### Feature 2: Theme Extraction UI
 
 **Test on each browser:**
+
 1. Login to application
 2. Navigate to literature discovery
 3. Select 3-5 papers
@@ -438,6 +466,7 @@ Browser: Safari 17
    - [ ] No visual glitches
 
 **Known Browser-Specific Issues:**
+
 - **Mobile Safari:** Theme cards may stack incorrectly (CSS grid issue)
 - **Firefox:** Progress bar animation may be choppy
 - **Edge:** No known issues (Chromium-based)
@@ -447,6 +476,7 @@ Browser: Safari 17
 #### Feature 3: Form Inputs & Validation
 
 **Test on each browser:**
+
 1. Navigate to login page
 2. Try to submit empty form
 3. Verify validation errors appear
@@ -461,6 +491,7 @@ Browser: Safari 17
    - [ ] Password visibility toggle works
 
 **Known Browser-Specific Issues:**
+
 - **Safari iOS:** May show system keyboard suggestions
 - **Firefox:** Autofill styling may differ
 - **Chrome:** Password manager integration may interfere
@@ -470,6 +501,7 @@ Browser: Safari 17
 #### Feature 4: Responsive Design (Mobile)
 
 **Test on Mobile Chrome (Android) and Mobile Safari (iOS):**
+
 1. Navigate to all major pages on phone
 2. Rotate device (portrait ↔ landscape)
 3. Pinch to zoom
@@ -482,6 +514,7 @@ Browser: Safari 17
    - [ ] Modals don't overflow screen
 
 **Common Mobile Issues:**
+
 - Fixed positioning elements may not work in Safari iOS
 - Viewport units (vh/vw) behave differently on mobile
 - Touch events differ from mouse events
@@ -493,6 +526,7 @@ Browser: Safari 17
 ### CSS Compatibility
 
 **CSS Grid in IE11 (NOT SUPPORTED):**
+
 ```css
 /* Don't support IE11, but provide graceful degradation */
 .grid-container {
@@ -511,6 +545,7 @@ Browser: Safari 17
 ```
 
 **Safari Flexbox Bugs:**
+
 ```css
 /* Safari has issues with flex-shrink */
 .flex-item {
@@ -520,6 +555,7 @@ Browser: Safari 17
 ```
 
 **Cross-Browser Scrollbar Styling:**
+
 ```css
 /* Webkit (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {
@@ -543,6 +579,7 @@ Browser: Safari 17
 ### JavaScript Compatibility
 
 **Fetch API (Full Support, but check CORS):**
+
 ```typescript
 // Works in all modern browsers
 const response = await fetch('/api/literature/search', {
@@ -558,6 +595,7 @@ if (response.status === 0) {
 ```
 
 **Clipboard API (Safari requires user gesture):**
+
 ```typescript
 // Works in Chrome/Firefox/Edge
 await navigator.clipboard.writeText('Copied text');
@@ -569,10 +607,11 @@ button.addEventListener('click', async () => {
 ```
 
 **Intersection Observer (Full Support):**
+
 ```typescript
 // Works in all modern browsers
 const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
+  entries.forEach((entry) => {
     if (entry.isIntersecting) {
       // Load more papers (infinite scroll)
     }
@@ -589,12 +628,14 @@ observer.observe(loadMoreTrigger);
 ### Screen Reader Testing
 
 **Test on:**
+
 - NVDA (Windows, Firefox)
 - JAWS (Windows, Chrome)
 - VoiceOver (macOS, Safari)
 - TalkBack (Android, Chrome)
 
 **Checklist:**
+
 - [ ] All images have alt text
 - [ ] Form labels properly associated
 - [ ] ARIA landmarks used correctly
@@ -610,11 +651,13 @@ observer.observe(loadMoreTrigger);
 # Browser Compatibility Test Results - [Date]
 
 ## Test Environment
+
 - Test Date: October 29, 2025
 - Tested URL: http://localhost:3000
 - Build Version: [Git commit hash]
 
 ## Browser Versions Tested
+
 - Chrome: 120.0.6099.109
 - Firefox: 121.0
 - Safari: 17.1.2
@@ -625,30 +668,33 @@ observer.observe(loadMoreTrigger);
 ## Test Results Summary
 
 ### Desktop Browsers
-| Feature | Chrome | Firefox | Safari | Edge |
-|---------|--------|---------|--------|------|
-| Homepage | ✅ | ✅ | ✅ | ✅ |
-| Search | ✅ | ✅ | ⚠️ | ✅ |
-| Extraction | ✅ | ✅ | ✅ | ✅ |
-| Forms | ✅ | ✅ | ✅ | ✅ |
-| Export | ✅ | ⚠️ | ✅ | ✅ |
+
+| Feature    | Chrome | Firefox | Safari | Edge |
+| ---------- | ------ | ------- | ------ | ---- |
+| Homepage   | ✅     | ✅      | ✅     | ✅   |
+| Search     | ✅     | ✅      | ⚠️     | ✅   |
+| Extraction | ✅     | ✅      | ✅     | ✅   |
+| Forms      | ✅     | ✅      | ✅     | ✅   |
+| Export     | ✅     | ⚠️      | ✅     | ✅   |
 
 **Overall Compatibility: 96% (48/50 tests passing)**
 
 ### Mobile Browsers
-| Feature | Chrome Mobile | Safari iOS |
-|---------|---------------|------------|
-| Homepage | ✅ | ✅ |
-| Search | ✅ | ⚠️ |
-| Extraction | ✅ | ⚠️ |
-| Forms | ✅ | ✅ |
-| Responsive | ✅ | ⚠️ |
+
+| Feature    | Chrome Mobile | Safari iOS |
+| ---------- | ------------- | ---------- |
+| Homepage   | ✅            | ✅         |
+| Search     | ✅            | ⚠️         |
+| Extraction | ✅            | ⚠️         |
+| Forms      | ✅            | ✅         |
+| Responsive | ✅            | ⚠️         |
 
 **Overall Compatibility: 88% (22/25 tests passing)**
 
 ## Issues Found
 
 ### ISSUE-001: Safari Search Delay
+
 - **Severity:** Medium
 - **Browser:** Safari 17.1.2
 - **Description:** First search takes 8s instead of <3s
@@ -659,6 +705,7 @@ observer.observe(loadMoreTrigger);
 - **Status:** Fix pending
 
 ### ISSUE-002: Firefox PDF Export Formatting
+
 - **Severity:** Low
 - **Browser:** Firefox 121.0
 - **Description:** PDF margins slightly wider than Chrome
@@ -668,6 +715,7 @@ observer.observe(loadMoreTrigger);
 - **Status:** Acceptable (defer to backlog)
 
 ### ISSUE-003: Safari iOS Theme Cards Layout
+
 - **Severity:** Medium
 - **Browser:** Safari iOS 17.1
 - **Description:** Theme cards stack vertically on iPhone (should be 2-column grid)
@@ -679,19 +727,23 @@ observer.observe(loadMoreTrigger);
 ## Recommendations
 
 ### Immediate Fixes (Before Production)
+
 1. Fix Safari iOS theme card layout (ISSUE-003)
 2. Add DNS prefetch for Safari performance (ISSUE-001)
 
 ### Nice-to-Have (Backlog)
+
 1. Optimize Firefox PDF export formatting (ISSUE-002)
 2. Test on older browser versions (Chrome 115, Firefox 115)
 
 ### Browser Support Policy
+
 ✅ **Full Support:** Chrome, Firefox, Safari, Edge (latest 2 versions)
-⚠️  **Partial Support:** Mobile browsers (some features may be limited)
+⚠️ **Partial Support:** Mobile browsers (some features may be limited)
 ❌ **Not Supported:** Internet Explorer 11 (End of Life)
 
 ## Production Readiness: ✅ YES
+
 All critical features work across target browsers. Minor issues documented and acceptable for launch.
 ```
 
@@ -700,6 +752,7 @@ All critical features work across target browsers. Minor issues documented and a
 ## Next Steps
 
 After completing browser compatibility testing:
+
 1. Document all browser-specific issues in GitHub
 2. Prioritize fixes (P0 blockers, P1 before production, P2 backlog)
 3. Add browser testing to CI/CD pipeline (Playwright)

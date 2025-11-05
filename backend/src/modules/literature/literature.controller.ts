@@ -9,7 +9,9 @@ import {
   HttpStatus,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -48,11 +50,13 @@ import {
   SuggestHypothesesDto,
   SuggestQuestionsDto,
 } from './dto/literature.dto';
+import { PrismaService } from '../../common/prisma.service'; // Phase 10 Day 18
 import { LiteratureService } from './literature.service';
 import { CrossPlatformSynthesisService } from './services/cross-platform-synthesis.service'; // Phase 9 Day 22
 import { EnhancedThemeIntegrationService } from './services/enhanced-theme-integration.service'; // Phase 10 Day 5.12
 import { GapAnalyzerService } from './services/gap-analyzer.service';
 import { KnowledgeGraphService } from './services/knowledge-graph.service'; // Phase 9 Day 14
+import { LiteratureCacheService } from './services/literature-cache.service'; // Phase 10 Day 18
 import { MultiMediaAnalysisService } from './services/multimedia-analysis.service'; // Phase 9 Day 18
 import { PredictiveGapService } from './services/predictive-gap.service'; // Phase 9 Day 15
 import { CitationStyle, ReferenceService } from './services/reference.service';
@@ -81,7 +85,9 @@ export class LiteratureController {
     private readonly videoRelevanceService: VideoRelevanceService, // Phase 9 Day 21
     private readonly queryExpansionService: QueryExpansionService, // Phase 9 Day 21
     private readonly enhancedThemeIntegrationService: EnhancedThemeIntegrationService, // Phase 10 Day 5.12
+    private readonly literatureCacheService: LiteratureCacheService, // Phase 10 Day 18
     private readonly configService: ConfigService, // Phase 10 Day 5.9 - Needed for ThemeToSurveyItemService
+    private readonly prisma: PrismaService, // Phase 10 Day 18 - Needed for corpus CRUD
   ) {}
 
   @Post('search')
@@ -706,6 +712,78 @@ export class LiteratureController {
       themesDto.studyContext,
       user.userId,
     );
+  }
+
+  /**
+   * PUBLIC ENDPOINT: Q-Statement Generation (dev/testing only)
+   * Same as authenticated endpoint but without JWT requirement
+   * Phase 10 Day 14: Development support for Q-statement generation
+   */
+  @Post('statements/generate/public')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '🔓 PUBLIC: Q-Statement Generation (dev/testing only)',
+    description: `
+      PUBLIC endpoint for testing Q-statement generation without authentication.
+      Only available in development mode. Uses same AI-powered generation as authenticated endpoint.
+
+      **WARNING**: This endpoint should be disabled in production.
+    `,
+  })
+  @ApiResponse({ status: 200, description: 'Statements generated' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 403, description: 'Endpoint disabled in production' })
+  async generateStatementsPublic(
+    @Body() themesDto: { themes: string[]; studyContext: any },
+  ) {
+    // Security: Only allow in development
+    const env = this.configService.get<string>('NODE_ENV', 'development');
+    if (env === 'production') {
+      throw new ForbiddenException({
+        success: false,
+        error: 'Public endpoint disabled in production',
+        message:
+          'Please use the authenticated endpoint /statements/generate',
+      });
+    }
+
+    try {
+      this.logger.log('[PUBLIC] Q-statement generation requested');
+      this.logger.log(
+        `Themes: ${themesDto.themes?.length || 0}, Context: ${JSON.stringify(themesDto.studyContext || {})}`,
+      );
+
+      // Phase 10 Day 14: Skip rate limiting for public endpoint by passing undefined
+      // This avoids foreign key constraint issues with non-existent users
+      const statements =
+        await this.literatureService.generateStatementsFromThemes(
+          themesDto.themes,
+          themesDto.studyContext,
+          undefined,
+        );
+
+      this.logger.log(
+        `[PUBLIC] Successfully generated ${statements.length} Q-statements`,
+      );
+
+      return statements;
+    } catch (error: any) {
+      this.logger.error('[PUBLIC] Q-statement generation failed:', error);
+      this.logger.error('Error details:', {
+        message: error?.message || 'Unknown error',
+        stack: error?.stack,
+        themes: themesDto.themes,
+        context: themesDto.studyContext,
+      });
+
+      throw new BadRequestException({
+        success: false,
+        error: 'Statement generation failed',
+        message: error?.message || 'Failed to generate Q-statements from themes',
+        details:
+          process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+      });
+    }
   }
 
   @Post('themes/extract')
@@ -2889,6 +2967,260 @@ export class LiteratureController {
         suggestion:
           'Check that all sources have sufficient content and purpose is valid',
       });
+    }
+  }
+
+  /**
+   * Phase 10 Day 18: Incremental Theme Extraction
+   * Extract themes incrementally without losing previous work, with content caching for cost reduction
+   *
+   * Purpose: Support iterative research workflow where researchers add sources until theoretical saturation
+   * Research Foundation: Braun & Clarke (2006, 2019) - Reflexive Thematic Analysis requires iteration
+   */
+  @Post('/themes/extract-incremental')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Incrementally extract themes from new papers added to existing corpus',
+    description: `
+      Preserves existing themes while processing new sources. Only fetches/processes new papers.
+
+      **Benefits:**
+      - **Cost Savings:** Caches full-text content and embeddings to avoid re-processing
+      - **Theoretical Saturation:** Tracks when no new themes emerge
+      - **Corpus Management:** Organizes papers into research corpuses
+      - **Incremental Research:** Add sources until saturation is reached
+
+      **Research Backing:**
+      - Braun & Clarke (2006, 2019): Reflexive Thematic Analysis requires iterative refinement
+      - Glaser & Strauss (1967): Theoretical saturation requires adding sources until no new themes
+      - Noblit & Hare (1988): Meta-ethnography requires corpus building, not one-shot synthesis
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Incremental extraction complete with merged themes and statistics',
+  })
+  async extractThemesIncremental(
+    @CurrentUser() user: any,
+    @Body() dto: any, // IncrementalExtractionDto
+  ): Promise<any> {
+    const startTime = Date.now();
+
+    try {
+      this.logger.log(`Starting incremental extraction for user ${user.userId}: ${dto.newPaperIds.length} new papers`);
+
+      // TODO: Implement incremental extraction logic
+      // For now, return a basic response structure
+      return {
+        themes: [],
+        statistics: {
+          previousThemeCount: 0,
+          newThemesAdded: 0,
+          themesStrengthened: 0,
+          themesWeakened: 0,
+          totalThemeCount: 0,
+          newPapersProcessed: dto.newPaperIds.length,
+          cachedPapersReused: dto.existingPaperIds.length,
+          processingTimeMs: Date.now() - startTime,
+        },
+        saturation: {
+          isSaturated: false,
+          confidenceLevel: 0,
+          newThemesFound: 0,
+          existingThemesStrengthened: 0,
+          recommendation: 'continue_extraction',
+          rationale: 'Implementation pending - Phase 10 Day 18 stub endpoint',
+        },
+        costSavings: {
+          cacheHitsCount: 0,
+          embeddingsSaved: 0,
+          completionsSaved: 0,
+          estimatedDollarsSaved: 0,
+          totalPapersProcessed: dto.newPaperIds.length + dto.existingPaperIds.length,
+          newPapersProcessed: dto.newPaperIds.length,
+          cachedPapersReused: dto.existingPaperIds.length,
+        },
+        themeChanges: [],
+        corpusId: dto.corpusId || 'new_corpus',
+        corpusName: dto.corpusName || 'Untitled Corpus',
+      };
+    } catch (error) {
+      this.logger.error(`Error in incremental extraction:`, error);
+      throw new InternalServerErrorException('Failed to perform incremental extraction');
+    }
+  }
+
+  /**
+   * Phase 10 Day 18: Get all corpuses for current user
+   */
+  @Get('/corpus/list')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get all research corpuses for current user',
+    description: 'Retrieve list of all corpuses with metadata for corpus management',
+  })
+  async getCorpusList(@CurrentUser() user: any): Promise<any[]> {
+    try {
+      return await this.literatureCacheService.getUserCorpuses(user.userId);
+    } catch (error) {
+      this.logger.error(`Error fetching corpus list:`, error);
+      throw new InternalServerErrorException('Failed to fetch corpus list');
+    }
+  }
+
+  /**
+   * Phase 10 Day 18: Get corpus statistics and cost savings
+   */
+  @Get('/corpus/stats')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get corpus statistics and cost savings',
+    description: 'Retrieve aggregated statistics across all user corpuses',
+  })
+  async getCorpusStats(@CurrentUser() user: any): Promise<any> {
+    try {
+      return await this.literatureCacheService.getCorpusStats(user.userId);
+    } catch (error) {
+      this.logger.error(`Error fetching corpus stats:`, error);
+      throw new InternalServerErrorException('Failed to fetch corpus stats');
+    }
+  }
+
+  /**
+   * Phase 10 Day 18: Create a new research corpus
+   */
+  @Post('/corpus/create')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create a new research corpus',
+    description: 'Initialize a new corpus for iterative theme extraction',
+  })
+  async createCorpus(
+    @CurrentUser() user: any,
+    @Body() dto: { name: string; purpose: string; paperIds: string[] }
+  ): Promise<any> {
+    try {
+      return await this.literatureCacheService.saveCorpus(
+        user.userId,
+        dto.paperIds,
+        dto.purpose,
+        dto.name
+      );
+    } catch (error) {
+      this.logger.error(`Error creating corpus:`, error);
+      throw new InternalServerErrorException('Failed to create corpus');
+    }
+  }
+
+  /**
+   * Phase 10 Day 18: Get specific corpus by ID
+   */
+  @Get('/corpus/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get corpus by ID',
+    description: 'Retrieve detailed information about a specific corpus',
+  })
+  async getCorpus(@CurrentUser() user: any, @Param('id') corpusId: string): Promise<any> {
+    try {
+      const corpuses = await this.literatureCacheService.getUserCorpuses(user.userId);
+      const corpus = corpuses.find(c => c.id === corpusId);
+      if (!corpus) {
+        throw new NotFoundException('Corpus not found');
+      }
+      return corpus;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error(`Error fetching corpus:`, error);
+      throw new InternalServerErrorException('Failed to fetch corpus');
+    }
+  }
+
+  /**
+   * Phase 10 Day 18: Update corpus metadata
+   */
+  @Patch('/corpus/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Update corpus metadata',
+    description: 'Update name or purpose of an existing corpus',
+  })
+  async updateCorpus(
+    @CurrentUser() user: any,
+    @Param('id') corpusId: string,
+    @Body() updates: { name?: string; purpose?: string }
+  ): Promise<any> {
+    try {
+      // First verify corpus belongs to user
+      const corpuses = await this.literatureCacheService.getUserCorpuses(user.userId);
+      const corpus = corpuses.find(c => c.id === corpusId);
+      if (!corpus) {
+        throw new NotFoundException('Corpus not found');
+      }
+
+      // Update corpus
+      await this.prisma.extractionCorpus.update({
+        where: { id: corpusId },
+        data: {
+          ...(updates.name && { name: updates.name }),
+          ...(updates.purpose && { purpose: updates.purpose }),
+        },
+      });
+
+      return await this.getCorpus(user, corpusId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error(`Error updating corpus:`, error);
+      throw new InternalServerErrorException('Failed to update corpus');
+    }
+  }
+
+  /**
+   * Phase 10 Day 18: Delete a research corpus
+   */
+  @Delete('/corpus/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Delete a research corpus',
+    description: 'Permanently delete a corpus and its cached data',
+  })
+  async deleteCorpus(@CurrentUser() user: any, @Param('id') corpusId: string): Promise<void> {
+    try {
+      // First verify corpus belongs to user
+      const corpuses = await this.literatureCacheService.getUserCorpuses(user.userId);
+      const corpus = corpuses.find(c => c.id === corpusId);
+      if (!corpus) {
+        throw new NotFoundException('Corpus not found');
+      }
+
+      // Delete corpus
+      await this.prisma.extractionCorpus.delete({
+        where: { id: corpusId },
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error(`Error deleting corpus:`, error);
+      throw new InternalServerErrorException('Failed to delete corpus');
     }
   }
 

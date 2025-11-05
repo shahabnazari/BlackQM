@@ -29,7 +29,7 @@ export class OpenAIService {
     smart: 'gpt-4-turbo-preview',
     vision: 'gpt-4-vision-preview',
   };
-  
+
   private costPerToken = {
     'gpt-3.5-turbo-0125': { input: 0.0005, output: 0.0015 },
     'gpt-4-turbo-preview': { input: 0.01, output: 0.03 },
@@ -42,10 +42,12 @@ export class OpenAIService {
   ) {
     const apiKey = this.configService.get('OPENAI_API_KEY');
     if (!apiKey) {
-      this.logger.warn('OpenAI API key not configured. AI features will be disabled.');
+      this.logger.warn(
+        'OpenAI API key not configured. AI features will be disabled.',
+      );
       return;
     }
-    
+
     this.openai = new OpenAI({
       apiKey,
       organization: this.configService.get('OPENAI_ORG_ID'),
@@ -56,7 +58,7 @@ export class OpenAIService {
 
   async generateCompletion(
     prompt: string,
-    options: AICompletionOptions = {}
+    options: AICompletionOptions = {},
   ): Promise<AIResponse> {
     const {
       model = 'fast',
@@ -73,7 +75,9 @@ export class OpenAIService {
     if (cache) {
       const cachedResponse = await this.checkCache(prompt, modelName);
       if (cachedResponse) {
-        this.logger.debug(`Cache hit for prompt hash: ${this.hashPrompt(prompt)}`);
+        this.logger.debug(
+          `Cache hit for prompt hash: ${this.hashPrompt(prompt)}`,
+        );
         return cachedResponse;
       }
     }
@@ -93,17 +97,38 @@ export class OpenAIService {
 
       const responseTime = Date.now() - startTime;
       const content = completion.choices[0].message.content || '';
-      const usage = completion.usage || { total_tokens: 0, prompt_tokens: 0, completion_tokens: 0 };
-      const cost = this.calculateCost(modelName, usage.prompt_tokens, usage.completion_tokens);
+      const usage = completion.usage || {
+        total_tokens: 0,
+        prompt_tokens: 0,
+        completion_tokens: 0,
+      };
+      const cost = this.calculateCost(
+        modelName,
+        usage.prompt_tokens,
+        usage.completion_tokens,
+      );
 
       // Track usage if userId provided
       if (userId) {
-        await this.trackUsage(userId, modelName, usage, cost, responseTime, 'success');
+        await this.trackUsage(
+          userId,
+          modelName,
+          usage,
+          cost,
+          responseTime,
+          'success',
+        );
       }
 
       // Cache response if enabled
       if (cache) {
-        await this.cacheResponse(prompt, modelName, content, usage.total_tokens, cost);
+        await this.cacheResponse(
+          prompt,
+          modelName,
+          content,
+          usage.total_tokens,
+          cost,
+        );
       }
 
       return {
@@ -115,12 +140,20 @@ export class OpenAIService {
       };
     } catch (error: any) {
       this.logger.error('OpenAI API error:', error);
-      
+
       // Track error if userId provided
       if (userId) {
-        await this.trackUsage(userId, modelName, null, 0, Date.now() - startTime, 'error', error?.message);
+        await this.trackUsage(
+          userId,
+          modelName,
+          null,
+          0,
+          Date.now() - startTime,
+          'error',
+          error?.message,
+        );
       }
-      
+
       throw new Error('AI service temporarily unavailable');
     }
   }
@@ -128,7 +161,7 @@ export class OpenAIService {
   async analyzeText(
     text: string,
     analysisType: 'sentiment' | 'themes' | 'bias',
-    userId?: string
+    userId?: string,
   ): Promise<any> {
     const prompts = {
       sentiment: `Analyze the sentiment of the following text. Return a JSON object with overall sentiment (positive/negative/neutral) and confidence score (0-1):\n\n${text}`,
@@ -150,9 +183,12 @@ export class OpenAIService {
     }
   }
 
-  private async checkCache(prompt: string, model: string): Promise<AIResponse | null> {
+  private async checkCache(
+    prompt: string,
+    model: string,
+  ): Promise<AIResponse | null> {
     const cacheKey = this.getCacheKey(prompt, model);
-    
+
     const cached = await this.prisma.aICache.findFirst({
       where: {
         cacheKey,
@@ -190,12 +226,12 @@ export class OpenAIService {
     model: string,
     response: string,
     tokens: number,
-    cost: number
+    cost: number,
   ): Promise<void> {
     const cacheKey = this.getCacheKey(prompt, model);
     const promptHash = this.hashPrompt(prompt);
     const ttl = this.configService.get<number>('AI_CACHE_TTL_SECONDS') || 3600;
-    
+
     try {
       await this.prisma.aICache.create({
         data: {
@@ -215,7 +251,12 @@ export class OpenAIService {
     }
   }
 
-  private async checkRateLimit(userId: string): Promise<void> {
+  private async checkRateLimit(userId?: string): Promise<void> {
+    // Skip rate limiting if no userId provided (e.g., public endpoints in development)
+    if (!userId) {
+      return;
+    }
+
     const limit = this.configService.get<number>('AI_RATE_LIMIT_PER_MIN') || 10;
     const windowStart = new Date(Date.now() - 60000); // 1 minute ago
     const windowEnd = new Date();
@@ -263,7 +304,7 @@ export class OpenAIService {
     cost: number,
     responseTime: number,
     status: string,
-    errorMessage?: string
+    errorMessage?: string,
   ): Promise<void> {
     try {
       await this.prisma.aIUsage.create({
@@ -300,7 +341,7 @@ export class OpenAIService {
     // Check daily usage
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     const dailyUsage = await this.prisma.aIUsage.aggregate({
       where: {
         userId,
@@ -317,7 +358,7 @@ export class OpenAIService {
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
-    
+
     const monthlyUsage = await this.prisma.aIUsage.aggregate({
       where: {
         userId,
@@ -331,14 +372,23 @@ export class OpenAIService {
     }
 
     // Check alert threshold
-    const monthlyPercentage = ((monthlyUsage._sum.cost || 0) / budgetLimit.monthlyLimitUsd);
+    const monthlyPercentage =
+      (monthlyUsage._sum.cost || 0) / budgetLimit.monthlyLimitUsd;
     if (monthlyPercentage > budgetLimit.alertThreshold) {
-      this.logger.warn(`User ${userId} has reached ${(monthlyPercentage * 100).toFixed(1)}% of monthly AI budget`);
+      this.logger.warn(
+        `User ${userId} has reached ${(monthlyPercentage * 100).toFixed(1)}% of monthly AI budget`,
+      );
     }
   }
 
-  private calculateCost(model: string, inputTokens: number, outputTokens: number): number {
-    const rates = this.costPerToken[model as keyof typeof this.costPerToken] || this.costPerToken['gpt-3.5-turbo-0125'];
+  private calculateCost(
+    model: string,
+    inputTokens: number,
+    outputTokens: number,
+  ): number {
+    const rates =
+      this.costPerToken[model as keyof typeof this.costPerToken] ||
+      this.costPerToken['gpt-3.5-turbo-0125'];
     return (inputTokens * rates.input + outputTokens * rates.output) / 1000;
   }
 

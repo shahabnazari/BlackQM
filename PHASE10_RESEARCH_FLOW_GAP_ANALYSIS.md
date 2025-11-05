@@ -10,6 +10,7 @@
 ## 🎯 EXECUTIVE SUMMARY
 
 **USER INSIGHT (Critical Question):**
+
 > "Theme extractions are only useful for Q-methodology studies. But researchers may NOT choose Q-methodology - they might want traditional surveys (like Qualtrics). How do extracted themes help in designing their questionnaire? How does this relate to research question or hypothesis design?"
 
 **VALIDATION: ✅ CORRECT**
@@ -23,6 +24,7 @@ The current system has a **Q-methodology bias** with critical gaps in the resear
 ### What Exists (✅ Implemented)
 
 #### Phase 9: DISCOVER
+
 - ✅ Literature search (papers, videos, podcasts, social media)
 - ✅ Theme extraction (academic-grade with semantic embeddings)
 - ✅ Gap analysis
@@ -30,6 +32,7 @@ The current system has a **Q-methodology bias** with critical gaps in the resear
 - ✅ Knowledge graph construction
 
 #### Phase 9.5: DESIGN (Research Design Intelligence)
+
 - ✅ Research question refinement (SQUARE-IT framework)
 - ✅ Hypothesis generation from contradictions/gaps/trends
 - ✅ Theory building (conceptual framework diagrams)
@@ -37,6 +40,7 @@ The current system has a **Q-methodology bias** with critical gaps in the resear
 - ⚠️ **BUT:** Only counts themes, doesn't use theme content to inform questions/hypotheses
 
 #### Phase 10: BUILD
+
 - ✅ Theme → Q-Statements (ThemeToStatementService)
 - ✅ Q-Grid Designer
 - ✅ Questionnaire Builder Pro (3-column advanced builder)
@@ -51,6 +55,7 @@ The current system has a **Q-methodology bias** with critical gaps in the resear
 ### GAP 1: Theme → Traditional Survey Items (CRITICAL)
 
 **Problem:**
+
 - `ThemeToStatementService` only generates Q-methodology statements
 - No service to convert themes into:
   - Likert scale items (1-5, 1-7 scales)
@@ -61,6 +66,7 @@ The current system has a **Q-methodology bias** with critical gaps in the resear
   - Matrix questions
 
 **Example:**
+
 ```
 Theme: "Climate Adaptation Strategies"
 Current Output: Q-statement "Communities should prioritize infrastructure resilience over individual preparedness"
@@ -77,11 +83,13 @@ Missing Output:
 ### GAP 2: Theme Content → Research Question Formulation (MAJOR)
 
 **Problem:**
+
 - `ResearchQuestionService` only uses theme COUNT, not theme CONTENT
 - Current: "85 themes identified" (just a number)
 - Missing: Using theme labels, descriptions, and patterns to suggest research questions
 
 **Example:**
+
 ```
 Themes Extracted:
 1. "Infrastructure Resilience" (appears in 15 sources, high influence)
@@ -102,10 +110,12 @@ Should Suggest Research Questions Like:
 ### GAP 3: Hypothesis → Survey Item Generation (MAJOR)
 
 **Problem:**
+
 - Hypotheses are generated but NOT used to create survey items
 - No service to convert hypothesis into testable survey questions
 
 **Example:**
+
 ```
 Hypothesis: "Higher infrastructure investment is associated with greater community resilience"
 
@@ -123,9 +133,11 @@ Should Generate Survey Items:
 ### GAP 4: Research Question → Survey Items (MAJOR)
 
 **Problem:**
+
 - Research questions are refined with SQUARE-IT but NOT converted to operationalized survey items
 
 **Example:**
+
 ```
 Research Question: "What factors influence community adoption of climate adaptation strategies?"
 
@@ -143,12 +155,14 @@ Should Generate Survey Items:
 ### GAP 5: Questionnaire Builder Pro Has No Theme Integration (CRITICAL)
 
 **Problem:**
+
 - Questionnaire Builder Pro is a blank canvas
 - No "Import from Themes" button
 - No "Generate from Research Question" option
 - Researchers start from scratch every time
 
 **Desired Features:**
+
 ```
 Questionnaire Builder Pro Should Have:
 □ "Import Themes" → Auto-generate Likert items
@@ -211,6 +225,7 @@ Questionnaire Builder Pro Should Have:
 **Purpose:** Convert themes into traditional survey items
 
 **Methods:**
+
 ```typescript
 // Generate Likert scale items from themes
 generateLikertItems(themes: Theme[], options: {
@@ -239,7 +254,8 @@ suggestItemTypes(themes: Theme[]): ItemTypeSuggestion[]
 ```
 
 **Research Backing:**
-- DeVellis, R. F. (2016). *Scale Development: Theory and Applications*
+
+- DeVellis, R. F. (2016). _Scale Development: Theory and Applications_
 - Krosnick, J. A., & Presser, S. (2010). Question and questionnaire design
 
 ---
@@ -249,6 +265,7 @@ suggestItemTypes(themes: Theme[]): ItemTypeSuggestion[]
 **Purpose:** Operationalize research questions into measurable variables and survey items
 
 **Methods:**
+
 ```typescript
 // Extract constructs from research question
 extractConstructs(researchQuestion: string): Construct[]
@@ -271,8 +288,9 @@ questionToSurvey(researchQuestion: string, themes: Theme[]): {
 ```
 
 **Research Backing:**
-- Creswell, J. W., & Creswell, J. D. (2017). *Research Design*
-- Shadish, Cook, & Campbell (2002). *Experimental and Quasi-Experimental Designs*
+
+- Creswell, J. W., & Creswell, J. D. (2017). _Research Design_
+- Shadish, Cook, & Campbell (2002). _Experimental and Quasi-Experimental Designs_
 
 ---
 
@@ -281,6 +299,7 @@ questionToSurvey(researchQuestion: string, themes: Theme[]): {
 **Purpose:** Convert hypotheses into testable survey items
 
 **Methods:**
+
 ```typescript
 // Parse hypothesis into components
 parseHypothesis(hypothesis: string): {
@@ -303,6 +322,7 @@ buildHypothesisTest(hypothesis: string): SurveySection
 ```
 
 **Research Backing:**
+
 - Spector, P. E. (1992). Summated rating scale construction
 - Churchill, G. A. (1979). A paradigm for developing better measures
 
@@ -313,6 +333,7 @@ buildHypothesisTest(hypothesis: string): SurveySection
 **Purpose:** Make themes actionable across the entire research workflow
 
 **Methods:**
+
 ```typescript
 // Suggest research questions from themes
 suggestResearchQuestions(themes: Theme[]): {
@@ -397,6 +418,7 @@ Themes
 #### Day 5.9: Theme-to-Survey Item Generation Service (NEW - 1 day)
 
 **Tasks:**
+
 - [ ] Create `ThemeToSurveyItemService`
 - [ ] Implement Likert scale generation (1-5, 1-7, 1-10)
 - [ ] Implement multiple choice generation
@@ -414,6 +436,7 @@ Themes
 #### Day 5.10: Research Question Operationalization Service (NEW - 1 day)
 
 **Tasks:**
+
 - [ ] Create `ResearchQuestionToItemService`
 - [ ] Implement construct extraction from questions
 - [ ] Implement variable operationalization
@@ -431,6 +454,7 @@ Themes
 #### Day 5.11: Hypothesis-to-Item Service (NEW - 1 day)
 
 **Tasks:**
+
 - [ ] Create `HypothesisToItemService`
 - [ ] Implement hypothesis parsing (IV/DV/moderators)
 - [ ] Implement variable measurement item generation
@@ -447,6 +471,7 @@ Themes
 #### Day 5.12: Enhanced Theme Integration (NEW - 1 day)
 
 **Tasks:**
+
 - [ ] Create `EnhancedThemeIntegrationService`
 - [ ] Implement theme → research question suggestions
 - [ ] Implement theme → hypothesis suggestions
@@ -463,6 +488,7 @@ Themes
 #### Day 5.13: Questionnaire Builder Pro - Theme Integration (NEW - 1 day)
 
 **Tasks:**
+
 - [ ] Add "Import from Themes" button to Questionnaire Builder Pro
 - [ ] Add "Generate from Research Question" option
 - [ ] Add "Generate from Hypotheses" option
@@ -479,6 +505,7 @@ Themes
 ## 🎯 PRIORITY IMPLEMENTATION ORDER
 
 ### Week 1 (Days 5.9-5.10): Core Survey Generation
+
 1. **Day 5.9:** ThemeToSurveyItemService (Likert, MC, rating scales)
 2. **Day 5.10:** ResearchQuestionToItemService (Question operationalization)
 
@@ -487,6 +514,7 @@ Themes
 ---
 
 ### Week 2 (Days 5.11-5.12): Advanced Integration
+
 3. **Day 5.11:** HypothesisToItemService (Hypothesis testing surveys)
 4. **Day 5.12:** EnhancedThemeIntegrationService (Proactive suggestions)
 
@@ -495,6 +523,7 @@ Themes
 ---
 
 ### Week 3 (Day 5.13): Frontend Integration
+
 5. **Day 5.13:** Questionnaire Builder Pro enhancements
 
 **Impact:** Polished end-to-end user experience
@@ -504,6 +533,7 @@ Themes
 ## 📊 SUCCESS METRICS
 
 ### Before Implementation:
+
 - ❌ Theme utility: Q-methodology only
 - ❌ Survey generation: Manual only
 - ❌ Research question to items: Not connected
@@ -511,6 +541,7 @@ Themes
 - ❌ User workflow: Fragmented
 
 ### After Implementation:
+
 - ✅ Theme utility: Q-methodology + Traditional surveys + Mixed methods
 - ✅ Survey generation: AI-powered from themes/questions/hypotheses
 - ✅ Research question to items: Fully automated operationalization
@@ -522,12 +553,14 @@ Themes
 ## 💡 COMPETITIVE ADVANTAGE
 
 ### Current Competitors:
+
 - **Qualtrics:** Survey builder (no literature integration)
 - **SurveyMonkey:** Survey builder (no research design tools)
 - **MAXQDA:** Qualitative analysis (no quantitative survey generation)
 - **NVivo:** Coding software (no survey integration)
 
 ### Our Unique Value (After Implementation):
+
 ```
 ✅ Literature Review (Papers + Videos + Social Media)
 ✅ Academic-Grade Theme Extraction (Semantic embeddings)
@@ -571,6 +604,7 @@ Themes
 ### CRITICAL: Implement Days 5.9-5.13 BEFORE proceeding to other Phase 10 features
 
 **Rationale:**
+
 1. This is a **core value proposition gap**
 2. Affects **all users** (not just Q-methodology researchers)
 3. Completion enables **traditional survey research** (much larger market)
@@ -599,6 +633,7 @@ Phase 10: Research Design to Publication
 The user's insight is **100% correct** and reveals a critical architectural gap. The current system is biased toward Q-methodology, leaving traditional survey researchers without a path from themes to questionnaires.
 
 **Immediate Action Required:**
+
 - Implement Days 5.9-5.13 to complete the research workflow
 - Update Phase Tracker Part 3 with these new days
 - Prioritize theme → survey item generation as next implementation

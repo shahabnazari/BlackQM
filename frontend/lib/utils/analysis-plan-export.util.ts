@@ -49,15 +49,24 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
   /**
    * Generate constructs summary
    */
-  private static generateConstructsSummary(result: OperationalizationResult): string {
-    const lines: string[] = ['IDENTIFIED CONSTRUCTS', '================================================================================'];
+  private static generateConstructsSummary(
+    result: OperationalizationResult
+  ): string {
+    const lines: string[] = [
+      'IDENTIFIED CONSTRUCTS',
+      '================================================================================',
+    ];
 
     result.constructs.forEach((construct, index) => {
-      lines.push(`\n${index + 1}. ${construct.name} (${this.getConstructTypeLabel(construct.type)})`);
+      lines.push(
+        `\n${index + 1}. ${construct.name} (${this.getConstructTypeLabel(construct.type)})`
+      );
       lines.push(`   Definition: ${construct.definition}`);
       lines.push(`   Confidence: ${(construct.confidence * 100).toFixed(1)}%`);
       if (construct.relatedConcepts.length > 0) {
-        lines.push(`   Related Concepts: ${construct.relatedConcepts.join(', ')}`);
+        lines.push(
+          `   Related Concepts: ${construct.relatedConcepts.join(', ')}`
+        );
       }
     });
 
@@ -67,25 +76,42 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
   /**
    * Generate measurement plan
    */
-  private static generateMeasurementPlan(result: OperationalizationResult): string {
-    const lines: string[] = ['MEASUREMENT PLAN', '================================================================================'];
+  private static generateMeasurementPlan(
+    result: OperationalizationResult
+  ): string {
+    const lines: string[] = [
+      'MEASUREMENT PLAN',
+      '================================================================================',
+    ];
 
     result.variables.forEach((variable, index) => {
-      const items = result.measurementItems.filter(item => item.variableId === variable.id);
-      const construct = result.constructs.find(c => c.id === variable.constructId);
+      const items = result.measurementItems.filter(
+        item => item.variableId === variable.id
+      );
+      const construct = result.constructs.find(
+        c => c.id === variable.constructId
+      );
 
       lines.push(`\n${index + 1}. ${variable.variableName}`);
       lines.push(`   Construct: ${construct?.name || 'Unknown'}`);
-      lines.push(`   Operational Definition: ${variable.operationalDefinition}`);
+      lines.push(
+        `   Operational Definition: ${variable.operationalDefinition}`
+      );
       lines.push(`   Measurement Level: ${variable.measurementLevel}`);
       lines.push(`   Measurement Approach: ${variable.measurementApproach}`);
       lines.push(`   Number of Items: ${items.length}`);
-      lines.push(`   Expected Reliability (α): ${variable.reliability.expectedAlpha.toFixed(2)}`);
-      lines.push(`   Target Reliability (α): ≥ ${variable.reliability.targetAlpha.toFixed(2)}`);
+      lines.push(
+        `   Expected Reliability (α): ${variable.reliability.expectedAlpha.toFixed(2)}`
+      );
+      lines.push(
+        `   Target Reliability (α): ≥ ${variable.reliability.targetAlpha.toFixed(2)}`
+      );
 
       lines.push(`\n   Survey Items:`);
       items.forEach((item, itemIndex) => {
-        lines.push(`   ${itemIndex + 1}. ${item.text}${item.reversed ? ' (REVERSED)' : ''}`);
+        lines.push(
+          `   ${itemIndex + 1}. ${item.text}${item.reversed ? ' (REVERSED)' : ''}`
+        );
         lines.push(`      Scale: ${item.scaleLabels.join(' | ')}`);
       });
     });
@@ -96,7 +122,9 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
   /**
    * Generate data collection plan
    */
-  private static generateDataCollectionPlan(result: OperationalizationResult): string {
+  private static generateDataCollectionPlan(
+    result: OperationalizationResult
+  ): string {
     const lines: string[] = [
       'DATA COLLECTION PLAN',
       '================================================================================',
@@ -118,7 +146,9 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
   /**
    * Generate analysis strategy
    */
-  private static generateAnalysisStrategy(result: OperationalizationResult): string {
+  private static generateAnalysisStrategy(
+    result: OperationalizationResult
+  ): string {
     const lines: string[] = [
       'STATISTICAL ANALYSIS STRATEGY',
       '================================================================================',
@@ -131,9 +161,11 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
       'Statistical Assumptions:',
     ];
 
-    result.statisticalPlan.primaryAnalysis.assumptions.forEach((assumption, index) => {
-      lines.push(`${index + 1}. ${assumption}`);
-    });
+    result.statisticalPlan.primaryAnalysis.assumptions.forEach(
+      (assumption, index) => {
+        lines.push(`${index + 1}. ${assumption}`);
+      }
+    );
 
     if (result.statisticalPlan.secondaryAnalyses.length > 0) {
       lines.push('', 'SECONDARY ANALYSES:');
@@ -150,7 +182,9 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
   /**
    * Generate reliability plan
    */
-  private static generateReliabilityPlan(result: OperationalizationResult): string {
+  private static generateReliabilityPlan(
+    result: OperationalizationResult
+  ): string {
     const lines: string[] = [
       'RELIABILITY ASSESSMENT PLAN',
       '================================================================================',
@@ -165,8 +199,12 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
     });
 
     lines.push('', 'Quality Metrics:');
-    lines.push(`- Overall Expected Reliability: α = ${result.qualityMetrics.reliabilityExpectation.toFixed(2)}`);
-    lines.push(`- Construct Coverage: ${(result.qualityMetrics.constructCoverage * 100).toFixed(1)}%`);
+    lines.push(
+      `- Overall Expected Reliability: α = ${result.qualityMetrics.reliabilityExpectation.toFixed(2)}`
+    );
+    lines.push(
+      `- Construct Coverage: ${(result.qualityMetrics.constructCoverage * 100).toFixed(1)}%`
+    );
 
     return lines.join('\n');
   }
@@ -174,7 +212,9 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
   /**
    * Generate validity plan
    */
-  private static generateValidityPlan(result: OperationalizationResult): string {
+  private static generateValidityPlan(
+    result: OperationalizationResult
+  ): string {
     const lines: string[] = [
       'VALIDITY ASSESSMENT PLAN',
       '================================================================================',
@@ -198,7 +238,9 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
   /**
    * Generate recommendations
    */
-  private static generateRecommendations(result: OperationalizationResult): string {
+  private static generateRecommendations(
+    result: OperationalizationResult
+  ): string {
     const lines: string[] = [
       'RECOMMENDATIONS',
       '================================================================================',
@@ -212,14 +254,21 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
 
     if (result.recommendations.improvementSuggestions.length > 0) {
       lines.push('', 'Improvement Suggestions:');
-      result.recommendations.improvementSuggestions.forEach((suggestion, index) => {
-        lines.push(`${index + 1}. ${suggestion}`);
-      });
+      result.recommendations.improvementSuggestions.forEach(
+        (suggestion, index) => {
+          lines.push(`${index + 1}. ${suggestion}`);
+        }
+      );
     }
 
-    lines.push('', '================================================================================');
+    lines.push(
+      '',
+      '================================================================================'
+    );
     lines.push('END OF ANALYSIS PLAN');
-    lines.push('================================================================================');
+    lines.push(
+      '================================================================================'
+    );
 
     return lines.join('\n');
   }
@@ -229,11 +278,18 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
    */
   private static getStudyTypeLabel(result: OperationalizationResult): string {
     // Study type not directly in result, infer from methodology or use generic
-    return result.methodology.approach.charAt(0).toUpperCase() + result.methodology.approach.slice(1) + ' Study';
+    return (
+      result.methodology.approach.charAt(0).toUpperCase() +
+      result.methodology.approach.slice(1) +
+      ' Study'
+    );
   }
 
   private static getConstructTypeLabel(type: string): string {
-    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    return type
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   /**
@@ -246,7 +302,10 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
   /**
    * Download analysis plan as text file
    */
-  static downloadTextPlan(result: OperationalizationResult, filename?: string): void {
+  static downloadTextPlan(
+    result: OperationalizationResult,
+    filename?: string
+  ): void {
     const plan = this.generateAnalysisPlan(result);
     const blob = new Blob([plan], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -262,7 +321,10 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
   /**
    * Download analysis plan as JSON
    */
-  static downloadJSONPlan(result: OperationalizationResult, filename?: string): void {
+  static downloadJSONPlan(
+    result: OperationalizationResult,
+    filename?: string
+  ): void {
     const json = this.generateJSON(result);
     const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -278,7 +340,9 @@ RECOMMENDED SAMPLE SIZE: N ≥ ${result.statisticalPlan.primaryAnalysis.sampleSi
   /**
    * Copy to clipboard
    */
-  static async copyToClipboard(result: OperationalizationResult): Promise<void> {
+  static async copyToClipboard(
+    result: OperationalizationResult
+  ): Promise<void> {
     const plan = this.generateAnalysisPlan(result);
     await navigator.clipboard.writeText(plan);
   }

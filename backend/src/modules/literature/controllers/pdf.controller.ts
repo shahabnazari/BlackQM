@@ -32,7 +32,10 @@ import { filter, map } from 'rxjs/operators';
 @UseGuards(JwtAuthGuard)
 export class PDFController {
   private readonly logger = new Logger(PDFController.name);
-  private readonly eventSubject = new Subject<{ paperId: string; event: any }>();
+  private readonly eventSubject = new Subject<{
+    paperId: string;
+    event: any;
+  }>();
 
   constructor(
     private pdfParsingService: PDFParsingService,
@@ -115,7 +118,10 @@ export class PDFController {
     not_fetched: string[];
   }> {
     if (!body.paperIds || !Array.isArray(body.paperIds)) {
-      throw new HttpException('Invalid request: paperIds array required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid request: paperIds array required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     return await this.pdfParsingService.getBulkStatus(body.paperIds);
@@ -131,7 +137,9 @@ export class PDFController {
     wordCount: number | null;
   }> {
     const fullText = await this.pdfParsingService.getFullText(paperId);
-    const wordCount = fullText ? this.pdfParsingService.calculateWordCount(fullText) : null;
+    const wordCount = fullText
+      ? this.pdfParsingService.calculateWordCount(fullText)
+      : null;
 
     return {
       fullText,
@@ -169,7 +177,11 @@ export class PDFController {
   // ============================================
 
   @OnEvent('pdf.job.queued')
-  handleQueued(payload: { jobId: string; paperId: string; progress: number }): void {
+  handleQueued(payload: {
+    jobId: string;
+    paperId: string;
+    progress: number;
+  }): void {
     this.eventSubject.next({
       paperId: payload.paperId,
       event: {
@@ -181,7 +193,11 @@ export class PDFController {
   }
 
   @OnEvent('pdf.job.processing')
-  handleProcessing(payload: { jobId: string; paperId: string; progress: number }): void {
+  handleProcessing(payload: {
+    jobId: string;
+    paperId: string;
+    progress: number;
+  }): void {
     this.eventSubject.next({
       paperId: payload.paperId,
       event: {

@@ -67,7 +67,13 @@ export interface HypothesisSurveyItem {
   text: string;
   variableId: string;
   itemNumber: number;
-  scaleType: 'likert_5' | 'likert_7' | 'semantic_differential' | 'frequency' | 'agreement' | 'satisfaction';
+  scaleType:
+    | 'likert_5'
+    | 'likert_7'
+    | 'semantic_differential'
+    | 'frequency'
+    | 'agreement'
+    | 'satisfaction';
   scaleLabels: string[];
   reversed: boolean;
   purpose: string; // e.g., "Measure independent variable: Social media usage"
@@ -102,7 +108,12 @@ export interface HypothesisTestBattery {
 
 export interface HypothesisToItemRequest {
   hypothesis: string;
-  hypothesisType?: 'correlational' | 'causal' | 'interaction' | 'mediation' | 'moderation';
+  hypothesisType?:
+    | 'correlational'
+    | 'causal'
+    | 'interaction'
+    | 'mediation'
+    | 'moderation';
   itemsPerVariable?: number; // Default: 3-7 for reliability
   targetReliability?: number; // Default: 0.80
   includeReverseItems?: boolean;
@@ -148,8 +159,12 @@ export class HypothesisToItemService {
   /**
    * Convert hypothesis into complete test battery with survey items
    */
-  async convertHypothesisToItems(request: HypothesisToItemRequest): Promise<HypothesisToItemResult> {
-    this.logger.log(`Converting hypothesis to survey items: ${request.hypothesis.substring(0, 50)}...`);
+  async convertHypothesisToItems(
+    request: HypothesisToItemRequest,
+  ): Promise<HypothesisToItemResult> {
+    this.logger.log(
+      `Converting hypothesis to survey items: ${request.hypothesis.substring(0, 50)}...`,
+    );
 
     // Validate input
     if (!request.hypothesis || request.hypothesis.trim().length === 0) {
@@ -158,22 +173,32 @@ export class HypothesisToItemService {
 
     try {
       // Step 1: Parse hypothesis to extract variables and relationships
-      const { variables, relationships, hypothesisType } = await this.parseHypothesis(request);
+      const { variables, relationships, hypothesisType } =
+        await this.parseHypothesis(request);
 
       // Step 2: Generate measurement scales for each variable
       const scales = await this.generateMeasurementScales(variables, request);
 
       // Step 3: Collect all items
-      const allItems = scales.flatMap(scale => scale.items);
+      const allItems = scales.flatMap((scale) => scale.items);
 
       // Step 4: Generate statistical test battery
-      const testBattery = await this.generateTestBattery(variables, relationships, hypothesisType, request);
+      const testBattery = await this.generateTestBattery(
+        variables,
+        relationships,
+        hypothesisType,
+        request,
+      );
 
       // Step 5: Calculate quality metrics
       const qualityMetrics = this.calculateQualityMetrics(scales, variables);
 
       // Step 6: Generate recommendations
-      const recommendations = this.generateRecommendations(scales, variables, testBattery);
+      const recommendations = this.generateRecommendations(
+        scales,
+        variables,
+        testBattery,
+      );
 
       // Step 7: Create visual research path
       const researchPath = this.generateResearchPath(variables, relationships);
@@ -191,7 +216,10 @@ export class HypothesisToItemService {
         researchPath,
       };
     } catch (error: any) {
-      this.logger.error(`Failed to convert hypothesis: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to convert hypothesis: ${error.message}`,
+        error.stack,
+      );
       throw new Error(`Hypothesis conversion failed: ${error.message}`);
     }
   }
@@ -249,34 +277,43 @@ Return JSON with structure:
           temperature: 0.3,
         });
 
-        const result = JSON.parse(completion.choices[0].message.content || '{}');
+        const result = JSON.parse(
+          completion.choices[0].message.content || '{}',
+        );
 
         // Convert to typed objects with IDs
-        const variables: HypothesisVariable[] = result.variables.map((v: any, index: number) => ({
-          id: `var_${index + 1}`,
-          name: v.name,
-          definition: v.definition,
-          role: v.role,
-          measurementLevel: v.measurementLevel,
-          confidence: v.confidence || 0.85,
-          relatedConcepts: v.relatedConcepts || [],
-        }));
+        const variables: HypothesisVariable[] = result.variables.map(
+          (v: any, index: number) => ({
+            id: `var_${index + 1}`,
+            name: v.name,
+            definition: v.definition,
+            role: v.role,
+            measurementLevel: v.measurementLevel,
+            confidence: v.confidence || 0.85,
+            relatedConcepts: v.relatedConcepts || [],
+          }),
+        );
 
-        const relationships: HypothesisRelationship[] = result.relationships.map((r: any) => {
-          const fromVar = variables.find(v => v.name === r.from);
-          const toVar = variables.find(v => v.name === r.to);
-          const moderatorVar = r.moderatorId ? variables.find(v => v.name === r.moderatorId) : null;
-          const mediatorVar = r.mediatorId ? variables.find(v => v.name === r.mediatorId) : null;
+        const relationships: HypothesisRelationship[] =
+          result.relationships.map((r: any) => {
+            const fromVar = variables.find((v) => v.name === r.from);
+            const toVar = variables.find((v) => v.name === r.to);
+            const moderatorVar = r.moderatorId
+              ? variables.find((v) => v.name === r.moderatorId)
+              : null;
+            const mediatorVar = r.mediatorId
+              ? variables.find((v) => v.name === r.mediatorId)
+              : null;
 
-          return {
-            from: fromVar?.id || '',
-            to: toVar?.id || '',
-            type: r.type,
-            direction: r.direction,
-            moderatorId: moderatorVar?.id,
-            mediatorId: mediatorVar?.id,
-          };
-        });
+            return {
+              from: fromVar?.id || '',
+              to: toVar?.id || '',
+              type: r.type,
+              direction: r.direction,
+              moderatorId: moderatorVar?.id,
+              mediatorId: mediatorVar?.id,
+            };
+          });
 
         return {
           variables,
@@ -284,7 +321,9 @@ Return JSON with structure:
           hypothesisType: result.hypothesisType,
         };
       } catch (error: any) {
-        this.logger.warn(`GPT-4 parsing failed, using template fallback: ${error.message}`);
+        this.logger.warn(
+          `GPT-4 parsing failed, using template fallback: ${error.message}`,
+        );
         return this.parseHypothesisTemplate(request);
       }
     }
@@ -306,11 +345,18 @@ Return JSON with structure:
     let hypothesisType = request.hypothesisType || 'correlational';
     if (hypothesis.includes('mediate') || hypothesis.includes('mediator')) {
       hypothesisType = 'mediation';
-    } else if (hypothesis.includes('moderate') || hypothesis.includes('moderator')) {
+    } else if (
+      hypothesis.includes('moderate') ||
+      hypothesis.includes('moderator')
+    ) {
       hypothesisType = 'moderation';
     } else if (hypothesis.includes('interact')) {
       hypothesisType = 'interaction';
-    } else if (hypothesis.includes('cause') || hypothesis.includes('affect') || hypothesis.includes('influence')) {
+    } else if (
+      hypothesis.includes('cause') ||
+      hypothesis.includes('affect') ||
+      hypothesis.includes('influence')
+    ) {
       hypothesisType = 'causal';
     }
 
@@ -322,7 +368,7 @@ Return JSON with structure:
         definition: 'The predictor or explanatory variable',
         role: 'independent',
         measurementLevel: 'interval',
-        confidence: 0.80,
+        confidence: 0.8,
         relatedConcepts: [],
       },
       {
@@ -331,7 +377,7 @@ Return JSON with structure:
         definition: 'The outcome or response variable',
         role: 'dependent',
         measurementLevel: 'interval',
-        confidence: 0.80,
+        confidence: 0.8,
         relatedConcepts: [],
       },
     ];
@@ -356,12 +402,19 @@ Return JSON with structure:
     request: HypothesisToItemRequest,
   ): Promise<MeasurementScale[]> {
     const itemsPerVariable = request.itemsPerVariable || 5;
-    const targetAlpha = request.targetReliability || 0.80;
+    const targetAlpha = request.targetReliability || 0.8;
 
     const scales = await Promise.all(
       variables.map(async (variable) => {
-        const items = await this.generateItemsForVariable(variable, itemsPerVariable, request);
-        const reliability = this.calculateExpectedReliability(items.length, targetAlpha);
+        const items = await this.generateItemsForVariable(
+          variable,
+          itemsPerVariable,
+          request,
+        );
+        const reliability = this.calculateExpectedReliability(
+          items.length,
+          targetAlpha,
+        );
         const validity = this.assessValidity(variable, items);
 
         return {
@@ -427,7 +480,9 @@ Target Population: ${request.targetPopulation || 'General'}`,
           temperature: 0.5,
         });
 
-        const itemsData = JSON.parse(completion.choices[0].message.content || '[]');
+        const itemsData = JSON.parse(
+          completion.choices[0].message.content || '[]',
+        );
 
         return itemsData.map((item: any, index: number) => ({
           id: `item_${variable.id}_${index + 1}`,
@@ -442,7 +497,9 @@ Target Population: ${request.targetPopulation || 'General'}`,
           researchBacking: item.researchBacking,
         }));
       } catch (error: any) {
-        this.logger.warn(`GPT-4 item generation failed, using templates: ${error.message}`);
+        this.logger.warn(
+          `GPT-4 item generation failed, using templates: ${error.message}`,
+        );
         return this.generateItemsTemplate(variable, itemCount, request);
       }
     }
@@ -460,7 +517,15 @@ Target Population: ${request.targetPopulation || 'General'}`,
   ): HypothesisSurveyItem[] {
     const items: HypothesisSurveyItem[] = [];
     const scaleType: HypothesisSurveyItem['scaleType'] = 'likert_7';
-    const scaleLabels = ['Strongly Disagree', 'Disagree', 'Somewhat Disagree', 'Neutral', 'Somewhat Agree', 'Agree', 'Strongly Agree'];
+    const scaleLabels = [
+      'Strongly Disagree',
+      'Disagree',
+      'Somewhat Disagree',
+      'Neutral',
+      'Somewhat Agree',
+      'Agree',
+      'Strongly Agree',
+    ];
 
     for (let i = 0; i < itemCount; i++) {
       const reversed = !!(request.includeReverseItems && i % 3 === 2);
@@ -486,7 +551,10 @@ Target Population: ${request.targetPopulation || 'General'}`,
    * Calculate expected reliability (Cronbach's alpha)
    * Using Spearman-Brown prophecy formula
    */
-  private calculateExpectedReliability(itemCount: number, targetAlpha: number): {
+  private calculateExpectedReliability(
+    itemCount: number,
+    targetAlpha: number,
+  ): {
     targetAlpha: number;
     expectedAlpha: number;
     itemCount: number;
@@ -496,11 +564,14 @@ Target Population: ${request.targetPopulation || 'General'}`,
     // Where k = number of items, r = average inter-item correlation
 
     // Assume average inter-item correlation of 0.40 (moderate)
-    const avgInterItemCorr = 0.40;
-    const expectedAlpha = (itemCount * avgInterItemCorr) / (1 + (itemCount - 1) * avgInterItemCorr);
+    const avgInterItemCorr = 0.4;
+    const expectedAlpha =
+      (itemCount * avgInterItemCorr) / (1 + (itemCount - 1) * avgInterItemCorr);
 
     // Generate expected item-total correlations (should be > 0.30)
-    const itemTotalCorrelations = Array(itemCount).fill(0).map(() => 0.50 + Math.random() * 0.20);
+    const itemTotalCorrelations = Array(itemCount)
+      .fill(0)
+      .map(() => 0.5 + Math.random() * 0.2);
 
     return {
       targetAlpha,
@@ -513,7 +584,10 @@ Target Population: ${request.targetPopulation || 'General'}`,
   /**
    * Assess scale validity
    */
-  private assessValidity(variable: HypothesisVariable, items: HypothesisSurveyItem[]): {
+  private assessValidity(
+    variable: HypothesisVariable,
+    items: HypothesisSurveyItem[],
+  ): {
     contentValidity: string;
     constructValidity: string;
     criterionValidity: string;
@@ -534,10 +608,10 @@ Target Population: ${request.targetPopulation || 'General'}`,
     hypothesisType: string,
     request: HypothesisToItemRequest,
   ): Promise<HypothesisTestBattery> {
-    const ivCount = variables.filter(v => v.role === 'independent').length;
-    const dvCount = variables.filter(v => v.role === 'dependent').length;
-    const hasModerator = variables.some(v => v.role === 'moderator');
-    const hasMediator = variables.some(v => v.role === 'mediator');
+    const ivCount = variables.filter((v) => v.role === 'independent').length;
+    const dvCount = variables.filter((v) => v.role === 'dependent').length;
+    const hasModerator = variables.some((v) => v.role === 'moderator');
+    const hasMediator = variables.some((v) => v.role === 'mediator');
 
     let primaryMethod = 'Pearson Correlation';
     let description = 'Test bivariate relationship between variables';
@@ -546,13 +620,24 @@ Target Population: ${request.targetPopulation || 'General'}`,
 
     if (hypothesisType === 'mediation') {
       primaryMethod = 'Mediation Analysis (Baron & Kenny, 1986)';
-      description = 'Test indirect effect through mediator using four-step approach';
-      assumptions = ['Linearity', 'No omitted variables', 'Temporal precedence', 'No measurement error'];
+      description =
+        'Test indirect effect through mediator using four-step approach';
+      assumptions = [
+        'Linearity',
+        'No omitted variables',
+        'Temporal precedence',
+        'No measurement error',
+      ];
       sampleSize = Math.max(100, ivCount * 20);
     } else if (hypothesisType === 'moderation') {
       primaryMethod = 'Moderated Regression Analysis';
       description = 'Test interaction effect between IV and moderator on DV';
-      assumptions = ['Linearity', 'No multicollinearity', 'Homoscedasticity', 'Normality of residuals'];
+      assumptions = [
+        'Linearity',
+        'No multicollinearity',
+        'Homoscedasticity',
+        'Normality of residuals',
+      ];
       sampleSize = Math.max(100, ivCount * 15);
     } else if (hypothesisType === 'interaction') {
       primaryMethod = 'Two-Way ANOVA with Interaction';
@@ -562,15 +647,27 @@ Target Population: ${request.targetPopulation || 'General'}`,
     } else if (hypothesisType === 'causal' && ivCount > 1) {
       primaryMethod = 'Multiple Regression Analysis';
       description = 'Test predictive relationships with multiple IVs';
-      assumptions = ['Linearity', 'Independence', 'Homoscedasticity', 'Normality', 'No multicollinearity'];
+      assumptions = [
+        'Linearity',
+        'Independence',
+        'Homoscedasticity',
+        'Normality',
+        'No multicollinearity',
+      ];
       sampleSize = Math.max(50, ivCount * 15 + 50);
     }
 
-    const alternativeTests = this.generateAlternativeTests(hypothesisType, ivCount, dvCount, hasModerator, hasMediator);
-    const reliabilityChecks = variables.map(v => ({
+    const alternativeTests = this.generateAlternativeTests(
+      hypothesisType,
+      ivCount,
+      dvCount,
+      hasModerator,
+      hasMediator,
+    );
+    const reliabilityChecks = variables.map((v) => ({
       scale: v.name,
       method: "Cronbach's alpha",
-      threshold: 0.70,
+      threshold: 0.7,
     }));
     const validityChecks = this.generateValidityChecks(variables);
 
@@ -580,7 +677,7 @@ Target Population: ${request.targetPopulation || 'General'}`,
         description,
         assumptions,
         requiredSampleSize: sampleSize,
-        expectedPower: 0.80,
+        expectedPower: 0.8,
       },
       alternativeTests,
       reliabilityChecks,
@@ -598,13 +695,18 @@ Target Population: ${request.targetPopulation || 'General'}`,
     hasModerator: boolean,
     hasMediator: boolean,
   ): Array<{ method: string; when: string; description: string }> {
-    const alternatives: Array<{ method: string; when: string; description: string }> = [];
+    const alternatives: Array<{
+      method: string;
+      when: string;
+      description: string;
+    }> = [];
 
     if (hypothesisType === 'causal' || hypothesisType === 'correlational') {
       alternatives.push({
         method: 'Structural Equation Modeling (SEM)',
         when: 'Sample size > 200 and testing complex model',
-        description: 'Test multiple relationships simultaneously with latent variables',
+        description:
+          'Test multiple relationships simultaneously with latent variables',
       });
     }
 
@@ -645,12 +747,14 @@ Target Population: ${request.targetPopulation || 'General'}`,
       {
         type: 'Convergent Validity',
         description: 'Ensure scale items converge on a single construct',
-        procedure: 'Factor analysis: All items should load > 0.60 on intended factor. AVE > 0.50.',
+        procedure:
+          'Factor analysis: All items should load > 0.60 on intended factor. AVE > 0.50.',
       },
       {
         type: 'Discriminant Validity',
         description: 'Ensure scales measure distinct constructs',
-        procedure: 'Fornell-Larcker criterion: Square root of AVE should exceed inter-construct correlations.',
+        procedure:
+          'Fornell-Larcker criterion: Square root of AVE should exceed inter-construct correlations.',
       },
       {
         type: 'Criterion Validity',
@@ -668,12 +772,17 @@ Target Population: ${request.targetPopulation || 'General'}`,
   /**
    * Calculate overall quality metrics
    */
-  private calculateQualityMetrics(scales: MeasurementScale[], variables: HypothesisVariable[]): {
+  private calculateQualityMetrics(
+    scales: MeasurementScale[],
+    variables: HypothesisVariable[],
+  ): {
     overallReliability: number;
     constructCoverage: number;
     validityScore: number;
   } {
-    const avgReliability = scales.reduce((sum, s) => sum + s.reliability.expectedAlpha, 0) / scales.length;
+    const avgReliability =
+      scales.reduce((sum, s) => sum + s.reliability.expectedAlpha, 0) /
+      scales.length;
     const constructCoverage = scales.length / variables.length; // Should be 1.0
     const validityScore = 0.85; // Based on assessment criteria
 
@@ -695,10 +804,12 @@ Target Population: ${request.targetPopulation || 'General'}`,
     const recommendations: string[] = [];
 
     // Reliability recommendations
-    const lowReliabilityScales = scales.filter(s => s.reliability.expectedAlpha < 0.70);
+    const lowReliabilityScales = scales.filter(
+      (s) => s.reliability.expectedAlpha < 0.7,
+    );
     if (lowReliabilityScales.length > 0) {
       recommendations.push(
-        `Consider adding more items to: ${lowReliabilityScales.map(s => s.scaleName).join(', ')}. Target α ≥ 0.70 for acceptable reliability.`,
+        `Consider adding more items to: ${lowReliabilityScales.map((s) => s.scaleName).join(', ')}. Target α ≥ 0.70 for acceptable reliability.`,
       );
     }
 
@@ -713,7 +824,9 @@ Target Population: ${request.targetPopulation || 'General'}`,
     );
 
     // Reverse coding
-    const hasReversedItems = scales.some(s => s.items.some(item => item.reversed));
+    const hasReversedItems = scales.some((s) =>
+      s.items.some((item) => item.reversed),
+    );
     if (hasReversedItems) {
       recommendations.push(
         'Remember to reverse-code negatively worded items before calculating scale scores.',
@@ -740,10 +853,10 @@ Target Population: ${request.targetPopulation || 'General'}`,
     variables: HypothesisVariable[],
     relationships: HypothesisRelationship[],
   ): { visualDiagram: string; statisticalModel: string } {
-    const ivs = variables.filter(v => v.role === 'independent');
-    const dvs = variables.filter(v => v.role === 'dependent');
-    const moderators = variables.filter(v => v.role === 'moderator');
-    const mediators = variables.filter(v => v.role === 'mediator');
+    const ivs = variables.filter((v) => v.role === 'independent');
+    const dvs = variables.filter((v) => v.role === 'dependent');
+    const moderators = variables.filter((v) => v.role === 'moderator');
+    const mediators = variables.filter((v) => v.role === 'mediator');
 
     let diagram = '========================================\n';
     diagram += 'HYPOTHESIS RESEARCH PATH\n';
@@ -752,7 +865,7 @@ Target Population: ${request.targetPopulation || 'General'}`,
     // Independent Variables
     if (ivs.length > 0) {
       diagram += 'INDEPENDENT VARIABLES:\n';
-      ivs.forEach(iv => {
+      ivs.forEach((iv) => {
         diagram += `  [${iv.name}]\n`;
       });
       diagram += '\n';
@@ -761,10 +874,15 @@ Target Population: ${request.targetPopulation || 'General'}`,
     // Relationships
     if (relationships.length > 0) {
       diagram += 'RELATIONSHIPS:\n';
-      relationships.forEach(rel => {
-        const fromVar = variables.find(v => v.id === rel.from);
-        const toVar = variables.find(v => v.id === rel.to);
-        const arrow = rel.direction === 'positive' ? '--->' : rel.direction === 'negative' ? '---x' : '----';
+      relationships.forEach((rel) => {
+        const fromVar = variables.find((v) => v.id === rel.from);
+        const toVar = variables.find((v) => v.id === rel.to);
+        const arrow =
+          rel.direction === 'positive'
+            ? '--->'
+            : rel.direction === 'negative'
+              ? '---x'
+              : '----';
         diagram += `  ${fromVar?.name || '?'} ${arrow} ${toVar?.name || '?'}\n`;
       });
       diagram += '\n';
@@ -773,7 +891,7 @@ Target Population: ${request.targetPopulation || 'General'}`,
     // Moderators
     if (moderators.length > 0) {
       diagram += 'MODERATORS:\n';
-      moderators.forEach(mod => {
+      moderators.forEach((mod) => {
         diagram += `  [${mod.name}] (affects strength of relationship)\n`;
       });
       diagram += '\n';
@@ -782,7 +900,7 @@ Target Population: ${request.targetPopulation || 'General'}`,
     // Mediators
     if (mediators.length > 0) {
       diagram += 'MEDIATORS:\n';
-      mediators.forEach(med => {
+      mediators.forEach((med) => {
         diagram += `  [${med.name}] (explains mechanism)\n`;
       });
       diagram += '\n';
@@ -791,12 +909,15 @@ Target Population: ${request.targetPopulation || 'General'}`,
     // Dependent Variables
     if (dvs.length > 0) {
       diagram += 'DEPENDENT VARIABLES:\n';
-      dvs.forEach(dv => {
+      dvs.forEach((dv) => {
         diagram += `  [${dv.name}]\n`;
       });
     }
 
-    const statisticalModel = this.generateStatisticalModel(variables, relationships);
+    const statisticalModel = this.generateStatisticalModel(
+      variables,
+      relationships,
+    );
 
     return {
       visualDiagram: diagram,
@@ -811,9 +932,9 @@ Target Population: ${request.targetPopulation || 'General'}`,
     variables: HypothesisVariable[],
     relationships: HypothesisRelationship[],
   ): string {
-    const dvs = variables.filter(v => v.role === 'dependent');
-    const ivs = variables.filter(v => v.role === 'independent');
-    const moderators = variables.filter(v => v.role === 'moderator');
+    const dvs = variables.filter((v) => v.role === 'dependent');
+    const ivs = variables.filter((v) => v.role === 'independent');
+    const moderators = variables.filter((v) => v.role === 'moderator');
 
     if (dvs.length === 0 || ivs.length === 0) {
       return 'DV = β₀ + β₁(IV) + ε';

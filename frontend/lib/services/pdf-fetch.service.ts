@@ -30,7 +30,8 @@ export interface PDFFetchProgress {
 }
 
 class PDFFetchService {
-  private readonly API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+  private readonly API_BASE =
+    process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
   /**
    * Trigger bulk PDF fetch for multiple papers
@@ -64,7 +65,10 @@ class PDFFetchService {
           queued++;
         } else {
           failed++;
-          console.warn(`PDF fetch failed for paper ${paperIds[index]}:`, result);
+          console.warn(
+            `PDF fetch failed for paper ${paperIds[index]}:`,
+            result
+          );
         }
       });
 
@@ -203,10 +207,13 @@ class PDFFetchService {
     wordCount: number | null;
   }> {
     try {
-      const response = await fetch(`${this.API_BASE}/pdf/full-text/${paperId}`, {
-        method: 'GET',
-        credentials: 'include',
-      });
+      const response = await fetch(
+        `${this.API_BASE}/pdf/full-text/${paperId}`,
+        {
+          method: 'GET',
+          credentials: 'include',
+        }
+      );
 
       if (response.ok) {
         return await response.json();

@@ -11,6 +11,7 @@ import { AnalysisLoggerService } from './services/analysis-logger.service';
 import { StatisticsService } from './services/statistics.service';
 import { HubService } from './services/hub.service';
 import { InterpretationService } from './services/interpretation.service';
+import { ExplainabilityService } from './services/explainability.service';
 import { CollaborationService } from './services/collaboration.service';
 import { SchedulingService } from './services/scheduling.service';
 import { AnalysisController } from './controllers/analysis.controller';
@@ -73,6 +74,9 @@ import { WebSocketService } from '../../services/websocket.service';
     // Interpretation Service (Phase 7 Day 5)
     InterpretationService,
 
+    // Explainability Service (Phase 10 Days 9-10)
+    ExplainabilityService,
+
     // Collaboration Service (Phase 7 Day 7)
     CollaborationService,
 
@@ -103,6 +107,7 @@ import { WebSocketService } from '../../services/websocket.service';
     PQMethodCompatibilityService,
     HubService,
     InterpretationService,
+    ExplainabilityService,
     CollaborationService,
     SchedulingService,
     CacheService,
