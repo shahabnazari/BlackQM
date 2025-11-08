@@ -19,6 +19,8 @@ import {
 } from './dto/literature.dto';
 import { APIQuotaMonitorService } from './services/api-quota-monitor.service';
 import { MultiMediaAnalysisService } from './services/multimedia-analysis.service';
+import { PDFParsingService } from './services/pdf-parsing.service';
+import { PDFQueueService } from './services/pdf-queue.service';
 import { SearchCoalescerService } from './services/search-coalescer.service';
 import { TranscriptionService } from './services/transcription.service';
 import { calculateQualityScore } from './utils/paper-quality.util';
@@ -45,6 +47,9 @@ export class LiteratureService {
     private readonly quotaMonitor: APIQuotaMonitorService,
     @Inject(forwardRef(() => StatementGeneratorService))
     private readonly statementGenerator: StatementGeneratorService,
+    // Phase 10 Day 30: PDF services for full-text extraction
+    private readonly pdfParsingService: PDFParsingService,
+    private readonly pdfQueueService: PDFQueueService,
   ) {}
 
   async searchLiterature(
@@ -501,6 +506,8 @@ export class LiteratureService {
             authors: paper.authors?.map((a: any) => a.name) || [],
             year: paper.year,
             abstract: paper.abstract,
+            doi: paper.externalIds?.DOI || null, // Phase 10 Day 30: Extract DOI for waterfall
+            pmid: paper.externalIds?.PubMed || null, // Phase 10 Day 30: Extract PMID for PMC API
             url: paper.url,
             venue: paper.venue,
             citationCount: paper.citationCount,
@@ -762,6 +769,7 @@ export class LiteratureService {
             url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
             source: 'PubMed',
             doi,
+            pmid, // Phase 10 Day 30: Include PMID for PMC full-text lookup
             citationCount: null, // Will be enriched from OpenAlex
             wordCount,
             wordCountExcludingRefs: wordCount,
@@ -1571,6 +1579,59 @@ export class LiteratureService {
         };
       }
 
+      // Phase 10 Day 30: Check for duplicates before saving
+      // Prevent duplicate saves when user manually saves then immediately extracts
+      let existingPaper = null;
+      if (saveDto.doi) {
+        existingPaper = await this.prisma.paper.findFirst({
+          where: {
+            userId,
+            doi: saveDto.doi,
+          },
+        });
+        if (existingPaper) {
+          this.logger.log(
+            `Paper already exists (DOI match): ${existingPaper.id}`,
+          );
+        }
+      }
+
+      // If no DOI, check by title + year (less precise but prevents obvious duplicates)
+      if (!existingPaper && saveDto.title && saveDto.year) {
+        existingPaper = await this.prisma.paper.findFirst({
+          where: {
+            userId,
+            title: saveDto.title,
+            year: saveDto.year,
+          },
+        });
+        if (existingPaper) {
+          this.logger.log(
+            `Paper already exists (title+year match): ${existingPaper.id}`,
+          );
+        }
+      }
+
+      // If paper exists, return existing ID (idempotent operation)
+      if (existingPaper) {
+        this.logger.log(`Returning existing paper ID: ${existingPaper.id}`);
+
+        // Still queue for full-text if needed
+        if (
+          (saveDto.doi || saveDto.pmid || saveDto.url) &&
+          existingPaper.fullTextStatus === 'not_fetched'
+        ) {
+          this.logger.log(
+            `🔍 Queueing full-text extraction for existing paper`,
+          );
+          this.pdfQueueService.addJob(existingPaper.id).catch((err) => {
+            this.logger.warn(`Failed to queue: ${err.message}`);
+          });
+        }
+
+        return { success: true, paperId: existingPaper.id };
+      }
+
       // Save paper to database for authenticated users
       const paper = await this.prisma.paper.create({
         data: {
@@ -1579,6 +1640,7 @@ export class LiteratureService {
           year: saveDto.year,
           abstract: saveDto.abstract,
           doi: saveDto.doi,
+          pmid: saveDto.pmid, // Phase 10 Day 30: Save PMID for PMC full-text lookup
           url: saveDto.url,
           venue: saveDto.venue,
           citationCount: saveDto.citationCount,
@@ -1590,6 +1652,63 @@ export class LiteratureService {
       });
 
       this.logger.log(`Paper saved successfully with ID: ${paper.id}`);
+
+      // Phase 10 Day 30: Queue background full-text extraction for papers with DOI, PMID, or URL
+      // Phase 10 Day 33: Enhanced diagnostic logging for identifier validation
+      // This ensures familiarization reads ACTUAL full articles, not just abstracts
+
+      // DIAGNOSTIC: Log actual identifier values (detect empty strings vs null)
+      const hasValidIdentifiers = Boolean(
+        (saveDto.doi && saveDto.doi.trim()) ||
+        (saveDto.pmid && saveDto.pmid.trim()) ||
+        (saveDto.url && saveDto.url.trim())
+      );
+
+      if (hasValidIdentifiers) {
+        const sources = [
+          saveDto.pmid && saveDto.pmid.trim() ? `PMID:${saveDto.pmid.trim()}` : null,
+          saveDto.doi && saveDto.doi.trim() ? `DOI:${saveDto.doi.trim()}` : null,
+          saveDto.url && saveDto.url.trim() ? `URL:${saveDto.url.substring(0, 50)}...` : null,
+        ]
+          .filter(Boolean)
+          .join(', ');
+
+        this.logger.log(`🔍 Queueing full-text extraction using: ${sources}`);
+
+        // DIAGNOSTIC: Log paper details for troubleshooting
+        this.logger.debug(`📋 Paper identifiers for ${paper.id}:`, {
+          paperId: paper.id,
+          title: saveDto.title?.substring(0, 60) + '...',
+          doi: saveDto.doi || 'NONE',
+          pmid: saveDto.pmid || 'NONE',
+          url: saveDto.url ? `${saveDto.url.substring(0, 50)}...` : 'NONE',
+        });
+
+        // Fire-and-forget: don't wait for full-text fetch (background job)
+        try {
+          const jobId = await this.pdfQueueService.addJob(paper.id);
+          this.logger.log(`✅ Job ${jobId} queued successfully for paper ${paper.id}`);
+        } catch (err: any) {
+          this.logger.error(
+            `❌ Failed to queue full-text job for ${paper.id}: ${err.message}`,
+          );
+          this.logger.error(`Error stack: ${err.stack}`);
+          // Non-critical: paper is still usable with abstract
+        }
+      } else {
+        // DIAGNOSTIC: Log WHY job not queued with actual values
+        this.logger.warn(
+          `⚠️  Paper ${paper.id} has NO valid identifiers - skipping full-text extraction`,
+        );
+        this.logger.debug(`Missing or empty identifiers:`, {
+          paperId: paper.id,
+          title: saveDto.title?.substring(0, 60) + '...',
+          doi: `"${saveDto.doi}"` || 'undefined',
+          pmid: `"${saveDto.pmid}"` || 'undefined',
+          url: `"${saveDto.url}"` || 'undefined',
+        });
+      }
+
       return { success: true, paperId: paper.id };
     } catch (error: any) {
       this.logger.error(`Failed to save paper: ${error.message}`);
@@ -1632,6 +1751,7 @@ export class LiteratureService {
             issue: true,
             pages: true,
             doi: true,
+            pmid: true, // Phase 10 Day 30: Include PMID for display
             url: true,
             venue: true,
             citationCount: true,
@@ -1643,6 +1763,11 @@ export class LiteratureService {
             collectionId: true,
             pdfPath: true,
             hasFullText: true,
+            fullText: true, // Phase 10 Day 30: Include full-text content
+            fullTextStatus: true, // Phase 10 Day 30: Include status for UI
+            fullTextSource: true, // Phase 10 Day 30: Show source (PMC/PDF/HTML)
+            fullTextWordCount: true, // Phase 10 Day 30: Display word count
+            fullTextFetchedAt: true, // Phase 10 Day 30: Show when fetched
             createdAt: true,
             updatedAt: true,
             // Exclude relations to avoid circular references and serialization issues
@@ -3319,5 +3444,435 @@ ER  -`;
     return sorted.length % 2 === 0
       ? (sorted[mid - 1] + sorted[mid]) / 2
       : sorted[mid];
+  }
+
+  /**
+   * PHASE 10 DAY 30: Refresh Paper Metadata (Enterprise-Grade Solution)
+   * Re-fetches metadata from academic sources for existing papers
+   * Designed to populate missing full-text availability fields for papers
+   * saved before full-text detection was implemented
+   *
+   * @param paperIds - Array of paper IDs or DOIs to refresh
+   * @param userId - User ID for logging
+   * @returns Object with refreshed papers and statistics
+   */
+  async refreshPaperMetadata(
+    paperIds: string[],
+    userId: string,
+  ): Promise<{
+    success: boolean;
+    refreshed: number;
+    failed: number;
+    papers: Paper[];
+    errors: Array<{ paperId: string; error: string }>;
+  }> {
+    this.logger.log(
+      `\n╔════════════════════════════════════════════════════════════╗`,
+    );
+    this.logger.log(
+      `║   🔄 REFRESH PAPER METADATA - ENTERPRISE SOLUTION         ║`,
+    );
+    this.logger.log(
+      `╚════════════════════════════════════════════════════════════╝`,
+    );
+    this.logger.log(`   User: ${userId}`);
+    this.logger.log(`   Papers to refresh: ${paperIds.length}`);
+    this.logger.log(``);
+
+    const refreshedPapers: Paper[] = [];
+    const errors: Array<{ paperId: string; error: string }> = [];
+
+    // Process papers in batches of 5 to avoid rate limiting
+    const BATCH_SIZE = 5;
+    let processedCount = 0;
+
+    for (let i = 0; i < paperIds.length; i += BATCH_SIZE) {
+      const batch = paperIds.slice(i, i + BATCH_SIZE);
+      this.logger.log(
+        `   📦 Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(paperIds.length / BATCH_SIZE)} (${batch.length} papers)`,
+      );
+
+      const batchResults = await Promise.allSettled(
+        batch.map(async (paperId) => {
+          try {
+            this.logger.log(`      🔍 Fetching metadata for: ${paperId}`);
+
+            // Try Semantic Scholar first (best source for full-text metadata)
+            let updatedPaper: Paper | null = null;
+
+            // Check if paperId is a DOI
+            if (paperId.startsWith('10.')) {
+              // Search by DOI
+              try {
+                const semanticScholarUrl = `https://api.semanticscholar.org/graph/v1/paper/DOI:${paperId}`;
+                const response = await firstValueFrom(
+                  this.httpService.get(semanticScholarUrl, {
+                    params: {
+                      fields:
+                        'title,authors,year,abstract,venue,citationCount,url,openAccessPdf,isOpenAccess,externalIds,fieldsOfStudy',
+                    },
+                    headers: {
+                      'User-Agent': 'VQMethod-Research-Platform/1.0',
+                    },
+                    timeout: 10000,
+                  }),
+                );
+
+                if (response.data) {
+                  updatedPaper = this.mapSemanticScholarToPaper(response.data);
+                  this.logger.log(
+                    `         ✅ Semantic Scholar: Found metadata (hasFullText: ${updatedPaper.hasFullText})`,
+                  );
+                }
+              } catch (ssError: any) {
+                this.logger.warn(
+                  `         ⚠️  Semantic Scholar lookup failed: ${ssError.message}`,
+                );
+              }
+            }
+
+            // Phase 10 Day 33: If Semantic Scholar ID/DOI failed, try title-based search (NEWLY IMPLEMENTED)
+            // Phase 10 Day 33 Fix: Add rate limit checks to prevent quota exhaustion
+            if (!updatedPaper) {
+              this.logger.log(`         🔍 Attempting title-based search...`);
+
+              // Phase 10 Day 33 Fix: Check rate limit before making API call
+              if (!this.quotaMonitor.canMakeRequest('semantic-scholar')) {
+                this.logger.warn(
+                  `         ⚠️  Semantic Scholar rate limit reached, skipping title-based search`,
+                );
+                throw new Error(
+                  'Semantic Scholar rate limit reached, cannot perform title-based search',
+                );
+              }
+
+              // Fetch paper from database to get title for search
+              const dbPaper = await this.prisma.paper.findUnique({
+                where: { id: paperId },
+                select: { title: true, authors: true, year: true },
+              });
+
+              if (!dbPaper || !dbPaper.title) {
+                throw new Error('Paper has no title for title-based search');
+              }
+
+              try {
+                // Call Semantic Scholar search API
+                const searchQuery = encodeURIComponent(dbPaper.title.trim());
+                const searchUrl = `https://api.semanticscholar.org/graph/v1/paper/search?query=${searchQuery}&limit=5&fields=title,authors,year,abstract,venue,citationCount,url,openAccessPdf,isOpenAccess,externalIds,fieldsOfStudy`;
+
+                const searchResponse = await firstValueFrom(
+                  this.httpService.get(searchUrl, {
+                    headers: {
+                      'User-Agent': 'VQMethod-Research-Platform/1.0',
+                    },
+                    timeout: 10000,
+                  }),
+                );
+
+                // Phase 10 Day 33 Fix: Record request for quota tracking
+                this.quotaMonitor.recordRequest('semantic-scholar');
+
+                if (searchResponse.data?.data && searchResponse.data.data.length > 0) {
+                  // Find best match using fuzzy title matching
+                  const bestMatch = this.findBestTitleMatch(
+                    dbPaper.title,
+                    searchResponse.data.data,
+                    dbPaper.authors as any[],
+                    dbPaper.year,
+                  );
+
+                  if (bestMatch) {
+                    updatedPaper = this.mapSemanticScholarToPaper(bestMatch);
+                    this.logger.log(
+                      `         ✅ Title-based search successful! Found: "${bestMatch.title?.substring(0, 60)}..."`,
+                    );
+                    this.logger.log(
+                      `            Full-text available: ${updatedPaper.hasFullText ? 'YES' : 'NO'}`,
+                    );
+                  } else {
+                    this.logger.warn(
+                      `         ⚠️  No good match found in search results (title similarity too low)`,
+                    );
+                  }
+                }
+              } catch (searchError: any) {
+                this.logger.warn(
+                  `         ⚠️  Title-based search failed: ${searchError.message}`,
+                );
+              }
+
+              // If still no result, throw error
+              if (!updatedPaper) {
+                throw new Error(
+                  'Both Semantic Scholar ID/DOI lookup and title-based search failed',
+                );
+              }
+            }
+
+            // Merge metadata: Keep original paper data, only update new fields
+            const mergedPaper: Paper = {
+              ...updatedPaper, // New metadata from API
+              id: paperId, // Keep original ID
+            };
+
+            processedCount++;
+            return mergedPaper;
+          } catch (error: any) {
+            this.logger.error(
+              `         ❌ Failed to refresh ${paperId}: ${error.message}`,
+            );
+            throw error;
+          }
+        }),
+      );
+
+      // Process batch results
+      for (let j = 0; j < batchResults.length; j++) {
+        const result = batchResults[j];
+        const paperId = batch[j];
+
+        if (result.status === 'fulfilled') {
+          refreshedPapers.push(result.value);
+        } else {
+          errors.push({
+            paperId,
+            error: result.reason?.message || 'Unknown error',
+          });
+        }
+      }
+
+      // Rate limiting: Wait 1 second between batches
+      if (i + BATCH_SIZE < paperIds.length) {
+        this.logger.log(`      ⏳ Waiting 1s before next batch...`);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+
+    this.logger.log(``);
+    this.logger.log(
+      `╔════════════════════════════════════════════════════════════╗`,
+    );
+    this.logger.log(
+      `║   ✅ METADATA REFRESH COMPLETE                            ║`,
+    );
+    this.logger.log(
+      `╚════════════════════════════════════════════════════════════╝`,
+    );
+    this.logger.log(`   📊 Statistics:`);
+    this.logger.log(`      • Total papers: ${paperIds.length}`);
+    this.logger.log(
+      `      • Successfully refreshed: ${refreshedPapers.length}`,
+    );
+    this.logger.log(`      • Failed: ${errors.length}`);
+
+    if (refreshedPapers.length > 0) {
+      const withFullText = refreshedPapers.filter((p) => p.hasFullText).length;
+      this.logger.log(
+        `      • Papers with full-text: ${withFullText}/${refreshedPapers.length}`,
+      );
+    }
+
+    if (errors.length > 0) {
+      this.logger.warn(`   ⚠️  Failed papers:`);
+      errors.forEach((err) => {
+        this.logger.warn(`      • ${err.paperId}: ${err.error}`);
+      });
+    }
+    this.logger.log(``);
+
+    return {
+      success: true,
+      refreshed: refreshedPapers.length,
+      failed: errors.length,
+      papers: refreshedPapers,
+      errors,
+    };
+  }
+
+  /**
+   * Helper method to map Semantic Scholar API response to Paper DTO
+   * Extracted from searchSemanticScholar for reuse
+   */
+  private mapSemanticScholarToPaper(paper: any): Paper {
+    // Calculate word counts
+    const abstractWordCount = calculateAbstractWordCount(paper.abstract || '');
+    const wordCount = calculateComprehensiveWordCount(
+      paper.title,
+      paper.abstract,
+    );
+    const wordCountExcludingRefs = wordCount; // Initially same
+
+    // Calculate quality score
+    const qualityComponents = calculateQualityScore({
+      citationCount: paper.citationCount || 0,
+      year: paper.year,
+      wordCount: abstractWordCount,
+      venue: paper.venue,
+      source: 'semantic_scholar',
+    });
+
+    // Phase 10 Day 5.17.4+: Enhanced PDF detection with PubMed Central fallback
+    let pdfUrl = paper.openAccessPdf?.url || null;
+    let hasPdf = !!pdfUrl && pdfUrl.trim().length > 0;
+
+    // If no PDF URL but has PubMed Central ID, construct PMC PDF URL
+    if (!hasPdf && paper.externalIds?.PubMedCentral) {
+      const pmcId = paper.externalIds.PubMedCentral;
+      pdfUrl = `https://www.ncbi.nlm.nih.gov/pmc/articles/PMC${pmcId}/pdf/`;
+      hasPdf = true;
+      this.logger.log(
+        `[Semantic Scholar] Constructed PMC PDF URL for paper ${paper.paperId}: ${pdfUrl}`,
+      );
+    }
+
+    return {
+      id: paper.paperId,
+      title: paper.title,
+      authors: paper.authors?.map((a: any) => a.name) || [],
+      year: paper.year,
+      abstract: paper.abstract,
+      url: paper.url,
+      venue: paper.venue,
+      citationCount: paper.citationCount,
+      fieldsOfStudy: paper.fieldsOfStudy,
+      source: LiteratureSource.SEMANTIC_SCHOLAR,
+      wordCount, // Total: title + abstract (+ full-text in future)
+      wordCountExcludingRefs, // Same as wordCount (already excludes non-content)
+      isEligible: isPaperEligible(wordCount),
+      // Phase 10 Day 5.17.4+: PDF availability from Semantic Scholar + PMC fallback
+      pdfUrl,
+      openAccessStatus: paper.isOpenAccess || hasPdf ? 'OPEN_ACCESS' : null,
+      hasPdf,
+      // Phase 10 Day 5.17.4+: Full-text availability (PDF detected = full-text available)
+      hasFullText: hasPdf, // If PDF URL exists, full-text is available
+      fullTextStatus: hasPdf ? 'available' : 'not_fetched', // 'available' = can be fetched
+      fullTextSource: hasPdf
+        ? paper.externalIds?.PubMedCentral
+          ? 'pmc'
+          : 'publisher'
+        : undefined,
+      // Phase 10 Day 5.13+ Extension 2: Enterprise quality metrics
+      abstractWordCount, // Abstract only (for 100-word filter)
+      citationsPerYear:
+        qualityComponents.citationImpact > 0
+          ? (paper.citationCount || 0) /
+            Math.max(
+              1,
+              new Date().getFullYear() -
+                (paper.year || new Date().getFullYear()),
+            )
+          : 0,
+      qualityScore: qualityComponents.totalScore,
+      isHighQuality: qualityComponents.totalScore >= 50,
+    };
+  }
+
+  /**
+   * Phase 10 Day 33: Find best title match from Semantic Scholar search results
+   * Uses fuzzy matching to handle minor title variations
+   *
+   * @param queryTitle - Original paper title to match
+   * @param results - Search results from Semantic Scholar
+   * @param authors - Optional author list for validation
+   * @param year - Optional year for validation
+   * @returns Best matching result or null if no good match found
+   */
+  private findBestTitleMatch(
+    queryTitle: string,
+    results: any[],
+    authors?: string[],
+    year?: number,
+  ): any | null {
+    // Normalize title for comparison (lowercase, remove punctuation, trim)
+    const normalizeTitle = (title: string): string => {
+      return title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '') // Remove punctuation
+        .replace(/\s+/g, ' ') // Collapse multiple spaces
+        .trim();
+    };
+
+    const normalizedQuery = normalizeTitle(queryTitle);
+
+    // Score each result
+    const scoredResults = results
+      .map((result) => {
+        if (!result.title) return null;
+
+        const normalizedResult = normalizeTitle(result.title);
+
+        // Calculate similarity score (0-100)
+        let score = 0;
+
+        // Exact match = 100
+        if (normalizedResult === normalizedQuery) {
+          score = 100;
+        }
+        // Substring match = 80-95
+        else if (normalizedResult.includes(normalizedQuery)) {
+          score = 90;
+        } else if (normalizedQuery.includes(normalizedResult)) {
+          score = 85;
+        }
+        // Word overlap score = 0-80
+        else {
+          const queryWords = normalizedQuery.split(' ').filter((w) => w.length > 3);
+          const resultWords = normalizedResult
+            .split(' ')
+            .filter((w) => w.length > 3);
+
+          const overlap = queryWords.filter((w) => resultWords.includes(w)).length;
+          const totalWords = Math.max(queryWords.length, resultWords.length);
+
+          if (totalWords > 0) {
+            score = (overlap / totalWords) * 80;
+          }
+        }
+
+        // Boost score if year matches (±2 years tolerance)
+        if (year && result.year && Math.abs(result.year - year) <= 2) {
+          score += 10;
+        }
+
+        // Boost score if authors match (simple name overlap)
+        if (authors && authors.length > 0 && result.authors && result.authors.length > 0) {
+          const authorLastNames = authors.map((a) =>
+            a.split(' ').pop()?.toLowerCase(),
+          );
+          const resultAuthorLastNames = result.authors.map((a: any) =>
+            a.name?.split(' ').pop()?.toLowerCase(),
+          );
+
+          const authorOverlap = authorLastNames.filter((name) =>
+            resultAuthorLastNames.includes(name),
+          ).length;
+
+          if (authorOverlap > 0) {
+            score += 5 * authorOverlap;
+          }
+        }
+
+        return {
+          result,
+          score,
+        };
+      })
+      .filter((item) => item !== null) as Array<{ result: any; score: number }>;
+
+    // Sort by score (highest first)
+    scoredResults.sort((a, b) => b.score - a.score);
+
+    // Return best match if score >= 70 (good enough threshold)
+    if (scoredResults.length > 0 && scoredResults[0].score >= 70) {
+      this.logger.debug(
+        `Title match score: ${scoredResults[0].score} for "${scoredResults[0].result.title?.substring(0, 60)}..."`,
+      );
+      return scoredResults[0].result;
+    }
+
+    // No good match found
+    this.logger.debug(`Best score was ${scoredResults[0]?.score || 0}, below threshold of 70`);
+    return null;
   }
 }

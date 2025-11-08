@@ -1,11 +1,10 @@
 'use client';
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import { useRouter, usePathname } from 'next/navigation';
-import { ResearchPhase } from './PrimaryToolbar';
 import { cn } from '@/lib/utils';
 import { SparklesIcon } from '@heroicons/react/24/outline';
+import { motion } from 'framer-motion';
+import { usePathname, useRouter } from 'next/navigation';
+import { ResearchPhase } from './PrimaryToolbar';
 
 interface ToolItem {
   id: string;
@@ -20,37 +19,18 @@ interface ToolItem {
 const phaseTools: Record<ResearchPhase, ToolItem[]> = {
   discover: [
     {
-      id: 'literature-search',
-      label: 'Literature Search',
+      id: 'literature-discovery',
+      label: 'Literature Discovery',
       path: '/discover/literature',
-      description: 'AI-powered paper search',
+      description: 'AI-powered search, themes, gaps & synthesis',
       aiEnabled: true,
-      badge: 'NEW',
+      badge: 'AI',
     },
     {
-      id: 'reference-manager',
-      label: 'Reference Manager',
+      id: 'library-manager',
+      label: 'Library Manager',
       path: '/discover/references',
-      description: 'Import and organize citations',
-    },
-    {
-      id: 'knowledge-map',
-      label: 'Knowledge Map',
-      path: '/discover/knowledge-map',
-      description: 'Visual concept mapping',
-    },
-    {
-      id: 'research-gaps',
-      label: 'Research Gaps',
-      path: '/discover/gaps',
-      description: 'AI gap analysis',
-      aiEnabled: true,
-    },
-    {
-      id: 'prior-studies',
-      label: 'Prior Studies',
-      path: '/discover/studies',
-      description: 'Browse existing Q-studies',
+      description: 'Advanced citation organization',
     },
   ],
   design: [

@@ -17,8 +17,10 @@ import { RecommendationEngine } from './RecommendationEngine';
 import { ComparativeInsights } from './ComparativeInsights';
 import { TrendIdentifier } from './TrendIdentifier';
 import { ActionableInsightsGenerator } from './ActionableInsightsGenerator';
-import { 
-  SparklesIcon, 
+import { ExplainabilityDashboard } from '../explainability/ExplainabilityDashboard';
+import { ResearchCorpusPanel } from '../repository/ResearchCorpusPanel';
+import {
+  SparklesIcon,
   DocumentDuplicateIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon
@@ -31,7 +33,7 @@ interface InterpretationWorkspaceProps {
   analysisResults: any;
   narratives: FactorNarrative[];
   themes: Theme[];
-  activeTab: 'narratives' | 'themes' | 'consensus' | 'synthesis' | 'bias' | 'perspectives' | 'alternatives' | 'mining' | 'patterns' | 'distinguishing' | 'interactions' | 'insights' | 'recommendations' | 'comparison' | 'trends' | 'actionable';
+  activeTab: 'narratives' | 'themes' | 'consensus' | 'synthesis' | 'bias' | 'perspectives' | 'alternatives' | 'mining' | 'patterns' | 'distinguishing' | 'interactions' | 'insights' | 'recommendations' | 'comparison' | 'trends' | 'actionable' | 'explainability' | 'corpus';
   onGenerateNarratives: () => void;
   onExtractThemes: () => void;
   generating: boolean;
@@ -268,6 +270,16 @@ export function InterpretationWorkspace({
                 console.log('Interaction analysis completed:', analysis);
               }}
             />
+          )}
+
+          {/* Phase 10 Days 24-25: Explainable AI Dashboard */}
+          {activeTab === 'explainability' && (
+            <ExplainabilityDashboard studyId={_studyId} />
+          )}
+
+          {/* Phase 10 Days 26-27: Research Repository & Knowledge System */}
+          {activeTab === 'corpus' && (
+            <ResearchCorpusPanel studyId={_studyId} />
           )}
 
           {/* Phase 8 Day 4: Insight Synthesis Components */}

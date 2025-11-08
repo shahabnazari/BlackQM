@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PrismaService } from '../../../common/prisma.service';
 import { PDFParsingService } from './pdf-parsing.service';
 
 /**
@@ -38,12 +39,62 @@ export class PDFQueueService {
   constructor(
     private pdfParsingService: PDFParsingService,
     private eventEmitter: EventEmitter2,
+    private prisma: PrismaService, // Phase 10 Day 32: Inject Prisma to update status immediately
   ) {}
 
   /**
    * Add a PDF processing job to the queue
+   * Phase 10 Day 33: Enhanced with database validation and diagnostic logging
    */
   async addJob(paperId: string): Promise<string> {
+    // Phase 10 Day 33: DIAGNOSTIC - Verify paper exists and has valid identifiers
+    try {
+      const paper = await this.prisma.paper.findUnique({
+        where: { id: paperId },
+        select: { id: true, doi: true, pmid: true, url: true, title: true },
+      });
+
+      if (!paper) {
+        const errorMsg = `Paper ${paperId} not found in database`;
+        this.logger.error(`❌ ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
+
+      // Check if paper has at least one valid identifier (non-empty after trim)
+      const hasValidDoi = paper.doi && paper.doi.trim().length > 0;
+      const hasValidPmid = paper.pmid && paper.pmid.trim().length > 0;
+      const hasValidUrl = paper.url && paper.url.trim().length > 0;
+
+      if (!hasValidDoi && !hasValidPmid && !hasValidUrl) {
+        const errorMsg = `Paper ${paperId} has no valid identifiers for full-text extraction`;
+        this.logger.error(`❌ ${errorMsg}`);
+        this.logger.debug(`Empty or missing identifiers:`, {
+          paperId: paper.id,
+          title: paper.title?.substring(0, 60) + '...',
+          doi: `"${paper.doi}"`,
+          pmid: `"${paper.pmid}"`,
+          url: `"${paper.url}"`,
+        });
+        throw new Error(errorMsg);
+      }
+
+      // Log which identifiers are available
+      const availableIdentifiers = [
+        hasValidDoi ? `DOI:${paper.doi}` : null,
+        hasValidPmid ? `PMID:${paper.pmid}` : null,
+        hasValidUrl ? `URL:${paper.url.substring(0, 40)}...` : null,
+      ]
+        .filter(Boolean)
+        .join(', ');
+
+      this.logger.log(
+        `Adding job for paper "${paper.title?.substring(0, 50)}..." using: ${availableIdentifiers}`,
+      );
+    } catch (error: any) {
+      this.logger.error(`❌ Failed to validate paper ${paperId}: ${error.message}`);
+      throw error; // Re-throw to prevent queuing invalid jobs
+    }
+
     const jobId = `pdf-${paperId}-${Date.now()}`;
 
     const job: PDFJob = {
@@ -59,7 +110,21 @@ export class PDFQueueService {
     this.jobs.set(jobId, job);
     this.queue.push(jobId);
 
-    this.logger.log(`Added PDF job ${jobId} for paper ${paperId} to queue`);
+    this.logger.log(`✅ Added PDF job ${jobId} for paper ${paperId} to queue`);
+
+    // Phase 10 Day 32: CRITICAL FIX - Update status to 'fetching' IMMEDIATELY
+    // Frontend waits 2 seconds and checks status - jobs must be marked as fetching right away
+    // Otherwise getBulkStatus returns 0 fetching → frontend skips wait → extraction has 0 full-text
+    try {
+      await this.prisma.paper.update({
+        where: { id: paperId },
+        data: { fullTextStatus: 'fetching' },
+      });
+      this.logger.log(`✅ Updated paper ${paperId} status to 'fetching'`);
+    } catch (error: any) {
+      this.logger.warn(`Failed to update paper ${paperId} status: ${error.message}`);
+      // Non-critical: job will still process
+    }
 
     // Emit queued event
     this.eventEmitter.emit('pdf.job.queued', { jobId, paperId, progress: 0 });

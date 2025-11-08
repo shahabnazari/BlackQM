@@ -9,15 +9,17 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Alert } from '@/components/ui/alert';
 import { useInterpretationStore } from '@/lib/stores/interpretation.store';
 import { InterpretationWorkspace } from '@/components/interpretation/InterpretationWorkspace';
-import { 
-  DocumentTextIcon, 
-  SparklesIcon, 
+import {
+  DocumentTextIcon,
+  SparklesIcon,
   ChartBarIcon,
   LightBulbIcon,
   BeakerIcon,
   ShieldCheckIcon,
   UserGroupIcon,
-  ArrowsPointingOutIcon
+  ArrowsPointingOutIcon,
+  BoltIcon,
+  ArchiveBoxIcon
 } from '@heroicons/react/24/outline';
 
 /**
@@ -52,7 +54,7 @@ export default function InterpretationPage() {
     extractThemes
   } = useInterpretationStore();
 
-  const [activeTab, setActiveTab] = useState<'narratives' | 'themes' | 'consensus' | 'synthesis' | 'bias' | 'perspectives' | 'alternatives' | 'mining' | 'patterns' | 'distinguishing' | 'interactions'>('narratives');
+  const [activeTab, setActiveTab] = useState<'narratives' | 'themes' | 'consensus' | 'synthesis' | 'bias' | 'perspectives' | 'alternatives' | 'mining' | 'patterns' | 'distinguishing' | 'interactions' | 'explainability' | 'corpus'>('narratives');
   const [generating, setGenerating] = useState(false);
 
   // Load interpretation data on mount
@@ -244,6 +246,24 @@ export default function InterpretationPage() {
             >
               <ArrowsPointingOutIcon className="w-4 h-4" />
               Interactions
+            </Button>
+            <Button
+              size="sm"
+              variant={activeTab === 'explainability' ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('explainability')}
+              className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600"
+            >
+              <BoltIcon className="w-4 h-4" />
+              🌟 Explainability
+            </Button>
+            <Button
+              size="sm"
+              variant={activeTab === 'corpus' ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('corpus')}
+              className="flex items-center gap-2"
+            >
+              <ArchiveBoxIcon className="w-4 h-4" />
+              Research Corpus
             </Button>
           </div>
         </div>

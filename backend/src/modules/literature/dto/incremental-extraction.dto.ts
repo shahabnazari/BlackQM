@@ -16,17 +16,18 @@ import {
 import { ApiProperty } from '@nestjs/swagger';
 
 export enum ResearchPurpose {
-  EXPLORATORY = 'exploratory',
-  EXPLANATORY = 'explanatory',
-  EVALUATIVE = 'evaluative',
-  DESCRIPTIVE = 'descriptive',
+  Q_METHODOLOGY = 'q_methodology',
+  SURVEY_CONSTRUCTION = 'survey_construction',
+  QUALITATIVE_ANALYSIS = 'qualitative_analysis',
+  LITERATURE_SYNTHESIS = 'literature_synthesis',
+  HYPOTHESIS_GENERATION = 'hypothesis_generation',
 }
 
 export enum UserExpertiseLevel {
-  BEGINNER = 'beginner',
+  NOVICE = 'novice',
   INTERMEDIATE = 'intermediate',
+  ADVANCED = 'advanced',
   EXPERT = 'expert',
-  ACADEMIC = 'academic',
 }
 
 export class IncrementalExtractionDto {
@@ -51,7 +52,7 @@ export class IncrementalExtractionDto {
   @ApiProperty({
     description: 'Research purpose for theme extraction',
     enum: ResearchPurpose,
-    example: ResearchPurpose.EXPLORATORY,
+    example: ResearchPurpose.QUALITATIVE_ANALYSIS,
   })
   @IsEnum(ResearchPurpose)
   purpose!: ResearchPurpose;

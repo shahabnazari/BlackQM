@@ -20,6 +20,9 @@ import { EnhancedThemeIntegrationService } from './services/enhanced-theme-integ
 import { PDFParsingService } from './services/pdf-parsing.service';
 import { PDFQueueService } from './services/pdf-queue.service';
 import { LiteratureCacheService } from './services/literature-cache.service';
+import { PaperQualityScoringService } from './services/paper-quality-scoring.service';
+import { GuidedBatchSelectorService } from './services/guided-batch-selector.service';
+import { HtmlFullTextService } from './services/html-full-text.service';
 import { PDFController } from './controllers/pdf.controller';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
@@ -68,6 +71,9 @@ import { AIModule } from '../ai/ai.module';
     PDFParsingService, // Phase 10 Day 5.15 - PDF Full-Text Parsing
     PDFQueueService, // Phase 10 Day 5.15 - PDF Background Queue
     LiteratureCacheService, // Phase 10 Day 18 - Iterative Theme Extraction Cache
+    PaperQualityScoringService, // Phase 10 Day 19.6 - Paper Quality Scoring
+    GuidedBatchSelectorService, // Phase 10 Day 19.6 - Guided Batch Selection
+    HtmlFullTextService, // Phase 10 Day 30 - HTML & PMC Full-Text Fetching
   ],
   exports: [
     LiteratureService,
@@ -88,6 +94,7 @@ import { AIModule } from '../ai/ai.module';
     PDFParsingService, // Phase 10 Day 5.15 - PDF Full-Text Parsing
     PDFQueueService, // Phase 10 Day 5.15 - PDF Background Queue
     LiteratureCacheService, // Phase 10 Day 18 - Iterative Theme Extraction Cache
+    HtmlFullTextService, // Phase 10 Day 30 - HTML & PMC Full-Text Fetching
   ],
 })
 export class LiteratureModule implements OnModuleInit {

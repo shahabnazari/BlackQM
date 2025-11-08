@@ -23,6 +23,7 @@ import { ParticipantFlowModule } from './modules/participant-flow.module';
 import { NavigationModule } from './modules/navigation/navigation.module';
 import { LiteratureModule } from './modules/literature/literature.module';
 import { ResearchDesignModule } from './modules/research-design/research-design.module';
+import { RepositoryModule } from './modules/repository/repository.module';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { ArchiveService } from './services/archive.service';
 
@@ -66,6 +67,7 @@ import { ArchiveService } from './services/archive.service';
     NavigationModule, // Phase 8.5: Research Lifecycle Navigation
     LiteratureModule, // Phase 9: Literature Review & Discovery System
     ResearchDesignModule, // Phase 9.5: Research Design Intelligence
+    RepositoryModule, // Phase 10 Days 26-30: Research Repository & Knowledge Management
     HealthModule,
   ],
   controllers: [AppController],

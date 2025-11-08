@@ -10,7 +10,12 @@ async function main() {
   const researcherPassword = await bcryptjs.hash('password123', 10);
   const researcher = await prisma.user.upsert({
     where: { email: 'researcher@test.com' },
-    update: {},
+    update: {
+      password: researcherPassword,
+      name: 'Researcher User',
+      role: 'RESEARCHER',
+      emailVerified: true,
+    },
     create: {
       email: 'researcher@test.com',
       password: researcherPassword,
@@ -27,7 +32,12 @@ async function main() {
 
   const user = await prisma.user.upsert({
     where: { email: 'test@example.com' },
-    update: {},
+    update: {
+      password: hashedPassword,
+      name: 'Test User',
+      role: 'RESEARCHER',
+      emailVerified: true,
+    },
     create: {
       email: 'test@example.com',
       password: hashedPassword,
@@ -43,7 +53,12 @@ async function main() {
   const adminPassword = await bcryptjs.hash('Password123!', 10);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@test.com' },
-    update: {},
+    update: {
+      password: adminPassword,
+      name: 'Admin User',
+      role: 'ADMIN',
+      emailVerified: true,
+    },
     create: {
       email: 'admin@test.com',
       password: adminPassword,
@@ -59,7 +74,12 @@ async function main() {
   const legacyAdminPassword = await bcryptjs.hash('Admin123456', 10);
   const legacyAdmin = await prisma.user.upsert({
     where: { email: 'admin@vqmethod.com' },
-    update: {},
+    update: {
+      password: legacyAdminPassword,
+      name: 'Admin User (Legacy)',
+      role: 'ADMIN',
+      emailVerified: true,
+    },
     create: {
       email: 'admin@vqmethod.com',
       password: legacyAdminPassword,

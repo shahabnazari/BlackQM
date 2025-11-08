@@ -64,7 +64,7 @@ export function IncrementalExtractionModal({
     new Set()
   );
   const [purpose, setPurpose] = useState<ResearchPurpose>(
-    ResearchPurpose.EXPLORATORY
+    ResearchPurpose.QUALITATIVE_ANALYSIS
   );
   const [expertiseLevel, setExpertiseLevel] = useState<UserExpertiseLevel>(
     UserExpertiseLevel.INTERMEDIATE
@@ -163,7 +163,7 @@ export function IncrementalExtractionModal({
     setSelectedCorpus(null);
     setSelectedPaperIds(new Set());
     setCorpusName('');
-    setPurpose(ResearchPurpose.EXPLORATORY);
+    setPurpose(ResearchPurpose.QUALITATIVE_ANALYSIS);
     setExpertiseLevel(UserExpertiseLevel.INTERMEDIATE);
     setError(null);
   };
@@ -380,15 +380,20 @@ export function IncrementalExtractionModal({
                   disabled={!!selectedCorpus}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <option value={ResearchPurpose.EXPLORATORY}>
-                    Exploratory
+                  <option value={ResearchPurpose.QUALITATIVE_ANALYSIS}>
+                    Qualitative Analysis
                   </option>
-                  <option value={ResearchPurpose.EXPLANATORY}>
-                    Explanatory
+                  <option value={ResearchPurpose.LITERATURE_SYNTHESIS}>
+                    Literature Synthesis
                   </option>
-                  <option value={ResearchPurpose.EVALUATIVE}>Evaluative</option>
-                  <option value={ResearchPurpose.DESCRIPTIVE}>
-                    Descriptive
+                  <option value={ResearchPurpose.HYPOTHESIS_GENERATION}>
+                    Hypothesis Generation
+                  </option>
+                  <option value={ResearchPurpose.SURVEY_CONSTRUCTION}>
+                    Survey Construction
+                  </option>
+                  <option value={ResearchPurpose.Q_METHODOLOGY}>
+                    Q-Methodology
                   </option>
                 </select>
                 {selectedCorpus && (

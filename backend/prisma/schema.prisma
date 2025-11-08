@@ -72,6 +72,9 @@ model User {
   approvalReviews       ReportApproval[]      @relation("ApprovalReviewers")
   createdShareLinks     ReportShareLink[]     @relation("ReportShareLinkCreator")
 
+  // Phase 10 Day 29: Permissions
+  insightAccessGrants   InsightAccess[]
+
   @@index([email])
   @@index([tenantId])
   @@index([isActive])
@@ -799,7 +802,8 @@ model Paper {
   volume        String?  // Volume number
   issue         String?  // Issue/Number
   pages         String?  // Page range (e.g., "123-145")
-  doi           String?  
+  doi           String?
+  pmid          String?  // PubMed ID (for PMC full-text lookup)
   url           String?
   venue         String?
   citationCount Int?
@@ -824,7 +828,7 @@ model Paper {
   // Phase 10 Day 5.15: Full-Text PDF Parsing
   fullText              String?   // Full-text content (10,000+ words)
   fullTextStatus        String?   @default("not_fetched") // not_fetched | fetching | success | failed
-  fullTextSource        String?   // unpaywall | manual
+  fullTextSource        String?   // unpaywall | manual | pmc | html_scrape
   fullTextFetchedAt     DateTime?
   fullTextWordCount     Int?      // Word count of full-text only (for analytics)
   fullTextHash          String?   // SHA256 hash for deduplication
@@ -1652,4 +1656,233 @@ model ReportShareLink {
   @@index([isActive])
   @@index([expiresAt])
   @@map("report_share_links")
+}
+
+// ============================================
+// PHASE 10 DAYS 26-30: Research Repository & Knowledge Management
+// ============================================
+
+/// Research Insight - Core entity in the knowledge repository
+/// Captures any research finding with full provenance and citation lineage
+model ResearchInsight {
+  id              String   @id @default(uuid())
+
+  // Core Content
+  title           String
+  content         String   // The actual insight/finding text
+  type            String   // 'statement' | 'factor' | 'theme' | 'gap' | 'quote' | 'paper_finding' | 'hypothesis'
+
+  // Source Information
+  sourceType      String   // 'study' | 'paper' | 'response' | 'analysis' | 'literature'
+  sourceId        String   // Foreign key to source entity
+  studyId         String?  // Link to study if applicable
+  userId          String   // Owner/creator
+
+  // Citation Lineage (paper → gap → question → hypothesis → theme → statement → factor → insight)
+  citationChain   Json     // Array of citation objects with full provenance
+  provenance      Json     // Detailed provenance metadata
+
+  // Metadata
+  keywords        Json     // string[] - Extracted keywords for search
+  tags            Json?    // string[] - User-defined tags
+  metadata        Json?    // Additional metadata (confidence, relevance, etc.)
+
+  // Relationships
+  relatedInsights Json?    // string[] - IDs of related insights
+  relatedPapers   Json?    // string[] - IDs of related papers
+  relatedThemes   Json?    // string[] - IDs of related themes
+
+  // Search Optimization
+  searchVector    String?  // Pre-computed search text for full-text search
+
+  // Collaboration & Sharing
+  isPublic        Boolean  @default(false)
+  shareLevel      String   @default("private") // 'private' | 'team' | 'institution' | 'public'
+
+  // Analytics
+  viewCount       Int      @default(0)
+  citationCount   Int      @default(0)
+
+  // Versioning
+  version         Int      @default(1)
+  parentId        String?  // For tracking insight evolution
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  annotations     InsightAnnotation[]
+  versions        InsightVersion[]
+  accessGrants    InsightAccess[]     // Phase 10 Day 29: Permission grants
+
+  @@index([type])
+  @@index([sourceType])
+  @@index([sourceId])
+  @@index([studyId])
+  @@index([userId])
+  @@index([isPublic])
+  @@index([shareLevel])
+  @@index([createdAt])
+  @@map("research_insights")
+}
+
+/// Insight Annotation - Collaborative notes on insights
+model InsightAnnotation {
+  id          String   @id @default(uuid())
+  insightId   String
+  insight     ResearchInsight @relation(fields: [insightId], references: [id], onDelete: Cascade)
+
+  userId      String
+  content     String   // Annotation text
+  type        String   // 'note' | 'question' | 'critique' | 'extension'
+
+  // Threading
+  parentId    String?  // For threaded discussions
+  replies     Json?    // string[] - Reply IDs
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([insightId])
+  @@index([userId])
+  @@index([parentId])
+  @@map("insight_annotations")
+}
+
+/// Insight Version - Track changes to insights over time
+model InsightVersion {
+  id          String   @id @default(uuid())
+  insightId   String
+  insight     ResearchInsight @relation(fields: [insightId], references: [id], onDelete: Cascade)
+
+  version     Int
+  content     String   // Snapshot of content at this version
+  metadata    Json     // Snapshot of metadata
+
+  changedBy   String   // User ID who made the change
+  changeNote  String?  // Description of changes
+
+  createdAt   DateTime @default(now())
+
+  @@index([insightId])
+  @@index([version])
+  @@map("insight_versions")
+}
+
+/// Repository Search Index - Optimized search index for all repository entities
+model RepositoryIndex {
+  id              String   @id @default(uuid())
+
+  // Entity Information
+  entityType      String   // 'insight' | 'statement' | 'factor' | 'paper' | 'theme' | 'gap' | 'quote'
+  entityId        String   // Foreign key to entity
+
+  // Searchable Content
+  title           String
+  content         String   // Full-text content for search
+  keywords        Json     // string[] - Keywords
+
+  // Facets for filtering
+  studyId         String?
+  userId          String
+  sourceType      String?  // Where this came from
+  createdDate     DateTime
+
+  // Search Metadata
+  relevanceScore  Float?   // Pre-computed relevance for ranking
+  popularity      Int      @default(0) // View/citation count for ranking
+
+  // Timestamps
+  indexedAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([entityType])
+  @@index([entityId])
+  @@index([studyId])
+  @@index([userId])
+  @@index([sourceType])
+  @@index([createdDate])
+  @@map("repository_index")
+}
+
+/// Saved Search - Store user's search queries for quick access
+model SavedSearch {
+  id          String   @id @default(uuid())
+  userId      String
+
+  name        String   // User-defined name for the search
+  query       String   // Search query string
+  filters     Json?    // Search filters (facets)
+
+  // Metadata
+  resultCount Int?     // Last known result count
+  isPublic    Boolean  @default(false)
+
+  // Usage tracking
+  lastUsed    DateTime @default(now())
+  useCount    Int      @default(1)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([lastUsed])
+  @@map("saved_searches")
+}
+
+/// Search History - Track all searches for analytics and suggestions
+model SearchHistory {
+  id          String   @id @default(uuid())
+  userId      String?  // Nullable for anonymous searches
+
+  query       String   // Search query
+  filters     Json?    // Applied filters
+  resultCount Int      // Number of results
+
+  // Analytics
+  clickedResults Json? // string[] - IDs of results clicked
+  sessionId   String?  // For session tracking
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("search_history")
+}
+
+// =============================================================================
+// PHASE 10 DAY 29: PERMISSIONS & COLLABORATION
+// =============================================================================
+
+/// Access Role - Permission levels for insights
+enum AccessRole {
+  VIEWER      // Can view only
+  COMMENTER   // Can view and add annotations
+  EDITOR      // Can view, annotate, and edit
+  OWNER       // Full control
+}
+
+/// Insight Access - Granular permission control for insights
+model InsightAccess {
+  id          String     @id @default(uuid())
+  insightId   String
+  insight     ResearchInsight @relation(fields: [insightId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role        AccessRole @default(VIEWER)
+  grantedBy   String     // User ID who granted access
+  grantedAt   DateTime   @default(now())
+  expiresAt   DateTime?  // Optional expiration date
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([insightId, userId])
+  @@index([userId])
+  @@index([insightId])
+  @@index([role])
+  @@map("insight_access")
 }

@@ -14,14 +14,17 @@ import DatabaseSourcesInfo from '@/components/literature/DatabaseSourcesInfo';
 import EnterpriseThemeCard from '@/components/literature/EnterpriseThemeCard';
 import PurposeSelectionWizard from '@/components/literature/PurposeSelectionWizard';
 import ThemeCountGuidance from '@/components/literature/ThemeCountGuidance';
-import { ThemeMethodologyExplainer } from '@/components/literature/ThemeMethodologyExplainer';
 import ThemeExtractionProgressModal from '@/components/literature/ThemeExtractionProgressModal';
+import { ThemeMethodologyExplainer } from '@/components/literature/ThemeMethodologyExplainer';
 import { VideoSelectionPanel } from '@/components/literature/VideoSelectionPanel';
 import { YouTubeChannelBrowser } from '@/components/literature/YouTubeChannelBrowser';
 // Phase 10 Day 18: Incremental Theme Extraction Components
 import { CorpusManagementPanel } from '@/components/literature/CorpusManagementPanel';
 import { IncrementalExtractionModal } from '@/components/literature/IncrementalExtractionModal';
 import { SaturationDashboard } from '@/components/literature/SaturationDashboard';
+// Phase 10 Day 31: Mode Selection & Guided Extraction
+import { GuidedExtractionWizard } from '@/components/literature/GuidedExtractionWizard';
+import { ModeSelectionModal } from '@/components/literature/ModeSelectionModal';
 // Phase 10 Day 5.12: Enhanced Theme Integration Components
 import type {
   ConstructMapping as ConstructMappingType,
@@ -42,7 +45,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import * as QueryExpansionAPI from '@/lib/api/services/query-expansion-api.service';
+// Phase 10 Day 31: QueryExpansionAPI now handled by SearchBar component
 import {
   ResearchPurpose,
   SaturationData,
@@ -60,6 +63,8 @@ import {
 import { useThemeExtractionProgress } from '@/lib/hooks/useThemeExtractionProgress';
 // Phase 10 Day 18: Incremental Extraction Hook
 import { useIncrementalExtraction } from '@/lib/hooks/useIncrementalExtraction';
+// Phase 10 Day 31.4: Full-Text Waiting Hook
+import { useWaitForFullText } from '@/lib/hooks/useWaitForFullText';
 import {
   literatureAPI,
   Paper,
@@ -73,10 +78,9 @@ import {
   saveLiteratureState,
 } from '@/lib/services/literature-state-persistence.service';
 import { cn } from '@/lib/utils';
-import { AnimatePresence, motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ArrowRight,
   Award,
   BookOpen,
   Calendar,
@@ -86,7 +90,6 @@ import {
   Download,
   ExternalLink,
   FileText,
-  Filter,
   GitBranch,
   Loader2,
   MessageSquare,
@@ -98,93 +101,64 @@ import {
   X,
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import React, { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+// Phase 10 Day 33: WebSocket for real-time theme extraction progress
+import { io, Socket } from 'socket.io-client';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { retryApiCall } from '@/lib/utils/retry';
+// Phase 10 Day 31: Extracted SearchSection Components
+import {
+  ActiveFiltersChips,
+  FilterPanel,
+  SearchBar,
+} from './components/SearchSection';
+// Phase 10 Day 31: useSearch hook available for future migration
+import { useLiteratureSearchStore } from '@/lib/stores/literature-search.store';
 
 function LiteratureSearchContent() {
+  // Phase 10 Day 31.4: Constants (eliminate magic numbers)
+  const FULL_TEXT_WAIT_SECONDS = 60; // Maximum wait for full-text extraction
+  const LIBRARY_MAX_PAPERS = 1000; // Maximum papers to fetch from library
+  const ABSTRACT_OVERFLOW_THRESHOLD = 2000; // Characters threshold for abstract overflow
+  const MIN_CONTENT_LENGTH = 50; // Minimum content length for analysis
+
   // PHASE 10 DAY 1: URL state management for bookmarkable searches
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Search state
-  const [query, setQuery] = useState('');
-  const [papers, setPapers] = useState<Paper[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [totalResults, setTotalResults] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
+  // Phase 10 Day 31: Use Zustand store for search state
+  const {
+    query,
+    setQuery,
+    papers,
+    setPapers,
+    totalResults,
+    setTotalResults,
+    loading,
+    setLoading,
+    currentPage,
+    setCurrentPage,
+    showFilters,
+    appliedFilters,
+    filters,
+    toggleShowFilters,
+    getAppliedFilterCount,
+    setFilters,
+    applyFilters,
+  } = useLiteratureSearchStore();
+
+  // Phase 10 Day 31: Search orchestration handled by local handleSearchAllSources
+  // Note: Future refactoring could migrate to useSearch().searchAllSources
   const [queryCorrectionMessage, setQueryCorrectionMessage] = useState<{
     original: string;
     corrected: string;
   } | null>(null);
   // const [selectedView, setSelectedView] = useState<'list' | 'grid'>('list');
 
-  // AI inline suggestions state
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-  const suggestionTimerRef = React.useRef<NodeJS.Timeout | null>(null);
-  const searchContainerRef = React.useRef<HTMLDivElement>(null);
+  // Phase 10 Day 31: AI suggestions, filters, and presets now managed by Zustand store
 
-  // Default filter values (sources managed separately via academicDatabases state)
-  const defaultFilters: {
-    yearFrom: number | undefined;
-    yearTo: number | undefined;
-    sortBy:
-      | 'relevance'
-      | 'date'
-      | 'citations'
-      | 'citations_per_year'
-      | 'word_count'
-      | 'quality_score';
-    citationMin: number;
-    minCitations: number | undefined;
-    publicationType: 'all' | 'journal' | 'conference' | 'preprint';
-    author: string;
-    authorSearchMode: 'contains' | 'exact' | 'fuzzy';
-    includeAIMode: boolean;
-  } = {
-    yearFrom: 2020,
-    yearTo: new Date().getFullYear(),
-    sortBy: 'relevance',
-    citationMin: 0,
-    minCitations: undefined,
-    publicationType: 'all',
-    author: '',
-    authorSearchMode: 'contains',
-    includeAIMode: true,
-  };
-
-  // Filters being configured (in the filter panel)
-  const [filters, setFilters] = useState(defaultFilters);
-
-  // Applied filters (actually used for search)
-  const [appliedFilters, setAppliedFilters] = useState(defaultFilters);
-
-  // PHASE 10 DAY 1: Saved filter presets
-  const [savedPresets, setSavedPresets] = useState<
-    Array<{
-      id: string;
-      name: string;
-      filters: typeof filters;
-    }>
-  >([]);
-  const [showPresets, setShowPresets] = useState(false);
-  const [presetName, setPresetName] = useState('');
-
-  // Load presets from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('filterPresets');
-      if (stored) {
-        setSavedPresets(JSON.parse(stored));
-      }
-    } catch (error) {
-      console.error('Failed to load filter presets:', error);
-    }
-  }, []);
-
-  // PHASE 10 DAY 1: Load filters from URL params on mount
+  // Phase 10 Day 31: Load filters from URL params on mount (uses Zustand)
   useEffect(() => {
     const q = searchParams.get('q');
     const yearFrom = searchParams.get('yearFrom');
@@ -193,134 +167,26 @@ function LiteratureSearchContent() {
     const publicationType = searchParams.get('type');
     const sortBy = searchParams.get('sort');
 
+    // Set query from URL
     if (q) setQuery(q);
 
-    const urlFilters = {
-      ...defaultFilters,
-      ...(yearFrom && { yearFrom: parseInt(yearFrom) }),
-      ...(yearTo && { yearTo: parseInt(yearTo) }),
-      ...(minCitations && { minCitations: parseInt(minCitations) }),
-      ...(publicationType &&
-        publicationType !== 'all' && {
-          publicationType: publicationType as any,
-        }),
-      ...(sortBy && sortBy !== 'relevance' && { sortBy: sortBy as any }),
-    };
+    // Build filter object from URL params
+    const urlFilterUpdates: Record<string, any> = {};
+    if (yearFrom) urlFilterUpdates.yearFrom = parseInt(yearFrom);
+    if (yearTo) urlFilterUpdates.yearTo = parseInt(yearTo);
+    if (minCitations) urlFilterUpdates.minCitations = parseInt(minCitations);
+    if (publicationType && publicationType !== 'all')
+      urlFilterUpdates.publicationType = publicationType;
+    if (sortBy && sortBy !== 'relevance') urlFilterUpdates.sortBy = sortBy;
 
-    setFilters(urlFilters);
-    setAppliedFilters(urlFilters);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Update URL when filters change
-  const updateURL = useCallback(
-    (newFilters: typeof filters, searchQuery?: string) => {
-      const params = new URLSearchParams();
-
-      if (searchQuery || query) params.set('q', searchQuery || query);
-      if (newFilters.yearFrom !== defaultFilters.yearFrom)
-        params.set('yearFrom', newFilters.yearFrom!.toString());
-      if (newFilters.yearTo !== defaultFilters.yearTo)
-        params.set('yearTo', newFilters.yearTo!.toString());
-      if (newFilters.minCitations)
-        params.set('minCitations', newFilters.minCitations.toString());
-      if (newFilters.publicationType !== 'all')
-        params.set('type', newFilters.publicationType);
-      if (newFilters.sortBy !== 'relevance')
-        params.set('sort', newFilters.sortBy);
-
-      const url = params.toString()
-        ? `?${params.toString()}`
-        : '/discover/literature';
-      router.replace(url, { scroll: false });
-    },
-    [query, router]
-  );
-
-  // Save preset to localStorage
-  const handleSavePreset = () => {
-    if (!presetName.trim()) {
-      toast.error('Please enter a preset name');
-      return;
+    // Apply URL filters if any
+    if (Object.keys(urlFilterUpdates).length > 0) {
+      setFilters(urlFilterUpdates);
+      applyFilters();
     }
+  }, [setQuery, setFilters, applyFilters, searchParams]);
 
-    const preset = {
-      id: Date.now().toString(),
-      name: presetName.trim(),
-      filters: appliedFilters,
-    };
-
-    const updated = [...savedPresets, preset];
-    setSavedPresets(updated);
-    localStorage.setItem('filterPresets', JSON.stringify(updated));
-    setPresetName('');
-    setShowPresets(false);
-    toast.success(`Preset "${preset.name}" saved!`);
-  };
-
-  // Load preset
-  const handleLoadPreset = (preset: (typeof savedPresets)[0]) => {
-    setFilters(preset.filters);
-    setAppliedFilters(preset.filters);
-    setShowPresets(false);
-    toast.success(`Loaded preset "${preset.name}"`);
-  };
-
-  // Delete preset
-  const handleDeletePreset = (presetId: string) => {
-    const updated = savedPresets.filter(p => p.id !== presetId);
-    setSavedPresets(updated);
-    localStorage.setItem('filterPresets', JSON.stringify(updated));
-    toast.success('Preset deleted');
-  };
-
-  // Count applied filters (filters that differ from defaults)
-  const getAppliedFilterCount = () => {
-    let count = 0;
-    if (appliedFilters.yearFrom !== defaultFilters.yearFrom) count++;
-    if (appliedFilters.yearTo !== defaultFilters.yearTo) count++;
-    if (appliedFilters.minCitations && appliedFilters.minCitations > 0) count++;
-    if (appliedFilters.publicationType !== 'all') count++;
-    if (appliedFilters.sortBy !== 'relevance') count++;
-    if (appliedFilters.author && appliedFilters.author.trim().length > 0)
-      count++;
-    return count;
-  };
-
-  const appliedFilterCount = getAppliedFilterCount();
-
-  // Apply filters (copy from filters to appliedFilters)
-  const handleApplyFilters = () => {
-    // Auto-correct any invalid filter values before applying
-    const correctedFilters = { ...filters };
-
-    // Auto-correct year range if needed
-    if (correctedFilters.yearFrom && correctedFilters.yearTo) {
-      if (correctedFilters.yearFrom > correctedFilters.yearTo) {
-        correctedFilters.yearTo = correctedFilters.yearFrom;
-      }
-    }
-
-    setAppliedFilters(correctedFilters);
-    setFilters(correctedFilters);
-    setShowFilters(false);
-
-    // PHASE 10 DAY 1: Update URL for bookmarkable search
-    updateURL(correctedFilters);
-
-    // Count the filters we're about to apply
-    let count = 0;
-    if (filters.yearFrom !== defaultFilters.yearFrom) count++;
-    if (filters.yearTo !== defaultFilters.yearTo) count++;
-    if (filters.minCitations && filters.minCitations > 0) count++;
-    if (filters.publicationType !== 'all') count++;
-    if (filters.sortBy !== 'relevance') count++;
-    if (filters.author && filters.author.trim().length > 0) count++;
-    if (count > 0) {
-      toast.success(`${count} filter${count === 1 ? '' : 's'} applied`);
-    } else {
-      toast.info('Using default filters');
-    }
-  };
+  // Phase 10 Day 31: Filter handlers now managed by Zustand (applyFilters, resetFilters, presets)
 
   // Analysis state
   const [selectedPapers, setSelectedPapers] = useState<Set<string>>(new Set());
@@ -342,6 +208,11 @@ function LiteratureSearchContent() {
   const [v2SaturationData, setV2SaturationData] =
     useState<SaturationData | null>(null);
   const [userExpertiseLevel] = useState<UserExpertiseLevel>('researcher');
+
+  // Phase 10 Day 31: Mode selection (quick vs guided extraction)
+  const [showModeSelectionModal, setShowModeSelectionModal] = useState(false);
+  const [showGuidedWizard, setShowGuidedWizard] = useState(false);
+  const [isExtractionInProgress, setIsExtractionInProgress] = useState(false); // CRITICAL FIX: Prevent duplicate extractions
 
   // Phase 10 Day 5.16: Content analysis data for Purpose Wizard Step 0
   const [contentAnalysis, setContentAnalysis] = useState<{
@@ -372,6 +243,14 @@ function LiteratureSearchContent() {
 
   // Phase 10 Day 18: Incremental extraction state management
   const incrementalExtraction = useIncrementalExtraction();
+
+  // Phase 10 Day 31.4: Full-text waiting before extraction
+  const { waitForFullText } = useWaitForFullText();
+
+  // Phase 10 Day 33: WebSocket connection for real-time progress
+  const { user } = useAuth();
+  const socketRef = useRef<Socket | null>(null);
+  const userIdRef = useRef<string | null>(null); // Phase 10 Day 33: Store user ID for cleanup
 
   // Phase 10 Day 5.12: Enhanced Theme Integration State
   const [selectedThemeIds, setSelectedThemeIds] = useState<string[]>([]);
@@ -491,8 +370,11 @@ function LiteratureSearchContent() {
     if (state.papers) setPapers(state.papers);
     if (state.totalResults) setTotalResults(state.totalResults);
     if (state.currentPage) setCurrentPage(state.currentPage);
-    if (state.filters) setFilters(state.filters);
-    if (state.appliedFilters) setAppliedFilters(state.appliedFilters);
+    // Phase 10 Day 31: Filters restored via Zustand (setFilters + applyFilters)
+    if (state.filters) {
+      setFilters(state.filters);
+      applyFilters();
+    }
 
     // Restore selection state
     if (state.selectedPapers) {
@@ -587,6 +469,113 @@ function LiteratureSearchContent() {
     youtubeVideos,
   ]);
 
+  // PHASE 10 DAY 33: WebSocket connection for real-time theme extraction progress
+  // Implements Patent Claim #9 (4-Part Transparent Progress Messaging)
+  // Phase 10 Day 33 Fix: Use actual user ID from auth context
+  useEffect(() => {
+    // Phase 10 Day 33 Fix: Only connect if user is authenticated
+    if (!user?.id) {
+      console.log('⚠️ WebSocket: User not authenticated, skipping connection');
+      return;
+    }
+
+    // Store user ID for cleanup
+    userIdRef.current = user.id;
+
+    // Get API URL from environment
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+    // Connect to theme-extraction WebSocket namespace
+    const socket = io(`${apiUrl}/theme-extraction`, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 10000,
+    });
+
+    socketRef.current = socket;
+
+    // Connection event handlers
+    socket.on('connect', () => {
+      console.log('✅ WebSocket connected to theme-extraction gateway');
+
+      // Phase 10 Day 33 Fix: Use actual user ID from auth context
+      socket.emit('join', user.id);
+      console.log(`📡 Joined room for user: ${user.id}`);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('❌ WebSocket disconnected from theme-extraction gateway');
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('❌ WebSocket connection error:', error.message);
+    });
+
+    // Theme extraction progress updates
+    socket.on('extraction-progress', (data: any) => {
+      console.log('🟢 WebSocket progress received:', data);
+
+      // Extract transparent message from details
+      if (data.details?.transparentMessage) {
+        const transparentMsg = data.details.transparentMessage;
+
+        console.log('🟢 Using REAL WebSocket transparentMessage:', {
+          stage: transparentMsg.stageName,
+          stageNumber: transparentMsg.stageNumber,
+          percentage: transparentMsg.percentage,
+          liveStats: transparentMsg.liveStats,
+        });
+
+        // Update progress with transparent message
+        updateProgress(
+          transparentMsg.stageNumber,
+          transparentMsg.totalStages || 6,
+          transparentMsg
+        );
+      } else {
+        // Fallback to basic progress update
+        console.warn('⚠️ WebSocket data missing transparentMessage, using basic update');
+        updateProgress(1, 6);
+      }
+    });
+
+    // Theme extraction completion
+    socket.on('extraction-complete', (data: any) => {
+      console.log('✅ WebSocket extraction complete:', data);
+      const themesCount = data.details?.themesExtracted || 0;
+      completeExtraction(themesCount);
+
+      // Celebration animation
+      if (themesCount > 0) {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+        });
+      }
+    });
+
+    // Theme extraction errors
+    socket.on('extraction-error', (data: any) => {
+      console.error('❌ WebSocket extraction error:', data);
+      setExtractionError(data.message || 'Theme extraction failed');
+      toast.error(data.message || 'Theme extraction failed');
+    });
+
+    // Cleanup on unmount
+    return () => {
+      if (socketRef.current && userIdRef.current) {
+        console.log('🔌 Disconnecting WebSocket on unmount');
+        // Phase 10 Day 33 Fix: Use stored user ID for proper room cleanup
+        socketRef.current.emit('leave', userIdRef.current);
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [user?.id]); // Phase 10 Day 33 Fix: Reconnect when user changes (login/logout)
+
   // PHASE 10 DAY 5.17.5: Clear incompatible results when purpose changes
   // Prevents stale data from previous purposes persisting in state
   useEffect(() => {
@@ -655,70 +644,7 @@ function LiteratureSearchContent() {
     }
   };
 
-  // AI-powered inline suggestions while typing
-  useEffect(() => {
-    // Clear previous timer
-    if (suggestionTimerRef.current) {
-      clearTimeout(suggestionTimerRef.current);
-    }
-
-    // Only fetch suggestions if query is at least 3 characters
-    if (query && query.trim().length >= 3) {
-      setLoadingSuggestions(true);
-
-      suggestionTimerRef.current = setTimeout(async () => {
-        try {
-          const result = await QueryExpansionAPI.expandQuery(query, 'general');
-
-          // Get up to 4 refined query suggestions
-          const suggestions = [
-            result.expanded,
-            ...result.suggestions.slice(0, 3),
-          ].filter(s => s && s !== query); // Remove duplicates and original query
-
-          setAiSuggestions(suggestions);
-          setShowSuggestions(suggestions.length > 0);
-        } catch (error) {
-          console.error('Failed to fetch AI suggestions:', error);
-          setAiSuggestions([]);
-          setShowSuggestions(false);
-        } finally {
-          setLoadingSuggestions(false);
-        }
-      }, 800); // 800ms debounce
-    } else {
-      setAiSuggestions([]);
-      setShowSuggestions(false);
-      setLoadingSuggestions(false);
-    }
-
-    // Cleanup
-    return () => {
-      if (suggestionTimerRef.current) {
-        clearTimeout(suggestionTimerRef.current);
-      }
-    };
-  }, [query]);
-
-  // Click outside to close suggestions
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        searchContainerRef.current &&
-        !searchContainerRef.current.contains(event.target as Node)
-      ) {
-        setShowSuggestions(false);
-      }
-    };
-
-    if (showSuggestions) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showSuggestions]);
+  // Phase 10 Day 31: AI suggestions now handled by SearchBar component
 
   const handleSearch = useCallback(async () => {
     if (!query.trim()) {
@@ -781,7 +707,7 @@ function LiteratureSearchContent() {
       }
 
       // Check if filters are too restrictive
-      if (result.total === 0 && appliedFilterCount > 0) {
+      if (result.total === 0 && getAppliedFilterCount() > 0) {
         const hasStrictFilters =
           (appliedFilters.minCitations && appliedFilters.minCitations > 0) ||
           (appliedFilters.yearFrom &&
@@ -817,7 +743,7 @@ function LiteratureSearchContent() {
         setActiveResultsSubTab('papers'); // Show papers sub-tab
 
         // More helpful message based on filters
-        if (appliedFilterCount > 0) {
+        if (getAppliedFilterCount() > 0) {
           const filterHints = [];
           if (appliedFilters.minCitations && appliedFilters.minCitations > 0) {
             filterHints.push(
@@ -900,6 +826,21 @@ function LiteratureSearchContent() {
   };
 
   const handleExtractThemes = async () => {
+    // CRITICAL FIX: Prevent duplicate extraction sessions
+    if (isExtractionInProgress) {
+      console.warn(
+        '⚠️ Extraction already in progress - ignoring duplicate click'
+      );
+      toast.error('Theme extraction already in progress');
+      return;
+    }
+
+    // Set extraction in progress
+    setIsExtractionInProgress(true);
+
+    // DAY 33 FIX: Immediate visual feedback
+    const preparingToast = toast.loading('Preparing papers for extraction...');
+
     // PHASE 10 DAY 5.17.3: Generate unique request ID for tracing
     const requestId = `extract_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     setCurrentRequestId(requestId); // Store in state for use in handlePurposeSelected
@@ -908,33 +849,613 @@ function LiteratureSearchContent() {
     console.log(`${'='.repeat(80)}`);
     console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
 
-    // PHASE 10 DAY 5.13: Show purpose selection wizard FIRST
-    const totalSources = selectedPapers.size + transcribedVideos.length;
-    console.log(`📊 [${requestId}] Initial counts:`, {
-      selectedPapers: selectedPapers.size,
-      transcribedVideos: transcribedVideos.length,
-      totalSources,
-    });
+    // Phase 10 Day 31: Auto-select all papers if none selected
+    // Use local variable to avoid state timing issues
+    let papersToAnalyze: Set<string>;
 
-    if (totalSources === 0) {
-      console.error(`❌ [${requestId}] No sources selected - aborting`);
-      toast.error('Please select papers or transcribe videos to analyze');
-      return;
+    if (selectedPapers.size === 0 && papers.length > 0) {
+      const allPaperIds = new Set(papers.map(p => p.id));
+      setSelectedPapers(allPaperIds);
+      papersToAnalyze = allPaperIds; // Use the new set immediately
+      console.log(
+        `✨ [${requestId}] Auto-selected all ${allPaperIds.size} papers`
+      );
+      toast.success(
+        `Auto-selected all ${allPaperIds.size} papers for extraction`
+      );
+      const totalSources = allPaperIds.size + transcribedVideos.length;
+      console.log(`📊 [${requestId}] Initial counts (auto-selected):`, {
+        selectedPapers: allPaperIds.size,
+        transcribedVideos: transcribedVideos.length,
+        totalSources,
+      });
+    } else {
+      papersToAnalyze = selectedPapers; // Use existing selection
+      const totalSources = selectedPapers.size + transcribedVideos.length;
+      console.log(`📊 [${requestId}] Initial counts:`, {
+        selectedPapers: selectedPapers.size,
+        transcribedVideos: transcribedVideos.length,
+        totalSources,
+      });
+
+      if (totalSources === 0) {
+        console.error(`❌ [${requestId}] No sources available - aborting`);
+        toast.error('No papers available for theme extraction');
+        return;
+      }
     }
+
+    // PHASE 10 DAY 32: STEP 0.5 - Automatic Metadata Refresh for Stale Papers
+    console.log(
+      `\n╔════════════════════════════════════════════════════════════╗`
+    );
+    console.log(`║   🔄 STEP 0.5: AUTO-REFRESH STALE METADATA               ║`);
+    console.log(
+      `╚════════════════════════════════════════════════════════════╝`
+    );
+    console.log(`   Checking for papers with outdated full-text metadata...`);
+
+    const papersToCheck = papers.filter(p => papersToAnalyze.has(p.id));
+    const stalePapers = papersToCheck.filter(
+      p =>
+        (p.doi || p.url) && // Has identifiers (can fetch full-text)
+        (!p.hasFullText || p.fullTextStatus === 'not_fetched') // Missing full-text metadata
+    );
+
+    console.log(`   📊 Analysis:`);
+    console.log(`      • Total selected papers: ${papersToCheck.length}`);
+    console.log(`      • Papers with stale metadata: ${stalePapers.length}`);
+    console.log(
+      `      • Papers with up-to-date metadata: ${papersToCheck.length - stalePapers.length}`
+    );
+
+    if (stalePapers.length > 0) {
+      console.log(
+        `\n   🔄 Refreshing metadata for ${stalePapers.length} papers...`
+      );
+      const refreshToast = toast.loading(
+        `Updating metadata for ${stalePapers.length} papers to detect full-text availability...`
+      );
+
+      try {
+        const paperIdsToRefresh = stalePapers.map(p => p.id);
+        const refreshResult =
+          await literatureAPI.refreshPaperMetadata(paperIdsToRefresh);
+
+        console.log(`   ✅ Metadata refresh complete:`);
+        console.log(
+          `      • Successfully refreshed: ${refreshResult.refreshed}`
+        );
+        console.log(`      • Failed: ${refreshResult.failed}`);
+        console.log(
+          `      • Papers with full-text: ${refreshResult.papers.filter(p => p.hasFullText).length}`
+        );
+
+        // Update the papers array with refreshed metadata
+        const refreshedPapersMap = new Map(
+          refreshResult.papers.map(p => [p.id, p])
+        );
+        const updatedPapers = papers.map(
+          p => refreshedPapersMap.get(p.id) || p
+        );
+        setPapers(updatedPapers);
+
+        toast.success(
+          `✅ Metadata updated: ${refreshResult.papers.filter(p => p.hasFullText).length} papers have full-text available`,
+          { id: refreshToast }
+        );
+
+        console.log(`   ✅ Papers array updated with fresh metadata`);
+      } catch (error: any) {
+        console.error(`   ❌ Metadata refresh failed:`, error);
+        toast.warning(
+          `Failed to refresh metadata. Proceeding with existing data...`,
+          { id: refreshToast, duration: 5000 }
+        );
+      }
+    } else {
+      console.log(
+        `   ✅ All selected papers have up-to-date metadata - skipping refresh`
+      );
+    }
+    console.log(``);
 
     // PHASE 10 DAY 5.16: Perform content analysis BEFORE showing wizard
     console.log(
-      `📄 [${requestId}] STEP 1: Content Analysis - Analyzing ${selectedPapers.size} papers...`
-    );
-    // Get selected paper objects
-    const selectedPaperObjects = papers.filter(p => selectedPapers.has(p.id));
-    console.log(
-      `✅ [${requestId}] Retrieved ${selectedPaperObjects.length} paper objects from state`
+      `📄 [${requestId}] STEP 1: Content Analysis - Analyzing ${papersToAnalyze.size} papers...`
     );
 
-    // Analyze content types
-    const paperSources: SourceContent[] = selectedPaperObjects.map(
-      (paper, index) => {
+    // Phase 10 Day 31.5: CRITICAL FIX - Save papers to database FIRST
+    // Papers must be saved before full-text extraction can work
+    // Background jobs only run for papers in the database
+    console.log(
+      `💾 [${requestId}] Saving papers to database to enable full-text extraction...`
+    );
+    const papersToSave = papers.filter(p => papersToAnalyze.has(p.id));
+    let savedCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+    const failedPapers: Array<{ title: string; error: string }> = [];
+
+    // Phase 10 Day 33: Refactored to use shared retry utility (enterprise-grade)
+    const savePaperWithRetry = async (
+      paper: any
+    ): Promise<{ success: boolean; error?: string }> => {
+      // Build save payload with only defined fields
+      const savePayload: any = {
+        title: paper.title,
+        authors: paper.authors || [],
+        year: paper.year,
+        source: paper.source,
+      };
+
+      // Add optional fields only if defined
+      if (paper.abstract) savePayload.abstract = paper.abstract;
+      if (paper.doi) savePayload.doi = paper.doi;
+      if (paper.url) savePayload.url = paper.url;
+      if (paper.venue) savePayload.venue = paper.venue;
+      if (paper.citationCount !== undefined)
+        savePayload.citationCount = paper.citationCount;
+      if (paper.keywords) savePayload.keywords = paper.keywords;
+
+      // Use shared retry utility with jitter and exponential backoff
+      const result = await retryApiCall(
+        async () => {
+          const saveResult = await literatureAPI.savePaper(savePayload);
+          if (!saveResult.success) {
+            throw new Error('Save returned false');
+          }
+          return saveResult;
+        },
+        {
+          maxRetries: 3,
+          onRetry: (attempt, error, delayMs) => {
+            console.warn(
+              `   ⚠️  Retry ${attempt}/3 for "${paper.title?.substring(0, 40)}..." - waiting ${Math.round(delayMs)}ms (${error.message})`
+            );
+          },
+        }
+      );
+
+      return result;
+    };
+
+    // Phase 10 Day 33 Fix: savePaperWithRetry handles ALL errors internally, no outer try-catch needed
+    for (const paper of papersToSave) {
+      const saveResult = await savePaperWithRetry(paper);
+
+      if (saveResult.success) {
+        savedCount++;
+        console.log(
+          `   ✅ Saved: "${paper.title?.substring(0, 50)}..." (${paper.doi || paper.url || 'no identifier'})`
+        );
+      } else {
+        // Check if it's a duplicate error (non-critical)
+        if (
+          saveResult.error?.includes('already exists') ||
+          saveResult.error?.includes('duplicate')
+        ) {
+          skippedCount++;
+          console.log(
+            `   ⏭️  Skipped (duplicate): "${paper.title?.substring(0, 50)}..."`
+          );
+        } else {
+          failedCount++;
+          failedPapers.push({
+            title: paper.title || 'Unknown',
+            error: saveResult.error || 'Unknown error'
+          });
+          console.error(
+            `   ❌ Failed after retries: "${paper.title?.substring(0, 50)}..." - ${saveResult.error}`
+          );
+        }
+      }
+
+      // CRITICAL FIX: Add 150ms delay between saves to prevent rate limit (429 errors)
+      // This allows backend to process requests sequentially without overwhelming rate limiter
+      if (savedCount + skippedCount + failedCount < papersToSave.length) {
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
+    }
+
+    // Phase 10 Day 32: Report save results with user notifications
+    console.log(
+      `✅ [${requestId}] Paper saving complete: ${savedCount} saved, ${skippedCount} already existed, ${failedCount} failed`
+    );
+
+    if (failedCount > 0) {
+      console.error(`❌ Failed papers:`, failedPapers);
+      toast.error(
+        `Failed to save ${failedCount} of ${papersToSave.length} papers. Theme extraction may be limited. Check console for details.`,
+        { duration: 8000 }
+      );
+    }
+
+    // DAY 33 FIX: Removed hardcoded 2-second wait - unnecessary delay
+    // Background jobs start immediately when papers are saved
+    // The waitForFullText() function below will poll for actual status
+
+    // Phase 10 Day 31: Fetch papers from database to get fullText
+    // Now papers should be in DB and jobs should be queued/running
+    console.log(
+      `🔄 [${requestId}] Fetching saved papers from database to check for full-text...`
+    );
+    try {
+      const savedPapersResponse = await literatureAPI.getUserLibrary(
+        1,
+        LIBRARY_MAX_PAPERS
+      );
+      const savedPapersMap = new Map(
+        savedPapersResponse.papers.map(p => [p.id, p])
+      );
+      console.log(
+        `✅ [${requestId}] Retrieved ${savedPapersResponse.papers.length} saved papers from database`
+      );
+
+      // Get selected paper objects, preferring DB version if available (has fullText)
+      const selectedPaperObjects = papers
+        .filter(p => papersToAnalyze.has(p.id))
+        .map(paper => {
+          const savedPaper = savedPapersMap.get(paper.id);
+          if (savedPaper) {
+            // Use database version which may have fullText
+            const hasFullText =
+              savedPaper.fullText && savedPaper.fullText.length > 0;
+            if (hasFullText) {
+              console.log(
+                `   ✅ Found fullText for "${paper.title?.substring(0, 50)}..." (${savedPaper.fullText?.length || 0} chars)`
+              );
+            }
+            return savedPaper;
+          }
+          // Fallback to search result if not in database
+          return paper;
+        });
+
+      console.log(
+        `✅ [${requestId}] Prepared ${selectedPaperObjects.length} paper objects (with DB fullText if available)`
+      );
+
+      // CRITICAL DIAGNOSTIC: Check if papers have any content BEFORE waiting
+      const papersWithAnyContent = selectedPaperObjects.filter(
+        p => (p.fullText && p.fullText.length > 0) || (p.abstract && p.abstract.length > 0)
+      );
+      const papersWithFullTextNow = selectedPaperObjects.filter(p => p.fullText && p.fullText.length > 0);
+      const papersWithAbstractNow = selectedPaperObjects.filter(p => p.abstract && p.abstract.length > 0);
+      console.log(`\n📊 [${requestId}] DIAGNOSTIC - Content Analysis BEFORE Waiting:`);
+      console.log(`   • Total selected papers: ${selectedPaperObjects.length}`);
+      console.log(`   • Papers with ANY content: ${papersWithAnyContent.length}`);
+      console.log(`   • Papers with full-text: ${papersWithFullTextNow.length}`);
+      console.log(`   • Papers with abstract: ${papersWithAbstractNow.length}`);
+      console.log(`   • Papers with NO content: ${selectedPaperObjects.length - papersWithAnyContent.length}`);
+
+      if (selectedPaperObjects.length > 0) {
+        const sample = selectedPaperObjects[0];
+        if (sample) {
+          console.log(`   📄 Sample paper:`, {
+            id: sample.id,
+            title: sample.title?.substring(0, 50),
+            hasAbstract: !!sample.abstract,
+            abstractLength: sample.abstract?.length || 0,
+            hasFullText: !!sample.fullText,
+            fullTextLength: sample.fullText?.length || 0,
+            hasFullTextFlag: sample.hasFullText,
+            doi: sample.doi,
+          });
+        }
+      }
+
+      // PHASE 10 DAY 32.2: STEP 1.5 - Wait for full-text extraction for papers that might have it
+      console.log(`\n📥 [${requestId}] STEP 1.5: Checking Full-Text Availability`);
+      console.log(`${'─'.repeat(60)}`);
+
+      // CRITICAL FIX: Wait for ALL papers with DOI/URL that don't have full-text yet
+      // The backend auto-triggers PDF queue for papers with identifiers, so we should wait for them
+      // Don't rely on hasFullText flag - it might not be set correctly in search results
+      const papersNeedingFullText = selectedPaperObjects.filter(
+        p =>
+          (!p.fullText || p.fullText.length === 0) && // Don't have full-text yet
+          (p.doi || p.url) // Have identifiers (PDF jobs would be queued)
+      );
+
+      console.log(`   🔍 Analysis:`);
+      console.log(
+        `      • Total selected papers: ${selectedPaperObjects.length}`
+      );
+      console.log(
+        `      • Papers with full-text already: ${selectedPaperObjects.filter(p => p.fullText && p.fullText.length > 0).length}`
+      );
+      console.log(
+        `      • Papers needing full-text fetch: ${papersNeedingFullText.length}`
+      );
+
+      // PHASE 10 DAY 32.2: CRITICAL FIX - Wait for full-text and update from DB
+      // Papers were saved above, which automatically triggered PDF queue jobs for those with DOI/PMID/URL
+      if (papersNeedingFullText.length > 0) {
+        console.log(
+          `\n   ⏳ Waiting for full-text extraction for ${papersNeedingFullText.length} papers...`
+        );
+        console.log(`   📋 Paper IDs:`, papersNeedingFullText.map(p => p.id).slice(0, 5).join(', ') + (papersNeedingFullText.length > 5 ? '...' : ''));
+
+        // DAY 33 FIX: Update toast to show full-text progress
+        toast.loading(`Fetching full-text articles: 0/${papersNeedingFullText.length} ready...`, { id: preparingToast });
+
+        // Wait for background full-text jobs to complete (max 60 seconds)
+        const paperIdsNeedingFullText = papersNeedingFullText.map(p => p.id);
+        const waitResult = await waitForFullText(paperIdsNeedingFullText, {
+          maxWaitSeconds: 60,
+          onProgress: (status) => {
+            console.log(
+              `   ⏳ Full-text progress: ${status.readyCount}/${status.total} ready (${status.progressPercent}%) - ${status.fetching.length} fetching - ${status.elapsedSeconds}s elapsed`
+            );
+            // DAY 33 FIX: Update toast with real-time progress
+            toast.loading(
+              `Fetching full-text articles: ${status.readyCount}/${status.total} ready (${status.elapsedSeconds}s elapsed)`,
+              { id: preparingToast }
+            );
+          },
+        });
+
+        console.log(`   ✅ Wait complete: ${waitResult.reason}`);
+        console.log(`      • Ready: ${waitResult.status.readyCount}/${waitResult.status.total}`);
+        console.log(`      • Fetching: ${waitResult.status.fetching.length}`);
+        console.log(`      • Failed: ${waitResult.status.failed.length}`);
+        console.log(`      • Not fetched: ${waitResult.status.notFetched.length}`);
+
+        // DAY 33 FIX: Update toast with completion status
+        const readyCount = waitResult.status.readyCount;
+        const totalCount = waitResult.status.total;
+        toast.success(
+          `Full-text ready: ${readyCount}/${totalCount} papers (${Math.round((readyCount/totalCount)*100)}%)`,
+          { id: preparingToast, duration: 3000 }
+        );
+      } else {
+        console.log(`   ℹ️ No papers waiting for full-text (all have full-text or lack identifiers)`);
+        // DAY 33 FIX: Update toast for no-wait case
+        toast.success('Papers ready for extraction', { id: preparingToast, duration: 2000 });
+      }
+
+      // CRITICAL: ALWAYS fetch updated papers from DB after saving, regardless of full-text wait
+      // This ensures we get the latest data including abstracts, metadata, and any full-text that completed
+      console.log(`\n   🔄 Fetching final updated papers from database...`);
+      const finalUpdatedResponse = await literatureAPI.getUserLibrary(
+        1,
+        LIBRARY_MAX_PAPERS
+      );
+      const finalUpdatedMap = new Map(
+        finalUpdatedResponse.papers.map(p => [p.id, p])
+      );
+
+      // Update ALL selectedPaperObjects with their DB versions (not just ones with full-text)
+      let updatedCount = 0;
+      let fullTextCount = 0;
+      for (let i = 0; i < selectedPaperObjects.length; i++) {
+        const paper = selectedPaperObjects[i];
+        if (paper) {
+          const dbPaper = finalUpdatedMap.get(paper.id);
+          if (dbPaper) {
+            selectedPaperObjects[i] = dbPaper;
+            updatedCount++;
+            if (dbPaper.fullText && dbPaper.fullText.length > 0) {
+              fullTextCount++;
+              console.log(
+                `      ✅ Paper with full-text: "${dbPaper.title?.substring(0, 50)}..." (${dbPaper.fullText.length} chars)`
+              );
+            }
+          }
+        }
+      }
+
+      console.log(`   ✅ Updated ${updatedCount}/${selectedPaperObjects.length} papers from database`);
+      console.log(`      • Papers with full-text: ${fullTextCount}`);
+      console.log(`      • Papers with abstract only: ${updatedCount - fullTextCount}`);
+      console.log(``);
+
+      // Analyze content types
+      const paperSources: SourceContent[] = selectedPaperObjects.map(
+        (paper, index) => {
+          let content = '';
+          let contentType:
+            | 'none'
+            | 'abstract'
+            | 'full_text'
+            | 'abstract_overflow' = 'none';
+          let contentSource = '';
+
+          console.log(
+            `   📑 [${requestId}] Paper ${index + 1}/${selectedPaperObjects.length}: "${paper.title?.substring(0, 60)}..."`
+          );
+
+          // PRIORITY 1: Use fullText if available (best quality)
+          if (paper.fullText && paper.fullText.length > 0) {
+            content = paper.fullText;
+            contentType = 'full_text';
+            contentSource = paper.fullTextSource || 'unknown';
+            console.log(
+              `      ✅ Full-text available: ${content.length} chars from ${contentSource}`
+            );
+          }
+          // PRIORITY 2: Check if "abstract" field contains full article (>2000 chars)
+          else if (paper.abstract && paper.abstract.length > 2000) {
+            content = paper.abstract;
+            contentType = 'abstract_overflow';
+            contentSource = 'abstract_field';
+            console.log(
+              `      ⚡ Abstract overflow detected: ${content.length} chars (treating as full-text)`
+            );
+          }
+          // PRIORITY 3: Use abstract (standard case)
+          else if (paper.abstract && paper.abstract.length > 0) {
+            content = paper.abstract;
+            contentType = 'abstract';
+            contentSource = 'abstract_field';
+            console.log(`      📝 Abstract only: ${content.length} chars`);
+          } else {
+            console.warn(`      ⚠️ No content available for this paper!`);
+          }
+
+          return {
+            id: paper.id,
+            type: 'paper' as const,
+            title: paper.title,
+            content,
+            keywords: paper.keywords || [],
+            ...(paper.doi && { doi: paper.doi }),
+            ...(paper.authors && { authors: paper.authors }),
+            ...(paper.year && { year: paper.year }),
+            ...(paper.url && { url: paper.url }),
+            metadata: {
+              contentType,
+              contentSource,
+              contentLength: content.length,
+              hasFullText: paper.hasFullText || false,
+              fullTextStatus: (paper.fullTextStatus || 'not_fetched') as
+                | 'not_fetched'
+                | 'fetching'
+                | 'success'
+                | 'failed',
+            },
+          };
+        }
+      );
+
+      // Add transcribed videos
+      const videoSources: SourceContent[] = transcribedVideos.map(video => ({
+        id: video.id,
+        type: 'youtube' as const,
+        title: video.title,
+        content: video.transcript,
+        keywords: video.themes?.map((t: any) => t.label || t) || [],
+        url: video.url,
+        metadata: {
+          videoId: video.sourceId,
+          duration: video.duration,
+          channel: video.channel,
+        },
+      }));
+
+      // Filter out sources without content
+      console.log(
+        `\n🔍 [${requestId}] Filtering sources with sufficient content (>50 chars)...`
+      );
+      const beforeFilter = paperSources.length;
+      const allSources = [
+        ...paperSources.filter(
+          s => s.content && s.content.length > MIN_CONTENT_LENGTH
+        ),
+        ...videoSources,
+      ];
+      const afterFilter = allSources.length;
+      console.log(
+        `   Filtered: ${beforeFilter} papers → ${afterFilter} valid sources (removed ${beforeFilter - afterFilter})`
+      );
+
+      if (allSources.length === 0) {
+        console.error(`❌ [${requestId}] No sources with content - aborting`);
+        toast.error(
+          'Selected papers have no content. Please select papers with abstracts or full-text.'
+        );
+        // CRITICAL FIX: Reset extraction flag when aborting
+        setIsExtractionInProgress(false);
+        setAnalyzingThemes(false);
+        return;
+      }
+
+      // Calculate content type breakdown
+      const contentTypeBreakdown = {
+        fullText: paperSources.filter(
+          s => s.metadata?.contentType === 'full_text'
+        ).length,
+        abstractOverflow: paperSources.filter(
+          s => s.metadata?.contentType === 'abstract_overflow'
+        ).length,
+        abstract: paperSources.filter(
+          s => s.metadata?.contentType === 'abstract'
+        ).length,
+        noContent: paperSources.filter(s => s.metadata?.contentType === 'none')
+          .length,
+      };
+
+      const totalContentLength = allSources.reduce(
+        (sum, s) => sum + (s.content?.length || 0),
+        0
+      );
+      const avgContentLength = totalContentLength / allSources.length;
+      const hasFullTextContent =
+        contentTypeBreakdown.fullText + contentTypeBreakdown.abstractOverflow >
+        0;
+
+      // Store content analysis for Purpose Wizard
+      setContentAnalysis({
+        fullTextCount: contentTypeBreakdown.fullText,
+        abstractOverflowCount: contentTypeBreakdown.abstractOverflow,
+        abstractCount: contentTypeBreakdown.abstract,
+        noContentCount: contentTypeBreakdown.noContent,
+        avgContentLength,
+        hasFullTextContent,
+        sources: allSources,
+      });
+
+      console.log(
+        `\n✅ [${requestId}] STEP 1 COMPLETE: Content Analysis Summary`
+      );
+      console.log(`${'─'.repeat(60)}`);
+      console.log(`   📊 Content Type Breakdown:`);
+      console.log(`      • Full-text papers: ${contentTypeBreakdown.fullText}`);
+      console.log(
+        `      • Abstract overflow: ${contentTypeBreakdown.abstractOverflow}`
+      );
+      console.log(
+        `      • Abstract-only papers: ${contentTypeBreakdown.abstract}`
+      );
+      console.log(`      • No content: ${contentTypeBreakdown.noContent}`);
+      console.log(`   📏 Content Volume:`);
+      console.log(
+        `      • Total characters: ${totalContentLength.toLocaleString()}`
+      );
+      console.log(
+        `      • Average per source: ${Math.round(avgContentLength).toLocaleString()} chars`
+      );
+      console.log(
+        `      • Estimated words: ${Math.round(totalContentLength / 5).toLocaleString()}`
+      );
+
+      // Phase 10 Day 32/33: CRITICAL FIX - Quality assessment checks actual fullTextCount
+      // Phase 10 Day 33 Fix: Removed duplicate logging, consolidated into single quality assessment
+      const qualityLevel =
+        contentTypeBreakdown.fullText > 0
+          ? 'HIGH (has full-text)'
+          : contentTypeBreakdown.abstractOverflow > 0
+            ? 'MODERATE (long abstracts)'
+            : 'LOW (short abstracts only)';
+
+      const qualityEmoji = contentTypeBreakdown.fullText > 0 ? '✅' : contentTypeBreakdown.abstractOverflow > 0 ? '⚠️' : '🔴';
+
+      console.log(`\n   🎯 Quality Assessment: ${qualityEmoji} ${qualityLevel}`);
+      console.log(`      • Full-text papers: ${contentTypeBreakdown.fullText} | Abstract overflow: ${contentTypeBreakdown.abstractOverflow} | Standard abstracts: ${contentTypeBreakdown.abstract} | No content: ${contentTypeBreakdown.none}`);
+      console.log(`${'─'.repeat(60)}\n`);
+
+      // Phase 10 Day 31: Show mode selection modal (quick vs guided)
+      console.log(
+        `🎯 [${requestId}] STEP 2: Opening Mode Selection Modal (Quick vs Guided)...`
+      );
+      setShowModeSelectionModal(true);
+    } catch (error) {
+      console.error(`❌ [${requestId}] Failed to fetch saved papers:`, error);
+      toast.error(
+        'Failed to load full-text content. Using available abstracts.'
+      );
+
+      // Fallback: Use papers from Zustand store even without fullText
+      const selectedPaperObjects = papers.filter(p =>
+        papersToAnalyze.has(p.id)
+      );
+      console.log(
+        `⚠️ [${requestId}] Falling back to ${selectedPaperObjects.length} papers from search results`
+      );
+
+      // Continue with content analysis using fallback data
+      const paperSources: SourceContent[] = selectedPaperObjects.map(paper => {
         let content = '';
         let contentType:
           | 'none'
@@ -943,36 +1464,21 @@ function LiteratureSearchContent() {
           | 'abstract_overflow' = 'none';
         let contentSource = '';
 
-        console.log(
-          `   📑 [${requestId}] Paper ${index + 1}/${selectedPaperObjects.length}: "${paper.title?.substring(0, 60)}..."`
-        );
-
-        // PRIORITY 1: Use fullText if available (best quality)
         if (paper.fullText && paper.fullText.length > 0) {
           content = paper.fullText;
           contentType = 'full_text';
           contentSource = paper.fullTextSource || 'unknown';
-          console.log(
-            `      ✅ Full-text available: ${content.length} chars from ${contentSource}`
-          );
-        }
-        // PRIORITY 2: Check if "abstract" field contains full article (>2000 chars)
-        else if (paper.abstract && paper.abstract.length > 2000) {
+        } else if (
+          paper.abstract &&
+          paper.abstract.length > ABSTRACT_OVERFLOW_THRESHOLD
+        ) {
           content = paper.abstract;
           contentType = 'abstract_overflow';
           contentSource = 'abstract_field';
-          console.log(
-            `      ⚡ Abstract overflow detected: ${content.length} chars (treating as full-text)`
-          );
-        }
-        // PRIORITY 3: Use abstract (standard case)
-        else if (paper.abstract && paper.abstract.length > 0) {
+        } else if (paper.abstract && paper.abstract.length > 0) {
           content = paper.abstract;
           contentType = 'abstract';
           contentSource = 'abstract_field';
-          console.log(`      📝 Abstract only: ${content.length} chars`);
-        } else {
-          console.warn(`      ⚠️ No content available for this paper!`);
         }
 
         return {
@@ -997,112 +1503,83 @@ function LiteratureSearchContent() {
               | 'failed',
           },
         };
-      }
-    );
+      });
 
-    // Add transcribed videos
-    const videoSources: SourceContent[] = transcribedVideos.map(video => ({
-      id: video.id,
-      type: 'youtube' as const,
-      title: video.title,
-      content: video.transcript,
-      keywords: video.themes?.map((t: any) => t.label || t) || [],
-      url: video.url,
-      metadata: {
-        videoId: video.sourceId,
-        duration: video.duration,
-        channel: video.channel,
-      },
-    }));
+      // Add transcribed videos
+      const videoSources: SourceContent[] = transcribedVideos.map(video => ({
+        id: video.id,
+        type: 'youtube' as const,
+        title: video.title,
+        content: video.transcript,
+        keywords: video.themes?.map((t: any) => t.label || t) || [],
+        url: video.url,
+        metadata: {
+          videoId: video.sourceId,
+          duration: video.duration,
+          wordCount: video.transcript.split(/\s+/).length,
+        },
+      }));
 
-    // Filter out sources without content
-    console.log(
-      `\n🔍 [${requestId}] Filtering sources with sufficient content (>50 chars)...`
-    );
-    const beforeFilter = paperSources.length;
-    const allSources = [
-      ...paperSources.filter(s => s.content && s.content.length > 50),
-      ...videoSources,
-    ];
-    const afterFilter = allSources.length;
-    console.log(
-      `   Filtered: ${beforeFilter} papers → ${afterFilter} valid sources (removed ${beforeFilter - afterFilter})`
-    );
+      const allSources = [...paperSources, ...videoSources];
 
-    if (allSources.length === 0) {
-      console.error(`❌ [${requestId}] No sources with content - aborting`);
-      toast.error(
-        'Selected papers have no content. Please select papers with abstracts or full-text.'
+      const contentTypeBreakdown = {
+        fullText: paperSources.filter(
+          s => s.metadata?.contentType === 'full_text'
+        ).length,
+        abstractOverflow: paperSources.filter(
+          s => s.metadata?.contentType === 'abstract_overflow'
+        ).length,
+        abstract: paperSources.filter(
+          s => s.metadata?.contentType === 'abstract'
+        ).length,
+        noContent: paperSources.filter(s => s.metadata?.contentType === 'none')
+          .length,
+      };
+
+      const totalContentLength = allSources.reduce(
+        (sum, s) => sum + (s.content?.length || 0),
+        0
       );
-      return;
+      const avgContentLength = totalContentLength / allSources.length;
+      const hasFullTextContent =
+        contentTypeBreakdown.fullText + contentTypeBreakdown.abstractOverflow >
+        0;
+
+      setContentAnalysis({
+        fullTextCount: contentTypeBreakdown.fullText,
+        abstractOverflowCount: contentTypeBreakdown.abstractOverflow,
+        abstractCount: contentTypeBreakdown.abstract,
+        noContentCount: contentTypeBreakdown.noContent,
+        avgContentLength,
+        hasFullTextContent,
+        sources: allSources,
+      });
+
+      // Still show mode selection modal even on error
+      setShowModeSelectionModal(true);
     }
+  };
 
-    // Calculate content type breakdown
-    const contentTypeBreakdown = {
-      fullText: paperSources.filter(
-        s => s.metadata?.contentType === 'full_text'
-      ).length,
-      abstractOverflow: paperSources.filter(
-        s => s.metadata?.contentType === 'abstract_overflow'
-      ).length,
-      abstract: paperSources.filter(s => s.metadata?.contentType === 'abstract')
-        .length,
-      noContent: paperSources.filter(s => s.metadata?.contentType === 'none')
-        .length,
-    };
+  // Phase 10 Day 31: Handle mode selection (quick vs guided)
+  const handleModeSelected = async (mode: 'quick' | 'guided') => {
+    const requestId = currentRequestId || 'unknown';
+    console.log(`\n🎯 [${requestId}] Mode selected: ${mode.toUpperCase()}`);
 
-    const totalContentLength = allSources.reduce(
-      (sum, s) => sum + (s.content?.length || 0),
-      0
-    );
-    const avgContentLength = totalContentLength / allSources.length;
-    const hasFullTextContent =
-      contentTypeBreakdown.fullText + contentTypeBreakdown.abstractOverflow > 0;
+    setShowModeSelectionModal(false);
 
-    // Store content analysis for Purpose Wizard
-    setContentAnalysis({
-      fullTextCount: contentTypeBreakdown.fullText,
-      abstractOverflowCount: contentTypeBreakdown.abstractOverflow,
-      abstractCount: contentTypeBreakdown.abstract,
-      noContentCount: contentTypeBreakdown.noContent,
-      avgContentLength,
-      hasFullTextContent,
-      sources: allSources,
-    });
-
-    console.log(
-      `\n✅ [${requestId}] STEP 1 COMPLETE: Content Analysis Summary`
-    );
-    console.log(`${'─'.repeat(60)}`);
-    console.log(`   📊 Content Type Breakdown:`);
-    console.log(`      • Full-text papers: ${contentTypeBreakdown.fullText}`);
-    console.log(
-      `      • Abstract overflow: ${contentTypeBreakdown.abstractOverflow}`
-    );
-    console.log(
-      `      • Abstract-only papers: ${contentTypeBreakdown.abstract}`
-    );
-    console.log(`      • No content: ${contentTypeBreakdown.noContent}`);
-    console.log(`   📏 Content Volume:`);
-    console.log(
-      `      • Total characters: ${totalContentLength.toLocaleString()}`
-    );
-    console.log(
-      `      • Average per source: ${Math.round(avgContentLength).toLocaleString()} chars`
-    );
-    console.log(
-      `      • Estimated words: ${Math.round(totalContentLength / 5).toLocaleString()}`
-    );
-    console.log(
-      `   🎯 Quality Assessment: ${hasFullTextContent ? '✅ HIGH (has full-text)' : '⚠️ MODERATE (abstracts only)'}`
-    );
-    console.log(`${'─'.repeat(60)}\n`);
-
-    // Show purpose selection wizard with content analysis
-    console.log(
-      `🎯 [${requestId}] STEP 2: Opening Purpose Selection Wizard...`
-    );
-    setShowPurposeWizard(true);
+    if (mode === 'quick') {
+      // Quick mode: Show purpose wizard (existing flow)
+      console.log(
+        `⚡ [${requestId}] Opening Purpose Selection Wizard for quick extraction...`
+      );
+      setShowPurposeWizard(true);
+    } else {
+      // Guided mode: Show guided extraction wizard
+      console.log(
+        `🤖 [${requestId}] Opening Guided Extraction Wizard for AI-powered extraction...`
+      );
+      setShowGuidedWizard(true);
+    }
   };
 
   // PHASE 10 DAY 5.13: V2 extraction with selected purpose
@@ -1247,8 +1724,9 @@ function LiteratureSearchContent() {
       `✅ [${requestId}] Content validation complete - proceeding with extraction`
     );
 
-    const allSources = contentAnalysis.sources;
-    const totalSources = allSources.length;
+    // Phase 10 Day 31.5: Use let instead of const so we can update after refresh
+    let allSources = contentAnalysis.sources;
+    let totalSources = allSources.length;
 
     console.log(`\n📦 [${requestId}] STEP 3: Preparing Extraction`);
     console.log(`${'─'.repeat(60)}`);
@@ -1269,6 +1747,282 @@ function LiteratureSearchContent() {
       `   ✅ Progress tracking initialized for ${totalSources} sources`
     );
 
+    // Phase 10 Day 31.4: STEP 3.5 - Wait for full-text extraction to complete
+    console.log(`\n⏳ [${requestId}] STEP 3.5: Checking Full-Text Status`);
+    console.log(`${'─'.repeat(60)}`);
+
+    // Phase 10 Day 31.5: DIAGNOSTIC - Show what papers we're checking
+    console.log(
+      `🔍 [${requestId}] DIAGNOSTIC - Papers being checked for full-text:`
+    );
+    const paperIdSet = new Set(paperIds);
+    const selectedPapersForDiag = papers.filter(p => paperIdSet.has(p.id));
+    selectedPapersForDiag.slice(0, 5).forEach((paper, idx) => {
+      console.log(`   ${idx + 1}. "${paper.title?.substring(0, 50)}..."`);
+      console.log(`      • DOI: ${paper.doi || 'MISSING'}`);
+      console.log(
+        `      • URL: ${paper.url ? paper.url.substring(0, 60) + '...' : 'MISSING'}`
+      );
+      console.log(
+        `      • Has identifiers: ${paper.doi || paper.url ? '✅ YES' : '❌ NO (cannot fetch full-text)'}`
+      );
+      console.log(
+        `      • Full-text status: ${paper.fullTextStatus || 'not_fetched'}`
+      );
+      console.log(
+        `      • Has full-text NOW: ${paper.hasFullText ? '✅ YES' : '❌ NO'}`
+      );
+    });
+    if (selectedPapersForDiag.length > 5) {
+      console.log(`   ... and ${selectedPapersForDiag.length - 5} more papers`);
+    }
+
+    // Count papers with identifiers
+    const papersWithIdentifiers = selectedPapersForDiag.filter(
+      p => p.doi || p.url
+    ).length;
+    const papersWithoutIdentifiers =
+      selectedPapersForDiag.length - papersWithIdentifiers;
+    console.log(`📊 [${requestId}] Identifier Summary:`);
+    console.log(
+      `   • Papers WITH identifiers (DOI/PMID/URL): ${papersWithIdentifiers}`
+    );
+    console.log(`   • Papers WITHOUT identifiers: ${papersWithoutIdentifiers}`);
+
+    // Phase 10 Day 31.5: CRITICAL USER WARNING - Surface identifier issues prominently
+    if (papersWithoutIdentifiers > 0) {
+      console.warn(
+        `   ⚠️ ${papersWithoutIdentifiers} papers CANNOT fetch full-text (no DOI/PMID/URL)!`
+      );
+
+      const percentage = Math.round(
+        (papersWithoutIdentifiers / selectedPapersForDiag.length) * 100
+      );
+
+      if (papersWithoutIdentifiers === selectedPapersForDiag.length) {
+        // ALL papers lack identifiers
+        toast.error(
+          `⚠️ CRITICAL: All ${papersWithoutIdentifiers} papers lack DOI/PMID/URL identifiers. Full-text extraction is IMPOSSIBLE. Only abstracts will be used for theme extraction.`,
+          { duration: 10000 }
+        );
+      } else if (percentage >= 50) {
+        // More than half lack identifiers
+        toast.warning(
+          `⚠️ WARNING: ${papersWithoutIdentifiers} of ${selectedPapersForDiag.length} papers (${percentage}%) lack identifiers. They cannot fetch full-text and will use abstracts only.`,
+          { duration: 8000 }
+        );
+      } else {
+        // Some papers lack identifiers
+        toast.warning(
+          `${papersWithoutIdentifiers} papers lack identifiers and will use abstracts only. ${papersWithIdentifiers} papers can fetch full-text.`,
+          { duration: 6000 }
+        );
+      }
+    } else {
+      console.log(
+        `   ✅ All papers have identifiers - full-text extraction possible!`
+      );
+    }
+
+    // Phase 10 Day 31.4: Optimization - check if we need to wait at all
+    const currentFullTextCount = contentAnalysis?.fullTextCount || 0;
+    const paperCount = paperIds.length;
+    const needsWaiting = currentFullTextCount < paperCount;
+
+    if (!needsWaiting) {
+      console.log(
+        `✅ [${requestId}] All ${paperCount} papers already have full-text - skipping wait`
+      );
+      console.log(
+        `   • Full-text papers: ${currentFullTextCount}/${paperCount}`
+      );
+      console.log(`   • No waiting needed - proceeding directly to extraction`);
+    } else {
+      console.log(
+        `   📊 Checking full-text status for ${paperIds.length} papers...`
+      );
+      console.log(
+        `   • Current full-text: ${currentFullTextCount}/${paperCount}`
+      );
+      console.log(
+        `   • ${paperCount - currentFullTextCount} papers may need processing`
+      );
+    }
+
+    let waitResult: Awaited<ReturnType<typeof waitForFullText>> = {
+      allReady: true,
+      status: {
+        ready: paperIds,
+        fetching: [],
+        failed: [],
+        notFetched: [],
+        total: paperIds.length,
+        readyCount: paperIds.length,
+        progressPercent: 100,
+        elapsedSeconds: 0,
+      },
+      reason: 'success',
+    };
+
+    if (needsWaiting) {
+      waitResult = await waitForFullText(paperIds, {
+        maxWaitSeconds: FULL_TEXT_WAIT_SECONDS,
+        onProgress: status => {
+          console.log(
+            `   ⏳ Full-text progress: ${status.readyCount}/${status.total} ready (${status.progressPercent}%) - ${status.elapsedSeconds}s elapsed`
+          );
+        },
+        onTimeout: status => {
+          console.warn(
+            `   ⚠️ Timeout: Proceeding with ${status.readyCount}/${status.total} papers ready`
+          );
+        },
+        onCancel: () => {
+          console.log(`   ❌ Full-text wait cancelled by user`);
+        },
+      });
+    }
+
+    if (waitResult.reason === 'cancelled') {
+      console.log(
+        `❌ [${requestId}] Extraction cancelled - user cancelled full-text wait`
+      );
+      setAnalyzingThemes(false);
+      setExtractingPapers(new Set());
+      return;
+    }
+
+    console.log(
+      `✅ [${requestId}] STEP 3.5 COMPLETE: Full-text check finished`
+    );
+    console.log(`   • Result: ${waitResult.reason}`);
+    console.log(
+      `   • Papers ready: ${waitResult.status.readyCount}/${waitResult.status.total}`
+    );
+    console.log(`   • Papers failed: ${waitResult.status.failed.length}`);
+    console.log(`   • Time elapsed: ${waitResult.status.elapsedSeconds}s`);
+
+    // Phase 10 Day 31.4: Only refresh if we actually waited AND got new full-text
+    const shouldRefresh =
+      needsWaiting && waitResult.status.readyCount > currentFullTextCount;
+
+    if (shouldRefresh) {
+      console.log(
+        `🔄 [${requestId}] Refreshing content analysis with new full-text data...`
+      );
+      console.log(`   • Previous full-text count: ${currentFullTextCount}`);
+      console.log(`   • New full-text count: ${waitResult.status.readyCount}`);
+      try {
+        const savedPapersResponse = await literatureAPI.getUserLibrary(
+          1,
+          LIBRARY_MAX_PAPERS
+        );
+        const savedPapersMap = new Map(
+          savedPapersResponse.papers.map(p => [p.id, p])
+        );
+
+        // Re-analyze content with updated full-text
+        const paperIdSet = new Set(paperIds);
+        const updatedPapers = papers
+          .filter(p => paperIdSet.has(p.id))
+          .map(paper => savedPapersMap.get(paper.id) || paper);
+
+        const paperSources = updatedPapers
+          .map(paper => {
+            let content = '';
+            let contentType:
+              | 'none'
+              | 'abstract'
+              | 'full_text'
+              | 'abstract_overflow' = 'none';
+            let contentSource = '';
+
+            if (paper.fullText && paper.fullText.length > 0) {
+              content = paper.fullText;
+              contentType = 'full_text';
+              contentSource = paper.fullTextSource || 'unknown';
+            } else if (
+              paper.abstract &&
+              paper.abstract.length > ABSTRACT_OVERFLOW_THRESHOLD
+            ) {
+              content = paper.abstract;
+              contentType = 'abstract_overflow';
+              contentSource = 'abstract_field';
+            } else if (paper.abstract && paper.abstract.length > 0) {
+              content = paper.abstract;
+              contentType = 'abstract';
+              contentSource = 'abstract_field';
+            }
+
+            return {
+              id: paper.id,
+              type: 'paper' as const,
+              title: paper.title,
+              content,
+              keywords: paper.keywords || [],
+              ...(paper.doi && { doi: paper.doi }),
+              ...(paper.authors && { authors: paper.authors }),
+              ...(paper.year && { year: paper.year }),
+              ...(paper.url && { url: paper.url }),
+              metadata: {
+                contentType,
+                contentSource,
+                contentLength: content.length,
+                hasFullText: paper.hasFullText || false,
+                fullTextStatus: (paper.fullTextStatus || 'not_fetched') as
+                  | 'not_fetched'
+                  | 'fetching'
+                  | 'success'
+                  | 'failed',
+              },
+            };
+          })
+          .filter(s => s.content && s.content.length > MIN_CONTENT_LENGTH);
+
+        const updatedFullTextCount = paperSources.filter(
+          s => s.metadata?.contentType === 'full_text'
+        ).length;
+        console.log(
+          `   ✅ Updated content analysis: ${updatedFullTextCount} full-text papers (was ${contentAnalysis.fullTextCount})`
+        );
+
+        // Phase 10 Day 31.5: Construct refreshed sources array
+        const refreshedSources = [
+          ...paperSources,
+          ...contentAnalysis.sources.filter(s => s.type !== 'paper'),
+        ];
+
+        // Update contentAnalysis state
+        setContentAnalysis({
+          ...contentAnalysis,
+          fullTextCount: updatedFullTextCount,
+          sources: refreshedSources,
+        });
+
+        // Phase 10 Day 31.5: CRITICAL FIX - Update allSources with refreshed data
+        // React state is async, so we must update the local variable directly
+        allSources = refreshedSources;
+        totalSources = allSources.length;
+
+        console.log(
+          `   🔄 [${requestId}] Updated allSources with ${allSources.length} refreshed sources`
+        );
+        console.log(
+          `   🔄 [${requestId}] Full-text papers in refreshed sources: ${updatedFullTextCount}`
+        );
+      } catch (error) {
+        console.warn(`   ⚠️ Failed to refresh content analysis:`, error);
+        // Continue with existing data
+      }
+    } else {
+      console.log(
+        `✅ [${requestId}] Skipping content refresh (no new full-text obtained)`
+      );
+      console.log(
+        `   • Using existing content analysis with ${currentFullTextCount} full-text papers`
+      );
+    }
+
     try {
       console.log(`\n🚀 [${requestId}] STEP 4: API Call to Backend`);
       console.log(`${'─'.repeat(60)}`);
@@ -1277,13 +2031,44 @@ function LiteratureSearchContent() {
       console.log(`   🔬 Methodology: reflexive_thematic`);
       console.log(`   ✅ Validation level: rigorous`);
       console.log(`   🔄 Iterative refinement: enabled`);
-      console.log(`\n   📊 Content Breakdown:`);
-      console.log(`      • Full-text papers: ${contentAnalysis.fullTextCount}`);
+
+      // Phase 10 Day 31.5: CRITICAL VALIDATION - Count actual full-text in sources array
+      const actualFullTextCount = allSources.filter(
+        s => s.type === 'paper' && s.metadata?.contentType === 'full_text'
+      ).length;
+      const actualAbstractCount = allSources.filter(
+        s => s.type === 'paper' && s.metadata?.contentType === 'abstract'
+      ).length;
+      const actualAbstractOverflowCount = allSources.filter(
+        s =>
+          s.type === 'paper' && s.metadata?.contentType === 'abstract_overflow'
+      ).length;
+
+      console.log(`\n   📊 Content Breakdown (VALIDATION):`);
       console.log(
-        `      • Abstract overflow: ${contentAnalysis.abstractOverflowCount}`
+        `      • Full-text papers in allSources: ${actualFullTextCount}`
       );
-      console.log(`      • Abstract-only: ${contentAnalysis.abstractCount}`);
-      console.log(`      • Total sources: ${allSources.length}`);
+      console.log(
+        `      • Abstract overflow in allSources: ${actualAbstractOverflowCount}`
+      );
+      console.log(
+        `      • Abstract-only in allSources: ${actualAbstractCount}`
+      );
+      console.log(`      • Total sources being sent: ${allSources.length}`);
+
+      // Validate sources match
+      if (
+        actualFullTextCount === 0 &&
+        allSources.filter(s => s.type === 'paper').length > 0
+      ) {
+        console.warn(
+          `⚠️ [${requestId}] WARNING: NO FULL-TEXT IN SOURCES ARRAY! This will cause 0 full articles in familiarization!`
+        );
+      } else {
+        console.log(
+          `✅ [${requestId}] Validation passed: ${actualFullTextCount} full-text papers in sources array`
+        );
+      }
 
       if (allSources.length > 0) {
         const firstSource = allSources[0];
@@ -1317,17 +2102,23 @@ function LiteratureSearchContent() {
           requestId, // PHASE 10 DAY 5.17.3: Pass request ID for end-to-end tracing
         },
         // Phase 10 Day 5.13: V2 progress callback with 4-part messaging
-        (stage, total, message) => {
+        // Phase 10 Day 31: Added transparentMessage parameter for real-time familiarization metrics
+        (stage, total, message, transparentMessage) => {
           const elapsed = ((Date.now() - apiStartTime) / 1000).toFixed(1);
           console.log(
             `   🟣 [${requestId}] Progress Update (${elapsed}s elapsed):`
           );
           console.log(`      • Stage: ${stage}/${total}`);
           console.log(`      • Message: ${message}`);
+          if (transparentMessage) {
+            console.log(`      • Transparent Message:`, transparentMessage);
+            console.log(`      • Live Stats:`, transparentMessage.liveStats);
+          }
           console.log(
             `      • Processing: ALL ${paperIds.length} papers together (holistic analysis)`
           );
-          updateProgress(stage, total);
+          // Phase 10 Day 31: Pass transparentMessage to hook for real-time article display
+          updateProgress(stage, total, transparentMessage);
 
           // CRITICAL FIX: stage is Braun & Clarke stage (1-6), NOT individual paper number!
           // ALL papers are processed together in each stage (holistic, not sequential)
@@ -1510,6 +2301,9 @@ function LiteratureSearchContent() {
           setExtractedPapers(extractedIds);
           setExtractingPapers(new Set());
 
+          // CRITICAL FIX: Reset extraction in progress
+          setIsExtractionInProgress(false);
+
           return; // Exit early
         }
 
@@ -1552,6 +2346,9 @@ function LiteratureSearchContent() {
         const extractedIds = new Set([...extractedPapers, ...paperIds]);
         setExtractedPapers(extractedIds);
         setExtractingPapers(new Set());
+
+        // CRITICAL FIX: Reset extraction in progress on success
+        setIsExtractionInProgress(false);
         console.log(
           `   ✅ Marked ${paperIds.length} papers as extracted (cleared "extracting" state)`
         );
@@ -1639,6 +2436,9 @@ function LiteratureSearchContent() {
       // Phase 10 Day 5.6: Set error in progress
       setExtractionError(error.message || 'Unknown error');
 
+      // CRITICAL FIX: Reset extraction in progress on error
+      setIsExtractionInProgress(false);
+
       console.error(`${'='.repeat(80)}\n`);
 
       toast.error(
@@ -1646,6 +2446,9 @@ function LiteratureSearchContent() {
       );
     } finally {
       setAnalyzingThemes(false);
+
+      // CRITICAL FIX: Always reset extraction in progress in finally block
+      setIsExtractionInProgress(false);
       // Progress UI will auto-dismiss after showing complete/error state
       const requestId = currentRequestId || 'unknown';
       console.log(
@@ -2719,621 +3522,23 @@ function LiteratureSearchContent() {
             </Badge>
           </div>
 
-          <div className="flex gap-2">
-            <div ref={searchContainerRef} className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-6 h-6" />
-              <Input
-                placeholder="Search across academic databases, alternative sources, and social media..."
-                value={query}
-                onChange={e => {
-                  setQuery(e.target.value);
-                  setShowSuggestions(true); // Show suggestions when user starts typing
-                  // Clear query correction message when user types
-                  if (queryCorrectionMessage) {
-                    setQueryCorrectionMessage(null);
-                  }
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    setShowSuggestions(false);
-                    handleSearchAllSources();
-                  } else if (e.key === 'Escape') {
-                    setShowSuggestions(false);
-                  }
-                }}
-                onFocus={() =>
-                  aiSuggestions.length > 0 && setShowSuggestions(true)
-                }
-                className="pl-14 pr-4 h-14 text-lg border-2 focus:border-blue-500"
-              />
+          {/* Phase 10 Day 31: Extracted SearchBar Component */}
+          <SearchBar
+            onSearch={handleSearchAllSources}
+            isLoading={loading || loadingAlternative || loadingSocial}
+            appliedFilterCount={getAppliedFilterCount()}
+            showFilters={showFilters}
+            onToggleFilters={toggleShowFilters}
+            academicDatabasesCount={academicDatabases.length}
+            alternativeSourcesCount={alternativeSources.length}
+            socialPlatformsCount={socialPlatforms.length}
+          />
 
-              {/* AI-Powered Inline Suggestions Dropdown */}
-              <AnimatePresence>
-                {showSuggestions &&
-                  (aiSuggestions.length > 0 || loadingSuggestions) && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-purple-200 rounded-lg shadow-xl z-50 overflow-hidden"
-                    >
-                      <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-purple-100 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-purple-600" />
-                        <span className="text-sm font-semibold text-purple-900">
-                          AI-Refined Questions (GPT-4)
-                        </span>
-                        {loadingSuggestions && (
-                          <Loader2 className="w-3 h-3 animate-spin text-purple-600 ml-auto" />
-                        )}
-                      </div>
+          {/* Phase 10 Day 31: Extracted ActiveFiltersChips Component */}
+          <ActiveFiltersChips />
 
-                      {loadingSuggestions ? (
-                        <div className="p-4 text-center text-gray-500 text-sm">
-                          Generating refined queries...
-                        </div>
-                      ) : (
-                        <div className="max-h-64 overflow-y-auto">
-                          {aiSuggestions.map((suggestion, index) => (
-                            <button
-                              key={index}
-                              onClick={() => {
-                                setQuery(suggestion);
-                                setShowSuggestions(false);
-                                // Clear any previous query correction message
-                                setQueryCorrectionMessage(null);
-                              }}
-                              className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0 group"
-                            >
-                              <div className="flex items-start gap-3">
-                                <Badge
-                                  variant="outline"
-                                  className="mt-0.5 bg-purple-100 text-purple-700 border-purple-300 flex-shrink-0"
-                                >
-                                  {index === 0 ? '✨ Best' : `${index + 1}`}
-                                </Badge>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm text-gray-900 group-hover:text-purple-900 font-medium break-words">
-                                    {suggestion}
-                                  </p>
-                                </div>
-                                <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 flex-shrink-0 mt-0.5" />
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="p-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-600 text-center">
-                        Press{' '}
-                        <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded text-xs">
-                          Enter
-                        </kbd>{' '}
-                        to search •{' '}
-                        <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded text-xs">
-                          Esc
-                        </kbd>{' '}
-                        to close
-                      </div>
-                    </motion.div>
-                  )}
-              </AnimatePresence>
-            </div>
-            <Button
-              onClick={handleSearchAllSources}
-              disabled={loading || loadingAlternative || loadingSocial}
-              className="h-14 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold"
-              size="lg"
-            >
-              {loading || loadingAlternative || loadingSocial ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
-              ) : (
-                <>
-                  <Search className="w-5 h-5 mr-2" />
-                  Search All Sources
-                </>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="h-14 px-6 border-2 relative"
-            >
-              <Filter className="w-5 h-5 mr-2" />
-              Filters
-              {appliedFilterCount > 0 && (
-                <Badge className="ml-2 bg-purple-600 text-white">
-                  {appliedFilterCount}
-                </Badge>
-              )}
-              {showFilters ? (
-                <X className="w-4 h-4 ml-2" />
-              ) : (
-                <ChevronRight className="w-4 h-4 ml-2" />
-              )}
-            </Button>
-          </div>
-
-          {/* Active Sources Indicator */}
-          <div className="flex items-center gap-2 mt-4 text-sm text-gray-600">
-            <span className="font-medium">Active sources:</span>
-            {academicDatabases.length > 0 && (
-              <Badge variant="outline" className="bg-blue-50">
-                {academicDatabases.length} Academic
-              </Badge>
-            )}
-            {alternativeSources.length > 0 && (
-              <Badge variant="outline" className="bg-indigo-50">
-                {alternativeSources.length} Alternative
-              </Badge>
-            )}
-            {socialPlatforms.length > 0 && (
-              <Badge variant="outline" className="bg-purple-50">
-                {socialPlatforms.length} Social Media
-              </Badge>
-            )}
-            {academicDatabases.length === 0 &&
-              alternativeSources.length === 0 &&
-              socialPlatforms.length === 0 && (
-                <span className="text-orange-600">
-                  ⚠️ No sources selected - please select sources below
-                </span>
-              )}
-          </div>
-
-          {/* Active Filters Chips - Only show APPLIED filters */}
-          {appliedFilterCount > 0 && (
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              <span className="text-sm font-medium text-gray-700">
-                Active filters:
-              </span>
-              {appliedFilters.yearFrom !== defaultFilters.yearFrom && (
-                <Badge
-                  variant="secondary"
-                  className="bg-purple-100 text-purple-700 flex items-center gap-1 cursor-pointer hover:bg-purple-200"
-                  onClick={() => {
-                    const newFilters = {
-                      ...appliedFilters,
-                      yearFrom: defaultFilters.yearFrom,
-                    };
-                    setAppliedFilters(newFilters);
-                    setFilters(newFilters);
-                  }}
-                >
-                  Year from: {appliedFilters.yearFrom}
-                  <X className="w-3 h-3" />
-                </Badge>
-              )}
-              {appliedFilters.yearTo !== defaultFilters.yearTo && (
-                <Badge
-                  variant="secondary"
-                  className="bg-purple-100 text-purple-700 flex items-center gap-1 cursor-pointer hover:bg-purple-200"
-                  onClick={() => {
-                    const newFilters = {
-                      ...appliedFilters,
-                      yearTo: defaultFilters.yearTo,
-                    };
-                    setAppliedFilters(newFilters);
-                    setFilters(newFilters);
-                  }}
-                >
-                  Year to: {appliedFilters.yearTo}
-                  <X className="w-3 h-3" />
-                </Badge>
-              )}
-              {appliedFilters.minCitations &&
-                appliedFilters.minCitations > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-purple-100 text-purple-700 flex items-center gap-1 cursor-pointer hover:bg-purple-200"
-                    onClick={() => {
-                      const newFilters = {
-                        ...appliedFilters,
-                        minCitations: undefined,
-                      };
-                      setAppliedFilters(newFilters);
-                      setFilters(newFilters);
-                    }}
-                  >
-                    Min citations: {appliedFilters.minCitations}
-                    <X className="w-3 h-3" />
-                  </Badge>
-                )}
-              {appliedFilters.publicationType !== 'all' && (
-                <Badge
-                  variant="secondary"
-                  className="bg-purple-100 text-purple-700 flex items-center gap-1 cursor-pointer hover:bg-purple-200"
-                  onClick={() => {
-                    const newFilters = {
-                      ...appliedFilters,
-                      publicationType: 'all' as const,
-                    };
-                    setAppliedFilters(newFilters);
-                    setFilters(newFilters);
-                  }}
-                >
-                  Type:{' '}
-                  {appliedFilters.publicationType === 'journal'
-                    ? 'Journal'
-                    : appliedFilters.publicationType === 'conference'
-                      ? 'Conference'
-                      : 'Preprint'}
-                  <X className="w-3 h-3" />
-                </Badge>
-              )}
-              {appliedFilters.sortBy !== 'relevance' && (
-                <Badge
-                  variant="secondary"
-                  className="bg-purple-100 text-purple-700 flex items-center gap-1 cursor-pointer hover:bg-purple-200"
-                  onClick={() => {
-                    const newFilters = {
-                      ...appliedFilters,
-                      sortBy: 'relevance' as const,
-                    };
-                    setAppliedFilters(newFilters);
-                    setFilters(newFilters);
-                  }}
-                >
-                  Sort:{' '}
-                  {appliedFilters.sortBy === 'citations'
-                    ? 'Citations'
-                    : appliedFilters.sortBy === 'date'
-                      ? 'Date'
-                      : 'Relevance'}
-                  <X className="w-3 h-3" />
-                </Badge>
-              )}
-              {appliedFilters.author &&
-                appliedFilters.author.trim().length > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-purple-100 text-purple-700 flex items-center gap-1 cursor-pointer hover:bg-purple-200"
-                    onClick={() => {
-                      const newFilters = {
-                        ...appliedFilters,
-                        author: '',
-                      };
-                      setAppliedFilters(newFilters);
-                      setFilters(newFilters);
-                    }}
-                  >
-                    Author: {appliedFilters.author}
-                    <X className="w-3 h-3" />
-                  </Badge>
-                )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setAppliedFilters(defaultFilters);
-                  setFilters(defaultFilters);
-                }}
-                className="text-xs h-6 text-gray-600 hover:text-gray-900"
-              >
-                Clear all filters
-              </Button>
-            </div>
-          )}
-
-          {/* Advanced Filters */}
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="space-y-4 pt-4 border-t mt-4"
-              >
-                <div className="grid grid-cols-5 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Year Range</label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        type="number"
-                        placeholder="From"
-                        min="1900"
-                        max={new Date().getFullYear()}
-                        value={filters.yearFrom ?? ''}
-                        onChange={e => {
-                          let val = parseInt(e.target.value);
-                          if (!isNaN(val)) {
-                            // Auto-correct: ensure from is not after to
-                            if (filters.yearTo && val > filters.yearTo) {
-                              val = filters.yearTo;
-                            }
-                            // Auto-correct: limit to valid range
-                            if (val < 1900) val = 1900;
-                            if (val > new Date().getFullYear())
-                              val = new Date().getFullYear();
-                          }
-                          setFilters({
-                            ...filters,
-                            yearFrom: isNaN(val) ? undefined : val,
-                          });
-                        }}
-                        className="w-full"
-                      />
-                      <Input
-                        type="number"
-                        placeholder="To"
-                        min="1900"
-                        max={new Date().getFullYear()}
-                        value={filters.yearTo ?? ''}
-                        onChange={e => {
-                          let val = parseInt(e.target.value);
-                          if (!isNaN(val)) {
-                            // Auto-correct: ensure to is not before from
-                            if (filters.yearFrom && val < filters.yearFrom) {
-                              val = filters.yearFrom;
-                            }
-                            // Auto-correct: limit to valid range
-                            if (val < 1900) val = 1900;
-                            if (val > new Date().getFullYear())
-                              val = new Date().getFullYear();
-                          }
-                          setFilters({
-                            ...filters,
-                            yearTo: isNaN(val) ? undefined : val,
-                          });
-                        }}
-                        className="w-full"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Author</label>
-                    <Input
-                      type="text"
-                      placeholder="e.g., Smith"
-                      value={filters.author}
-                      onChange={e =>
-                        setFilters({
-                          ...filters,
-                          author: e.target.value,
-                        })
-                      }
-                      className="mt-1"
-                    />
-                    <select
-                      value={filters.authorSearchMode}
-                      onChange={e =>
-                        setFilters({
-                          ...filters,
-                          authorSearchMode: e.target.value as
-                            | 'contains'
-                            | 'exact'
-                            | 'fuzzy',
-                        })
-                      }
-                      className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    >
-                      <option value="contains">Contains (partial match)</option>
-                      <option value="fuzzy">Fuzzy (typo-tolerant)</option>
-                      <option value="exact">Exact match</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Min Citations</label>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 10"
-                      value={filters.minCitations ?? ''}
-                      onChange={e => {
-                        const val = parseInt(e.target.value);
-                        setFilters({
-                          ...filters,
-                          minCitations: isNaN(val) ? undefined : val,
-                        });
-                      }}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">
-                      Publication Type
-                    </label>
-                    <select
-                      value={filters.publicationType}
-                      onChange={e =>
-                        setFilters({
-                          ...filters,
-                          publicationType: e.target.value as any,
-                        })
-                      }
-                      className="mt-1 w-full h-10 px-3 border rounded-md"
-                    >
-                      <option value="all">All Types</option>
-                      <option value="journal">Journal Articles</option>
-                      <option value="conference">Conference Papers</option>
-                      <option value="preprint">Preprints</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Sort By</label>
-                    <select
-                      value={filters.sortBy}
-                      onChange={e =>
-                        setFilters({
-                          ...filters,
-                          sortBy: e.target.value as any,
-                        })
-                      }
-                      className="mt-1 w-full h-10 px-3 border rounded-md"
-                    >
-                      <option value="relevance">Relevance</option>
-                      <option value="citations">Citations (Total)</option>
-                      <option value="citations_per_year">
-                        Citations/Year (Impact)
-                      </option>
-                      <option value="quality_score">
-                        Quality Score (Enterprise)
-                      </option>
-                      <option value="word_count">Word Count (Depth)</option>
-                      <option value="date">Date (Newest)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Phase 10 Day 5.13+ Extension 2: Enterprise Quality Filtering Transparency */}
-                <Alert className="bg-blue-50 border-blue-200">
-                  <Award className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-sm text-blue-900">
-                    <strong>Enterprise Research-Grade Filtering:</strong>{' '}
-                    Results automatically exclude papers with abstracts &lt;100
-                    words. Quality scores (0-100) combine citation impact,
-                    journal prestige, content depth, and recency.
-                    <strong className="text-green-700">
-                      {' '}
-                      High-quality papers (≥70) show "Full Text" button for
-                      open-access PDFs.
-                    </strong>
-                    <a
-                      href="#"
-                      className="underline ml-1"
-                      onClick={e => {
-                        e.preventDefault();
-                        alert(`Quality Score Algorithm (Enterprise Research-Grade):
-
-🏆 5-Dimensional Composite Score (0-100):
-
-1. Citation Impact (30%):
-   • 50+ cites/year = World-class (100 pts)
-   • 10+ cites/year = Excellent (70 pts)
-   • 5+ cites/year = Good (50 pts)
-   • 1+ cites/year = Average (20 pts)
-
-2. Journal Prestige (25%):
-   • Impact Factor (IF)
-   • SCImago Journal Rank (SJR)
-   • Quartile (Q1-Q4)
-   • Journal h-index
-
-3. Content Depth (15%):
-   • 8000+ words = Extensive (100 pts)
-   • 3000-8000 = Comprehensive (70-100 pts)
-   • 1000-3000 = Standard (40-70 pts)
-
-4. Recency Boost (15%):
-   • Current year = 100 pts
-   • 1 year old = 80 pts
-   • 2 years old = 60 pts
-
-5. Venue Quality (15%):
-   • Top-tier (Nature/Science) = 100 pts
-   • Peer-reviewed journal = 70-90 pts
-   • Conference = 50-70 pts
-   • Preprint = 30-50 pts
-
-Quality Tiers:
-✅ Exceptional (80-100): Breakthrough research
-✅ Excellent (70-79): High-quality methodology
-✅ Very Good (60-69): Solid research
-✅ Good (50-59): Acceptable research quality
-⚠️  Acceptable (40-49): Marginal quality, use with caution
-⚠️  Fair (30-39): Limited quality, consider excluding
-❌ Limited (<30): Below research-grade standards`);
-                      }}
-                    >
-                      Learn more
-                    </a>
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-3">
-                  {/* Saved Presets Section */}
-                  {savedPresets.length > 0 && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        📁 Saved Presets
-                      </label>
-                      <div className="flex gap-2 flex-wrap">
-                        {savedPresets.map(preset => (
-                          <div
-                            key={preset.id}
-                            className="flex items-center gap-1 bg-purple-50 border border-purple-200 rounded-lg px-3 py-1.5 text-sm"
-                          >
-                            <button
-                              onClick={() => handleLoadPreset(preset)}
-                              className="hover:text-purple-700 font-medium"
-                            >
-                              {preset.name}
-                            </button>
-                            <button
-                              onClick={() => handleDeletePreset(preset.id)}
-                              className="text-gray-400 hover:text-red-600"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Save Preset Form */}
-                  {showPresets && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="flex gap-2 items-end"
-                    >
-                      <div className="flex-1">
-                        <label className="text-sm font-medium">
-                          Preset Name
-                        </label>
-                        <Input
-                          placeholder="e.g., Recent AI Papers"
-                          value={presetName}
-                          onChange={e => setPresetName(e.target.value)}
-                          onKeyDown={e =>
-                            e.key === 'Enter' && handleSavePreset()
-                          }
-                          className="mt-1"
-                        />
-                      </div>
-                      <Button onClick={handleSavePreset} variant="outline">
-                        Save
-                      </Button>
-                      <Button
-                        onClick={() => setShowPresets(false)}
-                        variant="ghost"
-                      >
-                        Cancel
-                      </Button>
-                    </motion.div>
-                  )}
-
-                  <div className="flex justify-between gap-2 mt-4">
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setFilters(defaultFilters)}
-                      >
-                        Reset Filters
-                      </Button>
-                      {appliedFilterCount > 0 && !showPresets && (
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowPresets(true)}
-                          className="border-purple-300 text-purple-700 hover:bg-purple-50"
-                        >
-                          <Star className="w-4 h-4 mr-2" />
-                          Save as Preset
-                        </Button>
-                      )}
-                    </div>
-                    <Button
-                      onClick={handleApplyFilters}
-                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
-                    >
-                      <Check className="w-4 h-4 mr-2" />
-                      Apply Filters
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Phase 10 Day 31: Extracted FilterPanel Component */}
+          <FilterPanel isVisible={showFilters} />
         </CardContent>
       </Card>
 
@@ -3640,7 +3845,7 @@ Quality Tiers:
               variant="outline"
               onClick={handleExtractThemes}
               disabled={
-                (selectedPapers.size === 0 && transcribedVideos.length === 0) ||
+                (papers.length === 0 && transcribedVideos.length === 0) ||
                 analyzingThemes
               }
               className="flex items-center gap-2"
@@ -4527,8 +4732,7 @@ Quality Tiers:
                 size="lg"
                 onClick={handleExtractThemes}
                 disabled={
-                  (selectedPapers.size === 0 &&
-                    transcribedVideos.length === 0) ||
+                  (papers.length === 0 && transcribedVideos.length === 0) ||
                   analyzingThemes
                 }
                 className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
@@ -4547,24 +4751,24 @@ Quality Tiers:
                 )}
               </Button>
 
-              {selectedPapers.size === 0 && transcribedVideos.length === 0 && (
+              {papers.length === 0 && transcribedVideos.length === 0 && (
                 <p className="text-xs text-amber-600 mt-3">
-                  ⚠️ Select papers from search results above or transcribe
-                  videos to begin extraction
+                  ⚠️ Search for papers above or transcribe videos to begin
+                  extraction
                 </p>
               )}
 
               {/* Phase 10 Day 5.14: Warn about minimum source requirements */}
-              {selectedPapers.size + transcribedVideos.length > 0 &&
-                selectedPapers.size + transcribedVideos.length < 3 && (
+              {papers.length + transcribedVideos.length > 0 &&
+                papers.length + transcribedVideos.length < 3 && (
                   <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                     <p className="text-xs font-semibold text-amber-800 mb-1">
                       ⚠️ Low Source Count Warning
                     </p>
                     <p className="text-xs text-amber-700">
-                      You've selected{' '}
-                      {selectedPapers.size + transcribedVideos.length}{' '}
-                      source(s). For reliable theme extraction, we recommend:
+                      You have {papers.length + transcribedVideos.length}{' '}
+                      source(s) available. For reliable theme extraction, we
+                      recommend:
                     </p>
                     <ul className="text-xs text-amber-700 list-disc ml-4 mt-1 space-y-0.5">
                       <li>
@@ -4780,11 +4984,9 @@ Quality Tiers:
                             value={appliedFilters.sortBy}
                             onChange={e => {
                               const newSort = e.target.value as any;
-                              setFilters({ ...filters, sortBy: newSort });
-                              setAppliedFilters({
-                                ...appliedFilters,
-                                sortBy: newSort,
-                              });
+                              // Phase 10 Day 31: Use Zustand actions
+                              setFilters({ sortBy: newSort });
+                              applyFilters();
                               // Trigger re-search with new sort
                               if (query) {
                                 handleSearch();
@@ -5833,7 +6035,7 @@ Quality Tiers:
                     No themes extracted yet
                   </p>
                   <p className="text-sm text-gray-400 mb-4">
-                    Select papers and/or transcribe videos, then click
+                    Search for papers and/or transcribe videos, then click
                     &quot;Extract Themes from All Sources&quot; to identify
                     research themes with full provenance tracking
                   </p>
@@ -6174,6 +6376,41 @@ Quality Tiers:
             </Button>
           </div>
         )}
+
+      {/* Phase 10 Day 31: Mode Selection Modal (Quick vs Guided) */}
+      {showModeSelectionModal && (
+        <ModeSelectionModal
+          isOpen={showModeSelectionModal}
+          onClose={() => setShowModeSelectionModal(false)}
+          onModeSelected={handleModeSelected}
+          selectedPaperCount={selectedPapers.size}
+        />
+      )}
+
+      {/* Phase 10 Day 31: Guided Extraction Wizard */}
+      {showGuidedWizard && contentAnalysis && (
+        <GuidedExtractionWizard
+          isOpen={showGuidedWizard}
+          onClose={() => setShowGuidedWizard(false)}
+          corpusId={`corpus_${Date.now()}`}
+          corpusName="Auto-Generated Corpus"
+          allPapers={papers.map(p => ({
+            ...p,
+            hasFullText: p.hasFullText ?? false,
+          }))}
+          {...(extractionPurpose && { purpose: extractionPurpose })}
+          userExpertiseLevel="intermediate"
+          onIterationComplete={result => {
+            // Update themes with guided extraction results
+            if (result && result.themes) {
+              setUnifiedThemes(result.themes);
+              toast.success(
+                `Iteration ${result.iteration} complete: ${result.totalThemes} themes (${result.newThemes} new, ${result.strengthenedThemes} strengthened)`
+              );
+            }
+          }}
+        />
+      )}
 
       {/* Phase 10 Day 5.13: Purpose Selection Wizard Modal */}
       {showPurposeWizard && contentAnalysis && (

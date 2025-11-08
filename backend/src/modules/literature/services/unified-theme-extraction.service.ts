@@ -71,6 +71,17 @@ export interface ThemeProvenance {
   citationChain: string[];
 }
 
+/**
+ * Phase 10 Day 31.3: Minimal theme interface for deduplication
+ * Used for themes from heterogeneous sources before full unification
+ */
+interface DeduplicatableTheme {
+  label: string;
+  keywords: string[];
+  weight: number;
+  sourceIndices?: number[];
+}
+
 export interface SourceContent {
   id: string;
   type: 'paper' | 'youtube' | 'podcast' | 'tiktok' | 'instagram';
@@ -216,6 +227,33 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
   private readonly cache = new Map<string, { data: any; timestamp: number }>();
   private themeGateway: any;
 
+  // Phase 10 Day 31.2: Embedding configuration constants (eliminates magic numbers)
+  private static readonly EMBEDDING_MODEL = 'text-embedding-3-large';
+  private static readonly EMBEDDING_DIMENSIONS = 3072;
+  private static readonly EMBEDDING_MAX_TOKENS = 8191; // OpenAI limit for text-embedding-3-large
+
+  // Phase 10 Day 31.3: Theme extraction configuration constants (eliminates magic numbers)
+  private static readonly CODING_MODEL = 'gpt-4-turbo-preview';
+  private static readonly CODING_TEMPERATURE = 0.2; // Lower for consistent coding
+  private static readonly THEME_LABELING_TEMPERATURE = 0.3;
+  private static readonly MAX_BATCH_TOKENS = 100000; // Safe limit below GPT-4-turbo's 128k
+  private static readonly MAX_CHARS_PER_SOURCE = 40000; // ~10k tokens (conservative)
+  private static readonly CHARS_TO_TOKENS_RATIO = 4; // Approximate char-to-token conversion
+  private static readonly MAX_SOURCES_PER_BATCH = 5;
+  private static readonly CODE_EMBEDDING_CONCURRENCY = 10; // Parallel embedding generation
+  private static readonly DEFAULT_MAX_THEMES = 15;
+  private static readonly MAX_EXCERPTS_FOR_LABELING = 5;
+  private static readonly MAX_EXCERPTS_PER_SOURCE = 3;
+  private static readonly THEME_MERGE_SIMILARITY_THRESHOLD = 0.8; // Merge if > 0.8 similar
+  private static readonly SEMANTIC_RELEVANCE_THRESHOLD = 0.3; // Minimum semantic similarity
+  private static readonly VALIDATION_SCORE_COMPONENTS = 3; // coherence + distinctiveness + evidence
+  private static readonly DEFAULT_VALIDATION_SCORE = 0.5;
+  private static readonly DEFAULT_THEME_CONFIDENCE = 0.5;
+  private static readonly MIN_CODES_FOR_COHERENCE = 2;
+  private static readonly DEFAULT_COHERENCE_SCORE = 0.5;
+  private static readonly DEFAULT_DISTINCTIVENESS_SCORE = 1.0;
+  private static readonly MAX_THEMES_TO_LOG = 5; // Diagnostic logging limit
+
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
@@ -297,10 +335,10 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
       1: {
         what: {
           novice: `Reading all ${stats.sourcesAnalyzed} papers together and converting them into a format the AI can understand`,
-          researcher: `Generating semantic embeddings from full source content using text-embedding-3-large (3072 dimensions)`,
-          expert: `Corpus-level embedding generation: OpenAI text-embedding-3-large, batch size ${stats.sourcesAnalyzed}, full content (no truncation), cosine similarity space`,
+          researcher: `Generating semantic embeddings from full source content using ${UnifiedThemeExtractionService.EMBEDDING_MODEL} (${UnifiedThemeExtractionService.EMBEDDING_DIMENSIONS} dimensions)`,
+          expert: `Corpus-level embedding generation: OpenAI ${UnifiedThemeExtractionService.EMBEDDING_MODEL}, batch size ${stats.sourcesAnalyzed}, full content (no truncation), cosine similarity space`,
         },
-        why: 'Familiarization is the first step in thematic analysis (Braun & Clarke, 2019). Reading ALL sources together—not one-by-one—prevents early papers from biasing later analysis. This ensures themes emerge from the entire dataset, not just the first few sources.',
+        why: `SCIENTIFIC PROCESS: Familiarization converts each article into a ${UnifiedThemeExtractionService.EMBEDDING_DIMENSIONS}-dimensional semantic vector (embedding) that captures meaning mathematically. These embeddings enable: (1) Hierarchical clustering to find related concepts, (2) Cosine similarity calculations to measure semantic relationships (not keyword matching), (3) Provenance tracking showing which articles influence which themes. This implements Braun & Clarke (2019) Stage 1: reading ALL sources together prevents early bias, ensuring themes emerge from the complete dataset. The embeddings are the foundation for all downstream scientific analysis.`,
       },
       2: {
         what: {
@@ -396,12 +434,38 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
     }
 
     try {
-      // Use provided sources if available, otherwise fetch from database
+      // Phase 10 Day 30: CRITICAL FIX - Always check database for full-text, even with provided sources
+      // This ensures familiarization reads ACTUAL full articles, not just abstracts from search
       let sources: SourceContent[];
-      if (providedSources && providedSources.length > 0) {
-        this.logger.log(
-          'Using provided source data (no database query needed)',
-        );
+
+      if (providedSources && providedSources.length > 0 && sourceType === 'paper') {
+        this.logger.log('📚 Checking database for full-text versions of provided papers...');
+
+        // Try to get full-text versions from database
+        const dbSources = await this.fetchSourceContent(sourceType, sourceIds);
+
+        // Create a map of database sources by ID for quick lookup
+        const dbSourceMap = new Map(dbSources.map(s => [s.id, s]));
+
+        // For each provided source, use database version if it has full-text, otherwise use provided
+        sources = providedSources.map(providedSource => {
+          const dbSource = dbSourceMap.get(providedSource.id);
+
+          if (dbSource && (dbSource as any).fullText) {
+            this.logger.log(`✅ Using full-text from database for paper: ${providedSource.title.substring(0, 50)}...`);
+            return dbSource; // Has full-text in database
+          } else {
+            this.logger.log(`⚠️  No full-text in database for: ${providedSource.title.substring(0, 50)}... (using abstract)`);
+            return providedSource; // Fallback to provided (abstract)
+          }
+        });
+
+        const fullTextCount = sources.filter(s => (s as any).contentSource === 'full-text').length;
+        const abstractCount = sources.length - fullTextCount;
+        this.logger.log(`📊 Content sources: ${fullTextCount} full-text, ${abstractCount} abstracts`);
+
+      } else if (providedSources && providedSources.length > 0) {
+        this.logger.log('Using provided source data (non-paper sources)');
         sources = providedSources;
       } else {
         this.logger.log('Fetching source content from database');
@@ -459,13 +523,17 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
   async mergeThemesFromSources(
     sources: Array<{
       type: 'paper' | 'youtube' | 'podcast' | 'tiktok' | 'instagram';
-      themes: any[];
+      themes: DeduplicatableTheme[]; // Phase 10 Day 31.3: Properly typed
       sourceIds: string[];
     }>,
   ): Promise<UnifiedTheme[]> {
     this.logger.log(`Merging themes from ${sources.length} source groups`);
 
-    const themeMap = new Map<string, any>();
+    // Phase 10 Day 31.3: Properly typed theme map with sources tracking
+    type ThemeWithSources = DeduplicatableTheme & {
+      sources?: Array<{ type: string; ids: string[] }>;
+    };
+    const themeMap = new Map<string, ThemeWithSources>();
 
     // Group similar themes across sources
     for (const sourceGroup of sources) {
@@ -476,18 +544,18 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
         );
 
         if (similarKey) {
-          // Merge with existing theme
+          // Phase 10 Day 31.3: Merge with existing theme
           const existing = themeMap.get(similarKey)!;
-          existing.sources = [...existing.sources, ...(theme.sources || [])];
+          existing.sources = [...(existing.sources || []), { type: sourceGroup.type, ids: sourceGroup.sourceIds }];
           existing.keywords = [
             ...new Set([...existing.keywords, ...(theme.keywords || [])]),
           ];
           existing.weight = Math.max(existing.weight, theme.weight || 0);
         } else {
-          // Add as new theme
+          // Phase 10 Day 31.3: Add as new theme with sources initialized
           themeMap.set(theme.label, {
             ...theme,
-            sources: theme.sources || [],
+            sources: [{ type: sourceGroup.type, ids: sourceGroup.sourceIds }],
           });
         }
       }
@@ -725,8 +793,8 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
    * @returns Comparison analysis
    */
   async compareStudyThemes(studyIds: string[]): Promise<{
-    commonThemes: any[];
-    uniqueThemes: any[];
+    commonThemes: Array<{ label: string; occurrences: number; studies: string[] }>; // Phase 10 Day 31.3: Properly typed
+    uniqueThemes: Array<UnifiedTheme & { studyId: string }>; // Phase 10 Day 31.3: Properly typed
     themesByStudy: Record<string, UnifiedTheme[]>;
   }> {
     this.logger.log(`Comparing themes across ${studyIds.length} studies`);
@@ -1073,11 +1141,11 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
       ),
     );
 
-    // Collect all themes from successful extractions
-    const allThemes: any[] = [];
+    // Phase 10 Day 31.3: Properly typed - collect all themes from successful extractions
+    const allThemes: DeduplicatableTheme[] = [];
     for (const result of results) {
       if (result.status === 'fulfilled' && result.value.success) {
-        allThemes.push(...result.value.themes);
+        allThemes.push(...(result.value.themes as DeduplicatableTheme[]));
       }
     }
 
@@ -1147,13 +1215,14 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
   /**
    * Phase 10 Day 5.5: Deduplicate similar themes using semantic similarity
    * Enterprise pattern: Cosine similarity with keyword overlap
+   * Phase 10 Day 31.3: Properly typed with DeduplicatableTheme interface
    *
    * @private
    */
-  private deduplicateThemes(themes: any[]): any[] {
+  private deduplicateThemes(themes: DeduplicatableTheme[]): DeduplicatableTheme[] {
     if (themes.length === 0) return [];
 
-    const uniqueThemes: any[] = [];
+    const uniqueThemes: DeduplicatableTheme[] = [];
     const seen = new Set<string>();
 
     for (const theme of themes) {
@@ -1856,7 +1925,7 @@ Return JSON format:
       // NEW: AI Disclosure Section (Nature/Science 2024 compliance)
       aiDisclosure: {
         modelUsed:
-          'GPT-4 Turbo (gpt-4-turbo-preview) + text-embedding-3-large (3072 dimensions)',
+          `GPT-4 Turbo (gpt-4-turbo-preview) + ${UnifiedThemeExtractionService.EMBEDDING_MODEL} (${UnifiedThemeExtractionService.EMBEDDING_DIMENSIONS} dimensions)`,
         aiRoleDetailed:
           'AI performs: (1) Semantic embedding generation from full source content, (2) Initial code extraction via pattern detection, (3) Code clustering into candidate themes, (4) Theme labeling and description generation. Human oversight required for final theme selection and interpretation.',
         humanOversightRequired:
@@ -1932,6 +2001,32 @@ Return JSON format:
       );
       const stage2Start = Date.now();
 
+      // Phase 10 Day 31: Emit progress BEFORE heavy processing to eliminate 81-second silent gap
+      const stage2MessageStart = this.create4PartProgressMessage(
+        2,
+        'Initial Coding',
+        25,
+        userLevel,
+        {
+          sourcesAnalyzed: sources.length,
+          codesGenerated: 0,
+          currentOperation: 'Starting initial code extraction',
+        },
+      );
+      progressCallback?.(
+        2,
+        6,
+        'Analyzing content patterns using advanced AI (extracting initial codes from full source data)',
+        stage2MessageStart,
+      );
+      this.emitProgress(
+        userId,
+        'coding',
+        25,
+        stage2MessageStart.whatWeAreDoing,
+        stage2MessageStart,
+      );
+
       const initialCodes = await this.extractInitialCodes(sources, embeddings);
       const stage2Duration = ((Date.now() - stage2Start) / 1000).toFixed(2);
 
@@ -1943,7 +2038,7 @@ Return JSON format:
         {
           sourcesAnalyzed: sources.length,
           codesGenerated: initialCodes.length,
-          currentOperation: 'Extracting initial codes',
+          currentOperation: 'Completed initial code extraction',
         },
       );
       progressCallback?.(
@@ -1969,6 +2064,33 @@ Return JSON format:
       );
       const stage3Start = Date.now();
 
+      // Phase 10 Day 31: Emit progress BEFORE heavy processing
+      const stage3MessageStart = this.create4PartProgressMessage(
+        3,
+        'Theme Generation',
+        40,
+        userLevel,
+        {
+          sourcesAnalyzed: sources.length,
+          codesGenerated: initialCodes.length,
+          themesIdentified: 0,
+          currentOperation: 'Starting theme generation from semantic clusters',
+        },
+      );
+      progressCallback?.(
+        3,
+        6,
+        'Generating candidate themes from semantic clusters...',
+        stage3MessageStart,
+      );
+      this.emitProgress(
+        userId,
+        'generation',
+        40,
+        stage3MessageStart.whatWeAreDoing,
+        stage3MessageStart,
+      );
+
       const candidateThemes = await this.generateCandidateThemes(
         initialCodes,
         sources,
@@ -1986,13 +2108,13 @@ Return JSON format:
           sourcesAnalyzed: sources.length,
           codesGenerated: initialCodes.length,
           themesIdentified: candidateThemes.length,
-          currentOperation: 'Clustering codes into themes',
+          currentOperation: 'Completed theme generation',
         },
       );
       progressCallback?.(
         3,
         6,
-        'Generating candidate themes from semantic clusters...',
+        `Generated ${candidateThemes.length} candidate themes from semantic patterns`,
         stage3Message,
       );
       this.emitProgress(
@@ -2011,6 +2133,33 @@ Return JSON format:
         `\n✅ [${requestId}] STAGE 4/6: Theme Review (50% → 70%)`,
       );
       const stage4Start = Date.now();
+
+      // Phase 10 Day 31: Emit progress BEFORE heavy processing
+      const stage4MessageStart = this.create4PartProgressMessage(
+        4,
+        'Theme Review',
+        60,
+        userLevel,
+        {
+          sourcesAnalyzed: sources.length,
+          codesGenerated: initialCodes.length,
+          themesIdentified: candidateThemes.length,
+          currentOperation: 'Starting academic validation of candidate themes',
+        },
+      );
+      progressCallback?.(
+        4,
+        6,
+        'Validating themes against full dataset...',
+        stage4MessageStart,
+      );
+      this.emitProgress(
+        userId,
+        'review',
+        60,
+        stage4MessageStart.whatWeAreDoing,
+        stage4MessageStart,
+      );
 
       // PHASE 10 DAY 5.17.4: Now returns both themes and diagnostics
       const validationResult = await this.validateThemesAcademic(
@@ -2033,13 +2182,13 @@ Return JSON format:
           sourcesAnalyzed: sources.length,
           codesGenerated: initialCodes.length,
           themesIdentified: validatedThemes.length,
-          currentOperation: 'Cross-validating themes',
+          currentOperation: 'Completed academic validation',
         },
       );
       progressCallback?.(
         4,
         6,
-        'Validating themes against full dataset...',
+        `Validated ${validatedThemes.length} themes (removed ${removedCount} weak candidates)`,
         stage4Message,
       );
       this.emitProgress(
@@ -2057,6 +2206,33 @@ Return JSON format:
       this.logger.log(`\n🔧 [${requestId}] STAGE 5/6: Refinement (70% → 85%)`);
       const stage5Start = Date.now();
 
+      // Phase 10 Day 31: Emit progress BEFORE heavy processing
+      const stage5MessageStart = this.create4PartProgressMessage(
+        5,
+        'Refinement',
+        75,
+        userLevel,
+        {
+          sourcesAnalyzed: sources.length,
+          codesGenerated: initialCodes.length,
+          themesIdentified: validatedThemes.length,
+          currentOperation: 'Starting theme refinement and deduplication',
+        },
+      );
+      progressCallback?.(
+        5,
+        6,
+        'Refining and defining themes...',
+        stage5MessageStart,
+      );
+      this.emitProgress(
+        userId,
+        'refinement',
+        75,
+        stage5MessageStart.whatWeAreDoing,
+        stage5MessageStart,
+      );
+
       const refinedThemes = await this.refineThemesAcademic(
         validatedThemes,
         embeddings,
@@ -2073,13 +2249,13 @@ Return JSON format:
           sourcesAnalyzed: sources.length,
           codesGenerated: initialCodes.length,
           themesIdentified: refinedThemes.length,
-          currentOperation: 'Merging overlaps and removing weak themes',
+          currentOperation: 'Completed theme refinement',
         },
       );
       progressCallback?.(
         5,
         6,
-        'Refining and defining themes...',
+        `Refined to ${refinedThemes.length} themes (merged ${mergedCount} overlaps)`,
         stage5Message,
       );
       this.emitProgress(
@@ -2097,6 +2273,33 @@ Return JSON format:
       this.logger.log(`\n📊 [${requestId}] STAGE 6/6: Provenance (85% → 100%)`);
       const stage6Start = Date.now();
 
+      // Phase 10 Day 31: Emit progress BEFORE heavy processing
+      const stage6MessageStart = this.create4PartProgressMessage(
+        6,
+        'Provenance',
+        90,
+        userLevel,
+        {
+          sourcesAnalyzed: sources.length,
+          codesGenerated: initialCodes.length,
+          themesIdentified: refinedThemes.length,
+          currentOperation: 'Starting semantic provenance calculation',
+        },
+      );
+      progressCallback?.(
+        6,
+        6,
+        'Calculating semantic influence and building provenance...',
+        stage6MessageStart,
+      );
+      this.emitProgress(
+        userId,
+        'provenance',
+        90,
+        stage6MessageStart.whatWeAreDoing,
+        stage6MessageStart,
+      );
+
       const themesWithProvenance = await this.calculateSemanticProvenance(
         refinedThemes,
         sources,
@@ -2113,13 +2316,13 @@ Return JSON format:
           sourcesAnalyzed: sources.length,
           codesGenerated: initialCodes.length,
           themesIdentified: themesWithProvenance.length,
-          currentOperation: 'Finalizing theme provenance',
+          currentOperation: 'Completed provenance calculation',
         },
       );
       progressCallback?.(
         6,
         6,
-        'Calculating semantic influence and building provenance...',
+        `Completed ${themesWithProvenance.length} themes with full provenance`,
         stage6Message,
       );
       this.emitProgress(
@@ -2494,35 +2697,146 @@ Return JSON format:
       cumulativeThemes: number;
     }> = [];
 
-    // Track cumulative themes discovered
-    let cumulativeThemes = 0;
-    let previousThemeIds = new Set<string>();
+    // PHASE 10 DAY 33 FIX: Use REAL influence weights instead of simulated discovery
+    // OLD BUG: Iterated sources in array order, causing first source to "discover" 90% of themes
+    // NEW FIX: Assign each theme to PRIMARY source (highest influence), then sort by contribution
 
-    // Simulate progressive discovery (in real implementation, this would track actual discovery order)
-    // For now, estimate based on source influence
-    for (let i = 0; i < sources.length; i++) {
-      const source = sources[i];
+    // Step 0: Build source ID set for O(1) lookup (performance optimization)
+    const sourceIdSet = new Set(sources.map((s) => s.id));
+    const sourceIndexMap = new Map(sources.map((s, idx) => [s.id, idx])); // For stable sort
 
-      // Find themes where this source has influence
-      const themesFromThisSource = themes.filter((theme) =>
-        theme.sources.some(
-          (s) => s.sourceId === source.id && s.influence > 0.1,
-        ),
+    // Step 1: Assign each theme to its PRIMARY source (source with highest influence)
+    const themeToPrimarySource = new Map<string, string>();
+    let themesWithoutSources = 0;
+    let themesWithOrphanedSources = 0;
+
+    for (const theme of themes) {
+      // EDGE CASE: Theme has no sources
+      if (!theme.sources || theme.sources.length === 0) {
+        themesWithoutSources++;
+        this.logger.warn(
+          `⚠️ Theme "${theme.label}" has no sources - excluding from saturation analysis`,
+        );
+        continue;
+      }
+
+      // Find source with highest influence on this theme
+      const primarySource = theme.sources.reduce((max, current) =>
+        current.influence > max.influence ? current : max,
       );
 
-      // Count new themes (not seen in previous sources)
-      const newThemes = themesFromThisSource.filter(
-        (theme) => !previousThemeIds.has(theme.id),
+      // EDGE CASE: Primary source not in sources array (data inconsistency)
+      if (!sourceIdSet.has(primarySource.sourceId)) {
+        themesWithOrphanedSources++;
+        this.logger.warn(
+          `⚠️ Theme "${theme.label}" primary source "${primarySource.sourceId}" not in sources array - excluding from saturation`,
+        );
+        continue;
+      }
+
+      themeToPrimarySource.set(theme.id, primarySource.sourceId);
+    }
+
+    // Report data quality issues
+    if (themesWithoutSources > 0 || themesWithOrphanedSources > 0) {
+      this.logger.warn(
+        `📊 Saturation Data Quality: ${themesWithoutSources} themes without sources, ${themesWithOrphanedSources} with orphaned sources`,
+      );
+    }
+
+    // Step 2: Calculate total contribution for each source (optimized O(n) instead of O(n*m))
+    const sourceContribution = new Map<string, number>();
+    // Initialize all sources with 0 contribution
+    for (const source of sources) {
+      sourceContribution.set(source.id, 0);
+    }
+    // Count primary contributions
+    for (const [_themeId, sourceId] of themeToPrimarySource.entries()) {
+      const current = sourceContribution.get(sourceId) || 0;
+      sourceContribution.set(sourceId, current + 1);
+    }
+
+    // Step 3: Sort sources by contribution (highest first) with STABLE secondary sort
+    // TECHNICAL DEBT FIX: Add secondary sort by original index for deterministic ordering
+    const sortedSources = [...sources].sort((a, b) => {
+      const contribA = sourceContribution.get(a.id) || 0;
+      const contribB = sourceContribution.get(b.id) || 0;
+      if (contribA !== contribB) {
+        return contribB - contribA; // Primary: Descending by contribution
+      }
+      // Secondary: Stable sort by original index (deterministic)
+      const indexA = sourceIndexMap.get(a.id) || 0;
+      const indexB = sourceIndexMap.get(b.id) || 0;
+      return indexA - indexB;
+    });
+
+    this.logger.log(
+      `📊 Saturation Analysis: Sorted ${sortedSources.length} sources by contribution`,
+    );
+    if (sortedSources.length > 0) {
+      this.logger.log(
+        `   • Top contributor: "${sortedSources[0].title.substring(0, 60)}..." (${sourceContribution.get(sortedSources[0].id)} themes)`,
+      );
+      if (sortedSources.length > 1) {
+        this.logger.log(
+          `   • 2nd contributor: "${sortedSources[1].title.substring(0, 60)}..." (${sourceContribution.get(sortedSources[1].id)} themes)`,
+        );
+      }
+      if (sortedSources.length > 2) {
+        this.logger.log(
+          `   • 3rd contributor: "${sortedSources[2].title.substring(0, 60)}..." (${sourceContribution.get(sortedSources[2].id)} themes)`,
+        );
+      }
+    }
+
+    // Step 4: Build saturation curve using sorted sources
+    let cumulativeThemes = 0;
+    const discoveredThemeIds = new Set<string>();
+
+    for (let i = 0; i < sortedSources.length; i++) {
+      const source = sortedSources[i];
+
+      // Find themes where this source is the PRIMARY contributor
+      const primaryThemesFromSource = themes.filter(
+        (theme) => themeToPrimarySource.get(theme.id) === source.id,
+      );
+
+      // Count NEW themes (not yet discovered)
+      const newThemes = primaryThemesFromSource.filter(
+        (theme) => !discoveredThemeIds.has(theme.id),
       );
 
       cumulativeThemes += newThemes.length;
-      newThemes.forEach((theme) => previousThemeIds.add(theme.id));
+      newThemes.forEach((theme) => discoveredThemeIds.add(theme.id));
 
       sourceProgression.push({
         sourceNumber: i + 1,
         newThemesDiscovered: newThemes.length,
         cumulativeThemes,
       });
+
+      // Log first 5 sources for debugging
+      if (i < 5) {
+        this.logger.debug(
+          `   Source ${i + 1}: +${newThemes.length} new themes (total: ${cumulativeThemes})`,
+        );
+      }
+    }
+
+    // VALIDATION: Ensure all themes are accounted for (no themes lost)
+    const totalThemesInMap = themeToPrimarySource.size;
+    const totalThemesDiscovered = discoveredThemeIds.size;
+    if (totalThemesDiscovered !== totalThemesInMap) {
+      this.logger.error(
+        `❌ CRITICAL: Saturation data integrity failure! Expected ${totalThemesInMap} themes, discovered ${totalThemesDiscovered}`,
+      );
+      this.logger.error(
+        `   This indicates a logic bug in saturation calculation.`,
+      );
+    } else {
+      this.logger.log(
+        `   ✅ Validation passed: All ${totalThemesDiscovered} themes accounted for in saturation curve`,
+      );
     }
 
     // Detect saturation: when last 3 sources contribute <10% new themes
@@ -2557,7 +2871,7 @@ Return JSON format:
    * Generate semantic embeddings for FULL source content
    * NO TRUNCATION - analyzes complete text
    *
-   * Uses OpenAI text-embedding-3-large (3072 dimensions)
+   * Uses OpenAI text-embedding-3-large (${UnifiedThemeExtractionService.EMBEDDING_DIMENSIONS} dimensions)
    * Rate limit: 5000 req/min (handled with p-limit)
    *
    * @private
@@ -2568,6 +2882,12 @@ Return JSON format:
     progressCallback?: AcademicProgressCallback,
     userLevel: 'novice' | 'researcher' | 'expert' = 'researcher',
   ): Promise<Map<string, number[]>> {
+    // Phase 10 Day 31.2: Input validation (defensive programming)
+    if (!sources || sources.length === 0) {
+      this.logger.warn('generateSemanticEmbeddings called with empty sources array');
+      return new Map<string, number[]>();
+    }
+
     const embeddings = new Map<string, number[]>();
 
     // Track detailed stats for transparent progress (atomic updates for thread safety)
@@ -2578,40 +2898,150 @@ Return JSON format:
       processedCount: 0,
     };
 
-    // Phase 10 Day 5.17.3: Process sources in PARALLEL with concurrency limit + per-article progress
-    // Balance: Parallel for speed + Detailed progress + 1 second minimum per article
-    const limit = pLimit(5); // Process 5 at a time (balance speed vs rate limits)
+    // Phase 10 Day 30: Process sources SEQUENTIALLY for visible familiarization
+    // User feedback: "I wonder if that machine is reading the articles at all?"
+    // Sequential processing ensures users see each article being read in real-time
+    const limit = pLimit(1); // Process 1 at a time (fully sequential for transparency)
+
+    // Phase 10 Day 31.2: Track embedding statistics for scientific reporting
+    // Phase 10 Day 31.2: Use Welford's algorithm for single-pass mean + variance computation
+    let totalChunksProcessed = 0;
+    let chunkedArticleCount = 0;
+    let embeddingCount = 0;
+    let magnitudeMean = 0; // Running mean for Welford's algorithm
+    let magnitudeM2 = 0; // Running variance sum for Welford's algorithm
+    const failedSources: Array<{ id: string; title: string; error: string }> = []; // Track failures
 
     const embeddingTasks = sources.map((source, index) =>
       limit(async () => {
         const sourceStart = Date.now();
 
         try {
-          // Use FULL content - NO TRUNCATION
-          const textToEmbed = `${source.title}\n\n${source.content}`;
+          // Phase 10 Day 31.2: Validate source data (defensive programming)
+          if (!source.id) {
+            this.logger.error(`Source at index ${index} has no ID, skipping`);
+            failedSources.push({ id: 'unknown', title: source.title || 'Unknown', error: 'Missing source ID' });
+            return false;
+          }
+          if (!source.content || source.content.trim().length === 0) {
+            this.logger.warn(`Source ${source.id} has no content, skipping`);
+            failedSources.push({ id: source.id, title: source.title || 'Unknown', error: 'Empty content' });
+            return false;
+          }
 
           // Calculate word count and content type
-          const wordCount = source.content
-            ? source.content.split(/\s+/).length
-            : 0;
+          const wordCount = source.content.split(/\s+/).length;
+          // Phase 10 Day 31: Use metadata.contentType from frontend (fixes categorization mismatch)
+          // Phase 10 Day 31.1: IMPROVED CLASSIFICATION - Better distinguish abstracts from full articles
+          // Academic full-text articles: typically 4,000-15,000 words
+          // Long abstracts: typically 300-1,500 words
+          // Abstract overflow (API returns long abstract): 1,500-3,000 words (still NOT full article)
           const isFullText =
-            (source as any).contentSource === 'full-text' ||
-            (source as any).fullTextWordCount > 0 ||
-            wordCount > 1000; // Heuristic: >1000 words likely full-text
+            source.metadata?.contentType === 'full_text' || // Trust frontend: has real fullText from PDF
+            (source.metadata?.contentType === 'abstract_overflow' && wordCount > 3000) || // Only if truly article-length
+            wordCount > 3500; // Fallback: typical full article length (was 1000, too low)
 
-          // Log content length for transparency
-          this.logger.log(
-            `   📄 [${index + 1}/${sources.length}] Reading: "${source.title.substring(0, 60)}..." (${wordCount.toLocaleString()} words, ${isFullText ? 'full-text' : 'abstract'})`,
-          );
+          // Phase 10 Day 31.1: Log classification reasoning for transparency
+          const classificationReason = source.metadata?.contentType === 'full_text'
+            ? 'PDF-extracted'
+            : source.metadata?.contentType === 'abstract_overflow' && wordCount > 3000
+            ? 'abstract-overflow-long'
+            : wordCount > 3500
+            ? 'heuristic-long'
+            : 'abstract';
 
-          // Generate embedding
-          const response = await this.openai.embeddings.create({
-            model: 'text-embedding-3-large',
-            input: textToEmbed,
-            encoding_format: 'float',
-          });
+          // Phase 10 Day 31: CRITICAL FIX - Handle OpenAI's 8191 token limit
+          // Estimate tokens: ~4 chars per token (conservative for English)
+          const fullText = `${source.title}\n\n${source.content}`;
+          const estimatedTokens = Math.ceil(fullText.length / 4);
+          // Phase 10 Day 31.2: Use class constant instead of magic number
+          const MAX_TOKENS = UnifiedThemeExtractionService.EMBEDDING_MAX_TOKENS - 191; // Safe buffer
 
-          embeddings.set(source.id, response.data[0].embedding);
+          let embedding: number[];
+          let currentArticleChunks = 0; // Phase 10 Day 31.2: Track chunks for this article
+
+          if (estimatedTokens <= MAX_TOKENS) {
+            // Content fits in one embedding - use full text
+            this.logger.log(
+              `   📄 [${index + 1}/${sources.length}] Reading: "${source.title.substring(0, 60)}..." (${wordCount.toLocaleString()} words, ${estimatedTokens} tokens, ${isFullText ? 'full-text' : 'abstract'}, reason: ${classificationReason})`,
+            );
+
+            const response = await this.openai.embeddings.create({
+              model: UnifiedThemeExtractionService.EMBEDDING_MODEL,
+              input: fullText,
+              encoding_format: 'float',
+            });
+            embedding = response.data[0].embedding;
+
+            // Phase 10 Day 31.2: Calculate embedding magnitude (L2 norm) for scientific reporting
+            const magnitude = this.calculateEmbeddingMagnitude(embedding);
+
+            // Phase 10 Day 31.2: Welford's algorithm for online mean and variance
+            embeddingCount++;
+            const delta = magnitude - magnitudeMean;
+            magnitudeMean += delta / embeddingCount;
+            const delta2 = magnitude - magnitudeMean;
+            magnitudeM2 += delta * delta2;
+          } else {
+            // Content exceeds token limit - chunk and average embeddings
+            const chunkSize = MAX_TOKENS * 4; // ~32,000 characters per chunk
+            const chunks: string[] = [];
+
+            // Always include title in first chunk
+            let remainingContent = source.content;
+            let chunkCount = 0;
+
+            while (remainingContent.length > 0) {
+              const chunk = remainingContent.substring(0, chunkSize);
+              chunks.push(chunkCount === 0 ? `${source.title}\n\n${chunk}` : chunk);
+              remainingContent = remainingContent.substring(chunkSize);
+              chunkCount++;
+            }
+
+            this.logger.log(
+              `   📄 [${index + 1}/${sources.length}] Reading (CHUNKED): "${source.title.substring(0, 60)}..." (${wordCount.toLocaleString()} words, ${estimatedTokens} tokens → ${chunks.length} chunks, ${isFullText ? 'full-text' : 'abstract'}, reason: ${classificationReason})`,
+            );
+
+            // Generate embeddings for all chunks in parallel
+            const chunkEmbeddings = await Promise.all(
+              chunks.map(async (chunk) => {
+                const response = await this.openai.embeddings.create({
+                  model: UnifiedThemeExtractionService.EMBEDDING_MODEL,
+                  input: chunk,
+                  encoding_format: 'float',
+                });
+                return response.data[0].embedding;
+              })
+            );
+
+            // Average all chunk embeddings
+            embedding = chunkEmbeddings[0].map((_, i) => {
+              const sum = chunkEmbeddings.reduce((acc, emb) => acc + emb[i], 0);
+              return sum / chunkEmbeddings.length;
+            });
+
+            // Phase 10 Day 31.2: Track chunking statistics
+            currentArticleChunks = chunks.length;
+            totalChunksProcessed += chunks.length;
+            chunkedArticleCount++;
+
+            // Phase 10 Day 31.2: Calculate magnitude of averaged embedding
+            const magnitude = this.calculateEmbeddingMagnitude(embedding);
+
+            // Phase 10 Day 31.2: Welford's algorithm for online mean and variance
+            embeddingCount++;
+            const delta = magnitude - magnitudeMean;
+            magnitudeMean += delta / embeddingCount;
+            const delta2 = magnitude - magnitudeMean;
+            magnitudeM2 += delta * delta2;
+
+            this.logger.log(
+              `   ✅ Averaged ${chunks.length} chunk embeddings for complete article analysis (magnitude: ${magnitude.toFixed(4)})`,
+            );
+          }
+
+          // Store the embedding (now properly handles long articles)
+          embeddings.set(source.id, embedding);
 
           // Atomically update stats
           stats.processedCount++;
@@ -2651,6 +3081,11 @@ Return JSON format:
           }
 
           // Phase 10 Day 5.17.3: Create TransparentProgressMessage for both WebSocket and callback
+          // Phase 10 Day 30: Include detailed real-time familiarization metrics
+          // Phase 10 Day 31.2: Add embedding statistics for scientific transparency
+          // Phase 10 Day 31.2: Use Welford's running mean (O(1) access)
+          const currentAvgMagnitude = magnitudeMean;
+
           const transparentMessage = {
             stageName: 'Familiarization',
             stageNumber: 1,
@@ -2658,12 +3093,35 @@ Return JSON format:
             percentage: progressWithinStage,
             whatWeAreDoing: progressMessage,
             whyItMatters:
-              'Reading ALL sources together (not one-by-one) prevents early papers from biasing analysis. This ensures themes emerge from the entire dataset.',
+              `SCIENTIFIC PROCESS: Familiarization converts each article into a ${UnifiedThemeExtractionService.EMBEDDING_DIMENSIONS}-dimensional semantic vector (embedding) that captures meaning mathematically. These embeddings enable: (1) Hierarchical clustering to find related concepts, (2) Cosine similarity calculations to measure semantic relationships (not keyword matching), (3) Provenance tracking showing which articles influence which themes. This implements Braun & Clarke (2019) Stage 1: reading ALL sources together prevents early bias, ensuring themes emerge from the complete dataset. The embeddings are the foundation for all downstream scientific analysis.`,
             liveStats: {
               sourcesAnalyzed: stats.processedCount,
               currentOperation: `Reading ${isFullText ? 'full-text' : 'abstract'} ${index + 1}/${sources.length}`,
+              // Phase 10 Day 30: Real-time reading metrics for frontend display
+              fullTextRead: stats.fullTextCount,
+              abstractsRead: stats.abstractCount,
+              totalWordsRead: stats.totalWords,
+              currentArticle: index + 1,
+              totalArticles: sources.length,
+              articleTitle: source.title.substring(0, 80),
+              articleType: (isFullText ? 'full-text' : 'abstract') as 'full-text' | 'abstract',
+              articleWords: wordCount,
+              // Phase 10 Day 31.2: Enterprise-grade scientific metrics
+              embeddingStats: {
+                dimensions: UnifiedThemeExtractionService.EMBEDDING_DIMENSIONS,
+                model: UnifiedThemeExtractionService.EMBEDDING_MODEL,
+                totalEmbeddingsGenerated: embeddingCount,
+                averageEmbeddingMagnitude: currentAvgMagnitude > 0 ? currentAvgMagnitude : undefined,
+                processingMethod: (currentArticleChunks > 0 ? 'chunked-averaged' : 'single') as 'single' | 'chunked-averaged',
+                chunksProcessed: currentArticleChunks > 0 ? currentArticleChunks : undefined,
+                scientificExplanation: `Each article is converted into a ${UnifiedThemeExtractionService.EMBEDDING_DIMENSIONS}-dimensional vector where semantic meaning is preserved mathematically. Similar articles have embeddings with high cosine similarity (>0.7), enabling clustering and theme discovery without keyword matching.`,
+              },
             },
           };
+
+          // Phase 10 Day 30: Emit progress on EVERY article for real-time familiarization visibility
+          // User feedback: Stage 1 completes too fast - users can't see the reading happening
+          // Emit on every single article so word count increments visibly in real-time
 
           // Emit progress via WebSocket
           if (userId) {
@@ -2692,9 +3150,19 @@ Return JSON format:
 
           return true;
         } catch (error) {
+          // Phase 10 Day 31.2: Enhanced error handling with failure tracking
+          const errorMessage = (error as Error).message;
           this.logger.error(
-            `   ⚠️ Failed to embed source ${source.id}: ${(error as Error).message}`,
+            `   ⚠️ Failed to embed source ${source.id}: ${errorMessage}`,
           );
+
+          // Track failed source for reporting
+          failedSources.push({
+            id: source.id,
+            title: source.title || 'Unknown',
+            error: errorMessage,
+          });
+
           // Don't fail entire extraction if one source fails
           return false;
         }
@@ -2703,12 +3171,44 @@ Return JSON format:
 
     await Promise.all(embeddingTasks);
 
+    // Phase 10 Day 31.2: Final embedding statistics from Welford's algorithm (O(1) access)
+    const avgMagnitude = magnitudeMean;
+    const variance = embeddingCount > 1 ? magnitudeM2 / embeddingCount : 0;
+    const stdMagnitude = Math.sqrt(variance);
+
+    // Phase 10 Day 31.2: Report failed sources if any
+    if (failedSources.length > 0) {
+      this.logger.warn(
+        `\n   ⚠️ Failed to process ${failedSources.length}/${sources.length} sources:`,
+      );
+      failedSources.slice(0, 5).forEach((failure) => {
+        this.logger.warn(`      • ${failure.title} (${failure.id}): ${failure.error}`);
+      });
+      if (failedSources.length > 5) {
+        this.logger.warn(`      ... and ${failedSources.length - 5} more`);
+      }
+    }
+
     this.logger.log(
       `\n   ✅ Successfully generated ${embeddings.size}/${sources.length} embeddings`,
     );
     this.logger.log(
       `   📊 Familiarization complete: ${stats.fullTextCount} full articles + ${stats.abstractCount} abstracts = ${stats.totalWords.toLocaleString()} total words read`,
     );
+
+    // Phase 10 Day 31.2: ENTERPRISE-GRADE SCIENTIFIC LOGGING
+    this.logger.log(`\n   🔬 SCIENTIFIC EMBEDDING STATISTICS:`);
+    this.logger.log(`      • Model: ${UnifiedThemeExtractionService.EMBEDDING_MODEL}`);
+    this.logger.log(`      • Dimensions: ${UnifiedThemeExtractionService.EMBEDDING_DIMENSIONS.toLocaleString()} per embedding`);
+    this.logger.log(`      • Total embeddings generated: ${embeddingCount}`);
+    this.logger.log(`      • Average L2 norm (magnitude): ${avgMagnitude.toFixed(4)} ± ${stdMagnitude.toFixed(4)}`);
+    if (chunkedArticleCount > 0) {
+      this.logger.log(`      • Articles requiring chunking: ${chunkedArticleCount} (${totalChunksProcessed} total chunks)`);
+      this.logger.log(`      • Chunked articles processed via weighted averaging of chunk embeddings`);
+    }
+    this.logger.log(`      • Embedding space: ${UnifiedThemeExtractionService.EMBEDDING_DIMENSIONS}-dimensional cosine similarity space`);
+    this.logger.log(`      • Scientific use: Hierarchical clustering, semantic similarity, provenance tracking`);
+    this.logger.log(`      • Methodology: Braun & Clarke (2019) Reflexive Thematic Analysis - Stage 1`);
 
     return embeddings;
   }
@@ -2723,20 +3223,69 @@ Return JSON format:
     sources: SourceContent[],
     embeddings: Map<string, number[]>,
   ): Promise<InitialCode[]> {
+    // Phase 10 Day 31.3: Input validation (defensive programming)
+    if (!sources || sources.length === 0) {
+      this.logger.warn('extractInitialCodes called with empty sources array');
+      return [];
+    }
+
     const codes: InitialCode[] = [];
 
-    // Process sources in batches for efficiency
-    const batchSize = 5;
-    for (let i = 0; i < sources.length; i += batchSize) {
-      const batch = sources.slice(i, i + batchSize);
+    // Phase 10 Day 31.3: Use class constants instead of magic numbers
+    let currentBatch: SourceContent[] = [];
+    let currentBatchChars = 0;
 
+    for (let i = 0; i < sources.length; i++) {
+      const source = sources[i];
+      const sourceChars = source.content.length;
+
+      // Check if adding this source would exceed batch limit
+      if (currentBatch.length > 0 &&
+          (currentBatchChars + sourceChars > UnifiedThemeExtractionService.MAX_BATCH_TOKENS * UnifiedThemeExtractionService.CHARS_TO_TOKENS_RATIO ||
+           currentBatch.length >= UnifiedThemeExtractionService.MAX_SOURCES_PER_BATCH)) {
+        // Process current batch before adding this source
+        await this.processBatchForCodes(currentBatch, codes, i - currentBatch.length);
+        currentBatch = [];
+        currentBatchChars = 0;
+      }
+
+      // Truncate individual source if too long
+      let truncatedContent = source.content;
+      if (sourceChars > UnifiedThemeExtractionService.MAX_CHARS_PER_SOURCE) {
+        truncatedContent = source.content.substring(0, UnifiedThemeExtractionService.MAX_CHARS_PER_SOURCE);
+        this.logger.warn(
+          `   ⚠️ Source "${source.title.substring(0, 50)}..." truncated from ${sourceChars} to ${UnifiedThemeExtractionService.MAX_CHARS_PER_SOURCE} chars for code extraction`,
+        );
+      }
+
+      currentBatch.push({ ...source, content: truncatedContent });
+      currentBatchChars += truncatedContent.length;
+    }
+
+    // Process final batch
+    if (currentBatch.length > 0) {
+      await this.processBatchForCodes(currentBatch, codes, sources.length - currentBatch.length);
+    }
+
+    return codes;
+  }
+
+  /**
+   * Helper method to process a batch of sources for code extraction
+   * @private
+   */
+  private async processBatchForCodes(
+    batch: SourceContent[],
+    codes: InitialCode[],
+    startIndex: number,
+  ): Promise<void> {
       const prompt = `Analyze these research sources and extract initial codes (concepts, patterns, ideas).
 
 Sources (FULL CONTENT):
 ${batch
   .map(
     (s, idx) => `
-SOURCE ${i + idx + 1}: ${s.title}
+SOURCE ${startIndex + idx + 1}: ${s.title}
 Type: ${s.type}
 Full Content:
 ${s.content}
@@ -2764,11 +3313,12 @@ Return JSON format:
 }`;
 
       try {
+        // Phase 10 Day 31.3: Use class constants instead of magic numbers
         const response = await this.openai.chat.completions.create({
-          model: 'gpt-4-turbo-preview',
+          model: UnifiedThemeExtractionService.CODING_MODEL,
           messages: [{ role: 'user', content: prompt }],
           response_format: { type: 'json_object' },
-          temperature: 0.2, // Lower for more consistent coding
+          temperature: UnifiedThemeExtractionService.CODING_TEMPERATURE,
         });
 
         const result = JSON.parse(response.choices[0].message.content || '{}');
@@ -2783,12 +3333,9 @@ Return JSON format:
         }
       } catch (error) {
         this.logger.error(
-          `Failed to extract codes from batch ${i}: ${(error as Error).message}`,
+          `Failed to extract codes from batch starting at ${startIndex}: ${(error as Error).message}`,
         );
       }
-    }
-
-    return codes;
   }
 
   /**
@@ -2803,9 +3350,16 @@ Return JSON format:
     embeddings: Map<string, number[]>,
     options: AcademicExtractionOptions,
   ): Promise<CandidateTheme[]> {
+    // Phase 10 Day 31.3: Input validation (defensive programming)
+    if (!codes || codes.length === 0) {
+      this.logger.warn('generateCandidateThemes called with empty codes array');
+      return [];
+    }
+
     // Create embeddings for each code
     const codeEmbeddings = new Map<string, number[]>();
-    const limit = pLimit(10);
+    // Phase 10 Day 31.3: Use class constant instead of magic number
+    const limit = pLimit(UnifiedThemeExtractionService.CODE_EMBEDDING_CONCURRENCY);
 
     const embeddingTasks = codes.map((code) =>
       limit(async () => {
@@ -2813,7 +3367,7 @@ Return JSON format:
           const codeText = `${code.label}\n${code.description}\n${code.excerpts.join('\n')}`;
 
           const response = await this.openai.embeddings.create({
-            model: 'text-embedding-3-large',
+            model: UnifiedThemeExtractionService.EMBEDDING_MODEL,
             input: codeText,
             encoding_format: 'float',
           });
@@ -2829,11 +3383,12 @@ Return JSON format:
 
     await Promise.all(embeddingTasks);
 
+    // Phase 10 Day 31.3: Use class constant for default maxThemes
     // Cluster codes into themes using hierarchical clustering
     const themes = await this.hierarchicalClustering(
       codes,
       codeEmbeddings,
-      options.maxThemes || 15,
+      options.maxThemes || UnifiedThemeExtractionService.DEFAULT_MAX_THEMES,
     );
 
     // Use AI to label and describe each theme cluster
@@ -2921,7 +3476,7 @@ ${cluster.codes.map((c) => `- ${c.label}: ${c.description}`).join('\n')}
 Representative excerpts:
 ${cluster.codes
   .flatMap((c) => c.excerpts)
-  .slice(0, 5)
+  .slice(0, UnifiedThemeExtractionService.MAX_EXCERPTS_FOR_LABELING)
   .join('\n---\n')}
 
 Generate a theme that encompasses these codes.
@@ -2935,11 +3490,12 @@ Return JSON:
 }`;
 
       try {
+        // Phase 10 Day 31.3: Use class constants instead of magic numbers
         const response = await this.openai.chat.completions.create({
-          model: 'gpt-4-turbo-preview',
+          model: UnifiedThemeExtractionService.CODING_MODEL,
           messages: [{ role: 'user', content: prompt }],
           response_format: { type: 'json_object' },
-          temperature: 0.3,
+          temperature: UnifiedThemeExtractionService.THEME_LABELING_TEMPERATURE,
         });
 
         const themeData = JSON.parse(
@@ -3278,6 +3834,12 @@ Return JSON:
     embeddings: Map<string, number[]>,
     options: AcademicExtractionOptions,
   ): Promise<ValidationResult> {
+    // Phase 10 Day 31.3: Input validation (defensive programming)
+    if (!themes || themes.length === 0) {
+      this.logger.warn('validateThemesAcademic called with empty themes array');
+      return { validatedThemes: [], rejectionDiagnostics: null };
+    }
+
     // Calculate adaptive thresholds based on content characteristics (PHASE 10 DAY 5.17.1: Now purpose-aware)
     const thresholds = this.calculateAdaptiveThresholds(
       sources,
@@ -3293,6 +3855,9 @@ Return JSON:
     } = thresholds;
 
     const validatedThemes: CandidateTheme[] = [];
+
+    // Phase 10 Day 31.3: Track validation metrics to avoid recalculation (DRY principle)
+    const themeMetrics = new Map<string, { coherence: number; distinctiveness: number; evidenceQuality: number }>();
 
     for (const theme of themes) {
       // Check 1: Minimum source count
@@ -3335,10 +3900,14 @@ Return JSON:
         continue;
       }
 
+      // Phase 10 Day 31.3: Store metrics for reuse (DRY principle)
+      themeMetrics.set(theme.id, { coherence, distinctiveness, evidenceQuality });
+
+      // Phase 10 Day 31.3: Use class constant instead of magic number
       // Theme passed all validation checks
       validatedThemes.push({
         ...theme,
-        validationScore: (coherence + distinctiveness + evidenceQuality) / 3,
+        validationScore: (coherence + distinctiveness + evidenceQuality) / UnifiedThemeExtractionService.VALIDATION_SCORE_COMPONENTS,
       });
     }
 
@@ -3385,22 +3954,37 @@ Return JSON:
         );
       }
       this.logger.warn('');
-      this.logger.warn('🔍 Detailed Rejection Analysis (first 5 themes):');
+      // Phase 10 Day 31.3: Use class constant instead of magic number
+      this.logger.warn(`🔍 Detailed Rejection Analysis (first ${UnifiedThemeExtractionService.MAX_THEMES_TO_LOG} themes):`);
       this.logger.warn('');
 
-      const themesToLog = themes.slice(0, 5);
+      const themesToLog = themes.slice(0, UnifiedThemeExtractionService.MAX_THEMES_TO_LOG);
       const rejectedThemeDetails: any[] = [];
 
       for (let i = 0; i < themesToLog.length; i++) {
         const theme = themesToLog[i];
-        const coherence = this.calculateThemeCoherence(theme);
-        const distinctiveness =
-          i > 0
-            ? this.calculateDistinctiveness(theme, themes.slice(0, i))
-            : 1.0;
-        const evidenceQuality =
-          theme.codes.filter((c) => c.excerpts.length > 0).length /
-          theme.codes.length;
+
+        // Phase 10 Day 31.3: Reuse stored metrics if available, otherwise calculate (DRY principle)
+        let coherence: number;
+        let distinctiveness: number;
+        let evidenceQuality: number;
+
+        const storedMetrics = themeMetrics.get(theme.id);
+        if (storedMetrics) {
+          coherence = storedMetrics.coherence;
+          distinctiveness = storedMetrics.distinctiveness;
+          evidenceQuality = storedMetrics.evidenceQuality;
+        } else {
+          // Theme was rejected before metrics were stored
+          coherence = this.calculateThemeCoherence(theme);
+          distinctiveness =
+            i > 0
+              ? this.calculateDistinctiveness(theme, themes.slice(0, i))
+              : UnifiedThemeExtractionService.DEFAULT_DISTINCTIVENESS_SCORE;
+          evidenceQuality =
+            theme.codes.filter((c) => c.excerpts.length > 0).length /
+            theme.codes.length;
+        }
 
         // Determine which check(s) failed
         const failures: string[] = [];
@@ -3572,6 +4156,12 @@ Return JSON:
     themes: CandidateTheme[],
     embeddings: Map<string, number[]>,
   ): Promise<CandidateTheme[]> {
+    // Phase 10 Day 31.3: Input validation (defensive programming)
+    if (!themes || themes.length === 0) {
+      this.logger.warn('refineThemesAcademic called with empty themes array');
+      return [];
+    }
+
     let refinedThemes = [...themes];
 
     // Sort by validation score (strongest themes first)
@@ -3579,7 +4169,8 @@ Return JSON:
       (a, b) => (b.validationScore || 0) - (a.validationScore || 0),
     );
 
-    // Merge overlapping themes (similarity > 0.8)
+    // Phase 10 Day 31.3: Use class constant for merge threshold
+    // Merge overlapping themes (similarity > threshold)
     const finalThemes: CandidateTheme[] = [];
 
     for (const theme of refinedThemes) {
@@ -3591,7 +4182,7 @@ Return JSON:
           existingTheme.centroid,
         );
 
-        if (similarity > 0.8) {
+        if (similarity > UnifiedThemeExtractionService.THEME_MERGE_SIMILARITY_THRESHOLD) {
           // Merge into existing theme
           existingTheme.codes.push(...theme.codes);
           existingTheme.keywords = [
@@ -3635,6 +4226,12 @@ Return JSON:
     sources: SourceContent[],
     embeddings: Map<string, number[]>,
   ): Promise<UnifiedTheme[]> {
+    // Phase 10 Day 31.3: Input validation (defensive programming)
+    if (!themes || themes.length === 0) {
+      this.logger.warn('calculateSemanticProvenance called with empty themes array');
+      return [];
+    }
+
     const themesWithProvenance: UnifiedTheme[] = [];
 
     for (const theme of themes) {
@@ -3650,8 +4247,9 @@ Return JSON:
           sourceEmbedding,
         );
 
+        // Phase 10 Day 31.3: Use class constant for semantic relevance threshold
         // Only include sources with meaningful semantic connection
-        if (semanticSimilarity > 0.3) {
+        if (semanticSimilarity > UnifiedThemeExtractionService.SEMANTIC_RELEVANCE_THRESHOLD) {
           // Extract relevant excerpts using semantic search
           const relevantExcerpts = theme.codes
             .filter((code) => code.sourceId === source.id)
@@ -3668,7 +4266,7 @@ Return JSON:
             year: source.year,
             influence: semanticSimilarity,
             keywordMatches: 0, // Deprecated - using semantic similarity instead
-            excerpts: relevantExcerpts.slice(0, 3), // Top 3 most relevant
+            excerpts: relevantExcerpts.slice(0, UnifiedThemeExtractionService.MAX_EXCERPTS_PER_SOURCE),
           });
         }
       }
@@ -3695,13 +4293,14 @@ Return JSON:
         socialCount: themeSources.filter(
           (s) => s.sourceType === 'tiktok' || s.sourceType === 'instagram',
         ).length,
-        averageConfidence: theme.validationScore || 0.5,
+        averageConfidence: theme.validationScore || UnifiedThemeExtractionService.DEFAULT_VALIDATION_SCORE,
         citationChain: themeSources.map(
           (s) =>
             `${s.sourceTitle} (influence: ${(s.influence * 100).toFixed(1)}%)`,
         ),
       };
 
+      // Phase 10 Day 31.3: Use class constant for default confidence (eliminates duplication)
       themesWithProvenance.push({
         id: theme.id,
         label: theme.label,
@@ -3709,7 +4308,7 @@ Return JSON:
         keywords: theme.keywords,
         weight: themeSources.length / sources.length, // Prevalence across dataset
         controversial: false, // Could be enhanced with controversy detection
-        confidence: theme.validationScore || 0.5,
+        confidence: theme.validationScore || UnifiedThemeExtractionService.DEFAULT_THEME_CONFIDENCE,
         sources: themeSources,
         provenance,
         extractedAt: new Date(),
@@ -3782,13 +4381,35 @@ Return JSON:
   }
 
   /**
+   * Calculate L2 norm (Euclidean magnitude) of an embedding vector
+   * Phase 10 Day 31.2: Extracted to helper method to eliminate code duplication
+   *
+   * @private
+   * @param embedding - Vector to calculate magnitude for
+   * @returns L2 norm (magnitude) of the vector
+   */
+  private calculateEmbeddingMagnitude(embedding: number[]): number {
+    if (!embedding || embedding.length === 0) {
+      this.logger.warn('Cannot calculate magnitude of empty embedding vector');
+      return 0;
+    }
+
+    // Calculate L2 norm: sqrt(sum of squared components)
+    const sumOfSquares = embedding.reduce((sum, val) => sum + val * val, 0);
+    return Math.sqrt(sumOfSquares);
+  }
+
+  /**
    * Calculate semantic coherence of a theme
    * Measures how related the codes within a theme are to each other
    *
    * @private
    */
   private calculateThemeCoherence(theme: CandidateTheme): number {
-    if (theme.codes.length < 2) return 1.0;
+    // Phase 10 Day 31.3: Use class constants instead of magic numbers
+    if (theme.codes.length < UnifiedThemeExtractionService.MIN_CODES_FOR_COHERENCE) {
+      return UnifiedThemeExtractionService.DEFAULT_DISTINCTIVENESS_SCORE;
+    }
 
     // For now, use a heuristic based on keyword overlap
     // In production, would use code embeddings
@@ -3806,7 +4427,7 @@ Return JSON:
       }
     }
 
-    return comparisons > 0 ? totalOverlap / comparisons : 0.5;
+    return comparisons > 0 ? totalOverlap / comparisons : UnifiedThemeExtractionService.DEFAULT_COHERENCE_SCORE;
   }
 
   /**
@@ -3819,7 +4440,10 @@ Return JSON:
     theme: CandidateTheme,
     existingThemes: CandidateTheme[],
   ): number {
-    if (existingThemes.length === 0) return 1.0;
+    // Phase 10 Day 31.3: Use class constant instead of magic number
+    if (existingThemes.length === 0) {
+      return UnifiedThemeExtractionService.DEFAULT_DISTINCTIVENESS_SCORE;
+    }
 
     const similarities = existingThemes.map((existing) =>
       this.cosineSimilarity(theme.centroid, existing.centroid),
@@ -3933,6 +4557,31 @@ export interface TransparentProgressMessage {
     codesGenerated?: number;
     themesIdentified?: number;
     currentOperation: string;
+    // Phase 10 Day 30: Real-time familiarization metrics
+    fullTextRead?: number;
+    abstractsRead?: number;
+    totalWordsRead?: number;
+    currentArticle?: number;
+    totalArticles?: number;
+    articleTitle?: string;
+    articleType?: 'full-text' | 'abstract';
+    articleWords?: number;
+    // Phase 10 Day 31.2: Enterprise-grade scientific metrics for Stage 1
+    embeddingStats?: {
+      dimensions: number; // 3072 for text-embedding-3-large
+      model: string; // text-embedding-3-large
+      totalEmbeddingsGenerated: number;
+      averageEmbeddingMagnitude?: number; // L2 norm of embeddings
+      processingMethod: 'single' | 'chunked-averaged';
+      chunksProcessed?: number; // For long articles
+      scientificExplanation?: string; // What this means in scientific terms
+    };
+    // Phase 10 Day 31.2: Downloadable familiarization report
+    familiarizationReport?: {
+      downloadUrl?: string;
+      embeddingVectors?: boolean; // Whether full vectors are available
+      completedAt?: string;
+    };
   };
 }
 

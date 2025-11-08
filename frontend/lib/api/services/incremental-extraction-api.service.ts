@@ -19,10 +19,11 @@ import { getAuthHeaders } from '../utils/auth-headers';
 // ============================================================================
 
 export enum ResearchPurpose {
-  EXPLORATORY = 'exploratory',
-  EXPLANATORY = 'explanatory',
-  EVALUATIVE = 'evaluative',
-  DESCRIPTIVE = 'descriptive',
+  Q_METHODOLOGY = 'q_methodology',
+  SURVEY_CONSTRUCTION = 'survey_construction',
+  QUALITATIVE_ANALYSIS = 'qualitative_analysis',
+  LITERATURE_SYNTHESIS = 'literature_synthesis',
+  HYPOTHESIS_GENERATION = 'hypothesis_generation',
 }
 
 export enum UserExpertiseLevel {
@@ -317,6 +318,67 @@ export class IncrementalExtractionApiService {
     }
 
     return response.json();
+  }
+
+  /**
+   * Phase 10 Day 19.6: Get scientifically-guided paper batch recommendation
+   *
+   * Analyzes corpus quality and diversity to recommend next batch of papers
+   * using iteration-specific strategies (quality → diversity → gap-filling)
+   *
+   * Research backing:
+   * - Patton (1990): Purposive Sampling Strategies
+   * - Glaser & Strauss (1967): Theoretical Sampling
+   * - Francis et al. (2010): Saturation in Qualitative Research
+   *
+   * @param request Batch selection parameters
+   * @returns Recommended papers with scientific rationale
+   */
+  async selectGuidedBatch(request: {
+    allPaperIds: string[];
+    processedPaperIds: string[];
+    currentThemes: any[];
+    iteration: number;
+    batchSize?: number;
+    researchContext?: string;
+  }): Promise<any> {
+    console.log('🌐 [API] Calling guided-batch-select:', {
+      endpoint: `${this.baseUrl}/literature/guided-batch-select`,
+      allPaperIdsCount: request.allPaperIds.length,
+      processedPaperIdsCount: request.processedPaperIds.length,
+      themesCount: request.currentThemes.length,
+      iteration: request.iteration,
+    });
+
+    const response = await fetch(
+      `${this.baseUrl}/literature/guided-batch-select`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify(request),
+      }
+    );
+
+    if (!response.ok) {
+      let error: any;
+      try {
+        error = await response.json();
+      } catch (e) {
+        error = { message: `HTTP ${response.status}: ${response.statusText}` };
+      }
+      console.error('❌ [API] guided-batch-select failed:');
+      console.error('Status:', response.status, response.statusText);
+      console.error('Error message:', error.message);
+      console.error('Full error:', JSON.stringify(error, null, 2));
+      throw new Error(error.message || 'Failed to select guided batch');
+    }
+
+    const result = await response.json();
+    console.log('✅ [API] guided-batch-select success:', result);
+    return result;
   }
 }
 

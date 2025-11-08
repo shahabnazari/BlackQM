@@ -169,6 +169,11 @@ export class SavePaperDto {
   @IsOptional()
   doi?: string;
 
+  @ApiPropertyOptional({ description: 'PubMed ID (PMID) for PMC full-text lookup' })
+  @IsString()
+  @IsOptional()
+  pmid?: string;
+
   @ApiPropertyOptional({ description: 'Paper URL' })
   @IsString()
   @IsOptional()
@@ -1237,6 +1242,57 @@ export class GenerateCompleteSurveyDto {
 
   @ApiPropertyOptional({
     description: 'Research context to inform survey design',
+  })
+  @IsString()
+  @IsOptional()
+  researchContext?: string;
+}
+
+/**
+ * Phase 10 Day 19.6: Guided Batch Selection DTO
+ * Request DTO for scientifically-guided paper batch selection
+ */
+export class GuidedBatchSelectionDto {
+  @ApiProperty({
+    description: 'All paper IDs in the research corpus',
+    type: [String],
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  allPaperIds!: string[];
+
+  @ApiProperty({
+    description: 'Paper IDs already processed in previous iterations',
+    type: [String],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  processedPaperIds!: string[];
+
+  @ApiProperty({
+    description: 'Current themes from previous iterations',
+    type: Array,
+  })
+  @IsArray()
+  currentThemes!: any[];
+
+  @ApiProperty({
+    description: 'Current iteration number (1-based)',
+  })
+  @IsNumber()
+  iteration!: number;
+
+  @ApiPropertyOptional({
+    description: 'Number of papers to select for this batch',
+    default: 5,
+  })
+  @IsNumber()
+  @IsOptional()
+  batchSize?: number;
+
+  @ApiPropertyOptional({
+    description: 'Research context for quality assessment',
   })
   @IsString()
   @IsOptional()

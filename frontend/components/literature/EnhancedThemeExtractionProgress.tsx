@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen,
@@ -44,6 +44,44 @@ export interface TransparentProgressMessage {
     codesGenerated?: number;
     themesIdentified?: number;
     currentOperation: string;
+    // Phase 10 Day 30: Real-time familiarization metrics
+    fullTextRead?: number;
+    abstractsRead?: number;
+    totalWordsRead?: number;
+    currentArticle?: number;
+    totalArticles?: number;
+    articleTitle?: string;
+    articleType?: 'full-text' | 'abstract';
+    articleWords?: number;
+    // Phase 10 Day 31.2: Enterprise-grade scientific metrics
+    embeddingStats?: {
+      dimensions: number;
+      model: string;
+      totalEmbeddingsGenerated: number;
+      averageEmbeddingMagnitude?: number;
+      processingMethod: 'single' | 'chunked-averaged';
+      chunksProcessed?: number;
+      scientificExplanation?: string;
+    };
+    familiarizationReport?: {
+      downloadUrl?: string;
+      embeddingVectors?: boolean;
+      completedAt?: string;
+    };
+  };
+}
+
+export interface IterationData {
+  iterationNumber: number;
+  cachedCount: number;
+  newCount: number;
+  costSaved: number;
+  savingsPercent: number;
+  themeEvolution?: {
+    new: number;
+    strengthened: number;
+    unchanged: number;
+    weakened: number;
   };
 }
 
@@ -54,6 +92,9 @@ export interface EnhancedThemeExtractionProgressProps {
   transparentMessage?: TransparentProgressMessage;
   onRefinementRequest?: (stage: number) => void;
   allowIterativeRefinement?: boolean;
+  // Phase 10 Day 19.5: Iteration support
+  mode?: 'quick' | 'iterative';
+  iterationData?: IterationData;
 }
 
 // ============================================================================
@@ -138,12 +179,29 @@ export default function EnhancedThemeExtractionProgress({
   transparentMessage,
   onRefinementRequest,
   allowIterativeRefinement = false,
+  mode = 'quick',
+  iterationData,
 }: EnhancedThemeExtractionProgressProps) {
   const [expertiseLevel, setExpertiseLevel] =
     useState<UserExpertiseLevel>('researcher');
   const [expandedStages, setExpandedStages] = useState<Set<number>>(
     new Set([currentStage])
   );
+
+  // Phase 10 Day 30: Store completed stage metrics for persistent display
+  const [completedStageMetrics, setCompletedStageMetrics] = useState<Record<number, TransparentProgressMessage>>({});
+
+  // Phase 10 Day 30: Capture and persist metrics as stages progress
+  useEffect(() => {
+    if (transparentMessage && transparentMessage.liveStats) {
+      // Always save the latest metrics for each stage
+      // This ensures we have the final state when a stage completes
+      setCompletedStageMetrics(prev => ({
+        ...prev,
+        [transparentMessage.stageNumber]: transparentMessage
+      }));
+    }
+  }, [transparentMessage]);
 
   const toggleStageExpansion = (stageNumber: number) => {
     setExpandedStages(prev => {
@@ -311,6 +369,268 @@ export default function EnhancedThemeExtractionProgress({
                   </div>
                 )}
               </div>
+
+              {/* Phase 10 Day 30: Real-time Familiarization Metrics (Stage 1 - Main Display) */}
+              {/* ONLY show during active Stage 1 processing (top section) */}
+              {currentStage === 1 && transparentMessage?.liveStats && (transparentMessage.liveStats.totalWordsRead || 0) > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <BookOpen className="w-5 h-5 text-blue-600" />
+                    <h5 className="text-sm font-bold text-gray-900">
+                      Real-Time Reading Progress
+                    </h5>
+                  </div>
+
+                  {/* Progress Grid */}
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <p className="text-xs text-gray-600 mb-1">
+                        📖 Total Words Read
+                      </p>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {transparentMessage.liveStats.totalWordsRead?.toLocaleString() || 0}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Cumulative count
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <p className="text-xs text-gray-600 mb-1">
+                        📄 Full Articles
+                      </p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {transparentMessage.liveStats.fullTextRead || 0}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Deep content
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <p className="text-xs text-gray-600 mb-1">
+                        📝 Abstracts
+                      </p>
+                      <p className="text-2xl font-bold text-purple-600">
+                        {transparentMessage.liveStats.abstractsRead || 0}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Summary content
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Current Article Being Processed */}
+                  {transparentMessage.liveStats.articleTitle && (
+                    <div className="bg-white/50 rounded-lg p-3 border border-blue-200">
+                      <p className="text-xs font-semibold text-blue-700 mb-1">
+                        Currently Reading ({transparentMessage.liveStats.currentArticle}/{transparentMessage.liveStats.totalArticles}):
+                      </p>
+                      <p className="text-sm text-gray-800 font-medium mb-2">
+                        {transparentMessage.liveStats.articleTitle}
+                      </p>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className={`px-2 py-1 rounded font-medium ${
+                          transparentMessage.liveStats.articleType === 'full-text'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          {transparentMessage.liveStats.articleType === 'full-text' ? '📄 Full Article' : '📝 Abstract'}
+                        </span>
+                        <span className="text-gray-600">
+                          {transparentMessage.liveStats.articleWords?.toLocaleString() || 0} words
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Phase 10 Day 31.2: Scientific Embedding Statistics */}
+                  {transparentMessage.liveStats.embeddingStats && (
+                    <div className="mt-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-3 border border-indigo-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="w-4 h-4 text-indigo-600" />
+                        <h6 className="text-xs font-bold text-indigo-900">
+                          🔬 Scientific Processing Details
+                        </h6>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-white/60 rounded p-2">
+                          <p className="text-gray-600 mb-0.5">Model</p>
+                          <p className="font-semibold text-gray-900">{transparentMessage.liveStats.embeddingStats.model}</p>
+                        </div>
+                        <div className="bg-white/60 rounded p-2">
+                          <p className="text-gray-600 mb-0.5">Dimensions</p>
+                          <p className="font-semibold text-gray-900">{transparentMessage.liveStats.embeddingStats.dimensions.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-white/60 rounded p-2">
+                          <p className="text-gray-600 mb-0.5">Embeddings Generated</p>
+                          <p className="font-semibold text-gray-900">{transparentMessage.liveStats.embeddingStats.totalEmbeddingsGenerated}</p>
+                        </div>
+                        <div className="bg-white/60 rounded p-2">
+                          <p className="text-gray-600 mb-0.5">Processing Method</p>
+                          <p className="font-semibold text-gray-900">
+                            {transparentMessage.liveStats.embeddingStats.processingMethod === 'chunked-averaged'
+                              ? `Chunked (${transparentMessage.liveStats.embeddingStats.chunksProcessed} chunks)`
+                              : 'Single-pass'}
+                          </p>
+                        </div>
+                      </div>
+                      {transparentMessage.liveStats.embeddingStats.averageEmbeddingMagnitude && (
+                        <div className="mt-2 bg-white/60 rounded p-2">
+                          <p className="text-xs text-gray-600 mb-0.5">Average Embedding Magnitude (L2 Norm)</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {transparentMessage.liveStats.embeddingStats.averageEmbeddingMagnitude.toFixed(4)}
+                          </p>
+                        </div>
+                      )}
+                      {transparentMessage.liveStats.embeddingStats.scientificExplanation && (
+                        <div className="mt-2 text-xs text-indigo-800 bg-indigo-100/50 rounded p-2">
+                          📚 {transparentMessage.liveStats.embeddingStats.scientificExplanation}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Reading Speed Indicator */}
+                  <div className="mt-3 text-xs text-blue-700 bg-blue-50 rounded p-2">
+                    💡 <strong>Why this is fast:</strong> We're generating semantic embeddings (mathematical representations), not doing deep analysis yet. Stage 2-6 will analyze the actual content using GPT-4.
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Phase 10 Day 19.5: Iteration Metadata Display */}
+              {mode === 'iterative' && iterationData && currentStage === 1 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-3 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border-2 border-purple-200"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="w-5 h-5 text-purple-600" />
+                    <h5 className="text-sm font-bold text-gray-900">
+                      Iteration {iterationData.iterationNumber} • Cost Optimization Active
+                    </h5>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <p className="text-xs text-gray-600 mb-1">💾 Cached Papers</p>
+                      <p className="text-lg font-bold text-purple-600">
+                        {iterationData.cachedCount}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Already analyzed
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <p className="text-xs text-gray-600 mb-1">🆕 New Papers</p>
+                      <p className="text-lg font-bold text-blue-600">
+                        {iterationData.newCount}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Being processed
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <p className="text-xs text-gray-600 mb-1">💰 Cost Saved</p>
+                      <p className="text-lg font-bold text-green-600">
+                        ${iterationData.costSaved.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {iterationData.savingsPercent}% savings
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Phase 10 Day 19.5: Theme Evolution Display (Stage 3) */}
+              {mode === 'iterative' &&
+                iterationData?.themeEvolution &&
+                currentStage === 3 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-3 p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-lg border-2 border-green-200"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <GitBranch className="w-5 h-5 text-green-600" />
+                      <h5 className="text-sm font-bold text-gray-900">
+                        Theme Evolution (vs Iteration{' '}
+                        {iterationData.iterationNumber - 1})
+                      </h5>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <p className="text-xs text-gray-600 mb-1">✨ New</p>
+                        <p className="text-lg font-bold text-blue-600">
+                          {iterationData.themeEvolution.new}
+                        </p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <p className="text-xs text-gray-600 mb-1">
+                          📈 Strengthened
+                        </p>
+                        <p className="text-lg font-bold text-green-600">
+                          {iterationData.themeEvolution.strengthened}
+                        </p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <p className="text-xs text-gray-600 mb-1">
+                          ➡️ Unchanged
+                        </p>
+                        <p className="text-lg font-bold text-gray-600">
+                          {iterationData.themeEvolution.unchanged}
+                        </p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 shadow-sm">
+                        <p className="text-xs text-gray-600 mb-1">
+                          📉 Weakened
+                        </p>
+                        <p className="text-lg font-bold text-orange-600">
+                          {iterationData.themeEvolution.weakened}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+              {/* Phase 10 Day 19.5: Saturation Guidance (Stage 6) */}
+              {mode === 'iterative' && iterationData && currentStage === 6 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-3 p-4 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg border-2 border-teal-200"
+                >
+                  <div className="flex items-start gap-3">
+                    <Info className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h5 className="text-sm font-bold text-gray-900 mb-2">
+                        📊 Theoretical Saturation Assessment
+                      </h5>
+                      <p className="text-sm text-gray-700 mb-3">
+                        This is iteration {iterationData.iterationNumber}. Review
+                        theme evolution to assess saturation:
+                      </p>
+                      <ul className="text-sm text-gray-700 space-y-1.5 ml-4">
+                        <li>
+                          • <strong>High saturation:</strong> Mostly unchanged
+                          themes, few new themes
+                        </li>
+                        <li>
+                          • <strong>Emerging patterns:</strong> Many strengthened
+                          or new themes → continue iterations
+                        </li>
+                        <li>
+                          • <strong>Glaser & Strauss (1967):</strong> Stop when new
+                          data yields no new insights
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
 
               {/* Iterative Refinement Button (Patent Claim #11) */}
               {allowIterativeRefinement &&
@@ -489,6 +809,138 @@ export default function EnhancedThemeExtractionProgress({
                           </p>
                         )}
                       </div>
+
+                      {/* Phase 10 Day 30: Familiarization Metrics Summary (Stage 1 - Accordion) */}
+                      {/* ONLY show after Stage 1 completes (persistent display in accordion) */}
+                      {stage.number === 1 &&
+                        isCompleted &&
+                        completedStageMetrics[1]?.liveStats && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200"
+                          >
+                            <div className="flex items-center gap-2 mb-3">
+                              <BookOpen className="w-5 h-5 text-blue-600" />
+                              <h5 className="text-sm font-bold text-gray-900">
+                                Familiarization Summary
+                              </h5>
+                            </div>
+
+                            {/* Progress Grid - Completed Metrics */}
+                            <div className="grid grid-cols-3 gap-3 mb-3">
+                              <div className="bg-white rounded-lg p-3 shadow-sm">
+                                <p className="text-xs text-gray-600 mb-1">
+                                  📖 Total Words Read
+                                </p>
+                                <p className="text-2xl font-bold text-blue-600">
+                                  {completedStageMetrics[1].liveStats.totalWordsRead?.toLocaleString() || 0}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Final count
+                                </p>
+                              </div>
+                              <div className="bg-white rounded-lg p-3 shadow-sm">
+                                <p className="text-xs text-gray-600 mb-1">
+                                  📄 Full Articles
+                                </p>
+                                <p className="text-2xl font-bold text-green-600">
+                                  {completedStageMetrics[1].liveStats.fullTextRead || 0}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Complete texts
+                                </p>
+                              </div>
+                              <div className="bg-white rounded-lg p-3 shadow-sm">
+                                <p className="text-xs text-gray-600 mb-1">
+                                  📝 Abstracts
+                                </p>
+                                <p className="text-2xl font-bold text-purple-600">
+                                  {completedStageMetrics[1].liveStats.abstractsRead || 0}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Summaries
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Phase 10 Day 31.2: Scientific Embedding Statistics (Accordion) */}
+                            {completedStageMetrics[1].liveStats.embeddingStats && (
+                              <div className="mt-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Sparkles className="w-5 h-5 text-indigo-600" />
+                                  <h6 className="text-sm font-bold text-indigo-900">
+                                    🔬 Scientific Embedding Statistics
+                                  </h6>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                  <div className="bg-white rounded-lg p-3 shadow-sm">
+                                    <p className="text-xs text-gray-600 mb-1">AI Model</p>
+                                    <p className="text-sm font-bold text-indigo-700">
+                                      {completedStageMetrics[1].liveStats.embeddingStats.model}
+                                    </p>
+                                  </div>
+                                  <div className="bg-white rounded-lg p-3 shadow-sm">
+                                    <p className="text-xs text-gray-600 mb-1">Vector Dimensions</p>
+                                    <p className="text-sm font-bold text-indigo-700">
+                                      {completedStageMetrics[1].liveStats.embeddingStats.dimensions.toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <div className="bg-white rounded-lg p-3 shadow-sm">
+                                    <p className="text-xs text-gray-600 mb-1">Embeddings Generated</p>
+                                    <p className="text-sm font-bold text-indigo-700">
+                                      {completedStageMetrics[1].liveStats.embeddingStats.totalEmbeddingsGenerated}
+                                    </p>
+                                  </div>
+                                  <div className="bg-white rounded-lg p-3 shadow-sm">
+                                    <p className="text-xs text-gray-600 mb-1">Processing Method</p>
+                                    <p className="text-sm font-bold text-indigo-700">
+                                      {completedStageMetrics[1].liveStats.embeddingStats.processingMethod === 'chunked-averaged'
+                                        ? 'Chunked & Averaged'
+                                        : 'Single-pass'}
+                                    </p>
+                                  </div>
+                                </div>
+                                {completedStageMetrics[1].liveStats.embeddingStats.averageEmbeddingMagnitude && (
+                                  <div className="bg-white rounded-lg p-3 shadow-sm mb-3">
+                                    <p className="text-xs text-gray-600 mb-1">Average Embedding Magnitude (L2 Norm)</p>
+                                    <p className="text-lg font-bold text-indigo-700">
+                                      {completedStageMetrics[1].liveStats.embeddingStats.averageEmbeddingMagnitude.toFixed(4)}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Mathematical measure of semantic representation strength
+                                    </p>
+                                  </div>
+                                )}
+                                {completedStageMetrics[1].liveStats.embeddingStats.scientificExplanation && (
+                                  <div className="text-xs text-indigo-800 bg-indigo-100/60 rounded p-3">
+                                    <p className="font-semibold mb-1">📚 Scientific Process:</p>
+                                    <p>{completedStageMetrics[1].liveStats.embeddingStats.scientificExplanation}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Total Articles Processed Summary */}
+                            {completedStageMetrics[1].liveStats.totalArticles && (
+                              <div className="bg-white/50 rounded-lg p-3 border border-blue-200 mt-3">
+                                <p className="text-xs font-semibold text-blue-700 mb-1">
+                                  ✅ Completed: All {completedStageMetrics[1].liveStats.totalArticles} sources analyzed
+                                </p>
+                                <div className="flex items-center gap-3 text-xs mt-2">
+                                  <span className="text-gray-700">
+                                    🎯 <strong>Next:</strong> Stage 2 will now systematically code all this content using GPT-4
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Methodology Note */}
+                            <div className="mt-3 text-xs text-blue-700 bg-blue-50 rounded p-2">
+                              📚 <strong>Braun & Clarke (2006):</strong> Familiarization is complete. We've read and embedded all {completedStageMetrics[1].liveStats.totalArticles} sources. These semantic embeddings enable the AI to understand context and relationships across your entire corpus.
+                            </div>
+                          </motion.div>
+                        )}
 
                       {/* Refinement Option for Stages 4-6 */}
                       {allowIterativeRefinement &&

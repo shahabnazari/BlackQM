@@ -325,10 +325,20 @@ export default function ThemeCountGuidance({
               <TrendingUp className="w-4 h-4 text-purple-600" />
               Theme Saturation Analysis
             </h4>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 mb-2">
               Track how many new themes are discovered as each source is
               analyzed
             </p>
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+              <p className="text-xs text-purple-900 font-medium mb-1">
+                📊 Sources Sorted by Contribution
+              </p>
+              <p className="text-xs text-purple-800">
+                Sources are ranked by how many themes they primarily contribute to
+                (based on influence scores), not by the order they were added.
+                Source #1 = highest contributor, not necessarily first paper analyzed.
+              </p>
+            </div>
           </div>
 
           {/* Saturation Chart */}
@@ -341,7 +351,7 @@ export default function ThemeCountGuidance({
               <XAxis
                 dataKey="sourceNumber"
                 label={{
-                  value: 'Source Number',
+                  value: 'Source Rank (by contribution)',
                   position: 'insideBottom',
                   offset: -5,
                 }}

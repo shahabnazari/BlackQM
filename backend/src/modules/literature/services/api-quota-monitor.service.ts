@@ -16,6 +16,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 /**
  * API provider configuration with rate limits
@@ -246,6 +247,122 @@ export class APIQuotaMonitorService {
     }
 
     return stats.sort((a, b) => b.percentUsed - a.percentUsed);
+  }
+
+  /**
+   * Phase 10 Day 33: Enhanced quota logging for production monitoring
+   * Logs detailed quota stats every 5 minutes for alerting systems
+   */
+  logQuotaSummary(): void {
+    const allStats = this.getAllQuotaStats();
+    const criticalProviders = allStats.filter(
+      (s) => s.status === 'critical' || s.status === 'blocked'
+    );
+
+    if (criticalProviders.length > 0) {
+      this.logger.warn(
+        `🚨 [Quota Alert] ${criticalProviders.length} API(s) approaching rate limits:`
+      );
+      criticalProviders.forEach((stat) => {
+        this.logger.warn(
+          `   • ${stat.provider}: ${stat.requestCount}/${stat.maxRequests} (${stat.percentUsed}%) - ${stat.status.toUpperCase()}`
+        );
+      });
+    }
+
+    // Log summary of all providers
+    const summary = allStats
+      .map((s) => `${s.provider}:${s.percentUsed}%`)
+      .join(', ');
+    this.logger.log(`📊 [Quota Summary] ${summary}`);
+  }
+
+  /**
+   * Phase 10 Day 33: Get detailed breakdown for specific provider
+   * Used for debugging quota issues
+   */
+  getDetailedStats(provider: string): {
+    config: APIProvider | undefined;
+    window: TimeWindow | undefined;
+    stats: QuotaStats;
+    recentRequests: { timestamp: Date; secondsAgo: number }[];
+  } {
+    const config = this.providers.get(provider);
+    const window = this.windows.get(provider);
+    const stats = this.getQuotaStats(provider);
+
+    const now = Date.now();
+    const recentRequests = (window?.requests || [])
+      .map((timestamp) => ({
+        timestamp: new Date(timestamp),
+        secondsAgo: Math.floor((now - timestamp) / 1000),
+      }))
+      .sort((a, b) => b.secondsAgo - a.secondsAgo);
+
+    return {
+      config,
+      window,
+      stats,
+      recentRequests,
+    };
+  }
+
+  /**
+   * Phase 10 Day 33: Reset quota for specific provider (admin only)
+   * Use with caution - for testing or emergency quota resets
+   */
+  resetQuota(provider: string): void {
+    this.windows.delete(provider);
+    this.logger.warn(`🔄 [Quota] Reset quota for provider: ${provider}`);
+  }
+
+  /**
+   * Phase 10 Day 33: Scheduled quota monitoring (production alerts)
+   * Runs every 5 minutes to log quota status and alert on critical usage
+   *
+   * Critical alerts sent to:
+   * - Application logs (CloudWatch, Datadog, etc.)
+   * - Future: Slack/PagerDuty integration for production incidents
+   */
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  handleScheduledQuotaMonitoring(): void {
+    this.logQuotaSummary();
+
+    // Check for blocked providers
+    const allStats = this.getAllQuotaStats();
+    const blockedProviders = allStats.filter((s) => s.status === 'blocked');
+
+    if (blockedProviders.length > 0) {
+      this.logger.error(
+        `🚨 PRODUCTION ALERT: ${blockedProviders.length} API provider(s) BLOCKED due to rate limits`
+      );
+      blockedProviders.forEach((stat) => {
+        this.logger.error(
+          `   🚫 ${stat.provider}: ${stat.requestCount}/${stat.maxRequests} (${stat.percentUsed}%) - Resets at ${stat.resetAt.toISOString()}`
+        );
+      });
+
+      // TODO: Send to alerting system (Slack, PagerDuty, etc.)
+      // this.alertingService.sendCriticalAlert({
+      //   type: 'API_QUOTA_EXCEEDED',
+      //   providers: blockedProviders,
+      //   severity: 'critical'
+      // });
+    }
+  }
+
+  /**
+   * Phase 10 Day 33: Startup quota check
+   * Verifies quota monitoring is working on application start
+   */
+  onModuleInit(): void {
+    this.logger.log('📊 API Quota Monitor initialized');
+    this.logger.log(`   Monitoring ${this.providers.size} API providers:`);
+    this.providers.forEach((config, key) => {
+      this.logger.log(
+        `   • ${config.name}: ${config.requestsPerWindow} req/${config.windowMs}ms (warn: ${config.warningThreshold * 100}%, block: ${config.blockingThreshold * 100}%)`
+      );
+    });
   }
 
   /**

@@ -20,6 +20,7 @@ interface ThemeExtractionProgressModalProps {
 
 /**
  * Maps simple progress state to 6-stage Braun & Clarke methodology
+ * Phase 10 Day 30: Use real WebSocket transparentMessage when available
  */
 function mapProgressToStage(progress: ExtractionProgress): {
   currentStage: number;
@@ -31,7 +32,19 @@ function mapProgressToStage(progress: ExtractionProgress): {
   let currentStage = 1;
   let percentage = progress.progress;
 
-  // Map simple stages to Braun & Clarke 6 stages
+  // Phase 10 Day 30: If we have real WebSocket data, use it directly!
+  if (progress.transparentMessage) {
+    console.log('🟢 Using REAL WebSocket transparentMessage:', progress.transparentMessage);
+    return {
+      currentStage: progress.transparentMessage.stageNumber,
+      totalStages: progress.transparentMessage.totalStages || 6,
+      percentage: progress.transparentMessage.percentage,
+      transparentMessage: progress.transparentMessage,
+    };
+  }
+
+  // Fallback: Map simple stages to Braun & Clarke 6 stages (legacy path)
+  console.log('🟡 Using SYNTHETIC transparentMessage (fallback - no WebSocket data)');
   switch (progress.stage) {
     case 'preparing':
       currentStage = 1; // Familiarization
@@ -63,7 +76,7 @@ function mapProgressToStage(progress: ExtractionProgress): {
       break;
   }
 
-  // Generate 4-part transparent messaging
+  // Generate 4-part transparent messaging (synthetic fallback)
   const transparentMessage = generate4PartMessage(
     currentStage,
     totalStages,
@@ -97,11 +110,11 @@ function generate4PartMessage(
       // Stage 1: Familiarization (PHASE 10 DAY 5.17: Transparent processing explanation)
       stageName: 'Familiarization with Data',
       whatWeAreDoing:
-        'Converting ALL source content into semantic embeddings—mathematical representations that capture meaning (3,072-dimension vectors using text-embedding-3-large). This stage is FAST (~1-2 seconds) because it\'s mathematical transformation, not "deep reading." The system processes full-text papers (10,000+ words), full articles from abstract fields, and standard abstracts. Later stages (2-6) perform deeper analysis using GPT-4, which takes longer (2-6 seconds per batch).',
+        'Converting source content into semantic embeddings—mathematical representations that capture meaning (3,072-dimension vectors using text-embedding-3-large). Full-text articles were already fetched in the preparation phase. This analysis stage is FAST (~1-2 seconds) because it\'s mathematical transformation, not "deep reading." The system processes full-text papers (10,000+ words), full articles from abstract fields, and standard abstracts. Later stages (2-6) perform deeper analysis using GPT-4, which takes longer (2-6 seconds per batch).',
       whyItMatters:
         'Following Braun & Clarke (2006), familiarization builds an overview of the dataset. Embeddings enable the AI to understand semantic relationships (e.g., "autonomy" ≈ "self-determination") even across different wording. Full-text papers provide 40-50x more content than abstracts, enabling richer pattern detection. This stage is about breadth; depth comes in later stages when GPT-4 analyzes actual content for concepts and themes.',
       currentOperation:
-        'Generating semantic embeddings from all available content (mathematical transformation, not deep reading)',
+        'Generating semantic embeddings from prepared content (mathematical transformation, not deep reading)',
     },
     {
       // Stage 2: Coding

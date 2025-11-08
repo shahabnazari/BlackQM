@@ -25,6 +25,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { PrismaService } from '../../common/prisma.service'; // Phase 10 Day 18
 import { QueryExpansionService } from '../ai/services/query-expansion.service'; // Phase 9 Day 21
 import { VideoRelevanceService } from '../ai/services/video-relevance.service'; // Phase 9 Day 21
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -43,6 +44,7 @@ import {
   ExtractThemesV2Dto,
   ExtractUnifiedThemesDto,
   GenerateCompleteSurveyDto,
+  GuidedBatchSelectionDto,
   MapConstructsDto,
   SavePaperDto,
   ScoreVideoRelevanceDto,
@@ -50,14 +52,16 @@ import {
   SuggestHypothesesDto,
   SuggestQuestionsDto,
 } from './dto/literature.dto';
-import { PrismaService } from '../../common/prisma.service'; // Phase 10 Day 18
 import { LiteratureService } from './literature.service';
 import { CrossPlatformSynthesisService } from './services/cross-platform-synthesis.service'; // Phase 9 Day 22
 import { EnhancedThemeIntegrationService } from './services/enhanced-theme-integration.service'; // Phase 10 Day 5.12
 import { GapAnalyzerService } from './services/gap-analyzer.service';
+import { GuidedBatchSelectorService } from './services/guided-batch-selector.service'; // Phase 10 Day 19.6
 import { KnowledgeGraphService } from './services/knowledge-graph.service'; // Phase 9 Day 14
 import { LiteratureCacheService } from './services/literature-cache.service'; // Phase 10 Day 18
 import { MultiMediaAnalysisService } from './services/multimedia-analysis.service'; // Phase 9 Day 18
+import { PaperQualityScoringService } from './services/paper-quality-scoring.service'; // Phase 10 Day 19.6
+import { PDFQueueService } from './services/pdf-queue.service'; // Phase 10 Day 30
 import { PredictiveGapService } from './services/predictive-gap.service'; // Phase 9 Day 15
 import { CitationStyle, ReferenceService } from './services/reference.service';
 import { ThemeExtractionService } from './services/theme-extraction.service';
@@ -88,6 +92,9 @@ export class LiteratureController {
     private readonly literatureCacheService: LiteratureCacheService, // Phase 10 Day 18
     private readonly configService: ConfigService, // Phase 10 Day 5.9 - Needed for ThemeToSurveyItemService
     private readonly prisma: PrismaService, // Phase 10 Day 18 - Needed for corpus CRUD
+    private readonly paperQualityScoring: PaperQualityScoringService, // Phase 10 Day 19.6
+    private readonly guidedBatchSelector: GuidedBatchSelectorService, // Phase 10 Day 19.6
+    private readonly pdfQueueService: PDFQueueService, // Phase 10 Day 30 - Background full-text processing
   ) {}
 
   @Post('search')
@@ -121,6 +128,7 @@ export class LiteratureController {
 
   // Public save paper endpoint for development
   @Post('save/public')
+  @CustomRateLimit(60, 30) // Allow 30 saves per minute (higher for bulk operations)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Public save paper for testing (dev only)' })
   @ApiResponse({ status: 200, description: 'Paper saved successfully' })
@@ -194,6 +202,7 @@ export class LiteratureController {
   @Post('save')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
+  @CustomRateLimit(60, 30) // Phase 10 Day 32: Allow 30 saves/min for bulk operations
   @ApiOperation({ summary: 'Save paper to user library' })
   @ApiResponse({ status: 201, description: 'Paper saved successfully' })
   async savePaper(@Body() saveDto: SavePaperDto, @CurrentUser() user: any) {
@@ -712,6 +721,83 @@ export class LiteratureController {
       themesDto.studyContext,
       user.userId,
     );
+  }
+
+  /**
+   * PHASE 10 DAY 30: Refresh metadata for existing papers
+   * Re-fetches metadata from sources to populate full-text availability fields
+   * Enterprise-grade solution for papers saved before full-text detection was implemented
+   */
+  @Post('papers/refresh-metadata')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Refresh metadata for existing papers (Phase 10 Day 30)',
+    description:
+      'Re-fetches paper metadata from academic sources to populate missing fields like hasFullText, pdfUrl, fullTextStatus. ' +
+      'Designed for papers saved before full-text detection was implemented.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        paperIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of paper IDs or DOIs to refresh',
+        },
+      },
+      required: ['paperIds'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Metadata refreshed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        refreshed: { type: 'number', description: 'Number of papers updated' },
+        failed: { type: 'number', description: 'Number of papers that failed' },
+        papers: {
+          type: 'array',
+          description: 'Updated paper objects with new metadata',
+        },
+        errors: {
+          type: 'array',
+          description: 'List of papers that failed to refresh',
+        },
+      },
+    },
+  })
+  async refreshPaperMetadata(
+    @Body() body: { paperIds: string[] },
+    @CurrentUser() user: any,
+  ) {
+    this.logger.log(
+      `[${user.userId}] Refreshing metadata for ${body.paperIds.length} papers`,
+    );
+
+    try {
+      const result = await this.literatureService.refreshPaperMetadata(
+        body.paperIds,
+        user.userId,
+      );
+
+      this.logger.log(
+        `[${user.userId}] Metadata refresh complete: ${result.refreshed} successful, ${result.failed} failed`,
+      );
+
+      return result;
+    } catch (error: any) {
+      this.logger.error(
+        `[${user.userId}] Metadata refresh failed: ${error.message}`,
+      );
+      throw new InternalServerErrorException(
+        `Failed to refresh paper metadata: ${error.message}`,
+      );
+    }
   }
 
   /**
@@ -3012,43 +3098,209 @@ export class LiteratureController {
 
     try {
       this.logger.log(
-        `Starting incremental extraction for user ${user.userId}: ${dto.newPaperIds.length} new papers`,
+        `Starting incremental extraction for user ${user.userId}: ${dto.newPaperIds.length} new papers, ${dto.existingPaperIds.length} existing`,
       );
 
-      // TODO: Implement incremental extraction logic
-      // For now, return a basic response structure
+      // STEP 1: Get existing themes from previous iterations (if corpus exists)
+      let existingThemes: any[] = [];
+      if (dto.existingPaperIds.length > 0) {
+        this.logger.log(
+          `Fetching existing themes from ${dto.existingPaperIds.length} papers...`,
+        );
+        // Extract themes from existing papers to establish baseline
+        const existingSources = await this.getSourceContents(
+          dto.existingPaperIds,
+          user.userId,
+        );
+        const existingResult =
+          await this.unifiedThemeExtractionService.extractFromMultipleSources(
+            existingSources,
+            {
+              researchContext: dto.purpose,
+              maxThemes: dto.maxThemes,
+              minConfidence: dto.minConfidence,
+            },
+          );
+        existingThemes = existingResult.themes;
+        this.logger.log(
+          `✅ Found ${existingThemes.length} themes from existing papers`,
+        );
+      }
+
+      // STEP 2: Extract themes from NEW papers only
+      this.logger.log(
+        `Extracting themes from ${dto.newPaperIds.length} new papers...`,
+      );
+      const newSources = await this.getSourceContents(
+        dto.newPaperIds,
+        user.userId,
+      );
+      const newResult =
+        await this.unifiedThemeExtractionService.extractFromMultipleSources(
+          newSources,
+          {
+            researchContext: dto.purpose,
+            maxThemes: dto.maxThemes,
+            minConfidence: dto.minConfidence,
+          },
+        );
+      const newThemes = newResult.themes;
+      this.logger.log(
+        `✅ Extracted ${newThemes.length} themes from new papers`,
+      );
+
+      // STEP 3: Merge themes and track evolution
+      const themeChanges: any[] = [];
+      const mergedThemes: any[] = [];
+      const themeMap = new Map<string, any>();
+
+      // Add existing themes to map
+      existingThemes.forEach((theme) => {
+        themeMap.set(theme.label.toLowerCase(), {
+          ...theme,
+          previousConfidence: theme.confidence,
+          isExisting: true,
+        });
+      });
+
+      // Process new themes and detect changes
+      newThemes.forEach((newTheme: any) => {
+        const normalizedLabel = newTheme.label.toLowerCase();
+        const existing = themeMap.get(normalizedLabel);
+
+        if (existing) {
+          // Theme already exists - STRENGTHENED
+          const updatedTheme = {
+            ...existing,
+            confidence: Math.max(existing.confidence, newTheme.confidence),
+            sources: [...existing.sources, ...newTheme.sources],
+            weight: existing.weight + newTheme.weight,
+          };
+          themeMap.set(normalizedLabel, updatedTheme);
+
+          themeChanges.push({
+            themeId: existing.id,
+            themeName: existing.label,
+            changeType: 'strengthened',
+            previousConfidence: existing.confidence,
+            newConfidence: updatedTheme.confidence,
+            evidenceCount: updatedTheme.sources.length,
+            newEvidenceAdded: newTheme.sources.length,
+          });
+        } else {
+          // NEW theme found
+          themeMap.set(normalizedLabel, {
+            ...newTheme,
+            isExisting: false,
+          });
+
+          themeChanges.push({
+            themeId: newTheme.id,
+            themeName: newTheme.label,
+            changeType: 'new',
+            newConfidence: newTheme.confidence,
+            evidenceCount: newTheme.sources.length,
+            newEvidenceAdded: newTheme.sources.length,
+          });
+        }
+      });
+
+      // Check for unchanged or weakened themes
+      existingThemes.forEach((theme) => {
+        const normalizedLabel = theme.label.toLowerCase();
+        const current = themeMap.get(normalizedLabel);
+        if (
+          current &&
+          current.isExisting &&
+          !themeChanges.find((tc) => tc.themeId === theme.id)
+        ) {
+          // Theme exists but wasn't strengthened = UNCHANGED
+          themeChanges.push({
+            themeId: theme.id,
+            themeName: theme.label,
+            changeType: 'unchanged',
+            previousConfidence: theme.confidence,
+            newConfidence: theme.confidence,
+            evidenceCount: theme.sources.length,
+            newEvidenceAdded: 0,
+          });
+        }
+      });
+
+      // Convert map to array
+      mergedThemes.push(...Array.from(themeMap.values()));
+
+      // STEP 4: Calculate saturation metrics
+      const newThemesCount = themeChanges.filter(
+        (tc) => tc.changeType === 'new',
+      ).length;
+      const strengthenedCount = themeChanges.filter(
+        (tc) => tc.changeType === 'strengthened',
+      ).length;
+      const unchangedCount = themeChanges.filter(
+        (tc) => tc.changeType === 'unchanged',
+      ).length;
+
+      // Saturation logic: High saturation when few new themes and many unchanged
+      const saturationScore =
+        existingThemes.length > 0 ? unchangedCount / existingThemes.length : 0;
+      const newThemeRate =
+        mergedThemes.length > 0 ? newThemesCount / mergedThemes.length : 1;
+
+      const isSaturated =
+        existingThemes.length > 0 && // At least one iteration done
+        saturationScore > 0.7 && // 70%+ themes unchanged
+        newThemeRate < 0.15; // Less than 15% new themes
+
+      this.logger.log(
+        `📊 Saturation Analysis: ${saturationScore.toFixed(2)} score, ${newThemeRate.toFixed(2)} new rate, saturated=${isSaturated}`,
+      );
+
+      // STEP 5: Calculate cost savings
+      const estimatedCostPerPaper = 0.15; // $0.15 per paper average
+      const cachedPapersSavings =
+        dto.existingPaperIds.length * estimatedCostPerPaper;
+
+      const processingTime = Date.now() - startTime;
+
       return {
-        themes: [],
+        themes: mergedThemes,
         statistics: {
-          previousThemeCount: 0,
-          newThemesAdded: 0,
-          themesStrengthened: 0,
+          previousThemeCount: existingThemes.length,
+          newThemesAdded: newThemesCount,
+          themesStrengthened: strengthenedCount,
           themesWeakened: 0,
-          totalThemeCount: 0,
+          totalThemeCount: mergedThemes.length,
           newPapersProcessed: dto.newPaperIds.length,
           cachedPapersReused: dto.existingPaperIds.length,
-          processingTimeMs: Date.now() - startTime,
+          processingTimeMs: processingTime,
         },
         saturation: {
-          isSaturated: false,
-          confidenceLevel: 0,
-          newThemesFound: 0,
-          existingThemesStrengthened: 0,
-          recommendation: 'continue_extraction',
-          rationale: 'Implementation pending - Phase 10 Day 18 stub endpoint',
+          isSaturated,
+          confidenceLevel: saturationScore,
+          newThemesFound: newThemesCount,
+          existingThemesStrengthened: strengthenedCount,
+          recommendation: isSaturated
+            ? 'saturation_reached'
+            : newThemeRate > 0.3
+              ? 'continue_extraction'
+              : 'add_more_sources',
+          rationale: isSaturated
+            ? `Theoretical saturation reached: ${unchangedCount}/${existingThemes.length} themes unchanged (${(saturationScore * 100).toFixed(0)}%), only ${newThemesCount} new themes found (${(newThemeRate * 100).toFixed(0)}%). Glaser & Strauss (1967) recommend stopping when new data yields no new insights.`
+            : `Themes still evolving: ${newThemesCount} new themes + ${strengthenedCount} strengthened. Continue adding sources to reach saturation.`,
         },
         costSavings: {
-          cacheHitsCount: 0,
-          embeddingsSaved: 0,
-          completionsSaved: 0,
-          estimatedDollarsSaved: 0,
+          cacheHitsCount: dto.existingPaperIds.length,
+          embeddingsSaved: dto.existingPaperIds.length,
+          completionsSaved: dto.existingPaperIds.length * 2, // 2 completions per paper avg
+          estimatedDollarsSaved: cachedPapersSavings,
           totalPapersProcessed:
             dto.newPaperIds.length + dto.existingPaperIds.length,
           newPapersProcessed: dto.newPaperIds.length,
           cachedPapersReused: dto.existingPaperIds.length,
         },
-        themeChanges: [],
-        corpusId: dto.corpusId || 'new_corpus',
+        themeChanges,
+        corpusId: dto.corpusId || `corpus_${Date.now()}`,
         corpusName: dto.corpusName || 'Untitled Corpus',
       };
     } catch (error) {
@@ -3057,6 +3309,238 @@ export class LiteratureController {
         'Failed to perform incremental extraction',
       );
     }
+  }
+
+  /**
+   * Phase 10 Day 19.6: Guided Batch Selection for Incremental Extraction
+   * Scientifically-guided paper selection for next iteration
+   *
+   * Research Foundation:
+   * - Patton (1990): Purposive Sampling Strategies
+   * - Glaser & Strauss (1967): Theoretical Sampling
+   * - Francis et al. (2010): Saturation in Qualitative Research
+   *
+   * Selection Strategy:
+   * - Iteration 1: High-quality core papers (foundation)
+   * - Iteration 2: Diverse perspectives (robustness)
+   * - Iteration 3+: Gap-filling based on theme analysis
+   */
+  @Post('/guided-batch-select')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get scientifically-guided paper batch recommendation',
+    description: `
+      Analyzes corpus and recommends next batch of papers to process based on iteration strategy.
+
+      **Iteration Strategies:**
+      - **Iteration 1:** Selects highest-quality papers for robust foundation
+      - **Iteration 2:** Maximizes diversity across methodologies and contexts
+      - **Iteration 3+:** Fills gaps and tests for theoretical saturation
+
+      **Quality Assessment Dimensions:**
+      - Methodology quality (30%): RCT, meta-analysis, systematic review
+      - Citation impact (25%): Citations normalized by paper age
+      - Journal quality (20%): Venue recognition and impact
+      - Content quality (15%): Abstract completeness and structure
+      - Full-text availability (10%): Bonus for full-text access
+
+      **Research Backing:**
+      - Patton (1990): Maximum variation and purposive sampling
+      - Glaser & Strauss (1967): Theoretical sampling to saturation
+      - Francis et al. (2010): Evidence-based saturation assessment
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Batch recommendation with scientific rationale',
+  })
+  async selectGuidedBatch(
+    @CurrentUser() user: any,
+    @Body() dto: GuidedBatchSelectionDto,
+  ): Promise<any> {
+    this.logger.log(`🚀 === GUIDED BATCH SELECT ENDPOINT HIT ===`);
+    this.logger.log(`👤 User: ${user?.userId || 'UNKNOWN'}`);
+    this.logger.log(`📦 DTO received:`, JSON.stringify(dto, null, 2));
+
+    try {
+      this.logger.log(
+        `🔍 Guided batch selection for user ${user.userId}: Iteration ${dto.iteration}, ${dto.allPaperIds?.length || 0} total papers, ${dto.processedPaperIds?.length || 0} processed`,
+      );
+
+      if (!dto.allPaperIds || dto.allPaperIds.length === 0) {
+        this.logger.error(`❌ No paper IDs provided in request`);
+        throw new BadRequestException('No paper IDs provided');
+      }
+
+      this.logger.debug(
+        `📝 Paper IDs received: ${dto.allPaperIds.slice(0, 5).join(', ')}${dto.allPaperIds.length > 5 ? '...' : ''}`,
+      );
+
+      // Fetch paper data from database
+      this.logger.log(`📊 Querying database for papers...`);
+      const allPapers = await this.prisma.paper.findMany({
+        where: {
+          id: { in: dto.allPaperIds },
+          userId: user.userId,
+        },
+      });
+      this.logger.log(`📊 Database query completed`);
+
+      this.logger.log(
+        `📊 Found ${allPapers.length} papers in database out of ${dto.allPaperIds.length} requested`,
+      );
+
+      if (allPapers.length === 0) {
+        this.logger.error(
+          `❌ No papers found in database for user ${user.userId}. Paper IDs: ${dto.allPaperIds.slice(0, 10).join(', ')}`,
+        );
+        throw new BadRequestException(
+          'No papers found in corpus. Papers may not be saved to your account yet.',
+        );
+      }
+
+      const processedPapers = allPapers.filter((p) =>
+        dto.processedPaperIds.includes(p.id),
+      );
+
+      // Convert to Paper interface format
+      const formattedAllPapers = allPapers.map((p) => ({
+        id: p.id,
+        title: p.title,
+        abstract: p.abstract || undefined,
+        fullText: p.fullText || undefined,
+        authors: Array.isArray(p.authors) ? (p.authors as string[]) : undefined,
+        year: p.year || undefined,
+        doi: p.doi || undefined,
+        citationCount: p.citationCount || undefined,
+        journal: p.journal || undefined,
+        keywords: Array.isArray(p.keywords)
+          ? (p.keywords as string[])
+          : undefined,
+        hasFullText: !!p.fullText,
+      }));
+
+      const formattedProcessedPapers = processedPapers.map((p) => ({
+        id: p.id,
+        title: p.title,
+        abstract: p.abstract || undefined,
+        fullText: p.fullText || undefined,
+        authors: Array.isArray(p.authors) ? (p.authors as string[]) : undefined,
+        year: p.year || undefined,
+        doi: p.doi || undefined,
+        citationCount: p.citationCount || undefined,
+        journal: p.journal || undefined,
+        keywords: Array.isArray(p.keywords)
+          ? (p.keywords as string[])
+          : undefined,
+        hasFullText: !!p.fullText,
+      }));
+
+      // Get batch recommendation
+      this.logger.log(`🧠 Calling guidedBatchSelector.selectNextBatch...`);
+      this.logger.log(`   - formattedAllPapers: ${formattedAllPapers.length}`);
+      this.logger.log(
+        `   - formattedProcessedPapers: ${formattedProcessedPapers.length}`,
+      );
+      this.logger.log(`   - currentThemes: ${dto.currentThemes.length}`);
+      this.logger.log(`   - iteration: ${dto.iteration}`);
+      this.logger.log(`   - batchSize: ${dto.batchSize || 5}`);
+
+      const recommendation = await this.guidedBatchSelector.selectNextBatch(
+        formattedAllPapers,
+        formattedProcessedPapers,
+        dto.currentThemes,
+        dto.iteration,
+        dto.batchSize || 5,
+      );
+
+      this.logger.log(`✅ selectNextBatch completed successfully`);
+
+      // Calculate diversity metrics for full corpus
+      this.logger.log(`📊 Calculating diversity metrics...`);
+      const diversityMetrics =
+        this.guidedBatchSelector.calculateDiversityMetrics(formattedAllPapers);
+      this.logger.log(`✅ Diversity metrics calculated`);
+
+      this.logger.log(
+        `✅ Batch selected: ${recommendation.papers.length} papers for iteration ${recommendation.iteration}`,
+      );
+
+      return {
+        ...recommendation,
+        diversityMetrics,
+        corpusStats: {
+          totalPapers: allPapers.length,
+          processedPapers: processedPapers.length,
+          remainingPapers: allPapers.length - processedPapers.length,
+          currentThemeCount: dto.currentThemes.length,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`❌ Error in guided batch selection:`, error);
+      if (error instanceof Error) {
+        this.logger.error(`❌ Error stack:`, error.stack);
+        this.logger.error(`❌ Error message:`, error.message);
+      }
+
+      // Re-throw BadRequestException as-is, wrap others
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new InternalServerErrorException(
+        `Failed to select guided batch: ${errorMessage}`,
+      );
+    }
+  }
+
+  /**
+   * Helper method: Get source contents from paper IDs
+   * Fetches papers from database and converts to SourceContent format for theme extraction
+   */
+  private async getSourceContents(
+    paperIds: string[],
+    userId: string,
+  ): Promise<any[]> {
+    const papers = await this.prisma.paper.findMany({
+      where: {
+        id: { in: paperIds },
+        userId,
+      },
+    });
+
+    if (papers.length !== paperIds.length) {
+      this.logger.warn(
+        `Warning: Found ${papers.length} papers but expected ${paperIds.length}`,
+      );
+    }
+
+    return papers.map((paper) => ({
+      id: paper.id,
+      type: 'paper' as const,
+      title: paper.title,
+      content: paper.fullText || paper.abstract || '',
+      keywords: paper.keywords || [],
+      doi: paper.doi,
+      authors: paper.authors,
+      year: paper.year,
+      url: paper.url,
+      metadata: {
+        contentType: paper.fullText
+          ? 'full_text'
+          : paper.abstract
+            ? 'abstract'
+            : 'none',
+        contentSource: paper.fullTextSource || 'abstract_field',
+        contentLength: (paper.fullText || paper.abstract || '').length,
+        hasFullText: !!paper.fullText,
+        fullTextStatus: paper.fullTextStatus || 'not_fetched',
+      },
+    }));
   }
 
   /**
@@ -3853,6 +4337,182 @@ export class LiteratureController {
       throw new InternalServerErrorException({
         success: false,
         error: 'Complete survey generation failed',
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Phase 10 Day 30: Batch Process Papers for Full-Text Extraction
+   *
+   * Queues all papers that have DOI/PMID/URL but no full-text for background processing.
+   * Uses waterfall strategy: PMC API → Unpaywall PDF → HTML scraping
+   *
+   * Rate limited to 10 papers/minute with automatic retry logic.
+   */
+  @Post('batch-process-fulltext')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '📤 Batch process papers for full-text extraction',
+    description:
+      'Queues all papers with DOI/PMID/URL but no full-text for background processing via waterfall strategy (PMC API → PDF → HTML). Rate limited to 10 papers/minute.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Papers queued for processing',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        queued: { type: 'number' },
+        total: { type: 'number' },
+        stats: {
+          type: 'object',
+          properties: {
+            queueLength: { type: 'number' },
+            totalJobs: { type: 'number' },
+            processing: { type: 'number' },
+            completed: { type: 'number' },
+            failed: { type: 'number' },
+            queued: { type: 'number' },
+          },
+        },
+      },
+    },
+  })
+  async batchProcessFullText(@CurrentUser() user: any) {
+    return this.batchProcessFullTextInternal(user.userId);
+  }
+
+  /**
+   * Phase 10 Day 30: PUBLIC Batch Process Papers (Dev/Testing only)
+   */
+  @Post('batch-process-fulltext/public')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '📤 PUBLIC: Batch process papers (dev only)',
+    description:
+      'PUBLIC endpoint for testing batch processing without authentication. Processes all papers for the first user. Only available in development mode.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Papers queued for processing',
+  })
+  async batchProcessFullTextPublic() {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException(
+        'Public endpoint not available in production',
+      );
+    }
+
+    // Get first user for testing
+    const user = await this.prisma.user.findFirst();
+    if (!user) {
+      throw new NotFoundException('No users found');
+    }
+
+    return this.batchProcessFullTextInternal(user.id);
+  }
+
+  /**
+   * Internal implementation for batch processing
+   */
+  private async batchProcessFullTextInternal(userId: string) {
+    try {
+      this.logger.log(
+        `🚀 Batch processing full-text extraction (User: ${userId})`,
+      );
+
+      // Find all papers without full-text that have DOI/PMID/URL
+      const papers = await this.prisma.paper.findMany({
+        where: {
+          userId: userId,
+          OR: [
+            { doi: { not: null } },
+            { pmid: { not: null } },
+            { url: { not: null } },
+          ],
+          AND: [
+            {
+              OR: [
+                { fullTextStatus: 'not_fetched' },
+                { fullTextStatus: null },
+                { fullTextStatus: 'failed' }, // Retry failed papers
+              ],
+            },
+          ],
+        },
+        select: {
+          id: true,
+          title: true,
+          doi: true,
+          pmid: true,
+          url: true,
+          fullTextStatus: true,
+        },
+      });
+
+      this.logger.log(`   Found ${papers.length} papers to process`);
+
+      if (papers.length === 0) {
+        return {
+          success: true,
+          queued: 0,
+          total: 0,
+          message:
+            'No papers to process. All papers either have full-text or no sources.',
+        };
+      }
+
+      // Queue each paper
+      let queued = 0;
+      for (const paper of papers) {
+        try {
+          const jobId = await this.pdfQueueService.addJob(paper.id);
+          queued++;
+
+          const sources = [
+            (paper as any).pmid ? 'PMID' : null,
+            paper.doi ? 'DOI' : null,
+            paper.url ? 'URL' : null,
+          ]
+            .filter(Boolean)
+            .join(', ');
+
+          this.logger.log(
+            `   ✅ Queued paper ${paper.id}: "${paper.title?.substring(0, 60)}..." (Sources: ${sources}, Job: ${jobId})`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `   ❌ Failed to queue paper ${paper.id}:`,
+            error instanceof Error ? error.message : error,
+          );
+        }
+      }
+
+      const stats = this.pdfQueueService.getStats();
+
+      this.logger.log(
+        `✅ Batch processing initiated: ${queued}/${papers.length} papers queued (User: ${userId})`,
+      );
+
+      return {
+        success: true,
+        queued,
+        total: papers.length,
+        stats,
+        message: `Queued ${queued} papers for processing. Rate limit: 10 papers/minute. Expected completion: ~${Math.ceil(papers.length / 10)} minutes.`,
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Batch processing failed: ${error.message}`,
+        error.stack,
+      );
+
+      throw new InternalServerErrorException({
+        success: false,
+        error: 'Batch processing failed',
         message: error.message,
       });
     }

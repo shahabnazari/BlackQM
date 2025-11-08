@@ -276,49 +276,34 @@ class LiteratureAPIService {
         collectionId: paper.collectionId,
       };
 
-      // Try public endpoint first for development
-      const response = await this.api.post('/literature/save/public', saveData);
+      // Phase 10 Day 32: CRITICAL FIX - Use authenticated endpoint to enable full-text extraction
+      // Public endpoint doesn't save to DB or initiate full-text jobs
+      const response = await this.api.post('/literature/save', saveData);
 
-      // Also save full paper to localStorage for persistence in development
-      this.saveToLocalStorage(paper);
+      // Phase 10 Day 32: REMOVED localStorage duplication
+      // Papers saved to database only - prevents data sync issues
+      // localStorage becomes stale when DB updates (full-text added)
 
       return response.data;
     } catch (error: any) {
       console.error('Failed to save paper:', error);
 
-      // Fallback to localStorage for development
-      if (
-        error.response?.status === 401 ||
-        error.response?.status === 404 ||
-        error.response?.status === 400
-      ) {
-        console.log('Using localStorage fallback for save');
-        this.saveToLocalStorage(paper);
-        return { success: true, paperId: paper.id || 'mock-id' };
+      // Phase 10 Day 32: CRITICAL FIX - Don't return success on authentication failures
+      // Misleading success breaks theme extraction (no DB save = no full-text jobs)
+      if (error.response?.status === 401) {
+        console.error('❌ Authentication required to save papers');
+        throw new Error('AUTHENTICATION_REQUIRED');
       }
+
+      // Re-throw other errors without misleading success
+      console.error(`Save failed: ${error.response?.status || 'unknown'} - ${error.message}`);
       throw error;
     }
   }
 
-  // Helper: Save to localStorage
-  private saveToLocalStorage(paper: Partial<Paper>): void {
-    try {
-      const stored = localStorage.getItem('savedPapers') || '[]';
-      const papers = JSON.parse(stored);
-      const exists = papers.some((p: any) => p.id === paper.id);
-
-      if (!exists) {
-        papers.push({
-          ...paper,
-          savedAt: new Date().toISOString(),
-        });
-        localStorage.setItem('savedPapers', JSON.stringify(papers));
-        console.log('✅ Paper saved to localStorage:', paper.title);
-      }
-    } catch (e) {
-      console.error('Failed to save to localStorage:', e);
-    }
-  }
+  // Phase 10 Day 32: Removed saveToLocalStorage helper
+  // Papers are now saved ONLY to database via authenticated API
+  // localStorage duplication removed to prevent sync issues
 
   // Get user's saved papers
   async getUserLibrary(
@@ -329,8 +314,9 @@ class LiteratureAPIService {
     total: number;
   }> {
     try {
-      // Try public endpoint first for development
-      const response = await this.api.get('/literature/library/public', {
+      // Phase 10 Day 32: CRITICAL FIX - Use authenticated endpoint to get actual saved papers
+      // Public endpoint returns empty library (no papers with full-text)
+      const response = await this.api.get('/literature/library', {
         params: { page, limit },
       });
       return response.data;
@@ -1324,6 +1310,84 @@ class LiteratureAPIService {
       return response.data;
     } catch (error) {
       console.error('Failed to generate survey items from themes:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * PHASE 10 DAY 30: Refresh Paper Metadata (Enterprise-Grade Solution)
+   * Re-fetches metadata from academic sources for existing papers
+   * Populates missing full-text availability fields for papers saved before detection was implemented
+   *
+   * @param paperIds - Array of paper IDs or DOIs to refresh
+   * @returns Object with refreshed papers and statistics
+   */
+  async refreshPaperMetadata(paperIds: string[]): Promise<{
+    success: boolean;
+    refreshed: number;
+    failed: number;
+    papers: Paper[];
+    errors: Array<{ paperId: string; error: string }>;
+  }> {
+    try {
+      console.log(
+        `\n╔════════════════════════════════════════════════════════════╗`
+      );
+      console.log(
+        `║   🔄 REFRESH PAPER METADATA - STARTING                   ║`
+      );
+      console.log(
+        `╚════════════════════════════════════════════════════════════╝`
+      );
+      console.log(`   Papers to refresh: ${paperIds.length}`);
+      console.log(``);
+
+      const response = await this.api.post(
+        '/literature/papers/refresh-metadata',
+        {
+          paperIds,
+        }
+      );
+
+      console.log(``);
+      console.log(
+        `╔════════════════════════════════════════════════════════════╗`
+      );
+      console.log(
+        `║   ✅ METADATA REFRESH COMPLETE                           ║`
+      );
+      console.log(
+        `╚════════════════════════════════════════════════════════════╝`
+      );
+      console.log(`   📊 Statistics:`);
+      console.log(`      • Total papers: ${paperIds.length}`);
+      console.log(`      • Successfully refreshed: ${response.data.refreshed}`);
+      console.log(`      • Failed: ${response.data.failed}`);
+
+      if (response.data.papers && response.data.papers.length > 0) {
+        const withFullText = response.data.papers.filter(
+          (p: Paper) => p.hasFullText
+        ).length;
+        console.log(
+          `      • Papers with full-text: ${withFullText}/${response.data.papers.length}`
+        );
+      }
+
+      if (response.data.errors && response.data.errors.length > 0) {
+        console.warn(`   ⚠️  Failed papers:`);
+        response.data.errors.forEach(
+          (err: { paperId: string; error: string }) => {
+            console.warn(`      • ${err.paperId}: ${err.error}`);
+          }
+        );
+      }
+      console.log(``);
+
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to refresh paper metadata:', error);
+      console.error('   Error message:', error.message);
+      console.error('   Error response:', error.response?.data);
       throw error;
     }
   }

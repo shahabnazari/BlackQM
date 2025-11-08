@@ -150,6 +150,15 @@ export interface TransparentProgressMessage {
     codesGenerated?: number;
     themesIdentified?: number;
     currentOperation: string;
+    // Phase 10 Day 30: Real-time familiarization metrics
+    fullTextRead?: number;
+    abstractsRead?: number;
+    totalWordsRead?: number;
+    currentArticle?: number;
+    totalArticles?: number;
+    articleTitle?: string;
+    articleType?: 'full-text' | 'abstract';
+    articleWords?: number;
   };
 }
 
