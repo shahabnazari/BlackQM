@@ -153,20 +153,51 @@ class LiteratureAPIService {
       },
     });
 
-    // Add auth interceptor
+    // Add auth interceptor with enterprise-grade validation
     this.api.interceptors.request.use(async config => {
       const token = await getAuthToken();
-      console.log(
-        '🔑 [Auth Token]:',
-        token ? `${token.substring(0, 20)}...` : 'No token found'
-      );
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      } else {
-        console.warn(
-          '⚠️ [Auth] No token available - request will be unauthorized'
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(
+          '🔑 [Auth Token]:',
+          token ? `${token.substring(0, 20)}...` : 'No token found'
         );
       }
+
+      if (token) {
+        // Enterprise-grade validation: Ensure token is complete
+        const tokenParts = token.split('.');
+
+        if (tokenParts.length !== 3) {
+          console.error(
+            `❌ [Auth] Invalid JWT format! Expected 3 parts, got ${tokenParts.length}`
+          );
+          console.error(`❌ [Auth] Token: ${token.substring(0, 50)}...`);
+          return config; // Don't send incomplete token
+        }
+
+        if (token.length < 100) {
+          console.error(
+            `❌ [Auth] Token too short! Length: ${token.length} (expected >100)`
+          );
+          console.error(`❌ [Auth] Token: ${token}`);
+          return config; // Don't send suspicious token
+        }
+
+        // Token is valid, set Authorization header
+        config.headers.Authorization = `Bearer ${token}`;
+
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('✅ [Auth] Authorization header set successfully');
+        }
+      } else {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            '⚠️ [Auth] No token available - request will be unauthorized'
+          );
+        }
+      }
+
       return config;
     });
 
@@ -296,7 +327,9 @@ class LiteratureAPIService {
       }
 
       // Re-throw other errors without misleading success
-      console.error(`Save failed: ${error.response?.status || 'unknown'} - ${error.message}`);
+      console.error(
+        `Save failed: ${error.response?.status || 'unknown'} - ${error.message}`
+      );
       throw error;
     }
   }

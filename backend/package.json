@@ -89,7 +89,7 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-orcid": "^0.0.4",
-    "pdf-parse": "^2.4.5",
+    "pdf-parse": "^1.1.1",
     "pdfkit": "^0.17.2",
     "picocolors": "^1.1.1",
     "prisma": "^6.15.0",

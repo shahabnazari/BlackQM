@@ -213,6 +213,8 @@ function LiteratureSearchContent() {
   const [showModeSelectionModal, setShowModeSelectionModal] = useState(false);
   const [showGuidedWizard, setShowGuidedWizard] = useState(false);
   const [isExtractionInProgress, setIsExtractionInProgress] = useState(false); // CRITICAL FIX: Prevent duplicate extractions
+  // Phase 10 Day 34: Preparation message for modal
+  const [preparingMessage, setPreparingMessage] = useState<string>('');
 
   // Phase 10 Day 5.16: Content analysis data for Purpose Wizard Step 0
   const [contentAnalysis, setContentAnalysis] = useState<{
@@ -509,7 +511,7 @@ function LiteratureSearchContent() {
       console.log('❌ WebSocket disconnected from theme-extraction gateway');
     });
 
-    socket.on('connect_error', (error) => {
+    socket.on('connect_error', error => {
       console.error('❌ WebSocket connection error:', error.message);
     });
 
@@ -536,7 +538,9 @@ function LiteratureSearchContent() {
         );
       } else {
         // Fallback to basic progress update
-        console.warn('⚠️ WebSocket data missing transparentMessage, using basic update');
+        console.warn(
+          '⚠️ WebSocket data missing transparentMessage, using basic update'
+        );
         updateProgress(1, 6);
       }
     });
@@ -726,19 +730,24 @@ function LiteratureSearchContent() {
         setTotalResults(result.total);
         setActiveTab('results'); // PHASE 9 DAY 24: Switch to results tab
         setActiveResultsSubTab('papers'); // Show papers sub-tab
+
+        // Phase 10 Day 34: Auto-select all papers by default
+        const allPaperIds = new Set(result.papers.map(p => p.id));
+        setSelectedPapers(allPaperIds);
         console.log(
           '✅ Papers state updated with',
           result.papers.length,
-          'papers'
+          'papers (all selected by default)'
         );
         console.log('📑 Active tab set to:', 'results');
         toast.success(
-          `Found ${result.total} papers across ${academicDatabases.length} databases`
+          `Found ${result.total} papers across ${academicDatabases.length} databases. All papers selected by default.`
         );
       } else {
         console.warn('⚠️ No papers in result');
         setPapers([]);
         setTotalResults(0);
+        setSelectedPapers(new Set()); // Phase 10 Day 34: Clear selections
         setActiveTab('results'); // PHASE 9 DAY 24: Switch to results tab
         setActiveResultsSubTab('papers'); // Show papers sub-tab
 
@@ -826,20 +835,30 @@ function LiteratureSearchContent() {
   };
 
   const handleExtractThemes = async () => {
-    // CRITICAL FIX: Prevent duplicate extraction sessions
+    // Phase 10 Day 34: CRITICAL FIX - Prevent duplicate extraction sessions
     if (isExtractionInProgress) {
       console.warn(
         '⚠️ Extraction already in progress - ignoring duplicate click'
       );
-      toast.error('Theme extraction already in progress');
+      return; // Silently ignore, modal already shows progress
+    }
+
+    // Phase 10 Day 34: Check if any papers are selected
+    const totalSources = selectedPapers.size + transcribedVideos.length;
+    if (totalSources === 0) {
+      console.error('❌ No sources selected - aborting');
+      toast.error(
+        'Please select at least one paper or video for theme extraction'
+      );
       return;
     }
 
     // Set extraction in progress
     setIsExtractionInProgress(true);
 
-    // DAY 33 FIX: Immediate visual feedback
-    const preparingToast = toast.loading('Preparing papers for extraction...');
+    // Phase 10 Day 34: Open modal immediately with preparing state
+    setPreparingMessage('Analyzing papers and preparing for extraction...');
+    setShowModeSelectionModal(true);
 
     // PHASE 10 DAY 5.17.3: Generate unique request ID for tracing
     const requestId = `extract_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -848,42 +867,13 @@ function LiteratureSearchContent() {
     console.log(`🚀 [${requestId}] THEME EXTRACTION STARTED`);
     console.log(`${'='.repeat(80)}`);
     console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
+    console.log(`📊 [${requestId}] Initial counts:`, {
+      selectedPapers: selectedPapers.size,
+      transcribedVideos: transcribedVideos.length,
+      totalSources,
+    });
 
-    // Phase 10 Day 31: Auto-select all papers if none selected
-    // Use local variable to avoid state timing issues
-    let papersToAnalyze: Set<string>;
-
-    if (selectedPapers.size === 0 && papers.length > 0) {
-      const allPaperIds = new Set(papers.map(p => p.id));
-      setSelectedPapers(allPaperIds);
-      papersToAnalyze = allPaperIds; // Use the new set immediately
-      console.log(
-        `✨ [${requestId}] Auto-selected all ${allPaperIds.size} papers`
-      );
-      toast.success(
-        `Auto-selected all ${allPaperIds.size} papers for extraction`
-      );
-      const totalSources = allPaperIds.size + transcribedVideos.length;
-      console.log(`📊 [${requestId}] Initial counts (auto-selected):`, {
-        selectedPapers: allPaperIds.size,
-        transcribedVideos: transcribedVideos.length,
-        totalSources,
-      });
-    } else {
-      papersToAnalyze = selectedPapers; // Use existing selection
-      const totalSources = selectedPapers.size + transcribedVideos.length;
-      console.log(`📊 [${requestId}] Initial counts:`, {
-        selectedPapers: selectedPapers.size,
-        transcribedVideos: transcribedVideos.length,
-        totalSources,
-      });
-
-      if (totalSources === 0) {
-        console.error(`❌ [${requestId}] No sources available - aborting`);
-        toast.error('No papers available for theme extraction');
-        return;
-      }
-    }
+    const papersToAnalyze = selectedPapers; // Use existing selection
 
     // PHASE 10 DAY 32: STEP 0.5 - Automatic Metadata Refresh for Stale Papers
     console.log(
@@ -913,8 +903,9 @@ function LiteratureSearchContent() {
       console.log(
         `\n   🔄 Refreshing metadata for ${stalePapers.length} papers...`
       );
-      const refreshToast = toast.loading(
-        `Updating metadata for ${stalePapers.length} papers to detect full-text availability...`
+      // Phase 10 Day 34: Show progress in modal instead of toast
+      setPreparingMessage(
+        `Updating metadata for ${stalePapers.length} papers...`
       );
 
       try {
@@ -940,18 +931,10 @@ function LiteratureSearchContent() {
         );
         setPapers(updatedPapers);
 
-        toast.success(
-          `✅ Metadata updated: ${refreshResult.papers.filter(p => p.hasFullText).length} papers have full-text available`,
-          { id: refreshToast }
-        );
-
         console.log(`   ✅ Papers array updated with fresh metadata`);
       } catch (error: any) {
         console.error(`   ❌ Metadata refresh failed:`, error);
-        toast.warning(
-          `Failed to refresh metadata. Proceeding with existing data...`,
-          { id: refreshToast, duration: 5000 }
-        );
+        // Continue anyway - no toast needed
       }
     } else {
       console.log(
@@ -1043,7 +1026,7 @@ function LiteratureSearchContent() {
           failedCount++;
           failedPapers.push({
             title: paper.title || 'Unknown',
-            error: saveResult.error || 'Unknown error'
+            error: saveResult.error || 'Unknown error',
           });
           console.error(
             `   ❌ Failed after retries: "${paper.title?.substring(0, 50)}..." - ${saveResult.error}`
@@ -1065,10 +1048,12 @@ function LiteratureSearchContent() {
 
     if (failedCount > 0) {
       console.error(`❌ Failed papers:`, failedPapers);
-      toast.error(
-        `Failed to save ${failedCount} of ${papersToSave.length} papers. Theme extraction may be limited. Check console for details.`,
-        { duration: 8000 }
+      // Phase 10 Day 34: Show warning in modal instead of toast
+      setPreparingMessage(
+        `⚠️ ${failedCount} of ${papersToSave.length} papers failed to save. Continuing with available papers...`
       );
+      // Wait 2 seconds to show the warning
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
     // DAY 33 FIX: Removed hardcoded 2-second wait - unnecessary delay
@@ -1118,16 +1103,30 @@ function LiteratureSearchContent() {
 
       // CRITICAL DIAGNOSTIC: Check if papers have any content BEFORE waiting
       const papersWithAnyContent = selectedPaperObjects.filter(
-        p => (p.fullText && p.fullText.length > 0) || (p.abstract && p.abstract.length > 0)
+        p =>
+          (p.fullText && p.fullText.length > 0) ||
+          (p.abstract && p.abstract.length > 0)
       );
-      const papersWithFullTextNow = selectedPaperObjects.filter(p => p.fullText && p.fullText.length > 0);
-      const papersWithAbstractNow = selectedPaperObjects.filter(p => p.abstract && p.abstract.length > 0);
-      console.log(`\n📊 [${requestId}] DIAGNOSTIC - Content Analysis BEFORE Waiting:`);
+      const papersWithFullTextNow = selectedPaperObjects.filter(
+        p => p.fullText && p.fullText.length > 0
+      );
+      const papersWithAbstractNow = selectedPaperObjects.filter(
+        p => p.abstract && p.abstract.length > 0
+      );
+      console.log(
+        `\n📊 [${requestId}] DIAGNOSTIC - Content Analysis BEFORE Waiting:`
+      );
       console.log(`   • Total selected papers: ${selectedPaperObjects.length}`);
-      console.log(`   • Papers with ANY content: ${papersWithAnyContent.length}`);
-      console.log(`   • Papers with full-text: ${papersWithFullTextNow.length}`);
+      console.log(
+        `   • Papers with ANY content: ${papersWithAnyContent.length}`
+      );
+      console.log(
+        `   • Papers with full-text: ${papersWithFullTextNow.length}`
+      );
       console.log(`   • Papers with abstract: ${papersWithAbstractNow.length}`);
-      console.log(`   • Papers with NO content: ${selectedPaperObjects.length - papersWithAnyContent.length}`);
+      console.log(
+        `   • Papers with NO content: ${selectedPaperObjects.length - papersWithAnyContent.length}`
+      );
 
       if (selectedPaperObjects.length > 0) {
         const sample = selectedPaperObjects[0];
@@ -1146,7 +1145,9 @@ function LiteratureSearchContent() {
       }
 
       // PHASE 10 DAY 32.2: STEP 1.5 - Wait for full-text extraction for papers that might have it
-      console.log(`\n📥 [${requestId}] STEP 1.5: Checking Full-Text Availability`);
+      console.log(
+        `\n📥 [${requestId}] STEP 1.5: Checking Full-Text Availability`
+      );
       console.log(`${'─'.repeat(60)}`);
 
       // CRITICAL FIX: Wait for ALL papers with DOI/URL that don't have full-text yet
@@ -1175,44 +1176,59 @@ function LiteratureSearchContent() {
         console.log(
           `\n   ⏳ Waiting for full-text extraction for ${papersNeedingFullText.length} papers...`
         );
-        console.log(`   📋 Paper IDs:`, papersNeedingFullText.map(p => p.id).slice(0, 5).join(', ') + (papersNeedingFullText.length > 5 ? '...' : ''));
+        console.log(
+          `   📋 Paper IDs:`,
+          papersNeedingFullText
+            .map(p => p.id)
+            .slice(0, 5)
+            .join(', ') + (papersNeedingFullText.length > 5 ? '...' : '')
+        );
 
-        // DAY 33 FIX: Update toast to show full-text progress
-        toast.loading(`Fetching full-text articles: 0/${papersNeedingFullText.length} ready...`, { id: preparingToast });
+        // Phase 10 Day 34: Show progress in modal instead of toast
+        setPreparingMessage(
+          `Fetching full-text articles: 0/${papersNeedingFullText.length} ready...`
+        );
 
         // Wait for background full-text jobs to complete (max 60 seconds)
         const paperIdsNeedingFullText = papersNeedingFullText.map(p => p.id);
         const waitResult = await waitForFullText(paperIdsNeedingFullText, {
           maxWaitSeconds: 60,
-          onProgress: (status) => {
+          onProgress: status => {
             console.log(
               `   ⏳ Full-text progress: ${status.readyCount}/${status.total} ready (${status.progressPercent}%) - ${status.fetching.length} fetching - ${status.elapsedSeconds}s elapsed`
             );
-            // DAY 33 FIX: Update toast with real-time progress
-            toast.loading(
-              `Fetching full-text articles: ${status.readyCount}/${status.total} ready (${status.elapsedSeconds}s elapsed)`,
-              { id: preparingToast }
+            // Phase 10 Day 34: Update modal with real-time progress
+            setPreparingMessage(
+              `Fetching full-text articles: ${status.readyCount}/${status.total} ready (${status.elapsedSeconds}s elapsed)`
             );
           },
         });
 
         console.log(`   ✅ Wait complete: ${waitResult.reason}`);
-        console.log(`      • Ready: ${waitResult.status.readyCount}/${waitResult.status.total}`);
+        console.log(
+          `      • Ready: ${waitResult.status.readyCount}/${waitResult.status.total}`
+        );
         console.log(`      • Fetching: ${waitResult.status.fetching.length}`);
         console.log(`      • Failed: ${waitResult.status.failed.length}`);
-        console.log(`      • Not fetched: ${waitResult.status.notFetched.length}`);
+        console.log(
+          `      • Not fetched: ${waitResult.status.notFetched.length}`
+        );
 
-        // DAY 33 FIX: Update toast with completion status
+        // Phase 10 Day 34: Show completion status in modal
         const readyCount = waitResult.status.readyCount;
         const totalCount = waitResult.status.total;
-        toast.success(
-          `Full-text ready: ${readyCount}/${totalCount} papers (${Math.round((readyCount/totalCount)*100)}%)`,
-          { id: preparingToast, duration: 3000 }
+        setPreparingMessage(
+          `Full-text ready: ${readyCount}/${totalCount} papers (${Math.round((readyCount / totalCount) * 100)}%)`
         );
+        // Wait 1.5 seconds to show the completion message
+        await new Promise(resolve => setTimeout(resolve, 1500));
       } else {
-        console.log(`   ℹ️ No papers waiting for full-text (all have full-text or lack identifiers)`);
-        // DAY 33 FIX: Update toast for no-wait case
-        toast.success('Papers ready for extraction', { id: preparingToast, duration: 2000 });
+        console.log(
+          `   ℹ️ No papers waiting for full-text (all have full-text or lack identifiers)`
+        );
+        // Phase 10 Day 34: Show ready status in modal
+        setPreparingMessage('Papers ready for extraction');
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
       // CRITICAL: ALWAYS fetch updated papers from DB after saving, regardless of full-text wait
@@ -1246,9 +1262,13 @@ function LiteratureSearchContent() {
         }
       }
 
-      console.log(`   ✅ Updated ${updatedCount}/${selectedPaperObjects.length} papers from database`);
+      console.log(
+        `   ✅ Updated ${updatedCount}/${selectedPaperObjects.length} papers from database`
+      );
       console.log(`      • Papers with full-text: ${fullTextCount}`);
-      console.log(`      • Papers with abstract only: ${updatedCount - fullTextCount}`);
+      console.log(
+        `      • Papers with abstract only: ${updatedCount - fullTextCount}`
+      );
       console.log(``);
 
       // Analyze content types
@@ -1352,10 +1372,14 @@ function LiteratureSearchContent() {
 
       if (allSources.length === 0) {
         console.error(`❌ [${requestId}] No sources with content - aborting`);
-        toast.error(
-          'Selected papers have no content. Please select papers with abstracts or full-text.'
+        // Phase 10 Day 34: Show error in modal instead of toast
+        setPreparingMessage(
+          '❌ Selected papers have no content. Please select papers with abstracts or full-text.'
         );
-        // CRITICAL FIX: Reset extraction flag when aborting
+        // Wait 3 seconds to show error, then close modal
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        setShowModeSelectionModal(false);
+        setPreparingMessage('');
         setIsExtractionInProgress(false);
         setAnalyzingThemes(false);
         return;
@@ -1429,22 +1453,34 @@ function LiteratureSearchContent() {
             ? 'MODERATE (long abstracts)'
             : 'LOW (short abstracts only)';
 
-      const qualityEmoji = contentTypeBreakdown.fullText > 0 ? '✅' : contentTypeBreakdown.abstractOverflow > 0 ? '⚠️' : '🔴';
+      const qualityEmoji =
+        contentTypeBreakdown.fullText > 0
+          ? '✅'
+          : contentTypeBreakdown.abstractOverflow > 0
+            ? '⚠️'
+            : '🔴';
 
-      console.log(`\n   🎯 Quality Assessment: ${qualityEmoji} ${qualityLevel}`);
-      console.log(`      • Full-text papers: ${contentTypeBreakdown.fullText} | Abstract overflow: ${contentTypeBreakdown.abstractOverflow} | Standard abstracts: ${contentTypeBreakdown.abstract} | No content: ${contentTypeBreakdown.none}`);
+      console.log(
+        `\n   🎯 Quality Assessment: ${qualityEmoji} ${qualityLevel}`
+      );
+      console.log(
+        `      • Full-text papers: ${contentTypeBreakdown.fullText} | Abstract overflow: ${contentTypeBreakdown.abstractOverflow} | Standard abstracts: ${contentTypeBreakdown.abstract} | No content: ${contentTypeBreakdown.noContent}`
+      );
       console.log(`${'─'.repeat(60)}\n`);
 
       // Phase 10 Day 31: Show mode selection modal (quick vs guided)
       console.log(
         `🎯 [${requestId}] STEP 2: Opening Mode Selection Modal (Quick vs Guided)...`
       );
-      setShowModeSelectionModal(true);
+      // Phase 10 Day 34: Clear preparing message when ready for mode selection
+      setPreparingMessage('');
     } catch (error) {
       console.error(`❌ [${requestId}] Failed to fetch saved papers:`, error);
-      toast.error(
-        'Failed to load full-text content. Using available abstracts.'
+      // Phase 10 Day 34: Show error in modal instead of toast
+      setPreparingMessage(
+        '⚠️ Failed to load full-text content. Using available abstracts...'
       );
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Fallback: Use papers from Zustand store even without fullText
       const selectedPaperObjects = papers.filter(p =>
@@ -1555,8 +1591,8 @@ function LiteratureSearchContent() {
         sources: allSources,
       });
 
-      // Still show mode selection modal even on error
-      setShowModeSelectionModal(true);
+      // Phase 10 Day 34: Clear preparing message when ready for mode selection (fallback path)
+      setPreparingMessage('');
     }
   };
 
@@ -6381,9 +6417,15 @@ function LiteratureSearchContent() {
       {showModeSelectionModal && (
         <ModeSelectionModal
           isOpen={showModeSelectionModal}
-          onClose={() => setShowModeSelectionModal(false)}
+          onClose={() => {
+            setShowModeSelectionModal(false);
+            setPreparingMessage('');
+            setIsExtractionInProgress(false);
+          }}
           onModeSelected={handleModeSelected}
           selectedPaperCount={selectedPapers.size}
+          loading={!!preparingMessage}
+          preparingMessage={preparingMessage}
         />
       )}
 

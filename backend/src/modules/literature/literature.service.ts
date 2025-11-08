@@ -1616,13 +1616,14 @@ export class LiteratureService {
       if (existingPaper) {
         this.logger.log(`Returning existing paper ID: ${existingPaper.id}`);
 
-        // Still queue for full-text if needed
+        // Still queue for full-text if needed (Phase 10 Day 34: Also retry failed papers)
         if (
           (saveDto.doi || saveDto.pmid || saveDto.url) &&
-          existingPaper.fullTextStatus === 'not_fetched'
+          (existingPaper.fullTextStatus === 'not_fetched' ||
+            existingPaper.fullTextStatus === 'failed')
         ) {
           this.logger.log(
-            `🔍 Queueing full-text extraction for existing paper`,
+            `🔍 Queueing full-text extraction for existing paper (status: ${existingPaper.fullTextStatus})`,
           );
           this.pdfQueueService.addJob(existingPaper.id).catch((err) => {
             this.logger.warn(`Failed to queue: ${err.message}`);
@@ -1660,15 +1661,21 @@ export class LiteratureService {
       // DIAGNOSTIC: Log actual identifier values (detect empty strings vs null)
       const hasValidIdentifiers = Boolean(
         (saveDto.doi && saveDto.doi.trim()) ||
-        (saveDto.pmid && saveDto.pmid.trim()) ||
-        (saveDto.url && saveDto.url.trim())
+          (saveDto.pmid && saveDto.pmid.trim()) ||
+          (saveDto.url && saveDto.url.trim()),
       );
 
       if (hasValidIdentifiers) {
         const sources = [
-          saveDto.pmid && saveDto.pmid.trim() ? `PMID:${saveDto.pmid.trim()}` : null,
-          saveDto.doi && saveDto.doi.trim() ? `DOI:${saveDto.doi.trim()}` : null,
-          saveDto.url && saveDto.url.trim() ? `URL:${saveDto.url.substring(0, 50)}...` : null,
+          saveDto.pmid && saveDto.pmid.trim()
+            ? `PMID:${saveDto.pmid.trim()}`
+            : null,
+          saveDto.doi && saveDto.doi.trim()
+            ? `DOI:${saveDto.doi.trim()}`
+            : null,
+          saveDto.url && saveDto.url.trim()
+            ? `URL:${saveDto.url.substring(0, 50)}...`
+            : null,
         ]
           .filter(Boolean)
           .join(', ');
@@ -1687,7 +1694,9 @@ export class LiteratureService {
         // Fire-and-forget: don't wait for full-text fetch (background job)
         try {
           const jobId = await this.pdfQueueService.addJob(paper.id);
-          this.logger.log(`✅ Job ${jobId} queued successfully for paper ${paper.id}`);
+          this.logger.log(
+            `✅ Job ${jobId} queued successfully for paper ${paper.id}`,
+          );
         } catch (err: any) {
           this.logger.error(
             `❌ Failed to queue full-text job for ${paper.id}: ${err.message}`,
@@ -3573,7 +3582,10 @@ ER  -`;
                 // Phase 10 Day 33 Fix: Record request for quota tracking
                 this.quotaMonitor.recordRequest('semantic-scholar');
 
-                if (searchResponse.data?.data && searchResponse.data.data.length > 0) {
+                if (
+                  searchResponse.data?.data &&
+                  searchResponse.data.data.length > 0
+                ) {
                   // Find best match using fuzzy title matching
                   const bestMatch = this.findBestTitleMatch(
                     dbPaper.title,
@@ -3817,12 +3829,16 @@ ER  -`;
         }
         // Word overlap score = 0-80
         else {
-          const queryWords = normalizedQuery.split(' ').filter((w) => w.length > 3);
+          const queryWords = normalizedQuery
+            .split(' ')
+            .filter((w) => w.length > 3);
           const resultWords = normalizedResult
             .split(' ')
             .filter((w) => w.length > 3);
 
-          const overlap = queryWords.filter((w) => resultWords.includes(w)).length;
+          const overlap = queryWords.filter((w) =>
+            resultWords.includes(w),
+          ).length;
           const totalWords = Math.max(queryWords.length, resultWords.length);
 
           if (totalWords > 0) {
@@ -3836,7 +3852,12 @@ ER  -`;
         }
 
         // Boost score if authors match (simple name overlap)
-        if (authors && authors.length > 0 && result.authors && result.authors.length > 0) {
+        if (
+          authors &&
+          authors.length > 0 &&
+          result.authors &&
+          result.authors.length > 0
+        ) {
           const authorLastNames = authors.map((a) =>
             a.split(' ').pop()?.toLowerCase(),
           );
@@ -3872,7 +3893,9 @@ ER  -`;
     }
 
     // No good match found
-    this.logger.debug(`Best score was ${scoredResults[0]?.score || 0}, below threshold of 70`);
+    this.logger.debug(
+      `Best score was ${scoredResults[0]?.score || 0}, below threshold of 70`,
+    );
     return null;
   }
 }

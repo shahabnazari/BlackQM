@@ -256,16 +256,16 @@ export class APIQuotaMonitorService {
   logQuotaSummary(): void {
     const allStats = this.getAllQuotaStats();
     const criticalProviders = allStats.filter(
-      (s) => s.status === 'critical' || s.status === 'blocked'
+      (s) => s.status === 'critical' || s.status === 'blocked',
     );
 
     if (criticalProviders.length > 0) {
       this.logger.warn(
-        `🚨 [Quota Alert] ${criticalProviders.length} API(s) approaching rate limits:`
+        `🚨 [Quota Alert] ${criticalProviders.length} API(s) approaching rate limits:`,
       );
       criticalProviders.forEach((stat) => {
         this.logger.warn(
-          `   • ${stat.provider}: ${stat.requestCount}/${stat.maxRequests} (${stat.percentUsed}%) - ${stat.status.toUpperCase()}`
+          `   • ${stat.provider}: ${stat.requestCount}/${stat.maxRequests} (${stat.percentUsed}%) - ${stat.status.toUpperCase()}`,
         );
       });
     }
@@ -308,15 +308,6 @@ export class APIQuotaMonitorService {
   }
 
   /**
-   * Phase 10 Day 33: Reset quota for specific provider (admin only)
-   * Use with caution - for testing or emergency quota resets
-   */
-  resetQuota(provider: string): void {
-    this.windows.delete(provider);
-    this.logger.warn(`🔄 [Quota] Reset quota for provider: ${provider}`);
-  }
-
-  /**
    * Phase 10 Day 33: Scheduled quota monitoring (production alerts)
    * Runs every 5 minutes to log quota status and alert on critical usage
    *
@@ -334,11 +325,11 @@ export class APIQuotaMonitorService {
 
     if (blockedProviders.length > 0) {
       this.logger.error(
-        `🚨 PRODUCTION ALERT: ${blockedProviders.length} API provider(s) BLOCKED due to rate limits`
+        `🚨 PRODUCTION ALERT: ${blockedProviders.length} API provider(s) BLOCKED due to rate limits`,
       );
       blockedProviders.forEach((stat) => {
         this.logger.error(
-          `   🚫 ${stat.provider}: ${stat.requestCount}/${stat.maxRequests} (${stat.percentUsed}%) - Resets at ${stat.resetAt.toISOString()}`
+          `   🚫 ${stat.provider}: ${stat.requestCount}/${stat.maxRequests} (${stat.percentUsed}%) - Resets at ${stat.resetAt.toISOString()}`,
         );
       });
 
@@ -360,13 +351,14 @@ export class APIQuotaMonitorService {
     this.logger.log(`   Monitoring ${this.providers.size} API providers:`);
     this.providers.forEach((config, key) => {
       this.logger.log(
-        `   • ${config.name}: ${config.requestsPerWindow} req/${config.windowMs}ms (warn: ${config.warningThreshold * 100}%, block: ${config.blockingThreshold * 100}%)`
+        `   • ${config.name}: ${config.requestsPerWindow} req/${config.windowMs}ms (warn: ${config.warningThreshold * 100}%, block: ${config.blockingThreshold * 100}%)`,
       );
     });
   }
 
   /**
-   * Reset quota for a specific provider (manual override)
+   * Phase 10 Day 33: Reset quota for specific provider (admin only)
+   * Use with caution - for testing or emergency quota resets
    */
   resetQuota(provider: string): void {
     const config = this.providers.get(provider);

@@ -82,7 +82,7 @@ export class PDFQueueService {
       const availableIdentifiers = [
         hasValidDoi ? `DOI:${paper.doi}` : null,
         hasValidPmid ? `PMID:${paper.pmid}` : null,
-        hasValidUrl ? `URL:${paper.url.substring(0, 40)}...` : null,
+        hasValidUrl ? `URL:${paper.url?.substring(0, 40)}...` : null,
       ]
         .filter(Boolean)
         .join(', ');
@@ -91,7 +91,9 @@ export class PDFQueueService {
         `Adding job for paper "${paper.title?.substring(0, 50)}..." using: ${availableIdentifiers}`,
       );
     } catch (error: any) {
-      this.logger.error(`❌ Failed to validate paper ${paperId}: ${error.message}`);
+      this.logger.error(
+        `❌ Failed to validate paper ${paperId}: ${error.message}`,
+      );
       throw error; // Re-throw to prevent queuing invalid jobs
     }
 
@@ -122,7 +124,9 @@ export class PDFQueueService {
       });
       this.logger.log(`✅ Updated paper ${paperId} status to 'fetching'`);
     } catch (error: any) {
-      this.logger.warn(`Failed to update paper ${paperId} status: ${error.message}`);
+      this.logger.warn(
+        `Failed to update paper ${paperId} status: ${error.message}`,
+      );
       // Non-critical: job will still process
     }
 
