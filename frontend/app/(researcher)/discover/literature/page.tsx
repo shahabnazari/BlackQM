@@ -6,9 +6,7 @@
 
 'use client';
 
-import { AcademicInstitutionLogin } from '@/components/literature/AcademicInstitutionLogin';
 import { getAcademicIcon } from '@/components/literature/AcademicSourceIcons';
-import { CostCalculator } from '@/components/literature/CostCalculator';
 import { CrossPlatformDashboard } from '@/components/literature/CrossPlatformDashboard';
 import DatabaseSourcesInfo from '@/components/literature/DatabaseSourcesInfo';
 import EnterpriseThemeCard from '@/components/literature/EnterpriseThemeCard';
@@ -43,7 +41,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // Phase 10 Day 31: QueryExpansionAPI now handled by SearchBar component
 import {
@@ -65,18 +62,21 @@ import { useThemeExtractionProgress } from '@/lib/hooks/useThemeExtractionProgre
 import { useIncrementalExtraction } from '@/lib/hooks/useIncrementalExtraction';
 // Phase 10 Day 31.4: Full-Text Waiting Hook
 import { useWaitForFullText } from '@/lib/hooks/useWaitForFullText';
+// Phase 10.1 Day 4: Paper Management & State Persistence Hooks
+import { usePaperManagement } from '@/lib/hooks/usePaperManagement';
+import { useStatePersistence } from '@/lib/hooks/useStatePersistence';
+// Phase 10.1 Day 5: Search & Data Fetching Hooks
+import { useLiteratureSearch } from '@/lib/hooks/useLiteratureSearch';
+// import { useFullTextFetching } from '@/lib/hooks/useFullTextFetching'; // Available for future use
+import { useAlternativeSources } from '@/lib/hooks/useAlternativeSources';
 import {
   literatureAPI,
-  Paper,
+  // type Paper, // Available if needed
   ResearchGap,
 } from '@/lib/services/literature-api.service';
 // Phase 10 Day 5.17.4: State persistence for back button navigation
-import {
-  clearLiteratureState,
-  getSavedStateSummary,
-  loadLiteratureState,
-  saveLiteratureState,
-} from '@/lib/services/literature-state-persistence.service';
+// Phase 10.1 Day 4: State persistence now handled by useStatePersistence hook
+// import { clearLiteratureState, getSavedStateSummary, loadLiteratureState, saveLiteratureState } from '@/lib/services/literature-state-persistence.service';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -87,7 +87,6 @@ import {
   Check,
   ChevronRight,
   Database,
-  Download,
   ExternalLink,
   FileText,
   GitBranch,
@@ -104,7 +103,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 // Phase 10 Day 33: WebSocket for real-time theme extraction progress
-import { io, Socket } from 'socket.io-client';
+import io from 'socket.io-client';
+type Socket = ReturnType<typeof io>;
 import { useAuth } from '@/components/providers/AuthProvider';
 import { retryApiCall } from '@/lib/utils/retry';
 // Phase 10 Day 31: Extracted SearchSection Components
@@ -113,6 +113,11 @@ import {
   FilterPanel,
   SearchBar,
 } from './components/SearchSection';
+// Phase 10.1 Day 3: Extracted PaperCard Component
+import { PaperCard } from './components/PaperCard';
+// Phase 10.1 Day 3: Extracted Panel Components
+import { AcademicResourcesPanel } from './components/AcademicResourcesPanel';
+import { AlternativeSourcesPanel } from './components/AlternativeSourcesPanel';
 // Phase 10 Day 31: useSearch hook available for future migration
 import { useLiteratureSearchStore } from '@/lib/stores/literature-search.store';
 
@@ -136,7 +141,7 @@ function LiteratureSearchContent() {
     totalResults,
     setTotalResults,
     loading,
-    setLoading,
+    // setLoading, // Handled by useLiteratureSearch hook
     currentPage,
     setCurrentPage,
     showFilters,
@@ -148,12 +153,24 @@ function LiteratureSearchContent() {
     applyFilters,
   } = useLiteratureSearchStore();
 
-  // Phase 10 Day 31: Search orchestration handled by local handleSearchAllSources
-  // Note: Future refactoring could migrate to useSearch().searchAllSources
-  const [queryCorrectionMessage, setQueryCorrectionMessage] = useState<{
-    original: string;
-    corrected: string;
-  } | null>(null);
+  // Phase 10.1 Day 5: Literature Search Hook (replaces manual search state and handlers)
+  const {
+    academicDatabases,
+    setAcademicDatabases,
+    queryCorrectionMessage,
+    clearQueryCorrection,
+    handleSearch,
+  } = useLiteratureSearch({
+    autoSelectPapers: true,
+    autoSwitchToResults: true,
+    onSearchSuccess: () => {
+      setActiveTab('results');
+      setActiveResultsSubTab('papers');
+      // Auto-select all papers for extraction
+      const allPaperIds = new Set(papers.map(p => p.id));
+      setSelectedPapers(allPaperIds);
+    },
+  });
   // const [selectedView, setSelectedView] = useState<'list' | 'grid'>('list');
 
   // Phase 10 Day 31: AI suggestions, filters, and presets now managed by Zustand store
@@ -188,14 +205,23 @@ function LiteratureSearchContent() {
 
   // Phase 10 Day 31: Filter handlers now managed by Zustand (applyFilters, resetFilters, presets)
 
+  // Phase 10.1 Day 4: Paper Management Hook (replaces manual state declarations)
+  const {
+    selectedPapers,
+    savedPapers,
+    extractingPapers,
+    extractedPapers,
+    setSelectedPapers,
+    setSavedPapers,
+    setExtractingPapers,
+    setExtractedPapers,
+    togglePaperSelection,
+    handleTogglePaperSave,
+    loadUserLibrary: loadUserLibraryFromHook,
+    // handleSavePaper, handleRemovePaper, isSelected, isSaved, isExtracting, isExtracted - available if needed
+  } = usePaperManagement();
+
   // Analysis state
-  const [selectedPapers, setSelectedPapers] = useState<Set<string>>(new Set());
-  const [extractedPapers, setExtractedPapers] = useState<Set<string>>(
-    new Set()
-  ); // Phase 10 Day 5.7: Track extracted papers
-  const [extractingPapers, setExtractingPapers] = useState<Set<string>>(
-    new Set()
-  ); // Phase 10 Day 5.7: Track papers currently being extracted
   const [unifiedThemes, setUnifiedThemes] = useState<UnifiedTheme[]>([]);
   const [gaps, setGaps] = useState<ResearchGap[]>([]);
   const [analyzingThemes, setAnalyzingThemes] = useState(false);
@@ -269,47 +295,36 @@ function LiteratureSearchContent() {
   const [loadingSurvey, setLoadingSurvey] = useState(false);
   const [showSurveyModal, setShowSurveyModal] = useState(false);
 
-  // Library state
-  const [savedPapers, setSavedPapers] = useState<Paper[]>([]);
+  // Library state (savedPapers now managed by usePaperManagement hook)
   const [activeTab, setActiveTab] = useState('results'); // PHASE 9 DAY 24: Changed from 'search' to 'results'
 
-  // Alternative sources state
-  const [alternativeSources, setAlternativeSources] = useState<string[]>([]);
-  const [alternativeResults, setAlternativeResults] = useState<any[]>([]);
-  const [loadingAlternative, setLoadingAlternative] = useState(false);
-
-  // YouTube video selection state
-  const [youtubeVideos, setYoutubeVideos] = useState<any[]>([]);
-
-  // PHASE 9 DAY 13: Social media state
-  const [socialPlatforms, setSocialPlatforms] = useState<string[]>([]);
-  const [socialResults, setSocialResults] = useState<any[]>([]);
-  const [loadingSocial, setLoadingSocial] = useState(false);
-  const [socialInsights, setSocialInsights] = useState<any>(null);
-
-  // PHASE 9 DAY 18: Multimedia transcription state
-  const [transcriptionOptions, setTranscriptionOptions] = useState({
-    includeTranscripts: false,
-    extractThemes: false,
-    maxResults: 10,
+  // Phase 10.1 Day 5: Alternative Sources Hook (replaces manual alternative sources state)
+  const {
+    alternativeSources,
+    setAlternativeSources,
+    alternativeResults,
+    loadingAlternative,
+    youtubeVideos,
+    setYoutubeVideos,
+    transcribedVideos,
+    setTranscribedVideos,
+    transcriptionOptions,
+    setTranscriptionOptions,
+    socialPlatforms,
+    setSocialPlatforms,
+    socialResults,
+    socialInsights,
+    loadingSocial,
+    handleSearchAlternativeSources,
+    handleSearchSocialMedia,
+    handleSearchAllSources,
+  } = useAlternativeSources({
+    query,
+    mainSearchHandler: handleSearch,
+    hasMainSources: academicDatabases.length > 0,
+    mainSourcesCount: academicDatabases.length,
+    onSwitchTab: setActiveTab,
   });
-
-  // PHASE 9 DAY 20.5: Transcribed videos state
-  const [transcribedVideos, setTranscribedVideos] = useState<
-    {
-      id: string;
-      title: string;
-      sourceId: string; // YouTube video ID
-      url: string;
-      channel?: string;
-      duration: number; // in seconds
-      cost: number; // transcription cost
-      transcript: string;
-      themes?: any[];
-      extractedAt: string;
-      cached: boolean; // whether this was cached (no cost)
-    }[]
-  >([]);
 
   // PHASE 9 DAY 24: UX Reorganization - Panel and tab navigation state
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null); // Which panel section is expanded
@@ -320,13 +335,8 @@ function LiteratureSearchContent() {
     'themes' | 'gaps' | 'synthesis'
   >('themes');
 
-  // PHASE 9 DAY 25: Academic categorization - New state for institution auth and database selection
-  const [academicDatabases, setAcademicDatabases] = useState<string[]>([
-    'pubmed',
-    'semantic_scholar',
-    'crossref',
-    'arxiv',
-  ]);
+  // PHASE 9 DAY 25: Academic categorization - Institution auth state
+  // Phase 10.1 Day 5: academicDatabases now managed by useLiteratureSearch hook
   const [institutionAuth, setInstitutionAuth] = useState<{
     isAuthenticated: boolean;
     institution: any | null;
@@ -342,134 +352,79 @@ function LiteratureSearchContent() {
     accessibleDatabases: [],
   });
 
-  // PHASE 10 DAY 5.17.4: State restoration banner
-  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
-  const [restoreSummary, setRestoreSummary] = useState<{
-    itemCount: number;
-    hoursAgo?: number | undefined;
-  } | null>(null);
+  // Phase 10.1 Day 4: State Persistence Hook (replaces manual state persistence logic)
+  const {
+    showRestoreBanner,
+    restoreSummary,
+    handleRestoreState: restoreStateFromHook,
+    handleDismissRestore,
+  } = useStatePersistence({
+    currentState: {
+      query,
+      papers,
+      totalResults,
+      currentPage,
+      filters,
+      appliedFilters,
+      selectedPapers: Array.from(selectedPapers),
+      savedPapers,
+      unifiedThemes,
+      gaps,
+      extractionPurpose,
+      contentAnalysis,
+      selectedThemeIds,
+      researchQuestions,
+      hypotheses,
+      constructMappings,
+      transcribedVideos,
+      youtubeVideos,
+    },
+    onRestore: (state) => {
+      console.log('🔄 [Literature Page] Restoring state from useStatePersistence hook');
 
-  // PHASE 10 DAY 5.17.4: Load saved state on mount (before other useEffects)
-  useEffect(() => {
-    const summary = getSavedStateSummary();
-    if (summary.exists && summary.itemCount > 0) {
-      console.log('📦 Found saved literature state:', summary);
-      setRestoreSummary({
-        itemCount: summary.itemCount,
-        hoursAgo: summary.hoursAgo,
-      });
-      setShowRestoreBanner(true);
-    }
-  }, []); // Run once on mount
+      // Restore search state
+      if (state.query) setQuery(state.query);
+      if (state.papers) setPapers(state.papers);
+      if (state.totalResults) setTotalResults(state.totalResults);
+      if (state.currentPage) setCurrentPage(state.currentPage);
 
-  // PHASE 10 DAY 5.17.4: Restore state function
+      // Restore filters (Zustand)
+      if (state.filters) {
+        setFilters(state.filters);
+        applyFilters();
+      }
+
+      // Restore selection state
+      if (state.selectedPapers) {
+        setSelectedPapers(new Set(state.selectedPapers));
+      }
+      if (state.savedPapers) setSavedPapers(state.savedPapers);
+
+      // Restore analysis state
+      if (state.unifiedThemes) setUnifiedThemes(state.unifiedThemes);
+      if (state.gaps) setGaps(state.gaps);
+      if (state.extractionPurpose)
+        setExtractionPurpose(state.extractionPurpose as ResearchPurpose);
+      if (state.contentAnalysis) setContentAnalysis(state.contentAnalysis);
+
+      // Restore Enhanced Theme Integration
+      if (state.selectedThemeIds) setSelectedThemeIds(state.selectedThemeIds);
+      if (state.researchQuestions) setResearchQuestions(state.researchQuestions);
+      if (state.hypotheses) setHypotheses(state.hypotheses);
+      if (state.constructMappings) setConstructMappings(state.constructMappings);
+
+      // Restore video state
+      if (state.transcribedVideos) setTranscribedVideos(state.transcribedVideos);
+      if (state.youtubeVideos) setYoutubeVideos(state.youtubeVideos);
+    },
+    debounceDelay: 2000, // Save 2 seconds after last change
+    enableAutoSave: true,
+  });
+
+  // Wrapper for handleRestoreState to match existing function signature
   const handleRestoreState = useCallback(() => {
-    const state = loadLiteratureState();
-    console.log('🔄 Restoring literature state...', state);
-
-    // Restore search state
-    if (state.query) setQuery(state.query);
-    if (state.papers) setPapers(state.papers);
-    if (state.totalResults) setTotalResults(state.totalResults);
-    if (state.currentPage) setCurrentPage(state.currentPage);
-    // Phase 10 Day 31: Filters restored via Zustand (setFilters + applyFilters)
-    if (state.filters) {
-      setFilters(state.filters);
-      applyFilters();
-    }
-
-    // Restore selection state
-    if (state.selectedPapers) {
-      setSelectedPapers(new Set(state.selectedPapers));
-    }
-    if (state.savedPapers) setSavedPapers(state.savedPapers);
-
-    // Restore analysis state
-    if (state.unifiedThemes) setUnifiedThemes(state.unifiedThemes);
-    if (state.gaps) setGaps(state.gaps);
-    if (state.extractionPurpose)
-      setExtractionPurpose(state.extractionPurpose as ResearchPurpose);
-    if (state.contentAnalysis) setContentAnalysis(state.contentAnalysis);
-
-    // Restore Enhanced Theme Integration
-    if (state.selectedThemeIds) setSelectedThemeIds(state.selectedThemeIds);
-    if (state.researchQuestions) setResearchQuestions(state.researchQuestions);
-    if (state.hypotheses) setHypotheses(state.hypotheses);
-    if (state.constructMappings) setConstructMappings(state.constructMappings);
-
-    // Restore video state
-    if (state.transcribedVideos) setTranscribedVideos(state.transcribedVideos);
-    if (state.youtubeVideos) setYoutubeVideos(state.youtubeVideos);
-
-    setShowRestoreBanner(false);
-    toast.success(
-      `Restored ${state.unifiedThemes?.length || 0} themes, ${state.papers?.length || 0} papers`
-    );
-  }, []);
-
-  // PHASE 10 DAY 5.17.4: Dismiss restore banner
-  const handleDismissRestore = useCallback(() => {
-    setShowRestoreBanner(false);
-    clearLiteratureState();
-    toast.info('Starting fresh session');
-  }, []);
-
-  // PHASE 10 DAY 5.17.4: Auto-save state when critical data changes
-  useEffect(() => {
-    // Skip saving on initial mount (wait for user to actually have data)
-    if (
-      papers.length === 0 &&
-      unifiedThemes.length === 0 &&
-      researchQuestions.length === 0
-    ) {
-      return;
-    }
-
-    // Debounce saves to avoid excessive writes
-    const saveTimer = setTimeout(() => {
-      saveLiteratureState({
-        query,
-        papers,
-        totalResults,
-        currentPage,
-        filters,
-        appliedFilters,
-        selectedPapers: Array.from(selectedPapers),
-        savedPapers,
-        unifiedThemes,
-        gaps,
-        extractionPurpose,
-        contentAnalysis,
-        selectedThemeIds,
-        researchQuestions,
-        hypotheses,
-        constructMappings,
-        transcribedVideos,
-        youtubeVideos,
-      });
-    }, 2000); // Save 2 seconds after last change
-
-    return () => clearTimeout(saveTimer);
-  }, [
-    query,
-    papers,
-    totalResults,
-    currentPage,
-    filters,
-    appliedFilters,
-    selectedPapers,
-    savedPapers,
-    unifiedThemes,
-    gaps,
-    extractionPurpose,
-    contentAnalysis,
-    selectedThemeIds,
-    researchQuestions,
-    hypotheses,
-    constructMappings,
-    transcribedVideos,
-    youtubeVideos,
-  ]);
+    restoreStateFromHook();
+  }, [restoreStateFromHook]);
 
   // PHASE 10 DAY 33: WebSocket connection for real-time theme extraction progress
   // Implements Patent Claim #9 (4-Part Transparent Progress Messaging)
@@ -511,7 +466,7 @@ function LiteratureSearchContent() {
       console.log('❌ WebSocket disconnected from theme-extraction gateway');
     });
 
-    socket.on('connect_error', error => {
+    socket.on('connect_error', (error: any) => {
       console.error('❌ WebSocket connection error:', error.message);
     });
 
@@ -634,205 +589,15 @@ function LiteratureSearchContent() {
   }, [extractionPurpose]); // eslint-disable-line react-hooks/exhaustive-deps
   // Note: We intentionally omit result state variables from deps to avoid clearing on result updates
 
-  // Load saved papers on mount
+  // Phase 10.1 Day 4: Load saved papers on mount (now using hook's loadUserLibrary)
   useEffect(() => {
-    loadUserLibrary();
-  }, []);
-
-  const loadUserLibrary = async () => {
-    try {
-      const { papers } = await literatureAPI.getUserLibrary();
-      setSavedPapers(papers);
-    } catch (error) {
-      console.error('Failed to load library:', error);
-    }
-  };
+    loadUserLibraryFromHook();
+  }, [loadUserLibraryFromHook]);
 
   // Phase 10 Day 31: AI suggestions now handled by SearchBar component
 
-  const handleSearch = useCallback(async () => {
-    if (!query.trim()) {
-      toast.error('Please enter a search query');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      console.log('='.repeat(80));
-      console.log('🔍 SEARCH START');
-      console.log('Query:', query);
-      console.log('Applied Filters:', appliedFilters);
-      console.log('Selected Sources (academicDatabases):', academicDatabases);
-      console.log('Sources count:', academicDatabases.length);
-
-      const searchParams = {
-        query,
-        sources: academicDatabases,
-        ...(appliedFilters.yearFrom && { yearFrom: appliedFilters.yearFrom }),
-        ...(appliedFilters.yearTo && { yearTo: appliedFilters.yearTo }),
-        ...(appliedFilters.minCitations !== undefined && {
-          minCitations: appliedFilters.minCitations,
-        }),
-        ...(appliedFilters.publicationType !== 'all'
-          ? { publicationType: appliedFilters.publicationType }
-          : {}),
-        ...(appliedFilters.author &&
-          appliedFilters.author.trim().length > 0 && {
-            author: appliedFilters.author.trim(),
-            authorSearchMode: appliedFilters.authorSearchMode,
-          }),
-        // Phase 10 Day 5.13+ Extension 2: Enhanced sorting with quality metrics
-        sortByEnhanced: appliedFilters.sortBy,
-        page: currentPage,
-        limit: 20,
-        includeCitations: true,
-        // Phase 10 Day 5.13+ Extension 2: Default to 100-word minimum abstract (enterprise research-grade)
-        minAbstractLength: 100,
-      };
-
-      console.log('📤 Sending search params:', searchParams);
-
-      const result = await literatureAPI.searchLiterature(searchParams);
-
-      console.log('✅ Search result received:', result);
-      console.log('📚 Papers array:', result.papers);
-      console.log('📚 Papers count:', result.papers?.length);
-      console.log('📈 Total results:', result.total);
-      console.log('='.repeat(80));
-
-      // Google-like: Check if query was auto-corrected
-      if ((result as any).correctedQuery && (result as any).originalQuery) {
-        setQueryCorrectionMessage({
-          original: (result as any).originalQuery,
-          corrected: (result as any).correctedQuery,
-        });
-      } else {
-        setQueryCorrectionMessage(null);
-      }
-
-      // Check if filters are too restrictive
-      if (result.total === 0 && getAppliedFilterCount() > 0) {
-        const hasStrictFilters =
-          (appliedFilters.minCitations && appliedFilters.minCitations > 0) ||
-          (appliedFilters.yearFrom &&
-            appliedFilters.yearFrom >= new Date().getFullYear() - 2);
-
-        if (hasStrictFilters) {
-          toast.warning(
-            'No papers found with current filters. Try removing the citation filter or expanding the year range.',
-            { duration: 6000 }
-          );
-        }
-      }
-
-      if (result.papers && result.papers.length > 0) {
-        setPapers(result.papers);
-        setTotalResults(result.total);
-        setActiveTab('results'); // PHASE 9 DAY 24: Switch to results tab
-        setActiveResultsSubTab('papers'); // Show papers sub-tab
-
-        // Phase 10 Day 34: Auto-select all papers by default
-        const allPaperIds = new Set(result.papers.map(p => p.id));
-        setSelectedPapers(allPaperIds);
-        console.log(
-          '✅ Papers state updated with',
-          result.papers.length,
-          'papers (all selected by default)'
-        );
-        console.log('📑 Active tab set to:', 'results');
-        toast.success(
-          `Found ${result.total} papers across ${academicDatabases.length} databases. All papers selected by default.`
-        );
-      } else {
-        console.warn('⚠️ No papers in result');
-        setPapers([]);
-        setTotalResults(0);
-        setSelectedPapers(new Set()); // Phase 10 Day 34: Clear selections
-        setActiveTab('results'); // PHASE 9 DAY 24: Switch to results tab
-        setActiveResultsSubTab('papers'); // Show papers sub-tab
-
-        // More helpful message based on filters
-        if (getAppliedFilterCount() > 0) {
-          const filterHints = [];
-          if (appliedFilters.minCitations && appliedFilters.minCitations > 0) {
-            filterHints.push(
-              `citation filter (≥${appliedFilters.minCitations})`
-            );
-          }
-          if (
-            appliedFilters.yearFrom &&
-            appliedFilters.yearFrom >= new Date().getFullYear() - 2
-          ) {
-            filterHints.push(
-              `recent year filter (${appliedFilters.yearFrom}+)`
-            );
-          }
-
-          if (filterHints.length > 0) {
-            toast.info(
-              `No papers found. Your ${filterHints.join(' and ')} may be too restrictive. Try removing filters or adjusting the year range.`,
-              { duration: 7000 }
-            );
-          } else {
-            toast.info(
-              'No papers found with current filters. Try removing some filters.'
-            );
-          }
-        } else {
-          toast.info('No papers found. Try adjusting your search terms.');
-        }
-      }
-    } catch (error) {
-      toast.error('Search failed. Please try again.');
-      console.error('❌ Search error:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [query, appliedFilters, academicDatabases, currentPage]);
-
-  const handleSavePaper = async (paper: Paper) => {
-    try {
-      console.log('💾 Saving paper:', paper.title);
-      const result = await literatureAPI.savePaper(paper);
-
-      if (result.success) {
-        // Add paper to saved list if not already there
-        setSavedPapers(prevPapers => {
-          const exists = prevPapers.some(p => p.id === paper.id);
-          if (!exists) {
-            return [...prevPapers, paper];
-          }
-          return prevPapers;
-        });
-        toast.success('Paper saved to library');
-
-        // Refresh library to sync with backend/localStorage
-        setTimeout(() => loadUserLibrary(), 500);
-      }
-    } catch (error) {
-      console.error('Save paper error:', error);
-      toast.error('Failed to save paper');
-    }
-  };
-
-  const handleRemovePaper = async (paperId: string) => {
-    try {
-      console.log('🗑️ Removing paper:', paperId);
-      const result = await literatureAPI.removePaper(paperId);
-
-      if (result.success) {
-        // Remove paper from saved list
-        setSavedPapers(prevPapers => prevPapers.filter(p => p.id !== paperId));
-        toast.success('Paper removed from library');
-
-        // Refresh library to sync with backend/localStorage
-        setTimeout(() => loadUserLibrary(), 500);
-      }
-    } catch (error) {
-      console.error('Remove paper error:', error);
-      toast.error('Failed to remove paper');
-    }
-  };
+  // Phase 10.1 Day 5: handleSearch now provided by useLiteratureSearch hook (141 lines removed)
+  // Phase 10.1 Day 4: handleSavePaper, handleRemovePaper now provided by usePaperManagement hook
 
   const handleExtractThemes = async () => {
     // Phase 10 Day 34: CRITICAL FIX - Prevent duplicate extraction sessions
@@ -2815,629 +2580,11 @@ function LiteratureSearchContent() {
     }
   };
 
-  const handleSearchAlternativeSources = async () => {
-    if (!query.trim()) {
-      toast.error('Please enter a search query');
-      return;
-    }
-
-    if (alternativeSources.length === 0) {
-      toast.error('Please select at least one alternative source');
-      return;
-    }
-
-    setLoadingAlternative(true);
-    try {
-      // PHASE 9 DAY 18: Use enhanced YouTube search with transcription if enabled
-      if (
-        alternativeSources.includes('youtube') &&
-        transcriptionOptions.includeTranscripts
-      ) {
-        const youtubeResults =
-          await literatureAPI.searchYouTubeWithTranscription(
-            query,
-            transcriptionOptions
-          );
-
-        // PHASE 9 DAY 20.5: Store transcribed videos separately
-        if (
-          youtubeResults.transcripts &&
-          youtubeResults.transcripts.length > 0
-        ) {
-          const newTranscriptions = youtubeResults.transcripts.map(
-            (transcript: any) => ({
-              id: transcript.id || transcript.videoId,
-              title: transcript.title || 'Untitled Video',
-              sourceId: transcript.videoId,
-              url: `https://www.youtube.com/watch?v=${transcript.videoId}`,
-              channel: transcript.channel,
-              duration: transcript.duration || 0,
-              cost: transcript.cost || 0,
-              transcript: transcript.transcript || transcript.text || '',
-              themes: transcript.themes || [],
-              extractedAt: transcript.extractedAt || new Date().toISOString(),
-              cached: transcript.cached || false,
-            })
-          );
-
-          setTranscribedVideos(prev => [...prev, ...newTranscriptions]);
-
-          // Auto-switch to transcriptions tab
-          setActiveTab('transcriptions');
-        }
-
-        // Get results from other sources
-        const otherSources = alternativeSources.filter(s => s !== 'youtube');
-        let otherResults: any[] = [];
-        if (otherSources.length > 0) {
-          otherResults = await literatureAPI.searchAlternativeSources(
-            query,
-            otherSources
-          );
-        }
-
-        const allResults = [...(youtubeResults.videos || []), ...otherResults];
-        setAlternativeResults(allResults);
-
-        // Extract YouTube videos for VideoSelectionPanel
-        if (youtubeResults.videos && youtubeResults.videos.length > 0) {
-          setYoutubeVideos(youtubeResults.videos);
-        }
-
-        if (youtubeResults.transcriptionCost) {
-          toast.success(
-            `Found ${allResults.length} results. ${youtubeResults.transcripts?.length || 0} videos transcribed ($${youtubeResults.transcriptionCost.toFixed(2)})`
-          );
-        } else {
-          toast.success(`Found ${allResults.length} results`);
-        }
-      } else {
-        // Standard search without transcription
-        const results = await literatureAPI.searchAlternativeSources(
-          query,
-          alternativeSources
-        );
-        setAlternativeResults(results);
-
-        // Extract YouTube videos if present
-        if (alternativeSources.includes('youtube')) {
-          const youtubeResults = results.filter(
-            (r: any) => r.source === 'youtube'
-          );
-          if (youtubeResults.length > 0) {
-            setYoutubeVideos(youtubeResults);
-          }
-        }
-
-        toast.success(
-          `Found ${results.length} results from ${alternativeSources.length} alternative sources`
-        );
-      }
-    } catch (error) {
-      toast.error('Alternative sources search failed');
-      console.error('Alternative search error:', error);
-    } finally {
-      setLoadingAlternative(false);
-    }
-  };
-
-  /**
-   * PHASE 9 DAY 13: Search social media platforms
-   * Includes sentiment analysis and engagement-weighted synthesis
-   */
-  const handleSearchSocialMedia = async () => {
-    if (!query.trim()) {
-      toast.error('Please enter a search query');
-      return;
-    }
-
-    if (socialPlatforms.length === 0) {
-      toast.error('Please select at least one social media platform');
-      return;
-    }
-
-    setLoadingSocial(true);
-    try {
-      console.log(
-        '🔍 Social Media Search:',
-        query,
-        'Platforms:',
-        socialPlatforms
-      );
-
-      const results = await literatureAPI.searchSocialMedia(
-        query,
-        socialPlatforms
-      );
-
-      setSocialResults(results);
-
-      // Generate insights from results
-      if (results.length > 0) {
-        const insights = await literatureAPI.getSocialMediaInsights(results);
-        setSocialInsights(insights);
-
-        toast.success(
-          `Found ${results.length} posts from ${socialPlatforms.length} platforms with sentiment analysis`
-        );
-      } else {
-        toast.info(
-          'No social media results found. Try different platforms or queries.'
-        );
-      }
-    } catch (error) {
-      toast.error('Social media search failed');
-      console.error('Social media search error:', error);
-    } finally {
-      setLoadingSocial(false);
-    }
-  };
-
-  /**
-   * MASTER SEARCH: Search all selected sources (main + alternative + social)
-   * Provides unified search experience across all panels
-   */
-  const handleSearchAllSources = async () => {
-    if (!query.trim()) {
-      toast.error('Please enter a search query');
-      return;
-    }
-
-    const hasMainSources = academicDatabases.length > 0;
-    const hasAltSources = alternativeSources.length > 0;
-    const hasSocialSources = socialPlatforms.length > 0;
-
-    if (!hasMainSources && !hasAltSources && !hasSocialSources) {
-      toast.error('Please select at least one source to search');
-      return;
-    }
-
-    // Execute all searches in parallel
-    const searchPromises: Promise<void>[] = [];
-
-    if (hasMainSources) {
-      searchPromises.push(handleSearch());
-    }
-
-    if (hasAltSources) {
-      searchPromises.push(handleSearchAlternativeSources());
-    }
-
-    if (hasSocialSources) {
-      searchPromises.push(handleSearchSocialMedia());
-    }
-
-    await Promise.allSettled(searchPromises);
-
-    const totalSources =
-      (hasMainSources ? academicDatabases.length : 0) +
-      (hasAltSources ? alternativeSources.length : 0) +
-      (hasSocialSources ? socialPlatforms.length : 0);
-
-    toast.success(
-      `🔍 Comprehensive search completed across ${totalSources} sources!`
-    );
-  };
-
-  const togglePaperSelection = (paperId: string) => {
-    const newSelected = new Set(selectedPapers);
-    if (newSelected.has(paperId)) {
-      newSelected.delete(paperId);
-    } else {
-      newSelected.add(paperId);
-    }
-    setSelectedPapers(newSelected);
-  };
-
-  const PaperCard = ({ paper }: { paper: Paper }) => {
-    const isSelected = selectedPapers.has(paper.id);
-    const isSaved = savedPapers.some(p => p.id === paper.id);
-    const isExtracted = extractedPapers.has(paper.id); // Phase 10 Day 5.7: Check extraction status
-    const isExtracting = extractingPapers.has(paper.id); // Phase 10 Day 5.7: Check if currently extracting
-
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        layout // Phase 10 Day 5.7: Prevent jumping during badge updates
-        transition={{ layout: { duration: 0.2 } }}
-        className={cn(
-          'border rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer relative',
-          isSelected && 'border-blue-500 bg-blue-50/50',
-          isExtracted && 'border-green-200 bg-green-50/30',
-          isExtracting && 'border-amber-300 bg-amber-50/30'
-        )}
-        onClick={() => togglePaperSelection(paper.id)}
-      >
-        {/* Phase 10 Day 5.7: Real-time Extracting Status Badge */}
-        {isExtracting && !isExtracted && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            className="absolute -top-2 -right-2 z-10"
-          >
-            <Badge
-              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg px-2 py-1 gap-1 border-2 border-white animate-pulse"
-              aria-label="Extracting themes"
-            >
-              <Loader2 className="w-3 h-3 animate-spin" />
-              <span className="text-xs font-semibold">Extracting...</span>
-            </Badge>
-          </motion.div>
-        )}
-
-        {/* Phase 10 Day 5.7: Extracted Status Badge */}
-        {isExtracted && !isExtracting && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            className="absolute -top-2 -right-2 z-10"
-          >
-            <Badge
-              className="bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg px-2 py-1 gap-1 border-2 border-white"
-              aria-label="Themes extracted"
-            >
-              <Check className="w-3 h-3" />
-              <span className="text-xs font-semibold">Extracted</span>
-            </Badge>
-          </motion.div>
-        )}
-
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <div className="flex items-start gap-3">
-              <div
-                className={cn(
-                  'w-5 h-5 rounded border-2 flex items-center justify-center mt-1 transition-all',
-                  isSelected
-                    ? 'bg-blue-500 border-blue-500'
-                    : 'border-gray-300',
-                  isExtracted && !isSelected && 'border-green-500',
-                  isExtracting && !isSelected && 'border-amber-500 bg-amber-50'
-                )}
-              >
-                {isSelected && <Check className="w-3 h-3 text-white" />}
-                {!isSelected && isExtracting && (
-                  <Loader2 className="w-3 h-3 text-amber-600 animate-spin" />
-                )}
-                {!isSelected && !isExtracting && isExtracted && (
-                  <Check className="w-3 h-3 text-green-500" />
-                )}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-lg leading-tight flex-1">
-                    {paper.title}
-                  </h3>
-                  {paper.source &&
-                    (() => {
-                      const SourceIcon = getAcademicIcon(
-                        paper.source.toLowerCase().replace(/ /g, '_')
-                      );
-                      return (
-                        <Badge
-                          variant="secondary"
-                          className="flex items-center gap-1 shrink-0 px-2 py-1"
-                        >
-                          <SourceIcon className="w-3 h-3" />
-                          <span className="text-xs">{paper.source}</span>
-                        </Badge>
-                      );
-                    })()}
-                </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  {paper.authors?.slice(0, 3).join(', ')}
-                  {paper.authors?.length > 3 &&
-                    ` +${paper.authors.length - 3} more`}
-                </p>
-                <div className="flex gap-4 mt-2 text-sm text-gray-500 flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {paper.year}
-                  </span>
-                  {paper.venue && (
-                    <span className="flex items-center gap-1">
-                      <BookOpen className="w-3 h-3" />
-                      {paper.venue}
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1">
-                    <GitBranch className="w-3 h-3" />
-                    {paper.citationCount === null ||
-                    paper.citationCount === undefined
-                      ? 'No citation info'
-                      : `${paper.citationCount} citation${paper.citationCount === 1 ? '' : 's'}`}
-                  </span>
-                  {/* Phase 10 Day 5.13+: Word Count Badge - Clear Labeling */}
-                  {paper.wordCount !== null &&
-                    paper.wordCount !== undefined && (
-                      <span
-                        className={cn(
-                          'flex items-center gap-1 font-medium',
-                          paper.isEligible ? 'text-green-600' : 'text-amber-600'
-                        )}
-                        title={
-                          `Word count: Title + Abstract (${paper.wordCount.toLocaleString()} words)\n\n` +
-                          `Excludes: references, bibliography, indexes, glossaries, appendices, acknowledgments.\n\n` +
-                          `Abstract only: ${paper.abstractWordCount?.toLocaleString() || 'N/A'} words\n\n` +
-                          (paper.isEligible
-                            ? '✓ Meets minimum 1,000 word threshold for theme extraction'
-                            : '⚠ Below 1,000 word threshold - may lack sufficient content for theme extraction') +
-                          `\n\nNote: Full-text access coming in Phase 10 Day 5.15`
-                        }
-                      >
-                        <MessageSquare className="w-3 h-3" />
-                        {paper.wordCount.toLocaleString()} words
-                        <span className="text-xs opacity-75">
-                          (Title+Abstract)
-                        </span>
-                        {!paper.isEligible && (
-                          <span className="text-xs ml-1 bg-amber-100 px-1 rounded">
-                            short
-                          </span>
-                        )}
-                      </span>
-                    )}
-                  {/* Phase 10 Day 5.15.2: ENHANCED Full-Text + Abstract Overflow Detection */}
-                  {(() => {
-                    const hasFullText =
-                      (paper as any).fullTextStatus === 'success';
-                    const isFetching =
-                      (paper as any).fullTextStatus === 'fetching';
-                    const hasFailed =
-                      (paper as any).fullTextStatus === 'failed';
-                    const abstractLength = paper.abstract?.length || 0;
-                    const isAbstractOverflow = abstractLength > 2000; // Full article in abstract field
-
-                    // Show badge if: has full-text, fetching, failed, OR detected overflow
-                    if (
-                      !hasFullText &&
-                      !isFetching &&
-                      !hasFailed &&
-                      !isAbstractOverflow
-                    )
-                      return null;
-
-                    return (
-                      <span
-                        className={cn(
-                          'flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md',
-                          hasFullText
-                            ? 'text-green-700 bg-green-50 border border-green-200'
-                            : isAbstractOverflow
-                              ? 'text-purple-700 bg-purple-50 border border-purple-200'
-                              : isFetching
-                                ? 'text-blue-700 bg-blue-50 border border-blue-200 animate-pulse'
-                                : 'text-gray-600 bg-gray-50 border border-gray-200'
-                        )}
-                        title={
-                          hasFullText
-                            ? `✅ Full-text available (${(paper as any).fullTextWordCount?.toLocaleString() || 'N/A'} words). Provides 40-50x more content for deeper theme extraction.`
-                            : isAbstractOverflow
-                              ? `📄 Full article detected in abstract field (${abstractLength.toLocaleString()} chars). System will treat as full-text for validation.`
-                              : isFetching
-                                ? 'Fetching full-text PDF from open-access sources (Unpaywall API)...'
-                                : `📝 Abstract-only (${abstractLength} chars). System will automatically adjust validation thresholds for abstract-length content.`
-                        }
-                      >
-                        {hasFullText && (
-                          <>
-                            <svg
-                              className="w-3 h-3"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                            Full-text (
-                            {(
-                              paper as any
-                            ).fullTextWordCount?.toLocaleString() || '?'}{' '}
-                            words)
-                          </>
-                        )}
-                        {isAbstractOverflow && (
-                          <>
-                            <svg
-                              className="w-3 h-3"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                              />
-                            </svg>
-                            Full article ({Math.round(abstractLength / 1000)}k
-                            chars)
-                          </>
-                        )}
-                        {isFetching && (
-                          <>
-                            <svg
-                              className="w-3 h-3 animate-spin"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                              />
-                            </svg>
-                            Fetching full-text...
-                          </>
-                        )}
-                        {!hasFullText && !isAbstractOverflow && !isFetching && (
-                          <>
-                            <svg
-                              className="w-3 h-3"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                              />
-                            </svg>
-                            Abstract ({Math.round(abstractLength)} chars)
-                          </>
-                        )}
-                      </span>
-                    );
-                  })()}
-                  {/* Phase 10 Day 5.13+ Extension 2: Citations per Year (Impact Velocity) */}
-                  {paper.citationsPerYear !== null &&
-                    paper.citationsPerYear !== undefined &&
-                    paper.citationsPerYear > 0 && (
-                      <span
-                        className="flex items-center gap-1 font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md"
-                        title="Citation velocity (citations per year) - measures ongoing research impact. Higher values indicate influential work that continues to be cited."
-                      >
-                        <TrendingUp className="w-3 h-3" />
-                        <span className="font-semibold">
-                          {paper.citationsPerYear.toFixed(1)}
-                        </span>
-                        <span className="text-xs opacity-75">cites/yr</span>
-                      </span>
-                    )}
-                  {/* Phase 10 Day 5.13+ Extension 2: Quality Score Badge (Enterprise) */}
-                  {paper.qualityScore !== null &&
-                    paper.qualityScore !== undefined && (
-                      <span
-                        className={cn(
-                          'flex items-center gap-1 font-medium px-2 py-0.5 rounded-md',
-                          paper.qualityScore >= 70
-                            ? 'text-green-700 bg-green-50 border border-green-200'
-                            : paper.qualityScore >= 50
-                              ? 'text-blue-700 bg-blue-50 border border-blue-200'
-                              : paper.qualityScore >= 30
-                                ? 'text-amber-700 bg-amber-50 border border-amber-200'
-                                : 'text-gray-700 bg-gray-50 border border-gray-200'
-                        )}
-                        title={`Enterprise quality score based on citation impact (30%), journal prestige (25%), content depth (15%), recency (15%), and venue quality (15%)`}
-                      >
-                        <Award className="w-3 h-3" />
-                        <span className="font-semibold">
-                          {paper.qualityScore.toFixed(0)}
-                        </span>
-                        <span className="text-xs opacity-75">
-                          {paper.qualityScore >= 80
-                            ? 'Exceptional'
-                            : paper.qualityScore >= 70
-                              ? 'Excellent'
-                              : paper.qualityScore >= 60
-                                ? 'V.Good'
-                                : paper.qualityScore >= 50
-                                  ? 'Good'
-                                  : paper.qualityScore >= 40
-                                    ? 'Acceptable'
-                                    : paper.qualityScore >= 30
-                                      ? 'Fair'
-                                      : 'Limited'}
-                        </span>
-                      </span>
-                    )}
-                </div>
-                {paper.abstract && (
-                  <p className="mt-3 text-sm text-gray-700 line-clamp-3">
-                    {paper.abstract}
-                  </p>
-                )}
-                {paper.keywords && paper.keywords.length > 0 && (
-                  <div className="flex gap-2 mt-3 flex-wrap">
-                    {paper.keywords.slice(0, 5).map(keyword => (
-                      <Badge
-                        key={keyword}
-                        variant="secondary"
-                        className="text-xs"
-                      >
-                        {keyword}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-                <div
-                  className="flex gap-2 mt-4"
-                  onClick={e => e.stopPropagation()}
-                >
-                  {/* Phase 10 Day 5.13+ Extension 2: Show View Paper for DOI OR URL (enterprise-grade access) */}
-                  {(paper.doi || paper.url) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        // Prioritize DOI (more permanent), fallback to URL
-                        const link = paper.doi
-                          ? `https://doi.org/${paper.doi}`
-                          : paper.url;
-                        window.open(link, '_blank');
-                      }}
-                    >
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      View Paper
-                    </Button>
-                  )}
-                  {/* Phase 10 Day 5.13+ Extension 3: Full-Text Access for High-Quality Papers (Scientifically-Backed Tier 2) */}
-                  {paper.doi && (paper.qualityScore ?? 0) >= 70 && (
-                    <Button
-                      size="sm"
-                      variant="default"
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      onClick={() => {
-                        // Unpaywall API provides free full-text PDFs for open-access papers
-                        // Format: https://api.unpaywall.org/v2/{DOI}?email=YOUR_EMAIL
-                        // For now, try direct PDF link via Unpaywall redirect
-                        window.open(
-                          `https://api.unpaywall.org/v2/${paper.doi}?email=research@blackqmethod.com`,
-                          '_blank'
-                        );
-                      }}
-                      title="High-quality paper (≥70) - Full-text may be available via open access. Scientific justification: Purposive sampling (Patton 2002) - deep analysis of best papers."
-                    >
-                      <BookOpen className="w-3 h-3 mr-1" />
-                      Full Text
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant={isSaved ? 'secondary' : 'outline'}
-                    onClick={e => {
-                      e.stopPropagation();
-                      isSaved
-                        ? handleRemovePaper(paper.id)
-                        : handleSavePaper(paper);
-                    }}
-                  >
-                    <Star
-                      className={cn('w-3 h-3 mr-1', isSaved && 'fill-current')}
-                    />
-                    {isSaved ? 'Saved' : 'Save'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    );
-  };
+  // Phase 10.1 Day 5: Alternative sources handlers now provided by useAlternativeSources hook (203 lines removed)
+  // - handleSearchAlternativeSources (104 lines)
+  // - handleSearchSocialMedia (46 lines)
+  // - handleSearchAllSources (40 lines)
+  // Phase 10.1 Day 4: togglePaperSelection, handleTogglePaperSave now provided by usePaperManagement hook
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -3578,589 +2725,33 @@ function LiteratureSearchContent() {
         </CardContent>
       </Card>
 
-      {/* PHASE 9 DAY 25: Panel 1 - Academic Resources & Institutional Access */}
-      <Card className="border-2 border-blue-200">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Database className="w-5 h-5 text-blue-600" />
-              Academic Resources & Institutional Access
-            </span>
-            <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-              Scholarly Databases
-            </Badge>
-          </CardTitle>
-          <p className="text-sm text-gray-600 mt-2">
-            Search peer-reviewed academic literature from leading scholarly
-            databases
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* PHASE 9 DAY 25: Academic Database Selection */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Select Academic Databases
-            </label>
-            <div className="flex gap-2 flex-wrap">
-              {[
-                // Free & Open Access
-                {
-                  id: 'pubmed',
-                  label: 'PubMed',
-                  icon: '🏥',
-                  desc: 'Medical/life sciences - FREE',
-                  category: 'Free',
-                },
-                {
-                  id: 'pmc',
-                  label: 'PubMed Central',
-                  icon: '📖',
-                  desc: 'Free full-text articles',
-                  category: 'Free',
-                },
-                {
-                  id: 'arxiv',
-                  label: 'ArXiv',
-                  icon: '📐',
-                  desc: 'Physics/Math/CS preprints - FREE',
-                  category: 'Free',
-                },
-                {
-                  id: 'biorxiv',
-                  label: 'bioRxiv',
-                  icon: '🧬',
-                  desc: 'Biology preprints - FREE',
-                  category: 'Free',
-                },
-                {
-                  id: 'semantic_scholar',
-                  label: 'Semantic Scholar',
-                  icon: '🎓',
-                  desc: 'CS/interdisciplinary - FREE',
-                  category: 'Free',
-                },
+      {/* PHASE 10.1 DAY 3: Extracted Academic Resources Panel */}
+      <AcademicResourcesPanel
+        academicDatabases={academicDatabases}
+        onDatabasesChange={setAcademicDatabases}
+        institutionAuth={institutionAuth}
+        onInstitutionAuthChange={setInstitutionAuth}
+        papers={papers}
+        selectedPapers={selectedPapers}
+        transcribedVideosCount={transcribedVideos.length}
+        analyzingThemes={analyzingThemes}
+        onExtractThemes={handleExtractThemes}
+        onIncrementalExtraction={() => incrementalExtraction.openIncrementalExtraction()}
+        onCorpusManagement={() => incrementalExtraction.openCorpusManagement()}
+        onExportCitations={handleExportCitations}
+        corpusCount={incrementalExtraction.corpusList.length}
+        extractingPapers={extractingPapers}
+        getSourceIcon={getAcademicIcon}
+      />
 
-                // Multidisciplinary Premium
-                {
-                  id: 'web_of_science',
-                  label: 'Web of Science',
-                  icon: '🌐',
-                  desc: 'Multidisciplinary citation index',
-                  category: 'Premium',
-                },
-                {
-                  id: 'scopus',
-                  label: 'Scopus',
-                  icon: '🔬',
-                  desc: 'Multidisciplinary abstract/citation',
-                  category: 'Premium',
-                },
-                {
-                  id: 'crossref',
-                  label: 'CrossRef',
-                  icon: '🔗',
-                  desc: 'DOI database registry',
-                  category: 'Free',
-                },
-
-                // Subject-Specific
-                {
-                  id: 'ieee',
-                  label: 'IEEE Xplore',
-                  icon: '⚡',
-                  desc: 'Engineering/tech/CS',
-                  category: 'Premium',
-                },
-                {
-                  id: 'jstor',
-                  label: 'JSTOR',
-                  icon: '📚',
-                  desc: 'Humanities/social sciences',
-                  category: 'Premium',
-                },
-                {
-                  id: 'springer',
-                  label: 'SpringerLink',
-                  icon: '📕',
-                  desc: 'STM & social sciences',
-                  category: 'Premium',
-                },
-                {
-                  id: 'nature',
-                  label: 'Nature',
-                  icon: '🔬',
-                  desc: 'Science journals',
-                  category: 'Premium',
-                },
-                {
-                  id: 'wiley',
-                  label: 'Wiley Online',
-                  icon: '📘',
-                  desc: 'Multidisciplinary',
-                  category: 'Premium',
-                },
-                {
-                  id: 'elsevier',
-                  label: 'ScienceDirect',
-                  icon: '🔵',
-                  desc: 'Elsevier journals',
-                  category: 'Premium',
-                },
-                {
-                  id: 'psycinfo',
-                  label: 'PsycINFO',
-                  icon: '🧠',
-                  desc: 'Psychology/behavioral sciences',
-                  category: 'Premium',
-                },
-                {
-                  id: 'eric',
-                  label: 'ERIC',
-                  icon: '🎓',
-                  desc: 'Education research - FREE',
-                  category: 'Free',
-                },
-              ].map(source => {
-                const IconComponent = getAcademicIcon(source.id);
-                return (
-                  <Badge
-                    key={source.id}
-                    variant={
-                      academicDatabases.includes(source.id)
-                        ? 'default'
-                        : 'outline'
-                    }
-                    className="cursor-pointer py-2 px-4 text-sm hover:scale-105 transition-transform flex items-center gap-2"
-                    onClick={() => {
-                      const newDatabases = academicDatabases.includes(source.id)
-                        ? academicDatabases.filter(s => s !== source.id)
-                        : [...academicDatabases, source.id];
-                      setAcademicDatabases(newDatabases);
-                    }}
-                    title={source.desc}
-                  >
-                    <IconComponent className="w-4 h-4 flex-shrink-0" />
-                    <span>{source.label}</span>
-                  </Badge>
-                );
-              })}
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              {academicDatabases.length} database
-              {academicDatabases.length !== 1 ? 's' : ''} selected
-              {academicDatabases.length === 0 && ' (select at least one)'}
-            </p>
-          </div>
-
-          {/* PHASE 9 DAY 25: Institution Login */}
-          <AcademicInstitutionLogin
-            currentAuth={institutionAuth}
-            onAuthChange={setInstitutionAuth}
-          />
-
-          {/* PHASE 9 DAY 25: Cost Calculator */}
-          <CostCalculator
-            selectedPapers={selectedPapers}
-            papers={papers}
-            institutionAccessActive={institutionAuth.freeAccess}
-            onLoginClick={() => {
-              // Scroll to institution login section
-              toast.info('Scroll up to login with your institution');
-            }}
-          />
-
-          {/* Phase 10 Day 5.15: Content Depth Transparency Banner */}
-          {selectedPapers.size > 0 &&
-            (() => {
-              const selectedPaperObjects = papers.filter(p =>
-                selectedPapers.has(p.id)
-              );
-              const fullTextCount = selectedPaperObjects.filter(
-                p => (p as any).fullTextStatus === 'success'
-              ).length;
-              const fetchingCount = selectedPaperObjects.filter(
-                p => (p as any).fullTextStatus === 'fetching'
-              ).length;
-              const abstractOnlyCount =
-                selectedPaperObjects.length - fullTextCount - fetchingCount;
-              const avgFullTextWords =
-                fullTextCount > 0
-                  ? Math.round(
-                      selectedPaperObjects
-                        .filter(p => (p as any).fullTextStatus === 'success')
-                        .reduce(
-                          (sum, p) => sum + ((p as any).fullTextWordCount || 0),
-                          0
-                        ) / fullTextCount
-                    )
-                  : 0;
-              const avgAbstractWords =
-                abstractOnlyCount > 0
-                  ? Math.round(
-                      selectedPaperObjects
-                        .filter(p => (p as any).fullTextStatus !== 'success')
-                        .reduce(
-                          (sum, p) => sum + (p.abstractWordCount || 0),
-                          0
-                        ) / abstractOnlyCount
-                    )
-                  : 0;
-
-              return fullTextCount > 0 || fetchingCount > 0 ? (
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    Content Depth Analysis
-                  </h4>
-                  <div className="grid grid-cols-3 gap-3 text-xs">
-                    {fullTextCount > 0 && (
-                      <div className="bg-green-50 border border-green-200 rounded p-2">
-                        <div className="font-semibold text-green-900">
-                          {fullTextCount} Full-Text Papers
-                        </div>
-                        <div className="text-green-700">
-                          Avg: {avgFullTextWords.toLocaleString()} words
-                        </div>
-                        <div className="text-green-600 text-[10px] mt-1">
-                          Deep coding (Braun & Clarke Stage 2)
-                        </div>
-                      </div>
-                    )}
-                    {abstractOnlyCount > 0 && (
-                      <div className="bg-blue-50 border border-blue-200 rounded p-2">
-                        <div className="font-semibold text-blue-900">
-                          {abstractOnlyCount} Abstract-Only Papers
-                        </div>
-                        <div className="text-blue-700">
-                          Avg: {avgAbstractWords.toLocaleString()} words
-                        </div>
-                        <div className="text-blue-600 text-[10px] mt-1">
-                          Sufficient for theme ID
-                        </div>
-                      </div>
-                    )}
-                    {fetchingCount > 0 && (
-                      <div className="bg-amber-50 border border-amber-200 rounded p-2 animate-pulse">
-                        <div className="font-semibold text-amber-900">
-                          {fetchingCount} Fetching...
-                        </div>
-                        <div className="text-amber-700">Processing PDFs</div>
-                        <div className="text-amber-600 text-[10px] mt-1">
-                          Wait for better depth
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-blue-700 mt-3 leading-relaxed">
-                    <strong>Methodology:</strong> Full-text provides richer
-                    coding (40-50x more content) for high-quality papers (≥70
-                    score). Abstracts sufficient for preliminary theme
-                    identification (Thomas & Harden 2008).
-                    {fetchingCount > 0 &&
-                      ' You may extract now or wait ~2 min for full-text to complete.'}
-                  </p>
-                </div>
-              ) : null;
-            })()}
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={handleExtractThemes}
-              disabled={
-                (papers.length === 0 && transcribedVideos.length === 0) ||
-                analyzingThemes
-              }
-              className="flex items-center gap-2"
-            >
-              {analyzingThemes ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4 mr-2" />
-              )}
-              <span>Extract Themes from All Sources</span>
-              {(selectedPapers.size > 0 || transcribedVideos.length > 0) && (
-                <div className="flex gap-1">
-                  {selectedPapers.size > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      {selectedPapers.size} papers
-                    </Badge>
-                  )}
-                  {transcribedVideos.length > 0 && (
-                    <Badge
-                      variant="secondary"
-                      className="text-xs bg-purple-100 dark:bg-purple-900"
-                    >
-                      {transcribedVideos.length} videos
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </Button>
-            {/* Phase 10 Day 18: Incremental Extraction Button */}
-            <Button
-              variant="outline"
-              onClick={() => incrementalExtraction.openIncrementalExtraction()}
-              disabled={
-                (selectedPapers.size === 0 && transcribedVideos.length === 0) ||
-                analyzingThemes
-              }
-              className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-300"
-              title="Add papers incrementally to existing corpus and save costs via caching"
-            >
-              <TrendingUp className="w-4 h-4" />
-              <span>Extract Incrementally</span>
-              {incrementalExtraction.corpusList.length > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="text-xs bg-blue-100 dark:bg-blue-900"
-                >
-                  {incrementalExtraction.corpusList.length} corpus
-                </Badge>
-              )}
-            </Button>
-            {/* Phase 10 Day 18: Manage Corpuses Button */}
-            <Button
-              variant="outline"
-              onClick={() => incrementalExtraction.openCorpusManagement()}
-              className="flex items-center gap-2"
-              title="View and manage your research corpuses"
-            >
-              <Database className="w-4 h-4" />
-              <span>Manage Corpuses</span>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleExportCitations('bibtex')}
-              disabled={selectedPapers.size === 0}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export BibTeX
-            </Button>
-            {/* Phase 10 Day 5.17.5: Q-Statements button moved to purpose-specific actions section (line 5249) */}
-            {/* Purpose-specific rendering ensures only Q-Methodology users see this button */}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* PHASE 9 DAY 25: Panel 2 - Alternative Knowledge Sources */}
-      <Card className="border-2 border-indigo-200">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <GitBranch className="w-5 h-5 text-indigo-600" />
-              Alternative Knowledge Sources
-            </span>
-            <Badge
-              variant="secondary"
-              className="bg-indigo-100 text-indigo-700"
-            >
-              Expert Insights
-            </Badge>
-          </CardTitle>
-          <p className="text-sm text-gray-600 mt-2">
-            Discover expert knowledge beyond traditional academic databases:
-            podcasts, technical documentation, and community expertise
-            <span className="block mt-1 text-xs font-medium text-indigo-600">
-              💡 All sources are free and open-access
-            </span>
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Select Alternative Sources
-            </label>
-            <div className="flex gap-2 flex-wrap">
-              {[
-                {
-                  id: 'podcasts',
-                  label: 'Podcasts',
-                  icon: '🎙️',
-                  desc: 'Expert interviews & discussions',
-                },
-                {
-                  id: 'github',
-                  label: 'GitHub',
-                  icon: '💻',
-                  desc: 'Code & datasets',
-                },
-                {
-                  id: 'stackoverflow',
-                  label: 'StackOverflow',
-                  icon: '📚',
-                  desc: 'Technical Q&A',
-                },
-                {
-                  id: 'medium',
-                  label: 'Medium',
-                  icon: '📝',
-                  desc: 'Practitioner insights',
-                },
-              ].map(source => (
-                <Badge
-                  key={source.id}
-                  variant={
-                    alternativeSources.includes(source.id)
-                      ? 'default'
-                      : 'outline'
-                  }
-                  className="cursor-pointer py-2 px-4 text-sm"
-                  onClick={() => {
-                    const newSources = alternativeSources.includes(source.id)
-                      ? alternativeSources.filter(s => s !== source.id)
-                      : [...alternativeSources, source.id];
-                    setAlternativeSources(newSources);
-                  }}
-                >
-                  <span className="mr-2">{source.icon}</span>
-                  {source.label}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          {/* PHASE 9 DAY 25: Conditional sections for Alternative Sources */}
-          {alternativeSources.includes('podcasts') && (
-            <div className="border rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20">
-              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                🎙️ Podcast Search
-              </h4>
-              <p className="text-xs text-gray-600 mb-2">
-                Search for research podcasts, expert interviews, and academic
-                discussions
-              </p>
-              <Input placeholder="Search podcasts..." className="mb-2" />
-              <p className="text-xs text-gray-500">
-                Coming soon: Integration with Apple Podcasts, Spotify, and
-                Google Podcasts
-              </p>
-            </div>
-          )}
-
-          {alternativeSources.includes('github') && (
-            <div className="border rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20">
-              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                💻 GitHub Repository Browser
-              </h4>
-              <p className="text-xs text-gray-600 mb-2">
-                Find code implementations, datasets, and technical documentation
-              </p>
-              <Input placeholder="Search repositories..." className="mb-2" />
-              <p className="text-xs text-gray-500">
-                Coming soon: GitHub API integration for code search and dataset
-                discovery
-              </p>
-            </div>
-          )}
-
-          {alternativeSources.includes('stackoverflow') && (
-            <div className="border rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20">
-              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                📚 StackOverflow Search
-              </h4>
-              <p className="text-xs text-gray-600 mb-2">
-                Search technical Q&A and community knowledge
-              </p>
-              <Input placeholder="Search questions..." className="mb-2" />
-              <p className="text-xs text-gray-500">
-                Coming soon: StackOverflow API integration for technical
-                problem-solving
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <Button
-                onClick={handleSearchAlternativeSources}
-                disabled={loadingAlternative || alternativeSources.length === 0}
-                variant="default"
-                className="bg-purple-600 hover:bg-purple-700"
-              >
-                {loadingAlternative ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    <span className="animate-pulse">Searching...</span>
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-4 h-4 mr-2" />
-                    Search These Sources Only
-                  </>
-                )}
-              </Button>
-              {alternativeResults.length > 0 && (
-                <Badge variant="secondary" className="self-center">
-                  {alternativeResults.length} results found
-                </Badge>
-              )}
-            </div>
-            {loadingAlternative && (
-              <div className="text-sm text-purple-600 flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Retrieving from {alternativeSources.join(', ')}...</span>
-              </div>
-            )}
-            {alternativeSources.length === 0 && (
-              <p className="text-xs text-orange-600">
-                ⚠️ Select at least one source above to enable search
-              </p>
-            )}
-          </div>
-
-          {alternativeResults.length > 0 && (
-            <div className="mt-4 space-y-3 max-h-96 overflow-y-auto">
-              {alternativeResults.map((result, idx) => (
-                <div
-                  key={idx}
-                  className="border rounded-lg p-3 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-sm">{result.title}</h4>
-                      <p className="text-xs text-gray-600 mt-1">
-                        {result.authors?.join(', ')}
-                      </p>
-                      <Badge variant="outline" className="mt-2 text-xs">
-                        {result.source}
-                      </Badge>
-                      {result.abstract && (
-                        <p className="text-xs text-gray-700 mt-2 line-clamp-2">
-                          {result.abstract}
-                        </p>
-                      )}
-                    </div>
-                    {result.url && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => window.open(result.url, '_blank')}
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
+      {/* PHASE 10.1 DAY 3: Extracted Alternative Sources Panel */}
+      <AlternativeSourcesPanel
+        alternativeSources={alternativeSources}
+        onSourcesChange={setAlternativeSources}
+        alternativeResults={alternativeResults}
+        loadingAlternative={loadingAlternative}
+        onSearch={handleSearchAlternativeSources}
+      />
       {/* PHASE 9 DAY 25: Panel 3 - Social Media Intelligence (with YouTube moved here) */}
       <Card className="border-2 border-indigo-200">
         <CardHeader>
@@ -4969,7 +3560,7 @@ function LiteratureSearchContent() {
                           const originalQueryText =
                             queryCorrectionMessage.original;
                           setQuery(originalQueryText);
-                          setQueryCorrectionMessage(null);
+                          clearQueryCorrection();
                           // Immediately search with the original query
                           setTimeout(() => handleSearch(), 100);
                         }}
@@ -5106,7 +3697,17 @@ function LiteratureSearchContent() {
 
                   {/* Papers List */}
                   {papers.map(paper => (
-                    <PaperCard key={paper.id} paper={paper} />
+                    <PaperCard
+                      key={paper.id}
+                      paper={paper}
+                      isSelected={selectedPapers.has(paper.id)}
+                      isSaved={savedPapers.some(p => p.id === paper.id)}
+                      isExtracting={extractingPapers.has(paper.id)}
+                      isExtracted={extractedPapers.has(paper.id)}
+                      onToggleSelection={togglePaperSelection}
+                      onToggleSave={handleTogglePaperSave}
+                      getSourceIcon={getAcademicIcon}
+                    />
                   ))}
                 </div>
               ) : (
@@ -5170,7 +3771,17 @@ function LiteratureSearchContent() {
             <>
               {savedPapers.length > 0 ? (
                 savedPapers.map(paper => (
-                  <PaperCard key={paper.id} paper={paper} />
+                  <PaperCard
+                    key={paper.id}
+                    paper={paper}
+                    isSelected={selectedPapers.has(paper.id)}
+                    isSaved={true}
+                    isExtracting={extractingPapers.has(paper.id)}
+                    isExtracted={extractedPapers.has(paper.id)}
+                    onToggleSelection={togglePaperSelection}
+                    onToggleSave={handleTogglePaperSave}
+                    getSourceIcon={getAcademicIcon}
+                  />
                 ))
               ) : (
                 <div className="text-center py-12 text-gray-500">
