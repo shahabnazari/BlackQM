@@ -38,23 +38,10 @@
 import { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
 import confetti from 'canvas-confetti';
+// Phase 10.1 Day 6 Audit Fix: Import TransparentProgressMessage from source of truth
+import type { TransparentProgressMessage } from '@/lib/api/services/unified-theme-api.service';
 
 type Socket = ReturnType<typeof io>;
-
-/**
- * Transparent progress message structure (Patent Claim #9)
- */
-export interface TransparentProgressMessage {
-  stageName: string;
-  stageNumber: number;
-  totalStages: number;
-  percentage: number;
-  liveStats?: {
-    themesFound?: number;
-    papersProcessed?: number;
-    currentActivity?: string;
-  };
-}
 
 /**
  * Progress update data from WebSocket
