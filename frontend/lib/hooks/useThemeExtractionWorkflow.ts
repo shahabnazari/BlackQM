@@ -60,6 +60,7 @@ import { toast } from 'sonner';
 import { literatureAPI } from '@/lib/services/literature-api.service';
 import { retryApiCall } from '@/lib/utils/retry';
 import type { SourceContent } from '@/lib/api/services/unified-theme-api.service';
+import type { Paper as LiteraturePaper } from '@/lib/types/literature.types';
 
 // ============================================================================
 // CONSTANTS
@@ -93,25 +94,9 @@ export interface ContentAnalysis {
 }
 
 /**
- * Paper object structure (minimal required fields)
+ * Paper type (re-exported from literature.types.ts for consistency)
  */
-export interface Paper {
-  id: string;
-  title: string;
-  authors?: string[];
-  year?: number;
-  source: string;
-  abstract?: string;
-  doi?: string;
-  url?: string;
-  venue?: string;
-  citationCount?: number;
-  keywords?: string[];
-  hasFullText?: boolean;
-  fullText?: string;
-  fullTextStatus?: string;
-  contentType?: 'full_text' | 'abstract_overflow' | 'abstract' | 'none';
-}
+export type Paper = LiteraturePaper;
 
 /**
  * Transcribed video structure

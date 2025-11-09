@@ -83,7 +83,7 @@ export interface UseThemeExtractionHandlersConfig {
   contentAnalysis: ContentAnalysis | null;
   papers: Paper[];
   selectedPapers: Set<string>;
-  userExpertiseLevel: 'beginner' | 'intermediate' | 'expert';
+  userExpertiseLevel: 'novice' | 'researcher' | 'expert';
 
   // State setters
   setShowModeSelectionModal: (show: boolean) => void;
@@ -93,7 +93,7 @@ export interface UseThemeExtractionHandlersConfig {
   setAnalyzingThemes: (analyzing: boolean) => void;
   setExtractingPapers: (papers: Set<string>) => void;
   setIsExtractionInProgress: (inProgress: boolean) => void;
-  setExtractionError: (error: string | null) => void;
+  setExtractionError: (error: string) => void;
   setContentAnalysis: (analysis: ContentAnalysis | null) => void;
   setPapers: (papers: Paper[]) => void;
 
@@ -101,7 +101,7 @@ export interface UseThemeExtractionHandlersConfig {
   startExtraction: (totalSources: number) => void;
 
   // API functions
-  extractThemesV2: (request: any) => Promise<any>;
+  extractThemesV2: (sources: any[], request: any, onProgress?: any) => Promise<any>;
 
   // Optional callbacks
   onExtractionComplete?: (themes: any[]) => void;
@@ -573,7 +573,7 @@ export function useThemeExtractionHandlers(
         console.log(`\n   📡 Initiating API call to extractThemesV2...`);
         const apiStartTime = Date.now();
 
-        const result = await extractThemesV2({
+        const result = await extractThemesV2(allSources, {
           sources: allSources,
           purpose,
           userExpertiseLevel,
