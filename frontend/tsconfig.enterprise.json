@@ -1,0 +1,49 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // CRITICAL: Incremental compilation (massive speed boost)
+    "incremental": true,
+    "tsBuildInfoFile": ".next/cache/tsconfig.tsbuildinfo",
+
+    // CRITICAL: Skip lib check (don't type-check node_modules)
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+
+    // CRITICAL: Faster builds
+    "noEmit": true,
+    "isolatedModules": true,
+
+    // Module resolution optimization
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+
+    // CRITICAL: Disable expensive checks in development
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+
+    // Type checking (keep strict)
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true
+  },
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist",
+    "coverage",
+    "playwright-report",
+    ".cache",
+    "logs"
+  ],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ]
+}

@@ -109,7 +109,7 @@
     "styled-jsx": "^5.1.7",
     "tailwind-merge": "^2.6.0",
     "three": "^0.180.0",
-    "zod": "^4.1.5",
+    "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
@@ -155,5 +155,36 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "performance": {
+    "budgets": {
+      "coreWebVitals": {
+        "LCP": 2500,
+        "FID": 100,
+        "CLS": 0.1,
+        "FCP": 1800,
+        "TTI": 3800,
+        "TBT": 200
+      },
+      "bundleSize": {
+        "mainBundle": 512000,
+        "routeBundle": 256000,
+        "totalJavaScript": 1048576,
+        "totalCSS": 102400,
+        "images": 512000
+      },
+      "lighthouse": {
+        "performance": 90,
+        "accessibility": 90,
+        "bestPractices": 90,
+        "seo": 90,
+        "pwa": 80
+      }
+    },
+    "warnings": {
+      "bundleSize": true,
+      "slowRequests": true,
+      "largeImages": true
+    }
+  }
 }

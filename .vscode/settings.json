@@ -1,17 +1,35 @@
 {
-  "typescript.tsdk": "frontend/node_modules/typescript/lib",
-  "typescript.enablePromptUseWorkspaceTsdk": true,
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit",
-    "source.organizeImports": "explicit"
+  "typescript.tsserver.maxTsServerMemory": 8192,
+  "typescript.tsserver.log": "off",
+  "typescript.disableAutomaticTypeAcquisition": true,
+  "typescript.updateImportsOnFileMove.enabled": "never",
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/dist/**": true,
+    "**/coverage/**": true,
+    "**/playwright-report/**": true,
+    "**/.cache/**": true,
+    "**/logs/**": true,
+    "**/*.log": true,
+    "**/Lead/**": true,
+    "**/Main Docs/**": true
   },
-  "typescript.preferences.includePackageJsonAutoImports": "on",
-  "typescript.updateImportsOnFileMove.enabled": "always",
-  "eslint.workingDirectories": ["frontend"],
-  "files.exclude": {
+  "search.exclude": {
     "**/node_modules": true,
-    "**/.next": true
-  }
+    "**/.next": true,
+    "**/dist": true,
+    "**/coverage": true,
+    "**/playwright-report": true,
+    "**/.cache": true,
+    "**/logs": true,
+    "**/Lead": true,
+    "**/Main Docs": true
+  },
+  "files.autoSave": "onFocusChange",
+  "git.autofetch": false,
+  "editor.minimap.enabled": false,
+  "editor.semanticHighlighting.enabled": false
 }
