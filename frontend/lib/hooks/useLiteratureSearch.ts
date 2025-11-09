@@ -173,7 +173,9 @@ export function useLiteratureSearch(
 
     // Prevent duplicate searches
     if (isSearchingRef.current) {
-      console.log('⏳ Search already in progress, skipping duplicate request...');
+      console.log(
+        '⏳ Search already in progress, skipping duplicate request...'
+      );
       return;
     }
 
@@ -266,7 +268,9 @@ export function useLiteratureSearch(
         onSearchSuccess?.(result.papers.length, result.total);
 
         // Note: autoSelectPapers is handled by page.tsx after search completes
-        const selectionMessage = autoSelectPapers ? ' All papers selected by default.' : '';
+        const selectionMessage = autoSelectPapers
+          ? ' All papers selected by default.'
+          : '';
         toast.success(
           `Found ${result.total} papers across ${academicDatabases.length} databases.${selectionMessage}`
         );

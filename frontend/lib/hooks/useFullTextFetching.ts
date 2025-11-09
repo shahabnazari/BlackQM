@@ -127,7 +127,11 @@ export function useFullTextFetching(): UseFullTextFetchingReturn {
   >(new Map());
 
   // Core waiting functionality from useWaitForFullText
-  const { waitForFullText: baseWaitForFullText, isWaiting, cancel } = useWaitForFullText();
+  const {
+    waitForFullText: baseWaitForFullText,
+    isWaiting,
+    cancel,
+  } = useWaitForFullText();
 
   // ===========================
   // STATUS TRACKING
@@ -139,13 +143,16 @@ export function useFullTextFetching(): UseFullTextFetchingReturn {
    * @param {string} paperId - The paper ID to track
    * @param {FullTextFetchStatus} status - The current status
    */
-  const trackPaper = useCallback((paperId: string, status: FullTextFetchStatus) => {
-    setFullTextStatus((prev) => {
-      const updated = new Map(prev);
-      updated.set(paperId, status);
-      return updated;
-    });
-  }, []);
+  const trackPaper = useCallback(
+    (paperId: string, status: FullTextFetchStatus) => {
+      setFullTextStatus(prev => {
+        const updated = new Map(prev);
+        updated.set(paperId, status);
+        return updated;
+      });
+    },
+    []
+  );
 
   /**
    * Get full-text status for a paper
@@ -186,7 +193,7 @@ export function useFullTextFetching(): UseFullTextFetchingReturn {
       let failed = 0;
       let notStarted = 0;
 
-      idsToCheck.forEach((id) => {
+      idsToCheck.forEach(id => {
         const status = getPaperStatus(id);
         switch (status) {
           case FullTextFetchStatus.READY:
@@ -238,15 +245,19 @@ export function useFullTextFetching(): UseFullTextFetchingReturn {
       options: WaitForFullTextOptions = {}
     ): Promise<WaitForFullTextResult> => {
       // Mark all papers as fetching initially
-      paperIds.forEach((id) => trackPaper(id, FullTextFetchStatus.FETCHING));
+      paperIds.forEach(id => trackPaper(id, FullTextFetchStatus.FETCHING));
 
       // Enhanced progress callback that updates status
       const enhancedOnProgress = (status: FullTextWaitStatus) => {
         // Update status map based on bulk status
-        status.ready.forEach((id) => trackPaper(id, FullTextFetchStatus.READY));
-        status.fetching.forEach((id) => trackPaper(id, FullTextFetchStatus.FETCHING));
-        status.failed.forEach((id) => trackPaper(id, FullTextFetchStatus.FAILED));
-        status.notFetched.forEach((id) => trackPaper(id, FullTextFetchStatus.NOT_STARTED));
+        status.ready.forEach(id => trackPaper(id, FullTextFetchStatus.READY));
+        status.fetching.forEach(id =>
+          trackPaper(id, FullTextFetchStatus.FETCHING)
+        );
+        status.failed.forEach(id => trackPaper(id, FullTextFetchStatus.FAILED));
+        status.notFetched.forEach(id =>
+          trackPaper(id, FullTextFetchStatus.NOT_STARTED)
+        );
 
         // Call user's progress callback if provided
         options.onProgress?.(status);
@@ -259,10 +270,18 @@ export function useFullTextFetching(): UseFullTextFetchingReturn {
       });
 
       // Update final status
-      result.status.ready.forEach((id) => trackPaper(id, FullTextFetchStatus.READY));
-      result.status.fetching.forEach((id) => trackPaper(id, FullTextFetchStatus.FETCHING));
-      result.status.failed.forEach((id) => trackPaper(id, FullTextFetchStatus.FAILED));
-      result.status.notFetched.forEach((id) => trackPaper(id, FullTextFetchStatus.NOT_STARTED));
+      result.status.ready.forEach(id =>
+        trackPaper(id, FullTextFetchStatus.READY)
+      );
+      result.status.fetching.forEach(id =>
+        trackPaper(id, FullTextFetchStatus.FETCHING)
+      );
+      result.status.failed.forEach(id =>
+        trackPaper(id, FullTextFetchStatus.FAILED)
+      );
+      result.status.notFetched.forEach(id =>
+        trackPaper(id, FullTextFetchStatus.NOT_STARTED)
+      );
 
       return result;
     },

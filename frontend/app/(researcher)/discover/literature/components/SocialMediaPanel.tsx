@@ -102,7 +102,6 @@ export const SocialMediaPanel = memo(function SocialMediaPanel({
   showVideoSelection,
   onToggleVideoSelection,
 }: SocialMediaPanelProps) {
-
   const handlePlatformToggle = (platformId: string) => {
     const newPlatforms = socialPlatforms.includes(platformId)
       ? socialPlatforms.filter(p => p !== platformId)
@@ -111,9 +110,24 @@ export const SocialMediaPanel = memo(function SocialMediaPanel({
   };
 
   const platforms = [
-    { id: 'youtube', label: 'YouTube', icon: '📹', desc: 'Video content & interviews' },
-    { id: 'instagram', label: 'Instagram', icon: '📸', desc: 'Visual insights & stories' },
-    { id: 'tiktok', label: 'TikTok', icon: '🎵', desc: 'Short-form video trends' },
+    {
+      id: 'youtube',
+      label: 'YouTube',
+      icon: '📹',
+      desc: 'Video content & interviews',
+    },
+    {
+      id: 'instagram',
+      label: 'Instagram',
+      icon: '📸',
+      desc: 'Visual insights & stories',
+    },
+    {
+      id: 'tiktok',
+      label: 'TikTok',
+      icon: '🎵',
+      desc: 'Short-form video trends',
+    },
   ];
 
   return (
@@ -129,7 +143,8 @@ export const SocialMediaPanel = memo(function SocialMediaPanel({
           </Badge>
         </CardTitle>
         <p className="text-sm text-gray-600 mt-2">
-          Discover expert knowledge and trending discussions across social media platforms
+          Discover expert knowledge and trending discussions across social media
+          platforms
         </p>
       </CardHeader>
 
@@ -143,7 +158,9 @@ export const SocialMediaPanel = memo(function SocialMediaPanel({
             {platforms.map(platform => (
               <Badge
                 key={platform.id}
-                variant={socialPlatforms.includes(platform.id) ? 'default' : 'outline'}
+                variant={
+                  socialPlatforms.includes(platform.id) ? 'default' : 'outline'
+                }
                 className="cursor-pointer py-2 px-4 text-sm hover:scale-105 transition-transform"
                 onClick={() => handlePlatformToggle(platform.id)}
                 title={platform.desc}
@@ -154,7 +171,8 @@ export const SocialMediaPanel = memo(function SocialMediaPanel({
             ))}
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            {socialPlatforms.length} platform{socialPlatforms.length !== 1 ? 's' : ''} selected
+            {socialPlatforms.length} platform
+            {socialPlatforms.length !== 1 ? 's' : ''} selected
           </p>
         </div>
 
@@ -214,7 +232,7 @@ export const SocialMediaPanel = memo(function SocialMediaPanel({
               {showChannelBrowser && (
                 <div className="mt-2">
                   <YouTubeChannelBrowser
-                    onVideosSelected={(videos) => {
+                    onVideosSelected={videos => {
                       // TODO: Handle videos selected from channel browser
                       console.log('Videos selected:', videos);
                     }}
@@ -240,7 +258,7 @@ export const SocialMediaPanel = memo(function SocialMediaPanel({
                   <VideoSelectionPanel
                     videos={youtubeResults}
                     researchContext=""
-                    onTranscribe={async (videoIds) => {
+                    onTranscribe={async videoIds => {
                       // TODO: Implement video transcription
                       console.log('Transcribe videos:', videoIds);
                       await onTranscribeVideos();
@@ -258,7 +276,8 @@ export const SocialMediaPanel = memo(function SocialMediaPanel({
           <div className="border rounded-lg p-4 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20">
             <h4 className="text-sm font-semibold mb-2">📸 Instagram Search</h4>
             <p className="text-xs text-gray-600 mb-2">
-              Search for visual insights, expert stories, and community discussions
+              Search for visual insights, expert stories, and community
+              discussions
             </p>
             <p className="text-xs text-gray-500">
               Coming soon: Instagram API integration for visual content analysis
@@ -316,10 +335,7 @@ export const SocialMediaPanel = memo(function SocialMediaPanel({
         {/* Cross-Platform Dashboard */}
         {socialInsights && (
           <div className="mt-4">
-            <CrossPlatformDashboard
-              query={query}
-              maxResults={10}
-            />
+            <CrossPlatformDashboard query={query} maxResults={10} />
           </div>
         )}
       </CardContent>

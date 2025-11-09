@@ -111,10 +111,14 @@ export interface UseAlternativeSourcesReturn {
   youtubeVideos: any[];
   setYoutubeVideos: React.Dispatch<React.SetStateAction<any[]>>;
   transcribedVideos: TranscribedVideo[];
-  setTranscribedVideos: React.Dispatch<React.SetStateAction<TranscribedVideo[]>>;
+  setTranscribedVideos: React.Dispatch<
+    React.SetStateAction<TranscribedVideo[]>
+  >;
   transcriptionOptions: TranscriptionOptions;
   setTranscriptionOptions: (
-    options: TranscriptionOptions | ((prev: TranscriptionOptions) => TranscriptionOptions)
+    options:
+      | TranscriptionOptions
+      | ((prev: TranscriptionOptions) => TranscriptionOptions)
   ) => void;
 
   // Social media state
@@ -181,7 +185,9 @@ export function useAlternativeSources(
 
   // YouTube state
   const [youtubeVideos, setYoutubeVideos] = useState<any[]>([]);
-  const [transcribedVideos, setTranscribedVideos] = useState<TranscribedVideo[]>([]);
+  const [transcribedVideos, setTranscribedVideos] = useState<
+    TranscribedVideo[]
+  >([]);
   const [transcriptionOptions, setTranscriptionOptions] =
     useState<TranscriptionOptions>(DEFAULT_TRANSCRIPTION_OPTIONS);
 
@@ -238,10 +244,11 @@ export function useAlternativeSources(
         alternativeSources.includes('youtube') &&
         transcriptionOptions.includeTranscripts
       ) {
-        const youtubeResults = await literatureAPI.searchYouTubeWithTranscription(
-          query,
-          transcriptionOptions
-        );
+        const youtubeResults =
+          await literatureAPI.searchYouTubeWithTranscription(
+            query,
+            transcriptionOptions
+          );
 
         // Store transcribed videos separately
         if (
@@ -264,14 +271,14 @@ export function useAlternativeSources(
             })
           );
 
-          setTranscribedVideos((prev) => [...prev, ...newTranscriptions]);
+          setTranscribedVideos(prev => [...prev, ...newTranscriptions]);
 
           // Auto-switch to transcriptions tab
           onSwitchTab?.('transcriptions');
         }
 
         // Get results from other sources
-        const otherSources = alternativeSources.filter((s) => s !== 'youtube');
+        const otherSources = alternativeSources.filter(s => s !== 'youtube');
         let otherResults: any[] = [];
         if (otherSources.length > 0) {
           otherResults = await literatureAPI.searchAlternativeSources(
@@ -325,12 +332,7 @@ export function useAlternativeSources(
       setLoadingAlternative(false);
       isSearchingAlternativeRef.current = false;
     }
-  }, [
-    query,
-    alternativeSources,
-    transcriptionOptions,
-    onSwitchTab,
-  ]);
+  }, [query, alternativeSources, transcriptionOptions, onSwitchTab]);
 
   // ===========================
   // SOCIAL MEDIA SEARCH
@@ -467,10 +469,12 @@ export function useAlternativeSources(
     const results = await Promise.allSettled(searchPromises);
 
     // Count successful vs failed searches
-    const successful = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
+    const successful = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
 
-    console.log(`✅ Master Search Complete: ${successful} succeeded, ${failed} failed`);
+    console.log(
+      `✅ Master Search Complete: ${successful} succeeded, ${failed} failed`
+    );
 
     // Calculate total sources searched
     const totalSources =
