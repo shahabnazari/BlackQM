@@ -90,6 +90,7 @@ pnpm-lock.yaml
 *.tmp
 *.temp
 .cache/
+.tmp.driveupload/
 
 # Security
 *.key
@@ -100,9 +101,18 @@ pnpm-lock.yaml
 # Misc
 .vercel
 .turbo
-# Log files
+# Log files - Enterprise-grade exclusions
 *.log
 logs/
+**/logs/
+dev.log
+restart.log
+*-startup.log
+*-debug.log
+*-error.log
+*-out.log
+*-combined.log
+dev-manager.log
 
 
 # Uploaded files
@@ -117,3 +127,11 @@ CURRENT_TEST_CREDENTIALS.md
 # Development lock files
 .dev-ultimate.lock
 .dev-ultimate.pid
+
+# Archive directory for old files
+archive/
+
+# Outdated daily reports (keep only official docs in Main Docs/)
+PHASE*_DAY*.md
+*REPORT*.md
+!ENTERPRISE_TEST_REPORT_DAY*.md
