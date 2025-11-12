@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Service Worker & Cache Management - VQMethod</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    h1 {
+      color: #1a202c;
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #718096;
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      color: #2d3748;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      margin-bottom: 8px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.secondary {
+      background: #e2e8f0;
+      color: #2d3748;
+    }
+
+    button.secondary:hover {
+      background: #cbd5e0;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    button.danger {
+      background: linear-gradient(135deg, #fc5c7d 0%, #6a82fb 100%);
+    }
+
+    #status {
+      background: #f7fafc;
+      border-left: 4px solid #667eea;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #2d3748;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 24px;
+      display: none;
+    }
+
+    #status.show {
+      display: block;
+    }
+
+    #status.success {
+      border-left-color: #48bb78;
+      background: #f0fff4;
+    }
+
+    #status.error {
+      border-left-color: #f56565;
+      background: #fff5f5;
+    }
+
+    .info-box {
+      background: #ebf8ff;
+      border-left: 4px solid #4299e1;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #2c5282;
+    }
+
+    .info-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #2b6cb0;
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 480px) {
+      .button-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Cache Management</h1>
+    <p class="subtitle">Development utility for VQMethod platform</p>
+
+    <div class="info-box">
+      <strong>⚠️ When to use this tool:</strong>
+      If you're seeing stale JavaScript after server restarts, code changes not loading, or old data persisting despite hard refresh.
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <span class="icon">🗑️</span>
+        Quick Actions
+      </div>
+      <div class="button-grid">
+        <button id="clearAll" class="danger">Clear Everything</button>
+        <button id="refresh" class="secondary">Refresh Page</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <span class="icon">⚙️</span>
+        Service Workers
+      </div>
+      <button id="unregister">Unregister All Service Workers</button>
+      <button id="checkWorkers" class="secondary">Check Active Workers</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <span class="icon">💾</span>
+        Cache Storage
+      </div>
+      <button id="clearCache">Clear All Caches</button>
+      <button id="listCaches" class="secondary">List All Caches</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <span class="icon">🍪</span>
+        Storage & Cookies
+      </div>
+      <button id="clearLocalStorage">Clear LocalStorage</button>
+      <button id="clearSessionStorage">Clear SessionStorage</button>
+    </div>
+
+    <pre id="status"></pre>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+
+    function showStatus(message, type = 'success') {
+      statusEl.textContent = message;
+      statusEl.className = `show ${type}`;
+    }
+
+    // Clear Everything
+    document.getElementById('clearAll').addEventListener('click', async () => {
+      try {
+        let summary = '🧹 CLEARING EVERYTHING...\n\n';
+
+        // Unregister service workers
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          await reg.unregister();
+        }
+        summary += `✅ Unregistered ${registrations.length} service worker(s)\n`;
+
+        // Clear caches
+        const cacheNames = await caches.keys();
+        for (const name of cacheNames) {
+          await caches.delete(name);
+        }
+        summary += `✅ Cleared ${cacheNames.length} cache(s)\n`;
+
+        // Clear storage
+        localStorage.clear();
+        sessionStorage.clear();
+        summary += `✅ Cleared localStorage and sessionStorage\n`;
+
+        summary += `\n✨ Done! Refresh the page to see changes.`;
+        showStatus(summary, 'success');
+
+        // Auto-refresh after 2 seconds
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+      } catch (error) {
+        showStatus(`❌ Error: ${error.message}`, 'error');
+      }
+    });
+
+    // Unregister Service Workers
+    document.getElementById('unregister').addEventListener('click', async () => {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+
+        if (registrations.length === 0) {
+          showStatus('ℹ️  No service workers found.', 'success');
+          return;
+        }
+
+        for (const reg of registrations) {
+          await reg.unregister();
+        }
+
+        showStatus(
+          `✅ Unregistered ${registrations.length} service worker(s)\n\n` +
+          `Service workers removed:\n${registrations.map(r => `  • ${r.scope}`).join('\n')}`,
+          'success'
+        );
+      } catch (error) {
+        showStatus(`❌ Error: ${error.message}`, 'error');
+      }
+    });
+
+    // Check Active Workers
+    document.getElementById('checkWorkers').addEventListener('click', async () => {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+
+        if (registrations.length === 0) {
+          showStatus('ℹ️  No active service workers found.', 'success');
+          return;
+        }
+
+        let info = `📊 Found ${registrations.length} service worker(s):\n\n`;
+
+        registrations.forEach((reg, index) => {
+          info += `Worker #${index + 1}:\n`;
+          info += `  Scope: ${reg.scope}\n`;
+          info += `  Active: ${reg.active ? 'Yes' : 'No'}\n`;
+          info += `  Waiting: ${reg.waiting ? 'Yes' : 'No'}\n`;
+          info += `  Installing: ${reg.installing ? 'Yes' : 'No'}\n\n`;
+        });
+
+        showStatus(info, 'success');
+      } catch (error) {
+        showStatus(`❌ Error: ${error.message}`, 'error');
+      }
+    });
+
+    // Clear All Caches
+    document.getElementById('clearCache').addEventListener('click', async () => {
+      try {
+        const cacheNames = await caches.keys();
+
+        if (cacheNames.length === 0) {
+          showStatus('ℹ️  No caches found.', 'success');
+          return;
+        }
+
+        for (const name of cacheNames) {
+          await caches.delete(name);
+        }
+
+        showStatus(
+          `✅ Cleared ${cacheNames.length} cache(s)\n\n` +
+          `Caches deleted:\n${cacheNames.map(n => `  • ${n}`).join('\n')}`,
+          'success'
+        );
+      } catch (error) {
+        showStatus(`❌ Error: ${error.message}`, 'error');
+      }
+    });
+
+    // List All Caches
+    document.getElementById('listCaches').addEventListener('click', async () => {
+      try {
+        const cacheNames = await caches.keys();
+
+        if (cacheNames.length === 0) {
+          showStatus('ℹ️  No caches found.', 'success');
+          return;
+        }
+
+        let info = `📦 Found ${cacheNames.length} cache(s):\n\n`;
+
+        for (const name of cacheNames) {
+          const cache = await caches.open(name);
+          const requests = await cache.keys();
+          info += `${name} (${requests.length} items)\n`;
+
+          if (requests.length > 0) {
+            requests.slice(0, 5).forEach(req => {
+              info += `  • ${new URL(req.url).pathname}\n`;
+            });
+            if (requests.length > 5) {
+              info += `  ... and ${requests.length - 5} more\n`;
+            }
+          }
+          info += '\n';
+        }
+
+        showStatus(info, 'success');
+      } catch (error) {
+        showStatus(`❌ Error: ${error.message}`, 'error');
+      }
+    });
+
+    // Clear LocalStorage
+    document.getElementById('clearLocalStorage').addEventListener('click', () => {
+      try {
+        const itemCount = localStorage.length;
+        const keys = Object.keys(localStorage);
+        localStorage.clear();
+
+        showStatus(
+          `✅ Cleared ${itemCount} item(s) from localStorage\n\n` +
+          (keys.length > 0 ? `Keys cleared:\n${keys.map(k => `  • ${k}`).join('\n')}` : ''),
+          'success'
+        );
+      } catch (error) {
+        showStatus(`❌ Error: ${error.message}`, 'error');
+      }
+    });
+
+    // Clear SessionStorage
+    document.getElementById('clearSessionStorage').addEventListener('click', () => {
+      try {
+        const itemCount = sessionStorage.length;
+        const keys = Object.keys(sessionStorage);
+        sessionStorage.clear();
+
+        showStatus(
+          `✅ Cleared ${itemCount} item(s) from sessionStorage\n\n` +
+          (keys.length > 0 ? `Keys cleared:\n${keys.map(k => `  • ${k}`).join('\n')}` : ''),
+          'success'
+        );
+      } catch (error) {
+        showStatus(`❌ Error: ${error.message}`, 'error');
+      }
+    });
+
+    // Refresh Page
+    document.getElementById('refresh').addEventListener('click', () => {
+      window.location.reload(true);
+    });
+  </script>
+</body>
+</html>

@@ -199,104 +199,110 @@ export const useLiteratureThemeStore = create<ThemeState>()(
         loadingSurvey: false,
 
         // Theme management actions
-        setThemes: (themes) => set({ themes }),
+        setThemes: themes => set({ themes }),
 
-        addTheme: (theme) =>
-          set((state) => ({
+        addTheme: theme =>
+          set(state => ({
             themes: [...state.themes, theme],
           })),
 
-        removeTheme: (themeId) =>
-          set((state) => ({
-            themes: state.themes.filter((t) => t.id !== themeId),
-            selectedThemeIds: state.selectedThemeIds.filter((id) => id !== themeId),
+        removeTheme: themeId =>
+          set(state => ({
+            themes: state.themes.filter(t => t.id !== themeId),
+            selectedThemeIds: state.selectedThemeIds.filter(
+              id => id !== themeId
+            ),
           })),
 
         clearThemes: () => set({ themes: [], selectedThemeIds: [] }),
 
         // Selection actions
-        toggleThemeSelection: (themeId) =>
-          set((state) => ({
+        toggleThemeSelection: themeId =>
+          set(state => ({
             selectedThemeIds: state.selectedThemeIds.includes(themeId)
-              ? state.selectedThemeIds.filter((id) => id !== themeId)
+              ? state.selectedThemeIds.filter(id => id !== themeId)
               : [...state.selectedThemeIds, themeId],
           })),
 
         selectAllThemes: () =>
-          set((state) => ({
-            selectedThemeIds: state.themes.map((t) => t.id),
+          set(state => ({
+            selectedThemeIds: state.themes.map(t => t.id),
           })),
 
         clearSelection: () => set({ selectedThemeIds: [] }),
 
-        isThemeSelected: (themeId) => get().selectedThemeIds.includes(themeId),
+        isThemeSelected: themeId => get().selectedThemeIds.includes(themeId),
 
         getSelectedThemes: () => {
           const { themes, selectedThemeIds } = get();
-          return themes.filter((t) => selectedThemeIds.includes(t.id));
+          return themes.filter(t => selectedThemeIds.includes(t.id));
         },
 
         // Extraction actions
-        setExtractionPurpose: (purpose) => set({ extractionPurpose: purpose }),
+        setExtractionPurpose: purpose => set({ extractionPurpose: purpose }),
 
-        setSaturationData: (data) => set({ saturationData: data }),
+        setSaturationData: data => set({ saturationData: data }),
 
-        setUserExpertiseLevel: (level) => set({ userExpertiseLevel: level }),
+        setUserExpertiseLevel: level => set({ userExpertiseLevel: level }),
 
-        setAnalyzingThemes: (analyzing) => set({ analyzingThemes: analyzing }),
+        setAnalyzingThemes: analyzing => set({ analyzingThemes: analyzing }),
 
-        setAnalyzingGaps: (analyzing) => set({ analyzingGaps: analyzing }),
+        setAnalyzingGaps: analyzing => set({ analyzingGaps: analyzing }),
 
         // Extraction progress actions
-        setIsExtractionInProgress: (inProgress) =>
+        setIsExtractionInProgress: inProgress =>
           set({ isExtractionInProgress: inProgress }),
 
-        setExtractionProgress: (progress) => set({ extractionProgress: progress }),
+        setExtractionProgress: progress =>
+          set({ extractionProgress: progress }),
 
-        setCurrentRequestId: (id) => set({ currentRequestId: id }),
+        setCurrentRequestId: id => set({ currentRequestId: id }),
 
-        setPreparingMessage: (message) => set({ preparingMessage: message }),
+        setPreparingMessage: message => set({ preparingMessage: message }),
 
-        setContentAnalysis: (analysis) => set({ contentAnalysis: analysis }),
+        setContentAnalysis: analysis => set({ contentAnalysis: analysis }),
 
         // Research Questions actions
-        setResearchQuestions: (questions) => set({ researchQuestions: questions }),
+        setResearchQuestions: questions =>
+          set({ researchQuestions: questions }),
 
-        addResearchQuestion: (question) =>
-          set((state) => ({
+        addResearchQuestion: question =>
+          set(state => ({
             researchQuestions: [...state.researchQuestions, question],
           })),
 
-        removeResearchQuestion: (questionId) =>
-          set((state) => ({
-            researchQuestions: state.researchQuestions.filter((q) => q.id !== questionId),
+        removeResearchQuestion: questionId =>
+          set(state => ({
+            researchQuestions: state.researchQuestions.filter(
+              q => q.id !== questionId
+            ),
           })),
 
-        setLoadingQuestions: (loading) => set({ loadingQuestions: loading }),
+        setLoadingQuestions: loading => set({ loadingQuestions: loading }),
 
         // Hypotheses actions
-        setHypotheses: (hypotheses) => set({ hypotheses }),
+        setHypotheses: hypotheses => set({ hypotheses }),
 
-        addHypothesis: (hypothesis) =>
-          set((state) => ({
+        addHypothesis: hypothesis =>
+          set(state => ({
             hypotheses: [...state.hypotheses, hypothesis],
           })),
 
-        removeHypothesis: (hypothesisId) =>
-          set((state) => ({
-            hypotheses: state.hypotheses.filter((h) => h.id !== hypothesisId),
+        removeHypothesis: hypothesisId =>
+          set(state => ({
+            hypotheses: state.hypotheses.filter(h => h.id !== hypothesisId),
           })),
 
-        setLoadingHypotheses: (loading) => set({ loadingHypotheses: loading }),
+        setLoadingHypotheses: loading => set({ loadingHypotheses: loading }),
 
         // Survey Construction actions
-        setConstructMappings: (mappings) => set({ constructMappings: mappings }),
+        setConstructMappings: mappings => set({ constructMappings: mappings }),
 
-        setLoadingConstructs: (loading) => set({ loadingConstructs: loading }),
+        setLoadingConstructs: loading => set({ loadingConstructs: loading }),
 
-        setGeneratedSurvey: (survey) => set({ generatedSurvey: survey }),
+        setGeneratedSurvey: survey => set({ generatedSurvey: survey }),
 
-        setLoadingSurvey: (loading) => set({ loadingSurvey: loading }),
+        setLoadingSurvey: loading => set({ loadingSurvey: loading }),
 
         // Reset actions
         reset: () =>
@@ -338,7 +344,7 @@ export const useLiteratureThemeStore = create<ThemeState>()(
       {
         name: 'literature-theme-store',
         // Persist themes, extraction config, and downstream outputs
-        partialize: (state) => ({
+        partialize: state => ({
           themes: state.themes,
           extractionPurpose: state.extractionPurpose,
           saturationData: state.saturationData,

@@ -57,7 +57,11 @@ describe('LiteratureApiEnhancedService', () => {
 
       (apiClient.post as jest.Mock).mockResolvedValue(mockResponse);
 
-      const params = { query: 'machine learning', sources: ['pubmed'], limit: 10 };
+      const params = {
+        query: 'machine learning',
+        sources: ['pubmed'],
+        limit: 10,
+      };
       const { promise, cancel } = service.searchLiterature(params);
 
       const result = await promise;
@@ -149,9 +153,27 @@ describe('LiteratureApiEnhancedService', () => {
   describe('Batch Operations', () => {
     it('should get multiple papers by IDs', async () => {
       const mockPapers = [
-        { id: '1', title: 'Paper 1', authors: [], year: 2024, source: 'pubmed' },
-        { id: '2', title: 'Paper 2', authors: [], year: 2024, source: 'pubmed' },
-        { id: '3', title: 'Paper 3', authors: [], year: 2024, source: 'pubmed' },
+        {
+          id: '1',
+          title: 'Paper 1',
+          authors: [],
+          year: 2024,
+          source: 'pubmed',
+        },
+        {
+          id: '2',
+          title: 'Paper 2',
+          authors: [],
+          year: 2024,
+          source: 'pubmed',
+        },
+        {
+          id: '3',
+          title: 'Paper 3',
+          authors: [],
+          year: 2024,
+          source: 'pubmed',
+        },
       ];
 
       (apiClient.get as jest.Mock)
@@ -237,7 +259,11 @@ describe('LiteratureApiEnhancedService', () => {
 
       (apiClient.post as jest.Mock).mockResolvedValue(mockResponse);
 
-      const result = await service.checkFullTextAvailability(['123', '456', '789']);
+      const result = await service.checkFullTextAvailability([
+        '123',
+        '456',
+        '789',
+      ]);
 
       expect(result).toEqual(mockResponse.data);
     });
@@ -248,9 +274,10 @@ describe('LiteratureApiEnhancedService', () => {
       const mockBlob = new Blob(['csv content'], { type: 'text/csv' });
       (apiClient.post as jest.Mock).mockResolvedValue({ data: mockBlob });
 
-      const result = await service.exportPapers(
-        { paperIds: ['1', '2'], format: 'csv' }
-      );
+      const result = await service.exportPapers({
+        paperIds: ['1', '2'],
+        format: 'csv',
+      });
 
       expect(result).toBe(mockBlob);
       expect(apiClient.post).toHaveBeenCalledWith(
@@ -264,9 +291,10 @@ describe('LiteratureApiEnhancedService', () => {
       const mockBlob = new Blob(['bibtex content'], { type: 'text/plain' });
       (apiClient.post as jest.Mock).mockResolvedValue({ data: mockBlob });
 
-      const result = await service.exportPapers(
-        { paperIds: ['1'], format: 'bibtex' }
-      );
+      const result = await service.exportPapers({
+        paperIds: ['1'],
+        format: 'bibtex',
+      });
 
       expect(result).toBe(mockBlob);
     });
@@ -276,8 +304,20 @@ describe('LiteratureApiEnhancedService', () => {
     it('should get citations for a paper', async () => {
       const mockCitations = {
         data: [
-          { id: '1', title: 'Citing Paper 1', authors: [], year: 2024, source: 'pubmed' },
-          { id: '2', title: 'Citing Paper 2', authors: [], year: 2024, source: 'pubmed' },
+          {
+            id: '1',
+            title: 'Citing Paper 1',
+            authors: [],
+            year: 2024,
+            source: 'pubmed',
+          },
+          {
+            id: '2',
+            title: 'Citing Paper 2',
+            authors: [],
+            year: 2024,
+            source: 'pubmed',
+          },
         ],
       };
 
@@ -295,7 +335,13 @@ describe('LiteratureApiEnhancedService', () => {
     it('should get references for a paper', async () => {
       const mockReferences = {
         data: [
-          { id: '3', title: 'Reference 1', authors: [], year: 2023, source: 'pubmed' },
+          {
+            id: '3',
+            title: 'Reference 1',
+            authors: [],
+            year: 2023,
+            source: 'pubmed',
+          },
         ],
       };
 
@@ -319,7 +365,11 @@ describe('LiteratureApiEnhancedService', () => {
 
       (apiClient.post as jest.Mock).mockResolvedValue(mockScores);
 
-      const result = await service.calculateQualityScores(['123', '456', '789']);
+      const result = await service.calculateQualityScores([
+        '123',
+        '456',
+        '789',
+      ]);
 
       expect(result).toEqual(mockScores.data);
     });
@@ -365,8 +415,18 @@ describe('LiteratureApiEnhancedService', () => {
     it('should get saved searches', async () => {
       const mockSearches = {
         data: [
-          { id: '1', name: 'Search 1', params: { query: 'test' }, createdAt: '2024-01-01' },
-          { id: '2', name: 'Search 2', params: { query: 'test2' }, createdAt: '2024-01-02' },
+          {
+            id: '1',
+            name: 'Search 1',
+            params: { query: 'test' },
+            createdAt: '2024-01-01',
+          },
+          {
+            id: '2',
+            name: 'Search 2',
+            params: { query: 'test2' },
+            createdAt: '2024-01-02',
+          },
         ],
       };
 
@@ -448,8 +508,22 @@ describe('LiteratureApiEnhancedService', () => {
       const mockSearchResponse = {
         data: {
           papers: [
-            { id: '1', title: 'Paper 1', authors: [], year: 2024, source: 'pubmed', hasPdf: true },
-            { id: '2', title: 'Paper 2', authors: [], year: 2024, source: 'pubmed', hasPdf: true },
+            {
+              id: '1',
+              title: 'Paper 1',
+              authors: [],
+              year: 2024,
+              source: 'pubmed',
+              hasPdf: true,
+            },
+            {
+              id: '2',
+              title: 'Paper 2',
+              authors: [],
+              year: 2024,
+              source: 'pubmed',
+              hasPdf: true,
+            },
           ],
           total: 2,
           page: 1,

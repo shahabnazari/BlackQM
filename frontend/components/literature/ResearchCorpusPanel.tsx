@@ -265,7 +265,7 @@ export default function ResearchCorpusPanel({
                   {iterationHistory
                     .slice()
                     .reverse()
-                    .map((iteration) => (
+                    .map(iteration => (
                       <motion.button
                         key={iteration.iterationNumber}
                         onClick={() =>
@@ -299,8 +299,8 @@ export default function ResearchCorpusPanel({
                           <div>
                             <p className="text-gray-600">Papers</p>
                             <p className="font-semibold text-gray-900">
-                              +{iteration.papersAdded} (
-                              {iteration.totalPapers} total)
+                              +{iteration.papersAdded} ({iteration.totalPapers}{' '}
+                              total)
                             </p>
                           </div>
                           <div>

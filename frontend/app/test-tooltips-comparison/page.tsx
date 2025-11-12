@@ -35,28 +35,28 @@ export default function TestTooltipsComparison() {
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-700 dark:text-gray-300">Study Title</span>
-                    <InfoTooltip {...(studyCreationTooltips.studyTitle || defaultTooltip)} />
+                    <InfoTooltip {...(studyCreationTooltips['studyTitle'] || defaultTooltip)} />
                   </div>
                 </div>
                 
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-700 dark:text-gray-300">Welcome Message</span>
-                    <InfoTooltip {...(studyCreationTooltips.welcomeMessage || defaultTooltip)} position="bottom" />
+                    <InfoTooltip {...(studyCreationTooltips['welcomeMessage'] || defaultTooltip)} position="bottom" />
                   </div>
                 </div>
                 
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-700 dark:text-gray-300">Consent Form</span>
-                    <InfoTooltip {...(studyCreationTooltips.consentForm || defaultTooltip)} position="left" />
+                    <InfoTooltip {...(studyCreationTooltips['consentForm'] || defaultTooltip)} position="left" />
                   </div>
                 </div>
                 
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-700 dark:text-gray-300">Grid Configuration</span>
-                    <InfoTooltip {...(studyCreationTooltips.gridColumns || defaultTooltip)} position="right" />
+                    <InfoTooltip {...(studyCreationTooltips['gridColumns'] || defaultTooltip)} position="right" />
                   </div>
                 </div>
               </div>
@@ -85,28 +85,28 @@ export default function TestTooltipsComparison() {
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-700 dark:text-gray-300">Study Title</span>
-                    <InfoTooltipV2 {...(studyCreationTooltips.studyTitle || defaultTooltip)} />
+                    <InfoTooltipV2 {...(studyCreationTooltips['studyTitle'] || defaultTooltip)} />
                   </div>
                 </div>
                 
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-700 dark:text-gray-300">Welcome Message</span>
-                    <InfoTooltipV2 {...(studyCreationTooltips.welcomeMessage || defaultTooltip)} position="bottom" />
+                    <InfoTooltipV2 {...(studyCreationTooltips['welcomeMessage'] || defaultTooltip)} position="bottom" />
                   </div>
                 </div>
                 
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-700 dark:text-gray-300">Consent Form</span>
-                    <InfoTooltipV2 {...(studyCreationTooltips.consentForm || defaultTooltip)} position="auto" />
+                    <InfoTooltipV2 {...(studyCreationTooltips['consentForm'] || defaultTooltip)} position="auto" />
                   </div>
                 </div>
                 
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-700 dark:text-gray-300">Grid Configuration</span>
-                    <InfoTooltipV2 {...(studyCreationTooltips.gridColumns || defaultTooltip)} position="auto" />
+                    <InfoTooltipV2 {...(studyCreationTooltips['gridColumns'] || defaultTooltip)} position="auto" />
                   </div>
                 </div>
               </div>
@@ -142,15 +142,15 @@ export default function TestTooltipsComparison() {
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <span className="text-sm">Far Left</span>
-                  <InfoTooltipV2 {...(studyCreationTooltips.preScreening || defaultTooltip)} position="auto" />
+                  <InfoTooltipV2 {...(studyCreationTooltips['preScreening'] || defaultTooltip)} position="auto" />
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">Center</span>
-                  <InfoTooltipV2 {...(studyCreationTooltips.postSurvey || defaultTooltip)} position="auto" />
+                  <InfoTooltipV2 {...(studyCreationTooltips['postSurvey'] || defaultTooltip)} position="auto" />
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">Far Right</span>
-                  <InfoTooltipV2 {...(studyCreationTooltips.videoConferencing || defaultTooltip)} position="auto" />
+                  <InfoTooltipV2 {...(studyCreationTooltips['videoConferencing'] || defaultTooltip)} position="auto" />
                 </div>
               </div>
             </div>
@@ -163,15 +163,15 @@ export default function TestTooltipsComparison() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <label className="text-sm flex-1">Organization Name</label>
-                  <InfoTooltipV2 {...(studyCreationTooltips.organizationLogo || defaultTooltip)} />
+                  <InfoTooltipV2 {...(studyCreationTooltips['organizationLogo'] || defaultTooltip)} />
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="text-sm flex-1">Digital Signature</label>
-                  <InfoTooltipV2 {...(studyCreationTooltips.digitalSignature || defaultTooltip)} />
+                  <InfoTooltipV2 {...(studyCreationTooltips['digitalSignature'] || defaultTooltip)} />
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="text-sm flex-1">Template Selection</label>
-                  <InfoTooltipV2 {...(studyCreationTooltips.templates || defaultTooltip)} />
+                  <InfoTooltipV2 {...(studyCreationTooltips['templates'] || defaultTooltip)} />
                 </div>
               </div>
             </div>
@@ -187,15 +187,15 @@ export default function TestTooltipsComparison() {
               <div className="flex gap-4">
                 <div className="flex items-center gap-2">
                   <span className="text-sm">First</span>
-                  <InfoTooltipV2 {...(studyCreationTooltips.studyTitle || defaultTooltip)} />
+                  <InfoTooltipV2 {...(studyCreationTooltips['studyTitle'] || defaultTooltip)} />
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">Second</span>
-                  <InfoTooltipV2 {...(studyCreationTooltips.welcomeMessage || defaultTooltip)} />
+                  <InfoTooltipV2 {...(studyCreationTooltips['welcomeMessage'] || defaultTooltip)} />
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">Third</span>
-                  <InfoTooltipV2 {...(studyCreationTooltips.consentForm || defaultTooltip)} />
+                  <InfoTooltipV2 {...(studyCreationTooltips['consentForm'] || defaultTooltip)} />
                 </div>
               </div>
             </div>

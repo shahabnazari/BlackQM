@@ -51,9 +51,19 @@ export interface AlternativeSourcesPanelProps {
 // ============================================================================
 
 const ALTERNATIVE_SOURCES: AlternativeSource[] = [
-  { id: 'podcasts', label: 'Podcasts', icon: '🎙️', desc: 'Expert interviews & discussions' },
+  {
+    id: 'podcasts',
+    label: 'Podcasts',
+    icon: '🎙️',
+    desc: 'Expert interviews & discussions',
+  },
   { id: 'github', label: 'GitHub', icon: '💻', desc: 'Code & datasets' },
-  { id: 'stackoverflow', label: 'StackOverflow', icon: '📚', desc: 'Technical Q&A' },
+  {
+    id: 'stackoverflow',
+    label: 'StackOverflow',
+    icon: '📚',
+    desc: 'Technical Q&A',
+  },
   { id: 'medium', label: 'Medium', icon: '📝', desc: 'Practitioner insights' },
 ];
 
@@ -68,7 +78,6 @@ export const AlternativeSourcesPanel = memo(function AlternativeSourcesPanel({
   loadingAlternative,
   onSearch,
 }: AlternativeSourcesPanelProps) {
-
   const handleSourceToggle = (sourceId: string) => {
     const newSources = alternativeSources.includes(sourceId)
       ? alternativeSources.filter(s => s !== sourceId)
@@ -107,7 +116,9 @@ export const AlternativeSourcesPanel = memo(function AlternativeSourcesPanel({
             {ALTERNATIVE_SOURCES.map(source => (
               <Badge
                 key={source.id}
-                variant={alternativeSources.includes(source.id) ? 'default' : 'outline'}
+                variant={
+                  alternativeSources.includes(source.id) ? 'default' : 'outline'
+                }
                 className="cursor-pointer py-2 px-4 text-sm"
                 onClick={() => handleSourceToggle(source.id)}
               >
@@ -125,11 +136,13 @@ export const AlternativeSourcesPanel = memo(function AlternativeSourcesPanel({
               🎙️ Podcast Search
             </h4>
             <p className="text-xs text-gray-600 mb-2">
-              Search for research podcasts, expert interviews, and academic discussions
+              Search for research podcasts, expert interviews, and academic
+              discussions
             </p>
             <Input placeholder="Search podcasts..." className="mb-2" />
             <p className="text-xs text-gray-500">
-              Coming soon: Integration with Apple Podcasts, Spotify, and Google Podcasts
+              Coming soon: Integration with Apple Podcasts, Spotify, and Google
+              Podcasts
             </p>
           </div>
         )}
@@ -144,7 +157,8 @@ export const AlternativeSourcesPanel = memo(function AlternativeSourcesPanel({
             </p>
             <Input placeholder="Search repositories..." className="mb-2" />
             <p className="text-xs text-gray-500">
-              Coming soon: GitHub API integration for code search and dataset discovery
+              Coming soon: GitHub API integration for code search and dataset
+              discovery
             </p>
           </div>
         )}
@@ -159,7 +173,8 @@ export const AlternativeSourcesPanel = memo(function AlternativeSourcesPanel({
             </p>
             <Input placeholder="Search questions..." className="mb-2" />
             <p className="text-xs text-gray-500">
-              Coming soon: StackOverflow API integration for technical problem-solving
+              Coming soon: StackOverflow API integration for technical
+              problem-solving
             </p>
           </div>
         )}

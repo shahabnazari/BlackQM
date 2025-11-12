@@ -16,9 +16,9 @@ export default defineConfig({
 
   // Test execution settings
   fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  ...(process.env.CI ? { workers: 1 } : {}),
+  forbidOnly: !!process.env['CI'],
+  retries: process.env['CI'] ? 2 : 0,
+  ...(process.env['CI'] ? { workers: 1 } : {}),
 
   // Reporter configuration
   reporter: [
@@ -32,7 +32,7 @@ export default defineConfig({
   // Shared test configuration
   use: {
     // Base URL for testing
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL: process.env['BASE_URL'] || 'http://localhost:3000',
 
     // Collect trace on test failure
     trace: 'on-first-retry',
@@ -191,7 +191,7 @@ export default defineConfig({
     command: 'npm run dev',
     port: 3000,
     timeout: 120 * 1000,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !process.env['CI'],
   },
 
   // Output folder for test artifacts

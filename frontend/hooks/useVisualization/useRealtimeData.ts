@@ -26,7 +26,7 @@ export function useRealtimeData<T = any>(
   options: RealtimeDataOptions<T> = { queryKey: [endpoint] }
 ) {
   const {
-    websocketUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000',
+    websocketUrl = process.env['NEXT_PUBLIC_WS_URL'] || 'ws://localhost:4000',
     channel,
     refetchInterval = 5000,
     onUpdate,

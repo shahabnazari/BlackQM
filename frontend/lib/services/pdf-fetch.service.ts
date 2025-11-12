@@ -31,7 +31,7 @@ export interface PDFFetchProgress {
 
 class PDFFetchService {
   private readonly API_BASE =
-    process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+    process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000/api';
 
   /**
    * Trigger bulk PDF fetch for multiple papers

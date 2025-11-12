@@ -226,7 +226,9 @@ Consider:
     // Clean old cache entries
     if (this.cache.size > 100) {
       const oldestKey = Array.from(this.cache.keys())[0];
-      this.cache.delete(oldestKey);
+      if (oldestKey) {
+        this.cache.delete(oldestKey);
+      }
     }
   }
 }

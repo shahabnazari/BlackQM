@@ -80,9 +80,7 @@ describe('BaseErrorBoundary', () => {
   describe('Custom Fallback', () => {
     it('should render custom fallback component', () => {
       render(
-        <BaseErrorBoundary
-          fallback={<div>Custom fallback</div>}
-        >
+        <BaseErrorBoundary fallback={<div>Custom fallback</div>}>
           <ThrowError shouldThrow={true} />
         </BaseErrorBoundary>
       );
@@ -91,9 +89,7 @@ describe('BaseErrorBoundary', () => {
     });
 
     it('should render custom fallback function with error details', () => {
-      const fallback = (error: Error) => (
-        <div>Error: {error.message}</div>
-      );
+      const fallback = (error: Error) => <div>Error: {error.message}</div>;
 
       render(
         <BaseErrorBoundary fallback={fallback}>
@@ -217,7 +213,9 @@ describe('BaseErrorBoundary', () => {
         </BaseErrorBoundary>
       );
 
-      expect(screen.getByText(/This error has occurred 1 times/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/This error has occurred 1 times/i)
+      ).toBeInTheDocument();
 
       // Reset and throw again
       rerender(
@@ -232,7 +230,9 @@ describe('BaseErrorBoundary', () => {
         </BaseErrorBoundary>
       );
 
-      expect(screen.getByText(/This error has occurred 1 times/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/This error has occurred 1 times/i)
+      ).toBeInTheDocument();
     });
   });
 
@@ -292,7 +292,9 @@ describe('BaseErrorBoundary', () => {
       );
 
       const element = screen.getByText('No error');
-      expect(element.parentElement?.className).not.toContain('error-boundary-isolation');
+      expect(element.parentElement?.className).not.toContain(
+        'error-boundary-isolation'
+      );
     });
   });
 
@@ -336,7 +338,9 @@ describe('BaseErrorBoundary', () => {
         </BaseErrorBoundary>
       );
 
-      expect(screen.getByText('Network request failed: timeout after 30s')).toBeInTheDocument();
+      expect(
+        screen.getByText('Network request failed: timeout after 30s')
+      ).toBeInTheDocument();
     });
 
     it('should reject errors properly', () => {

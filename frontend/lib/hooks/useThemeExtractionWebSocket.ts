@@ -177,7 +177,7 @@ export function useThemeExtractionWebSocket(
     setConnectionStatus(ConnectionStatus.CONNECTING);
 
     // Get API URL from environment
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000';
 
     console.log(`🔌 Connecting to WebSocket: ${apiUrl}/theme-extraction`);
 

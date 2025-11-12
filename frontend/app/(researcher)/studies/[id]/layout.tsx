@@ -11,7 +11,7 @@ export default function StudyLayout({
   children: React.ReactNode;
 }) {
   const params = useParams();
-  const studyId = params.id as string;
+  const studyId = params['id'] as string;
 
   // Store current study ID in context/localStorage for PrimaryToolbar to use
   useEffect(() => {

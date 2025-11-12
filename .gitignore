@@ -103,6 +103,7 @@ pnpm-lock.yaml
 .turbo
 # Log files - Enterprise-grade exclusions
 *.log
+*.log.old
 logs/
 **/logs/
 dev.log
@@ -113,6 +114,7 @@ restart.log
 *-out.log
 *-combined.log
 dev-manager.log
+dev-manager.log.old
 
 
 # Uploaded files

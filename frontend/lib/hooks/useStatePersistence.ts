@@ -207,7 +207,9 @@ export function useStatePersistence(
    */
   const handleRestoreState = useCallback(() => {
     if (isRestoringRef.current) {
-      console.log('⏳ [useStatePersistence] Restore already in progress, skipping...');
+      console.log(
+        '⏳ [useStatePersistence] Restore already in progress, skipping...'
+      );
       return;
     }
 
@@ -275,7 +277,9 @@ export function useStatePersistence(
    */
   const saveCurrentState = useCallback(() => {
     try {
-      console.log('💾 [useStatePersistence] Saving current state immediately...');
+      console.log(
+        '💾 [useStatePersistence] Saving current state immediately...'
+      );
       saveLiteratureState(currentState);
       setHasSavedData(true);
     } catch (error) {

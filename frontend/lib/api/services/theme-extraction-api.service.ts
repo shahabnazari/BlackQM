@@ -13,7 +13,11 @@
  * @module theme-extraction-api.service
  */
 
-import { BaseApiService, CancellableRequest, RequestOptions } from './base-api.service';
+import {
+  BaseApiService,
+  CancellableRequest,
+  RequestOptions,
+} from './base-api.service';
 
 // ============================================================================
 // Types
@@ -32,7 +36,11 @@ export interface UnifiedTheme {
 }
 
 export interface ResearchPurpose {
-  type: 'exploration' | 'hypothesis_testing' | 'theory_building' | 'literature_review';
+  type:
+    | 'exploration'
+    | 'hypothesis_testing'
+    | 'theory_building'
+    | 'literature_review';
   description: string;
   researchQuestions?: string[];
   targetAudience?: string;
@@ -176,7 +184,7 @@ class ThemeExtractionApiService extends BaseApiService {
   ): CancellableRequest<ThemeExtractionResponse> {
     const requestId = `extraction-${Date.now()}`;
 
-    return this.createCancellableRequest(requestId, async (signal) => {
+    return this.createCancellableRequest(requestId, async signal => {
       const response = await this.post<ThemeExtractionResponse>(
         '/extract',
         params,
@@ -210,7 +218,7 @@ class ThemeExtractionApiService extends BaseApiService {
   ): CancellableRequest<ThemeExtractionResponse> {
     const pollingRequestId = `poll-${requestId}`;
 
-    return this.createCancellableRequest(pollingRequestId, async (signal) => {
+    return this.createCancellableRequest(pollingRequestId, async signal => {
       const pollInterval = 2000; // 2 seconds
       const maxAttempts = 150; // 5 minutes total (150 * 2s)
 
@@ -261,7 +269,11 @@ class ThemeExtractionApiService extends BaseApiService {
   async generateResearchQuestions(
     themeIds: string[],
     params?: {
-      researchType?: 'exploratory' | 'descriptive' | 'explanatory' | 'evaluative';
+      researchType?:
+        | 'exploratory'
+        | 'descriptive'
+        | 'explanatory'
+        | 'evaluative';
       maxQuestions?: number;
       includeSubQuestions?: boolean;
     },
@@ -333,7 +345,13 @@ class ThemeExtractionApiService extends BaseApiService {
       { hypothesis },
       options
     );
-    return response.data as { feasible: boolean; testability: number; suggestedMethods: string[]; requiredSampleSize: number; estimatedCost: number };
+    return response.data as {
+      feasible: boolean;
+      testability: number;
+      suggestedMethods: string[];
+      requiredSampleSize: number;
+      estimatedCost: number;
+    };
   }
 
   // ============================================================================
@@ -392,12 +410,17 @@ class ThemeExtractionApiService extends BaseApiService {
     }[];
     reliabilityEstimate: number;
   }> {
-    const response = await this.post(
-      '/survey/validate',
-      { items },
-      options
-    );
-    return response.data as { items: SurveyItem[]; issues: { itemId: string; issue: string; severity: 'low' | 'medium' | 'high'; suggestion: string }[]; reliabilityEstimate: number };
+    const response = await this.post('/survey/validate', { items }, options);
+    return response.data as {
+      items: SurveyItem[];
+      issues: {
+        itemId: string;
+        issue: string;
+        severity: 'low' | 'medium' | 'high';
+        suggestion: string;
+      }[];
+      reliabilityEstimate: number;
+    };
   }
 
   // ============================================================================
@@ -438,11 +461,16 @@ class ThemeExtractionApiService extends BaseApiService {
       timeline: string;
     };
   }> {
-    const response = await this.get(
-      `/gaps/${gapId}/recommendations`,
-      options
-    );
-    return response.data as { gap: ResearchGap; recommendations: { methodology: string[]; collaborators: string[]; funding: string[]; timeline: string } };
+    const response = await this.get(`/gaps/${gapId}/recommendations`, options);
+    return response.data as {
+      gap: ResearchGap;
+      recommendations: {
+        methodology: string[];
+        collaborators: string[];
+        funding: string[];
+        timeline: string;
+      };
+    };
   }
 
   // ============================================================================
@@ -456,10 +484,7 @@ class ThemeExtractionApiService extends BaseApiService {
     themeId: string,
     options?: RequestOptions
   ): Promise<UnifiedTheme> {
-    const response = await this.get<UnifiedTheme>(
-      `/${themeId}`,
-      options
-    );
+    const response = await this.get<UnifiedTheme>(`/${themeId}`, options);
     return response.data;
   }
 
@@ -519,7 +544,8 @@ class ThemeExtractionApiService extends BaseApiService {
 // Export Singleton Instance
 // ============================================================================
 
-export const themeExtractionApiService = ThemeExtractionApiService.getInstance();
+export const themeExtractionApiService =
+  ThemeExtractionApiService.getInstance();
 
 // Export class for testing
 export { ThemeExtractionApiService };

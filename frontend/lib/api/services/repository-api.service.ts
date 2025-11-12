@@ -18,7 +18,15 @@ import { apiClient } from '../client';
 // ============================================================================
 
 export interface CitationNode {
-  type: 'paper' | 'gap' | 'question' | 'hypothesis' | 'theme' | 'statement' | 'factor' | 'insight';
+  type:
+    | 'paper'
+    | 'gap'
+    | 'question'
+    | 'hypothesis'
+    | 'theme'
+    | 'statement'
+    | 'factor'
+    | 'insight';
   id: string;
   title: string;
   metadata?: Record<string, any>;
@@ -40,7 +48,14 @@ export interface ResearchInsight {
   id: string;
   title: string;
   content: string;
-  type: 'statement' | 'factor' | 'theme' | 'gap' | 'quote' | 'paper_finding' | 'hypothesis';
+  type:
+    | 'statement'
+    | 'factor'
+    | 'theme'
+    | 'gap'
+    | 'quote'
+    | 'paper_finding'
+    | 'hypothesis';
   sourceType: 'study' | 'paper' | 'response' | 'analysis' | 'literature';
   sourceId: string;
   studyId?: string;
@@ -170,7 +185,9 @@ export class RepositoryApiService {
   /**
    * Reindex specific study
    */
-  async reindexStudy(studyId: string): Promise<{ studyId: string; indexed: number; message: string }> {
+  async reindexStudy(
+    studyId: string
+  ): Promise<{ studyId: string; indexed: number; message: string }> {
     const response = await apiClient.post(`/repository/index/study/${studyId}`);
     return response.data;
   }
@@ -216,7 +233,9 @@ export class RepositoryApiService {
       queryParams.append('order', params.order);
     }
 
-    const response = await apiClient.get(`/repository/search?${queryParams.toString()}`);
+    const response = await apiClient.get(
+      `/repository/search?${queryParams.toString()}`
+    );
     return response.data;
   }
 
@@ -231,8 +250,13 @@ export class RepositoryApiService {
   /**
    * Get related insights
    */
-  async getRelatedInsights(insightId: string, limit: number = 5): Promise<ResearchInsight[]> {
-    const response = await apiClient.get(`/repository/insights/${insightId}/related?limit=${limit}`);
+  async getRelatedInsights(
+    insightId: string,
+    limit: number = 5
+  ): Promise<ResearchInsight[]> {
+    const response = await apiClient.get(
+      `/repository/insights/${insightId}/related?limit=${limit}`
+    );
     return response.data;
   }
 
@@ -265,7 +289,9 @@ export class RepositoryApiService {
    * Get annotations for an insight
    */
   async getAnnotations(insightId: string): Promise<Annotation[]> {
-    const response = await apiClient.get(`/repository/insights/${insightId}/annotations`);
+    const response = await apiClient.get(
+      `/repository/insights/${insightId}/annotations`
+    );
     return response.data;
   }
 
@@ -276,23 +302,32 @@ export class RepositoryApiService {
     insightId: string,
     content: string,
     type: Annotation['type'],
-    parentId?: string,
+    parentId?: string
   ): Promise<Annotation> {
-    const response = await apiClient.post(`/repository/insights/${insightId}/annotations`, {
-      content,
-      type,
-      parentId,
-    });
+    const response = await apiClient.post(
+      `/repository/insights/${insightId}/annotations`,
+      {
+        content,
+        type,
+        parentId,
+      }
+    );
     return response.data;
   }
 
   /**
    * Update annotation
    */
-  async updateAnnotation(annotationId: string, content: string): Promise<Annotation> {
-    const response = await apiClient.post(`/repository/annotations/${annotationId}`, {
-      content,
-    });
+  async updateAnnotation(
+    annotationId: string,
+    content: string
+  ): Promise<Annotation> {
+    const response = await apiClient.post(
+      `/repository/annotations/${annotationId}`,
+      {
+        content,
+      }
+    );
     return response.data;
   }
 
@@ -300,7 +335,9 @@ export class RepositoryApiService {
    * Delete annotation
    */
   async deleteAnnotation(annotationId: string): Promise<{ deleted: boolean }> {
-    const response = await apiClient.post(`/repository/annotations/${annotationId}/delete`);
+    const response = await apiClient.post(
+      `/repository/annotations/${annotationId}/delete`
+    );
     return response.data;
   }
 
@@ -312,15 +349,22 @@ export class RepositoryApiService {
    * Get version history for an insight
    */
   async getVersionHistory(insightId: string): Promise<InsightVersion[]> {
-    const response = await apiClient.get(`/repository/insights/${insightId}/versions`);
+    const response = await apiClient.get(
+      `/repository/insights/${insightId}/versions`
+    );
     return response.data;
   }
 
   /**
    * Get specific version
    */
-  async getVersion(insightId: string, version: number): Promise<InsightVersion> {
-    const response = await apiClient.get(`/repository/insights/${insightId}/versions/${version}`);
+  async getVersion(
+    insightId: string,
+    version: number
+  ): Promise<InsightVersion> {
+    const response = await apiClient.get(
+      `/repository/insights/${insightId}/versions/${version}`
+    );
     return response.data;
   }
 
@@ -332,7 +376,9 @@ export class RepositoryApiService {
    * Get search history
    */
   async getSearchHistory(limit: number = 20): Promise<SearchHistoryEntry[]> {
-    const response = await apiClient.get(`/repository/search-history?limit=${limit}`);
+    const response = await apiClient.get(
+      `/repository/search-history?limit=${limit}`
+    );
     return response.data;
   }
 
@@ -354,12 +400,15 @@ export class RepositoryApiService {
   async updateVisibility(
     insightId: string,
     isPublic: boolean,
-    shareLevel: 'private' | 'team' | 'institution' | 'public',
+    shareLevel: 'private' | 'team' | 'institution' | 'public'
   ): Promise<ResearchInsight> {
-    const response = await apiClient.put(`/repository/insights/${insightId}/visibility`, {
-      isPublic,
-      shareLevel,
-    });
+    const response = await apiClient.put(
+      `/repository/insights/${insightId}/visibility`,
+      {
+        isPublic,
+        shareLevel,
+      }
+    );
     return response.data;
   }
 
@@ -370,21 +419,29 @@ export class RepositoryApiService {
     insightId: string,
     userId: string,
     role: AccessRole,
-    expiresAt?: string,
+    expiresAt?: string
   ): Promise<InsightAccess> {
-    const response = await apiClient.post(`/repository/insights/${insightId}/access`, {
-      userId,
-      role,
-      expiresAt,
-    });
+    const response = await apiClient.post(
+      `/repository/insights/${insightId}/access`,
+      {
+        userId,
+        role,
+        expiresAt,
+      }
+    );
     return response.data;
   }
 
   /**
    * Revoke user access
    */
-  async revokeAccess(insightId: string, userId: string): Promise<{ revoked: boolean }> {
-    const response = await apiClient.delete(`/repository/insights/${insightId}/access/${userId}`);
+  async revokeAccess(
+    insightId: string,
+    userId: string
+  ): Promise<{ revoked: boolean }> {
+    const response = await apiClient.delete(
+      `/repository/insights/${insightId}/access/${userId}`
+    );
     return response.data;
   }
 
@@ -392,7 +449,9 @@ export class RepositoryApiService {
    * Check if current user has access
    */
   async checkAccess(insightId: string): Promise<AccessCheckResult> {
-    const response = await apiClient.get(`/repository/insights/${insightId}/check-access`);
+    const response = await apiClient.get(
+      `/repository/insights/${insightId}/check-access`
+    );
     return response.data;
   }
 
@@ -400,7 +459,9 @@ export class RepositoryApiService {
    * Get access list for insight
    */
   async getAccessList(insightId: string): Promise<InsightAccess[]> {
-    const response = await apiClient.get(`/repository/insights/${insightId}/access`);
+    const response = await apiClient.get(
+      `/repository/insights/${insightId}/access`
+    );
     return response.data;
   }
 
@@ -410,12 +471,15 @@ export class RepositoryApiService {
   async grantStudyAccess(
     studyId: string,
     userId: string,
-    role: 'VIEWER' | 'COMMENTER' | 'EDITOR',
+    role: 'VIEWER' | 'COMMENTER' | 'EDITOR'
   ): Promise<{ granted: number; insights: string[] }> {
-    const response = await apiClient.post(`/repository/studies/${studyId}/access`, {
-      userId,
-      role,
-    });
+    const response = await apiClient.post(
+      `/repository/studies/${studyId}/access`,
+      {
+        userId,
+        role,
+      }
+    );
     return response.data;
   }
 
@@ -424,9 +488,11 @@ export class RepositoryApiService {
    */
   async revokeStudyAccess(
     studyId: string,
-    userId: string,
+    userId: string
   ): Promise<{ revoked: number; insights: string[] }> {
-    const response = await apiClient.delete(`/repository/studies/${studyId}/access/${userId}`);
+    const response = await apiClient.delete(
+      `/repository/studies/${studyId}/access/${userId}`
+    );
     return response.data;
   }
 }

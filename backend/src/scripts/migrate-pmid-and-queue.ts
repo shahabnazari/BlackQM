@@ -31,7 +31,9 @@ async function migratePMIDAndQueue() {
       },
     });
 
-    console.log(`   Found ${papersWithPubMedUrl.length} papers with PubMed URLs and no PMID`);
+    console.log(
+      `   Found ${papersWithPubMedUrl.length} papers with PubMed URLs and no PMID`,
+    );
 
     let updatedCount = 0;
     for (const paper of papersWithPubMedUrl) {
@@ -51,7 +53,9 @@ async function migratePMIDAndQueue() {
     console.log(`   📊 Updated ${updatedCount} papers with PMID\n`);
 
     // Step 2: Find all papers without full-text that have DOI/PMID/URL
-    console.log('📋 Step 2: Finding papers to queue for full-text extraction...');
+    console.log(
+      '📋 Step 2: Finding papers to queue for full-text extraction...',
+    );
     const papersToQueue = await prisma.paper.findMany({
       where: {
         OR: [
@@ -61,10 +65,7 @@ async function migratePMIDAndQueue() {
         ],
         AND: [
           {
-            OR: [
-              { fullTextStatus: 'not_fetched' },
-              { fullTextStatus: null },
-            ],
+            OR: [{ fullTextStatus: 'not_fetched' }, { fullTextStatus: null }],
           },
         ],
       },
@@ -77,23 +78,29 @@ async function migratePMIDAndQueue() {
       },
     });
 
-    console.log(`   Found ${papersToQueue.length} papers to queue for full-text extraction`);
+    console.log(
+      `   Found ${papersToQueue.length} papers to queue for full-text extraction`,
+    );
 
     // Step 3: Update their status to 'fetching' (they'll be picked up by queue service)
     // Note: In a real production system, we'd call the queue service directly
     // For now, we just mark them and provide instructions
-    const paperIds = papersToQueue.map(p => p.id);
+    const paperIds = papersToQueue.map((p) => p.id);
 
     console.log(`\n📊 Summary:`);
     console.log(`   • Papers with new PMID: ${updatedCount}`);
-    console.log(`   • Papers ready for full-text fetch: ${papersToQueue.length}`);
+    console.log(
+      `   • Papers ready for full-text fetch: ${papersToQueue.length}`,
+    );
     console.log(`\n🔧 Next Steps:`);
     console.log(`   1. Papers are ready to be queued`);
     console.log(`   2. Add API endpoint to trigger batch processing`);
     console.log(`   3. Papers have been identified with these IDs (first 10):`);
-    papersToQueue.slice(0, 10).forEach(p => {
+    papersToQueue.slice(0, 10).forEach((p) => {
       console.log(`      • ${p.id}: "${p.title?.substring(0, 60)}..."`);
-      console.log(`        Sources: ${[p.pmid ? 'PMID' : null, p.doi ? 'DOI' : null, p.url ? 'URL' : null].filter(Boolean).join(', ')}`);
+      console.log(
+        `        Sources: ${[p.pmid ? 'PMID' : null, p.doi ? 'DOI' : null, p.url ? 'URL' : null].filter(Boolean).join(', ')}`,
+      );
     });
 
     return paperIds;
@@ -108,8 +115,12 @@ async function migratePMIDAndQueue() {
 // Run migration
 migratePMIDAndQueue()
   .then((paperIds) => {
-    console.log(`\n✅ Migration complete! ${paperIds.length} papers ready for full-text fetch.`);
-    console.log(`\n💡 To trigger full-text fetch for these papers, call the batch processing endpoint.`);
+    console.log(
+      `\n✅ Migration complete! ${paperIds.length} papers ready for full-text fetch.`,
+    );
+    console.log(
+      `\n💡 To trigger full-text fetch for these papers, call the batch processing endpoint.`,
+    );
     process.exit(0);
   })
   .catch((error) => {

@@ -26,7 +26,12 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
-import { explainabilityApi, type FactorExplanation, type BiasAudit, type CertaintyScore } from '@/lib/api/services/explainability-api.service';
+import {
+  explainabilityApi,
+  type FactorExplanation,
+  type BiasAudit,
+  type CertaintyScore,
+} from '@/lib/api/services/explainability-api.service';
 import { InteractiveWhatIfAnalysis } from './InteractiveWhatIfAnalysis';
 
 // ============================================================================
@@ -35,7 +40,12 @@ import { InteractiveWhatIfAnalysis } from './InteractiveWhatIfAnalysis';
 
 interface ExplainabilityDashboardProps {
   studyId: string;
-  initialTab?: 'feature-importance' | 'what-if' | 'bias-audit' | 'certainty' | 'alternatives';
+  initialTab?:
+    | 'feature-importance'
+    | 'what-if'
+    | 'bias-audit'
+    | 'certainty'
+    | 'alternatives';
 }
 
 // ============================================================================
@@ -51,7 +61,11 @@ function FeatureImportancePanel({ factors }: { factors: FactorExplanation[] }) {
   const currentFactor = factors[selectedFactor];
 
   if (!currentFactor) {
-    return <div className="text-center py-12 text-gray-500">No factor data available</div>;
+    return (
+      <div className="text-center py-12 text-gray-500">
+        No factor data available
+      </div>
+    );
   }
 
   return (
@@ -59,7 +73,9 @@ function FeatureImportancePanel({ factors }: { factors: FactorExplanation[] }) {
       {/* Factor Selector */}
       <Card className="p-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm font-medium text-gray-700">Select Factor:</span>
+          <span className="text-sm font-medium text-gray-700">
+            Select Factor:
+          </span>
           {factors.map((factor, idx) => (
             <Button
               key={factor.factorNumber}
@@ -112,18 +128,27 @@ function FeatureImportancePanel({ factors }: { factors: FactorExplanation[] }) {
             Most Important Positive Statements
           </h3>
           <div className="space-y-3">
-            {currentFactor.topPositiveStatements.slice(0, 5).map((stmt, idx) => (
-              <div key={idx} className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-start justify-between mb-2">
-                  <Badge className="bg-green-100 text-green-700 text-xs">#{stmt.rank}</Badge>
-                  <span className="text-xs text-green-700 font-medium">
-                    {(stmt.importance * 100).toFixed(0)}% importance
-                  </span>
+            {currentFactor.topPositiveStatements
+              .slice(0, 5)
+              .map((stmt, idx) => (
+                <div
+                  key={idx}
+                  className="p-3 bg-green-50 border border-green-200 rounded-lg"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <Badge className="bg-green-100 text-green-700 text-xs">
+                      #{stmt.rank}
+                    </Badge>
+                    <span className="text-xs text-green-700 font-medium">
+                      {(stmt.importance * 100).toFixed(0)}% importance
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-800">{stmt.statementText}</p>
+                  <p className="text-xs text-green-600 mt-1 italic">
+                    {stmt.explanation}
+                  </p>
                 </div>
-                <p className="text-sm text-gray-800">{stmt.statementText}</p>
-                <p className="text-xs text-green-600 mt-1 italic">{stmt.explanation}</p>
-              </div>
-            ))}
+              ))}
           </div>
         </Card>
 
@@ -133,18 +158,27 @@ function FeatureImportancePanel({ factors }: { factors: FactorExplanation[] }) {
             Most Important Negative Statements
           </h3>
           <div className="space-y-3">
-            {currentFactor.topNegativeStatements.slice(0, 5).map((stmt, idx) => (
-              <div key={idx} className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-start justify-between mb-2">
-                  <Badge className="bg-red-100 text-red-700 text-xs">#{stmt.rank}</Badge>
-                  <span className="text-xs text-red-700 font-medium">
-                    {(stmt.importance * 100).toFixed(0)}% importance
-                  </span>
+            {currentFactor.topNegativeStatements
+              .slice(0, 5)
+              .map((stmt, idx) => (
+                <div
+                  key={idx}
+                  className="p-3 bg-red-50 border border-red-200 rounded-lg"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <Badge className="bg-red-100 text-red-700 text-xs">
+                      #{stmt.rank}
+                    </Badge>
+                    <span className="text-xs text-red-700 font-medium">
+                      {(stmt.importance * 100).toFixed(0)}% importance
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-800">{stmt.statementText}</p>
+                  <p className="text-xs text-red-600 mt-1 italic">
+                    {stmt.explanation}
+                  </p>
                 </div>
-                <p className="text-sm text-gray-800">{stmt.statementText}</p>
-                <p className="text-xs text-red-600 mt-1 italic">{stmt.explanation}</p>
-              </div>
-            ))}
+              ))}
           </div>
         </Card>
       </div>
@@ -163,13 +197,28 @@ function BiasAuditPanel({ biasAudit }: { biasAudit: BiasAudit }) {
   };
 
   const getComplianceBadge = (level: string) => {
-    const configs: Record<string, { variant: 'success' | 'warning' | 'destructive'; icon: React.ReactNode }> = {
-      excellent: { variant: 'success', icon: <CheckCircleIcon className="w-4 h-4" /> },
-      good: { variant: 'success', icon: <CheckCircleIcon className="w-4 h-4" /> },
-      acceptable: { variant: 'warning', icon: <ExclamationTriangleIcon className="w-4 h-4" /> },
-      needs_improvement: { variant: 'destructive', icon: <ExclamationTriangleIcon className="w-4 h-4" /> },
+    const configs: Record<
+      string,
+      { variant: 'success' | 'warning' | 'destructive'; icon: React.ReactNode }
+    > = {
+      excellent: {
+        variant: 'success',
+        icon: <CheckCircleIcon className="w-4 h-4" />,
+      },
+      good: {
+        variant: 'success',
+        icon: <CheckCircleIcon className="w-4 h-4" />,
+      },
+      acceptable: {
+        variant: 'warning',
+        icon: <ExclamationTriangleIcon className="w-4 h-4" />,
+      },
+      needs_improvement: {
+        variant: 'destructive',
+        icon: <ExclamationTriangleIcon className="w-4 h-4" />,
+      },
     };
-    return configs[level] ?? configs.acceptable;
+    return configs[level] ?? configs['acceptable'];
   };
 
   return (
@@ -179,17 +228,24 @@ function BiasAuditPanel({ biasAudit }: { biasAudit: BiasAudit }) {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">Overall Bias Score</h2>
-            <p className="text-sm text-gray-600 mt-1">Lower is better (0-100 scale)</p>
+            <p className="text-sm text-gray-600 mt-1">
+              Lower is better (0-100 scale)
+            </p>
           </div>
           <div className="text-right">
-            <div className={`text-5xl font-bold ${getScoreColor(biasAudit.overallBiasScore)}`}>
+            <div
+              className={`text-5xl font-bold ${getScoreColor(biasAudit.overallBiasScore)}`}
+            >
               {biasAudit.overallBiasScore}
             </div>
             {(() => {
               const badge = getComplianceBadge(biasAudit.complianceLevel);
               if (!badge) return null;
               return (
-                <Badge variant={badge.variant} className="mt-2 flex items-center gap-1">
+                <Badge
+                  variant={badge.variant}
+                  className="mt-2 flex items-center gap-1"
+                >
                   {badge.icon}
                   {biasAudit.complianceLevel.replace('_', ' ')}
                 </Badge>
@@ -207,11 +263,17 @@ function BiasAuditPanel({ biasAudit }: { biasAudit: BiasAudit }) {
             <div key={key} className="p-4 border border-gray-200 rounded-lg">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h4 className="font-medium text-gray-900">{dimension.name}</h4>
-                  <p className="text-sm text-gray-600 mt-1">{dimension.description}</p>
+                  <h4 className="font-medium text-gray-900">
+                    {dimension.name}
+                  </h4>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {dimension.description}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <div className={`text-2xl font-bold ${getScoreColor(dimension.score)}`}>
+                  <div
+                    className={`text-2xl font-bold ${getScoreColor(dimension.score)}`}
+                  >
                     {dimension.score}
                   </div>
                   <Badge
@@ -230,7 +292,9 @@ function BiasAuditPanel({ biasAudit }: { biasAudit: BiasAudit }) {
 
               {/* Evidence */}
               <div className="mb-3">
-                <div className="text-xs font-medium text-gray-700 mb-1">Evidence:</div>
+                <div className="text-xs font-medium text-gray-700 mb-1">
+                  Evidence:
+                </div>
                 <ul className="text-xs text-gray-600 space-y-1">
                   {dimension.evidence.map((ev, idx) => (
                     <li key={idx}>• {ev}</li>
@@ -241,7 +305,9 @@ function BiasAuditPanel({ biasAudit }: { biasAudit: BiasAudit }) {
               {/* Corrective Actions */}
               {dimension.level !== 'low' && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-                  <div className="text-xs font-medium text-yellow-800 mb-1">Recommended Actions:</div>
+                  <div className="text-xs font-medium text-yellow-800 mb-1">
+                    Recommended Actions:
+                  </div>
                   <ul className="text-xs text-yellow-700 space-y-1">
                     {dimension.correctiveActions.map((action, idx) => (
                       <li key={idx}>• {action}</li>
@@ -257,7 +323,9 @@ function BiasAuditPanel({ biasAudit }: { biasAudit: BiasAudit }) {
       {/* Recommendations */}
       {biasAudit.recommendations.length > 0 && (
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Priority Recommendations</h3>
+          <h3 className="text-lg font-semibold mb-4">
+            Priority Recommendations
+          </h3>
           <div className="space-y-3">
             {biasAudit.recommendations.map((rec, idx) => (
               <div
@@ -287,7 +355,9 @@ function BiasAuditPanel({ biasAudit }: { biasAudit: BiasAudit }) {
                   <span className="text-xs text-gray-600">{rec.category}</span>
                 </div>
                 <h4 className="font-medium text-gray-900">{rec.issue}</h4>
-                <p className="text-sm text-gray-700 mt-2">{rec.recommendation}</p>
+                <p className="text-sm text-gray-700 mt-2">
+                  {rec.recommendation}
+                </p>
                 <div className="mt-3 text-xs text-gray-600">
                   <strong>Expected Impact:</strong> {rec.expectedImpact}
                 </div>
@@ -303,21 +373,35 @@ function BiasAuditPanel({ biasAudit }: { biasAudit: BiasAudit }) {
 /**
  * Certainty Score Panel
  */
-function CertaintyScorePanel({ certaintyScores, factors }: { certaintyScores: Record<number, CertaintyScore>; factors: FactorExplanation[] }) {
+function CertaintyScorePanel({
+  certaintyScores,
+  factors,
+}: {
+  certaintyScores: Record<number, CertaintyScore>;
+  factors: FactorExplanation[];
+}) {
   const [selectedFactor, setSelectedFactor] = useState<number>(1);
 
   const currentScore = certaintyScores[selectedFactor];
 
   if (!currentScore) {
-    return <div className="text-center py-12 text-gray-500">No certainty data available</div>;
+    return (
+      <div className="text-center py-12 text-gray-500">
+        No certainty data available
+      </div>
+    );
   }
 
   const getReliabilityColor = (reliability: string) => {
     switch (reliability) {
-      case 'very_high': return 'text-green-600';
-      case 'high': return 'text-blue-600';
-      case 'moderate': return 'text-yellow-600';
-      default: return 'text-red-600';
+      case 'very_high':
+        return 'text-green-600';
+      case 'high':
+        return 'text-blue-600';
+      case 'moderate':
+        return 'text-yellow-600';
+      default:
+        return 'text-red-600';
     }
   };
 
@@ -326,12 +410,16 @@ function CertaintyScorePanel({ certaintyScores, factors }: { certaintyScores: Re
       {/* Factor Selector */}
       <Card className="p-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm font-medium text-gray-700">Select Factor:</span>
-          {factors.map((factor) => (
+          <span className="text-sm font-medium text-gray-700">
+            Select Factor:
+          </span>
+          {factors.map(factor => (
             <Button
               key={factor.factorNumber}
               size="sm"
-              variant={selectedFactor === factor.factorNumber ? 'primary' : 'secondary'}
+              variant={
+                selectedFactor === factor.factorNumber ? 'primary' : 'secondary'
+              }
               onClick={() => setSelectedFactor(factor.factorNumber)}
             >
               Factor {factor.factorNumber}
@@ -345,10 +433,14 @@ function CertaintyScorePanel({ certaintyScores, factors }: { certaintyScores: Re
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">Overall Certainty</h2>
-            <p className="text-sm text-gray-600 mt-1">Confidence in factor interpretation</p>
+            <p className="text-sm text-gray-600 mt-1">
+              Confidence in factor interpretation
+            </p>
           </div>
           <div className="text-right">
-            <div className={`text-5xl font-bold ${getReliabilityColor(currentScore.reliability)}`}>
+            <div
+              className={`text-5xl font-bold ${getReliabilityColor(currentScore.reliability)}`}
+            >
               {(currentScore.overall * 100).toFixed(0)}%
             </div>
             <Badge variant="secondary" className="mt-2">
@@ -365,8 +457,12 @@ function CertaintyScorePanel({ certaintyScores, factors }: { certaintyScores: Re
           {Object.entries(currentScore.components).map(([key, value]) => (
             <div key={key}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
-                <span className="text-sm font-bold">{(value * 100).toFixed(0)}%</span>
+                <span className="text-sm font-medium capitalize">
+                  {key.replace(/([A-Z])/g, ' $1')}
+                </span>
+                <span className="text-sm font-bold">
+                  {(value * 100).toFixed(0)}%
+                </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div
@@ -405,7 +501,9 @@ function CertaintyScorePanel({ certaintyScores, factors }: { certaintyScores: Re
             <div className="text-xs text-gray-600">Upper Bound</div>
           </div>
         </div>
-        <p className="text-sm text-gray-600 mt-4 italic">{currentScore.explanation}</p>
+        <p className="text-sm text-gray-600 mt-4 italic">
+          {currentScore.explanation}
+        </p>
       </Card>
     </div>
   );
@@ -415,15 +513,23 @@ function CertaintyScorePanel({ certaintyScores, factors }: { certaintyScores: Re
 // MAIN DASHBOARD
 // ============================================================================
 
-export function ExplainabilityDashboard({ studyId, initialTab = 'feature-importance' }: ExplainabilityDashboardProps) {
+export function ExplainabilityDashboard({
+  studyId,
+  initialTab = 'feature-importance',
+}: ExplainabilityDashboardProps) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Data
-  const [featureImportance, setFeatureImportance] = useState<FactorExplanation[] | null>(null);
+  const [featureImportance, setFeatureImportance] = useState<
+    FactorExplanation[] | null
+  >(null);
   const [biasAudit, setBiasAudit] = useState<BiasAudit | null>(null);
-  const [certaintyScores, setCertaintyScores] = useState<Record<number, CertaintyScore> | null>(null);
+  const [certaintyScores, setCertaintyScores] = useState<Record<
+    number,
+    CertaintyScore
+  > | null>(null);
 
   // Load data
   useEffect(() => {
@@ -431,7 +537,8 @@ export function ExplainabilityDashboard({ studyId, initialTab = 'feature-importa
       setLoading(true);
       setError(null);
       try {
-        const summary = await explainabilityApi.getExplainabilitySummary(studyId);
+        const summary =
+          await explainabilityApi.getExplainabilitySummary(studyId);
         setFeatureImportance(summary.featureImportance.factors);
         setBiasAudit(summary.biasAudit);
         setCertaintyScores(summary.certaintyScores);
@@ -449,7 +556,9 @@ export function ExplainabilityDashboard({ studyId, initialTab = 'feature-importa
     return (
       <div className="flex items-center justify-center py-24">
         <LoadingSpinner size="lg" />
-        <span className="ml-4 text-gray-600">Loading explainability analysis...</span>
+        <span className="ml-4 text-gray-600">
+          Loading explainability analysis...
+        </span>
       </div>
     );
   }
@@ -459,8 +568,12 @@ export function ExplainabilityDashboard({ studyId, initialTab = 'feature-importa
       <Card className="p-6">
         <div className="text-center py-12">
           <ExclamationTriangleIcon className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load</h3>
-          <p className="text-sm text-gray-600">{error || 'Unable to load explainability data'}</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Failed to Load
+          </h3>
+          <p className="text-sm text-gray-600">
+            {error || 'Unable to load explainability data'}
+          </p>
         </div>
       </Card>
     );
@@ -477,7 +590,8 @@ export function ExplainabilityDashboard({ studyId, initialTab = 'feature-importa
               Explainability Dashboard
             </h1>
             <p className="text-purple-100 mt-2">
-              SHAP-inspired analysis • Interactive What-If • Bias Detection • Certainty Scoring
+              SHAP-inspired analysis • Interactive What-If • Bias Detection •
+              Certainty Scoring
             </p>
           </div>
           <Badge className="bg-white text-purple-600 border-0">
@@ -488,7 +602,10 @@ export function ExplainabilityDashboard({ studyId, initialTab = 'feature-importa
       </Card>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
+      <Tabs
+        value={activeTab}
+        onValueChange={value => setActiveTab(value as typeof activeTab)}
+      >
         <TabsList className="grid w-full grid-cols-4 lg:grid-cols-4">
           <TabsTrigger value="feature-importance">
             <ChartBarIcon className="w-4 h-4 mr-2" />
@@ -527,7 +644,10 @@ export function ExplainabilityDashboard({ studyId, initialTab = 'feature-importa
         </TabsContent>
 
         <TabsContent value="certainty">
-          <CertaintyScorePanel certaintyScores={certaintyScores} factors={featureImportance} />
+          <CertaintyScorePanel
+            certaintyScores={certaintyScores}
+            factors={featureImportance}
+          />
         </TabsContent>
       </Tabs>
     </div>

@@ -43,11 +43,11 @@ export async function GET(request: NextRequest) {
     };
 
     // If we have a backend available, forward the request
-    if (process.env.BACKEND_URL) {
+    if (process.env['BACKEND_URL']) {
       try {
         const params = studyId ? `?studyId=${studyId}` : '';
         const response = await fetch(
-          `${process.env.BACKEND_URL}/api/navigation/state${params}`,
+          `${process.env['BACKEND_URL']}/api/navigation/state${params}`,
           {
             headers: {
               Authorization: request.headers.get('Authorization') || '',

@@ -36,7 +36,9 @@ export class QMethodValidatorService {
     }
 
     return calculated.every((value, index) => {
-      const difference = Math.abs(value - expected[index]);
+      const expectedValue = expected[index];
+      if (expectedValue === undefined) return false;
+      const difference = Math.abs(value - expectedValue);
       // Round difference to avoid floating point precision issues
       const roundedDiff = Math.round(difference * 1000) / 1000;
       return roundedDiff <= tolerance;
@@ -60,12 +62,15 @@ export class QMethodValidatorService {
     }
 
     return calculated.every((row, rowIndex) => {
-      if (row.length !== expected[rowIndex].length) {
+      const expectedRow = expected[rowIndex];
+      if (!expectedRow || row.length !== expectedRow.length) {
         return false;
       }
-      
+
       return row.every((value, colIndex) => {
-        const difference = Math.abs(value - expected[rowIndex][colIndex]);
+        const expectedValue = expectedRow[colIndex];
+        if (expectedValue === undefined) return false;
+        const difference = Math.abs(value - expectedValue);
         // Use a small epsilon to handle floating point precision issues
         return difference <= tolerance + Number.EPSILON;
       });

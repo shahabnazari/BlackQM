@@ -44,12 +44,16 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
   const [insights, setInsights] = useState<ResearchInsight[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedInsight, setSelectedInsight] = useState<ResearchInsight | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'lineage' | 'annotations' | 'similar'>('overview');
+  const [selectedInsight, setSelectedInsight] =
+    useState<ResearchInsight | null>(null);
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'lineage' | 'annotations' | 'similar'
+  >('overview');
   const [similarInsights, setSimilarInsights] = useState<ResearchInsight[]>([]); // Phase 10 Day 28
   const [showFilters, setShowFilters] = useState(false);
   const [searchAllStudies, setSearchAllStudies] = useState(false); // Phase 10 Day 28: Cross-study search
-  const [shareDialogInsight, setShareDialogInsight] = useState<ResearchInsight | null>(null); // Phase 10 Day 29: Permissions
+  const [shareDialogInsight, setShareDialogInsight] =
+    useState<ResearchInsight | null>(null); // Phase 10 Day 29: Permissions
   const [filters, setFilters] = useState<SearchFilters>({
     studyIds: studyId ? [studyId] : [],
   });
@@ -188,7 +192,7 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
   const handleShareUpdate = (updatedInsight: ResearchInsight) => {
     // Update the insight in the list
     setInsights(prev =>
-      prev.map(i => i.id === updatedInsight.id ? updatedInsight : i)
+      prev.map(i => (i.id === updatedInsight.id ? updatedInsight : i))
     );
     // Update selected insight if it's the one being shared
     if (selectedInsight?.id === updatedInsight.id) {
@@ -205,7 +209,9 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
         <div className="p-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Research Corpus</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Research Corpus
+              </h2>
               {stats && (
                 <p className="text-sm text-gray-600 mt-1">
                   {stats.totalInsights} insights indexed across all studies
@@ -231,8 +237,12 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={searchAllStudies ? "Search across all your studies..." : "Search insights, statements, factors, themes..."}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder={
+                  searchAllStudies
+                    ? 'Search across all your studies...'
+                    : 'Search insights, statements, factors, themes...'
+                }
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
@@ -254,7 +264,9 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
               {showHistory && searchHistory.length > 0 && (
                 <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-80 overflow-y-auto">
                   <div className="p-2 border-b border-gray-200 flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">Recent Searches</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Recent Searches
+                    </span>
                     <button
                       onClick={async () => {
                         await repositoryApi.clearSearchHistory();
@@ -266,7 +278,7 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
                       Clear All
                     </button>
                   </div>
-                  {searchHistory.map((entry) => (
+                  {searchHistory.map(entry => (
                     <button
                       key={entry.id}
                       onClick={() => {
@@ -276,8 +288,12 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
                       }}
                       className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-0"
                     >
-                      <div className="text-sm text-gray-900 truncate">{entry.query}</div>
-                      <div className="text-xs text-gray-500">{entry.resultCount} results</div>
+                      <div className="text-sm text-gray-900 truncate">
+                        {entry.query}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {entry.resultCount} results
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -301,7 +317,7 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
                 <input
                   type="checkbox"
                   checked={searchAllStudies}
-                  onChange={(e) => setSearchAllStudies(e.target.checked)}
+                  onChange={e => setSearchAllStudies(e.target.checked)}
                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
                 <span className="ml-2 text-sm text-gray-700">
@@ -319,10 +335,20 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
                   Insight Type
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {['statement', 'factor', 'theme', 'gap', 'quote', 'paper_finding', 'hypothesis'].map((type) => (
+                  {[
+                    'statement',
+                    'factor',
+                    'theme',
+                    'gap',
+                    'quote',
+                    'paper_finding',
+                    'hypothesis',
+                  ].map(type => (
                     <Badge
                       key={type}
-                      variant={filters.types?.includes(type) ? 'default' : 'secondary'}
+                      variant={
+                        filters.types?.includes(type) ? 'default' : 'secondary'
+                      }
                       className="cursor-pointer"
                       onClick={() => {
                         const types = filters.types || [];
@@ -345,12 +371,14 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
           {/* Stats */}
           {stats && (
             <div className="mt-4 flex gap-4">
-              {Object.entries(stats.byType).slice(0, 5).map(([type, count]) => (
-                <div key={type} className="text-sm">
-                  <span className="text-gray-600 capitalize">{type}:</span>{' '}
-                  <span className="font-semibold">{count}</span>
-                </div>
-              ))}
+              {Object.entries(stats.byType)
+                .slice(0, 5)
+                .map(([type, count]) => (
+                  <div key={type} className="text-sm">
+                    <span className="text-gray-600 capitalize">{type}:</span>{' '}
+                    <span className="font-semibold">{count}</span>
+                  </div>
+                ))}
             </div>
           )}
         </div>
@@ -369,12 +397,14 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
           ) : insights.length === 0 ? (
             <Card>
               <div className="p-8 text-center text-gray-500">
-                {searchQuery ? 'No insights found. Try a different search query.' : 'No insights indexed yet. Click "Reindex Study" to get started.'}
+                {searchQuery
+                  ? 'No insights found. Try a different search query.'
+                  : 'No insights indexed yet. Click "Reindex Study" to get started.'}
               </div>
             </Card>
           ) : (
             <>
-              {insights.map((insight) => (
+              {insights.map(insight => (
                 <InsightCard
                   key={insight.id}
                   insight={insight}
@@ -411,7 +441,10 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
         {/* Detail Panel */}
         <div className="lg:col-span-1">
           {selectedInsight ? (
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+            <Tabs
+              value={activeTab}
+              onValueChange={value => setActiveTab(value as any)}
+            >
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="lineage">Lineage</TabsTrigger>
@@ -428,7 +461,9 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
               </TabsContent>
 
               <TabsContent value="lineage">
-                <CitationLineage citationChain={selectedInsight.citationChain} />
+                <CitationLineage
+                  citationChain={selectedInsight.citationChain}
+                />
               </TabsContent>
 
               <TabsContent value="annotations">
@@ -439,22 +474,37 @@ export function ResearchCorpusPanel({ studyId }: ResearchCorpusPanelProps) {
               <TabsContent value="similar">
                 <Card>
                   <div className="p-4">
-                    <h3 className="text-lg font-semibold mb-3">Similar Insights</h3>
+                    <h3 className="text-lg font-semibold mb-3">
+                      Similar Insights
+                    </h3>
                     {similarInsights.length === 0 ? (
-                      <p className="text-sm text-gray-500">No similar insights found.</p>
+                      <p className="text-sm text-gray-500">
+                        No similar insights found.
+                      </p>
                     ) : (
                       <div className="space-y-3">
-                        {similarInsights.map((similar) => (
+                        {similarInsights.map(similar => (
                           <div
                             key={similar.id}
                             onClick={() => handleViewDetails(similar.id)}
                             className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
                           >
-                            <div className="font-medium text-sm text-gray-900 mb-1">{similar.title}</div>
-                            <div className="text-xs text-gray-600 line-clamp-2">{similar.content}</div>
+                            <div className="font-medium text-sm text-gray-900 mb-1">
+                              {similar.title}
+                            </div>
+                            <div className="text-xs text-gray-600 line-clamp-2">
+                              {similar.content}
+                            </div>
                             <div className="flex gap-2 mt-2">
-                              <Badge variant="secondary" className="text-xs capitalize">{similar.type}</Badge>
-                              <span className="text-xs text-gray-500">{similar.keywords.slice(0, 3).join(', ')}</span>
+                              <Badge
+                                variant="secondary"
+                                className="text-xs capitalize"
+                              >
+                                {similar.type}
+                              </Badge>
+                              <span className="text-xs text-gray-500">
+                                {similar.keywords.slice(0, 3).join(', ')}
+                              </span>
                             </div>
                           </div>
                         ))}

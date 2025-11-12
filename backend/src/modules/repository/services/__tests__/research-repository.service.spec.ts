@@ -65,7 +65,8 @@ describe('ResearchRepositoryService', () => {
       {
         factorNumber: 1,
         label: 'Environmental Activists',
-        description: 'This factor represents environmental activists who prioritize climate action.',
+        description:
+          'This factor represents environmental activists who prioritize climate action.',
         variance: 0.35,
         eigenvalue: 4.2,
         loadings: [0.8, 0.7, 0.6],
@@ -73,7 +74,8 @@ describe('ResearchRepositoryService', () => {
       {
         factorNumber: 2,
         label: 'Economic Pragmatists',
-        description: 'This factor represents those balancing environmental and economic concerns.',
+        description:
+          'This factor represents those balancing environmental and economic concerns.',
         variance: 0.25,
         eigenvalue: 3.0,
         loadings: [0.7, 0.6, 0.5],
@@ -93,7 +95,8 @@ describe('ResearchRepositoryService', () => {
         id: 'answer-1',
         questionId: 'q-1',
         responseId: 'response-1',
-        value: 'I believe that renewable energy is essential for combating climate change and ensuring a sustainable future for our planet and future generations.',
+        value:
+          'I believe that renewable energy is essential for combating climate change and ensuring a sustainable future for our planet and future generations.',
         createdAt: new Date(),
       },
       {
@@ -112,7 +115,8 @@ describe('ResearchRepositoryService', () => {
     title: 'Climate Change and Society: A Comprehensive Review',
     authors: ['Smith, J.', 'Doe, A.'],
     year: 2023,
-    abstract: 'This paper examines the social implications of climate change and proposes policy interventions.',
+    abstract:
+      'This paper examines the social implications of climate change and proposes policy interventions.',
     journal: 'Environmental Science',
     doi: '10.1234/example',
     citationCount: 45,
@@ -191,11 +195,20 @@ describe('ResearchRepositoryService', () => {
   describe('extractInsightsFromStudy', () => {
     it('should extract insights from all sources', async () => {
       // Setup mocks
-      jest.spyOn(prismaService.statement, 'findMany').mockResolvedValue([mockStatement] as any);
-      jest.spyOn(prismaService.analysisResult, 'findMany').mockResolvedValue([mockAnalysisResult] as any);
-      jest.spyOn(prismaService.response, 'findMany').mockResolvedValue([mockResponse] as any);
+      jest
+        .spyOn(prismaService.statement, 'findMany')
+        .mockResolvedValue([mockStatement] as any);
+      jest
+        .spyOn(prismaService.analysisResult, 'findMany')
+        .mockResolvedValue([mockAnalysisResult] as any);
+      jest
+        .spyOn(prismaService.response, 'findMany')
+        .mockResolvedValue([mockResponse] as any);
 
-      const insights = await service.extractInsightsFromStudy(mockStudyId, mockUserId);
+      const insights = await service.extractInsightsFromStudy(
+        mockStudyId,
+        mockUserId,
+      );
 
       // Should extract from statements, factors, and quotes
       expect(insights.length).toBeGreaterThan(0);
@@ -216,10 +229,15 @@ describe('ResearchRepositoryService', () => {
 
     it('should handle empty study gracefully', async () => {
       jest.spyOn(prismaService.statement, 'findMany').mockResolvedValue([]);
-      jest.spyOn(prismaService.analysisResult, 'findMany').mockResolvedValue([]);
+      jest
+        .spyOn(prismaService.analysisResult, 'findMany')
+        .mockResolvedValue([]);
       jest.spyOn(prismaService.response, 'findMany').mockResolvedValue([]);
 
-      const insights = await service.extractInsightsFromStudy(mockStudyId, mockUserId);
+      const insights = await service.extractInsightsFromStudy(
+        mockStudyId,
+        mockUserId,
+      );
 
       expect(insights).toEqual([]);
     });
@@ -227,9 +245,14 @@ describe('ResearchRepositoryService', () => {
 
   describe('extractStatementInsights', () => {
     it('should extract statement insights with full provenance', async () => {
-      jest.spyOn(prismaService.statement, 'findMany').mockResolvedValue([mockStatement] as any);
+      jest
+        .spyOn(prismaService.statement, 'findMany')
+        .mockResolvedValue([mockStatement] as any);
 
-      const insights = await service['extractStatementInsights'](mockStudyId, mockUserId);
+      const insights = await service['extractStatementInsights'](
+        mockStudyId,
+        mockUserId,
+      );
 
       expect(insights).toHaveLength(1);
       expect(insights[0].type).toBe('statement');
@@ -247,9 +270,14 @@ describe('ResearchRepositoryService', () => {
         ...mockStatement,
         statementProvenance: null,
       };
-      jest.spyOn(prismaService.statement, 'findMany').mockResolvedValue([statementWithoutProvenance] as any);
+      jest
+        .spyOn(prismaService.statement, 'findMany')
+        .mockResolvedValue([statementWithoutProvenance] as any);
 
-      const insights = await service['extractStatementInsights'](mockStudyId, mockUserId);
+      const insights = await service['extractStatementInsights'](
+        mockStudyId,
+        mockUserId,
+      );
 
       expect(insights).toHaveLength(1);
       expect(insights[0].citationChain).toHaveLength(1); // only statement
@@ -258,9 +286,14 @@ describe('ResearchRepositoryService', () => {
 
   describe('extractFactorInsights', () => {
     it('should extract factor insights from analysis results', async () => {
-      jest.spyOn(prismaService.analysisResult, 'findMany').mockResolvedValue([mockAnalysisResult] as any);
+      jest
+        .spyOn(prismaService.analysisResult, 'findMany')
+        .mockResolvedValue([mockAnalysisResult] as any);
 
-      const insights = await service['extractFactorInsights'](mockStudyId, mockUserId);
+      const insights = await service['extractFactorInsights'](
+        mockStudyId,
+        mockUserId,
+      );
 
       expect(insights).toHaveLength(2); // Two factors in mock data
       expect(insights[0].type).toBe('factor');
@@ -268,7 +301,9 @@ describe('ResearchRepositoryService', () => {
       expect(insights[0].content).toContain('environmental activists');
       expect(insights[0].citationChain[0].type).toBe('factor');
       expect(insights[0].citationChain[0].metadata).toHaveProperty('variance');
-      expect(insights[0].citationChain[0].metadata).toHaveProperty('eigenvalue');
+      expect(insights[0].citationChain[0].metadata).toHaveProperty(
+        'eigenvalue',
+      );
     });
 
     it('should handle analysis results without factors', async () => {
@@ -276,9 +311,14 @@ describe('ResearchRepositoryService', () => {
         ...mockAnalysisResult,
         factors: null,
       };
-      jest.spyOn(prismaService.analysisResult, 'findMany').mockResolvedValue([resultWithoutFactors] as any);
+      jest
+        .spyOn(prismaService.analysisResult, 'findMany')
+        .mockResolvedValue([resultWithoutFactors] as any);
 
-      const insights = await service['extractFactorInsights'](mockStudyId, mockUserId);
+      const insights = await service['extractFactorInsights'](
+        mockStudyId,
+        mockUserId,
+      );
 
       expect(insights).toEqual([]);
     });
@@ -286,9 +326,14 @@ describe('ResearchRepositoryService', () => {
 
   describe('extractQuoteInsights', () => {
     it('should extract quotes from long text answers', async () => {
-      jest.spyOn(prismaService.response, 'findMany').mockResolvedValue([mockResponse] as any);
+      jest
+        .spyOn(prismaService.response, 'findMany')
+        .mockResolvedValue([mockResponse] as any);
 
-      const insights = await service['extractQuoteInsights'](mockStudyId, mockUserId);
+      const insights = await service['extractQuoteInsights'](
+        mockStudyId,
+        mockUserId,
+      );
 
       expect(insights).toHaveLength(1); // Only one answer is >50 chars
       expect(insights[0].type).toBe('quote');
@@ -309,9 +354,14 @@ describe('ResearchRepositoryService', () => {
           },
         ],
       };
-      jest.spyOn(prismaService.response, 'findMany').mockResolvedValue([responseWithShortAnswers] as any);
+      jest
+        .spyOn(prismaService.response, 'findMany')
+        .mockResolvedValue([responseWithShortAnswers] as any);
 
-      const insights = await service['extractQuoteInsights'](mockStudyId, mockUserId);
+      const insights = await service['extractQuoteInsights'](
+        mockStudyId,
+        mockUserId,
+      );
 
       expect(insights).toEqual([]);
     });
@@ -329,9 +379,14 @@ describe('ResearchRepositoryService', () => {
           },
         ],
       };
-      jest.spyOn(prismaService.response, 'findMany').mockResolvedValue([responseWithNonStringAnswers] as any);
+      jest
+        .spyOn(prismaService.response, 'findMany')
+        .mockResolvedValue([responseWithNonStringAnswers] as any);
 
-      const insights = await service['extractQuoteInsights'](mockStudyId, mockUserId);
+      const insights = await service['extractQuoteInsights'](
+        mockStudyId,
+        mockUserId,
+      );
 
       expect(insights).toEqual([]);
     });
@@ -339,7 +394,9 @@ describe('ResearchRepositoryService', () => {
 
   describe('extractInsightsFromLiterature', () => {
     it('should extract insights from papers', async () => {
-      jest.spyOn(prismaService.paper, 'findMany').mockResolvedValue([mockPaper] as any);
+      jest
+        .spyOn(prismaService.paper, 'findMany')
+        .mockResolvedValue([mockPaper] as any);
 
       const insights = await service.extractInsightsFromLiterature(mockUserId);
 
@@ -352,9 +409,14 @@ describe('ResearchRepositoryService', () => {
     });
 
     it('should filter by paper IDs when provided', async () => {
-      jest.spyOn(prismaService.paper, 'findMany').mockResolvedValue([mockPaper] as any);
+      jest
+        .spyOn(prismaService.paper, 'findMany')
+        .mockResolvedValue([mockPaper] as any);
 
-      await service.extractInsightsFromLiterature(mockUserId, ['paper-1', 'paper-2']);
+      await service.extractInsightsFromLiterature(mockUserId, [
+        'paper-1',
+        'paper-2',
+      ]);
 
       expect(prismaService.paper.findMany).toHaveBeenCalledWith({
         where: { userId: mockUserId, id: { in: ['paper-1', 'paper-2'] } },
@@ -368,7 +430,7 @@ describe('ResearchRepositoryService', () => {
       await service.extractInsightsFromLiterature(mockUserId);
 
       expect(prismaService.paper.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 100 })
+        expect.objectContaining({ take: 100 }),
       );
     });
   });
@@ -407,8 +469,12 @@ describe('ResearchRepositoryService', () => {
         updatedAt: new Date(),
       };
 
-      jest.spyOn(prismaService.researchInsight, 'upsert').mockResolvedValue({} as any);
-      jest.spyOn(prismaService.repositoryIndex, 'upsert').mockResolvedValue({} as any);
+      jest
+        .spyOn(prismaService.researchInsight, 'upsert')
+        .mockResolvedValue({} as any);
+      jest
+        .spyOn(prismaService.repositoryIndex, 'upsert')
+        .mockResolvedValue({} as any);
 
       await service.indexInsight(mockInsight);
 
@@ -452,7 +518,8 @@ describe('ResearchRepositoryService', () => {
         { id: 'insight-3' } as any,
       ];
 
-      jest.spyOn(service, 'indexInsight')
+      jest
+        .spyOn(service, 'indexInsight')
         .mockResolvedValueOnce(undefined)
         .mockRejectedValueOnce(new Error('Index failed'))
         .mockResolvedValueOnce(undefined);
@@ -466,32 +533,40 @@ describe('ResearchRepositoryService', () => {
 
   describe('reindexStudy', () => {
     it('should extract and index all insights from a study', async () => {
-      jest.spyOn(service, 'extractInsightsFromStudy').mockResolvedValue([{ id: 'insight-1' } as any]);
+      jest
+        .spyOn(service, 'extractInsightsFromStudy')
+        .mockResolvedValue([{ id: 'insight-1' } as any]);
       jest.spyOn(service, 'indexInsights').mockResolvedValue(1);
 
       const indexed = await service.reindexStudy(mockStudyId, mockUserId);
 
       expect(indexed).toBe(1);
-      expect(service.extractInsightsFromStudy).toHaveBeenCalledWith(mockStudyId, mockUserId);
+      expect(service.extractInsightsFromStudy).toHaveBeenCalledWith(
+        mockStudyId,
+        mockUserId,
+      );
       expect(service.indexInsights).toHaveBeenCalledWith([{ id: 'insight-1' }]);
     });
   });
 
   describe('reindexAll', () => {
     it('should reindex all studies and literature for a user', async () => {
-      jest.spyOn(prismaService.survey, 'findMany').mockResolvedValue([
-        { id: 'study-1' },
-        { id: 'study-2' },
-      ] as any);
+      jest
+        .spyOn(prismaService.survey, 'findMany')
+        .mockResolvedValue([{ id: 'study-1' }, { id: 'study-2' }] as any);
       jest.spyOn(service, 'reindexStudy').mockResolvedValue(5);
-      jest.spyOn(service, 'extractInsightsFromLiterature').mockResolvedValue([{ id: 'lit-1' }] as any);
+      jest
+        .spyOn(service, 'extractInsightsFromLiterature')
+        .mockResolvedValue([{ id: 'lit-1' }] as any);
       jest.spyOn(service, 'indexInsights').mockResolvedValue(1);
 
       const totalIndexed = await service.reindexAll(mockUserId);
 
       expect(totalIndexed).toBe(11); // 2 studies * 5 + 1 literature
       expect(service.reindexStudy).toHaveBeenCalledTimes(2);
-      expect(service.extractInsightsFromLiterature).toHaveBeenCalledWith(mockUserId);
+      expect(service.extractInsightsFromLiterature).toHaveBeenCalledWith(
+        mockUserId,
+      );
     });
   });
 
@@ -530,9 +605,13 @@ describe('ResearchRepositoryService', () => {
 
     it('should search insights with query', async () => {
       jest.spyOn(cacheService, 'get').mockResolvedValue(null);
-      jest.spyOn(prismaService.researchInsight, 'findMany').mockResolvedValue([mockInsightFromDb] as any);
+      jest
+        .spyOn(prismaService.researchInsight, 'findMany')
+        .mockResolvedValue([mockInsightFromDb] as any);
       jest.spyOn(prismaService.researchInsight, 'count').mockResolvedValue(1);
-      jest.spyOn(prismaService.researchInsight, 'groupBy').mockResolvedValue([]);
+      jest
+        .spyOn(prismaService.researchInsight, 'groupBy')
+        .mockResolvedValue([]);
 
       const result = await service.search({
         query: 'climate change',
@@ -570,9 +649,13 @@ describe('ResearchRepositoryService', () => {
 
     it('should apply type filters', async () => {
       jest.spyOn(cacheService, 'get').mockResolvedValue(null);
-      jest.spyOn(prismaService.researchInsight, 'findMany').mockResolvedValue([]);
+      jest
+        .spyOn(prismaService.researchInsight, 'findMany')
+        .mockResolvedValue([]);
       jest.spyOn(prismaService.researchInsight, 'count').mockResolvedValue(0);
-      jest.spyOn(prismaService.researchInsight, 'groupBy').mockResolvedValue([]);
+      jest
+        .spyOn(prismaService.researchInsight, 'groupBy')
+        .mockResolvedValue([]);
 
       await service.search({
         query: 'test',
@@ -586,15 +669,19 @@ describe('ResearchRepositoryService', () => {
           where: expect.objectContaining({
             type: { in: ['statement', 'factor'] },
           }),
-        })
+        }),
       );
     });
 
     it('should apply date range filters', async () => {
       jest.spyOn(cacheService, 'get').mockResolvedValue(null);
-      jest.spyOn(prismaService.researchInsight, 'findMany').mockResolvedValue([]);
+      jest
+        .spyOn(prismaService.researchInsight, 'findMany')
+        .mockResolvedValue([]);
       jest.spyOn(prismaService.researchInsight, 'count').mockResolvedValue(0);
-      jest.spyOn(prismaService.researchInsight, 'groupBy').mockResolvedValue([]);
+      jest
+        .spyOn(prismaService.researchInsight, 'groupBy')
+        .mockResolvedValue([]);
 
       const from = new Date('2024-01-01');
       const to = new Date('2024-12-31');
@@ -611,15 +698,19 @@ describe('ResearchRepositoryService', () => {
           where: expect.objectContaining({
             createdAt: { gte: from, lte: to },
           }),
-        })
+        }),
       );
     });
 
     it('should support pagination', async () => {
       jest.spyOn(cacheService, 'get').mockResolvedValue(null);
-      jest.spyOn(prismaService.researchInsight, 'findMany').mockResolvedValue([]);
+      jest
+        .spyOn(prismaService.researchInsight, 'findMany')
+        .mockResolvedValue([]);
       jest.spyOn(prismaService.researchInsight, 'count').mockResolvedValue(0);
-      jest.spyOn(prismaService.researchInsight, 'groupBy').mockResolvedValue([]);
+      jest
+        .spyOn(prismaService.researchInsight, 'groupBy')
+        .mockResolvedValue([]);
 
       await service.search({
         query: 'test',
@@ -631,23 +722,27 @@ describe('ResearchRepositoryService', () => {
         expect.objectContaining({
           take: 10,
           skip: 20,
-        })
+        }),
       );
     });
 
     it('should cache search results', async () => {
       jest.spyOn(cacheService, 'get').mockResolvedValue(null);
       jest.spyOn(cacheService, 'set').mockResolvedValue(true);
-      jest.spyOn(prismaService.researchInsight, 'findMany').mockResolvedValue([]);
+      jest
+        .spyOn(prismaService.researchInsight, 'findMany')
+        .mockResolvedValue([]);
       jest.spyOn(prismaService.researchInsight, 'count').mockResolvedValue(0);
-      jest.spyOn(prismaService.researchInsight, 'groupBy').mockResolvedValue([]);
+      jest
+        .spyOn(prismaService.researchInsight, 'groupBy')
+        .mockResolvedValue([]);
 
       await service.search({ query: 'test' });
 
       expect(cacheService.set).toHaveBeenCalledWith(
         expect.any(String),
         expect.any(Object),
-        300 // 5 minutes
+        300, // 5 minutes
       );
     });
   });
@@ -656,8 +751,12 @@ describe('ResearchRepositoryService', () => {
     it('should retrieve an insight and increment view count', async () => {
       const mockInsight = { id: 'insight-1', userId: mockUserId } as any;
 
-      jest.spyOn(prismaService.researchInsight, 'findFirst').mockResolvedValue(mockInsight);
-      jest.spyOn(prismaService.researchInsight, 'update').mockResolvedValue({} as any);
+      jest
+        .spyOn(prismaService.researchInsight, 'findFirst')
+        .mockResolvedValue(mockInsight);
+      jest
+        .spyOn(prismaService.researchInsight, 'update')
+        .mockResolvedValue({} as any);
 
       const result = await service.getInsight('insight-1', mockUserId);
 
@@ -669,7 +768,9 @@ describe('ResearchRepositoryService', () => {
     });
 
     it('should return null for non-existent insight', async () => {
-      jest.spyOn(prismaService.researchInsight, 'findFirst').mockResolvedValue(null);
+      jest
+        .spyOn(prismaService.researchInsight, 'findFirst')
+        .mockResolvedValue(null);
 
       const result = await service.getInsight('nonexistent', mockUserId);
 
@@ -690,8 +791,12 @@ describe('ResearchRepositoryService', () => {
         { id: 'insight-3', type: 'statement' } as any,
       ];
 
-      jest.spyOn(prismaService.researchInsight, 'findUnique').mockResolvedValue(mockInsight);
-      jest.spyOn(prismaService.researchInsight, 'findMany').mockResolvedValue(mockRelated);
+      jest
+        .spyOn(prismaService.researchInsight, 'findUnique')
+        .mockResolvedValue(mockInsight);
+      jest
+        .spyOn(prismaService.researchInsight, 'findMany')
+        .mockResolvedValue(mockRelated);
 
       const related = await service.getRelatedInsights('insight-1', 5);
 
@@ -702,12 +807,14 @@ describe('ResearchRepositoryService', () => {
             id: { not: 'insight-1' },
           }),
           take: 5,
-        })
+        }),
       );
     });
 
     it('should return empty array for non-existent insight', async () => {
-      jest.spyOn(prismaService.researchInsight, 'findUnique').mockResolvedValue(null);
+      jest
+        .spyOn(prismaService.researchInsight, 'findUnique')
+        .mockResolvedValue(null);
 
       const related = await service.getRelatedInsights('nonexistent');
 
@@ -721,7 +828,8 @@ describe('ResearchRepositoryService', () => {
 
   describe('extractKeywords', () => {
     it('should extract meaningful keywords from text', () => {
-      const text = 'Climate change is the most pressing environmental issue of our time and requires immediate action.';
+      const text =
+        'Climate change is the most pressing environmental issue of our time and requires immediate action.';
 
       const keywords = service['extractKeywords'](text, 5);
 
@@ -740,7 +848,7 @@ describe('ResearchRepositoryService', () => {
       const keywords = service['extractKeywords'](text);
 
       // Words under 4 chars should be filtered
-      keywords.forEach(keyword => {
+      keywords.forEach((keyword) => {
         expect(keyword.length).toBeGreaterThan(3);
       });
     });
@@ -765,10 +873,12 @@ describe('ResearchRepositoryService', () => {
       const vector = service['buildSearchVector'](
         'Climate Change',
         'Environmental Impact',
-        'Policy Implications'
+        'Policy Implications',
       );
 
-      expect(vector).toBe('climate change environmental impact policy implications');
+      expect(vector).toBe(
+        'climate change environmental impact policy implications',
+      );
       expect(vector).not.toContain('  '); // No double spaces
     });
 
@@ -776,7 +886,7 @@ describe('ResearchRepositoryService', () => {
       const vector = service['buildSearchVector'](
         'Climate-change',
         'Impact (significant)',
-        'Policy: action!'
+        'Policy: action!',
       );
 
       expect(vector).toContain('climate');
@@ -893,8 +1003,14 @@ describe('ResearchRepositoryService', () => {
         citationCount: 0,
       } as any;
 
-      const popularScore = service['calculateSearchScore'](popularInsight, 'climate');
-      const unpopularScore = service['calculateSearchScore'](unpopularInsight, 'climate');
+      const popularScore = service['calculateSearchScore'](
+        popularInsight,
+        'climate',
+      );
+      const unpopularScore = service['calculateSearchScore'](
+        unpopularInsight,
+        'climate',
+      );
 
       expect(popularScore).toBeGreaterThan(unpopularScore);
     });
@@ -913,7 +1029,8 @@ describe('ResearchRepositoryService', () => {
 
   describe('extractHighlights', () => {
     it('should extract context around query matches', () => {
-      const text = 'Climate change is a pressing issue that affects everyone. We must take action on climate change now.';
+      const text =
+        'Climate change is a pressing issue that affects everyone. We must take action on climate change now.';
       const query = 'climate change';
 
       const highlights = service['extractHighlights'](text, query);

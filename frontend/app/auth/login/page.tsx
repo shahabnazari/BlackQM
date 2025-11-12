@@ -171,7 +171,7 @@ function LoginContent() {
   // Handle social login
   const handleSocialLogin = (provider: string) => {
     sessionStorage.setItem('auth_redirect', redirectUrl);
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/${provider}`;
+    window.location.href = `${process.env['NEXT_PUBLIC_API_URL']}/auth/${provider}`;
   };
 
   return (

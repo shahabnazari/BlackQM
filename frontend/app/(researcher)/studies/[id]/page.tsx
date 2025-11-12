@@ -76,10 +76,10 @@ export default function StudyDetailPage() {
   useEffect(() => {
     // Simulate loading study data
     setTimeout(() => {
-      setStudy({ ...mockStudyData, id: params.id as string });
+      setStudy({ ...mockStudyData, id: params['id'] as string });
       setIsLoading(false);
     }, 500);
-  }, [params.id]);
+  }, [params]);
 
   if (isLoading) {
     return (

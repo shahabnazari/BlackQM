@@ -49,7 +49,10 @@ const NODE_TYPE_COLORS: Record<string, string> = {
   insight: 'bg-orange-100 text-orange-700 border-orange-300',
 };
 
-export function CitationLineage({ citationChain, compact = false }: CitationLineageProps) {
+export function CitationLineage({
+  citationChain,
+  compact = false,
+}: CitationLineageProps) {
   if (citationChain.length === 0) {
     return (
       <Card>
@@ -66,13 +69,19 @@ export function CitationLineage({ citationChain, compact = false }: CitationLine
       <div className="flex items-center gap-2 flex-wrap">
         {citationChain.map((node, index) => {
           const Icon = NODE_TYPE_ICONS[node.type] || DocumentTextIcon;
-          const colorClass = NODE_TYPE_COLORS[node.type] || 'bg-gray-100 text-gray-700 border-gray-300';
+          const colorClass =
+            NODE_TYPE_COLORS[node.type] ||
+            'bg-gray-100 text-gray-700 border-gray-300';
 
           return (
             <React.Fragment key={node.id}>
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${colorClass}`}>
+              <div
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${colorClass}`}
+              >
                 <Icon className="w-4 h-4" />
-                <span className="text-xs font-medium capitalize">{node.type}</span>
+                <span className="text-xs font-medium capitalize">
+                  {node.type}
+                </span>
               </div>
               {index < citationChain.length - 1 && (
                 <ArrowRightIcon className="w-4 h-4 text-gray-400" />
@@ -95,7 +104,9 @@ export function CitationLineage({ citationChain, compact = false }: CitationLine
         <div className="space-y-3">
           {citationChain.map((node, index) => {
             const Icon = NODE_TYPE_ICONS[node.type] || DocumentTextIcon;
-            const colorClass = NODE_TYPE_COLORS[node.type] || 'bg-gray-100 text-gray-700 border-gray-300';
+            const colorClass =
+              NODE_TYPE_COLORS[node.type] ||
+              'bg-gray-100 text-gray-700 border-gray-300';
 
             return (
               <div key={node.id} className="relative">
@@ -105,7 +116,9 @@ export function CitationLineage({ citationChain, compact = false }: CitationLine
                 )}
 
                 {/* Node */}
-                <div className={`flex items-start gap-3 p-3 rounded-lg border ${colorClass}`}>
+                <div
+                  className={`flex items-start gap-3 p-3 rounded-lg border ${colorClass}`}
+                >
                   <div className="flex-shrink-0">
                     <Icon className="w-5 h-5" />
                   </div>
@@ -130,36 +143,48 @@ export function CitationLineage({ citationChain, compact = false }: CitationLine
                           if (key === 'authors' && Array.isArray(value)) {
                             return (
                               <div key={key} className="text-xs text-gray-600">
-                                <span className="font-medium">Authors:</span> {value.slice(0, 3).join(', ')}
-                                {value.length > 3 && ` +${value.length - 3} more`}
+                                <span className="font-medium">Authors:</span>{' '}
+                                {value.slice(0, 3).join(', ')}
+                                {value.length > 3 &&
+                                  ` +${value.length - 3} more`}
                               </div>
                             );
                           }
                           if (key === 'year' || key === 'doi') {
                             return (
                               <div key={key} className="text-xs text-gray-600">
-                                <span className="font-medium capitalize">{key}:</span> {value}
+                                <span className="font-medium capitalize">
+                                  {key}:
+                                </span>{' '}
+                                {value}
                               </div>
                             );
                           }
                           if (key === 'variance' || key === 'relevanceScore') {
                             return (
                               <div key={key} className="text-xs text-gray-600">
-                                <span className="font-medium capitalize">{key}:</span> {(value * 100).toFixed(1)}%
+                                <span className="font-medium capitalize">
+                                  {key}:
+                                </span>{' '}
+                                {(value * 100).toFixed(1)}%
                               </div>
                             );
                           }
                           if (key === 'eigenvalue' || key === 'confidence') {
                             return (
                               <div key={key} className="text-xs text-gray-600">
-                                <span className="font-medium capitalize">{key}:</span> {Number(value).toFixed(2)}
+                                <span className="font-medium capitalize">
+                                  {key}:
+                                </span>{' '}
+                                {Number(value).toFixed(2)}
                               </div>
                             );
                           }
                           if (key === 'keywords' && Array.isArray(value)) {
                             return (
                               <div key={key} className="text-xs text-gray-600">
-                                <span className="font-medium">Keywords:</span> {value.slice(0, 5).join(', ')}
+                                <span className="font-medium">Keywords:</span>{' '}
+                                {value.slice(0, 5).join(', ')}
                               </div>
                             );
                           }
@@ -177,7 +202,8 @@ export function CitationLineage({ citationChain, compact = false }: CitationLine
         {/* Summary */}
         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
           <div className="text-sm text-gray-600">
-            <span className="font-medium">Complete Lineage:</span> This insight traces back through {citationChain.length} research artifacts,
+            <span className="font-medium">Complete Lineage:</span> This insight
+            traces back through {citationChain.length} research artifacts,
             ensuring full transparency and reproducibility.
           </div>
         </div>

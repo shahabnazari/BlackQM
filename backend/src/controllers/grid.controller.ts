@@ -13,9 +13,16 @@ export class GridController {
   }
 
   // Get grid configuration by survey ID
-  getGridBySurveyId = async (req: Request, res: Response) => {
+  getGridBySurveyId = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { surveyId } = req.params;
+
+      if (!surveyId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Survey ID is required',
+        });
+      }
 
       const grid = await prisma.gridConfiguration.findUnique({
         where: { surveyId },
@@ -37,13 +44,13 @@ export class GridController {
         });
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: grid,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching grid configuration:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to fetch grid configuration',
       });
@@ -51,9 +58,17 @@ export class GridController {
   };
 
   // Create grid configuration
-  createGrid = async (req: Request, res: Response) => {
+  createGrid = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { surveyId } = req.params;
+
+      if (!surveyId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Survey ID is required',
+        });
+      }
+
       const {
         rangeMin,
         rangeMax,
@@ -116,13 +131,13 @@ export class GridController {
         grid,
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: grid,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating grid configuration:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to create grid configuration',
       });
@@ -130,9 +145,17 @@ export class GridController {
   };
 
   // Update grid configuration
-  updateGrid = async (req: Request, res: Response) => {
+  updateGrid = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Grid ID is required',
+        });
+      }
+
       const updates = req.body;
 
       // Get existing grid to check permissions
@@ -170,13 +193,13 @@ export class GridController {
         updates,
       });
 
-      res.json({
+      return res.json({
         success: true,
         data: grid,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating grid configuration:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to update grid configuration',
       });
@@ -184,9 +207,16 @@ export class GridController {
   };
 
   // Delete grid configuration
-  deleteGrid = async (req: Request, res: Response) => {
+  deleteGrid = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Grid ID is required',
+        });
+      }
 
       // Get existing grid to check permissions
       const existingGrid = await prisma.gridConfiguration.findUnique({
@@ -221,13 +251,13 @@ export class GridController {
         surveyId: existingGrid.surveyId,
       });
 
-      res.json({
+      return res.json({
         success: true,
         message: 'Grid configuration deleted successfully',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting grid configuration:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to delete grid configuration',
       });
@@ -235,7 +265,7 @@ export class GridController {
   };
 
   // Validate grid configuration
-  validateGrid = async (req: Request, res: Response) => {
+  validateGrid = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { columns, totalCells, rangeMin, rangeMax } = req.body;
 
@@ -286,7 +316,7 @@ export class GridController {
 
       const isValid = errors.length === 0;
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           isValid,
@@ -298,9 +328,9 @@ export class GridController {
           },
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error validating grid configuration:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to validate grid configuration',
       });

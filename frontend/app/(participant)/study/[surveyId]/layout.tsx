@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import {
   useParticipantFlow,
@@ -21,7 +21,7 @@ interface StudyLayoutProps {
 
 export default function StudyLayout({ children }: StudyLayoutProps) {
   const params = useParams();
-  const surveyId = params.surveyId as string;
+  const surveyId = params['surveyId'] as string;
   const [isMobile, setIsMobile] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -85,6 +85,29 @@ export default function StudyLayout({ children }: StudyLayoutProps) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [hasUnsavedChanges, flowState, saveProgress]);
 
+  // Handle save progress (moved above useEffect to fix hoisting error)
+  const handleSaveProgress = useCallback(async () => {
+    if (!flowState) return;
+
+    try {
+      const savePoint = await saveProgress(flowState.stageData, false);
+      setHasUnsavedChanges(false);
+
+      // Store save point reference in localStorage
+      if (savePoint) {
+        localStorage.setItem(
+          `flow_savepoint_${surveyId}`,
+          JSON.stringify({
+            timestamp: savePoint.timestamp,
+            stage: savePoint.stageId,
+          })
+        );
+      }
+    } catch (error: any) {
+      toast.error('Failed to save progress');
+    }
+  }, [flowState, saveProgress, surveyId]);
+
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -107,30 +130,7 @@ export default function StudyLayout({ children }: StudyLayoutProps) {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [canGoBack, canProceed, goBack, goNext]);
-
-  // Handle save progress
-  const handleSaveProgress = async () => {
-    if (!flowState) return;
-
-    try {
-      const savePoint = await saveProgress(flowState.stageData, false);
-      setHasUnsavedChanges(false);
-
-      // Store save point reference in localStorage
-      if (savePoint) {
-        localStorage.setItem(
-          `flow_savepoint_${surveyId}`,
-          JSON.stringify({
-            timestamp: savePoint.timestamp,
-            stage: savePoint.stageId,
-          })
-        );
-      }
-    } catch (error) {
-      toast.error('Failed to save progress');
-    }
-  };
+  }, [canGoBack, canProceed, goBack, goNext, handleSaveProgress]);
 
   // Handle navigation
   const handleGoNext = async (stageData?: any) => {

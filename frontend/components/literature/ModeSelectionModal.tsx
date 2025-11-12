@@ -180,7 +180,9 @@ export function ModeSelectionModal({
               <X className="h-6 w-6" />
             </button>
             <h2 className="text-2xl font-bold text-white mb-2">
-              {loading ? 'Preparing Papers...' : 'Choose Your Extraction Approach'}
+              {loading
+                ? 'Preparing Papers...'
+                : 'Choose Your Extraction Approach'}
             </h2>
             {loading && preparingMessage ? (
               <div className="text-blue-100 flex items-center gap-2">
@@ -189,7 +191,8 @@ export function ModeSelectionModal({
               </div>
             ) : (
               <div className="text-blue-100">
-                {selectedPaperCount} paper{selectedPaperCount !== 1 ? 's' : ''} selected
+                {selectedPaperCount} paper{selectedPaperCount !== 1 ? 's' : ''}{' '}
+                selected
               </div>
             )}
           </div>
@@ -200,7 +203,9 @@ export function ModeSelectionModal({
               <Award className="h-4 w-4 text-purple-600" />
               <span className="font-medium">Research-Backed Methodology</span>
               <span className="text-gray-400">•</span>
-              <span>Glaser & Strauss (1967) • Patton (1990) • Francis et al. (2010)</span>
+              <span>
+                Glaser & Strauss (1967) • Patton (1990) • Francis et al. (2010)
+              </span>
             </div>
           </div>
 
@@ -229,13 +234,17 @@ export function ModeSelectionModal({
 
                 <div className="flex items-start gap-4 mb-4">
                   <div className={`p-3 rounded-lg ${quickConfig.bgColor}`}>
-                    <quickConfig.icon className={`h-6 w-6 ${quickConfig.color}`} />
+                    <quickConfig.icon
+                      className={`h-6 w-6 ${quickConfig.color}`}
+                    />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-gray-900">
                       {quickConfig.title}
                     </h3>
-                    <p className="text-sm text-gray-600">{quickConfig.subtitle}</p>
+                    <p className="text-sm text-gray-600">
+                      {quickConfig.subtitle}
+                    </p>
                   </div>
                 </div>
 
@@ -285,8 +294,13 @@ export function ModeSelectionModal({
                     <h3 className="text-lg font-bold text-gray-900 mb-1">
                       Guided Extraction
                     </h3>
-                    <p className="text-xs text-pink-700 font-medium mb-1">🤖 AI-Powered • 5-Dimensional Quality Scoring</p>
-                    <p className="text-xs text-gray-600">Patent-pending automatic paper selection & saturation detection</p>
+                    <p className="text-xs text-pink-700 font-medium mb-1">
+                      🤖 AI-Powered • 5-Dimensional Quality Scoring
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Patent-pending automatic paper selection & saturation
+                      detection
+                    </p>
                   </div>
                 </div>
 
@@ -297,10 +311,22 @@ export function ModeSelectionModal({
                       HOW IT WORKS (Scientifically):
                     </h4>
                     <div className="space-y-1.5 text-xs text-gray-700">
-                      <div>1️⃣ <strong>Foundation</strong> (Iteration 1): Highest-quality papers → Robust baseline</div>
-                      <div>2️⃣ <strong>Diversity</strong> (Iteration 2): Different methodologies → Test theme robustness</div>
-                      <div>3️⃣ <strong>Gap-Filling</strong> (Iteration 3+): Weak themes → Approach saturation</div>
-                      <div>4️⃣ <strong>Auto-Stop</strong>: When saturation reached → Never over-analyze</div>
+                      <div>
+                        1️⃣ <strong>Foundation</strong> (Iteration 1):
+                        Highest-quality papers → Robust baseline
+                      </div>
+                      <div>
+                        2️⃣ <strong>Diversity</strong> (Iteration 2): Different
+                        methodologies → Test theme robustness
+                      </div>
+                      <div>
+                        3️⃣ <strong>Gap-Filling</strong> (Iteration 3+): Weak
+                        themes → Approach saturation
+                      </div>
+                      <div>
+                        4️⃣ <strong>Auto-Stop</strong>: When saturation reached →
+                        Never over-analyze
+                      </div>
                     </div>
                   </div>
 
@@ -311,11 +337,15 @@ export function ModeSelectionModal({
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="text-green-700">
                         <div className="font-bold">60% Time Saved</div>
-                        <div className="text-[10px] text-green-600">Stops at 20 of 50 papers</div>
+                        <div className="text-[10px] text-green-600">
+                          Stops at 20 of 50 papers
+                        </div>
                       </div>
                       <div className="text-green-700">
                         <div className="font-bold">60% Cost Saved</div>
-                        <div className="text-[10px] text-green-600">$2 instead of $5 typical</div>
+                        <div className="text-[10px] text-green-600">
+                          $2 instead of $5 typical
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -325,9 +355,18 @@ export function ModeSelectionModal({
                       📚 SCIENTIFIC BACKING:
                     </h4>
                     <div className="space-y-0.5 text-[10px] text-blue-700">
-                      <div>• <strong>Glaser & Strauss (1967)</strong> - Theoretical sampling</div>
-                      <div>• <strong>Patton (1990)</strong> - Purposive sampling strategies</div>
-                      <div>• <strong>Francis et al. (2010)</strong> - Saturation framework</div>
+                      <div>
+                        • <strong>Glaser & Strauss (1967)</strong> - Theoretical
+                        sampling
+                      </div>
+                      <div>
+                        • <strong>Patton (1990)</strong> - Purposive sampling
+                        strategies
+                      </div>
+                      <div>
+                        • <strong>Francis et al. (2010)</strong> - Saturation
+                        framework
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -353,9 +392,11 @@ export function ModeSelectionModal({
                       ✨ AI Recommendation
                     </p>
                     <p className="text-sm text-pink-800">
-                      You've selected {selectedPaperCount} papers. For large datasets,
-                      we recommend using <strong>Guided Extraction</strong> for automatic
-                      quality scoring, scientific batch selection, and saturation tracking.
+                      You&apos;ve selected {selectedPaperCount} papers. For large
+                      datasets, we recommend using{' '}
+                      <strong>Guided Extraction</strong> for automatic quality
+                      scoring, scientific batch selection, and saturation
+                      tracking.
                     </p>
                   </div>
                 </div>

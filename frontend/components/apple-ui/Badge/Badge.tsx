@@ -31,15 +31,15 @@ const badgeVariants = cva(
   }
 );
 
-interface BadgeProps 
-  extends HTMLAttributes<HTMLDivElement>,
+interface BadgeProps
+  extends HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof badgeVariants> {
   as?: React.ElementType;
   ariaLabel?: string;
 }
 
-const Badge = forwardRef<HTMLDivElement, BadgeProps>(
-  ({ className, variant, size, as: Component = "div", ariaLabel, children, ...props }, ref) => {
+const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
+  ({ className, variant, size, as: Component = "span", ariaLabel, children, ...props }, ref) => {
     return (
       <Component
         className={cn(badgeVariants({ variant, size, className }))}

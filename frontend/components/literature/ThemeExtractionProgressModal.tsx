@@ -44,7 +44,7 @@ function mapProgressToStage(progress: ExtractionProgress): {
   }
 
   // Fallback: Map simple stages to Braun & Clarke 6 stages (legacy path)
-  console.log('🟡 Using SYNTHETIC transparentMessage (fallback - no WebSocket data)');
+  // Phase 10.1 Day 7: Suppressed excessive logging (was appearing 40+ times per extraction)
   switch (progress.stage) {
     case 'preparing':
       currentStage = 1; // Familiarization

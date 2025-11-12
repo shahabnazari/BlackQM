@@ -192,7 +192,7 @@ export function ErrorRecovery({
     },
   };
 
-  const currentError = errorTypes[errorCode] || errorTypes.UNKNOWN;
+  const currentError = errorTypes[errorCode] || errorTypes['UNKNOWN'];
   if (!currentError) return null; // This should never happen, but satisfies TypeScript
   const ErrorIcon = currentError.icon;
 

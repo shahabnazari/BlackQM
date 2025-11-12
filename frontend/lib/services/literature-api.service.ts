@@ -45,6 +45,15 @@ export interface Paper {
     | 'manual'
     | 'abstract_overflow'
     | 'pmc'
+    | 'eric'
+    | 'web_of_science'
+    | 'scopus'
+    | 'ieee'
+    | 'springer'
+    | 'nature'
+    | 'wiley'
+    | 'sage'
+    | 'taylor_francis'
     | 'publisher'; // How full-text was obtained
   fullTextWordCount?: number; // Word count of full-text only (for analytics)
 }
@@ -115,7 +124,7 @@ class LiteratureAPIService {
 
   constructor() {
     this.baseURL =
-      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+      process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000/api';
     this.api = axios.create({
       baseURL: this.baseURL,
       headers: {
@@ -217,13 +226,32 @@ class LiteratureAPIService {
   }
 
   // Search literature across multiple databases
+  // Phase 10.6 Day 14.5+: Returns enhanced metadata for transparency
   async searchLiterature(params: SearchLiteratureParams): Promise<{
     papers: Paper[];
     total: number;
     page: number;
+    metadata?: {
+      totalCollected: number;
+      sourceBreakdown: Record<string, { papers: number; duration: number; error?: string }>;
+      uniqueAfterDedup: number;
+      deduplicationRate: number;
+      duplicatesRemoved: number;
+      afterEnrichment: number;
+      afterQualityFilter: number;
+      qualityFiltered: number;
+      totalQualified: number;
+      displayed: number;
+      searchDuration: number;
+      queryExpansion?: { original: string; expanded: string };
+    };
   }> {
     try {
       console.log('📡 API: Sending search request with params:', params);
+      console.log('📡 [DEBUG] API params.sources:', params.sources);
+      console.log('📡 [DEBUG] API params.sources type:', typeof params.sources);
+      console.log('📡 [DEBUG] API params.sources length:', params.sources?.length);
+      console.log('📡 [DEBUG] API params.sources JSON:', JSON.stringify(params.sources));
       // Temporarily use public endpoint for development
       const response = await this.api.post('/literature/search/public', params);
       console.log('📥 API: Raw response:', response);
@@ -237,13 +265,19 @@ class LiteratureAPIService {
       console.log('📚 API: Papers count:', actualData.papers?.length || 0);
 
       // Ensure we have the expected structure
+      // Phase 10.6 Day 14.5: Include metadata for transparency
       const result = {
         papers: actualData.papers || [],
         total: actualData.total || 0,
         page: actualData.page || params.page || 1,
+        metadata: actualData.metadata || null, // CRITICAL: Pass through metadata from backend
       };
 
       console.log('✅ API: Returning result:', result);
+      console.log('📊 API: Metadata included:', {
+        hasMetadata: !!actualData.metadata,
+        metadataKeys: actualData.metadata ? Object.keys(actualData.metadata) : []
+      });
       return result;
     } catch (error: any) {
       console.error('❌ API: Literature search failed:', error);

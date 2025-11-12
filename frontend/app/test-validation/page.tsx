@@ -16,14 +16,14 @@ export default function ValidationTestPage() {
     
     // Title validation
     if (!title || title.length < 10) {
-      errors.title = 'Title must be at least 10 characters';
+      errors['title'] = 'Title must be at least 10 characters';
     } else if (title.length > 100) {
-      errors.title = 'Title must be less than 100 characters';
+      errors['title'] = 'Title must be less than 100 characters';
     }
     
     // Description validation (optional field)
     if (description && description.length > 0 && description.length < 50) {
-      errors.description = 'Description must be at least 50 characters if provided';
+      errors['description'] = 'Description must be at least 50 characters if provided';
     }
     
     setValidationErrors(errors);
@@ -64,7 +64,7 @@ export default function ValidationTestPage() {
                   });
                 }
               }}
-              error={validationErrors.title || ''}
+              error={validationErrors['title'] || ''}
               aria-label="Study title"
               aria-required="true"
             />
@@ -88,7 +88,7 @@ export default function ValidationTestPage() {
               id="description"
               name="description"
               className={`w-full px-4 py-3 rounded-lg border ${
-                validationErrors.description ? 'border-red-500' : 'border-gray-300'
+                validationErrors['description'] ? 'border-red-500' : 'border-gray-300'
               } focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
               rows={4}
               placeholder="Describe your study (50-500 characters if provided)"
@@ -111,9 +111,9 @@ export default function ValidationTestPage() {
               </span>
               <span>Optional field</span>
             </div>
-            {validationErrors.description && (
+            {validationErrors['description'] && (
               <p className="text-xs text-red-500 mt-1" role="alert">
-                {validationErrors.description}
+                {validationErrors['description']}
               </p>
             )}
           </div>

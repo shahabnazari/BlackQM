@@ -44,9 +44,9 @@ async function testAllSources() {
       limit: 3,
     });
 
-    const hasDoi = papers.some(p => !!p.doi);
-    const hasPmid = papers.some(p => !!(p as any).pmid);
-    const hasUrl = papers.some(p => !!p.url);
+    const hasDoi = papers.some((p) => !!p.doi);
+    const hasPmid = papers.some((p) => !!(p as any).pmid);
+    const hasUrl = papers.some((p) => !!p.url);
 
     console.log(`   ✅ Retrieved ${papers.length} papers`);
     console.log(`   - Has DOI: ${hasDoi ? '✅' : '❌'}`);
@@ -92,9 +92,9 @@ async function testAllSources() {
       limit: 3,
     });
 
-    const hasDoi = papers.some(p => !!p.doi);
-    const hasPmid = papers.some(p => !!(p as any).pmid);
-    const hasUrl = papers.some(p => !!p.url);
+    const hasDoi = papers.some((p) => !!p.doi);
+    const hasPmid = papers.some((p) => !!(p as any).pmid);
+    const hasUrl = papers.some((p) => !!p.url);
 
     console.log(`   ✅ Retrieved ${papers.length} papers`);
     console.log(`   - Has DOI: ${hasDoi ? '✅' : '❌'}`);
@@ -140,9 +140,9 @@ async function testAllSources() {
       limit: 3,
     });
 
-    const hasDoi = papers.some(p => !!p.doi);
-    const hasPmid = papers.some(p => !!(p as any).pmid);
-    const hasUrl = papers.some(p => !!p.url);
+    const hasDoi = papers.some((p) => !!p.doi);
+    const hasPmid = papers.some((p) => !!(p as any).pmid);
+    const hasUrl = papers.some((p) => !!p.url);
 
     console.log(`   ✅ Retrieved ${papers.length} papers`);
     console.log(`   - Has DOI: ${hasDoi ? '✅' : '❌'}`);
@@ -188,9 +188,9 @@ async function testAllSources() {
       limit: 3,
     });
 
-    const hasDoi = papers.some(p => !!p.doi);
-    const hasPmid = papers.some(p => !!(p as any).pmid);
-    const hasUrl = papers.some(p => !!p.url);
+    const hasDoi = papers.some((p) => !!p.doi);
+    const hasPmid = papers.some((p) => !!(p as any).pmid);
+    const hasUrl = papers.some((p) => !!p.url);
 
     console.log(`   ✅ Retrieved ${papers.length} papers`);
     console.log(`   - Has DOI: ${hasDoi ? '✅' : '❌'}`);
@@ -231,7 +231,7 @@ async function testAllSources() {
   // ===== SUMMARY =====
   console.log('\n📊 ===== TEST SUMMARY =====\n');
 
-  const summaryTable = results.map(r => ({
+  const summaryTable = results.map((r) => ({
     Source: r.source,
     Status: r.success ? '✅ PASS' : '❌ FAIL',
     Papers: r.paperCount,
@@ -244,12 +244,16 @@ async function testAllSources() {
   console.table(summaryTable);
 
   // Verify critical fix: Semantic Scholar should have DOI/PMID
-  const semanticScholar = results.find(r => r.source === 'Semantic Scholar');
+  const semanticScholar = results.find((r) => r.source === 'Semantic Scholar');
   if (semanticScholar) {
     if (semanticScholar.hasDoi && semanticScholar.hasPmid) {
-      console.log('\n✅ CRITICAL FIX VERIFIED: Semantic Scholar now extracts DOI AND PMID!');
+      console.log(
+        '\n✅ CRITICAL FIX VERIFIED: Semantic Scholar now extracts DOI AND PMID!',
+      );
     } else {
-      console.log('\n❌ CRITICAL FIX FAILED: Semantic Scholar not extracting DOI/PMID properly');
+      console.log(
+        '\n❌ CRITICAL FIX FAILED: Semantic Scholar not extracting DOI/PMID properly',
+      );
       console.log(`   DOI: ${semanticScholar.hasDoi ? 'OK' : 'MISSING'}`);
       console.log(`   PMID: ${semanticScholar.hasPmid ? 'OK' : 'MISSING'}`);
     }
@@ -266,11 +270,11 @@ async function testAllSources() {
   await app.close();
 
   // Exit with error if any test failed
-  const allPassed = results.every(r => r.success);
+  const allPassed = results.every((r) => r.success);
   process.exit(allPassed ? 0 : 1);
 }
 
-testAllSources().catch(error => {
+testAllSources().catch((error) => {
   console.error('💥 Test script failed:', error);
   process.exit(1);
 });

@@ -61,10 +61,12 @@ npm run dev:lite       # No test watchers, optimized for performance
 # ⚡ Performance mode (with 2GB memory limit)
 npm run dev:performance
 
-# 🔧 Full featured mode (health checks, auto-restart)
-npm run dev
+# 🔧 ENTERPRISE: Ultimate Dev Manager V4 (Phase 10.1 Day 11)
+npm run dev            # Auto-restart, health monitoring, metrics API
+                       # Monitoring: http://localhost:9090/status
 
 # Other commands
+npm run dev:v3         # Legacy V3 dev manager
 npm run stop           # Stop all servers
 npm run restart        # Stop and restart
 npm run dev:clean      # Clean build and restart
@@ -77,6 +79,10 @@ npm run dev:clean      # Clean build and restart
 - 🌐 **Frontend**: http://localhost:3000
 - 🔧 **Backend API**: http://localhost:4000
 - 📚 **API Documentation**: http://localhost:4000/api/docs
+- 📊 **Dev Manager Monitoring** (V4 only): http://localhost:9090/status
+  - Status: http://localhost:9090/status
+  - Metrics: http://localhost:9090/metrics
+  - Health: http://localhost:9090/health
 
 ---
 
@@ -186,6 +192,7 @@ Comprehensive documentation is available in the [`/Lead`](./Lead) directory:
 - 🛠️ [Development Implementation Guide Part 1](./Lead/Development_Implementation_Guide_Part1.md)
 - 🔧 [Development Implementation Guide Part 2](./Lead/Development_Implementation_Guide_Part2.md)
 - ✅ [Implementation Phases](./Lead/IMPLEMENTATION_PHASES.md)
+- 📊 [Quality Scoring Methodology](./QUALITY_SCORING_METHODOLOGY.md) - Transparent paper quality assessment
 
 ---
 

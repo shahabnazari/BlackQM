@@ -46,6 +46,11 @@ export interface Paper {
   journal?: string;
   keywords?: string[];
   hasFullText: boolean;
+  // Phase 10.6 Day 2: Enhanced PubMed metadata
+  meshTerms?: Array<{ descriptor: string; qualifiers: string[] }>;
+  publicationType?: string[];
+  authorAffiliations?: Array<{ author: string; affiliation: string }>;
+  grants?: Array<{ grantId: string | null; agency: string | null; country: string | null }>;
 }
 
 @Injectable()
@@ -79,7 +84,10 @@ export class PaperQualityScoringService {
       fullTextBonus,
       breakdown: {
         methodology: this.getMethodologyBreakdown(methodologyScore),
-        citations: this.getCitationBreakdown(citationScore, paper.citationCount),
+        citations: this.getCitationBreakdown(
+          citationScore,
+          paper.citationCount,
+        ),
         journal: this.getJournalBreakdown(journalScore),
         content: this.getContentBreakdown(contentQualityScore),
         fullText: paper.hasFullText
@@ -91,36 +99,66 @@ export class PaperQualityScoringService {
 
   /**
    * Assess methodology quality based on keywords and abstract content
+   * Phase 10.6 Day 2: Enhanced with publication type and MeSH term weighting
    */
   private assessMethodology(paper: Paper): number {
-    const text = (paper.abstract || '') + ' ' + (paper.keywords || []).join(' ');
+    const text =
+      (paper.abstract || '') + ' ' + (paper.keywords || []).join(' ');
     const lowerText = text.toLowerCase();
 
     let score = 50; // Base score
 
-    // High-quality research designs (+30 points)
-    const highQuality = [
-      'randomized controlled trial',
-      'rct',
-      'meta-analysis',
-      'systematic review',
-      'longitudinal',
-      'experimental',
-    ];
-    if (highQuality.some((term) => lowerText.includes(term))) {
-      score += 30;
-    }
+    // Phase 10.6 Day 2: Publication Type Scoring (from PubMed metadata)
+    if (paper.publicationType && paper.publicationType.length > 0) {
+      const pubTypes = paper.publicationType.map(t => t.toLowerCase());
 
-    // Medium-quality designs (+15 points)
-    const mediumQuality = [
-      'quasi-experimental',
-      'cohort study',
-      'case-control',
-      'cross-sectional',
-      'mixed methods',
-    ];
-    if (mediumQuality.some((term) => lowerText.includes(term))) {
-      score += 15;
+      // High-quality publication types (+30 points)
+      const highQualityTypes = [
+        'randomized controlled trial',
+        'meta-analysis',
+        'systematic review',
+        'clinical trial',
+      ];
+      if (highQualityTypes.some(type => pubTypes.includes(type))) {
+        score += 30;
+      }
+
+      // Medium-quality publication types (+15 points)
+      const mediumQualityTypes = [
+        'review',
+        'comparative study',
+        'multicenter study',
+        'observational study',
+      ];
+      if (mediumQualityTypes.some(type => pubTypes.includes(type))) {
+        score += 15;
+      }
+    } else {
+      // Fallback to text-based detection if no publication type metadata
+      // High-quality research designs (+30 points)
+      const highQuality = [
+        'randomized controlled trial',
+        'rct',
+        'meta-analysis',
+        'systematic review',
+        'longitudinal',
+        'experimental',
+      ];
+      if (highQuality.some((term) => lowerText.includes(term))) {
+        score += 30;
+      }
+
+      // Medium-quality designs (+15 points)
+      const mediumQuality = [
+        'quasi-experimental',
+        'cohort study',
+        'case-control',
+        'cross-sectional',
+        'mixed methods',
+      ];
+      if (mediumQuality.some((term) => lowerText.includes(term))) {
+        score += 15;
+      }
     }
 
     // Rigorous methodology indicators (+5 points each)
@@ -134,9 +172,21 @@ export class PaperQualityScoringService {
       'validity',
     ];
     const foundIndicators = rigorIndicators.filter((term) =>
-      lowerText.includes(term)
+      lowerText.includes(term),
     ).length;
     score += foundIndicators * 5;
+
+    // Phase 10.6 Day 2: MeSH Terms Quality Bonus
+    // Papers with MeSH terms are professionally indexed by NLM curators
+    if (paper.meshTerms && paper.meshTerms.length > 0) {
+      // +10 points for having MeSH terms (indicates thorough indexing)
+      score += 10;
+
+      // Additional bonus for comprehensive MeSH indexing
+      if (paper.meshTerms.length >= 10) {
+        score += 5; // Well-categorized papers have 10+ MeSH terms
+      }
+    }
 
     return Math.min(100, score);
   }
@@ -212,7 +262,8 @@ export class PaperQualityScoringService {
     let score = 40; // Base score
 
     // Length indicators
-    if (abstract.length > 2000) score += 20; // Comprehensive
+    if (abstract.length > 2000)
+      score += 20; // Comprehensive
     else if (abstract.length > 1000) score += 15;
     else if (abstract.length > 500) score += 10;
     else if (abstract.length > 200) score += 5;
@@ -227,7 +278,7 @@ export class PaperQualityScoringService {
       'findings',
     ];
     const foundStructure = structureWords.filter((word) =>
-      abstract.toLowerCase().includes(word)
+      abstract.toLowerCase().includes(word),
     ).length;
     score += foundStructure * 5;
 
@@ -292,7 +343,7 @@ export class PaperQualityScoringService {
       const score = await this.assessPaperQuality(paper);
       scores.set(paper.id, score);
       this.logger.debug(
-        `Quality scored: ${paper.title.substring(0, 50)}... = ${score.overallScore}/100`
+        `Quality scored: ${paper.title.substring(0, 50)}... = ${score.overallScore}/100`,
       );
     }
 

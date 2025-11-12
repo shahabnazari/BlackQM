@@ -125,7 +125,7 @@ export class IncrementalExtractionApiService {
   private baseUrl: string;
 
   constructor(
-    baseUrl: string = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+    baseUrl: string = process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:3001'
   ) {
     this.baseUrl = baseUrl;
   }

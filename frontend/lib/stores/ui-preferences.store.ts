@@ -118,28 +118,30 @@ export const useUIPreferencesStore = create<UIPreferencesState>()(
         showInstitutionAuthModal: false,
 
         // View preference actions
-        setViewMode: (viewMode) => set({ viewMode }),
+        setViewMode: viewMode => set({ viewMode }),
 
         toggleDatabaseInfo: () =>
-          set((state) => ({
+          set(state => ({
             showDatabaseInfo: !state.showDatabaseInfo,
           })),
 
         toggleCostCalculator: () =>
-          set((state) => ({
+          set(state => ({
             showCostCalculator: !state.showCostCalculator,
           })),
 
         // Tab actions
-        setActiveTab: (activeTab) => set({ activeTab }),
+        setActiveTab: activeTab => set({ activeTab }),
 
-        setActiveResultsSubTab: (activeResultsSubTab) => set({ activeResultsSubTab }),
+        setActiveResultsSubTab: activeResultsSubTab =>
+          set({ activeResultsSubTab }),
 
-        setActiveAnalysisSubTab: (activeAnalysisSubTab) => set({ activeAnalysisSubTab }),
+        setActiveAnalysisSubTab: activeAnalysisSubTab =>
+          set({ activeAnalysisSubTab }),
 
         // Panel actions
-        togglePanel: (panelId) =>
-          set((state) => {
+        togglePanel: panelId =>
+          set(state => {
             const newSet = new Set(state.expandedPanels);
             if (newSet.has(panelId)) {
               newSet.delete(panelId);
@@ -149,15 +151,15 @@ export const useUIPreferencesStore = create<UIPreferencesState>()(
             return { expandedPanels: newSet };
           }),
 
-        expandPanel: (panelId) =>
-          set((state) => {
+        expandPanel: panelId =>
+          set(state => {
             const newSet = new Set(state.expandedPanels);
             newSet.add(panelId);
             return { expandedPanels: newSet };
           }),
 
-        collapsePanel: (panelId) =>
-          set((state) => {
+        collapsePanel: panelId =>
+          set(state => {
             const newSet = new Set(state.expandedPanels);
             newSet.delete(panelId);
             return { expandedPanels: newSet };
@@ -165,7 +167,7 @@ export const useUIPreferencesStore = create<UIPreferencesState>()(
 
         collapseAllPanels: () => set({ expandedPanels: new Set() }),
 
-        isPanelExpanded: (panelId) => get().expandedPanels.has(panelId),
+        isPanelExpanded: panelId => get().expandedPanels.has(panelId),
 
         // Modal actions
         openPurposeWizard: () => set({ showPurposeWizard: true }),
@@ -181,10 +183,11 @@ export const useUIPreferencesStore = create<UIPreferencesState>()(
         closeSurveyModal: () => set({ showSurveyModal: false }),
 
         openInstitutionAuthModal: () => set({ showInstitutionAuthModal: true }),
-        closeInstitutionAuthModal: () => set({ showInstitutionAuthModal: false }),
+        closeInstitutionAuthModal: () =>
+          set({ showInstitutionAuthModal: false }),
 
         // Restore banner actions
-        showRestore: (restoreSummary) =>
+        showRestore: restoreSummary =>
           set({ showRestoreBanner: true, restoreSummary }),
 
         hideRestoreBanner: () =>
@@ -206,7 +209,7 @@ export const useUIPreferencesStore = create<UIPreferencesState>()(
       {
         name: 'ui-preferences-store',
         // Persist view preferences and tab state
-        partialize: (state) => ({
+        partialize: state => ({
           viewMode: state.viewMode,
           showDatabaseInfo: state.showDatabaseInfo,
           showCostCalculator: state.showCostCalculator,
@@ -216,7 +219,7 @@ export const useUIPreferencesStore = create<UIPreferencesState>()(
           expandedPanels: Array.from(state.expandedPanels),
         }),
         // Convert Set back from array on rehydration
-        onRehydrateStorage: () => (state) => {
+        onRehydrateStorage: () => state => {
           if (state) {
             state.expandedPanels = new Set(
               state.expandedPanels as unknown as string[]

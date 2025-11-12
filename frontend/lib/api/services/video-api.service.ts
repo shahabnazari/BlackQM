@@ -12,7 +12,11 @@
  * @module video-api.service
  */
 
-import { BaseApiService, CancellableRequest, RequestOptions } from './base-api.service';
+import {
+  BaseApiService,
+  CancellableRequest,
+  RequestOptions,
+} from './base-api.service';
 
 // ============================================================================
 // Types
@@ -128,12 +132,11 @@ class VideoApiService extends BaseApiService {
   ): CancellableRequest<VideoSearchResponse> {
     const requestId = `video-search-${Date.now()}`;
 
-    return this.createCancellableRequest(requestId, async (signal) => {
-      const response = await this.post<VideoSearchResponse>(
-        '/search',
-        params,
-        { ...options, signal }
-      );
+    return this.createCancellableRequest(requestId, async signal => {
+      const response = await this.post<VideoSearchResponse>('/search', params, {
+        ...options,
+        signal,
+      });
       return response.data;
     });
   }
@@ -181,7 +184,7 @@ class VideoApiService extends BaseApiService {
   ): CancellableRequest<Transcription> {
     const requestId = `transcription-${params.videoId}`;
 
-    return this.createCancellableRequest(requestId, async (signal) => {
+    return this.createCancellableRequest(requestId, async signal => {
       const response = await this.post<Transcription>(
         '/transcriptions/generate',
         params,
@@ -206,7 +209,11 @@ class VideoApiService extends BaseApiService {
       `/transcriptions/${videoId}/status`,
       options
     );
-    return response.data as { videoId: string; status: 'not_started' | 'processing' | 'completed' | 'failed'; progress?: number };
+    return response.data as {
+      videoId: string;
+      status: 'not_started' | 'processing' | 'completed' | 'failed';
+      progress?: number;
+    };
   }
 
   /**
@@ -242,7 +249,13 @@ class VideoApiService extends BaseApiService {
       `/transcriptions/batch/${jobId}/status`,
       options
     );
-    return response.data as { jobId: string; totalVideos: number; completed: number; failed: number; progress: number };
+    return response.data as {
+      jobId: string;
+      totalVideos: number;
+      completed: number;
+      failed: number;
+      progress: number;
+    };
   }
 
   // ============================================================================
@@ -301,7 +314,11 @@ class VideoApiService extends BaseApiService {
       `/channels/search?q=${encodeURIComponent(query)}`,
       { ...options, params }
     );
-    return response.data as { channels: ChannelInfo[]; nextPageToken?: string; totalResults: number };
+    return response.data as {
+      channels: ChannelInfo[];
+      nextPageToken?: string;
+      totalResults: number;
+    };
   }
 
   // ============================================================================
@@ -363,7 +380,13 @@ class VideoApiService extends BaseApiService {
       { videoId, researchQuery },
       options
     );
-    return response.data as { videoId: string; relevanceScore: number; keyTopics: string[]; matchedKeywords: string[]; summary: string };
+    return response.data as {
+      videoId: string;
+      relevanceScore: number;
+      keyTopics: string[];
+      matchedKeywords: string[];
+      summary: string;
+    };
   }
 
   /**
@@ -381,12 +404,16 @@ class VideoApiService extends BaseApiService {
       importance: number;
     }>;
   }> {
-    const response = await this.post(
-      '/analyze/moments',
-      { videoId },
-      options
-    );
-    return response.data as { videoId: string; moments: Array<{ timestamp: number; duration: number; description: string; importance: number }> };
+    const response = await this.post('/analyze/moments', { videoId }, options);
+    return response.data as {
+      videoId: string;
+      moments: Array<{
+        timestamp: number;
+        duration: number;
+        description: string;
+        importance: number;
+      }>;
+    };
   }
 
   // ============================================================================

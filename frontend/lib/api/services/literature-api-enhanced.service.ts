@@ -12,7 +12,11 @@
  * @module literature-api-enhanced.service
  */
 
-import { BaseApiService, CancellableRequest, RequestOptions } from './base-api.service';
+import {
+  BaseApiService,
+  CancellableRequest,
+  RequestOptions,
+} from './base-api.service';
 
 // ============================================================================
 // Types
@@ -55,8 +59,18 @@ export interface Paper {
   // Full-text support
   fullText?: string;
   hasFullText?: boolean;
-  fullTextStatus?: 'not_fetched' | 'fetching' | 'success' | 'failed' | 'available';
-  fullTextSource?: 'unpaywall' | 'manual' | 'abstract_overflow' | 'pmc' | 'publisher';
+  fullTextStatus?:
+    | 'not_fetched'
+    | 'fetching'
+    | 'success'
+    | 'failed'
+    | 'available';
+  fullTextSource?:
+    | 'unpaywall'
+    | 'manual'
+    | 'abstract_overflow'
+    | 'pmc'
+    | 'publisher';
   fullTextWordCount?: number;
 }
 
@@ -74,13 +88,40 @@ export interface SearchLiteratureParams {
   // Quality filters
   minWordCount?: number;
   minAbstractLength?: number;
-  sortByEnhanced?: 'relevance' | 'date' | 'citations' | 'citations_per_year' | 'word_count' | 'quality_score';
+  sortByEnhanced?:
+    | 'relevance'
+    | 'date'
+    | 'citations'
+    | 'citations_per_year'
+    | 'word_count'
+    | 'quality_score';
 }
 
 export interface SearchLiteratureResponse {
   papers: Paper[];
   total: number;
   page: number;
+  // Phase 10.6 Day 14.5: Search transparency metadata
+  metadata?: {
+    totalCollected: number;
+    sourceBreakdown: Record<string, { papers: number; duration: number; error?: string }>;
+    uniqueAfterDedup: number;
+    deduplicationRate: number;
+    duplicatesRemoved: number;
+    afterEnrichment: number;
+    afterQualityFilter: number;
+    qualityFiltered: number;
+    totalQualified: number;
+    displayed: number;
+    searchDuration: number;
+    queryExpansion?: { original: string; expanded: string };
+  };
+  isCached?: boolean;
+  cacheAge?: number;
+  isStale?: boolean;
+  isArchive?: boolean;
+  correctedQuery?: string;
+  originalQuery?: string;
 }
 
 export interface FetchFullTextParams {
@@ -119,7 +160,8 @@ class LiteratureApiEnhancedService extends BaseApiService {
    */
   static getInstance(): LiteratureApiEnhancedService {
     if (!LiteratureApiEnhancedService.instance) {
-      LiteratureApiEnhancedService.instance = new LiteratureApiEnhancedService();
+      LiteratureApiEnhancedService.instance =
+        new LiteratureApiEnhancedService();
     }
     return LiteratureApiEnhancedService.instance;
   }
@@ -138,7 +180,7 @@ class LiteratureApiEnhancedService extends BaseApiService {
   ): CancellableRequest<SearchLiteratureResponse> {
     const requestId = `search-${Date.now()}`;
 
-    return this.createCancellableRequest(requestId, async (signal) => {
+    return this.createCancellableRequest(requestId, async signal => {
       const response = await this.post<SearchLiteratureResponse>(
         '/search/public',
         params,
@@ -166,9 +208,7 @@ class LiteratureApiEnhancedService extends BaseApiService {
     paperIds: string[],
     options?: RequestOptions
   ): Promise<Paper[]> {
-    const requests = paperIds.map(id =>
-      () => this.getPaperById(id, options)
-    );
+    const requests = paperIds.map(id => () => this.getPaperById(id, options));
     return this.batch(requests);
   }
 
@@ -186,7 +226,7 @@ class LiteratureApiEnhancedService extends BaseApiService {
   ): CancellableRequest<FetchFullTextResponse> {
     const requestId = `fulltext-${params.paperId}`;
 
-    return this.createCancellableRequest(requestId, async (signal) => {
+    return this.createCancellableRequest(requestId, async signal => {
       const response = await this.post<FetchFullTextResponse>(
         '/fulltext/fetch',
         params,
@@ -237,11 +277,10 @@ class LiteratureApiEnhancedService extends BaseApiService {
     params: ExportParams,
     options?: RequestOptions
   ): Promise<Blob> {
-    const response = await this.post<Blob>(
-      '/export',
-      params,
-      { ...options, responseType: 'blob' }
-    );
+    const response = await this.post<Blob>('/export', params, {
+      ...options,
+      responseType: 'blob',
+    });
     return response.data;
   }
 
@@ -345,9 +384,21 @@ class LiteratureApiEnhancedService extends BaseApiService {
    */
   async getSavedSearches(
     options?: RequestOptions
-  ): Promise<Array<{ id: string; name: string; params: SearchLiteratureParams; createdAt: string }>> {
+  ): Promise<
+    Array<{
+      id: string;
+      name: string;
+      params: SearchLiteratureParams;
+      createdAt: string;
+    }>
+  > {
     const response = await this.get('/searches/saved', options);
-    return response.data as Array<{ id: string; name: string; params: SearchLiteratureParams; createdAt: string }>;
+    return response.data as Array<{
+      id: string;
+      name: string;
+      params: SearchLiteratureParams;
+      createdAt: string;
+    }>;
   }
 
   /**

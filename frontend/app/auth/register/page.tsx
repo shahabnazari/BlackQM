@@ -134,7 +134,7 @@ export default function RegisterPage() {
   // Handle social registration
   const handleSocialRegister = (provider: string) => {
     sessionStorage.setItem('auth_redirect', '/dashboard');
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/${provider}`;
+    window.location.href = `${process.env['NEXT_PUBLIC_API_URL']}/auth/${provider}`;
   };
 
   return (

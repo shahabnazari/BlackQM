@@ -115,6 +115,7 @@ export class LiteratureController {
 
   // Temporary public endpoint for testing
   @Post('search/public')
+  @CustomRateLimit(60, 200) // Phase 10.1 Day 11: Allow 200 searches/min for progressive loading (10 batches)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Public search for testing (dev only)' })
   @ApiResponse({ status: 200, description: 'Search results returned' })

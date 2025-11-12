@@ -105,7 +105,7 @@ export function AcademicInstitutionLogin({
     setIsLoading(true);
     // Redirect to backend ORCID OAuth endpoint with returnUrl
     const backendUrl =
-      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+      process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000/api';
     const returnUrl = encodeURIComponent('/discover/literature');
     window.location.href = `${backendUrl}/auth/orcid?returnUrl=${returnUrl}`;
   }, []);

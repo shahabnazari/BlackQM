@@ -16,8 +16,22 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Card } from '@/components/apple-ui/Card';
 import { Button } from '@/components/apple-ui/Button';
@@ -33,7 +47,12 @@ import {
   ArrowsUpDownIcon,
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
-import { explainabilityApi, type Counterfactual, type StatementImportance, type FactorExplanation } from '@/lib/api/services/explainability-api.service';
+import {
+  explainabilityApi,
+  type Counterfactual,
+  type StatementImportance,
+  type FactorExplanation,
+} from '@/lib/api/services/explainability-api.service';
 
 // ============================================================================
 // TYPES
@@ -74,7 +93,12 @@ interface SortableStatementItemProps {
   disabled: boolean;
 }
 
-function SortableStatementItem({ statement, index, onToggleLock, disabled }: SortableStatementItemProps) {
+function SortableStatementItem({
+  statement,
+  index,
+  onToggleLock,
+  disabled,
+}: SortableStatementItemProps) {
   const {
     attributes,
     listeners,
@@ -92,9 +116,12 @@ function SortableStatementItem({ statement, index, onToggleLock, disabled }: Sor
 
   const getContributionColor = (contribution: string) => {
     switch (contribution) {
-      case 'positive': return 'bg-green-100 text-green-700 border-green-300';
-      case 'negative': return 'bg-red-100 text-red-700 border-red-300';
-      default: return 'bg-gray-100 text-gray-700 border-gray-300';
+      case 'positive':
+        return 'bg-green-100 text-green-700 border-green-300';
+      case 'negative':
+        return 'bg-red-100 text-red-700 border-red-300';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-300';
     }
   };
 
@@ -111,7 +138,11 @@ function SortableStatementItem({ statement, index, onToggleLock, disabled }: Sor
       } ${statement.locked ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200'}`}
     >
       {/* Drag Handle */}
-      <div {...attributes} {...listeners} className="absolute left-2 top-1/2 -translate-y-1/2 cursor-move">
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute left-2 top-1/2 -translate-y-1/2 cursor-move"
+      >
         {!statement.locked && !disabled && (
           <ArrowsUpDownIcon className="w-5 h-5 text-gray-400 hover:text-blue-500" />
         )}
@@ -125,20 +156,32 @@ function SortableStatementItem({ statement, index, onToggleLock, disabled }: Sor
               <Badge variant="secondary" className="text-xs">
                 #{index + 1}
               </Badge>
-              <Badge className={`text-xs ${getContributionColor(statement.contribution)}`}>
+              <Badge
+                className={`text-xs ${getContributionColor(statement.contribution)}`}
+              >
                 {statement.contribution}
               </Badge>
-              <span className="text-xs text-gray-500">z-score: {statement.zScore.toFixed(2)}</span>
-              <span className="text-xs text-gray-500">rank: {statement.rank}</span>
+              <span className="text-xs text-gray-500">
+                z-score: {statement.zScore.toFixed(2)}
+              </span>
+              <span className="text-xs text-gray-500">
+                rank: {statement.rank}
+              </span>
             </div>
-            <p className="text-sm text-gray-800 leading-relaxed">{statement.statementText}</p>
-            <p className="text-xs text-gray-500 mt-1 italic">{statement.explanation}</p>
+            <p className="text-sm text-gray-800 leading-relaxed">
+              {statement.statementText}
+            </p>
+            <p className="text-xs text-gray-500 mt-1 italic">
+              {statement.explanation}
+            </p>
 
             {/* Importance Bar */}
             <div className="mt-3 space-y-1">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-600">Importance:</span>
-                <span className="font-medium">{(statement.importance * 100).toFixed(0)}%</span>
+                <span className="font-medium">
+                  {(statement.importance * 100).toFixed(0)}%
+                </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
@@ -187,7 +230,9 @@ export function InteractiveWhatIfAnalysis({
     }))
   );
   const [isCalculating, setIsCalculating] = useState(false);
-  const [currentScenario, setCurrentScenario] = useState<WhatIfScenario | null>(null);
+  const [currentScenario, setCurrentScenario] = useState<WhatIfScenario | null>(
+    null
+  );
   const [showOriginal, setShowOriginal] = useState(false);
   const [counterfactuals, setCounterfactuals] = useState<Counterfactual[]>([]);
 
@@ -203,10 +248,13 @@ export function InteractiveWhatIfAnalysis({
   React.useEffect(() => {
     const loadCounterfactuals = async () => {
       try {
-        const result = await explainabilityApi.generateCounterfactuals(studyId, {
-          scenarioCount: 3,
-          focusOnDistinguishing: true,
-        });
+        const result = await explainabilityApi.generateCounterfactuals(
+          studyId,
+          {
+            scenarioCount: 3,
+            focusOnDistinguishing: true,
+          }
+        );
         setCounterfactuals(result.counterfactuals);
       } catch (error) {
         console.error('Failed to load counterfactuals:', error);
@@ -220,9 +268,9 @@ export function InteractiveWhatIfAnalysis({
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      setStatements((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
+      setStatements(items => {
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over.id);
 
         const newItems = arrayMove(items, oldIndex, newIndex);
 
@@ -236,8 +284,8 @@ export function InteractiveWhatIfAnalysis({
 
   // Toggle statement lock
   const toggleLock = useCallback((id: string) => {
-    setStatements((items) =>
-      items.map((item) =>
+    setStatements(items =>
+      items.map(item =>
         item.id === id ? { ...item, locked: !item.locked } : item
       )
     );
@@ -250,14 +298,18 @@ export function InteractiveWhatIfAnalysis({
       // Simulate variance calculation (in real implementation, would call backend)
       const changedPositions = newStatements.reduce((count, stmt, idx) => {
         const originalIdx = factorExplanation.statementImportances.findIndex(
-          (s) => s.statementId === stmt.statementId
+          s => s.statementId === stmt.statementId
         );
         return originalIdx !== idx ? count + 1 : count;
       }, 0);
 
       const varianceChange = -(changedPositions / newStatements.length) * 5; // Estimate 5% max impact
       const confidenceLevel: 'high' | 'medium' | 'low' =
-        changedPositions <= 3 ? 'high' : changedPositions <= 6 ? 'medium' : 'low';
+        changedPositions <= 3
+          ? 'high'
+          : changedPositions <= 6
+            ? 'medium'
+            : 'low';
 
       const scenario: WhatIfScenario = {
         id: `scenario-${Date.now()}`,
@@ -293,34 +345,37 @@ export function InteractiveWhatIfAnalysis({
   }, [factorExplanation]);
 
   // Apply counterfactual scenario
-  const applyCounterfactual = useCallback((counterfactual: Counterfactual) => {
-    // Filter out removed statements
-    const removedIds = counterfactual.modifiedStatements
-      .filter((m) => m.action === 'removed')
-      .map((m) => m.statementId);
+  const applyCounterfactual = useCallback(
+    (counterfactual: Counterfactual) => {
+      // Filter out removed statements
+      const removedIds = counterfactual.modifiedStatements
+        .filter(m => m.action === 'removed')
+        .map(m => m.statementId);
 
-    const filteredStatements = statements.filter(
-      (s) => !removedIds.includes(s.statementId)
-    );
+      const filteredStatements = statements.filter(
+        s => !removedIds.includes(s.statementId)
+      );
 
-    setStatements(filteredStatements);
+      setStatements(filteredStatements);
 
-    // Calculate impact
-    calculatePredictedImpact(filteredStatements);
-  }, [statements]);
+      // Calculate impact
+      calculatePredictedImpact(filteredStatements);
+    },
+    [statements]
+  );
 
   // Count changes
   const changedCount = useMemo(() => {
     return statements.reduce((count, stmt, idx) => {
       const originalIdx = factorExplanation.statementImportances.findIndex(
-        (s) => s.statementId === stmt.statementId
+        s => s.statementId === stmt.statementId
       );
       return originalIdx !== idx ? count + 1 : count;
     }, 0);
   }, [statements, factorExplanation]);
 
   const lockedCount = useMemo(() => {
-    return statements.filter((s) => s.locked).length;
+    return statements.filter(s => s.locked).length;
   }, [statements]);
 
   return (
@@ -398,13 +453,16 @@ export function InteractiveWhatIfAnalysis({
           <div className="space-y-3">
             <div className="flex items-start gap-4">
               <div className="flex-1">
-                <p className="text-sm text-gray-700">{currentScenario.predictedImpact.narrative}</p>
+                <p className="text-sm text-gray-700">
+                  {currentScenario.predictedImpact.narrative}
+                </p>
               </div>
               <Badge
                 className={
                   currentScenario.predictedImpact.confidenceLevel === 'high'
                     ? 'bg-green-100 text-green-700'
-                    : currentScenario.predictedImpact.confidenceLevel === 'medium'
+                    : currentScenario.predictedImpact.confidenceLevel ===
+                        'medium'
                       ? 'bg-yellow-100 text-yellow-700'
                       : 'bg-red-100 text-red-700'
                 }
@@ -422,7 +480,9 @@ export function InteractiveWhatIfAnalysis({
                       : 'text-red-600'
                   }`}
                 >
-                  {currentScenario.predictedImpact.varianceChange > 0 ? '+' : ''}
+                  {currentScenario.predictedImpact.varianceChange > 0
+                    ? '+'
+                    : ''}
                   {currentScenario.predictedImpact.varianceChange.toFixed(2)}%
                 </span>
               </div>
@@ -451,14 +511,27 @@ export function InteractiveWhatIfAnalysis({
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">{cf.scenarioName}</h4>
-                    <p className="text-sm text-gray-600 mt-1">{cf.description}</p>
+                    <h4 className="font-medium text-gray-900">
+                      {cf.scenarioName}
+                    </h4>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {cf.description}
+                    </p>
                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                      <span>{cf.modifiedStatements.length} statements affected</span>
+                      <span>
+                        {cf.modifiedStatements.length} statements affected
+                      </span>
                       {cf.predictedImpact[0] && (
-                        <span className={cf.predictedImpact[0].varianceChange > 0 ? 'text-green-600' : 'text-red-600'}>
+                        <span
+                          className={
+                            cf.predictedImpact[0].varianceChange > 0
+                              ? 'text-green-600'
+                              : 'text-red-600'
+                          }
+                        >
                           {cf.predictedImpact[0].varianceChange > 0 ? '+' : ''}
-                          {cf.predictedImpact[0].varianceChange.toFixed(1)}% variance
+                          {cf.predictedImpact[0].varianceChange.toFixed(1)}%
+                          variance
                         </span>
                       )}
                     </div>
@@ -482,8 +555,15 @@ export function InteractiveWhatIfAnalysis({
           </span>
         </h3>
 
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={statements.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={statements.map(s => s.id)}
+            strategy={verticalListSortingStrategy}
+          >
             <div className="space-y-3">
               {statements.map((statement, index) => (
                 <SortableStatementItem
@@ -503,11 +583,22 @@ export function InteractiveWhatIfAnalysis({
       <Card className="p-4 bg-gray-50">
         <h4 className="text-sm font-semibold mb-2">How to Use:</h4>
         <ul className="text-xs text-gray-600 space-y-1">
-          <li>• <strong>Drag statements</strong> up or down to reorder them</li>
-          <li>• <strong>Lock statements</strong> (🔒 icon) to prevent them from moving</li>
-          <li>• <strong>Watch predicted impact</strong> update in real-time above</li>
-          <li>• <strong>Apply scenarios</strong> to test pre-built what-if cases</li>
-          <li>• <strong>Reset</strong> anytime to return to original order</li>
+          <li>
+            • <strong>Drag statements</strong> up or down to reorder them
+          </li>
+          <li>
+            • <strong>Lock statements</strong> (🔒 icon) to prevent them from
+            moving
+          </li>
+          <li>
+            • <strong>Watch predicted impact</strong> update in real-time above
+          </li>
+          <li>
+            • <strong>Apply scenarios</strong> to test pre-built what-if cases
+          </li>
+          <li>
+            • <strong>Reset</strong> anytime to return to original order
+          </li>
         </ul>
       </Card>
     </div>

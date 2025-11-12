@@ -21,7 +21,7 @@ export default function TestTooltips() {
             <h2 className="text-xl font-semibold mb-4">Position: Top (Default)</h2>
             <div className="flex items-center gap-2">
               <span className="text-label">Study Title</span>
-              <InfoTooltip {...(studyCreationTooltips.studyTitle || defaultTooltip)} position="top" />
+              <InfoTooltip {...(studyCreationTooltips['studyTitle'] || defaultTooltip)} position="top" />
             </div>
           </div>
 
@@ -29,7 +29,7 @@ export default function TestTooltips() {
             <h2 className="text-xl font-semibold mb-4">Position: Bottom</h2>
             <div className="flex items-center gap-2">
               <span className="text-label">Welcome Message</span>
-              <InfoTooltip {...(studyCreationTooltips.welcomeMessage || defaultTooltip)} position="bottom" />
+              <InfoTooltip {...(studyCreationTooltips['welcomeMessage'] || defaultTooltip)} position="bottom" />
             </div>
           </div>
 
@@ -38,7 +38,7 @@ export default function TestTooltips() {
             <div className="flex justify-end">
               <div className="flex items-center gap-2">
                 <span className="text-label">Consent Form</span>
-                <InfoTooltip {...(studyCreationTooltips.consentForm || defaultTooltip)} position="left" />
+                <InfoTooltip {...(studyCreationTooltips['consentForm'] || defaultTooltip)} position="left" />
               </div>
             </div>
           </div>
@@ -47,7 +47,7 @@ export default function TestTooltips() {
             <h2 className="text-xl font-semibold mb-4">Position: Right</h2>
             <div className="flex items-center gap-2">
               <span className="text-label">Pre-screening</span>
-              <InfoTooltip {...(studyCreationTooltips.preScreening || defaultTooltip)} position="right" />
+              <InfoTooltip {...(studyCreationTooltips['preScreening'] || defaultTooltip)} position="right" />
             </div>
           </div>
         </div>
@@ -61,15 +61,15 @@ export default function TestTooltips() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <span className="text-label">Field 1</span>
-                <InfoTooltip {...(studyCreationTooltips.gridColumns || defaultTooltip)} />
+                <InfoTooltip {...(studyCreationTooltips['gridColumns'] || defaultTooltip)} />
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-label">Field 2</span>
-                <InfoTooltip {...(studyCreationTooltips.distributionShape || defaultTooltip)} />
+                <InfoTooltip {...(studyCreationTooltips['distributionShape'] || defaultTooltip)} />
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-label">Field 3</span>
-                <InfoTooltip {...(studyCreationTooltips.postSurvey || defaultTooltip)} />
+                <InfoTooltip {...(studyCreationTooltips['postSurvey'] || defaultTooltip)} />
               </div>
             </div>
           </div>
@@ -79,11 +79,11 @@ export default function TestTooltips() {
             <div className="flex justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-label">Left edge</span>
-                <InfoTooltip {...(studyCreationTooltips.videoConferencing || defaultTooltip)} />
+                <InfoTooltip {...(studyCreationTooltips['videoConferencing'] || defaultTooltip)} />
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-label">Right edge</span>
-                <InfoTooltip {...(studyCreationTooltips.digitalSignature || defaultTooltip)} />
+                <InfoTooltip {...(studyCreationTooltips['digitalSignature'] || defaultTooltip)} />
               </div>
             </div>
           </div>
@@ -92,7 +92,7 @@ export default function TestTooltips() {
             <h3 className="text-lg font-semibold mb-4">Long content tooltip</h3>
             <div className="flex items-center gap-2">
               <span className="text-label">Templates</span>
-              <InfoTooltip {...(studyCreationTooltips.templates || defaultTooltip)} />
+              <InfoTooltip {...(studyCreationTooltips['templates'] || defaultTooltip)} />
             </div>
           </div>
         </div>
@@ -105,14 +105,14 @@ export default function TestTooltips() {
               <h3 className="text-lg font-semibold mb-4">Light background</h3>
               <div className="flex items-center gap-2">
                 <span className="text-gray-900 dark:text-gray-100">Organization Logo</span>
-                <InfoTooltip {...(studyCreationTooltips.organizationLogo || defaultTooltip)} />
+                <InfoTooltip {...(studyCreationTooltips['organizationLogo'] || defaultTooltip)} />
               </div>
             </div>
             <div className="p-6 bg-gray-100 dark:bg-gray-800 rounded-lg">
               <h3 className="text-lg font-semibold mb-4">Gray background</h3>
               <div className="flex items-center gap-2">
                 <span className="text-gray-900 dark:text-gray-100">Organization Logo</span>
-                <InfoTooltip {...(studyCreationTooltips.organizationLogo || defaultTooltip)} />
+                <InfoTooltip {...(studyCreationTooltips['organizationLogo'] || defaultTooltip)} />
               </div>
             </div>
           </div>

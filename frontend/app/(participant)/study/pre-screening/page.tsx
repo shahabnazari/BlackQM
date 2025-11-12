@@ -24,9 +24,9 @@ function PreScreeningContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const studyId = searchParams.get('studyId') || (params.studyId as string);
+  const studyId = searchParams.get('studyId') || (params['studyId'] as string);
   const participantId =
-    searchParams.get('participantId') || (params.participantId as string);
+    searchParams.get('participantId') || (params['participantId'] as string);
   const studyToken = searchParams.get('token');
 
   const [loading] = useState(false);

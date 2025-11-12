@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Card,
@@ -148,7 +148,7 @@ const SECTION_LABELS: Record<
 export default function ReportBuilderPage() {
   const params = useParams();
   const router = useRouter();
-  const studyId = params.studyId as string;
+  const studyId = params['studyId'] as string;
 
   // State
   const [templateType, setTemplateType] = useState<TemplateType>(
@@ -165,12 +165,8 @@ export default function ReportBuilderPage() {
   const [report, setReport] = useState<ReportResponse | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string>('');
 
-  // Load existing reports on mount
-  useEffect(() => {
-    loadReports();
-  }, [studyId]);
-
-  const loadReports = async () => {
+  // Load existing reports (moved above useEffect to fix hoisting error)
+  const loadReports = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -194,12 +190,17 @@ export default function ReportBuilderPage() {
       if (data.reports && data.reports.length > 0) {
         setReport(data.reports[0]);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading reports:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [studyId, router]);
+
+  // Load existing reports on mount
+  useEffect(() => {
+    loadReports();
+  }, [studyId, loadReports]);
 
   const generateReport = async () => {
     try {

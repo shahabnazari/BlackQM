@@ -106,10 +106,12 @@ export const BulkActionsToolbar = React.memo(function BulkActionsToolbar({
         {/* Actions */}
         {actions.length > 0 && (
           <div className="flex items-center space-x-2">
-            {actions.map((action) => {
+            {actions.map(action => {
               const variantStyles = {
-                default: 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                primary: 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
+                default:
+                  'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                primary:
+                  'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
                 danger: 'bg-red-600 text-white border-red-600 hover:bg-red-700',
               };
 

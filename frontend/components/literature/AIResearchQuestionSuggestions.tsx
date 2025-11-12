@@ -291,7 +291,7 @@ export const AIResearchQuestionSuggestions: React.FC<
           <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
           <p className="text-gray-600">No research questions generated yet</p>
           <p className="text-sm text-gray-500 mt-1">
-            Select themes and click "Generate Research Questions" to get started
+            Select themes and click &quot;Generate Research Questions&quot; to get started
           </p>
         </div>
       )}

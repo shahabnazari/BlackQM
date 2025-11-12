@@ -19,10 +19,43 @@ import {
 } from './dto/literature.dto';
 import { APIQuotaMonitorService } from './services/api-quota-monitor.service';
 import { MultiMediaAnalysisService } from './services/multimedia-analysis.service';
+import { OpenAlexEnrichmentService } from './services/openalex-enrichment.service';
 import { PDFParsingService } from './services/pdf-parsing.service';
 import { PDFQueueService } from './services/pdf-queue.service';
 import { SearchCoalescerService } from './services/search-coalescer.service';
 import { TranscriptionService } from './services/transcription.service';
+// Phase 10.6 Day 3: Additional academic source services
+import { GoogleScholarService } from './services/google-scholar.service';
+import { BioRxivService } from './services/biorxiv.service';
+import { SSRNService } from './services/ssrn.service';
+import { ChemRxivService } from './services/chemrxiv.service';
+// Phase 10.6 Day 3.5: Extracted old sources to dedicated services (refactoring)
+import { SemanticScholarService } from './services/semantic-scholar.service';
+import { CrossRefService } from './services/crossref.service';
+import { PubMedService } from './services/pubmed.service';
+import { ArxivService } from './services/arxiv.service';
+// Phase 10.6 Day 4: PubMed Central (PMC) - Full-text articles
+import { PMCService } from './services/pmc.service';
+// Phase 10.6 Day 5: ERIC - Education research database
+import { ERICService } from './services/eric.service';
+// Phase 10.6 Day 6: Web of Science - Premium academic database
+import { WebOfScienceService } from './services/web-of-science.service';
+// Phase 10.6 Day 7: Scopus - Premium Elsevier database
+import { ScopusService } from './services/scopus.service';
+// Phase 10.6 Day 8: IEEE Xplore - Engineering and computer science database
+import { IEEEService } from './services/ieee.service';
+// Phase 10.6 Day 9: SpringerLink - Multidisciplinary STM publisher
+import { SpringerService } from './services/springer.service';
+// Phase 10.6 Day 10: Nature - High-impact multidisciplinary journal
+import { NatureService } from './services/nature.service';
+// Phase 10.6 Day 11: Wiley Online Library - 6M+ articles, engineering/medicine
+import { WileyService } from './services/wiley.service';
+// Phase 10.6 Day 12: SAGE Publications - 1000+ journals, social sciences
+import { SageService } from './services/sage.service';
+// Phase 10.6 Day 13: Taylor & Francis - 2700+ journals, humanities
+import { TaylorFrancisService } from './services/taylor-francis.service';
+// Phase 10.6 Day 14.4: Enterprise-grade search logging
+import { SearchLoggerService } from './services/search-logger.service';
 import { calculateQualityScore } from './utils/paper-quality.util';
 import {
   calculateAbstractWordCount,
@@ -50,6 +83,40 @@ export class LiteratureService {
     // Phase 10 Day 30: PDF services for full-text extraction
     private readonly pdfParsingService: PDFParsingService,
     private readonly pdfQueueService: PDFQueueService,
+    // Phase 10.1 Day 12: Citation & journal metrics enrichment
+    private readonly openAlexEnrichment: OpenAlexEnrichmentService,
+    // Phase 10.6 Day 3: Additional academic source integrations
+    private readonly googleScholarService: GoogleScholarService,
+    private readonly bioRxivService: BioRxivService,
+    private readonly ssrnService: SSRNService,
+    private readonly chemRxivService: ChemRxivService,
+    // Phase 10.6 Day 3.5: Extracted old sources to dedicated services (refactoring)
+    private readonly semanticScholarService: SemanticScholarService,
+    private readonly crossRefService: CrossRefService,
+    private readonly pubMedService: PubMedService,
+    private readonly arxivService: ArxivService,
+    // Phase 10.6 Day 4: PubMed Central (PMC) - Full-text articles
+    private readonly pmcService: PMCService,
+    // Phase 10.6 Day 5: ERIC - Education research database
+    private readonly ericService: ERICService,
+    // Phase 10.6 Day 6: Web of Science - Premium academic database
+    private readonly webOfScienceService: WebOfScienceService,
+    // Phase 10.6 Day 7: Scopus - Premium Elsevier database
+    private readonly scopusService: ScopusService,
+    // Phase 10.6 Day 8: IEEE Xplore - Engineering and computer science database
+    private readonly ieeeService: IEEEService,
+    // Phase 10.6 Day 9: SpringerLink - Multidisciplinary STM publisher
+    private readonly springerService: SpringerService,
+    // Phase 10.6 Day 10: Nature - High-impact multidisciplinary journal
+    private readonly natureService: NatureService,
+    // Phase 10.6 Day 11: Wiley Online Library - 6M+ articles, engineering/medicine
+    private readonly wileyService: WileyService,
+    // Phase 10.6 Day 12: SAGE Publications - 1000+ journals, social sciences
+    private readonly sageService: SageService,
+    // Phase 10.6 Day 13: Taylor & Francis - 2700+ journals, humanities
+    private readonly taylorFrancisService: TaylorFrancisService,
+    // Phase 10.6 Day 14.4: Enterprise-grade search logging
+    private readonly searchLogger: SearchLoggerService,
   ) {}
 
   async searchLiterature(
@@ -65,6 +132,21 @@ export class LiteratureService {
     isArchive?: boolean;
     correctedQuery?: string;
     originalQuery?: string;
+    // Phase 10.6 Day 14.5: Add metadata for search transparency
+    metadata?: {
+      totalCollected: number;
+      sourceBreakdown: Record<string, { papers: number; duration: number; error?: string }>;
+      uniqueAfterDedup: number;
+      deduplicationRate: number;
+      duplicatesRemoved: number;
+      afterEnrichment: number;
+      afterQualityFilter: number;
+      qualityFiltered: number;
+      totalQualified: number;
+      displayed: number;
+      searchDuration: number;
+      queryExpansion?: { original: string; expanded: string };
+    };
   }> {
     const cacheKey = `literature:search:${JSON.stringify(searchDto)}`;
 
@@ -87,18 +169,38 @@ export class LiteratureService {
     this.logger.log(`Original query: "${originalQuery}"`);
     this.logger.log(`Expanded query: "${expandedQuery}"`);
 
-    // Create an enhanced search DTO with expanded query
-    const enhancedSearchDto = { ...searchDto, query: expandedQuery };
+    // Phase 10.1 Day 12: Fetch more papers from APIs to support 200-paper progressive loading
+    // Frontend requests 10 batches × 20 papers = 200 total
+    // We need to fetch 100+ papers from each source to have enough after deduplication
+    const API_FETCH_LIMIT = 100; // Fetch 100 papers from each API source
 
-    const sources = searchDto.sources || [
-      LiteratureSource.SEMANTIC_SCHOLAR,
-      LiteratureSource.CROSSREF,
-      LiteratureSource.PUBMED,
-    ];
+    // Create an enhanced search DTO with expanded query and higher fetch limit
+    const enhancedSearchDto = {
+      ...searchDto,
+      query: expandedQuery,
+      limit: API_FETCH_LIMIT // Override limit for API fetching
+    };
 
-    const searchPromises = sources.map((source) =>
-      this.searchBySource(source, enhancedSearchDto),
-    );
+    // Phase 10.1 Day 11: Defensive check for empty array ([] is truthy in JS!)
+    // Frontend may send sources: [] expecting defaults to be used
+    const sources =
+      searchDto.sources && searchDto.sources.length > 0
+        ? searchDto.sources
+        : [
+            LiteratureSource.SEMANTIC_SCHOLAR,
+            LiteratureSource.CROSSREF,
+            LiteratureSource.PUBMED,
+          ];
+
+    // Phase 10.6 Day 14.4: Start enterprise-grade search logging
+    const searchLog = this.searchLogger.startSearch(originalQuery, sources as string[], userId);
+
+    // Track duration for each source search
+    const sourcesStartTimes: Record<string, number> = {};
+    const searchPromises = sources.map((source) => {
+      sourcesStartTimes[source as string] = Date.now();
+      return this.searchBySource(source, enhancedSearchDto);
+    });
 
     const results = await Promise.allSettled(searchPromises);
     const papers: Paper[] = [];
@@ -106,11 +208,15 @@ export class LiteratureService {
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
       const source = sources[i];
+      const sourceDuration = Date.now() - sourcesStartTimes[source as string];
+
       if (result.status === 'fulfilled' && result.value) {
         this.logger.log(`✓ ${source}: Returned ${result.value.length} papers`);
+        searchLog.recordSource(source as string, result.value.length, sourceDuration);
         papers.push(...result.value);
       } else if (result.status === 'rejected') {
         this.logger.error(`✗ ${source}: Failed - ${result.reason}`);
+        searchLog.recordSource(source as string, 0, sourceDuration, String(result.reason));
       }
     }
 
@@ -124,8 +230,54 @@ export class LiteratureService {
       `📊 After deduplication: ${papers.length} → ${uniquePapers.length} unique papers`,
     );
 
+    // Phase 10.1 Day 12: Enrich papers with OpenAlex citations & journal metrics
+    this.logger.log(`🔄 [OpenAlex] ABOUT TO CALL enrichBatch with ${uniquePapers.length} papers...`);
+    this.logger.log(`🔄 [OpenAlex] First 3 papers DOIs: ${uniquePapers.slice(0, 3).map(p => p.doi || 'NO_DOI').join(', ')}`);
+    const enrichedPapers = await this.openAlexEnrichment.enrichBatch(uniquePapers);
+    this.logger.log(`✅ [OpenAlex] enrichBatch COMPLETED, returned ${enrichedPapers.length} papers`);
+
+    // Recalculate quality scores with enriched journal metrics
+    const papersWithUpdatedQuality = enrichedPapers.map((paper) => {
+      // Calculate quality components for ALL papers (with or without journal metrics)
+      const qualityComponents = calculateQualityScore({
+        citationCount: paper.citationCount,
+        year: paper.year,
+        wordCount: paper.wordCount,
+        venue: paper.venue,
+        source: paper.source,
+        impactFactor: paper.impactFactor,
+        sjrScore: null, // Not yet implemented
+        quartile: paper.quartile,
+        hIndexJournal: paper.hIndexJournal,
+      });
+
+      // Calculate citationsPerYear (may have been updated by OpenAlex)
+      const citationsPerYear =
+        paper.citationCount && paper.year
+          ? paper.citationCount /
+            Math.max(1, new Date().getFullYear() - paper.year)
+          : 0;
+
+      // Phase 10.1 Day 12: Store breakdown for ALL papers for transparency
+      return {
+        ...paper,
+        citationsPerYear, // Recalculated with potentially updated citation count from OpenAlex
+        qualityScore: qualityComponents.totalScore,
+        isHighQuality: qualityComponents.totalScore >= 50,
+        qualityScoreBreakdown: {
+          citationImpact: qualityComponents.citationImpact,
+          journalPrestige: qualityComponents.journalPrestige,
+          contentDepth: qualityComponents.contentDepth,
+        },
+      };
+    });
+
+    this.logger.log(
+      `✅ [OpenAlex] Enrichment complete. Papers with journal metrics: ${papersWithUpdatedQuality.filter(p => p.hIndexJournal).length}/${uniquePapers.length}`,
+    );
+
     // Apply filters
-    let filteredPapers = uniquePapers;
+    let filteredPapers = papersWithUpdatedQuality;
     this.logger.log(`📊 Starting filters with ${filteredPapers.length} papers`);
 
     // Filter by minimum citations
@@ -255,63 +407,16 @@ export class LiteratureService {
       `📊 Relevance scores calculated for all ${papersWithScore.length} papers`,
     );
 
-    // PHASE 10 DAY 1 CRITICAL TERMS: Identify critical/unique terms and penalize papers without them
-    const criticalTerms = this.identifyCriticalTerms(originalQuery);
-    if (criticalTerms.length > 0) {
-      this.logger.log(
-        `Critical terms detected: ${criticalTerms.join(', ')} (papers without these will be heavily penalized)`,
-      );
-    }
-
-    // Apply HEAVY penalty to papers without critical terms (rather than filtering them out)
-    const papersWithCriticalTermPenalty = papersWithScore.map((paper) => {
-      if (criticalTerms.length === 0) return paper; // No critical terms, no penalty
-
-      const titleLower = (paper.title || '').toLowerCase();
-      const abstractLower = (paper.abstract || '').toLowerCase();
-      const keywordsLower = (paper.keywords || []).join(' ').toLowerCase();
-      const combinedText = `${titleLower} ${abstractLower} ${keywordsLower}`;
-
-      // Check if paper contains at least one critical term
-      const hasCriticalTerm = criticalTerms.some((term) =>
-        combinedText.includes(term.toLowerCase()),
-      );
-
-      if (!hasCriticalTerm) {
-        // Apply MASSIVE penalty (90% score reduction) for missing critical terms
-        const originalScore = paper.relevanceScore || 0;
-        const penalizedScore = Math.round(originalScore * 0.1); // Keep only 10% of original score
-        this.logger.debug(
-          `Critical term penalty: "${paper.title.substring(0, 50)}..." (${originalScore} → ${penalizedScore})`,
-        );
-        return { ...paper, relevanceScore: penalizedScore };
-      }
-
-      return paper; // Has critical term, no penalty
-    });
-
-    const penalizedCount = papersWithCriticalTermPenalty.filter((p) => {
-      const hasCriticalTerm = criticalTerms.some((term) => {
-        const titleLower = (p.title || '').toLowerCase();
-        const abstractLower = (p.abstract || '').toLowerCase();
-        return (
-          titleLower.includes(term.toLowerCase()) ||
-          abstractLower.includes(term.toLowerCase())
-        );
-      });
-      return !hasCriticalTerm;
-    }).length;
-
-    if (criticalTerms.length > 0) {
-      this.logger.log(
-        `📊 Critical terms check: ${papersWithCriticalTermPenalty.length - penalizedCount} papers have critical terms, ${penalizedCount} papers penalized (score reduced by 90%)`,
-      );
-    }
+    // Phase 10.1 Day 11: Removed critical terms penalty
+    // - Spelling variations (q-methodology vs q method) caused false negatives
+    // - Overly harsh 90% penalty filtered good papers
+    // - May re-implement with fuzzy matching for term variants in future
 
     // PHASE 10 DAY 1 ENHANCEMENT: Filter out papers with low relevance scores
     // This prevents broad, irrelevant results from appearing
-    const MIN_RELEVANCE_SCORE = 15; // Requires at least some keyword matches
-    const relevantPapers = papersWithCriticalTermPenalty.filter((paper) => {
+    // Phase 10.1 Day 11 FIX: Lowered from 15 to 3 (papers were getting scores of 0-3, all filtered out)
+    const MIN_RELEVANCE_SCORE = 3; // Requires at least minimal keyword relevance
+    const relevantPapers = papersWithScore.filter((paper) => {
       const score = paper.relevanceScore || 0;
       if (score < MIN_RELEVANCE_SCORE) {
         this.logger.debug(
@@ -386,6 +491,12 @@ export class LiteratureService {
       }
     }
 
+    // Phase 10.6 Day 14.5+: Enhanced search transparency - track complete pipeline
+    const deduplicationRate =
+      papers.length > 0
+        ? ((papers.length - uniquePapers.length) / papers.length) * 100
+        : 0;
+
     const result = {
       papers: paginatedPapers,
       total: sortedPapers.length,
@@ -395,6 +506,35 @@ export class LiteratureService {
         correctedQuery: expandedQuery,
         originalQuery: originalQuery,
       }),
+      // Phase 10.6 Day 14.5+: ENTERPRISE TRANSPARENCY - Complete search pipeline
+      metadata: {
+        // Step 1: Initial collection from all sources
+        totalCollected: papers.length, // Papers before any processing
+        sourceBreakdown: searchLog.getSourceResults(), // Papers per source (INITIAL)
+
+        // Step 2: Deduplication
+        uniqueAfterDedup: uniquePapers.length, // Papers after removing duplicates
+        deduplicationRate: parseFloat(deduplicationRate.toFixed(2)), // % duplicates removed
+        duplicatesRemoved: papers.length - uniquePapers.length,
+
+        // Step 3: Quality scoring & filtering
+        afterEnrichment: enrichedPapers.length, // After OpenAlex enrichment
+        afterQualityFilter: relevantPapers.length, // After relevance/quality filters
+        qualityFiltered: papersWithUpdatedQuality.length - relevantPapers.length, // Papers removed by quality
+
+        // Step 4: Final results
+        totalQualified: sortedPapers.length, // Papers meeting all criteria (pre-pagination)
+        displayed: paginatedPapers.length, // Papers shown in current page
+
+        // Performance & query info
+        searchDuration: searchLog.getSearchDuration(), // Total search time (ms)
+        ...(expandedQuery !== originalQuery && {
+          queryExpansion: {
+            original: originalQuery,
+            expanded: expandedQuery,
+          },
+        }),
+      },
     };
 
     // Phase 10 Days 2-3: Use enhanced cache service
@@ -402,6 +542,13 @@ export class LiteratureService {
 
     // Log search for analytics
     await this.logSearch(searchDto, userId);
+
+    // Phase 10.6 Day 14.4: Finalize enterprise-grade search logging
+    await searchLog.finalize({
+      totalPapers: papers.length,
+      uniquePapers: uniquePapers.length,
+      expandedQuery: expandedQuery !== originalQuery ? expandedQuery : undefined,
+    });
 
     return result;
   }
@@ -419,11 +566,70 @@ export class LiteratureService {
         return this.searchPubMed(searchDto);
       case LiteratureSource.ARXIV:
         return this.searchArxiv(searchDto);
+      // Phase 10.6 Day 3: New academic sources
+      case LiteratureSource.GOOGLE_SCHOLAR:
+        return this.searchGoogleScholar(searchDto);
+      case LiteratureSource.BIORXIV:
+        return this.searchBioRxiv(searchDto);
+      case LiteratureSource.MEDRXIV:
+        return this.searchMedRxiv(searchDto);
+      case LiteratureSource.SSRN:
+        return this.searchSSRN(searchDto);
+      case LiteratureSource.CHEMRXIV:
+        return this.searchChemRxiv(searchDto);
+      // Phase 10.6 Day 4: PubMed Central (PMC) - Full-text articles
+      case LiteratureSource.PMC:
+        return this.searchPMC(searchDto);
+      // Phase 10.6 Day 5: ERIC - Education research database
+      case LiteratureSource.ERIC:
+        return this.searchERIC(searchDto);
+      // Phase 10.6 Day 6: Web of Science - Premium academic database
+      case LiteratureSource.WEB_OF_SCIENCE:
+        return this.searchWebOfScience(searchDto);
+      // Phase 10.6 Day 7: Scopus - Premium Elsevier database
+      case LiteratureSource.SCOPUS:
+        return this.searchScopus(searchDto);
+      // Phase 10.6 Day 8: IEEE Xplore - Engineering and computer science database
+      case LiteratureSource.IEEE_XPLORE:
+        return this.searchIEEE(searchDto);
+      // Phase 10.6 Day 9: SpringerLink - Multidisciplinary STM publisher
+      case LiteratureSource.SPRINGER:
+        return this.searchSpringer(searchDto);
+      // Phase 10.6 Day 10: Nature - High-impact multidisciplinary journal
+      case LiteratureSource.NATURE:
+        return this.searchNature(searchDto);
+      // Phase 10.6 Day 11: Wiley Online Library - 6M+ articles, engineering/medicine
+      case LiteratureSource.WILEY:
+        return this.searchWiley(searchDto);
+      // Phase 10.6 Day 12: SAGE Publications - 1000+ journals, social sciences
+      case LiteratureSource.SAGE:
+        return this.searchSage(searchDto);
+      // Phase 10.6 Day 13: Taylor & Francis - 2700+ journals, humanities
+      case LiteratureSource.TAYLOR_FRANCIS:
+        return this.searchTaylorFrancis(searchDto);
       default:
         return [];
     }
   }
 
+  /**
+   * Phase 10.6 Day 3.5: Thin wrapper for Semantic Scholar service
+   *
+   * ⚠️ MODIFICATION STRATEGY:
+   * This is a THIN WRAPPER for orchestration only. DO NOT add business logic here.
+   *
+   * ✅ Responsibilities of this wrapper:
+   * - Request deduplication (SearchCoalescer)
+   * - API quota management (QuotaMonitor)
+   * - High-level error handling
+   *
+   * ❌ DO NOT modify Semantic Scholar integration here:
+   * - To change API fields, parsing, quality scoring → Modify semantic-scholar.service.ts
+   * - To add PDF detection logic → Modify semantic-scholar.service.ts parsePaper()
+   * - To change error handling → Modify semantic-scholar.service.ts search()
+   *
+   * @see backend/src/modules/literature/services/semantic-scholar.service.ts
+   */
   private async searchSemanticScholar(
     searchDto: SearchLiteratureDto,
   ): Promise<Paper[]> {
@@ -432,136 +638,48 @@ export class LiteratureService {
     return await this.searchCoalescer.coalesce(coalescerKey, async () => {
       // Phase 10 Days 2-3: Check quota before making API call
       if (!this.quotaMonitor.canMakeRequest('semantic-scholar')) {
-        this.logger.warn(
-          `🚫 [Semantic Scholar] Quota exceeded - using cache instead`,
-        );
+        this.logger.warn(`🚫 [Semantic Scholar] Quota exceeded - using cache instead`);
         return [];
       }
 
       try {
-        this.logger.log(
-          `[Semantic Scholar] Searching with query: "${searchDto.query}"`,
-        );
-        const url = 'https://api.semanticscholar.org/graph/v1/paper/search';
-        const params: any = {
-          query: searchDto.query,
-          fields:
-            'paperId,title,authors,year,abstract,citationCount,url,venue,fieldsOfStudy,openAccessPdf,isOpenAccess,externalIds',
-          limit: searchDto.limit || 20,
-        };
-
-        if (searchDto.yearFrom || searchDto.yearTo) {
-          params['year'] =
-            `${searchDto.yearFrom || 1900}-${searchDto.yearTo || new Date().getFullYear()}`;
-        }
-
-        const response = await firstValueFrom(
-          this.httpService.get(url, { params }),
-        );
+        // Call dedicated service (all business logic is there)
+        const papers = await this.semanticScholarService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
+        });
 
         // Phase 10 Days 2-3: Record successful request
         this.quotaMonitor.recordRequest('semantic-scholar');
-
-        const papers = response.data.data.map((paper: any) => {
-          // Phase 10 Day 5.13+ Extension: Comprehensive word count
-          // Count ALL content: title + abstract (full-text added later in Day 5.15)
-          // Excludes: references, indexes, glossaries, appendices, acknowledgments
-          const abstractWordCount = calculateAbstractWordCount(paper.abstract);
-          const wordCount = calculateComprehensiveWordCount(
-            paper.title,
-            paper.abstract,
-          );
-          const wordCountExcludingRefs = wordCount; // Already excludes non-content sections
-
-          // Phase 10 Day 5.13+ Extension 2: Calculate quality score
-          const qualityComponents = calculateQualityScore({
-            citationCount: paper.citationCount,
-            year: paper.year,
-            wordCount,
-            venue: paper.venue,
-            source: LiteratureSource.SEMANTIC_SCHOLAR,
-            impactFactor: null, // TODO: Enrich from OpenAlex in future
-            sjrScore: null,
-            quartile: null,
-            hIndexJournal: null,
-          });
-
-          // Phase 10 Day 5.17.4+: Enhanced PDF detection with PubMed Central fallback
-          let pdfUrl = paper.openAccessPdf?.url || null;
-          let hasPdf = !!pdfUrl && pdfUrl.trim().length > 0;
-
-          // If no PDF URL but has PubMed Central ID, construct PMC PDF URL
-          if (!hasPdf && paper.externalIds?.PubMedCentral) {
-            const pmcId = paper.externalIds.PubMedCentral;
-            pdfUrl = `https://www.ncbi.nlm.nih.gov/pmc/articles/PMC${pmcId}/pdf/`;
-            hasPdf = true;
-            this.logger.log(
-              `[Semantic Scholar] Constructed PMC PDF URL for paper ${paper.paperId}: ${pdfUrl}`,
-            );
-          }
-
-          return {
-            id: paper.paperId,
-            title: paper.title,
-            authors: paper.authors?.map((a: any) => a.name) || [],
-            year: paper.year,
-            abstract: paper.abstract,
-            doi: paper.externalIds?.DOI || null, // Phase 10 Day 30: Extract DOI for waterfall
-            pmid: paper.externalIds?.PubMed || null, // Phase 10 Day 30: Extract PMID for PMC API
-            url: paper.url,
-            venue: paper.venue,
-            citationCount: paper.citationCount,
-            fieldsOfStudy: paper.fieldsOfStudy,
-            source: LiteratureSource.SEMANTIC_SCHOLAR,
-            wordCount, // Total: title + abstract (+ full-text in future)
-            wordCountExcludingRefs, // Same as wordCount (already excludes non-content)
-            isEligible: isPaperEligible(wordCount),
-            // Phase 10 Day 5.17.4+: PDF availability from Semantic Scholar + PMC fallback
-            pdfUrl,
-            openAccessStatus:
-              paper.isOpenAccess || hasPdf ? 'OPEN_ACCESS' : null,
-            hasPdf,
-            // Phase 10 Day 5.17.4+: Full-text availability (PDF detected = full-text available)
-            hasFullText: hasPdf, // If PDF URL exists, full-text is available
-            fullTextStatus: hasPdf ? 'available' : 'not_fetched', // 'available' = can be fetched
-            fullTextSource: hasPdf
-              ? paper.externalIds?.PubMedCentral
-                ? 'pmc'
-                : 'publisher'
-              : undefined,
-            // Phase 10 Day 5.13+ Extension 2: Enterprise quality metrics
-            abstractWordCount, // Abstract only (for 100-word filter)
-            citationsPerYear:
-              qualityComponents.citationImpact > 0
-                ? (paper.citationCount || 0) /
-                  Math.max(
-                    1,
-                    new Date().getFullYear() -
-                      (paper.year || new Date().getFullYear()),
-                  )
-                : 0,
-            qualityScore: qualityComponents.totalScore,
-            isHighQuality: qualityComponents.totalScore >= 50,
-          };
-        });
-
-        this.logger.log(`[Semantic Scholar] Returned ${papers.length} papers`);
         return papers;
       } catch (error: any) {
-        if (error.response?.status === 429) {
-          this.logger.error(
-            `[Semantic Scholar] ⚠️  RATE LIMITED (429) - Too many requests. Results will be cached.`,
-          );
-        } else {
-          this.logger.error(
-            `[Semantic Scholar] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
-          );
-        }
+        this.logger.error(
+          `[Semantic Scholar] Wrapper error: ${error.message}`,
+        );
         return [];
       }
     });
   }
 
+  /**
+   * Phase 10.6 Day 3.5: Thin wrapper for CrossRef service
+   *
+   * ⚠️ MODIFICATION STRATEGY:
+   * This is a THIN WRAPPER for orchestration only. DO NOT add business logic here.
+   *
+   * ✅ Responsibilities of this wrapper:
+   * - Request deduplication (SearchCoalescer)
+   * - API quota management (QuotaMonitor)
+   * - High-level error handling
+   *
+   * ❌ DO NOT modify CrossRef integration here:
+   * - To change API parameters, parsing, DOI handling → Modify crossref.service.ts
+   * - To add citation analysis logic → Modify crossref.service.ts parsePaper()
+   * - To change error handling → Modify crossref.service.ts search()
+   *
+   * @see backend/src/modules/literature/services/crossref.service.ts
+   */
   private async searchCrossRef(
     searchDto: SearchLiteratureDto,
   ): Promise<Paper[]> {
@@ -575,90 +693,41 @@ export class LiteratureService {
       }
 
       try {
-        const url = 'https://api.crossref.org/works';
-        const params: any = {
-          query: searchDto.query,
-          rows: searchDto.limit || 20,
-        };
-
-        if (searchDto.yearFrom) {
-          params['filter'] = `from-pub-date:${searchDto.yearFrom}`;
-        }
-
-        const response = await firstValueFrom(
-          this.httpService.get(url, { params }),
-        );
+        // Call dedicated service (all business logic is there)
+        const papers = await this.crossRefService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
+        });
 
         // Phase 10 Days 2-3: Record successful request
         this.quotaMonitor.recordRequest('crossref');
-
-        const papers = response.data.message.items.map((item: any) => {
-          // Phase 10 Day 5.13+ Extension: Comprehensive word count (title + abstract)
-          const abstractWordCount = calculateAbstractWordCount(item.abstract);
-          const wordCount = calculateComprehensiveWordCount(
-            item.title?.[0],
-            item.abstract,
-          );
-          const wordCountExcludingRefs = wordCount;
-
-          // Phase 10 Day 5.13+ Extension 2: Calculate quality score
-          const qualityComponents = calculateQualityScore({
-            citationCount: item['is-referenced-by-count'],
-            year: item.published?.['date-parts']?.[0]?.[0],
-            wordCount,
-            venue: item['container-title']?.[0],
-            source: LiteratureSource.CROSSREF,
-            impactFactor: null,
-            sjrScore: null,
-            quartile: null,
-            hIndexJournal: null,
-          });
-
-          const year = item.published?.['date-parts']?.[0]?.[0];
-          const citationCount = item['is-referenced-by-count'] || 0;
-
-          return {
-            id: item.DOI,
-            title: item.title?.[0] || '',
-            authors:
-              item.author?.map((a: any) => `${a.given} ${a.family}`) || [],
-            year,
-            abstract: item.abstract,
-            doi: item.DOI,
-            url: item.URL,
-            venue: item['container-title']?.[0],
-            citationCount,
-            source: LiteratureSource.CROSSREF,
-            wordCount,
-            wordCountExcludingRefs: wordCount,
-            isEligible: isPaperEligible(wordCount),
-            // Phase 10 Day 5.13+ Extension 2: Enterprise quality metrics
-            abstractWordCount,
-            citationsPerYear: year
-              ? citationCount / Math.max(1, new Date().getFullYear() - year)
-              : 0,
-            qualityScore: qualityComponents.totalScore,
-            isHighQuality: qualityComponents.totalScore >= 50,
-          };
-        });
-
-        this.logger.log(`[CrossRef] Returned ${papers.length} papers`);
         return papers;
       } catch (error: any) {
-        if (error.response?.status === 429) {
-          this.logger.error(
-            `[CrossRef] ⚠️  RATE LIMITED (429) - Too many requests. Results will be cached.`,
-          );
-        } else {
-          this.logger.error(
-            `[CrossRef] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
-          );
-        }
+        this.logger.error(`[CrossRef] Wrapper error: ${error.message}`);
         return [];
       }
     });
   }
 
+  /**
+   * Phase 10.6 Day 3.5: Thin wrapper for PubMed service
+   *
+   * ⚠️ MODIFICATION STRATEGY:
+   * This is a THIN WRAPPER for orchestration only. DO NOT add business logic here.
+   *
+   * ✅ Responsibilities of this wrapper:
+   * - Request deduplication (SearchCoalescer)
+   * - API quota management (QuotaMonitor)
+   * - High-level error handling
+   *
+   * ❌ DO NOT modify PubMed integration here:
+   * - To change E-utilities API, XML parsing, MeSH extraction → Modify pubmed.service.ts
+   * - To change OpenAlex enrichment logic → Modify pubmed.service.ts enrichCitationsFromOpenAlex()
+   * - To add PMC linking or metadata fields → Modify pubmed.service.ts parsePaper()
+   *
+   * @see backend/src/modules/literature/services/pubmed.service.ts
+   */
   private async searchPubMed(searchDto: SearchLiteratureDto): Promise<Paper[]> {
     // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
     const coalescerKey = `pubmed:${JSON.stringify(searchDto)}`;
@@ -670,150 +739,41 @@ export class LiteratureService {
       }
 
       try {
-        // First, search for IDs
-        const searchUrl =
-          'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi';
-        const searchParams = {
-          db: 'pubmed',
-          term: searchDto.query,
-          retmode: 'json',
-          retmax: searchDto.limit || 20,
-        };
-
-        const searchResponse = await firstValueFrom(
-          this.httpService.get(searchUrl, { params: searchParams }),
-        );
-
-        const ids = searchResponse.data.esearchresult.idlist;
-        if (!ids || ids.length === 0) {
-          this.quotaMonitor.recordRequest('pubmed'); // Record even if no results
-          return [];
-        }
-
-        // Then, fetch details
-        const fetchUrl =
-          'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
-        const fetchParams = {
-          db: 'pubmed',
-          id: ids.join(','),
-          retmode: 'xml',
-          rettype: 'abstract',
-        };
-
-        const fetchResponse = await firstValueFrom(
-          this.httpService.get(fetchUrl, { params: fetchParams }),
-        );
-
-        // Parse PubMed XML response using regex (lightweight approach)
-        const xmlData = fetchResponse.data;
-        const articles =
-          xmlData.match(/<PubmedArticle>[\s\S]*?<\/PubmedArticle>/g) || [];
-
-        const papers = articles.map((article: string) => {
-          const pmid = article.match(/<PMID[^>]*>(.*?)<\/PMID>/)?.[1] || '';
-          const title =
-            article.match(/<ArticleTitle>(.*?)<\/ArticleTitle>/)?.[1] || '';
-          const abstractText =
-            article.match(/<AbstractText[^>]*>(.*?)<\/AbstractText>/)?.[1] ||
-            '';
-          const year =
-            article.match(/<PubDate>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] ||
-            article.match(/<DateCompleted>[\s\S]*?<Year>(.*?)<\/Year>/)?.[1] ||
-            null;
-
-          // Extract authors
-          const authorMatches =
-            article.match(/<Author[^>]*>[\s\S]*?<\/Author>/g) || [];
-          const authors = authorMatches.map((author: string) => {
-            const lastName =
-              author.match(/<LastName>(.*?)<\/LastName>/)?.[1] || '';
-            const foreName =
-              author.match(/<ForeName>(.*?)<\/ForeName>/)?.[1] || '';
-            return `${foreName} ${lastName}`.trim();
-          });
-
-          // Extract DOI if available
-          const doi =
-            article.match(/<ArticleId IdType="doi">(.*?)<\/ArticleId>/)?.[1] ||
-            null;
-
-          // Phase 10 Day 5.13+ Extension: Comprehensive word count (title + abstract)
-          const abstractWordCount = calculateAbstractWordCount(abstractText);
-          const wordCount = calculateComprehensiveWordCount(
-            title.trim(),
-            abstractText.trim(),
-          );
-          const wordCountExcludingRefs = wordCount;
-          const parsedYear = year ? parseInt(year) : null;
-
-          // Phase 10 Day 5.13+ Extension 2: Calculate quality score
-          // Note: citationCount will be enriched from OpenAlex later
-          const qualityComponents = calculateQualityScore({
-            citationCount: null, // Will be enriched from OpenAlex
-            year: parsedYear,
-            wordCount,
-            venue: null, // PubMed doesn't provide venue in basic search
-            source: 'PubMed',
-            impactFactor: null,
-            sjrScore: null,
-            quartile: null,
-            hIndexJournal: null,
-          });
-
-          return {
-            id: pmid,
-            title: title.trim(),
-            authors,
-            year: parsedYear,
-            abstract: abstractText.trim(),
-            url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
-            source: 'PubMed',
-            doi,
-            pmid, // Phase 10 Day 30: Include PMID for PMC full-text lookup
-            citationCount: null, // Will be enriched from OpenAlex
-            wordCount,
-            wordCountExcludingRefs: wordCount,
-            isEligible: isPaperEligible(wordCount),
-            // Phase 10 Day 5.13+ Extension 2: Enterprise quality metrics
-            abstractWordCount,
-            citationsPerYear: 0, // Will be recalculated after OpenAlex enrichment
-            qualityScore: qualityComponents.totalScore,
-            isHighQuality: qualityComponents.totalScore >= 50,
-          };
+        // Call dedicated service (all business logic is there, including OpenAlex enrichment)
+        const papers = await this.pubMedService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
         });
-
-        // Enrich citation counts from OpenAlex for papers with DOIs
-        this.logger.log(
-          `Enriching ${papers.length} PubMed papers with citation data from OpenAlex...`,
-        );
-        const enrichedPapers = await this.enrichCitationsFromOpenAlex(papers);
-        const enrichedCount = enrichedPapers.filter(
-          (p) => p.citationCount !== null,
-        ).length;
-        this.logger.log(
-          `[PubMed] Successfully enriched ${enrichedCount}/${papers.length} papers with citation counts`,
-        );
-        this.logger.log(`[PubMed] Returned ${enrichedPapers.length} papers`);
 
         // Phase 10 Days 2-3: Record successful request
         this.quotaMonitor.recordRequest('pubmed');
-
-        return enrichedPapers;
+        return papers;
       } catch (error: any) {
-        if (error.response?.status === 429) {
-          this.logger.error(
-            `[PubMed] ⚠️  RATE LIMITED (429) - Too many requests. Results will be cached.`,
-          );
-        } else {
-          this.logger.error(
-            `[PubMed] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
-          );
-        }
+        this.logger.error(`[PubMed] Wrapper error: ${error.message}`);
         return [];
       }
     });
   }
 
+  /**
+   * Phase 10.6 Day 3.5: Thin wrapper for arXiv service
+   *
+   * ⚠️ MODIFICATION STRATEGY:
+   * This is a THIN WRAPPER for orchestration only. DO NOT add business logic here.
+   *
+   * ✅ Responsibilities of this wrapper:
+   * - Request deduplication (SearchCoalescer)
+   * - API quota management (QuotaMonitor)
+   * - High-level error handling
+   *
+   * ❌ DO NOT modify arXiv integration here:
+   * - To change Atom/RSS parsing, category filters, PDF URLs → Modify arxiv.service.ts
+   * - To add version tracking or DOI extraction → Modify arxiv.service.ts parsePaper()
+   * - To change error handling → Modify arxiv.service.ts search()
+   *
+   * @see backend/src/modules/literature/services/arxiv.service.ts
+   */
   private async searchArxiv(searchDto: SearchLiteratureDto): Promise<Paper[]> {
     // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
     const coalescerKey = `arxiv:${JSON.stringify(searchDto)}`;
@@ -825,172 +785,449 @@ export class LiteratureService {
       }
 
       try {
-        const url = 'http://export.arxiv.org/api/query';
-        const params = {
-          search_query: `all:${searchDto.query}`,
-          max_results: searchDto.limit || 20,
+        // Call dedicated service (all business logic is there)
+        const papers = await this.arxivService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
           sortBy: 'relevance',
           sortOrder: 'descending',
-        };
-
-        const response = await firstValueFrom(
-          this.httpService.get(url, { params }),
-        );
+        });
 
         // Phase 10 Days 2-3: Record successful request
         this.quotaMonitor.recordRequest('arxiv');
-
-        // Parse XML response using regex (lightweight approach)
-        const data = response.data;
-        const entries = data.match(/<entry>[\s\S]*?<\/entry>/g) || [];
-
-        const papers = entries.map((entry: string) => {
-          const title = entry.match(/<title>(.*?)<\/title>/)?.[1] || '';
-          const summary = entry.match(/<summary>(.*?)<\/summary>/)?.[1] || '';
-          const id = entry.match(/<id>(.*?)<\/id>/)?.[1] || '';
-          const published =
-            entry.match(/<published>(.*?)<\/published>/)?.[1] || '';
-          const authors =
-            entry
-              .match(/<author>[\s\S]*?<name>(.*?)<\/name>/g)
-              ?.map((a: string) => a.match(/<name>(.*?)<\/name>/)?.[1] || '') ||
-            [];
-
-          // Phase 10 Day 5.13+ Extension: Comprehensive word count (title + abstract)
-          const abstractWordCount = calculateAbstractWordCount(summary);
-          const wordCount = calculateComprehensiveWordCount(
-            title.trim(),
-            summary.trim(),
-          );
-          const wordCountExcludingRefs = wordCount;
-          const year = published ? new Date(published).getFullYear() : null;
-
-          // Phase 10 Day 5.13+ Extension 2: Calculate quality score
-          const qualityComponents = calculateQualityScore({
-            citationCount: null, // arXiv doesn't provide citation counts
-            year,
-            wordCount,
-            venue: 'arXiv', // Preprint server
-            source: 'arXiv',
-            impactFactor: null,
-            sjrScore: null,
-            quartile: null,
-            hIndexJournal: null,
-          });
-
-          return {
-            id,
-            title: title.trim(),
-            authors,
-            year,
-            abstract: summary.trim(),
-            url: id,
-            source: 'arXiv',
-            doi: null,
-            citationCount: null,
-            wordCount,
-            wordCountExcludingRefs: wordCount,
-            isEligible: isPaperEligible(wordCount),
-            // Phase 10 Day 5.13+ Extension 2: Enterprise quality metrics
-            abstractWordCount,
-            citationsPerYear: 0, // No citation data available from arXiv
-            qualityScore: qualityComponents.totalScore,
-            isHighQuality: qualityComponents.totalScore >= 50,
-          };
-        });
-
-        this.logger.log(`[arXiv] Returned ${papers.length} papers`);
         return papers;
       } catch (error: any) {
-        if (error.response?.status === 429) {
-          this.logger.error(
-            `[arXiv] ⚠️  RATE LIMITED (429) - Too many requests. Results will be cached.`,
-          );
-        } else {
-          this.logger.error(
-            `[arXiv] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
-          );
-        }
+        this.logger.error(`[arXiv] Wrapper error: ${error.message}`);
         return [];
       }
     });
   }
 
   /**
-   * Enriches papers with citation counts from OpenAlex API
-   * Particularly useful for PubMed papers which don't provide citation data
+   * Phase 10.6 Day 4: Thin wrapper for PMC service
+   *
+   * ⚠️ MODIFICATION STRATEGY:
+   * This is a THIN WRAPPER for orchestration only. DO NOT add business logic here.
+   *
+   * ✅ Responsibilities of this wrapper:
+   * - Request deduplication (SearchCoalescer)
+   * - API quota management (QuotaMonitor)
+   * - High-level error handling
+   *
+   * ❌ DO NOT modify PMC integration here:
+   * - To change XML parsing, section extraction → Modify pmc.service.ts
+   * - To add full-text processing logic → Modify pmc.service.ts parsePaper()
+   * - To change error handling → Modify pmc.service.ts search()
+   *
+   * @see backend/src/modules/literature/services/pmc.service.ts
    */
-  private async enrichCitationsFromOpenAlex(papers: Paper[]): Promise<Paper[]> {
-    const enrichedPapers = await Promise.all(
-      papers.map(async (paper) => {
-        // Only enrich if paper has DOI but no citation count
-        if (!paper.doi || paper.citationCount !== null) {
-          return paper;
-        }
+  private async searchPMC(searchDto: SearchLiteratureDto): Promise<Paper[]> {
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `pmc:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('pmc')) {
+        this.logger.warn(`🚫 [PMC] Quota exceeded - using cache instead`);
+        return [];
+      }
 
-        try {
-          const url = `https://api.openalex.org/works/https://doi.org/${paper.doi}`;
-          const response = await firstValueFrom(
-            this.httpService.get(url, {
-              headers: {
-                'User-Agent': 'BlackQMethod-Research-Platform',
-              },
-              timeout: 3000, // 3 second timeout per request
-            }),
-          );
+      try {
+        // Call dedicated service (all business logic is there)
+        const papers = await this.pmcService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
+          openAccessOnly: true, // Default to Open Access for full-text availability
+        });
 
-          const citedByCount = response.data?.cited_by_count;
-          if (typeof citedByCount === 'number') {
-            this.logger.log(
-              `Enriched citation count for "${paper.title.substring(0, 50)}...": ${citedByCount}`,
-            );
-
-            // Phase 10 Day 5.13+ Extension 2: Recalculate quality score with enriched data
-            const citationsPerYear = paper.year
-              ? citedByCount /
-                Math.max(1, new Date().getFullYear() - paper.year)
-              : 0;
-
-            const qualityComponents = calculateQualityScore({
-              citationCount: citedByCount,
-              year: paper.year,
-              wordCount: paper.wordCount,
-              venue: paper.venue,
-              source: paper.source,
-              impactFactor: null,
-              sjrScore: null,
-              quartile: null,
-              hIndexJournal: null,
-            });
-
-            return {
-              ...paper,
-              citationCount: citedByCount,
-              citationsPerYear,
-              qualityScore: qualityComponents.totalScore,
-              isHighQuality: qualityComponents.totalScore >= 50,
-            };
-          }
-        } catch (error: any) {
-          // Silently fail - don't block on enrichment errors
-          this.logger.debug(
-            `Failed to enrich citations for DOI ${paper.doi}: ${error.message}`,
-          );
-        }
-
-        return paper;
-      }),
-    );
-
-    return enrichedPapers;
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('pmc');
+        return papers;
+      } catch (error: any) {
+        this.logger.error(`[PMC] Wrapper error: ${error.message}`);
+        return [];
+      }
+    });
   }
+
+  /**
+   * Phase 10.6 Day 5: Thin wrapper for ERIC service
+   * @see backend/src/modules/literature/services/eric.service.ts
+   */
+  private async searchERIC(searchDto: SearchLiteratureDto): Promise<Paper[]> {
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `eric:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('eric')) {
+        this.logger.warn(`🚫 [ERIC] Quota exceeded - using cache instead`);
+        return [];
+      }
+
+      try {
+        // Call dedicated service (all business logic is there)
+        const papers = await this.ericService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
+          peerReviewed: true, // Default to peer-reviewed for quality
+        });
+
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('eric');
+        return papers;
+      } catch (error: any) {
+        this.logger.error(`[ERIC] Wrapper error: ${error.message}`);
+        return [];
+      }
+    });
+  }
+
+  /**
+   * Phase 10.6 Day 6: Thin wrapper for Web of Science service
+   * @see backend/src/modules/literature/services/web-of-science.service.ts
+   */
+  private async searchWebOfScience(
+    searchDto: SearchLiteratureDto,
+  ): Promise<Paper[]> {
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `web_of_science:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('web_of_science')) {
+        this.logger.warn(
+          `🚫 [Web of Science] Quota exceeded - using cache instead`,
+        );
+        return [];
+      }
+
+      try {
+        // Call dedicated service (all business logic is there)
+        const papers = await this.webOfScienceService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
+        });
+
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('web_of_science');
+        return papers;
+      } catch (error: any) {
+        this.logger.error(`[Web of Science] Wrapper error: ${error.message}`);
+        return [];
+      }
+    });
+  }
+
+  /**
+   * Phase 10.6 Day 7: Scopus thin wrapper (orchestration only)
+   * Delegates to ScopusService for all business logic
+   */
+  private async searchScopus(
+    searchDto: SearchLiteratureDto,
+  ): Promise<Paper[]> {
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `scopus:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('scopus')) {
+        this.logger.warn(`🚫 [Scopus] Quota exceeded - using cache instead`);
+        return [];
+      }
+
+      try {
+        // Call dedicated service (all business logic is there)
+        const papers = await this.scopusService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
+        });
+
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('scopus');
+        return papers;
+      } catch (error: any) {
+        this.logger.error(`[Scopus] Wrapper error: ${error.message}`);
+        return [];
+      }
+    });
+  }
+
+  /**
+   * Phase 10.6 Day 8: Thin wrapper for IEEE Xplore service
+   * @see backend/src/modules/literature/services/ieee.service.ts
+   *
+   * THIN WRAPPER PATTERN:
+   * - This method contains ONLY orchestration logic
+   * - Request deduplication via SearchCoalescer (prevents duplicate API calls)
+   * - API quota management via QuotaMonitor (prevents rate limit violations)
+   * - High-level error handling (graceful degradation)
+   *
+   * ALL BUSINESS LOGIC (API calls, parsing, transformations) lives in:
+   * ieee.service.ts - 400+ lines of IEEE Xplore implementation
+   *
+   * DO NOT add business logic here - modify ieee.service.ts instead
+   */
+  private async searchIEEE(
+    searchDto: SearchLiteratureDto,
+  ): Promise<Paper[]> {
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `ieee:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('ieee')) {
+        this.logger.warn(`🚫 [IEEE Xplore] Quota exceeded - using cache instead`);
+        return [];
+      }
+
+      try {
+        // Call dedicated service (all business logic is there)
+        const papers = await this.ieeeService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
+        });
+
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('ieee');
+        return papers;
+      } catch (error: any) {
+        this.logger.error(`[IEEE Xplore] Wrapper error: ${error.message}`);
+        return [];
+      }
+    });
+  }
+
+  /**
+   * Phase 10.6 Day 9: Thin wrapper for SpringerLink service
+   * @see backend/src/modules/literature/services/springer.service.ts
+   *
+   * THIN WRAPPER PATTERN:
+   * - This method contains ONLY orchestration logic
+   * - Request deduplication via SearchCoalescer (prevents duplicate API calls)
+   * - API quota management via QuotaMonitor (prevents rate limit violations)
+   * - High-level error handling (graceful degradation)
+   *
+   * ALL BUSINESS LOGIC (API calls, parsing, transformations) lives in:
+   * springer.service.ts - 400+ lines of SpringerLink implementation
+   *
+   * DO NOT add business logic here - modify springer.service.ts instead
+   */
+  private async searchSpringer(
+    searchDto: SearchLiteratureDto,
+  ): Promise<Paper[]> {
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `springer:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('springer')) {
+        this.logger.warn(`🚫 [SpringerLink] Quota exceeded - using cache instead`);
+        return [];
+      }
+
+      try {
+        // Call dedicated service (all business logic is there)
+        const papers = await this.springerService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
+        });
+
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('springer');
+        return papers;
+      } catch (error: any) {
+        this.logger.error(`[SpringerLink] Wrapper error: ${error.message}`);
+        return [];
+      }
+    });
+  }
+
+  /**
+   * Phase 10.6 Day 10: Thin wrapper for Nature service
+   * @see backend/src/modules/literature/services/nature.service.ts
+   *
+   * THIN WRAPPER PATTERN:
+   * - This method contains ONLY orchestration logic
+   * - Request deduplication via SearchCoalescer (prevents duplicate API calls)
+   * - API quota management via QuotaMonitor (prevents rate limit violations)
+   * - High-level error handling (graceful degradation)
+   *
+   * ALL BUSINESS LOGIC (API calls, parsing, transformations) lives in:
+   * nature.service.ts - 400+ lines of Nature implementation
+   *
+   * DO NOT add business logic here - modify nature.service.ts instead
+   */
+  private async searchNature(
+    searchDto: SearchLiteratureDto,
+  ): Promise<Paper[]> {
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `nature:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('nature')) {
+        this.logger.warn(`🚫 [Nature] Quota exceeded - using cache instead`);
+        return [];
+      }
+
+      try {
+        // Call dedicated service (all business logic is there)
+        const papers = await this.natureService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
+        });
+
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('nature');
+        return papers;
+      } catch (error: any) {
+        this.logger.error(`[Nature] Wrapper error: ${error.message}`);
+        return [];
+      }
+    });
+  }
+
+  /**
+   * Phase 10.6 Day 11: Wiley Online Library - Thin wrapper
+   * ALL business logic in wiley.service.ts
+   */
+  private async searchWiley(
+    searchDto: SearchLiteratureDto,
+  ): Promise<Paper[]> {
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `wiley:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('wiley')) {
+        this.logger.warn(`🚫 [Wiley] Quota exceeded - using cache instead`);
+        return [];
+      }
+
+      try {
+        // Call dedicated service (all business logic is there)
+        const papers = await this.wileyService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
+        });
+
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('wiley');
+        return papers;
+      } catch (error: any) {
+        this.logger.error(`[Wiley] Wrapper error: ${error.message}`);
+        return [];
+      }
+    });
+  }
+
+  /**
+   * Phase 10.6 Day 12: SAGE Publications - Thin wrapper
+   * ALL business logic in sage.service.ts
+   */
+  private async searchSage(
+    searchDto: SearchLiteratureDto,
+  ): Promise<Paper[]> {
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `sage:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('sage')) {
+        this.logger.warn(`🚫 [SAGE] Quota exceeded - using cache instead`);
+        return [];
+      }
+
+      try {
+        // Call dedicated service (all business logic is there)
+        const papers = await this.sageService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
+        });
+
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('sage');
+        return papers;
+      } catch (error: any) {
+        this.logger.error(`[SAGE] Wrapper error: ${error.message}`);
+        return [];
+      }
+    });
+  }
+
+  /**
+   * Phase 10.6 Day 13: Taylor & Francis - Thin wrapper
+   * ALL business logic in taylor-francis.service.ts
+   */
+  private async searchTaylorFrancis(
+    searchDto: SearchLiteratureDto,
+  ): Promise<Paper[]> {
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `taylor_francis:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('taylor_francis')) {
+        this.logger.warn(
+          `🚫 [Taylor & Francis] Quota exceeded - using cache instead`,
+        );
+        return [];
+      }
+
+      try {
+        // Call dedicated service (all business logic is there)
+        const papers = await this.taylorFrancisService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
+        });
+
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('taylor_francis');
+        return papers;
+      } catch (error: any) {
+        this.logger.error(
+          `[Taylor & Francis] Wrapper error: ${error.message}`,
+        );
+        return [];
+      }
+    });
+  }
+
+  /**
+   * Phase 10.6 Day 3.5: REMOVED - Moved to pubmed.service.ts
+   *
+   * OpenAlex enrichment is now handled within the PubMed service itself.
+   * This eliminates duplication and keeps all PubMed-related logic in one place.
+   *
+   * @see backend/src/modules/literature/services/pubmed.service.ts enrichCitationsFromOpenAlex()
+   */
 
   private deduplicatePapers(papers: Paper[]): Paper[] {
     const seen = new Set<string>();
+    const seenIds = new Set<string>(); // Phase 10.6 Day 14.5: Also track IDs to prevent duplicate keys in React
+
     return papers.filter((paper) => {
-      const key = paper.doi || paper.title.toLowerCase();
-      if (seen.has(key)) return false;
+      // Normalize DOI for comparison (remove http://, https://, doi.org/, trailing slashes)
+      const normalizedDoi = paper.doi
+        ? paper.doi
+            .replace(/^https?:\/\//i, '')
+            .replace(/^(dx\.)?doi\.org\//i, '')
+            .replace(/\/+$/, '')
+            .toLowerCase()
+        : null;
+
+      // Primary deduplication key: normalized DOI or lowercase title
+      const key = normalizedDoi || paper.title.toLowerCase();
+
+      // Secondary check: ensure paper ID is unique (React keys must be unique)
+      if (seen.has(key) || seenIds.has(paper.id)) {
+        return false;
+      }
+
       seen.add(key);
+      seenIds.add(paper.id);
       return true;
     });
   }
@@ -1092,16 +1329,9 @@ export class LiteratureService {
       score *= 1.2;
     }
 
-    // Recency bonus (papers from last 3 years get a small boost)
-    const currentYear = new Date().getFullYear();
-    if (paper.year && paper.year >= currentYear - 3) {
-      score += 3;
-    }
-
-    // Citation bonus (highly cited papers get a small boost)
-    if (paper.citationCount && paper.citationCount > 100) {
-      score += Math.log10(paper.citationCount) * 2; // Logarithmic scaling
-    }
+    // Phase 10.1 Day 11: Removed recency and citation bonuses
+    // - Recency bonus was giving unfair advantage to recent papers
+    // - Citation bonus was redundant (already in quality score)
 
     return Math.round(score); // Return rounded score for cleaner logs
   }
@@ -1649,6 +1879,11 @@ export class LiteratureService {
           tags: saveDto.tags as any, // Json field
           collectionId: saveDto.collectionId,
           source: 'user_added', // Required field
+          // Phase 10.6 Day 2: Enhanced PubMed Metadata
+          meshTerms: saveDto.meshTerms as any, // Json field
+          publicationType: saveDto.publicationType as any, // Json field
+          authorAffiliations: saveDto.authorAffiliations as any, // Json field
+          grants: saveDto.grants as any, // Json field
         },
       });
 
@@ -1777,6 +2012,11 @@ export class LiteratureService {
             fullTextSource: true, // Phase 10 Day 30: Show source (PMC/PDF/HTML)
             fullTextWordCount: true, // Phase 10 Day 30: Display word count
             fullTextFetchedAt: true, // Phase 10 Day 30: Show when fetched
+            // Phase 10.6 Day 2: Enhanced PubMed Metadata
+            meshTerms: true,
+            publicationType: true,
+            authorAffiliations: true,
+            grants: true,
             createdAt: true,
             updatedAt: true,
             // Exclude relations to avoid circular references and serialization issues
@@ -2084,12 +2324,7 @@ ER  -`;
     if (sources.includes('arxiv')) {
       searchPromises.push(this.searchArxivPreprints(query));
     }
-    if (sources.includes('biorxiv')) {
-      searchPromises.push(this.searchBioRxiv(query));
-    }
-    if (sources.includes('ssrn')) {
-      searchPromises.push(this.searchSSRN(query));
-    }
+    // Phase 10.6 Day 3: bioRxiv, SSRN, and other new sources are now handled by searchBySource
     if (sources.includes('patents')) {
       searchPromises.push(this.searchPatents(query));
     }
@@ -2172,44 +2407,6 @@ ER  -`;
     }
   }
 
-  private async searchBioRxiv(query: string): Promise<any[]> {
-    try {
-      // bioRxiv API endpoint
-      const url = `https://api.biorxiv.org/details/biorxiv/${encodeURIComponent(query)}/na/na/0/20/json`;
-
-      const response = await firstValueFrom(this.httpService.get(url));
-
-      if (response.data && response.data.collection) {
-        return response.data.collection.map((paper: any) => ({
-          id: paper.doi,
-          title: paper.title,
-          authors: paper.authors
-            ? paper.authors.split(';').map((a: string) => a.trim())
-            : [],
-          year: paper.date ? new Date(paper.date).getFullYear() : null,
-          abstract: paper.abstract,
-          doi: paper.doi,
-          url: `https://doi.org/${paper.doi}`,
-          source: 'bioRxiv',
-          type: 'preprint',
-        }));
-      }
-
-      return [];
-    } catch (error: any) {
-      this.logger.warn(`bioRxiv search failed: ${error.message}`);
-      return [];
-    }
-  }
-
-  private async searchSSRN(query: string): Promise<any[]> {
-    // SSRN doesn't have a public API, would need web scraping or partnership
-    // Return placeholder for now
-    this.logger.warn(
-      'SSRN search not yet implemented - requires API key or scraping',
-    );
-    return [];
-  }
 
   private async searchPatents(query: string): Promise<any[]> {
     try {
@@ -3897,5 +4094,100 @@ ER  -`;
       `Best score was ${scoredResults[0]?.score || 0}, below threshold of 70`,
     );
     return null;
+  }
+
+  /**
+   * Phase 10.6 Day 3: Search Google Scholar
+   */
+  private async searchGoogleScholar(searchDto: SearchLiteratureDto): Promise<Paper[]> {
+    if (!this.googleScholarService.isAvailable()) {
+      this.logger.warn('[GoogleScholar] Service not available - SERPAPI_KEY not configured');
+      return [];
+    }
+
+    try {
+      const papers = await this.googleScholarService.search(searchDto.query, {
+        yearFrom: searchDto.yearFrom,
+        yearTo: searchDto.yearTo,
+        limit: searchDto.limit || 20,
+      });
+
+      return papers;
+    } catch (error: any) {
+      this.logger.error(`[GoogleScholar] Search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Phase 10.6 Day 3: Search bioRxiv
+   */
+  private async searchBioRxiv(searchDto: SearchLiteratureDto): Promise<Paper[]> {
+    try {
+      const papers = await this.bioRxivService.searchBioRxiv(searchDto.query, {
+        yearFrom: searchDto.yearFrom,
+        yearTo: searchDto.yearTo,
+        limit: searchDto.limit || 20,
+      });
+
+      return papers;
+    } catch (error: any) {
+      this.logger.error(`[bioRxiv] Search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Phase 10.6 Day 3: Search medRxiv
+   */
+  private async searchMedRxiv(searchDto: SearchLiteratureDto): Promise<Paper[]> {
+    try {
+      const papers = await this.bioRxivService.searchMedRxiv(searchDto.query, {
+        yearFrom: searchDto.yearFrom,
+        yearTo: searchDto.yearTo,
+        limit: searchDto.limit || 20,
+      });
+
+      return papers;
+    } catch (error: any) {
+      this.logger.error(`[medRxiv] Search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Phase 10.6 Day 3: Search SSRN
+   */
+  private async searchSSRN(searchDto: SearchLiteratureDto): Promise<Paper[]> {
+    try {
+      const papers = await this.ssrnService.search(searchDto.query, {
+        yearFrom: searchDto.yearFrom,
+        yearTo: searchDto.yearTo,
+        limit: searchDto.limit || 20,
+      });
+
+      return papers;
+    } catch (error: any) {
+      this.logger.error(`[SSRN] Search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Phase 10.6 Day 3: Search ChemRxiv
+   */
+  private async searchChemRxiv(searchDto: SearchLiteratureDto): Promise<Paper[]> {
+    try {
+      const papers = await this.chemRxivService.search(searchDto.query, {
+        yearFrom: searchDto.yearFrom,
+        yearTo: searchDto.yearTo,
+        limit: searchDto.limit || 20,
+      });
+
+      return papers;
+    } catch (error: any) {
+      this.logger.error(`[ChemRxiv] Search failed: ${error.message}`);
+      return [];
+    }
   }
 }

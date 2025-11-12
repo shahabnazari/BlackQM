@@ -74,7 +74,7 @@ export const DatabaseSelectorSkeleton = React.memo(
     return (
       <div className="space-y-3 animate-pulse">
         <div className="h-5 bg-gray-200 rounded w-24" />
-        {[1, 2, 3, 4].map((i) => (
+        {[1, 2, 3, 4].map(i => (
           <div key={i} className="h-16 bg-gray-200 rounded-lg" />
         ))}
       </div>
@@ -93,7 +93,7 @@ export const FiltersSkeleton = React.memo(function FiltersSkeleton() {
       <div className="h-6 bg-gray-200 rounded w-32" />
 
       {/* Filter sections */}
-      {[1, 2, 3, 4].map((i) => (
+      {[1, 2, 3, 4].map(i => (
         <div key={i} className="space-y-2">
           <div className="h-4 bg-gray-200 rounded w-24" />
           <div className="h-10 bg-gray-200 rounded" />
@@ -118,7 +118,7 @@ export const PaginationSkeleton = React.memo(function PaginationSkeleton() {
     <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 animate-pulse">
       <div className="h-5 bg-gray-200 rounded w-48" />
       <div className="flex space-x-1">
-        {[1, 2, 3, 4, 5].map((i) => (
+        {[1, 2, 3, 4, 5].map(i => (
           <div key={i} className="h-10 w-10 bg-gray-200 rounded" />
         ))}
       </div>
@@ -146,7 +146,7 @@ export const LiteraturePageSkeleton = React.memo(
 
           {/* Results */}
           <div className="col-span-9 space-y-4">
-            {[1, 2, 3, 4, 5].map((i) => (
+            {[1, 2, 3, 4, 5].map(i => (
               <ResultCardSkeleton key={i} />
             ))}
             <PaginationSkeleton />

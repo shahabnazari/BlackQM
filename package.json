@@ -14,7 +14,8 @@
     "CRITICAL": "NEVER create /app, /components, or /pages in root - they go in /frontend/!"
   },
   "scripts": {
-    "dev": "node scripts/dev-ultimate-v3.js",
+    "dev": "node scripts/dev-ultimate-v4-day11.js",
+    "dev:v3": "node scripts/dev-ultimate-v3.js",
     "dev:lite": "node scripts/dev-lite.js",
     "dev:performance": "NODE_OPTIONS='--max-old-space-size=2048' node scripts/dev-lite.js",
     "dev:enterprise": "node scripts/dev-enterprise.js",

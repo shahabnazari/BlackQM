@@ -12,7 +12,8 @@ import React, { ReactNode } from 'react';
 import { BaseErrorBoundary, ErrorBoundaryProps } from './BaseErrorBoundary';
 import { ErrorFallbackUI } from './ErrorFallbackUI';
 
-interface ThemeErrorBoundaryProps extends Omit<ErrorBoundaryProps, 'componentName' | 'fallback'> {
+interface ThemeErrorBoundaryProps
+  extends Omit<ErrorBoundaryProps, 'componentName' | 'fallback'> {
   children: ReactNode;
   showContactSupport?: boolean;
 }

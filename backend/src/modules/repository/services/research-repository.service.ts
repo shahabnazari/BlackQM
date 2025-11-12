@@ -30,7 +30,14 @@ export interface ResearchInsight {
   id: string;
   title: string;
   content: string;
-  type: 'statement' | 'factor' | 'theme' | 'gap' | 'quote' | 'paper_finding' | 'hypothesis';
+  type:
+    | 'statement'
+    | 'factor'
+    | 'theme'
+    | 'gap'
+    | 'quote'
+    | 'paper_finding'
+    | 'hypothesis';
   sourceType: 'study' | 'paper' | 'response' | 'analysis' | 'literature';
   sourceId: string;
   studyId?: string;
@@ -55,7 +62,15 @@ export interface ResearchInsight {
 }
 
 export interface CitationNode {
-  type: 'paper' | 'gap' | 'question' | 'hypothesis' | 'theme' | 'statement' | 'factor' | 'insight';
+  type:
+    | 'paper'
+    | 'gap'
+    | 'question'
+    | 'hypothesis'
+    | 'theme'
+    | 'statement'
+    | 'factor'
+    | 'insight';
   id: string;
   title: string;
   metadata?: Record<string, any>;
@@ -138,13 +153,19 @@ export class ResearchRepositoryService {
    * Extract all research insights from a study
    * Includes statements, factors, quotes, and derived insights
    */
-  async extractInsightsFromStudy(studyId: string, userId: string): Promise<ResearchInsight[]> {
+  async extractInsightsFromStudy(
+    studyId: string,
+    userId: string,
+  ): Promise<ResearchInsight[]> {
     this.logger.log(`Extracting insights from study: ${studyId}`);
 
     const insights: ResearchInsight[] = [];
 
     // Extract statement insights
-    const statementInsights = await this.extractStatementInsights(studyId, userId);
+    const statementInsights = await this.extractStatementInsights(
+      studyId,
+      userId,
+    );
     insights.push(...statementInsights);
 
     // Extract factor insights
@@ -155,14 +176,19 @@ export class ResearchRepositoryService {
     const quoteInsights = await this.extractQuoteInsights(studyId, userId);
     insights.push(...quoteInsights);
 
-    this.logger.log(`Extracted ${insights.length} insights from study ${studyId}`);
+    this.logger.log(
+      `Extracted ${insights.length} insights from study ${studyId}`,
+    );
     return insights;
   }
 
   /**
    * Extract statement insights with full provenance
    */
-  private async extractStatementInsights(studyId: string, userId: string): Promise<ResearchInsight[]> {
+  private async extractStatementInsights(
+    studyId: string,
+    userId: string,
+  ): Promise<ResearchInsight[]> {
     const statements = await this.prisma.statement.findMany({
       where: { surveyId: studyId },
       include: {
@@ -175,7 +201,7 @@ export class ResearchRepositoryService {
       },
     });
 
-    return statements.map(statement => {
+    return statements.map((statement) => {
       const citationChain: CitationNode[] = [];
 
       // Build citation chain
@@ -199,7 +225,8 @@ export class ResearchRepositoryService {
           title: statement.statementProvenance.sourceTheme.name,
           metadata: {
             keywords: statement.statementProvenance.sourceTheme.keywords,
-            relevanceScore: statement.statementProvenance.sourceTheme.relevanceScore,
+            relevanceScore:
+              statement.statementProvenance.sourceTheme.relevanceScore,
           },
         });
       }
@@ -234,7 +261,11 @@ export class ResearchRepositoryService {
           generatedBy: 'research-repository-service',
         },
         keywords: this.extractKeywords(statement.text),
-        searchVector: this.buildSearchVector(statement.text, statement.perspective || '', statement.text),
+        searchVector: this.buildSearchVector(
+          statement.text,
+          statement.perspective || '',
+          statement.text,
+        ),
         isPublic: false,
         shareLevel: 'private' as const,
         viewCount: 0,
@@ -249,7 +280,10 @@ export class ResearchRepositoryService {
   /**
    * Extract factor insights from analysis results
    */
-  private async extractFactorInsights(studyId: string, userId: string): Promise<ResearchInsight[]> {
+  private async extractFactorInsights(
+    studyId: string,
+    userId: string,
+  ): Promise<ResearchInsight[]> {
     const analysisResults = await this.prisma.analysisResult.findMany({
       where: { surveyId: studyId },
     });
@@ -265,8 +299,14 @@ export class ResearchRepositoryService {
         for (const factor of factors) {
           insights.push({
             id: `factor_${result.id}_${factor.factorNumber || factor.number}`,
-            title: factor.label || factor.name || `Factor ${factor.factorNumber || factor.number}`,
-            content: factor.description || factor.interpretation || JSON.stringify(factor),
+            title:
+              factor.label ||
+              factor.name ||
+              `Factor ${factor.factorNumber || factor.number}`,
+            content:
+              factor.description ||
+              factor.interpretation ||
+              JSON.stringify(factor),
             type: 'factor' as const,
             sourceType: 'analysis' as const,
             sourceId: result.id,
@@ -276,7 +316,9 @@ export class ResearchRepositoryService {
               {
                 type: 'factor',
                 id: result.id,
-                title: factor.label || `Factor ${factor.factorNumber || factor.number}`,
+                title:
+                  factor.label ||
+                  `Factor ${factor.factorNumber || factor.number}`,
                 metadata: {
                   variance: factor.variance || factor.explainedVariance,
                   eigenvalue: factor.eigenvalue,
@@ -297,11 +339,13 @@ export class ResearchRepositoryService {
               generatedAt: result.createdAt,
               generatedBy: 'q-analysis-service',
             },
-            keywords: this.extractKeywords(factor.description || factor.interpretation || ''),
+            keywords: this.extractKeywords(
+              factor.description || factor.interpretation || '',
+            ),
             searchVector: this.buildSearchVector(
               factor.label || '',
               factor.description || '',
-              factor.interpretation || ''
+              factor.interpretation || '',
             ),
             isPublic: false,
             shareLevel: 'private' as const,
@@ -321,7 +365,10 @@ export class ResearchRepositoryService {
   /**
    * Extract quote insights from participant responses
    */
-  private async extractQuoteInsights(studyId: string, userId: string): Promise<ResearchInsight[]> {
+  private async extractQuoteInsights(
+    studyId: string,
+    userId: string,
+  ): Promise<ResearchInsight[]> {
     const responses = await this.prisma.response.findMany({
       where: { surveyId: studyId },
       include: {
@@ -333,15 +380,13 @@ export class ResearchRepositoryService {
 
     for (const response of responses) {
       // Extract meaningful quotes from open-ended answers
-      const openEndedAnswers = response.answers.filter(
-        answer => {
-          // Check if value is a string (text answer) and has sufficient length
-          if (typeof answer.value === 'string' && answer.value.length > 50) {
-            return true;
-          }
-          return false;
+      const openEndedAnswers = response.answers.filter((answer) => {
+        // Check if value is a string (text answer) and has sufficient length
+        if (typeof answer.value === 'string' && answer.value.length > 50) {
+          return true;
         }
-      );
+        return false;
+      });
 
       for (const answer of openEndedAnswers) {
         const textValue = answer.value as string;
@@ -398,7 +443,10 @@ export class ResearchRepositoryService {
   /**
    * Extract insights from literature (papers and themes)
    */
-  async extractInsightsFromLiterature(userId: string, paperIds?: string[]): Promise<ResearchInsight[]> {
+  async extractInsightsFromLiterature(
+    userId: string,
+    paperIds?: string[],
+  ): Promise<ResearchInsight[]> {
     const whereClause = paperIds
       ? { userId, id: { in: paperIds } }
       : { userId };
@@ -408,7 +456,7 @@ export class ResearchRepositoryService {
       take: 100, // Limit to prevent overwhelming extraction
     });
 
-    return papers.map(paper => ({
+    return papers.map((paper) => ({
       id: `paper_${paper.id}`,
       title: paper.title,
       content: paper.abstract || paper.title,
@@ -444,9 +492,15 @@ export class ResearchRepositoryService {
       },
       keywords: [
         ...(Array.isArray(paper.keywords) ? (paper.keywords as string[]) : []),
-        ...(Array.isArray(paper.fieldsOfStudy) ? (paper.fieldsOfStudy as string[]) : []),
+        ...(Array.isArray(paper.fieldsOfStudy)
+          ? (paper.fieldsOfStudy as string[])
+          : []),
       ].filter(Boolean),
-      searchVector: this.buildSearchVector(paper.title, paper.abstract || '', ''),
+      searchVector: this.buildSearchVector(
+        paper.title,
+        paper.abstract || '',
+        '',
+      ),
       isPublic: false,
       shareLevel: 'private' as const,
       viewCount: 0,
@@ -544,7 +598,9 @@ export class ResearchRepositoryService {
         await this.indexInsight(insight);
         indexed++;
       } catch (error: any) {
-        this.logger.error(`Failed to index insight ${insight.id}: ${error?.message || error}`);
+        this.logger.error(
+          `Failed to index insight ${insight.id}: ${error?.message || error}`,
+        );
       }
     }
     return indexed;
@@ -566,7 +622,10 @@ export class ResearchRepositoryService {
   /**
    * Reindex all entities for a user
    */
-  async reindexAll(userId: string, options: IndexingOptions = {}): Promise<number> {
+  async reindexAll(
+    userId: string,
+    options: IndexingOptions = {},
+  ): Promise<number> {
     this.logger.log(`Reindexing all entities for user: ${userId}`);
 
     let totalIndexed = 0;
@@ -585,7 +644,9 @@ export class ResearchRepositoryService {
     const literatureInsights = await this.extractInsightsFromLiterature(userId);
     totalIndexed += await this.indexInsights(literatureInsights);
 
-    this.logger.log(`Reindexed ${totalIndexed} total insights for user ${userId}`);
+    this.logger.log(
+      `Reindexed ${totalIndexed} total insights for user ${userId}`,
+    );
     return totalIndexed;
   }
 
@@ -658,7 +719,7 @@ export class ResearchRepositoryService {
     const facets = await this.calculateFacets(where);
 
     // Build results with scoring
-    const results = insights.map(insight => {
+    const results = insights.map((insight) => {
       const typedInsight = {
         ...insight,
         citationChain: insight.citationChain as any,
@@ -694,15 +755,14 @@ export class ResearchRepositoryService {
   /**
    * Get a single insight with full details
    */
-  async getInsight(insightId: string, userId: string): Promise<ResearchInsight | null> {
+  async getInsight(
+    insightId: string,
+    userId: string,
+  ): Promise<ResearchInsight | null> {
     const insight = await this.prisma.researchInsight.findFirst({
       where: {
         id: insightId,
-        OR: [
-          { userId },
-          { isPublic: true },
-          { shareLevel: 'public' },
-        ],
+        OR: [{ userId }, { isPublic: true }, { shareLevel: 'public' }],
       },
       include: {
         annotations: true,
@@ -736,7 +796,10 @@ export class ResearchRepositoryService {
   /**
    * Get related insights (similar content, same study, etc.)
    */
-  async getRelatedInsights(insightId: string, limit: number = 5): Promise<ResearchInsight[]> {
+  async getRelatedInsights(
+    insightId: string,
+    limit: number = 5,
+  ): Promise<ResearchInsight[]> {
     const insight = await this.prisma.researchInsight.findUnique({
       where: { id: insightId },
     });
@@ -747,10 +810,7 @@ export class ResearchRepositoryService {
     const related = await this.prisma.researchInsight.findMany({
       where: {
         id: { not: insightId },
-        OR: [
-          { studyId: insight.studyId },
-          { type: insight.type },
-        ],
+        OR: [{ studyId: insight.studyId }, { type: insight.type }],
       },
       take: limit,
       orderBy: [
@@ -759,17 +819,20 @@ export class ResearchRepositoryService {
       ],
     });
 
-    return related.map(r => ({
-      ...r,
-      citationChain: r.citationChain as any,
-      provenance: r.provenance as any,
-      keywords: r.keywords as any,
-      tags: r.tags as any,
-      metadata: r.metadata as any,
-      relatedInsights: r.relatedInsights as any,
-      relatedPapers: r.relatedPapers as any,
-      relatedThemes: r.relatedThemes as any,
-    } as ResearchInsight));
+    return related.map(
+      (r) =>
+        ({
+          ...r,
+          citationChain: r.citationChain as any,
+          provenance: r.provenance as any,
+          keywords: r.keywords as any,
+          tags: r.tags as any,
+          metadata: r.metadata as any,
+          relatedInsights: r.relatedInsights as any,
+          relatedPapers: r.relatedPapers as any,
+          relatedThemes: r.relatedThemes as any,
+        }) as ResearchInsight,
+    );
   }
 
   // ==========================================================================
@@ -783,13 +846,45 @@ export class ResearchRepositoryService {
     if (!text) return [];
 
     // Simple keyword extraction: lowercase, split, filter stop words, take unique
-    const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'is', 'was', 'are', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'this', 'that', 'these', 'those']);
+    const stopWords = new Set([
+      'the',
+      'a',
+      'an',
+      'and',
+      'or',
+      'but',
+      'in',
+      'on',
+      'at',
+      'to',
+      'for',
+      'of',
+      'with',
+      'by',
+      'from',
+      'is',
+      'was',
+      'are',
+      'were',
+      'been',
+      'be',
+      'have',
+      'has',
+      'had',
+      'do',
+      'does',
+      'did',
+      'this',
+      'that',
+      'these',
+      'those',
+    ]);
 
     const words = text
       .toLowerCase()
       .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
-      .filter(word => word.length > 3 && !stopWords.has(word));
+      .filter((word) => word.length > 3 && !stopWords.has(word));
 
     // Count frequency
     const freq = new Map<string, number>();
@@ -838,7 +933,10 @@ export class ResearchRepositoryService {
   /**
    * Calculate search score for an insight
    */
-  private calculateSearchScore(insight: ResearchInsight, query: string): number {
+  private calculateSearchScore(
+    insight: ResearchInsight,
+    query: string,
+  ): number {
     if (!query) return insight.viewCount + insight.citationCount;
 
     const queryLower = query.toLowerCase();
@@ -855,7 +953,9 @@ export class ResearchRepositoryService {
     }
 
     // Keyword match (medium weight)
-    const keywordMatches = insight.keywords.filter(k => k.includes(queryLower)).length;
+    const keywordMatches = insight.keywords.filter((k) =>
+      k.includes(queryLower),
+    ).length;
     score += keywordMatches * 3;
 
     // Popularity boost
@@ -867,7 +967,11 @@ export class ResearchRepositoryService {
   /**
    * Extract highlights from text
    */
-  private extractHighlights(text: string, query: string, contextLength: number = 100): string[] {
+  private extractHighlights(
+    text: string,
+    query: string,
+    contextLength: number = 100,
+  ): string[] {
     if (!query || !text) return [];
 
     const queryLower = query.toLowerCase();
@@ -879,7 +983,9 @@ export class ResearchRepositoryService {
       const start = Math.max(0, index - contextLength);
       const end = Math.min(text.length, index + query.length + contextLength);
       const snippet = text.substring(start, end);
-      highlights.push((start > 0 ? '...' : '') + snippet + (end < text.length ? '...' : ''));
+      highlights.push(
+        (start > 0 ? '...' : '') + snippet + (end < text.length ? '...' : ''),
+      );
       index = textLower.indexOf(queryLower, index + 1);
     }
 
@@ -932,9 +1038,11 @@ export class ResearchRepositoryService {
     ]);
 
     return {
-      types: new Map(typeGroups.map(g => [g.type, g._count])),
-      sourceTypes: new Map(sourceTypeGroups.map(g => [g.sourceType, g._count])),
-      studies: new Map(studyGroups.map(g => [g.studyId!, g._count])),
+      types: new Map(typeGroups.map((g) => [g.type, g._count])),
+      sourceTypes: new Map(
+        sourceTypeGroups.map((g) => [g.sourceType, g._count]),
+      ),
+      studies: new Map(studyGroups.map((g) => [g.studyId!, g._count])),
       dateRanges: new Map(), // TODO: Implement date range facets
     };
   }
@@ -951,11 +1059,7 @@ export class ResearchRepositoryService {
     const insight = await this.prisma.researchInsight.findFirst({
       where: {
         id: insightId,
-        OR: [
-          { userId },
-          { isPublic: true },
-          { shareLevel: 'public' },
-        ],
+        OR: [{ userId }, { isPublic: true }, { shareLevel: 'public' }],
       },
     });
 
@@ -983,11 +1087,7 @@ export class ResearchRepositoryService {
     const insight = await this.prisma.researchInsight.findFirst({
       where: {
         id: insightId,
-        OR: [
-          { userId },
-          { isPublic: true },
-          { shareLevel: 'public' },
-        ],
+        OR: [{ userId }, { isPublic: true }, { shareLevel: 'public' }],
       },
     });
 
@@ -1010,7 +1110,11 @@ export class ResearchRepositoryService {
   /**
    * Update an annotation
    */
-  async updateAnnotation(annotationId: string, userId: string, content: string) {
+  async updateAnnotation(
+    annotationId: string,
+    userId: string,
+    content: string,
+  ) {
     const annotation = await this.prisma.insightAnnotation.findFirst({
       where: { id: annotationId, userId },
     });
@@ -1056,11 +1160,7 @@ export class ResearchRepositoryService {
     const insight = await this.prisma.researchInsight.findFirst({
       where: {
         id: insightId,
-        OR: [
-          { userId },
-          { isPublic: true },
-          { shareLevel: 'public' },
-        ],
+        OR: [{ userId }, { isPublic: true }, { shareLevel: 'public' }],
       },
     });
 
@@ -1082,11 +1182,7 @@ export class ResearchRepositoryService {
     const insight = await this.prisma.researchInsight.findFirst({
       where: {
         id: insightId,
-        OR: [
-          { userId },
-          { isPublic: true },
-          { shareLevel: 'public' },
-        ],
+        OR: [{ userId }, { isPublic: true }, { shareLevel: 'public' }],
       },
     });
 
@@ -1265,10 +1361,7 @@ export class ResearchRepositoryService {
         accessGrants: {
           where: {
             userId,
-            OR: [
-              { expiresAt: null },
-              { expiresAt: { gt: new Date() } },
-            ],
+            OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
           },
         },
       },
@@ -1315,10 +1408,7 @@ export class ResearchRepositoryService {
     return await this.prisma.insightAccess.findMany({
       where: {
         insightId,
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } },
-        ],
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
       include: {
         user: {

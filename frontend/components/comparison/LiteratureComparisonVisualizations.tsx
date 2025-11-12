@@ -365,8 +365,8 @@ export default function LiteratureComparisonVisualizations({
       byCategory,
       avgConfidence,
       highSignificance,
-      confirmatoryRate: ((byCategory.confirmatory || 0) / total) * 100,
-      noveltyRate: ((byCategory.novel || 0) / total) * 100,
+      confirmatoryRate: ((byCategory['confirmatory'] || 0) / total) * 100,
+      noveltyRate: ((byCategory['novel'] || 0) / total) * 100,
     };
   }, [data.findings]);
 
@@ -483,19 +483,19 @@ export default function LiteratureComparisonVisualizations({
             </div>
             <div className="text-center">
               <p className="text-3xl font-bold text-green-600">
-                {statistics.byCategory.confirmatory || 0}
+                {statistics.byCategory['confirmatory'] || 0}
               </p>
               <p className="text-sm text-gray-600">Confirmatory</p>
             </div>
             <div className="text-center">
               <p className="text-3xl font-bold text-blue-600">
-                {statistics.byCategory.novel || 0}
+                {statistics.byCategory['novel'] || 0}
               </p>
               <p className="text-sm text-gray-600">Novel</p>
             </div>
             <div className="text-center">
               <p className="text-3xl font-bold text-red-600">
-                {statistics.byCategory.contradictory || 0}
+                {statistics.byCategory['contradictory'] || 0}
               </p>
               <p className="text-sm text-gray-600">Contradictory</p>
             </div>
@@ -1058,7 +1058,7 @@ export default function LiteratureComparisonVisualizations({
               literature findings
             </li>
             <li>
-              {statistics.byCategory.novel || 0} novel discoveries not
+              {statistics.byCategory['novel'] || 0} novel discoveries not
               previously documented
             </li>
             <li>

@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/nextjs';
 
 // Client-side Sentry configuration
 Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN || 'https://your-dsn@sentry.io/project-id',
+  dsn: process.env['NEXT_PUBLIC_SENTRY_DSN'] || 'https://your-dsn@sentry.io/project-id',
   environment: process.env.NODE_ENV,
   
   // Adjust this value in production, or use tracesSampler for greater control
@@ -57,7 +57,7 @@ Sentry.init({
     }
     
     // Don't send events in development unless explicitly enabled
-    if (process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_SENTRY_DSN) {
+    if (process.env.NODE_ENV === 'development' && !process.env['NEXT_PUBLIC_SENTRY_DSN']) {
       return null;
     }
     

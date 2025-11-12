@@ -80,7 +80,9 @@ describe('RepositoryController', () => {
     }).compile();
 
     controller = module.get<RepositoryController>(RepositoryController);
-    repositoryService = module.get<ResearchRepositoryService>(ResearchRepositoryService);
+    repositoryService = module.get<ResearchRepositoryService>(
+      ResearchRepositoryService,
+    );
   });
 
   afterEach(() => {
@@ -125,7 +127,10 @@ describe('RepositoryController', () => {
         indexed: 42,
         message: `Successfully indexed 42 insights from study ${mockStudyId}`,
       });
-      expect(repositoryService.reindexStudy).toHaveBeenCalledWith(mockStudyId, mockUserId);
+      expect(repositoryService.reindexStudy).toHaveBeenCalledWith(
+        mockStudyId,
+        mockUserId,
+      );
     });
 
     it('should handle empty study', async () => {
@@ -161,9 +166,21 @@ describe('RepositoryController', () => {
     };
 
     it('should search with basic query', async () => {
-      jest.spyOn(repositoryService, 'search').mockResolvedValue(mockSearchResult);
+      jest
+        .spyOn(repositoryService, 'search')
+        .mockResolvedValue(mockSearchResult);
 
-      const result = await controller.search('test', undefined, undefined, undefined, undefined, undefined, undefined, undefined, mockRequest);
+      const result = await controller.search(
+        'test',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        mockRequest,
+      );
 
       expect(result).toEqual(mockSearchResult);
       expect(repositoryService.search).toHaveBeenCalledWith({
@@ -181,64 +198,124 @@ describe('RepositoryController', () => {
     });
 
     it('should apply type filters', async () => {
-      jest.spyOn(repositoryService, 'search').mockResolvedValue(mockSearchResult);
+      jest
+        .spyOn(repositoryService, 'search')
+        .mockResolvedValue(mockSearchResult);
 
-      await controller.search('test', 'statement,factor', undefined, undefined, undefined, undefined, undefined, undefined, mockRequest);
+      await controller.search(
+        'test',
+        'statement,factor',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        mockRequest,
+      );
 
       expect(repositoryService.search).toHaveBeenCalledWith(
         expect.objectContaining({
           filters: expect.objectContaining({
             types: ['statement', 'factor'],
           }),
-        })
+        }),
       );
     });
 
     it('should apply source type filters', async () => {
-      jest.spyOn(repositoryService, 'search').mockResolvedValue(mockSearchResult);
+      jest
+        .spyOn(repositoryService, 'search')
+        .mockResolvedValue(mockSearchResult);
 
-      await controller.search('test', undefined, 'study,paper', undefined, undefined, undefined, undefined, undefined, mockRequest);
+      await controller.search(
+        'test',
+        undefined,
+        'study,paper',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        mockRequest,
+      );
 
       expect(repositoryService.search).toHaveBeenCalledWith(
         expect.objectContaining({
           filters: expect.objectContaining({
             sourceTypes: ['study', 'paper'],
           }),
-        })
+        }),
       );
     });
 
     it('should apply study filters', async () => {
-      jest.spyOn(repositoryService, 'search').mockResolvedValue(mockSearchResult);
+      jest
+        .spyOn(repositoryService, 'search')
+        .mockResolvedValue(mockSearchResult);
 
-      await controller.search('test', undefined, undefined, 'study-1,study-2', undefined, undefined, undefined, undefined, mockRequest);
+      await controller.search(
+        'test',
+        undefined,
+        undefined,
+        'study-1,study-2',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        mockRequest,
+      );
 
       expect(repositoryService.search).toHaveBeenCalledWith(
         expect.objectContaining({
           filters: expect.objectContaining({
             studyIds: ['study-1', 'study-2'],
           }),
-        })
+        }),
       );
     });
 
     it('should apply pagination', async () => {
-      jest.spyOn(repositoryService, 'search').mockResolvedValue(mockSearchResult);
+      jest
+        .spyOn(repositoryService, 'search')
+        .mockResolvedValue(mockSearchResult);
 
-      await controller.search('test', undefined, undefined, undefined, '10', '20', undefined, undefined, mockRequest);
+      await controller.search(
+        'test',
+        undefined,
+        undefined,
+        undefined,
+        '10',
+        '20',
+        undefined,
+        undefined,
+        mockRequest,
+      );
 
       expect(repositoryService.search).toHaveBeenCalledWith(
         expect.objectContaining({
           limit: 10,
           offset: 20,
-        })
+        }),
       );
     });
 
     it('should apply sorting', async () => {
-      jest.spyOn(repositoryService, 'search').mockResolvedValue(mockSearchResult);
+      jest
+        .spyOn(repositoryService, 'search')
+        .mockResolvedValue(mockSearchResult);
 
-      await controller.search('test', undefined, undefined, undefined, undefined, undefined, 'popularity', 'desc', mockRequest);
+      await controller.search(
+        'test',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'popularity',
+        'desc',
+        mockRequest,
+      );
 
       expect(repositoryService.search).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -246,14 +323,26 @@ describe('RepositoryController', () => {
             field: 'popularity',
             order: 'desc',
           },
-        })
+        }),
       );
     });
 
     it('should default sort order to desc', async () => {
-      jest.spyOn(repositoryService, 'search').mockResolvedValue(mockSearchResult);
+      jest
+        .spyOn(repositoryService, 'search')
+        .mockResolvedValue(mockSearchResult);
 
-      await controller.search('test', undefined, undefined, undefined, undefined, undefined, 'date', undefined, mockRequest);
+      await controller.search(
+        'test',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'date',
+        undefined,
+        mockRequest,
+      );
 
       expect(repositoryService.search).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -261,31 +350,55 @@ describe('RepositoryController', () => {
             field: 'date',
             order: 'desc',
           },
-        })
+        }),
       );
     });
 
     it('should default limit to 20', async () => {
-      jest.spyOn(repositoryService, 'search').mockResolvedValue(mockSearchResult);
+      jest
+        .spyOn(repositoryService, 'search')
+        .mockResolvedValue(mockSearchResult);
 
-      await controller.search('test', undefined, undefined, undefined, undefined, undefined, undefined, undefined, mockRequest);
+      await controller.search(
+        'test',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        mockRequest,
+      );
 
       expect(repositoryService.search).toHaveBeenCalledWith(
         expect.objectContaining({
           limit: 20,
-        })
+        }),
       );
     });
 
     it('should default offset to 0', async () => {
-      jest.spyOn(repositoryService, 'search').mockResolvedValue(mockSearchResult);
+      jest
+        .spyOn(repositoryService, 'search')
+        .mockResolvedValue(mockSearchResult);
 
-      await controller.search('test', undefined, undefined, undefined, undefined, undefined, undefined, undefined, mockRequest);
+      await controller.search(
+        'test',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        mockRequest,
+      );
 
       expect(repositoryService.search).toHaveBeenCalledWith(
         expect.objectContaining({
           offset: 0,
-        })
+        }),
       );
     });
   });
@@ -296,12 +409,17 @@ describe('RepositoryController', () => {
 
   describe('GET /repository/insights/:id', () => {
     it('should retrieve an insight', async () => {
-      jest.spyOn(repositoryService, 'getInsight').mockResolvedValue(mockInsight as any);
+      jest
+        .spyOn(repositoryService, 'getInsight')
+        .mockResolvedValue(mockInsight as any);
 
       const result = await controller.getInsight('insight-1', mockRequest);
 
       expect(result).toEqual(mockInsight);
-      expect(repositoryService.getInsight).toHaveBeenCalledWith('insight-1', mockUserId);
+      expect(repositoryService.getInsight).toHaveBeenCalledWith(
+        'insight-1',
+        mockUserId,
+      );
     });
 
     it('should return 404 for non-existent insight', async () => {
@@ -319,28 +437,44 @@ describe('RepositoryController', () => {
   describe('GET /repository/insights/:id/related', () => {
     it('should get related insights with default limit', async () => {
       const mockRelated = [mockInsight, { ...mockInsight, id: 'insight-2' }];
-      jest.spyOn(repositoryService, 'getRelatedInsights').mockResolvedValue(mockRelated as any);
+      jest
+        .spyOn(repositoryService, 'getRelatedInsights')
+        .mockResolvedValue(mockRelated as any);
 
-      const result = await controller.getRelatedInsights('insight-1', undefined);
+      const result = await controller.getRelatedInsights(
+        'insight-1',
+        undefined,
+      );
 
       expect(result).toEqual(mockRelated);
-      expect(repositoryService.getRelatedInsights).toHaveBeenCalledWith('insight-1', 5);
+      expect(repositoryService.getRelatedInsights).toHaveBeenCalledWith(
+        'insight-1',
+        5,
+      );
     });
 
     it('should get related insights with custom limit', async () => {
       const mockRelated = [mockInsight];
-      jest.spyOn(repositoryService, 'getRelatedInsights').mockResolvedValue(mockRelated as any);
+      jest
+        .spyOn(repositoryService, 'getRelatedInsights')
+        .mockResolvedValue(mockRelated as any);
 
       const result = await controller.getRelatedInsights('insight-1', '10');
 
       expect(result).toEqual(mockRelated);
-      expect(repositoryService.getRelatedInsights).toHaveBeenCalledWith('insight-1', 10);
+      expect(repositoryService.getRelatedInsights).toHaveBeenCalledWith(
+        'insight-1',
+        10,
+      );
     });
 
     it('should handle empty related insights', async () => {
       jest.spyOn(repositoryService, 'getRelatedInsights').mockResolvedValue([]);
 
-      const result = await controller.getRelatedInsights('insight-1', undefined);
+      const result = await controller.getRelatedInsights(
+        'insight-1',
+        undefined,
+      );
 
       expect(result).toEqual([]);
     });
@@ -355,7 +489,15 @@ describe('RepositoryController', () => {
       const result = await controller.getFacets(mockRequest);
 
       expect(result).toEqual({
-        types: ['statement', 'factor', 'theme', 'gap', 'quote', 'paper_finding', 'hypothesis'],
+        types: [
+          'statement',
+          'factor',
+          'theme',
+          'gap',
+          'quote',
+          'paper_finding',
+          'hypothesis',
+        ],
         sourceTypes: ['study', 'paper', 'response', 'analysis', 'literature'],
         shareLevels: ['private', 'team', 'institution', 'public'],
         sortOptions: ['relevance', 'date', 'popularity', 'citationCount'],
@@ -393,7 +535,9 @@ describe('RepositoryController', () => {
         query: {},
       };
 
-      jest.spyOn(repositoryService, 'search').mockResolvedValue(mockSearchResult as any);
+      jest
+        .spyOn(repositoryService, 'search')
+        .mockResolvedValue(mockSearchResult as any);
 
       const result = await controller.getStats(mockRequest);
 
@@ -436,7 +580,9 @@ describe('RepositoryController', () => {
         query: {},
       };
 
-      jest.spyOn(repositoryService, 'search').mockResolvedValue(emptyResult as any);
+      jest
+        .spyOn(repositoryService, 'search')
+        .mockResolvedValue(emptyResult as any);
 
       const result = await controller.getStats(mockRequest);
 

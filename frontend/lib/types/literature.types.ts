@@ -31,18 +31,53 @@ export interface Paper {
   hIndexJournal?: number;
   qualityScore?: number;
   isHighQuality?: boolean;
+  qualityScoreBreakdown?: {
+    citationImpact: number;
+    journalPrestige: number;
+    contentDepth: number;
+  };
   fullText?: string;
   hasFullText?: boolean;
-  fullTextStatus?: 'not_fetched' | 'fetching' | 'success' | 'failed' | 'available';
-  fullTextSource?: 'unpaywall' | 'manual' | 'abstract_overflow' | 'pmc' | 'publisher';
+  fullTextStatus?:
+    | 'not_fetched'
+    | 'fetching'
+    | 'success'
+    | 'failed'
+    | 'available';
+  fullTextSource?:
+    | 'unpaywall'
+    | 'manual'
+    | 'abstract_overflow'
+    | 'pmc'
+    | 'eric'
+    | 'web_of_science'
+    | 'scopus'
+    | 'ieee'
+    | 'springer'
+    | 'nature'
+    | 'wiley'
+    | 'sage'
+    | 'taylor_francis'
+    | 'publisher';
   fullTextWordCount?: number;
+  // Phase 10.6 Day 2: Enhanced PubMed Metadata
+  meshTerms?: Array<{ descriptor: string; qualifiers: string[] }>;
+  publicationType?: string[];
+  authorAffiliations?: Array<{ author: string; affiliation: string }>;
+  grants?: Array<{ grantId: string | null; agency: string | null; country: string | null }>;
 }
 
 export interface SearchFilters {
   yearFrom?: number;
   yearTo?: number;
   sortBy?: 'relevance' | 'date' | 'citations';
-  publicationType?: 'all' | 'journal' | 'conference' | 'preprint' | 'book' | 'thesis';
+  publicationType?:
+    | 'all'
+    | 'journal'
+    | 'conference'
+    | 'preprint'
+    | 'book'
+    | 'thesis';
   author?: string;
   authorSearchMode?: 'contains' | 'exact';
   includeAIMode?: boolean;
@@ -62,7 +97,11 @@ export interface QueryCorrection {
 }
 
 export interface ResearchPurpose {
-  type: 'exploration' | 'hypothesis_testing' | 'theory_building' | 'literature_review';
+  type:
+    | 'exploration'
+    | 'hypothesis_testing'
+    | 'theory_building'
+    | 'literature_review';
   description: string;
   researchQuestions?: string[];
   targetAudience?: string;

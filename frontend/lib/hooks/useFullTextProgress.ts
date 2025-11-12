@@ -34,7 +34,7 @@ export function useFullTextProgress(
 
     // Set up Server-Sent Events connection
     const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+      process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000/api';
     const eventSource = new EventSource(`${apiUrl}/pdf/events/${paperId}`, {
       withCredentials: true,
     });
@@ -146,7 +146,7 @@ export function useFullTextBulkStatus(paperIds: string[]) {
     setLoading(true);
     try {
       const apiUrl =
-        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+        process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000/api';
       const response = await fetch(`${apiUrl}/pdf/bulk-status`, {
         method: 'POST',
         headers: {
@@ -184,7 +184,7 @@ export function useTriggerFullTextFetch() {
     setLoading(true);
     try {
       const apiUrl =
-        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+        process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000/api';
       const response = await fetch(`${apiUrl}/pdf/fetch/${paperId}`, {
         method: 'POST',
         credentials: 'include',

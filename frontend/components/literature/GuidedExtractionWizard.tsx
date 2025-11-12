@@ -90,7 +90,12 @@ interface GuidedExtractionWizardProps {
   corpusId: string;
   corpusName: string;
   allPapers: Paper[];
-  purpose?: 'q_methodology' | 'survey_construction' | 'qualitative_analysis' | 'literature_synthesis' | 'hypothesis_generation';
+  purpose?:
+    | 'q_methodology'
+    | 'survey_construction'
+    | 'qualitative_analysis'
+    | 'literature_synthesis'
+    | 'hypothesis_generation';
   userExpertiseLevel?: 'novice' | 'intermediate' | 'advanced' | 'expert';
   researchContext?: string;
   onIterationComplete?: (result: IterationResult) => void;
@@ -116,9 +121,13 @@ export function GuidedExtractionWizard({
   researchContext: _researchContext,
   onIterationComplete,
 }: GuidedExtractionWizardProps) {
-  const [step, setStep] = useState<WizardStep>(purpose ? 'analyzing' : 'purpose-selection');
-  const [selectedPurpose, setSelectedPurpose] = useState<typeof purpose>(purpose);
-  const [selectedExpertiseLevel, setSelectedExpertiseLevel] = useState<typeof userExpertiseLevel>(userExpertiseLevel);
+  const [step, setStep] = useState<WizardStep>(
+    purpose ? 'analyzing' : 'purpose-selection'
+  );
+  const [selectedPurpose, setSelectedPurpose] =
+    useState<typeof purpose>(purpose);
+  const [selectedExpertiseLevel, setSelectedExpertiseLevel] =
+    useState<typeof userExpertiseLevel>(userExpertiseLevel);
   const [currentIteration, setCurrentIteration] = useState(1);
   const [processedPaperIds, setProcessedPaperIds] = useState<string[]>([]);
   const [currentThemes, setCurrentThemes] = useState<any[]>([]);
@@ -149,7 +158,7 @@ export function GuidedExtractionWizard({
 
     try {
       const requestData = {
-        allPaperIds: allPapers.map((p) => p.id),
+        allPaperIds: allPapers.map(p => p.id),
         processedPaperIds: processedPaperIds,
         currentThemes: currentThemes,
         iteration: currentIteration,
@@ -164,9 +173,13 @@ export function GuidedExtractionWizard({
         iteration: requestData.iteration,
       });
 
-      const data = await incrementalExtractionApi.selectGuidedBatch(requestData);
+      const data =
+        await incrementalExtractionApi.selectGuidedBatch(requestData);
 
-      console.log('✅ [Guided Extraction] Batch recommendation received:', data);
+      console.log(
+        '✅ [Guided Extraction] Batch recommendation received:',
+        data
+      );
 
       setBatchRecommendation(data);
       setDiversityMetrics(data.diversityMetrics);
@@ -174,7 +187,8 @@ export function GuidedExtractionWizard({
       setStep('recommendation');
     } catch (err) {
       console.error('❌ [Guided Extraction] Error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Analysis failed';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Analysis failed';
       console.error('❌ [Guided Extraction] Error message:', errorMessage);
       setError(errorMessage);
       setStep('purpose-selection'); // Go back to purpose selection on error
@@ -197,7 +211,7 @@ export function GuidedExtractionWizard({
       const result = await incrementalExtractionApi.extractThemesIncremental({
         corpusId,
         corpusName,
-        newPaperIds: batchRecommendation.papers.map((p) => p.id),
+        newPaperIds: batchRecommendation.papers.map(p => p.id),
         existingPaperIds: processedPaperIds,
         purpose: selectedPurpose as any,
         userExpertiseLevel: selectedExpertiseLevel as any,
@@ -207,7 +221,10 @@ export function GuidedExtractionWizard({
       const iterationResult: IterationResult = {
         newThemes: result.statistics.newThemesAdded,
         strengthenedThemes: result.statistics.themesStrengthened,
-        unchangedThemes: result.statistics.totalThemeCount - result.statistics.newThemesAdded - result.statistics.themesStrengthened,
+        unchangedThemes:
+          result.statistics.totalThemeCount -
+          result.statistics.newThemesAdded -
+          result.statistics.themesStrengthened,
         totalThemes: result.statistics.totalThemeCount,
         saturation: result.saturation.confidenceLevel * 100,
         isSaturated: result.saturation.isSaturated,
@@ -218,7 +235,7 @@ export function GuidedExtractionWizard({
       setIterationHistory([...iterationHistory, iterationResult]);
       setProcessedPaperIds([
         ...processedPaperIds,
-        ...batchRecommendation.papers.map((p) => p.id),
+        ...batchRecommendation.papers.map(p => p.id),
       ]);
       setCurrentThemes(result.themes);
 
@@ -261,18 +278,59 @@ export function GuidedExtractionWizard({
    */
   const renderPurposeSelection = () => {
     const purposes = [
-      { value: 'qualitative_analysis', label: 'Qualitative Analysis', description: 'General thematic analysis for qualitative research', icon: '🔍' },
-      { value: 'literature_synthesis', label: 'Literature Synthesis', description: 'Meta-analysis and systematic literature reviews', icon: '📚' },
-      { value: 'hypothesis_generation', label: 'Hypothesis Generation', description: 'Theory-building and hypothesis development', icon: '💡' },
-      { value: 'survey_construction', label: 'Survey Construction', description: 'Transform themes into validated survey scales', icon: '📝' },
-      { value: 'q_methodology', label: 'Q-Methodology', description: 'Generate Q-statements for Q-sort studies', icon: '🎯' },
+      {
+        value: 'qualitative_analysis',
+        label: 'Qualitative Analysis',
+        description: 'General thematic analysis for qualitative research',
+        icon: '🔍',
+      },
+      {
+        value: 'literature_synthesis',
+        label: 'Literature Synthesis',
+        description: 'Meta-analysis and systematic literature reviews',
+        icon: '📚',
+      },
+      {
+        value: 'hypothesis_generation',
+        label: 'Hypothesis Generation',
+        description: 'Theory-building and hypothesis development',
+        icon: '💡',
+      },
+      {
+        value: 'survey_construction',
+        label: 'Survey Construction',
+        description: 'Transform themes into validated survey scales',
+        icon: '📝',
+      },
+      {
+        value: 'q_methodology',
+        label: 'Q-Methodology',
+        description: 'Generate Q-statements for Q-sort studies',
+        icon: '🎯',
+      },
     ];
 
     const expertiseLevels = [
-      { value: 'novice', label: 'Novice', description: 'New to qualitative research' },
-      { value: 'intermediate', label: 'Intermediate', description: 'Some experience with thematic analysis' },
-      { value: 'advanced', label: 'Advanced', description: 'Experienced researcher' },
-      { value: 'expert', label: 'Expert', description: 'Expert in qualitative methods' },
+      {
+        value: 'novice',
+        label: 'Novice',
+        description: 'New to qualitative research',
+      },
+      {
+        value: 'intermediate',
+        label: 'Intermediate',
+        description: 'Some experience with thematic analysis',
+      },
+      {
+        value: 'advanced',
+        label: 'Advanced',
+        description: 'Experienced researcher',
+      },
+      {
+        value: 'expert',
+        label: 'Expert',
+        description: 'Expert in qualitative methods',
+      },
     ];
 
     return (
@@ -286,15 +344,18 @@ export function GuidedExtractionWizard({
             Select Your Research Purpose
           </h3>
           <p className="text-gray-400">
-            This helps optimize theme extraction for your specific research goals
+            This helps optimize theme extraction for your specific research
+            goals
           </p>
         </div>
 
         {/* Purpose Selection */}
         <div className="space-y-3">
-          <label className="text-sm font-semibold text-white">Research Purpose</label>
+          <label className="text-sm font-semibold text-white">
+            Research Purpose
+          </label>
           <div className="grid grid-cols-1 gap-3">
-            {purposes.map((p) => (
+            {purposes.map(p => (
               <button
                 key={p.value}
                 onClick={() => setSelectedPurpose(p.value as any)}
@@ -308,7 +369,9 @@ export function GuidedExtractionWizard({
                   <span className="text-2xl">{p.icon}</span>
                   <div className="flex-1">
                     <div className="font-medium text-white">{p.label}</div>
-                    <div className="text-sm text-gray-400 mt-1">{p.description}</div>
+                    <div className="text-sm text-gray-400 mt-1">
+                      {p.description}
+                    </div>
                   </div>
                   {selectedPurpose === p.value && (
                     <CheckCircle className="h-5 w-5 text-blue-400 flex-shrink-0" />
@@ -321,9 +384,11 @@ export function GuidedExtractionWizard({
 
         {/* Expertise Level Selection */}
         <div className="space-y-3">
-          <label className="text-sm font-semibold text-white">Your Expertise Level</label>
+          <label className="text-sm font-semibold text-white">
+            Your Expertise Level
+          </label>
           <div className="grid grid-cols-2 gap-3">
-            {expertiseLevels.map((level) => (
+            {expertiseLevels.map(level => (
               <button
                 key={level.value}
                 onClick={() => setSelectedExpertiseLevel(level.value as any)}
@@ -333,8 +398,12 @@ export function GuidedExtractionWizard({
                     : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
                 }`}
               >
-                <div className="font-medium text-white text-sm">{level.label}</div>
-                <div className="text-xs text-gray-400 mt-1">{level.description}</div>
+                <div className="font-medium text-white text-sm">
+                  {level.label}
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {level.description}
+                </div>
               </button>
             ))}
           </div>
@@ -391,17 +460,22 @@ export function GuidedExtractionWizard({
         </div>
         <div className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-          <span>Selecting optimal batch for iteration {currentIteration}...</span>
+          <span>
+            Selecting optimal batch for iteration {currentIteration}...
+          </span>
         </div>
       </div>
 
       {/* Scientific Foundation Note - NEW */}
       <div className="max-w-md mx-auto bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-left">
-        <p className="text-blue-400 font-semibold mb-1">📚 Quality Assessment Framework:</p>
+        <p className="text-blue-400 font-semibold mb-1">
+          📚 Quality Assessment Framework:
+        </p>
         <p className="text-gray-300 leading-relaxed">
-          Papers scored using CASP (Critical Appraisal Skills Programme) and JBI (Joanna Briggs Institute)
-          quality criteria, combined with <strong>Patton's (1990)</strong> purposive sampling strategies
-          for maximum variation sampling.
+          Papers scored using CASP (Critical Appraisal Skills Programme) and JBI
+          (Joanna Briggs Institute) quality criteria, combined with{' '}
+          <strong>Patton's (1990)</strong> purposive sampling strategies for
+          maximum variation sampling.
         </p>
       </div>
     </motion.div>
@@ -411,8 +485,7 @@ export function GuidedExtractionWizard({
    * Render: Recommendation Step
    */
   const renderRecommendation = () => {
-    if (!batchRecommendation || !diversityMetrics || !corpusStats)
-      return null;
+    if (!batchRecommendation || !diversityMetrics || !corpusStats) return null;
 
     return (
       <motion.div
@@ -441,9 +514,24 @@ export function GuidedExtractionWizard({
           <div className="inline-flex items-center gap-1 text-xs text-gray-500 bg-slate-800/50 border border-slate-700 rounded px-3 py-1">
             <Award className="h-3 w-3 text-yellow-400" />
             <span>
-              {currentIteration === 1 && <><strong>Patton (1990):</strong> Intensity sampling for foundational insights</>}
-              {currentIteration === 2 && <><strong>Patton (1990):</strong> Maximum variation sampling for robustness</>}
-              {currentIteration > 2 && <><strong>Francis et al. (2010):</strong> Saturation assessment framework</>}
+              {currentIteration === 1 && (
+                <>
+                  <strong>Patton (1990):</strong> Intensity sampling for
+                  foundational insights
+                </>
+              )}
+              {currentIteration === 2 && (
+                <>
+                  <strong>Patton (1990):</strong> Maximum variation sampling for
+                  robustness
+                </>
+              )}
+              {currentIteration > 2 && (
+                <>
+                  <strong>Francis et al. (2010):</strong> Saturation assessment
+                  framework
+                </>
+              )}
             </span>
           </div>
         </div>
@@ -614,10 +702,13 @@ export function GuidedExtractionWizard({
 
       {/* Thematic Analysis Citation - NEW */}
       <div className="max-w-md mx-auto bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 text-xs text-left">
-        <p className="text-purple-400 font-semibold mb-1">📚 Analysis Framework:</p>
+        <p className="text-purple-400 font-semibold mb-1">
+          📚 Analysis Framework:
+        </p>
         <p className="text-gray-300 leading-relaxed">
-          <strong>Braun & Clarke (2006, 2019):</strong> 6-stage Reflexive Thematic Analysis ensures
-          systematic, transparent theme development with iterative refinement across all coding stages.
+          <strong>Braun & Clarke (2006, 2019):</strong> 6-stage Reflexive
+          Thematic Analysis ensures systematic, transparent theme development
+          with iterative refinement across all coding stages.
         </p>
       </div>
     </motion.div>
@@ -691,22 +782,37 @@ export function GuidedExtractionWizard({
               <div className="text-lg font-bold text-white">
                 {processedPaperIds.length}/{allPapers.length}
                 <span className="text-sm text-gray-400 ml-1">
-                  ({Math.round((processedPaperIds.length / allPapers.length) * 100)}%)
+                  (
+                  {Math.round(
+                    (processedPaperIds.length / allPapers.length) * 100
+                  )}
+                  %)
                 </span>
               </div>
             </div>
             <div className="bg-slate-900/50 rounded-lg p-3">
-              <div className="text-xs text-gray-400 mb-1">Potential Savings</div>
+              <div className="text-xs text-gray-400 mb-1">
+                Potential Savings
+              </div>
               <div className="text-lg font-bold text-green-400">
-                {Math.round(((allPapers.length - processedPaperIds.length) / allPapers.length) * 100)}%
-                <span className="text-xs text-gray-400 ml-1">if stopped now</span>
+                {Math.round(
+                  ((allPapers.length - processedPaperIds.length) /
+                    allPapers.length) *
+                    100
+                )}
+                %
+                <span className="text-xs text-gray-400 ml-1">
+                  if stopped now
+                </span>
               </div>
             </div>
           </div>
           <div className="text-xs text-gray-300 bg-slate-900/30 rounded p-2 border border-slate-700">
-            <strong className="text-green-400">🔬 Scientific Note:</strong> By analyzing papers iteratively and monitoring saturation,
-            you're following Glaser & Strauss (1967) theoretical sampling. Most studies reach saturation after analyzing
-            20-40% of their corpus, saving substantial time and cost.
+            <strong className="text-green-400">🔬 Scientific Note:</strong> By
+            analyzing papers iteratively and monitoring saturation, you're
+            following Glaser & Strauss (1967) theoretical sampling. Most studies
+            reach saturation after analyzing 20-40% of their corpus, saving
+            substantial time and cost.
           </div>
         </div>
 
@@ -749,9 +855,9 @@ export function GuidedExtractionWizard({
                     </div>
                     <div className="text-gray-300">
                       Glaser & Strauss (1967) recommend stopping when no new
-                      insights emerge. You've reached {Math.round(lastResult.saturation)}%
-                      saturation with {lastResult.unchangedThemes} themes remaining
-                      unchanged.
+                      insights emerge. You've reached{' '}
+                      {Math.round(lastResult.saturation)}% saturation with{' '}
+                      {lastResult.unchangedThemes} themes remaining unchanged.
                     </div>
                   </div>
                 </div>
@@ -831,8 +937,8 @@ export function GuidedExtractionWizard({
         </h3>
         <p className="text-gray-400 mb-6 max-w-md mx-auto text-center">
           You've successfully reached theoretical saturation after{' '}
-          {iterationHistory.length} iterations with {Math.round(finalSaturation)}%
-          confidence.
+          {iterationHistory.length} iterations with{' '}
+          {Math.round(finalSaturation)}% confidence.
         </p>
 
         {/* Research Summary */}
@@ -888,16 +994,21 @@ export function GuidedExtractionWizard({
               <div className="text-3xl font-bold text-blue-400 mb-1">
                 {iterationHistory.length}
               </div>
-              <div className="text-xs text-gray-400">Iterations to Saturation</div>
+              <div className="text-xs text-gray-400">
+                Iterations to Saturation
+              </div>
               <div className="text-[10px] text-gray-500 mt-1">
                 (avg 3-4 for most studies)
               </div>
             </div>
           </div>
           <div className="text-xs text-gray-300 bg-slate-900/30 rounded p-3 border border-slate-700">
-            <strong className="text-green-400">🎯 Why This Matters:</strong> Guided mode achieved saturation by analyzing only{' '}
-            {processedPaperIds.length} of {allPapers.length} papers ({100 - savingsPercent}% of corpus), saving{' '}
-            {savingsPercent}% of time and cost while maintaining scientific rigor per Glaser & Strauss (1967).
+            <strong className="text-green-400">🎯 Why This Matters:</strong>{' '}
+            Guided mode achieved saturation by analyzing only{' '}
+            {processedPaperIds.length} of {allPapers.length} papers (
+            {100 - savingsPercent}% of corpus), saving {savingsPercent}% of time
+            and cost while maintaining scientific rigor per Glaser & Strauss
+            (1967).
           </div>
         </div>
 
@@ -912,20 +1023,26 @@ export function GuidedExtractionWizard({
               <strong>Theme Extraction Methodology:</strong>
             </p>
             <p className="mb-2">
-              We employed guided incremental extraction using scientifically-backed purposive sampling strategies
-              (Patton, 1990; Glaser & Strauss, 1967). Papers were analyzed iteratively across {iterationHistory.length}{' '}
-              iterations, with automatic batch selection based on 5-dimensional quality scoring (methodology 30%,
-              citations 25%, journal impact 20%, content quality 15%, full-text availability 10%).
+              We employed guided incremental extraction using
+              scientifically-backed purposive sampling strategies (Patton, 1990;
+              Glaser & Strauss, 1967). Papers were analyzed iteratively across{' '}
+              {iterationHistory.length} iterations, with automatic batch
+              selection based on 5-dimensional quality scoring (methodology 30%,
+              citations 25%, journal impact 20%, content quality 15%, full-text
+              availability 10%).
             </p>
             <p className="mb-2">
-              <strong>Iteration Strategy:</strong> Iteration 1 established foundational themes from highest-quality papers;
-              Iteration 2 tested theme robustness across diverse methodologies; Iterations 3+ filled conceptual gaps
-              until saturation.
+              <strong>Iteration Strategy:</strong> Iteration 1 established
+              foundational themes from highest-quality papers; Iteration 2
+              tested theme robustness across diverse methodologies; Iterations
+              3+ filled conceptual gaps until saturation.
             </p>
             <p>
-              <strong>Saturation:</strong> Theoretical saturation ({Math.round(finalSaturation)}% confidence) was reached
-              after analyzing {processedPaperIds.length} of {allPapers.length} papers, yielding {currentThemes.length}{' '}
-              distinct themes (Francis et al., 2010).
+              <strong>Saturation:</strong> Theoretical saturation (
+              {Math.round(finalSaturation)}% confidence) was reached after
+              analyzing {processedPaperIds.length} of {allPapers.length} papers,
+              yielding {currentThemes.length} distinct themes (Francis et al.,
+              2010).
             </p>
           </div>
           <button
@@ -981,7 +1098,9 @@ export function GuidedExtractionWizard({
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2 flex items-center gap-2 text-xs">
             <Award className="h-3 w-3 text-blue-400 flex-shrink-0" />
             <div className="text-gray-300">
-              <strong className="text-blue-400">Research-Backed Methodology:</strong>
+              <strong className="text-blue-400">
+                Research-Backed Methodology:
+              </strong>
               <span className="text-gray-400 ml-1">
                 Glaser & Strauss (1967) • Patton (1990) • Francis et al. (2010)
               </span>

@@ -46,7 +46,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ResearchPurpose,
   SaturationData,
-  SourceContent,
+  // SourceContent, // Available if needed
   UnifiedTheme,
   UserExpertiseLevel,
   useUnifiedThemeAPI,
@@ -61,7 +61,7 @@ import { useThemeExtractionProgress } from '@/lib/hooks/useThemeExtractionProgre
 // Phase 10 Day 18: Incremental Extraction Hook
 import { useIncrementalExtraction } from '@/lib/hooks/useIncrementalExtraction';
 // Phase 10 Day 31.4: Full-Text Waiting Hook
-import { useWaitForFullText } from '@/lib/hooks/useWaitForFullText';
+// import { useWaitForFullText } from '@/lib/hooks/useWaitForFullText'; // Available if needed
 // Phase 10.1 Day 4: Paper Management & State Persistence Hooks
 import { usePaperManagement } from '@/lib/hooks/usePaperManagement';
 import { useStatePersistence } from '@/lib/hooks/useStatePersistence';
@@ -73,6 +73,8 @@ import { useAlternativeSources } from '@/lib/hooks/useAlternativeSources';
 import { useThemeExtractionHandlers } from '@/lib/hooks/useThemeExtractionHandlers';
 // Phase 10.1 Day 6 Audit Fix: Theme Extraction Workflow Hook
 import { useThemeExtractionWorkflow } from '@/lib/hooks/useThemeExtractionWorkflow';
+// Phase 10.1 Day 7: Progressive Search Hook (200 papers)
+import { useProgressiveSearch } from '@/lib/hooks/useProgressiveSearch';
 import {
   literatureAPI,
   // type Paper, // Available if needed
@@ -104,13 +106,13 @@ import {
   X,
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 // Phase 10 Day 33: WebSocket for real-time theme extraction progress
 import io from 'socket.io-client';
 type Socket = ReturnType<typeof io>;
 import { useAuth } from '@/components/providers/AuthProvider';
-import { retryApiCall } from '@/lib/utils/retry';
+// import { retryApiCall } from '@/lib/utils/retry'; // Available if needed
 // Phase 10 Day 31: Extracted SearchSection Components
 import {
   ActiveFiltersChips,
@@ -122,15 +124,21 @@ import { PaperCard } from './components/PaperCard';
 // Phase 10.1 Day 3: Extracted Panel Components
 import { AcademicResourcesPanel } from './components/AcademicResourcesPanel';
 import { AlternativeSourcesPanel } from './components/AlternativeSourcesPanel';
+// Phase 10.1 Day 7: Social Media Panel Component (DEFERRED - requires Day 6 useYouTubeIntegration hook)
+// import { SocialMediaPanel } from './components/SocialMediaPanel';
+// Phase 10.1 Day 7: Progressive Loading Components
+import { ProgressiveLoadingIndicator } from '@/components/literature/ProgressiveLoadingIndicator';
+// Phase 10.6 Day 14.5+: Search Process Transparency Component (Enterprise-Grade)
+import { SearchProcessIndicator } from '@/components/literature/SearchProcessIndicator';
 // Phase 10 Day 31: useSearch hook available for future migration
 import { useLiteratureSearchStore } from '@/lib/stores/literature-search.store';
 
 function LiteratureSearchContent() {
   // Phase 10 Day 31.4: Constants (eliminate magic numbers)
-  const FULL_TEXT_WAIT_SECONDS = 60; // Maximum wait for full-text extraction
-  const LIBRARY_MAX_PAPERS = 1000; // Maximum papers to fetch from library
-  const ABSTRACT_OVERFLOW_THRESHOLD = 2000; // Characters threshold for abstract overflow
-  const MIN_CONTENT_LENGTH = 50; // Minimum content length for analysis
+  // const FULL_TEXT_WAIT_SECONDS = 60; // Maximum wait for full-text extraction
+  // const LIBRARY_MAX_PAPERS = 1000; // Maximum papers to fetch from library
+  // const ABSTRACT_OVERFLOW_THRESHOLD = 2000; // Characters threshold for abstract overflow
+  // const MIN_CONTENT_LENGTH = 50; // Minimum content length for analysis
 
   // PHASE 10 DAY 1: URL state management for bookmarkable searches
   const router = useRouter();
@@ -193,12 +201,12 @@ function LiteratureSearchContent() {
 
     // Build filter object from URL params
     const urlFilterUpdates: Record<string, any> = {};
-    if (yearFrom) urlFilterUpdates.yearFrom = parseInt(yearFrom);
-    if (yearTo) urlFilterUpdates.yearTo = parseInt(yearTo);
-    if (minCitations) urlFilterUpdates.minCitations = parseInt(minCitations);
+    if (yearFrom) urlFilterUpdates['yearFrom'] = parseInt(yearFrom);
+    if (yearTo) urlFilterUpdates['yearTo'] = parseInt(yearTo);
+    if (minCitations) urlFilterUpdates['minCitations'] = parseInt(minCitations);
     if (publicationType && publicationType !== 'all')
-      urlFilterUpdates.publicationType = publicationType;
-    if (sortBy && sortBy !== 'relevance') urlFilterUpdates.sortBy = sortBy;
+      urlFilterUpdates['publicationType'] = publicationType;
+    if (sortBy && sortBy !== 'relevance') urlFilterUpdates['sortBy'] = sortBy;
 
     // Apply URL filters if any
     if (Object.keys(urlFilterUpdates).length > 0) {
@@ -218,12 +226,85 @@ function LiteratureSearchContent() {
     setSelectedPapers,
     setSavedPapers,
     setExtractingPapers,
-    setExtractedPapers,
+    setExtractedPapers, // Phase 10.1 Day 12: Uncommented for extraction completion tracking
     togglePaperSelection,
     handleTogglePaperSave,
     loadUserLibrary: loadUserLibraryFromHook,
     // handleSavePaper, handleRemovePaper, isSelected, isSaved, isExtracting, isExtracted - available if needed
   } = usePaperManagement();
+
+  // Phase 10.1 Day 7: Progressive Search Hook (200 papers)
+  const { executeProgressiveSearch, cancelProgressiveSearch, isSearching } =
+    useProgressiveSearch();
+  const { progressiveLoading } = useLiteratureSearchStore();
+  // Phase 10.1 Day 7: Always use progressive mode (200 papers with quality sorting) - toggle removed
+
+  // Phase 10.6 Day 14: Source Filtering - Filter papers by selected academic databases
+  const filteredPapers = useMemo(() => {
+    // If no sources selected, show all papers
+    if (academicDatabases.length === 0) return papers;
+
+    // Map UI source IDs to backend LiteratureSource enum values
+    const sourceMapping: Record<string, string[]> = {
+      pubmed: ['pubmed'],
+      pmc: ['pmc'],
+      arxiv: ['arxiv'],
+      biorxiv: ['biorxiv', 'medrxiv'], // Both use same backend service
+      chemrxiv: ['chemrxiv'],
+      semantic_scholar: ['semantic_scholar'],
+      google_scholar: ['google_scholar'],
+      ssrn: ['ssrn'],
+      crossref: ['crossref'],
+      eric: ['eric'],
+      web_of_science: ['web_of_science'],
+      scopus: ['scopus'],
+      ieee_xplore: ['ieee_xplore'],
+      springer: ['springer'],
+      nature: ['nature'],
+      wiley: ['wiley'],
+      sage: ['sage'],
+      taylor_francis: ['taylor_francis'],
+    };
+
+    // Build set of allowed sources
+    const allowedSources = new Set<string>();
+    academicDatabases.forEach(dbId => {
+      const sources = sourceMapping[dbId] || [dbId];
+      sources.forEach(s => allowedSources.add(s));
+    });
+
+    // Filter papers by source
+    return papers.filter(paper => {
+      if (!paper.source) return false; // No source = don't show
+      const paperSource = paper.source.toLowerCase();
+      return allowedSources.has(paperSource);
+    });
+  }, [papers, academicDatabases]);
+
+  // Phase 10.6 Day 14: Auto-deselect papers that are filtered out
+  useEffect(() => {
+    if (filteredPapers.length < papers.length) {
+      // Some papers are filtered out - remove them from selection
+      const filteredPaperIds = new Set(filteredPapers.map(p => p.id));
+      const updatedSelection = new Set(
+        Array.from(selectedPapers).filter(id => filteredPaperIds.has(id))
+      );
+      if (updatedSelection.size !== selectedPapers.size) {
+        setSelectedPapers(updatedSelection);
+      }
+    }
+  }, [filteredPapers, papers, selectedPapers, setSelectedPapers]);
+
+  // Phase 10.6 Day 14.5+: ENTERPRISE TRANSPARENCY - Get metadata from backend
+  // SearchMetadata contains complete pipeline: Collection → Dedup → Quality → Final
+  const { searchMetadata } = useLiteratureSearchStore();
+
+  // DEBUG: Log metadata from store
+  console.log('[LiteraturePage] Search metadata from store:', {
+    hasMetadata: searchMetadata !== null,
+    metadata: searchMetadata,
+    papersCount: papers.length,
+  });
 
   // Analysis state
   const [unifiedThemes, setUnifiedThemes] = useState<UnifiedTheme[]>([]);
@@ -235,7 +316,7 @@ function LiteratureSearchContent() {
   const [extractionPurpose, setExtractionPurpose] =
     useState<ResearchPurpose | null>(null);
   const [showPurposeWizard, setShowPurposeWizard] = useState(false);
-  const [v2SaturationData, setV2SaturationData] =
+  const [v2SaturationData, _setV2SaturationData] =
     useState<SaturationData | null>(null);
   const [userExpertiseLevel] = useState<UserExpertiseLevel>('researcher');
 
@@ -261,7 +342,7 @@ function LiteratureSearchContent() {
   const incrementalExtraction = useIncrementalExtraction();
 
   // Phase 10 Day 31.4: Full-text waiting before extraction
-  const { waitForFullText } = useWaitForFullText();
+  // const { waitForFullText } = useWaitForFullText(); // Available if needed
 
   // Phase 10 Day 33: WebSocket connection for real-time progress
   const { user } = useAuth();
@@ -305,7 +386,7 @@ function LiteratureSearchContent() {
     loadingSocial,
     handleSearchAlternativeSources,
     handleSearchSocialMedia,
-    handleSearchAllSources,
+    // handleSearchAllSources removed - always using progressive search (200 papers)
   } = useAlternativeSources({
     query,
     mainSearchHandler: handleSearch,
@@ -314,10 +395,16 @@ function LiteratureSearchContent() {
     onSwitchTab: setActiveTab,
   });
 
+  // Phase 10.1 Day 7: Always execute progressive search (200 papers with quality sorting)
+  const handleSearchWithMode = useCallback(async () => {
+    // Execute progressive search (200 high-quality papers)
+    await executeProgressiveSearch();
+  }, [executeProgressiveSearch]);
+
   // Phase 10.1 Day 6 Audit Fix: Theme Extraction Workflow Hook (Paper Preparation & Content Analysis)
   // Must be AFTER useAlternativeSources since it depends on transcribedVideos
   const {
-    isExtractionInProgress,
+    // isExtractionInProgress, // Available if needed
     preparingMessage,
     contentAnalysis,
     currentRequestId,
@@ -348,6 +435,7 @@ function LiteratureSearchContent() {
       setExtractionPurpose,
       setAnalyzingThemes,
       setExtractingPapers,
+      setExtractedPapers, // Phase 10.1 Day 12: Added for extraction completion tracking
       setIsExtractionInProgress,
       setExtractionError,
       setContentAnalysis,
@@ -475,7 +563,7 @@ function LiteratureSearchContent() {
     userIdRef.current = user.id;
 
     // Get API URL from environment
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000';
 
     // Connect to theme-extraction WebSocket namespace
     const socket = io(`${apiUrl}/theme-extraction`, {
@@ -502,7 +590,12 @@ function LiteratureSearchContent() {
     });
 
     socket.on('connect_error', (error: any) => {
-      console.error('❌ WebSocket connection error:', error.message);
+      // Phase 10.1 Day 7: Suppress expected namespace errors (backend gateway not registered)
+      if (error.message === 'Invalid namespace') {
+        console.log('👤 WebSocket: Theme extraction namespace not available, using fallback mode');
+      } else {
+        console.error('❌ WebSocket connection error:', error.message);
+      }
     });
 
     // Theme extraction progress updates
@@ -541,6 +634,20 @@ function LiteratureSearchContent() {
       const themesCount = data.details?.themesExtracted || 0;
       completeExtraction(themesCount);
 
+      // Phase 10.1 Day 12: Move papers from extracting to extracted state
+      // This enables the "Extracted" badge to show on individual papers
+      setExtractedPapers(prev => {
+        const newExtracted = new Set(prev);
+        extractingPapers.forEach(paperId => newExtracted.add(paperId));
+        console.log(
+          `✅ Marked ${extractingPapers.size} papers as extracted (total: ${newExtracted.size})`
+        );
+        return newExtracted;
+      });
+
+      // Clear extracting state
+      setExtractingPapers(new Set());
+
       // Celebration animation
       if (themesCount > 0) {
         confetti({
@@ -568,7 +675,7 @@ function LiteratureSearchContent() {
         socketRef.current = null;
       }
     };
-  }, [user?.id]); // Phase 10 Day 33 Fix: Reconnect when user changes (login/logout)
+  }, [user?.id, updateProgress, completeExtraction, setExtractionError]); // Phase 10 Day 33 Fix: Reconnect when user changes (login/logout)
 
   // PHASE 10 DAY 5.17.5: Clear incompatible results when purpose changes
   // Prevents stale data from previous purposes persisting in state
@@ -638,7 +745,8 @@ function LiteratureSearchContent() {
   // Removed 893 lines: handleModeSelected (20 lines) + handlePurposeSelected (873 lines)
 
   // Phase 10 Day 5.12: Helper to convert UnifiedTheme to Theme format
-  const mapUnifiedThemeToTheme = (unifiedTheme: UnifiedTheme) => ({
+  // Phase 10.1 Day 8: Memoized to avoid recreating on every render
+  const mapUnifiedThemeToTheme = useCallback((unifiedTheme: UnifiedTheme) => ({
     id: unifiedTheme.id,
     name: unifiedTheme.label,
     description: unifiedTheme.description || '',
@@ -650,10 +758,11 @@ function LiteratureSearchContent() {
       type: source.sourceType,
     })),
     keyPhrases: unifiedTheme.keywords,
-  });
+  }), []);
 
   // Phase 10 Day 5.12: Enhanced Theme Integration Handlers
-  const handleGenerateQuestions = async () => {
+  // Phase 10.1 Day 8: Wrapped with useCallback for performance
+  const handleGenerateQuestions = useCallback(async () => {
     if (selectedThemeIds.length === 0) {
       toast.error('Please select themes first');
       return;
@@ -705,9 +814,10 @@ function LiteratureSearchContent() {
     } finally {
       setLoadingQuestions(false);
     }
-  };
+  }, [selectedThemeIds, unifiedThemes, mapUnifiedThemeToTheme, extractionPurpose, setLoadingQuestions, setResearchQuestions]);
 
-  const handleGenerateHypotheses = async () => {
+  // Phase 10.1 Day 8: Wrapped with useCallback for performance
+  const handleGenerateHypotheses = useCallback(async () => {
     if (selectedThemeIds.length === 0) {
       toast.error('Please select themes first');
       return;
@@ -733,9 +843,10 @@ function LiteratureSearchContent() {
     } finally {
       setLoadingHypotheses(false);
     }
-  };
+  }, [selectedThemeIds, unifiedThemes, mapUnifiedThemeToTheme, setLoadingHypotheses, setHypotheses]);
 
-  const handleMapConstructs = async () => {
+  // Phase 10.1 Day 8: Wrapped with useCallback for performance
+  const handleMapConstructs = useCallback(async () => {
     if (selectedThemeIds.length === 0) {
       toast.error('Please select themes first');
       return;
@@ -760,9 +871,10 @@ function LiteratureSearchContent() {
     } finally {
       setLoadingConstructs(false);
     }
-  };
+  }, [selectedThemeIds, unifiedThemes, mapUnifiedThemeToTheme, setLoadingConstructs, setConstructMappings]);
 
-  const handleGenerateSurvey = async (config: SurveyGenerationConfig) => {
+  // Phase 10.1 Day 8: Wrapped with useCallback for performance
+  const handleGenerateSurvey = useCallback(async (config: SurveyGenerationConfig) => {
     if (selectedThemeIds.length === 0) {
       toast.error('Please select themes first');
       return;
@@ -816,9 +928,10 @@ function LiteratureSearchContent() {
     } finally {
       setLoadingSurvey(false);
     }
-  };
+  }, [selectedThemeIds, unifiedThemes, mapUnifiedThemeToTheme, setLoadingSurvey, setGeneratedSurvey]);
 
-  const handleAnalyzeGaps = async () => {
+  // Phase 10.1 Day 8: Wrapped with useCallback for performance
+  const handleAnalyzeGaps = useCallback(async () => {
     // Use selected papers for gap analysis
     if (selectedPapers.size === 0) {
       toast.error('Please select papers to analyze for research gaps');
@@ -874,9 +987,10 @@ function LiteratureSearchContent() {
     } finally {
       setAnalyzingGaps(false);
     }
-  };
+  }, [selectedPapers, papers, setAnalyzingGaps, setGaps, setActiveTab, setActiveAnalysisSubTab]);
 
-  const handleExportCitations = async (format: 'bibtex' | 'ris' | 'apa') => {
+  // Phase 10.1 Day 8: Wrapped with useCallback for performance
+  const handleExportCitations = useCallback(async (format: 'bibtex' | 'ris' | 'apa') => {
     if (selectedPapers.size === 0) {
       toast.error('Please select papers to export');
       return;
@@ -904,9 +1018,10 @@ function LiteratureSearchContent() {
     } catch (error) {
       toast.error('Export failed');
     }
-  };
+  }, [selectedPapers]);
 
-  const handleGenerateStatements = async () => {
+  // Phase 10.1 Day 8: Wrapped with useCallback for performance
+  const handleGenerateStatements = useCallback(async () => {
     console.log('🎯 [Q-Statements] Button clicked');
     console.log(`   Themes available: ${unifiedThemes.length}`);
 
@@ -957,7 +1072,7 @@ function LiteratureSearchContent() {
         `Statement generation failed: ${error.message || 'Unknown error'}`
       );
     }
-  };
+  }, [unifiedThemes, query, router]);
 
   // Phase 10.1 Day 5: Alternative sources handlers now provided by useAlternativeSources hook (203 lines removed)
   // - handleSearchAlternativeSources (104 lines)
@@ -1086,8 +1201,8 @@ function LiteratureSearchContent() {
 
           {/* Phase 10 Day 31: Extracted SearchBar Component */}
           <SearchBar
-            onSearch={handleSearchAllSources}
-            isLoading={loading || loadingAlternative || loadingSocial}
+            onSearch={handleSearchWithMode}
+            isLoading={loading || loadingAlternative || loadingSocial || isSearching}
             appliedFilterCount={getAppliedFilterCount()}
             showFilters={showFilters}
             onToggleFilters={toggleShowFilters}
@@ -1101,6 +1216,38 @@ function LiteratureSearchContent() {
 
           {/* Phase 10 Day 31: Extracted FilterPanel Component */}
           <FilterPanel isVisible={showFilters} />
+
+          {/* Phase 10.6 Day 14.5+: ENTERPRISE TRANSPARENCY INDICATOR */}
+          {/* Shows complete pipeline: Collection → Dedup → Quality → Final */}
+          {/* Now uses REAL backend metadata instead of frontend calculations */}
+          {/* FIXED: Show during AND after progressive loading (not blocked) */}
+          {(() => {
+            const isVisible = searchMetadata !== null && papers.length > 0;
+            console.log('🔍 [SearchProcessIndicator] Visibility Check:', {
+              searchMetadata: searchMetadata ? 'HAS DATA' : 'NULL',
+              papersLength: papers.length,
+              isVisible,
+              metadataKeys: searchMetadata ? Object.keys(searchMetadata) : [],
+            });
+            return (
+              <SearchProcessIndicator
+                query={query}
+                metadata={searchMetadata}
+                searchStatus={
+                  loading ? 'searching' :
+                  progressiveLoading.status === 'loading' ? 'searching' :
+                  papers.length > 0 ? 'completed' : 'idle'
+                }
+                isVisible={isVisible}
+              />
+            );
+          })()}
+
+          {/* Phase 10.1 Day 7: Progressive Loading Indicator */}
+          <ProgressiveLoadingIndicator
+            state={progressiveLoading}
+            onCancel={cancelProgressiveSearch}
+          />
         </CardContent>
       </Card>
 
@@ -1110,7 +1257,7 @@ function LiteratureSearchContent() {
         onDatabasesChange={setAcademicDatabases}
         institutionAuth={institutionAuth}
         onInstitutionAuthChange={setInstitutionAuth}
-        papers={papers}
+        papers={filteredPapers}
         selectedPapers={selectedPapers}
         transcribedVideosCount={transcribedVideos.length}
         analyzingThemes={analyzingThemes}
@@ -1953,7 +2100,16 @@ function LiteratureSearchContent() {
                 </Alert>
               )}
 
-              {loading ? (
+              {/* Phase 10.1 Day 7: Progressive Loading Indicator */}
+              {progressiveLoading.isActive && progressiveLoading.status === 'loading' && (
+                <ProgressiveLoadingIndicator
+                  state={progressiveLoading}
+                  onCancel={cancelProgressiveSearch}
+                />
+              )}
+
+              {/* Show loading spinner ONLY if not in progressive mode OR if progressive hasn't started yet */}
+              {loading && !progressiveLoading.isActive ? (
                 <div className="flex justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
                 </div>
@@ -2076,8 +2232,30 @@ function LiteratureSearchContent() {
                     </div>
                   </div>
 
+                  {/* Phase 10.6 Day 14: Source Filter Status Indicator */}
+                  {academicDatabases.length > 0 &&
+                    filteredPapers.length < papers.length && (
+                      <Alert className="mb-4 bg-blue-50 border-blue-300">
+                        <Database className="w-4 h-4 text-blue-600" />
+                        <AlertDescription className="text-blue-900">
+                          <span className="font-semibold">
+                            Filtering active:
+                          </span>{' '}
+                          Showing {filteredPapers.length} of {papers.length}{' '}
+                          papers from {academicDatabases.length} selected source
+                          {academicDatabases.length > 1 ? 's' : ''}.{' '}
+                          <button
+                            onClick={() => setAcademicDatabases([])}
+                            className="underline hover:text-blue-700 font-medium"
+                          >
+                            Clear filters to show all
+                          </button>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
                   {/* Papers List */}
-                  {papers.map(paper => (
+                  {filteredPapers.map(paper => (
                     <PaperCard
                       key={paper.id}
                       paper={paper}

@@ -125,24 +125,24 @@ export const useVideoManagementStore = create<VideoManagementState>()(
         transcriptionOptions: defaultTranscriptionOptions,
 
         // Search actions
-        setSearchQuery: (searchQuery) => set({ searchQuery }),
+        setSearchQuery: searchQuery => set({ searchQuery }),
 
-        setVideos: (videos) => set({ videos }),
+        setVideos: videos => set({ videos }),
 
-        addVideos: (videos) =>
-          set((state) => ({
+        addVideos: videos =>
+          set(state => ({
             videos: [...state.videos, ...videos],
           })),
 
         clearVideos: () => set({ videos: [], selectedVideos: new Set() }),
 
-        setLoading: (loading) => set({ loading }),
+        setLoading: loading => set({ loading }),
 
-        setError: (error) => set({ error }),
+        setError: error => set({ error }),
 
         // Selection actions
-        toggleVideoSelection: (videoId) =>
-          set((state) => {
+        toggleVideoSelection: videoId =>
+          set(state => {
             const newSet = new Set(state.selectedVideos);
             if (newSet.has(videoId)) {
               newSet.delete(videoId);
@@ -153,29 +153,29 @@ export const useVideoManagementStore = create<VideoManagementState>()(
           }),
 
         selectAllVideos: () =>
-          set((state) => ({
-            selectedVideos: new Set(state.videos.map((v) => v.id)),
+          set(state => ({
+            selectedVideos: new Set(state.videos.map(v => v.id)),
           })),
 
         clearSelection: () => set({ selectedVideos: new Set() }),
 
-        isSelected: (videoId) => get().selectedVideos.has(videoId),
+        isSelected: videoId => get().selectedVideos.has(videoId),
 
         getSelectedVideos: () => {
           const { videos, selectedVideos } = get();
-          return videos.filter((v) => selectedVideos.has(v.id));
+          return videos.filter(v => selectedVideos.has(v.id));
         },
 
         // Transcription actions
-        addToQueue: (videoId) =>
-          set((state) => {
+        addToQueue: videoId =>
+          set(state => {
             const newQueue = new Set(state.transcriptionQueue);
             newQueue.add(videoId);
             return { transcriptionQueue: newQueue };
           }),
 
-        removeFromQueue: (videoId) =>
-          set((state) => {
+        removeFromQueue: videoId =>
+          set(state => {
             const newQueue = new Set(state.transcriptionQueue);
             newQueue.delete(videoId);
             return { transcriptionQueue: newQueue };
@@ -184,7 +184,7 @@ export const useVideoManagementStore = create<VideoManagementState>()(
         clearQueue: () => set({ transcriptionQueue: new Set() }),
 
         setTranscription: (videoId, transcription) =>
-          set((state) => {
+          set(state => {
             const newMap = new Map(state.transcribedVideos);
             newMap.set(videoId, transcription);
 
@@ -198,17 +198,17 @@ export const useVideoManagementStore = create<VideoManagementState>()(
             };
           }),
 
-        getTranscription: (videoId) => get().transcribedVideos.get(videoId),
+        getTranscription: videoId => get().transcribedVideos.get(videoId),
 
         setTranscriptionProgress: (videoId, progress) =>
-          set((state) => {
+          set(state => {
             const newProgress = new Map(state.transcriptionProgress);
             newProgress.set(videoId, progress);
             return { transcriptionProgress: newProgress };
           }),
 
-        setTranscriptionOptions: (options) =>
-          set((state) => ({
+        setTranscriptionOptions: options =>
+          set(state => ({
             transcriptionOptions: { ...state.transcriptionOptions, ...options },
           })),
 
@@ -227,12 +227,12 @@ export const useVideoManagementStore = create<VideoManagementState>()(
       {
         name: 'video-management-store',
         // Persist transcriptions and options
-        partialize: (state) => ({
+        partialize: state => ({
           transcribedVideos: Array.from(state.transcribedVideos.entries()),
           transcriptionOptions: state.transcriptionOptions,
         }),
         // Convert Map back from array on rehydration
-        onRehydrateStorage: () => (state) => {
+        onRehydrateStorage: () => state => {
           if (state) {
             state.transcribedVideos = new Map(
               state.transcribedVideos as unknown as [string, Transcription][]

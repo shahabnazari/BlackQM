@@ -195,7 +195,7 @@ class HubAPIService {
       this.wsConnection.close();
     }
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000';
+    const wsUrl = process.env['NEXT_PUBLIC_WS_URL'] || 'ws://localhost:4000';
     this.wsConnection = new WebSocket(wsUrl);
 
     this.wsConnection.onopen = () => {

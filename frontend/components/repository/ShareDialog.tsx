@@ -37,9 +37,9 @@ interface ShareDialogProps {
 
 export function ShareDialog({ insight, onClose, onUpdate }: ShareDialogProps) {
   const [isPublic, setIsPublic] = useState(insight.isPublic);
-  const [shareLevel, setShareLevel] = useState<'private' | 'team' | 'institution' | 'public'>(
-    insight.shareLevel,
-  );
+  const [shareLevel, setShareLevel] = useState<
+    'private' | 'team' | 'institution' | 'public'
+  >(insight.shareLevel);
   const [accessList, setAccessList] = useState<InsightAccess[]>([]);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState<AccessRole>('VIEWER');
@@ -65,7 +65,11 @@ export function ShareDialog({ insight, onClose, onUpdate }: ShareDialogProps) {
     setLoading(true);
     setError(null);
     try {
-      const updated = await repositoryApi.updateVisibility(insight.id, isPublic, shareLevel);
+      const updated = await repositoryApi.updateVisibility(
+        insight.id,
+        isPublic,
+        shareLevel
+      );
       onUpdate?.(updated);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update visibility');
@@ -133,7 +137,9 @@ export function ShareDialog({ insight, onClose, onUpdate }: ShareDialogProps) {
             <div className="flex items-center gap-3">
               <ShareIcon className="w-6 h-6 text-blue-600" />
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Share & Permissions</h2>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Share & Permissions
+                </h2>
                 <p className="text-sm text-gray-500 mt-1">{insight.title}</p>
               </div>
             </div>
@@ -153,7 +159,9 @@ export function ShareDialog({ insight, onClose, onUpdate }: ShareDialogProps) {
 
           {/* Visibility Settings */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Visibility</h3>
+            <h3 className="text-sm font-medium text-gray-900 mb-3">
+              Visibility
+            </h3>
             <div className="space-y-3">
               {/* Public/Private Toggle */}
               <label className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
@@ -164,7 +172,9 @@ export function ShareDialog({ insight, onClose, onUpdate }: ShareDialogProps) {
                     <LockClosedIcon className="w-5 h-5 text-gray-600" />
                   )}
                   <div>
-                    <p className="font-medium text-sm">{isPublic ? 'Public' : 'Private'}</p>
+                    <p className="font-medium text-sm">
+                      {isPublic ? 'Public' : 'Private'}
+                    </p>
                     <p className="text-xs text-gray-500">
                       {isPublic
                         ? 'Anyone can view this insight'
@@ -175,7 +185,7 @@ export function ShareDialog({ insight, onClose, onUpdate }: ShareDialogProps) {
                 <input
                   type="checkbox"
                   checked={isPublic}
-                  onChange={(e) => setIsPublic(e.target.checked)}
+                  onChange={e => setIsPublic(e.target.checked)}
                   className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
               </label>
@@ -187,14 +197,22 @@ export function ShareDialog({ insight, onClose, onUpdate }: ShareDialogProps) {
                 </label>
                 <select
                   value={shareLevel}
-                  onChange={(e) =>
-                    setShareLevel(e.target.value as 'private' | 'team' | 'institution' | 'public')
+                  onChange={e =>
+                    setShareLevel(
+                      e.target.value as
+                        | 'private'
+                        | 'team'
+                        | 'institution'
+                        | 'public'
+                    )
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 >
                   <option value="private">Private - Only you</option>
                   <option value="team">Team - Your research team</option>
-                  <option value="institution">Institution - Your organization</option>
+                  <option value="institution">
+                    Institution - Your organization
+                  </option>
                   <option value="public">Public - Everyone</option>
                 </select>
               </div>
@@ -220,11 +238,13 @@ export function ShareDialog({ insight, onClose, onUpdate }: ShareDialogProps) {
             </h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-gray-700 mb-1">User Email</label>
+                <label className="block text-xs text-gray-700 mb-1">
+                  User Email
+                </label>
                 <input
                   type="email"
                   value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  onChange={e => setNewUserEmail(e.target.value)}
                   placeholder="user@example.com"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
@@ -233,12 +253,16 @@ export function ShareDialog({ insight, onClose, onUpdate }: ShareDialogProps) {
                 <label className="block text-xs text-gray-700 mb-1">Role</label>
                 <select
                   value={newUserRole}
-                  onChange={(e) => setNewUserRole(e.target.value as AccessRole)}
+                  onChange={e => setNewUserRole(e.target.value as AccessRole)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 >
                   <option value="VIEWER">Viewer - Can view only</option>
-                  <option value="COMMENTER">Commenter - Can view and add annotations</option>
-                  <option value="EDITOR">Editor - Can view, annotate, and edit</option>
+                  <option value="COMMENTER">
+                    Commenter - Can view and add annotations
+                  </option>
+                  <option value="EDITOR">
+                    Editor - Can view, annotate, and edit
+                  </option>
                   <option value="OWNER">Owner - Full control</option>
                 </select>
               </div>
@@ -266,17 +290,20 @@ export function ShareDialog({ insight, onClose, onUpdate }: ShareDialogProps) {
               </p>
             ) : (
               <div className="space-y-2">
-                {accessList.map((access) => (
+                {accessList.map(access => (
                   <div
                     key={access.id}
                     className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900">
-                        {access.user?.name || access.user?.email || access.userId}
+                        {access.user?.name ||
+                          access.user?.email ||
+                          access.userId}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Granted {new Date(access.grantedAt).toLocaleDateString()}
+                        Granted{' '}
+                        {new Date(access.grantedAt).toLocaleDateString()}
                         {access.expiresAt &&
                           ` • Expires ${new Date(access.expiresAt).toLocaleDateString()}`}
                       </p>

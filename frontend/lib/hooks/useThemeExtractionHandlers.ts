@@ -92,6 +92,7 @@ export interface UseThemeExtractionHandlersConfig {
   setExtractionPurpose: (purpose: ResearchPurpose) => void;
   setAnalyzingThemes: (analyzing: boolean) => void;
   setExtractingPapers: (papers: Set<string>) => void;
+  setExtractedPapers: (updater: (prev: Set<string>) => Set<string>) => void; // Phase 10.1 Day 12: Added
   setIsExtractionInProgress: (inProgress: boolean) => void;
   setExtractionError: (error: string) => void;
   setContentAnalysis: (analysis: ContentAnalysis | null) => void;
@@ -101,7 +102,11 @@ export interface UseThemeExtractionHandlersConfig {
   startExtraction: (totalSources: number) => void;
 
   // API functions
-  extractThemesV2: (sources: any[], request: any, onProgress?: any) => Promise<any>;
+  extractThemesV2: (
+    sources: any[],
+    request: any,
+    onProgress?: any
+  ) => Promise<any>;
 
   // Optional callbacks
   onExtractionComplete?: (themes: any[]) => void;
@@ -186,6 +191,7 @@ export function useThemeExtractionHandlers(
     setExtractionPurpose,
     setAnalyzingThemes,
     setExtractingPapers,
+    setExtractedPapers, // Phase 10.1 Day 12: Added for extraction completion tracking
     setIsExtractionInProgress,
     setExtractionError,
     setContentAnalysis,
@@ -594,6 +600,17 @@ export function useThemeExtractionHandlers(
         console.log(`\n✅ [${requestId}] STEP 5: Processing Results`);
         console.log(`${'─'.repeat(60)}`);
         console.log(`   📊 Themes extracted: ${result.themes?.length || 0}`);
+
+        // Phase 10.1 Day 12: Move papers from extracting to extracted state
+        // This ensures "Extracted" badges show on papers even if WebSocket fails
+        setExtractedPapers(prev => {
+          const newExtracted = new Set(prev);
+          paperIds.forEach(id => newExtracted.add(id));
+          console.log(
+            `   ✅ Marked ${paperIds.length} papers as extracted (total: ${newExtracted.size})`
+          );
+          return newExtracted;
+        });
 
         // Clear extracting state
         setExtractingPapers(new Set());

@@ -46,7 +46,7 @@ export interface UseWebSocketReturn {
  */
 export function useWebSocket(options: WebSocketOptions = {}): UseWebSocketReturn {
   const {
-    url = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3334',
+    url = process.env['NEXT_PUBLIC_WS_URL'] || 'ws://localhost:3334',
     protocols = [],
     reconnectInterval = 1000,
     maxReconnectAttempts = 5,

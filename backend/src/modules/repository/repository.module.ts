@@ -24,14 +24,10 @@ import { ReportModule } from '../report/report.module';
 @Module({
   imports: [
     forwardRef(() => AnalysisModule), // Prevent circular dependency
-    forwardRef(() => ReportModule),   // Prevent circular dependency
+    forwardRef(() => ReportModule), // Prevent circular dependency
   ],
   controllers: [RepositoryController],
-  providers: [
-    ResearchRepositoryService,
-    PrismaService,
-    CacheService,
-  ],
+  providers: [ResearchRepositoryService, PrismaService, CacheService],
   exports: [ResearchRepositoryService],
 })
 export class RepositoryModule {}

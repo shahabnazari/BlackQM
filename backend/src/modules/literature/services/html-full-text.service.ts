@@ -30,7 +30,8 @@ interface HtmlFetchResult {
 @Injectable()
 export class HtmlFullTextService {
   private readonly logger = new Logger(HtmlFullTextService.name);
-  private readonly PMC_BASE_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
+  private readonly PMC_BASE_URL =
+    'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
   private readonly NCBI_EMAIL = 'research@blackq.app'; // Required by NCBI API terms
   private readonly NCBI_TOOL = 'blackqmethod';
   private readonly REQUEST_TIMEOUT_MS = 15000; // 15 seconds
@@ -71,7 +72,9 @@ export class HtmlFullTextService {
       this.logger.log(`🔍 Attempting HTML scraping from: ${url}`);
       const htmlResult = await this.scrapeHtmlFromUrl(url);
       if (htmlResult.success) {
-        this.logger.log(`✅ HTML scraping success: ${htmlResult.wordCount} words`);
+        this.logger.log(
+          `✅ HTML scraping success: ${htmlResult.wordCount} words`,
+        );
         return htmlResult;
       }
       this.logger.log(`⚠️  HTML scraping failed: ${htmlResult.error}`);
@@ -143,7 +146,9 @@ export class HtmlFullTextService {
 
       const wordCount = this.calculateWordCount(fullText);
 
-      this.logger.log(`✅ PMC extraction successful: ${wordCount} words from ${pmcid}`);
+      this.logger.log(
+        `✅ PMC extraction successful: ${wordCount} words from ${pmcid}`,
+      );
 
       return {
         success: true,
@@ -194,7 +199,9 @@ export class HtmlFullTextService {
 
       return null;
     } catch (error) {
-      this.logger.warn(`Failed to convert PMID ${pmid} to PMCID: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.warn(
+        `Failed to convert PMID ${pmid} to PMCID: ${error instanceof Error ? error.message : String(error)}`,
+      );
       return null;
     }
   }
@@ -254,7 +261,9 @@ export class HtmlFullTextService {
 
       return bodyContent;
     } catch (error) {
-      this.logger.error(`Error parsing PMC XML: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(
+        `Error parsing PMC XML: ${error instanceof Error ? error.message : String(error)}`,
+      );
       return '';
     }
   }
@@ -280,8 +289,10 @@ export class HtmlFullTextService {
       const response = await axios.get(url, {
         timeout: this.REQUEST_TIMEOUT_MS,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.9',
         },
         maxRedirects: 5,
@@ -301,10 +312,16 @@ export class HtmlFullTextService {
         extractedText = this.extractMdpiContent(document);
       } else if (hostname.includes('frontiersin.org')) {
         extractedText = this.extractFrontiersContent(document);
-      } else if (hostname.includes('nature.com') || hostname.includes('springer.com')) {
+      } else if (
+        hostname.includes('nature.com') ||
+        hostname.includes('springer.com')
+      ) {
         extractedText = this.extractSpringerNatureContent(document);
       } else if (hostname.includes('sciencedirect.com')) {
         extractedText = this.extractScienceDirectContent(document);
+      } else if (hostname.includes('jamanetwork.com')) {
+        // Phase 10.6 Day 8: JAMA Network - American Medical Association
+        extractedText = this.extractJAMAContent(document);
       } else {
         // Generic fallback
         extractedText = this.extractGenericContent(document);
@@ -313,7 +330,8 @@ export class HtmlFullTextService {
       if (!extractedText || extractedText.length < 100) {
         return {
           success: false,
-          error: 'HTML scraping returned insufficient text (possible paywall or extraction failure)',
+          error:
+            'HTML scraping returned insufficient text (possible paywall or extraction failure)',
         };
       }
 
@@ -341,11 +359,7 @@ export class HtmlFullTextService {
    */
 
   private extractPlosContent(document: Document): string {
-    const selectors = [
-      '.article-text',
-      '#artText',
-      '.article-content',
-    ];
+    const selectors = ['.article-text', '#artText', '.article-content'];
     return this.extractBySelectors(document, selectors);
   }
 
@@ -359,11 +373,7 @@ export class HtmlFullTextService {
   }
 
   private extractFrontiersContent(document: Document): string {
-    const selectors = [
-      '.JournalFullText',
-      'article',
-      '.main-content',
-    ];
+    const selectors = ['.JournalFullText', 'article', '.main-content'];
     return this.extractBySelectors(document, selectors);
   }
 
@@ -378,9 +388,20 @@ export class HtmlFullTextService {
   }
 
   private extractScienceDirectContent(document: Document): string {
+    const selectors = ['#body', '.Body', 'article'];
+    return this.extractBySelectors(document, selectors);
+  }
+
+  /**
+   * Phase 10.6 Day 8: JAMA Network HTML extraction
+   * American Medical Association's publishing platform
+   */
+  private extractJAMAContent(document: Document): string {
     const selectors = [
-      '#body',
-      '.Body',
+      '.article-full-text',
+      '.article-body-section',
+      '#Article',
+      '.article-content',
       'article',
     ];
     return this.extractBySelectors(document, selectors);

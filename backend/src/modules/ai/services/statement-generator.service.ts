@@ -138,12 +138,12 @@ IMPORTANT: Generate exactly ${count} statements, no more, no less.`;
 
     for (const line of lines) {
       const match = line.match(/^(S\d+):\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+)$/);
-      if (match) {
+      if (match && match.length >= 5) {
         statements.push({
-          id: match[1],
-          text: match[2].trim(),
-          perspective: match[3].trim(),
-          polarity: match[4].trim().toLowerCase() as
+          id: match[1] as string,
+          text: (match[2] as string).trim(),
+          perspective: (match[3] as string).trim(),
+          polarity: (match[4] as string).trim().toLowerCase() as
             | 'positive'
             | 'negative'
             | 'neutral',

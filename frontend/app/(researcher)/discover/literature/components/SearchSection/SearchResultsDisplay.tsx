@@ -133,7 +133,7 @@ const QueryDisplayBanner = memo(function QueryDisplayBanner({
             <span className="text-sm text-gray-600">Sort:</span>
             <select
               value={appliedSortBy}
-              onChange={(e) => {
+              onChange={e => {
                 logger.debug('[QueryDisplayBanner] Sort changed', {
                   sortBy: e.target.value,
                 });
@@ -229,7 +229,9 @@ export const SearchResultsDisplay = memo(function SearchResultsDisplay({
 
     // Trigger search with original query (delayed to allow state update)
     setTimeout(() => {
-      logger.debug('[SearchResultsDisplay] Triggering search with original query');
+      logger.debug(
+        '[SearchResultsDisplay] Triggering search with original query'
+      );
       // Note: Actual search trigger should come from parent via callback
     }, 100);
   };
@@ -288,7 +290,7 @@ export const SearchResultsDisplay = memo(function SearchResultsDisplay({
 
       {/* Papers List */}
       <div className="space-y-4">
-        {papers.map((paper) => (
+        {papers.map(paper => (
           <React.Fragment key={paper.id}>{renderPaper(paper)}</React.Fragment>
         ))}
       </div>

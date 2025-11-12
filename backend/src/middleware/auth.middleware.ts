@@ -16,12 +16,13 @@ export const authMiddleware = (
   req: Request,
   res: Response,
   next: NextFunction,
-) => {
+): void => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+      res.status(401).json({ error: 'No token provided' });
+      return;
     }
 
     const decoded = verify(token, process.env.JWT_SECRET || 'secret') as any;
@@ -32,8 +33,8 @@ export const authMiddleware = (
       role: decoded.role || 'user',
     };
     next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+  } catch (error: any) {
+    res.status(401).json({ error: 'Invalid token' });
   }
 };
 

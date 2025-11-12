@@ -504,7 +504,7 @@ export class UnifiedThemeAPIService {
       if (onProgress && typeof window !== 'undefined') {
         const socketIO = await import('socket.io-client');
         const wsUrl =
-          process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+          process.env['NEXT_PUBLIC_BACKEND_URL'] || 'http://localhost:4000';
 
         socket = socketIO.default(`${wsUrl}/theme-extraction`, {
           transports: ['websocket', 'polling'],

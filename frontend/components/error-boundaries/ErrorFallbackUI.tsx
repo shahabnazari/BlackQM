@@ -146,7 +146,11 @@ export function ErrorFallbackUI({
 // Loading Fallback UI
 // ============================================================================
 
-export function LoadingFallbackUI({ message = 'Loading...' }: { message?: string }) {
+export function LoadingFallbackUI({
+  message = 'Loading...',
+}: {
+  message?: string;
+}) {
   return (
     <div className="min-h-[400px] flex items-center justify-center p-6">
       <div className="text-center">

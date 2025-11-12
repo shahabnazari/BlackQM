@@ -11,7 +11,7 @@ import { tokenStorage, getDeviceFingerprint } from './utils';
 // Create axios instance with base configuration
 const createAuthClient = (): AxiosInstance => {
   const baseURL =
-    process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+    process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000/api';
 
   const client = axios.create({
     baseURL,

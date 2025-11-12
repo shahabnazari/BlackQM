@@ -87,7 +87,10 @@ interface SocialMediaState {
 
   // Actions - Platform configuration
   togglePlatform: (platform: SocialPlatform) => void;
-  setPlatformConfig: (platform: SocialPlatform, config: Partial<PlatformConfig>) => void;
+  setPlatformConfig: (
+    platform: SocialPlatform,
+    config: Partial<PlatformConfig>
+  ) => void;
   enableAllPlatforms: () => void;
   disableAllPlatforms: () => void;
 
@@ -148,7 +151,7 @@ export const useSocialMediaStore = create<SocialMediaState>()(
         // Initial state
         platforms: defaultPlatforms,
         platformConfigs: new Map(
-          defaultPlatforms.map((p) => [p, { ...defaultPlatformConfig }])
+          defaultPlatforms.map(p => [p, { ...defaultPlatformConfig }])
         ),
         searchQuery: '',
         results: new Map(),
@@ -160,8 +163,8 @@ export const useSocialMediaStore = create<SocialMediaState>()(
         selectedPosts: new Set(),
 
         // Platform configuration actions
-        togglePlatform: (platform) =>
-          set((state) => {
+        togglePlatform: platform =>
+          set(state => {
             const newConfigs = new Map(state.platformConfigs);
             const config = newConfigs.get(platform);
             if (config) {
@@ -171,17 +174,18 @@ export const useSocialMediaStore = create<SocialMediaState>()(
           }),
 
         setPlatformConfig: (platform, config) =>
-          set((state) => {
+          set(state => {
             const newConfigs = new Map(state.platformConfigs);
-            const existingConfig = newConfigs.get(platform) || defaultPlatformConfig;
+            const existingConfig =
+              newConfigs.get(platform) || defaultPlatformConfig;
             newConfigs.set(platform, { ...existingConfig, ...config });
             return { platformConfigs: newConfigs };
           }),
 
         enableAllPlatforms: () =>
-          set((state) => {
+          set(state => {
             const newConfigs = new Map(state.platformConfigs);
-            state.platforms.forEach((platform) => {
+            state.platforms.forEach(platform => {
               const config = newConfigs.get(platform);
               if (config) {
                 newConfigs.set(platform, { ...config, enabled: true });
@@ -191,9 +195,9 @@ export const useSocialMediaStore = create<SocialMediaState>()(
           }),
 
         disableAllPlatforms: () =>
-          set((state) => {
+          set(state => {
             const newConfigs = new Map(state.platformConfigs);
-            state.platforms.forEach((platform) => {
+            state.platforms.forEach(platform => {
               const config = newConfigs.get(platform);
               if (config) {
                 newConfigs.set(platform, { ...config, enabled: false });
@@ -203,25 +207,25 @@ export const useSocialMediaStore = create<SocialMediaState>()(
           }),
 
         // Search actions
-        setSearchQuery: (searchQuery) => set({ searchQuery }),
+        setSearchQuery: searchQuery => set({ searchQuery }),
 
         setResults: (platform, posts) =>
-          set((state) => {
+          set(state => {
             const newResults = new Map(state.results);
             newResults.set(platform, posts);
             return { results: newResults };
           }),
 
         addResults: (platform, posts) =>
-          set((state) => {
+          set(state => {
             const newResults = new Map(state.results);
             const existing = newResults.get(platform) || [];
             newResults.set(platform, [...existing, ...posts]);
             return { results: newResults };
           }),
 
-        clearResults: (platform) =>
-          set((state) => {
+        clearResults: platform =>
+          set(state => {
             if (platform) {
               const newResults = new Map(state.results);
               newResults.delete(platform);
@@ -231,29 +235,29 @@ export const useSocialMediaStore = create<SocialMediaState>()(
           }),
 
         setLoading: (platform, loading) =>
-          set((state) => {
+          set(state => {
             const newLoading = new Map(state.loading);
             newLoading.set(platform, loading);
             return { loading: newLoading };
           }),
 
         setError: (platform, error) =>
-          set((state) => {
+          set(state => {
             const newErrors = new Map(state.errors);
             newErrors.set(platform, error);
             return { errors: newErrors };
           }),
 
         // Insights actions
-        setInsights: (insights) => set({ insights }),
+        setInsights: insights => set({ insights }),
 
-        setAnalyzingInsights: (analyzingInsights) => set({ analyzingInsights }),
+        setAnalyzingInsights: analyzingInsights => set({ analyzingInsights }),
 
-        setInsightsError: (insightsError) => set({ insightsError }),
+        setInsightsError: insightsError => set({ insightsError }),
 
         // Selection actions
-        togglePostSelection: (postId) =>
-          set((state) => {
+        togglePostSelection: postId =>
+          set(state => {
             const newSet = new Set(state.selectedPosts);
             if (newSet.has(postId)) {
               newSet.delete(postId);
@@ -266,33 +270,33 @@ export const useSocialMediaStore = create<SocialMediaState>()(
         selectAllPosts: () =>
           set(() => {
             const allPosts = get().getAllPosts();
-            return { selectedPosts: new Set(allPosts.map((p) => p.id)) };
+            return { selectedPosts: new Set(allPosts.map(p => p.id)) };
           }),
 
         clearSelection: () => set({ selectedPosts: new Set() }),
 
-        isSelected: (postId) => get().selectedPosts.has(postId),
+        isSelected: postId => get().selectedPosts.has(postId),
 
         getSelectedPosts: () => {
           const allPosts = get().getAllPosts();
           const { selectedPosts } = get();
-          return allPosts.filter((p) => selectedPosts.has(p.id));
+          return allPosts.filter(p => selectedPosts.has(p.id));
         },
 
         // Utility actions
         getEnabledPlatforms: () => {
           const { platforms, platformConfigs } = get();
-          return platforms.filter((p) => platformConfigs.get(p)?.enabled);
+          return platforms.filter(p => platformConfigs.get(p)?.enabled);
         },
 
         getAllPosts: () => {
           const { results } = get();
           const allPosts: SocialPost[] = [];
-          results.forEach((posts) => allPosts.push(...posts));
+          results.forEach(posts => allPosts.push(...posts));
           return allPosts;
         },
 
-        getPostsByPlatform: (platform) => {
+        getPostsByPlatform: platform => {
           return get().results.get(platform) || [];
         },
 
@@ -312,14 +316,17 @@ export const useSocialMediaStore = create<SocialMediaState>()(
       {
         name: 'social-media-store',
         // Persist platform configurations
-        partialize: (state) => ({
+        partialize: state => ({
           platformConfigs: Array.from(state.platformConfigs.entries()),
         }),
         // Convert Map back from array on rehydration
-        onRehydrateStorage: () => (state) => {
+        onRehydrateStorage: () => state => {
           if (state) {
             state.platformConfigs = new Map(
-              state.platformConfigs as unknown as [SocialPlatform, PlatformConfig][]
+              state.platformConfigs as unknown as [
+                SocialPlatform,
+                PlatformConfig,
+              ][]
             );
           }
         },

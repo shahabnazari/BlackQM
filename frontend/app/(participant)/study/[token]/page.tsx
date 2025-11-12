@@ -49,9 +49,9 @@ export default function ParticipantStudyPage() {
 
         // Use token from URL or default to study-1
         const studyId =
-          typeof params.token === 'string'
-            ? params.token
-            : params.token?.[0] || 'study-1';
+          typeof params['token'] === 'string'
+            ? params['token']
+            : params['token']?.[0] || 'study-1';
 
         // Start session (will use mock data if backend is not available)
         const session = await participantApi.startSession(studyId);
@@ -91,7 +91,7 @@ export default function ParticipantStudyPage() {
     };
 
     initSession();
-  }, [params.token]);
+  }, [params]);
 
   const handleStepComplete = async (data?: any) => {
     setCompletedSteps([...completedSteps, currentStep]);

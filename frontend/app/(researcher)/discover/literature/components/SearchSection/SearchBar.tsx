@@ -9,7 +9,15 @@
 
 import React, { useEffect, useRef, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Sparkles, Loader2, ArrowRight, Filter, X, ChevronRight } from 'lucide-react';
+import {
+  Search,
+  Sparkles,
+  Loader2,
+  ArrowRight,
+  Filter,
+  X,
+  ChevronRight,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -81,6 +89,13 @@ export const SearchBar = memo(function SearchBar({
   const suggestionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
+  // 🔧 FIX: Hydration - Only render dynamic badges after client mount
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // ============================================================================
   // AI Suggestions Effect (Debounced)
   // ============================================================================
@@ -107,7 +122,10 @@ export const SearchBar = memo(function SearchBar({
           });
 
           // Set the expanded query as first suggestion, followed by top 3 alternatives
-          setAISuggestions([result.expanded, ...result.suggestions.slice(0, 3)]);
+          setAISuggestions([
+            result.expanded,
+            ...result.suggestions.slice(0, 3),
+          ]);
           setShowSuggestions(true);
         } catch (error) {
           logger.error('[SearchBar] Failed to fetch AI suggestions', error);
@@ -220,7 +238,7 @@ export const SearchBar = memo(function SearchBar({
           <Input
             placeholder="Search across academic databases, alternative sources, and social media..."
             value={query}
-            onChange={(e) => handleQueryChange(e.target.value)}
+            onChange={e => handleQueryChange(e.target.value)}
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
             className="pl-14 pr-4 h-14 text-lg border-2 focus:border-blue-500"
@@ -229,67 +247,68 @@ export const SearchBar = memo(function SearchBar({
 
           {/* AI-Powered Inline Suggestions Dropdown */}
           <AnimatePresence>
-            {showSuggestions && (aiSuggestions.length > 0 || loadingSuggestions) && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-purple-200 rounded-lg shadow-xl z-50 overflow-hidden"
-              >
-                <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-purple-100 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm font-semibold text-purple-900">
-                    AI-Refined Questions (GPT-4)
-                  </span>
-                  {loadingSuggestions && (
-                    <Loader2 className="w-3 h-3 animate-spin text-purple-600 ml-auto" />
-                  )}
-                </div>
-
-                {loadingSuggestions ? (
-                  <div className="p-4 text-center text-gray-500 text-sm">
-                    Generating refined queries...
+            {showSuggestions &&
+              (aiSuggestions.length > 0 || loadingSuggestions) && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-purple-200 rounded-lg shadow-xl z-50 overflow-hidden"
+                >
+                  <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-purple-100 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm font-semibold text-purple-900">
+                      AI-Refined Questions (GPT-4)
+                    </span>
+                    {loadingSuggestions && (
+                      <Loader2 className="w-3 h-3 animate-spin text-purple-600 ml-auto" />
+                    )}
                   </div>
-                ) : (
-                  <div className="max-h-64 overflow-y-auto">
-                    {aiSuggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleSuggestionClick(suggestion)}
-                        className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0 group"
-                      >
-                        <div className="flex items-start gap-3">
-                          <Badge
-                            variant="outline"
-                            className="mt-0.5 bg-purple-100 text-purple-700 border-purple-300 flex-shrink-0"
-                          >
-                            {index === 0 ? '✨ Best' : `${index + 1}`}
-                          </Badge>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-900 group-hover:text-purple-900 font-medium break-words">
-                              {suggestion}
-                            </p>
+
+                  {loadingSuggestions ? (
+                    <div className="p-4 text-center text-gray-500 text-sm">
+                      Generating refined queries...
+                    </div>
+                  ) : (
+                    <div className="max-h-64 overflow-y-auto">
+                      {aiSuggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0 group"
+                        >
+                          <div className="flex items-start gap-3">
+                            <Badge
+                              variant="outline"
+                              className="mt-0.5 bg-purple-100 text-purple-700 border-purple-300 flex-shrink-0"
+                            >
+                              {index === 0 ? '✨ Best' : `${index + 1}`}
+                            </Badge>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-gray-900 group-hover:text-purple-900 font-medium break-words">
+                                {suggestion}
+                              </p>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 flex-shrink-0 mt-0.5" />
                           </div>
-                          <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 flex-shrink-0 mt-0.5" />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
-                <div className="p-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-600 text-center">
-                  Press{' '}
-                  <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded text-xs">
-                    Enter
-                  </kbd>{' '}
-                  to search •{' '}
-                  <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded text-xs">
-                    Esc
-                  </kbd>{' '}
-                  to close
-                </div>
-              </motion.div>
-            )}
+                  <div className="p-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-600 text-center">
+                    Press{' '}
+                    <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded text-xs">
+                      Enter
+                    </kbd>{' '}
+                    to search •{' '}
+                    <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded text-xs">
+                      Esc
+                    </kbd>{' '}
+                    to close
+                  </div>
+                </motion.div>
+              )}
           </AnimatePresence>
         </div>
 
@@ -318,7 +337,7 @@ export const SearchBar = memo(function SearchBar({
         >
           <Filter className="w-5 h-5 mr-2" />
           Filters
-          {appliedFilterCount > 0 && (
+          {isMounted && appliedFilterCount > 0 && (
             <Badge className="ml-2 bg-purple-600 text-white">
               {appliedFilterCount}
             </Badge>
@@ -334,22 +353,22 @@ export const SearchBar = memo(function SearchBar({
       {/* Active Sources Indicator */}
       <div className="flex items-center gap-2 text-sm text-gray-600">
         <span className="font-medium">Active sources:</span>
-        {academicDatabasesCount > 0 && (
+        {isMounted && academicDatabasesCount > 0 && (
           <Badge variant="outline" className="bg-blue-50">
             {academicDatabasesCount} Academic
           </Badge>
         )}
-        {alternativeSourcesCount > 0 && (
+        {isMounted && alternativeSourcesCount > 0 && (
           <Badge variant="outline" className="bg-indigo-50">
             {alternativeSourcesCount} Alternative
           </Badge>
         )}
-        {socialPlatformsCount > 0 && (
+        {isMounted && socialPlatformsCount > 0 && (
           <Badge variant="outline" className="bg-purple-50">
             {socialPlatformsCount} Social Media
           </Badge>
         )}
-        {hasNoSources && (
+        {isMounted && hasNoSources && (
           <span className="text-orange-600">
             ⚠️ No sources selected - please select sources below
           </span>

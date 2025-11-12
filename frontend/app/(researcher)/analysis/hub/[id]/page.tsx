@@ -28,7 +28,7 @@ import { HubLoadingSkeleton } from '@/components/hub/LoadingSkeleton';
  */
 export default function AnalysisHubPage() {
   const params = useParams();
-  const studyId = params.id as string;
+  const studyId = params['id'] as string;
 
   const { studyData, isLoading, error, loadStudy, currentSection } =
     useStudyHub();

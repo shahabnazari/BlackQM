@@ -295,14 +295,14 @@ export default function ScreeningQuestionnaire({
   }
 
   // Error state
-  if (errors.general) {
+  if (errors['general']) {
     return (
       <Card className="max-w-3xl mx-auto p-8">
         <Alert variant="destructive">
           <ExclamationTriangleIcon className="h-5 w-5" />
           <div className="ml-2">
             <h3 className="font-semibold">Error</h3>
-            <p className="text-sm mt-1">{errors.general}</p>
+            <p className="text-sm mt-1">{errors['general']}</p>
           </div>
         </Alert>
         <Button onClick={loadQuestions} className="mt-4">

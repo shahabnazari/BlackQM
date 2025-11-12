@@ -53,7 +53,9 @@ async function batchProcessPapers() {
     console.log(`   Found ${papers.length} papers to process\n`);
 
     if (papers.length === 0) {
-      console.log('✅ No papers to process. All papers either have full-text or no sources.');
+      console.log(
+        '✅ No papers to process. All papers either have full-text or no sources.',
+      );
       await app.close();
       return;
     }
@@ -67,7 +69,9 @@ async function batchProcessPapers() {
           paper.pmid ? `PMID:${paper.pmid}` : null,
           paper.doi ? `DOI:${paper.doi}` : null,
           paper.url ? 'URL' : null,
-        ].filter(Boolean).join(', ');
+        ]
+          .filter(Boolean)
+          .join(', ');
 
         console.log(`   Queueing: "${paper.title?.substring(0, 60)}..."`);
         console.log(`      Sources: ${sources}`);
@@ -78,7 +82,10 @@ async function batchProcessPapers() {
 
         console.log(`      ✅ Queued with job ID: ${jobId}\n`);
       } catch (error) {
-        console.error(`      ❌ Failed to queue paper ${paper.id}:`, error instanceof Error ? error.message : error);
+        console.error(
+          `      ❌ Failed to queue paper ${paper.id}:`,
+          error instanceof Error ? error.message : error,
+        );
       }
     }
 
@@ -99,8 +106,9 @@ async function batchProcessPapers() {
     console.log(`\n💡 The queue will process papers in the background.`);
     console.log(`   Check backend logs for progress updates.`);
     console.log(`   Rate limit: 10 papers per minute`);
-    console.log(`   Expected completion: ~${Math.ceil(papers.length / 10)} minutes`);
-
+    console.log(
+      `   Expected completion: ~${Math.ceil(papers.length / 10)} minutes`,
+    );
   } catch (error) {
     console.error('❌ Batch processing failed:', error);
     throw error;

@@ -48,10 +48,10 @@ export const authOptions: NextAuthOptions = {
 
           if (data.user && data.accessToken) {
             return {
-              id: data.user.id,
+              id: data.user['id'],
               email: data.user.email,
               name: data.user.name || null,
-              role: data.user.role || 'researcher',
+              role: data.user['role'] || 'researcher',
               accessToken: data.accessToken,
             } as any;
           }
@@ -88,19 +88,19 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
+        token['id'] = user['id'];
         token.email = user.email || null;
-        token.role = (user as any).role;
-        token.accessToken = (user as any).accessToken;
+        token['role'] = (user as any)['role'];
+        token['accessToken'] = (user as any)['accessToken'];
       }
       return token;
     },
 
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).role = token.role;
-        (session as any).accessToken = token.accessToken;
+        (session.user as any)['id'] = token['id'];
+        (session.user as any)['role'] = token['role'];
+        (session as any)['accessToken'] = token['accessToken'];
       }
       return session;
     },

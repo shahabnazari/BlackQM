@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   UsersIcon,
   CalendarIcon,
@@ -67,19 +67,8 @@ export default function RecruitmentPage() {
   const [selectedStudyId] = useState<string>('study-1');
   const [selectedDate] = useState<Date>(new Date());
 
-  useEffect(() => {
-    // Load recruitment data
-    loadRecruitmentData();
-  }, [selectedStudyId]);
-
-  useEffect(() => {
-    // Load time slots when date or study changes
-    if (activeTab === 'scheduling') {
-      loadTimeSlots();
-    }
-  }, [selectedDate, selectedStudyId, activeTab]);
-
-  const loadRecruitmentData = async () => {
+  // Load recruitment data (moved above useEffect to fix hoisting error)
+  const loadRecruitmentData = useCallback(async () => {
     try {
       // Fetch real data from API
       const [appointmentsData, metricsData] = await Promise.all([
@@ -93,16 +82,17 @@ export default function RecruitmentPage() {
 
       // For now, still use mock participants until we have a proper participants API
       setParticipants(getMockParticipants());
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load recruitment data:', error);
       // Fallback to mock data on error
       setParticipants(getMockParticipants());
       setAppointments(getMockAppointments());
       setMetrics(getMockMetrics());
     }
-  };
+  }, [selectedStudyId]);
 
-  const loadTimeSlots = async () => {
+  // Load time slots (moved above useEffect to fix hoisting error)
+  const loadTimeSlots = useCallback(async () => {
     try {
       const startDate = new Date(selectedDate);
       startDate.setHours(0, 0, 0, 0);
@@ -115,10 +105,22 @@ export default function RecruitmentPage() {
         endDate
       );
       // Time slots will be used when calendar component is implemented
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load time slots:', error);
     }
-  };
+  }, [selectedDate, selectedStudyId]);
+
+  useEffect(() => {
+    // Load recruitment data
+    loadRecruitmentData();
+  }, [selectedStudyId, loadRecruitmentData]);
+
+  useEffect(() => {
+    // Load time slots when date or study changes
+    if (activeTab === 'scheduling') {
+      loadTimeSlots();
+    }
+  }, [selectedDate, selectedStudyId, activeTab, loadTimeSlots]);
 
   return (
     <div className="min-h-screen bg-system-gray-6">

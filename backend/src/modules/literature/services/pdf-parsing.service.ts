@@ -219,6 +219,27 @@ export class PDFParsingService {
         }
       }
 
+      // JAMA Network (jamanetwork.com)
+      // Phase 10.6 Day 8: JAMA publisher-specific PDF pattern
+      if (hostname.includes('jamanetwork.com')) {
+        // Pattern: https://jamanetwork.com/journals/jama/fullarticle/2761645 →
+        //          https://jamanetwork.com/journals/jama/articlepdf/2761044/jama_*.pdf
+        // Note: Unpaywall provides the correct PDF URL, this is fallback for landing pages
+        if (url.pathname.includes('/fullarticle/')) {
+          // Extract article ID
+          const articleIdMatch = url.pathname.match(/\/fullarticle\/(\d+)/);
+          if (articleIdMatch) {
+            const articleId = articleIdMatch[1];
+            // JAMA's PDF article IDs are often different from HTML article IDs
+            // We need to query the HTML page or rely on Unpaywall's direct PDF URL
+            // For now, log and return null to let Unpaywall handle it
+            this.logger.log(
+              `JAMA article detected: ${articleId}. Relying on Unpaywall for PDF URL.`,
+            );
+          }
+        }
+      }
+
       // Handle doi.org URLs by detecting publisher from DOI pattern
       if (hostname === 'doi.org' && url.pathname.startsWith('/10.')) {
         const doi = url.pathname.substring(1); // Remove leading /
@@ -255,6 +276,17 @@ export class PDFParsingService {
         if (doi.startsWith('10.1371/')) {
           // PLOS journal detection from DOI is complex, use generic pattern
           return `https://journals.plos.org/plosone/article/file?id=${doi}&type=printable`;
+        }
+
+        // JAMA: 10.1001/... → jamanetwork.com
+        // Phase 10.6 Day 8: JAMA DOI pattern
+        if (doi.startsWith('10.1001/')) {
+          // JAMA uses Bronze OA model - Unpaywall will provide direct PDF URLs
+          // We'll rely on Unpaywall's best_oa_location rather than constructing
+          this.logger.log(
+            `JAMA DOI detected (${doi}). Relying on Unpaywall for PDF URL.`,
+          );
+          return null; // Let Unpaywall handle it
         }
 
         // Generic fallback: try adding .pdf

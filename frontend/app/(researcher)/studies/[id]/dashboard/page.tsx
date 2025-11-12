@@ -22,7 +22,7 @@ import { studyApi } from '@/lib/api/study';
 export default function StudyDashboard() {
   const params = useParams();
   const router = useRouter();
-  const studyId = params.id as string;
+  const studyId = params['id'] as string;
 
   const [study, setStudy] = useState<any>(null);
   const [loading, setLoading] = useState(true);

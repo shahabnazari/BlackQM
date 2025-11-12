@@ -48,9 +48,7 @@ export interface DiversityMetrics {
 export class GuidedBatchSelectorService {
   private readonly logger = new Logger(GuidedBatchSelectorService.name);
 
-  constructor(
-    private readonly qualityScoring: PaperQualityScoringService
-  ) {}
+  constructor(private readonly qualityScoring: PaperQualityScoringService) {}
 
   /**
    * Select next batch of papers for incremental extraction
@@ -60,10 +58,10 @@ export class GuidedBatchSelectorService {
     processedPapers: Paper[],
     currentThemes: any[],
     iteration: number,
-    batchSize: number = 5
+    batchSize: number = 5,
   ): Promise<BatchRecommendation> {
     this.logger.log(
-      `🎯 selectNextBatch called: iteration=${iteration}, allPapers=${allPapers?.length || 0}, processed=${processedPapers?.length || 0}, batchSize=${batchSize}`
+      `🎯 selectNextBatch called: iteration=${iteration}, allPapers=${allPapers?.length || 0}, processed=${processedPapers?.length || 0}, batchSize=${batchSize}`,
     );
 
     try {
@@ -75,7 +73,7 @@ export class GuidedBatchSelectorService {
 
       // Get quality scores for all unprocessed papers
       const unprocessedPapers = allPapers.filter(
-        (p) => !processedPapers.some((pp) => pp.id === p.id)
+        (p) => !processedPapers.some((pp) => pp.id === p.id),
       );
 
       this.logger.log(`📊 Unprocessed papers: ${unprocessedPapers.length}`);
@@ -86,20 +84,23 @@ export class GuidedBatchSelectorService {
       }
 
       this.logger.log(`🔬 Assessing paper quality...`);
-      const qualityScores = await this.qualityScoring.assessPapers(
-        unprocessedPapers
+      const qualityScores =
+        await this.qualityScoring.assessPapers(unprocessedPapers);
+      this.logger.log(
+        `✅ Quality assessment complete: ${qualityScores.size} papers scored`,
       );
-      this.logger.log(`✅ Quality assessment complete: ${qualityScores.size} papers scored`);
 
       // Select based on iteration strategy
-      this.logger.log(`🎯 Selecting batch using iteration ${iteration} strategy...`);
+      this.logger.log(
+        `🎯 Selecting batch using iteration ${iteration} strategy...`,
+      );
 
       if (iteration === 1) {
         this.logger.log(`📌 Using Foundation Batch strategy`);
         return this.selectFoundationBatch(
           unprocessedPapers,
           qualityScores,
-          batchSize
+          batchSize,
         );
       } else if (iteration === 2) {
         this.logger.log(`📌 Using Diversity Batch strategy`);
@@ -107,7 +108,7 @@ export class GuidedBatchSelectorService {
           unprocessedPapers,
           processedPapers,
           qualityScores,
-          batchSize
+          batchSize,
         );
       } else {
         this.logger.log(`📌 Using Gap-Filling Batch strategy`);
@@ -117,7 +118,7 @@ export class GuidedBatchSelectorService {
           currentThemes,
           qualityScores,
           batchSize,
-          iteration
+          iteration,
         );
       }
     } catch (error) {
@@ -136,7 +137,7 @@ export class GuidedBatchSelectorService {
   private selectFoundationBatch(
     papers: Paper[],
     qualityScores: Map<string, QualityScore>,
-    batchSize: number
+    batchSize: number,
   ): BatchRecommendation {
     // Sort by overall quality score
     const sortedPapers = papers
@@ -165,7 +166,7 @@ export class GuidedBatchSelectorService {
     const avgQuality =
       selected.reduce(
         (sum, p) => sum + qualityScores.get(p.id)!.overallScore,
-        0
+        0,
       ) / selected.length;
 
     return {
@@ -194,7 +195,7 @@ initial themes that will be tested for robustness in subsequent iterations.`,
     papers: Paper[],
     processedPapers: Paper[],
     qualityScores: Map<string, QualityScore>,
-    batchSize: number
+    batchSize: number,
   ): BatchRecommendation {
     const selected: Paper[] = [];
 
@@ -261,7 +262,7 @@ and settings. Methodological diversity strengthens theme robustness.`,
     currentThemes: any[],
     qualityScores: Map<string, QualityScore>,
     batchSize: number,
-    iteration: number
+    iteration: number,
   ): BatchRecommendation {
     // Identify underrepresented themes
     const themeStrengths = currentThemes.map((theme) => ({
@@ -369,10 +370,7 @@ papers to confirm whether new themes still emerge. ${weakThemes.length > 0 ? `Al
     const topics = this.extractTopics(papers);
 
     // Simple diversity scoring
-    const methodologyDiversity = Math.min(
-      100,
-      (methodologies.size / 5) * 100
-    ); // Max 5 methodologies
+    const methodologyDiversity = Math.min(100, (methodologies.size / 5) * 100); // Max 5 methodologies
     const topicDiversity = Math.min(100, (topics.size / 20) * 100); // Max 20 topics
 
     const overallDiversity = (methodologyDiversity + topicDiversity) / 2;
@@ -380,8 +378,7 @@ papers to confirm whether new themes still emerge. ${weakThemes.length > 0 ? `Al
     const underrepresentedAreas: string[] = [];
     if (methodologies.size < 3)
       underrepresentedAreas.push('Need more methodology diversity');
-    if (topics.size < 10)
-      underrepresentedAreas.push('Limited topic coverage');
+    if (topics.size < 10) underrepresentedAreas.push('Limited topic coverage');
 
     return {
       topicDiversity,

@@ -34,7 +34,7 @@ class APIHealthService {
   private readonly API_TIMEOUT = 10000; // 10 seconds - more tolerant
   private readonly SLOW_THRESHOLD = 5000; // 5 seconds - more tolerant
   private readonly BACKEND_URL =
-    process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+    process.env['NEXT_PUBLIC_BACKEND_URL'] || 'http://localhost:4000';
 
   private constructor() {}
 

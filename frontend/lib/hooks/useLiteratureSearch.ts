@@ -80,12 +80,22 @@ export interface UseLiteratureSearchReturn {
   appliedFilters: any;
 }
 
-// Default academic databases
+// Default academic databases - Phase 10.6 Day 14.3: Truly free sources only (no API keys required)
+// BUG FIX #1 (Day 14.2): Changed 'semantic-scholar' to 'semantic_scholar' to match backend enum
+// BUG FIX #2 (Day 14.3): Removed 'google_scholar' - requires paid SERPAPI_KEY ($50-500/month)
+// ENHANCEMENT: Expanded from 4 to 9 truly free sources
 const DEFAULT_ACADEMIC_DATABASES = [
-  'pubmed',
-  'semantic-scholar',
-  'crossref',
-  'arxiv',
+  'pubmed',              // PubMed - Medical/life sciences (36M+ papers, free NCBI API)
+  'pmc',                 // PubMed Central - Free full-text (8M+ articles, free NCBI API)
+  'arxiv',               // ArXiv - Physics/Math/CS preprints (2M+ papers, free API)
+  'biorxiv',             // bioRxiv/medRxiv - Biology/medical preprints (250K+ papers, free API)
+  'chemrxiv',            // ChemRxiv - Chemistry preprints (20K+ papers, free Figshare API)
+  'semantic_scholar',    // Semantic Scholar - CS/interdisciplinary (200M+ papers, free S2 API)
+  'ssrn',                // SSRN - Social science papers (1M+ papers, free RSS feeds)
+  'crossref',            // CrossRef - DOI database (150M+ records, free REST API)
+  'eric',                // ERIC - Education research (1.5M+ papers, free US Dept of Education API)
+  // NOTE: 'google_scholar' removed - requires paid SerpAPI subscription
+  // To enable Google Scholar, set SERPAPI_KEY in backend .env ($50-500/month)
 ];
 
 /**
@@ -135,6 +145,7 @@ export function useLiteratureSearch(
     setLoading,
     setTotalResults,
     getAppliedFilterCount,
+    setSearchMetadata, // Phase 10.6 Day 14.5: Store search transparency data
   } = useLiteratureSearchStore();
 
   // Prevent duplicate search requests
@@ -187,8 +198,11 @@ export function useLiteratureSearch(
       console.log('🔍 SEARCH START');
       console.log('Query:', query);
       console.log('Applied Filters:', appliedFilters);
-      console.log('Selected Sources (academicDatabases):', academicDatabases);
-      console.log('Sources count:', academicDatabases.length);
+      console.log('🔍 [DEBUG] Selected Sources (academicDatabases):', academicDatabases);
+      console.log('🔍 [DEBUG] Sources count:', academicDatabases.length);
+      console.log('🔍 [DEBUG] Sources type:', typeof academicDatabases);
+      console.log('🔍 [DEBUG] Is Array:', Array.isArray(academicDatabases));
+      console.log('🔍 [DEBUG] Sources JSON:', JSON.stringify(academicDatabases));
 
       // Build search parameters with filters
       const searchParams = {
@@ -219,6 +233,9 @@ export function useLiteratureSearch(
       };
 
       console.log('📤 Sending search params:', searchParams);
+      console.log('📤 [DEBUG] searchParams.sources:', searchParams.sources);
+      console.log('📤 [DEBUG] searchParams.sources type:', typeof searchParams.sources);
+      console.log('📤 [DEBUG] searchParams.sources length:', searchParams.sources?.length);
 
       const result = await literatureAPI.searchLiterature(searchParams);
 
@@ -226,7 +243,14 @@ export function useLiteratureSearch(
       console.log('📚 Papers array:', result.papers);
       console.log('📚 Papers count:', result.papers?.length);
       console.log('📈 Total results:', result.total);
+      console.log('📊 Metadata:', result.metadata); // Phase 10.6 Day 14.5
       console.log('='.repeat(80));
+
+      // Phase 10.6 Day 14.5: Store search metadata for transparency
+      if (result.metadata) {
+        console.log('💾 Storing search metadata:', result.metadata);
+        setSearchMetadata(result.metadata as any); // Cast needed for type compatibility
+      }
 
       // Check if query was auto-corrected (Google-like UX)
       if ((result as any).correctedQuery && (result as any).originalQuery) {
@@ -331,6 +355,7 @@ export function useLiteratureSearch(
     setPapers,
     setTotalResults,
     getAppliedFilterCount,
+    setSearchMetadata, // Phase 10.6 Day 14.5
   ]);
 
   /**

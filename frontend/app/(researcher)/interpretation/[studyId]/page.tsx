@@ -40,7 +40,7 @@ import {
  */
 export default function InterpretationPage() {
   const params = useParams();
-  const studyId = params.studyId as string;
+  const studyId = params['studyId'] as string;
   
   const {
     studyData,

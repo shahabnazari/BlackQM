@@ -68,7 +68,7 @@ export function ThemeExtractionProgress({
 
   useEffect(() => {
     // Connect to WebSocket
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000';
     const newSocket = io(`${apiUrl}/theme-extraction`, {
       transports: ['websocket'],
       reconnection: true,

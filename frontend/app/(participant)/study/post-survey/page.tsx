@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { PostSurveyQuestionnaire } from '@/components/questionnaire/PostSurveyQuestionnaire';
 import PostSurvey from '@/components/participant/PostSurvey';
 import { Card } from '@/components/apple-ui/Card';
@@ -34,9 +34,9 @@ function PostSurveyContent() {
   const searchParams = useSearchParams();
 
   // Extract parameters
-  const studyId = searchParams.get('studyId') || (params.studyId as string);
+  const studyId = searchParams.get('studyId') || (params['studyId'] as string);
   const participantId =
-    searchParams.get('participantId') || (params.participantId as string);
+    searchParams.get('participantId') || (params['participantId'] as string);
   const studyToken = searchParams.get('token');
 
   // State
@@ -46,6 +46,24 @@ function PostSurveyContent() {
   const [qsortData, setQsortData] = useState<any>(null);
   const [completed, setCompleted] = useState(false);
   const [surveyResult, setSurveyResult] = useState<any>(null);
+
+  // Check if dynamic questions are available (moved above useEffect to fix hoisting error)
+  const checkDynamicQuestionsAvailability = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `/api/questions/survey/${studyId}?type=post-survey`
+      );
+      if (response.ok) {
+        const questions = await response.json();
+        setUseDynamicQuestions(questions.length > 0);
+      } else {
+        setUseDynamicQuestions(false);
+      }
+    } catch (err: any) {
+      console.error('Failed to check dynamic questions:', err);
+      setUseDynamicQuestions(false);
+    }
+  }, [studyId]);
 
   // Load Q-sort data from session
   useEffect(() => {
@@ -59,7 +77,7 @@ function PostSurveyContent() {
 
         // Check if dynamic questions are available
         checkDynamicQuestionsAvailability();
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to load Q-sort data:', err);
       } finally {
         setLoading(false);
@@ -67,25 +85,7 @@ function PostSurveyContent() {
     };
 
     loadQSortData();
-  }, []);
-
-  // Check if dynamic questions are available
-  const checkDynamicQuestionsAvailability = async () => {
-    try {
-      const response = await fetch(
-        `/api/questions/survey/${studyId}?type=post-survey`
-      );
-      if (response.ok) {
-        const questions = await response.json();
-        setUseDynamicQuestions(questions.length > 0);
-      } else {
-        setUseDynamicQuestions(false);
-      }
-    } catch (err) {
-      console.error('Failed to check dynamic questions:', err);
-      setUseDynamicQuestions(false);
-    }
-  };
+  }, [checkDynamicQuestionsAvailability]);
 
   // Validate required parameters
   useEffect(() => {

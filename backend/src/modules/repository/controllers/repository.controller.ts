@@ -11,9 +11,19 @@ import {
   Request,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { ResearchRepositoryService, SearchQuery } from '../services/research-repository.service';
+import {
+  ResearchRepositoryService,
+  SearchQuery,
+} from '../services/research-repository.service';
 
 // Phase 10 Day 30: Simplified caching (using service-level cache instead of HTTP interceptor)
 // CacheInterceptor requires @nestjs/cache-manager which may not be configured
@@ -39,9 +49,7 @@ import { ResearchRepositoryService, SearchQuery } from '../services/research-rep
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class RepositoryController {
-  constructor(
-    private readonly repositoryService: ResearchRepositoryService,
-  ) {}
+  constructor(private readonly repositoryService: ResearchRepositoryService) {}
 
   // ==========================================================================
   // INDEXING ENDPOINTS
@@ -53,7 +61,8 @@ export class RepositoryController {
   @Post('index')
   @ApiOperation({
     summary: 'Reindex all research entities',
-    description: 'Extracts and indexes all research insights from studies, literature, and analyses',
+    description:
+      'Extracts and indexes all research insights from studies, literature, and analyses',
   })
   @ApiResponse({
     status: HttpStatus.CREATED,
@@ -62,7 +71,10 @@ export class RepositoryController {
       type: 'object',
       properties: {
         indexed: { type: 'number', example: 156 },
-        message: { type: 'string', example: 'Successfully indexed 156 insights' },
+        message: {
+          type: 'string',
+          example: 'Successfully indexed 156 insights',
+        },
       },
     },
   })
@@ -89,10 +101,7 @@ export class RepositoryController {
     status: HttpStatus.CREATED,
     description: 'Study reindexed successfully',
   })
-  async reindexStudy(
-    @Param('studyId') studyId: string,
-    @Request() req: any,
-  ) {
+  async reindexStudy(@Param('studyId') studyId: string, @Request() req: any) {
     const userId = req.user.userId;
     const indexed = await this.repositoryService.reindexStudy(studyId, userId);
 
@@ -114,17 +123,53 @@ export class RepositoryController {
   @Get('search')
   @ApiOperation({
     summary: 'Search research repository',
-    description: 'Full-text search with faceting across all indexed research insights',
+    description:
+      'Full-text search with faceting across all indexed research insights',
   })
   @ApiQuery({ name: 'q', description: 'Search query', required: true })
-  @ApiQuery({ name: 'types', description: 'Filter by insight types (comma-separated)', required: false })
-  @ApiQuery({ name: 'sourceTypes', description: 'Filter by source types (comma-separated)', required: false })
-  @ApiQuery({ name: 'studyIds', description: 'Filter by study IDs (comma-separated)', required: false })
-  @ApiQuery({ name: 'allStudies', description: 'Search across all user studies (default: false)', required: false, type: Boolean })
-  @ApiQuery({ name: 'limit', description: 'Number of results per page', required: false, type: Number })
-  @ApiQuery({ name: 'offset', description: 'Pagination offset', required: false, type: Number })
-  @ApiQuery({ name: 'sort', description: 'Sort by: relevance, date, popularity, citationCount', required: false })
-  @ApiQuery({ name: 'order', description: 'Sort order: asc or desc', required: false })
+  @ApiQuery({
+    name: 'types',
+    description: 'Filter by insight types (comma-separated)',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'sourceTypes',
+    description: 'Filter by source types (comma-separated)',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'studyIds',
+    description: 'Filter by study IDs (comma-separated)',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'allStudies',
+    description: 'Search across all user studies (default: false)',
+    required: false,
+    type: Boolean,
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Number of results per page',
+    required: false,
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'offset',
+    description: 'Pagination offset',
+    required: false,
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'sort',
+    description: 'Sort by: relevance, date, popularity, citationCount',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'order',
+    description: 'Sort order: asc or desc',
+    required: false,
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Search results with facets',
@@ -147,7 +192,8 @@ export class RepositoryController {
         types: types ? types.split(',') : undefined,
         sourceTypes: sourceTypes ? sourceTypes.split(',') : undefined,
         // Phase 10 Day 28: Cross-study search - only filter by studyId if not searching all studies
-        studyIds: (allStudies === 'true' || !studyIds) ? undefined : studyIds.split(','),
+        studyIds:
+          allStudies === 'true' || !studyIds ? undefined : studyIds.split(','),
         userIds: [req.user.userId], // Only search user's own insights
       },
       sort: sort
@@ -180,7 +226,8 @@ export class RepositoryController {
   @Get('insights/:id')
   @ApiOperation({
     summary: 'Get insight details',
-    description: 'Retrieve full insight details including citation chain and provenance',
+    description:
+      'Retrieve full insight details including citation chain and provenance',
   })
   @ApiParam({ name: 'id', description: 'Insight ID' })
   @ApiResponse({
@@ -191,10 +238,7 @@ export class RepositoryController {
     status: HttpStatus.NOT_FOUND,
     description: 'Insight not found',
   })
-  async getInsight(
-    @Param('id') insightId: string,
-    @Request() req: any,
-  ) {
+  async getInsight(@Param('id') insightId: string, @Request() req: any) {
     const userId = req.user.userId;
     const insight = await this.repositoryService.getInsight(insightId, userId);
 
@@ -218,7 +262,12 @@ export class RepositoryController {
     description: 'Find insights related to the specified insight',
   })
   @ApiParam({ name: 'id', description: 'Insight ID' })
-  @ApiQuery({ name: 'limit', description: 'Number of related insights', required: false, type: Number })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Number of related insights',
+    required: false,
+    type: Number,
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Related insights',
@@ -247,7 +296,15 @@ export class RepositoryController {
   async getFacets(@Request() req: any) {
     // Return available facet options
     return {
-      types: ['statement', 'factor', 'theme', 'gap', 'quote', 'paper_finding', 'hypothesis'],
+      types: [
+        'statement',
+        'factor',
+        'theme',
+        'gap',
+        'quote',
+        'paper_finding',
+        'hypothesis',
+      ],
       sourceTypes: ['study', 'paper', 'response', 'analysis', 'literature'],
       shareLevels: ['private', 'team', 'institution', 'public'],
       sortOptions: ['relevance', 'date', 'popularity', 'citationCount'],
@@ -303,7 +360,10 @@ export class RepositoryController {
     description: 'List of annotations',
   })
   async getAnnotations(@Param('id') insightId: string, @Request() req: any) {
-    return await this.repositoryService.getAnnotations(insightId, req.user.userId);
+    return await this.repositoryService.getAnnotations(
+      insightId,
+      req.user.userId,
+    );
   }
 
   /**
@@ -399,7 +459,10 @@ export class RepositoryController {
     description: 'Version history',
   })
   async getVersionHistory(@Param('id') insightId: string, @Request() req: any) {
-    return await this.repositoryService.getVersionHistory(insightId, req.user.userId);
+    return await this.repositoryService.getVersionHistory(
+      insightId,
+      req.user.userId,
+    );
   }
 
   /**
@@ -440,15 +503,17 @@ export class RepositoryController {
     summary: 'Get search history',
     description: 'Retrieve user search history',
   })
-  @ApiQuery({ name: 'limit', description: 'Number of results', required: false, type: Number })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Number of results',
+    required: false,
+    type: Number,
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Search history',
   })
-  async getSearchHistory(
-    @Query('limit') limit?: string,
-    @Request() req?: any,
-  ) {
+  async getSearchHistory(@Query('limit') limit?: string, @Request() req?: any) {
     return await this.repositoryService.getSearchHistory(
       req.user.userId,
       limit ? parseInt(limit, 10) : 20,
@@ -481,7 +546,8 @@ export class RepositoryController {
   @Put('insights/:id/visibility')
   @ApiOperation({
     summary: 'Update insight visibility',
-    description: 'Change insight public/private status and share level (owner only)',
+    description:
+      'Change insight public/private status and share level (owner only)',
   })
   @ApiParam({ name: 'id', description: 'Insight ID' })
   @ApiResponse({
@@ -490,7 +556,11 @@ export class RepositoryController {
   })
   async updateVisibility(
     @Param('id') insightId: string,
-    @Body() body: { isPublic: boolean; shareLevel: 'private' | 'team' | 'institution' | 'public' },
+    @Body()
+    body: {
+      isPublic: boolean;
+      shareLevel: 'private' | 'team' | 'institution' | 'public';
+    },
     @Request() req: any,
   ) {
     return await this.repositoryService.updateInsightVisibility(
@@ -507,7 +577,8 @@ export class RepositoryController {
   @Post('insights/:id/access')
   @ApiOperation({
     summary: 'Grant access to user',
-    description: 'Grant a user access to an insight with specific role (owner only)',
+    description:
+      'Grant a user access to an insight with specific role (owner only)',
   })
   @ApiParam({ name: 'id', description: 'Insight ID' })
   @ApiResponse({
@@ -516,7 +587,8 @@ export class RepositoryController {
   })
   async grantAccess(
     @Param('id') insightId: string,
-    @Body() body: {
+    @Body()
+    body: {
       userId: string;
       role: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'OWNER';
       expiresAt?: string;
@@ -571,14 +643,8 @@ export class RepositoryController {
     status: HttpStatus.OK,
     description: 'Access check result',
   })
-  async checkAccess(
-    @Param('id') insightId: string,
-    @Request() req: any,
-  ) {
-    return await this.repositoryService.checkAccess(
-      insightId,
-      req.user.userId,
-    );
+  async checkAccess(@Param('id') insightId: string, @Request() req: any) {
+    return await this.repositoryService.checkAccess(insightId, req.user.userId);
   }
 
   /**
@@ -594,10 +660,7 @@ export class RepositoryController {
     status: HttpStatus.OK,
     description: 'Access list',
   })
-  async getAccessList(
-    @Param('id') insightId: string,
-    @Request() req: any,
-  ) {
+  async getAccessList(@Param('id') insightId: string, @Request() req: any) {
     return await this.repositoryService.getInsightAccessList(
       insightId,
       req.user.userId,
@@ -619,7 +682,8 @@ export class RepositoryController {
   })
   async grantStudyAccess(
     @Param('studyId') studyId: string,
-    @Body() body: {
+    @Body()
+    body: {
       userId: string;
       role: 'VIEWER' | 'COMMENTER' | 'EDITOR';
     },

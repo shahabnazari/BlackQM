@@ -840,6 +840,12 @@ model Paper {
   wordCountExcludingRefs Int?     // Word count excluding references/indexes/etc
   qualityScore          Float?    // 0-100 quality score (triggers full-text fetch if >=70)
 
+  // Phase 10.6 Day 2: Enhanced PubMed Metadata
+  meshTerms            Json?     // MeSH (Medical Subject Headings) terms from PubMed
+  publicationType      Json?     // Publication types (e.g., ["Journal Article", "Review"])
+  authorAffiliations   Json?     // Author affiliations from PubMed
+  grants               Json?     // Grant information (agency, ID, country)
+
   // Timestamps
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

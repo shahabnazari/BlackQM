@@ -144,8 +144,14 @@ describe('BaseApiService', () => {
     it('should cancel specific request by ID', () => {
       const executor = jest.fn().mockResolvedValue({ data: 'done' });
 
-      const request1 = service.testCreateCancellableRequest('request-1', executor);
-      const request2 = service.testCreateCancellableRequest('request-2', executor);
+      const request1 = service.testCreateCancellableRequest(
+        'request-1',
+        executor
+      );
+      const request2 = service.testCreateCancellableRequest(
+        'request-2',
+        executor
+      );
 
       service.testCancel('request-1');
 
@@ -211,7 +217,9 @@ describe('BaseApiService', () => {
         () => Promise.resolve({ data: 3 }),
       ];
 
-      await expect(service.testBatch(requests)).rejects.toThrow('Request failed');
+      await expect(service.testBatch(requests)).rejects.toThrow(
+        'Request failed'
+      );
     });
   });
 
@@ -253,7 +261,9 @@ describe('BaseApiService', () => {
 
       (apiClient.get as jest.Mock).mockRejectedValue(mockError);
 
-      await expect(service.testGet('/endpoint')).rejects.toMatchObject(mockError);
+      await expect(service.testGet('/endpoint')).rejects.toMatchObject(
+        mockError
+      );
 
       // Should only attempt once (no retries)
       expect(apiClient.get).toHaveBeenCalledTimes(1);
@@ -269,7 +279,9 @@ describe('BaseApiService', () => {
 
       (apiClient.get as jest.Mock).mockRejectedValue(mockError);
 
-      await expect(service.testGet('/endpoint')).rejects.toMatchObject(mockError);
+      await expect(service.testGet('/endpoint')).rejects.toMatchObject(
+        mockError
+      );
     });
 
     it('should handle timeout errors', async () => {
@@ -280,7 +292,9 @@ describe('BaseApiService', () => {
 
       (apiClient.get as jest.Mock).mockRejectedValue(mockError);
 
-      await expect(service.testGet('/endpoint')).rejects.toMatchObject(mockError);
+      await expect(service.testGet('/endpoint')).rejects.toMatchObject(
+        mockError
+      );
     });
 
     it('should handle cancellation errors', async () => {
@@ -291,7 +305,9 @@ describe('BaseApiService', () => {
 
       (apiClient.get as jest.Mock).mockRejectedValue(mockError);
 
-      await expect(service.testGet('/endpoint')).rejects.toMatchObject(mockError);
+      await expect(service.testGet('/endpoint')).rejects.toMatchObject(
+        mockError
+      );
 
       // Should only attempt once (no retries for cancellations)
       expect(apiClient.get).toHaveBeenCalledTimes(1);

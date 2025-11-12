@@ -12,7 +12,11 @@
  * @module social-media-api.service
  */
 
-import { BaseApiService, CancellableRequest, RequestOptions } from './base-api.service';
+import {
+  BaseApiService,
+  CancellableRequest,
+  RequestOptions,
+} from './base-api.service';
 
 // ============================================================================
 // Types
@@ -149,7 +153,7 @@ class SocialMediaApiService extends BaseApiService {
   ): CancellableRequest<SocialSearchResponse> {
     const requestId = `social-search-${Date.now()}`;
 
-    return this.createCancellableRequest(requestId, async (signal) => {
+    return this.createCancellableRequest(requestId, async signal => {
       const response = await this.post<SocialSearchResponse>(
         '/search',
         params,
@@ -179,13 +183,17 @@ class SocialMediaApiService extends BaseApiService {
   }> {
     const requestId = `${platform}-search-${Date.now()}`;
 
-    return this.createCancellableRequest(requestId, async (signal) => {
+    return this.createCancellableRequest(requestId, async signal => {
       const response = await this.post(
         `/${platform}/search`,
         { query, ...params },
         { ...options, signal }
       );
-      return response.data as { posts: SocialPost[]; totalResults: number; nextToken?: string };
+      return response.data as {
+        posts: SocialPost[];
+        totalResults: number;
+        nextToken?: string;
+      };
     });
   }
 
@@ -218,7 +226,7 @@ class SocialMediaApiService extends BaseApiService {
   ): CancellableRequest<CrossPlatformInsights> {
     const requestId = `insights-${Date.now()}`;
 
-    return this.createCancellableRequest(requestId, async (signal) => {
+    return this.createCancellableRequest(requestId, async signal => {
       const response = await this.post<CrossPlatformInsights>(
         '/insights/generate',
         { postIds },
@@ -234,17 +242,29 @@ class SocialMediaApiService extends BaseApiService {
   async analyzeSentiment(
     postIds: string[],
     options?: RequestOptions
-  ): Promise<Record<string, {
-    sentiment: 'positive' | 'neutral' | 'negative';
-    score: number;
-    confidence: number;
-  }>> {
+  ): Promise<
+    Record<
+      string,
+      {
+        sentiment: 'positive' | 'neutral' | 'negative';
+        score: number;
+        confidence: number;
+      }
+    >
+  > {
     const response = await this.post(
       '/analysis/sentiment',
       { postIds },
       options
     );
-    return response.data as Record<string, { sentiment: 'positive' | 'neutral' | 'negative'; score: number; confidence: number }>;
+    return response.data as Record<
+      string,
+      {
+        sentiment: 'positive' | 'neutral' | 'negative';
+        score: number;
+        confidence: number;
+      }
+    >;
   }
 
   /**
@@ -270,7 +290,14 @@ class SocialMediaApiService extends BaseApiService {
       { postIds, ...params },
       options
     );
-    return response.data as { themes: { name: string; frequency: number; keywords: string[]; sentiment: string }[] };
+    return response.data as {
+      themes: {
+        name: string;
+        frequency: number;
+        keywords: string[];
+        sentiment: string;
+      }[];
+    };
   }
 
   // ============================================================================
@@ -313,7 +340,10 @@ class SocialMediaApiService extends BaseApiService {
       { query, ...params },
       options
     );
-    return response.data as { influencers: InfluencerProfile[]; totalResults: number };
+    return response.data as {
+      influencers: InfluencerProfile[];
+      totalResults: number;
+    };
   }
 
   /**
@@ -356,11 +386,7 @@ class SocialMediaApiService extends BaseApiService {
   ): Promise<{
     topics: TrendingTopic[];
   }> {
-    const response = await this.post(
-      '/trending/topics',
-      params,
-      options
-    );
+    const response = await this.post('/trending/topics', params, options);
     return response.data as { topics: TrendingTopic[] };
   }
 
@@ -381,11 +407,17 @@ class SocialMediaApiService extends BaseApiService {
       trend: 'rising' | 'stable' | 'falling';
     }[];
   }> {
-    const response = await this.get(
-      `/${platform}/trending/hashtags`,
-      { ...options, params }
-    );
-    return response.data as { hashtags: { tag: string; volume: number; trend: 'rising' | 'stable' | 'falling' }[] };
+    const response = await this.get(`/${platform}/trending/hashtags`, {
+      ...options,
+      params,
+    });
+    return response.data as {
+      hashtags: {
+        tag: string;
+        volume: number;
+        trend: 'rising' | 'stable' | 'falling';
+      }[];
+    };
   }
 
   // ============================================================================
@@ -427,7 +459,9 @@ class SocialMediaApiService extends BaseApiService {
       { postIds, ...params },
       options
     );
-    return response.data as { distribution: { timestamp: string; count: number }[] };
+    return response.data as {
+      distribution: { timestamp: string; count: number }[];
+    };
   }
 
   // ============================================================================

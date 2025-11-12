@@ -160,7 +160,9 @@ export function useSearch(): UseSearchReturn {
           const filterHints: string[] = [];
 
           if (appliedFilters.minCitations && appliedFilters.minCitations > 0) {
-            filterHints.push(`citation filter (≥${appliedFilters.minCitations})`);
+            filterHints.push(
+              `citation filter (≥${appliedFilters.minCitations})`
+            );
           }
 
           const currentYear = new Date().getFullYear();
@@ -168,7 +170,9 @@ export function useSearch(): UseSearchReturn {
             appliedFilters.yearFrom &&
             appliedFilters.yearFrom >= currentYear - 2
           ) {
-            filterHints.push(`recent year filter (${appliedFilters.yearFrom}+)`);
+            filterHints.push(
+              `recent year filter (${appliedFilters.yearFrom}+)`
+            );
           }
 
           if (filterHints.length > 0) {

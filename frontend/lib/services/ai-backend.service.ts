@@ -14,7 +14,7 @@
 import { getAuthToken } from '../auth/auth-utils';
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+  process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000/api';
 
 export interface GridRecommendation {
   columns: number;

@@ -111,7 +111,7 @@ export function NavigationProvider({
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
-    const newSocket = io(`${process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000'}/navigation`, {
+    const newSocket = io(`${process.env['NEXT_PUBLIC_WS_URL'] || 'http://localhost:4000'}/navigation`, {
       auth: {
         token: localStorage.getItem('access_token') || localStorage.getItem('token'),
       },

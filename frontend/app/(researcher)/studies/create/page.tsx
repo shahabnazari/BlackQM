@@ -283,12 +283,12 @@ export default function EnhancedCreateStudyPage() {
         showInfo('Old draft migrated. You can find it in your studies list.');
       }
     }
-  }, []);
+  }, [router, showError, showInfo]);
 
   // Initialize API health monitoring
   useEffect(() => {
     // Skip health checks if disabled via environment variable
-    if (process.env.NEXT_PUBLIC_DISABLE_HEALTH_CHECKS === 'true') {
+    if (process.env['NEXT_PUBLIC_DISABLE_HEALTH_CHECKS'] === 'true') {
       return;
     }
 
@@ -337,7 +337,7 @@ export default function EnhancedCreateStudyPage() {
       clearTimeout(initialCheckTimer);
       unsubscribe();
     };
-  }, [showError, showWarning, showSuccess]);
+  }, [showError, showWarning, showSuccess, apiHealth]);
 
   // Unified save function - autosave and manual save are the same
   const saveDraft = saveNow; // Both autosave and manual save use the same function
@@ -349,19 +349,19 @@ export default function EnhancedCreateStudyPage() {
     return temp.textContent || temp.innerText || '';
   };
 
-  const validateStep = (stepNumber: number): boolean => {
+  const validateStep = useCallback((stepNumber: number): boolean => {
     const errors: Record<string, string> = {};
 
     switch (stepNumber) {
       case 1:
         if (!studyConfig.title || studyConfig.title.length < 10) {
-          errors.title = 'Title must be at least 10 characters';
+          errors['title'] = 'Title must be at least 10 characters';
         }
         if (studyConfig.title.length > 100) {
-          errors.title = 'Title must be less than 100 characters';
+          errors['title'] = 'Title must be less than 100 characters';
         }
         if (studyConfig.description && studyConfig.description.length < 50) {
-          errors.description =
+          errors['description'] =
             'Description must be at least 50 characters if provided';
         }
         break;
@@ -370,39 +370,39 @@ export default function EnhancedCreateStudyPage() {
         // For welcome message - count actual text content, not HTML
         const welcomeText = getTextFromHTML(studyConfig.welcomeMessage || '');
         if (!welcomeText || welcomeText.length < 100) {
-          errors.welcomeMessage = `Welcome message must be at least 100 characters (currently ${welcomeText.length})`;
+          errors['welcomeMessage'] = `Welcome message must be at least 100 characters (currently ${welcomeText.length})`;
         }
         if (welcomeText.length > 5000) {
-          errors.welcomeMessage = `Welcome message must be less than 5000 characters (currently ${welcomeText.length})`;
+          errors['welcomeMessage'] = `Welcome message must be less than 5000 characters (currently ${welcomeText.length})`;
         }
 
         // For consent form - count actual text content, not HTML
         const consentText = getTextFromHTML(studyConfig.consentForm || '');
         if (!consentText || consentText.length < 500) {
-          errors.consentForm = `Consent form must be at least 500 characters (currently ${consentText.length})`;
+          errors['consentForm'] = `Consent form must be at least 500 characters (currently ${consentText.length})`;
         }
         if (consentText.length > 10000) {
-          errors.consentForm = `Consent form must be less than 10000 characters (currently ${consentText.length})`;
+          errors['consentForm'] = `Consent form must be less than 10000 characters (currently ${consentText.length})`;
         }
         break;
 
       case 3:
         if (!gridConfig) {
-          errors.grid = 'Please configure the Q-sort grid';
+          errors['grid'] = 'Please configure the Q-sort grid';
         } else if (gridConfig.totalCells === 0) {
-          errors.grid = 'Grid must have at least one cell configured';
+          errors['grid'] = 'Grid must have at least one cell configured';
         }
         break;
 
       case 4:
         const currentStimuli = studyConfig.stimuli || stimuli;
         if (!currentStimuli || currentStimuli.length === 0) {
-          errors.stimuli = 'Please upload study stimuli';
+          errors['stimuli'] = 'Please upload study stimuli';
         } else if (
           gridConfig &&
           currentStimuli.length !== gridConfig.totalCells
         ) {
-          errors.stimuli = `Please upload exactly ${gridConfig.totalCells} stimuli (currently ${currentStimuli.length})`;
+          errors['stimuli'] = `Please upload exactly ${gridConfig.totalCells} stimuli (currently ${currentStimuli.length})`;
         }
         break;
     }
@@ -447,9 +447,9 @@ export default function EnhancedCreateStudyPage() {
     }
 
     return Object.keys(errors).length === 0;
-  };
+  }, [studyConfig, gridConfig, stimuli, getTextFromHTML, showError]);
 
-  const handleNext = async () => {
+  const handleNext = useCallback(async () => {
     // Auto-save before navigating
     if (hasUnsavedChanges) {
       await saveDraft();
@@ -468,9 +468,9 @@ export default function EnhancedCreateStudyPage() {
     } else {
       handleSubmit();
     }
-  };
+  }, [hasUnsavedChanges, saveDraft, validateStep, step, generatePreview, handleSubmit]);
 
-  const handleBack = async () => {
+  const handleBack = useCallback(async () => {
     // Auto-save before navigating
     if (hasUnsavedChanges) {
       await saveDraft();
@@ -479,13 +479,13 @@ export default function EnhancedCreateStudyPage() {
     if (step > 1) {
       setStep(step - 1);
     }
-  };
+  }, [hasUnsavedChanges, saveDraft, step]);
 
   const handleSaveDraft = () => {
     saveDraft();
   };
 
-  const generatePreview = async () => {
+  const generatePreview = useCallback(async () => {
     try {
       // Create preview data structure with researcher branding
       const previewData = {
@@ -546,7 +546,7 @@ export default function EnhancedCreateStudyPage() {
     } catch (error: any) {
       console.error('Error generating preview:', error);
     }
-  };
+  }, [studyConfig, generateGridConfig]);
 
   const generateGridConfig = (columns: number, shape: string) => {
     const config = [];
@@ -573,7 +573,7 @@ export default function EnhancedCreateStudyPage() {
     return config;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     setIsSaving(true);
     setIsLoadingAPI(true);
 
@@ -618,7 +618,7 @@ export default function EnhancedCreateStudyPage() {
       setIsSaving(false);
       setIsLoadingAPI(false);
     }
-  };
+  }, [studyConfig, stimuli, draftId, showSuccess, router, showError]);
 
   const updateConfig = useCallback(
     (field: keyof EnhancedStudyConfig, value: any) => {
@@ -775,7 +775,7 @@ export default function EnhancedCreateStudyPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [step]); // Minimal dependencies to avoid circular refs
+  }, [step, handleBack, handleNext, handleSubmit, saveDraft]); // Minimal dependencies to avoid circular refs
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 px-4">
@@ -970,14 +970,14 @@ export default function EnhancedCreateStudyPage() {
                     });
                   }
                 }}
-                {...(validationErrors.title && {
-                  error: validationErrors.title,
+                {...(validationErrors['title'] && {
+                  error: validationErrors['title'],
                 })}
                 aria-label="Study title"
                 aria-required="true"
-                aria-invalid={!!validationErrors.title}
+                aria-invalid={!!validationErrors['title']}
                 aria-describedby={
-                  validationErrors.title ? 'title-error' : 'title-hint'
+                  validationErrors['title'] ? 'title-error' : 'title-hint'
                 }
               />
               <div
@@ -1015,7 +1015,7 @@ export default function EnhancedCreateStudyPage() {
               <textarea
                 id="study-description"
                 name="description"
-                className={`w-full px-4 py-3 rounded-lg border ${validationErrors.description ? 'border-system-red' : 'border-quaternary-fill'} bg-tertiary-background text-label placeholder:text-tertiary-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+                className={`w-full px-4 py-3 rounded-lg border ${validationErrors['description'] ? 'border-system-red' : 'border-quaternary-fill'} bg-tertiary-background text-label placeholder:text-tertiary-label focus:border-system-blue focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
                 rows={4}
                 placeholder="Describe your study's purpose and goals (50-500 characters if provided)"
                 value={studyConfig.description}
@@ -1031,9 +1031,9 @@ export default function EnhancedCreateStudyPage() {
                 }}
                 aria-label="Study description"
                 aria-required="false"
-                aria-invalid={!!validationErrors.description}
+                aria-invalid={!!validationErrors['description']}
                 aria-describedby={
-                  validationErrors.description
+                  validationErrors['description']
                     ? 'description-error'
                     : 'description-hint'
                 }
@@ -1056,9 +1056,9 @@ export default function EnhancedCreateStudyPage() {
                 </span>
                 <span>Optional field</span>
               </div>
-              {validationErrors.description && (
+              {validationErrors['description'] && (
                 <p className="text-xs text-system-red mt-1" role="alert">
-                  {validationErrors.description}
+                  {validationErrors['description']}
                 </p>
               )}
             </div>
@@ -1137,9 +1137,9 @@ export default function EnhancedCreateStudyPage() {
                   minLength={100}
                   maxLength={5000}
                 />
-                {validationErrors.welcomeMessage && (
+                {validationErrors['welcomeMessage'] && (
                   <p className="text-xs text-system-red mt-1" role="alert">
-                    {validationErrors.welcomeMessage}
+                    {validationErrors['welcomeMessage']}
                   </p>
                 )}
               </div>
@@ -1235,9 +1235,9 @@ export default function EnhancedCreateStudyPage() {
                   minLength={500}
                   maxLength={10000}
                 />
-                {validationErrors.consentForm && (
+                {validationErrors['consentForm'] && (
                   <p className="text-xs text-system-red mt-1" role="alert">
-                    {validationErrors.consentForm}
+                    {validationErrors['consentForm']}
                   </p>
                 )}
               </div>

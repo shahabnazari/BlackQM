@@ -96,7 +96,8 @@ export class OpenAIService {
       });
 
       const responseTime = Date.now() - startTime;
-      const content = completion.choices[0].message.content || '';
+      const firstChoice = completion.choices[0];
+      const content = firstChoice?.message.content || '';
       const usage = completion.usage || {
         total_tokens: 0,
         prompt_tokens: 0,

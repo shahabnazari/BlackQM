@@ -29,6 +29,31 @@ export enum LiteratureSource {
   PUBMED = 'pubmed',
   ARXIV = 'arxiv',
   GOOGLE_SCHOLAR = 'google_scholar',
+  // Phase 10.6 Day 3: Additional academic sources
+  BIORXIV = 'biorxiv',
+  MEDRXIV = 'medrxiv',
+  SSRN = 'ssrn',
+  CHEMRXIV = 'chemrxiv',
+  // Phase 10.6 Day 4: PubMed Central (PMC) - Full-text articles
+  PMC = 'pmc',
+  // Phase 10.6 Day 5: ERIC - Education research database
+  ERIC = 'eric',
+  // Phase 10.6 Day 6: Web of Science - Premium academic database
+  WEB_OF_SCIENCE = 'web_of_science',
+  // Phase 10.6 Day 7: Scopus - Premium Elsevier database
+  SCOPUS = 'scopus',
+  // Phase 10.6 Day 8: IEEE Xplore - Engineering and computer science database
+  IEEE_XPLORE = 'ieee_xplore',
+  // Phase 10.6 Day 9: SpringerLink - Multidisciplinary STM publisher
+  SPRINGER = 'springer',
+  // Phase 10.6 Day 10: Nature - High-impact multidisciplinary journal
+  NATURE = 'nature',
+  // Phase 10.6 Day 11: Wiley Online Library - 6M+ articles, strong in engineering/medicine
+  WILEY = 'wiley',
+  // Phase 10.6 Day 12: SAGE Publications - 1000+ journals, social sciences focus
+  SAGE = 'sage',
+  // Phase 10.6 Day 13: Taylor & Francis - 2700+ journals, humanities focus
+  TAYLOR_FRANCIS = 'taylor_francis',
 }
 
 export class SearchLiteratureDto {
@@ -198,6 +223,59 @@ export class SavePaperDto {
   @IsString()
   @IsOptional()
   collectionId?: string;
+
+  // Phase 10.6 Day 2: Enhanced PubMed Metadata
+  @ApiPropertyOptional({
+    description: 'MeSH terms (Medical Subject Headings) from PubMed',
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        descriptor: { type: 'string' },
+        qualifiers: { type: 'array', items: { type: 'string' } }
+      }
+    }
+  })
+  @IsOptional()
+  meshTerms?: Array<{ descriptor: string; qualifiers: string[] }>;
+
+  @ApiPropertyOptional({
+    description: 'Publication types from PubMed',
+    type: [String],
+    example: ['Journal Article', 'Randomized Controlled Trial']
+  })
+  @IsArray()
+  @IsOptional()
+  publicationType?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Author affiliations from PubMed',
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        author: { type: 'string' },
+        affiliation: { type: 'string' }
+      }
+    }
+  })
+  @IsOptional()
+  authorAffiliations?: Array<{ author: string; affiliation: string }>;
+
+  @ApiPropertyOptional({
+    description: 'Grant information from PubMed',
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        grantId: { type: 'string', nullable: true },
+        agency: { type: 'string', nullable: true },
+        country: { type: 'string', nullable: true }
+      }
+    }
+  })
+  @IsOptional()
+  grants?: Array<{ grantId: string | null; agency: string | null; country: string | null }>;
 }
 
 export class ExportCitationsDto {
@@ -319,9 +397,10 @@ export class Paper {
   id!: string;
   title!: string;
   authors!: string[];
-  year!: number;
+  year?: number; // Phase 10.6 Day 3.5: Made optional (not all papers have publication year)
   abstract?: string;
   doi?: string;
+  pmid?: string; // Phase 10.6 Day 3.5: PubMed ID for PMC full-text lookup
   url?: string;
   venue?: string;
   citationCount?: number;
@@ -352,6 +431,15 @@ export class Paper {
     | 'manual'
     | 'abstract_overflow'
     | 'pmc'
+    | 'eric'
+    | 'web_of_science'
+    | 'scopus'
+    | 'ieee'
+    | 'springer'
+    | 'nature'
+    | 'wiley'
+    | 'sage'
+    | 'taylor_francis'
     | 'publisher'; // Where full-text came from
   fullTextWordCount?: number; // Word count from full-text (when fetched)
   fullText?: string; // Full-text content (when fetched)
@@ -365,6 +453,19 @@ export class Paper {
   hIndexJournal?: number; // Journal h-index
   qualityScore?: number; // Composite quality score (0-100)
   isHighQuality?: boolean; // Meets enterprise quality standards
+
+  // Phase 10.1 Day 12: Quality Score Transparency
+  qualityScoreBreakdown?: {
+    citationImpact: number; // 0-100 (40% weight)
+    journalPrestige: number; // 0-100 (35% weight)
+    contentDepth: number; // 0-100 (25% weight)
+  };
+
+  // Phase 10.6 Day 2-3.5: PubMed-specific rich metadata
+  meshTerms?: Array<{ descriptor: string; qualifiers: string[] }>; // Medical Subject Headings
+  publicationType?: string[]; // Publication type classifications
+  authorAffiliations?: Array<{ author: string; affiliation: string }>; // Author institutional affiliations
+  grants?: Array<{ grantId: string | null; agency: string | null; country: string | null }>; // Funding information
 }
 
 export class Theme {

@@ -316,7 +316,7 @@ export class AICostService {
 
   private groupByModel(usage: any[]): Record<string, { requests: number; tokens: number; cost: number }> {
     const grouped: Record<string, { requests: number; tokens: number; cost: number }> = {};
-    
+
     usage.forEach(u => {
       if (!grouped[u.model]) {
         grouped[u.model] = {
@@ -325,21 +325,24 @@ export class AICostService {
           cost: 0,
         };
       }
-      
-      grouped[u.model].requests += 1;
-      grouped[u.model].tokens += u.totalTokens;
-      grouped[u.model].cost += u.cost;
+
+      const modelGroup = grouped[u.model];
+      if (modelGroup) {
+        modelGroup.requests += 1;
+        modelGroup.tokens += u.totalTokens;
+        modelGroup.cost += u.cost;
+      }
     });
-    
+
     return grouped;
   }
 
   private groupByDay(usage: any[]): Record<string, { requests: number; tokens: number; cost: number }> {
     const grouped: Record<string, { requests: number; tokens: number; cost: number }> = {};
-    
+
     usage.forEach(u => {
       const day = u.createdAt.toISOString().split('T')[0];
-      
+
       if (!grouped[day]) {
         grouped[day] = {
           requests: 0,
@@ -347,12 +350,15 @@ export class AICostService {
           cost: 0,
         };
       }
-      
-      grouped[day].requests += 1;
-      grouped[day].tokens += u.totalTokens;
-      grouped[day].cost += u.cost;
+
+      const dayGroup = grouped[day];
+      if (dayGroup) {
+        dayGroup.requests += 1;
+        dayGroup.tokens += u.totalTokens;
+        dayGroup.cost += u.cost;
+      }
     });
-    
+
     return grouped;
   }
 }

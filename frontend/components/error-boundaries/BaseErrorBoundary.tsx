@@ -22,7 +22,9 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 export interface ErrorBoundaryProps {
   children: ReactNode;
-  fallback?: ReactNode | ((error: Error, errorInfo: ErrorInfo, retry: () => void) => ReactNode);
+  fallback?:
+    | ReactNode
+    | ((error: Error, errorInfo: ErrorInfo, retry: () => void) => ReactNode);
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
   onReset?: () => void;
   resetKeys?: Array<string | number>;
@@ -41,7 +43,10 @@ interface ErrorBoundaryState {
 // Base Error Boundary Class
 // ============================================================================
 
-export class BaseErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class BaseErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {
@@ -105,7 +110,11 @@ export class BaseErrorBoundary extends Component<ErrorBoundaryProps, ErrorBounda
     return prevKeys.every((key, index) => key === nextKeys[index]);
   }
 
-  private logError(error: Error, errorInfo: ErrorInfo, componentName?: string): void {
+  private logError(
+    error: Error,
+    errorInfo: ErrorInfo,
+    componentName?: string
+  ): void {
     console.group(`🔴 Error Boundary: ${componentName || 'Unknown Component'}`);
     console.error('Error:', error);
     console.error('Error Message:', error.message);
@@ -114,7 +123,11 @@ export class BaseErrorBoundary extends Component<ErrorBoundaryProps, ErrorBounda
     console.groupEnd();
   }
 
-  private reportError(error: Error, errorInfo: ErrorInfo, componentName?: string): void {
+  private reportError(
+    error: Error,
+    errorInfo: ErrorInfo,
+    componentName?: string
+  ): void {
     // Integration point for error reporting service (Sentry, Rollbar, etc.)
     if (typeof window !== 'undefined' && (window as any).errorReporter) {
       (window as any).errorReporter.report({
@@ -191,7 +204,9 @@ export class BaseErrorBoundary extends Component<ErrorBoundaryProps, ErrorBounda
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-red-900">
-              {componentName ? `Error in ${componentName}` : 'Something went wrong'}
+              {componentName
+                ? `Error in ${componentName}`
+                : 'Something went wrong'}
             </h3>
             <p className="mt-2 text-sm text-red-700">{error.message}</p>
             {errorCount > 1 && (

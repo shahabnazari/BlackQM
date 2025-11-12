@@ -71,14 +71,29 @@ export function useIncrementalExtraction() {
         corpusStats: stats,
         isLoadingCorpuses: false,
       }));
-    } catch (error) {
-      console.error('Failed to load corpus data:', error);
-      setState(prev => ({
-        ...prev,
-        corpusError:
-          error instanceof Error ? error.message : 'Failed to load corpus data',
-        isLoadingCorpuses: false,
-      }));
+    } catch (error: any) {
+      // Phase 10.1 Day 7: Suppress expected 401 errors for unauthenticated users
+      if (error?.response?.status === 401 || error?.message === 'Unauthorized') {
+        console.log(
+          '👤 [useIncrementalExtraction] User not authenticated, skipping corpus load'
+        );
+        setState(prev => ({
+          ...prev,
+          corpusList: [],
+          corpusStats: null,
+          isLoadingCorpuses: false,
+        }));
+      } else {
+        console.error('Failed to load corpus data:', error);
+        setState(prev => ({
+          ...prev,
+          corpusError:
+            error instanceof Error
+              ? error.message
+              : 'Failed to load corpus data',
+          isLoadingCorpuses: false,
+        }));
+      }
     }
   }, []);
 

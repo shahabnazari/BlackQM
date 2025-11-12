@@ -22,10 +22,10 @@ export async function POST(request: NextRequest) {
     }
 
     // If we have a backend available, forward the request
-    if (process.env.BACKEND_URL) {
+    if (process.env['BACKEND_URL']) {
       try {
         const response = await fetch(
-          `${process.env.BACKEND_URL}/api/navigation/track`,
+          `${process.env['BACKEND_URL']}/api/navigation/track`,
           {
             method: 'POST',
             headers: {

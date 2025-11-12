@@ -30,7 +30,9 @@ interface FilterPanelProps {
 // Component Implementation
 // ============================================================================
 
-export const FilterPanel = memo(function FilterPanel({ isVisible }: FilterPanelProps) {
+export const FilterPanel = memo(function FilterPanel({
+  isVisible,
+}: FilterPanelProps) {
   // ============================================================================
   // State from Zustand Store
   // ============================================================================
@@ -104,7 +106,9 @@ export const FilterPanel = memo(function FilterPanel({ isVisible }: FilterPanelP
   };
 
   const handlePublicationTypeChange = (value: string) => {
-    logger.debug('[FilterPanel] Publication type changed', { publicationType: value });
+    logger.debug('[FilterPanel] Publication type changed', {
+      publicationType: value,
+    });
     const publicationType = value as SearchFilters['publicationType'];
     if (publicationType !== undefined) {
       setFilters({ publicationType });
@@ -229,7 +233,7 @@ Quality Tiers:
                 min="1900"
                 max={currentYear}
                 value={filters.yearFrom ?? ''}
-                onChange={(e) => handleYearFromChange(e.target.value)}
+                onChange={e => handleYearFromChange(e.target.value)}
                 className="w-full"
                 aria-label="Year from"
               />
@@ -239,7 +243,7 @@ Quality Tiers:
                 min="1900"
                 max={currentYear}
                 value={filters.yearTo ?? ''}
-                onChange={(e) => handleYearToChange(e.target.value)}
+                onChange={e => handleYearToChange(e.target.value)}
                 className="w-full"
                 aria-label="Year to"
               />
@@ -253,13 +257,13 @@ Quality Tiers:
               type="text"
               placeholder="e.g., Smith"
               value={filters.author}
-              onChange={(e) => handleAuthorChange(e.target.value)}
+              onChange={e => handleAuthorChange(e.target.value)}
               className="mt-1"
               aria-label="Author name"
             />
             <select
               value={filters.authorSearchMode}
-              onChange={(e) => handleAuthorSearchModeChange(e.target.value)}
+              onChange={e => handleAuthorSearchModeChange(e.target.value)}
               className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               aria-label="Author search mode"
             >
@@ -276,7 +280,7 @@ Quality Tiers:
               type="number"
               placeholder="e.g., 10"
               value={filters.minCitations ?? ''}
-              onChange={(e) => handleMinCitationsChange(e.target.value)}
+              onChange={e => handleMinCitationsChange(e.target.value)}
               className="mt-1"
               aria-label="Minimum citations"
             />
@@ -287,7 +291,7 @@ Quality Tiers:
             <label className="text-sm font-medium">Publication Type</label>
             <select
               value={filters.publicationType}
-              onChange={(e) => handlePublicationTypeChange(e.target.value)}
+              onChange={e => handlePublicationTypeChange(e.target.value)}
               className="mt-1 w-full h-10 px-3 border rounded-md"
               aria-label="Publication type"
             >
@@ -303,13 +307,15 @@ Quality Tiers:
             <label className="text-sm font-medium">Sort By</label>
             <select
               value={filters.sortBy}
-              onChange={(e) => handleSortByChange(e.target.value)}
+              onChange={e => handleSortByChange(e.target.value)}
               className="mt-1 w-full h-10 px-3 border rounded-md"
               aria-label="Sort by"
             >
               <option value="relevance">Relevance</option>
               <option value="citations">Citations (Total)</option>
-              <option value="citations_per_year">Citations/Year (Impact)</option>
+              <option value="citations_per_year">
+                Citations/Year (Impact)
+              </option>
               <option value="quality_score">Quality Score (Enterprise)</option>
               <option value="word_count">Word Count (Depth)</option>
               <option value="date">Date (Newest)</option>
@@ -333,7 +339,7 @@ Quality Tiers:
             <a
               href="#"
               className="underline ml-1"
-              onClick={(e) => {
+              onClick={e => {
                 e.preventDefault();
                 handleShowQualityInfo();
               }}
@@ -350,7 +356,7 @@ Quality Tiers:
             <div className="space-y-2">
               <label className="text-sm font-medium">📁 Saved Presets</label>
               <div className="flex gap-2 flex-wrap">
-                {savedPresets.map((preset) => (
+                {savedPresets.map(preset => (
                   <div
                     key={preset.id}
                     className="flex items-center gap-1 bg-purple-50 border border-purple-200 rounded-lg px-3 py-1.5 text-sm"
@@ -387,8 +393,8 @@ Quality Tiers:
                 <Input
                   placeholder="e.g., Recent AI Papers"
                   value={presetName}
-                  onChange={(e) => setPresetName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSavePreset()}
+                  onChange={e => setPresetName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSavePreset()}
                   className="mt-1"
                   aria-label="Preset name"
                 />

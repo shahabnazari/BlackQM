@@ -142,7 +142,9 @@ export class ExplainabilityApiService {
   async calculateFeatureImportance(
     studyId: string
   ): Promise<{ factors: FactorExplanation[] }> {
-    const response = await apiClient.get(`/interpretation/${studyId}/explainability/feature-importance`);
+    const response = await apiClient.get(
+      `/interpretation/${studyId}/explainability/feature-importance`
+    );
     return response.data;
   }
 
@@ -158,8 +160,10 @@ export class ExplainabilityApiService {
     }
   ): Promise<{ counterfactuals: Counterfactual[] }> {
     const params = new URLSearchParams();
-    if (options?.scenarioCount) params.append('scenarioCount', options.scenarioCount.toString());
-    if (options?.focusOnDistinguishing) params.append('focusOnDistinguishing', 'true');
+    if (options?.scenarioCount)
+      params.append('scenarioCount', options.scenarioCount.toString());
+    if (options?.focusOnDistinguishing)
+      params.append('focusOnDistinguishing', 'true');
 
     const response = await apiClient.get(
       `/interpretation/${studyId}/explainability/counterfactuals?${params.toString()}`
@@ -172,7 +176,9 @@ export class ExplainabilityApiService {
    * Multi-dimensional analysis across 5 bias types
    */
   async performBiasAudit(studyId: string): Promise<BiasAudit> {
-    const response = await apiClient.get(`/interpretation/${studyId}/explainability/bias-audit`);
+    const response = await apiClient.get(
+      `/interpretation/${studyId}/explainability/bias-audit`
+    );
     return response.data;
   }
 

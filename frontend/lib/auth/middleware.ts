@@ -60,7 +60,7 @@ export async function verifyAuth(req: NextRequest): Promise<{
 
     // Check for API key authentication (for service-to-service calls)
     const apiKey = req.headers.get('x-api-key');
-    if (apiKey && apiKey === process.env.INTERNAL_API_KEY) {
+    if (apiKey && apiKey === process.env['INTERNAL_API_KEY']) {
       return {
         authenticated: true,
         user: {

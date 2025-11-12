@@ -106,7 +106,7 @@ export class BaseApiService {
    * Cancel all pending requests
    */
   protected cancelAll(): void {
-    this.abortControllers.forEach((controller) => {
+    this.abortControllers.forEach(controller => {
       controller.abort('All requests cancelled');
     });
     this.abortControllers.clear();
@@ -124,7 +124,13 @@ export class BaseApiService {
     options: RequestOptions = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.basePath}${path}`;
-    const { skipRetry = false, retries, retryDelay, onRetry, ...config } = options;
+    const {
+      skipRetry = false,
+      retries,
+      retryDelay,
+      onRetry,
+      ...config
+    } = options;
 
     if (skipRetry) {
       return apiClient.get<T>(url, config);
@@ -147,7 +153,13 @@ export class BaseApiService {
     options: RequestOptions = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.basePath}${path}`;
-    const { skipRetry = false, retries, retryDelay, onRetry, ...config } = options;
+    const {
+      skipRetry = false,
+      retries,
+      retryDelay,
+      onRetry,
+      ...config
+    } = options;
 
     if (skipRetry) {
       return apiClient.post<T>(url, data, config);
@@ -170,7 +182,13 @@ export class BaseApiService {
     options: RequestOptions = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.basePath}${path}`;
-    const { skipRetry = false, retries, retryDelay, onRetry, ...config } = options;
+    const {
+      skipRetry = false,
+      retries,
+      retryDelay,
+      onRetry,
+      ...config
+    } = options;
 
     if (skipRetry) {
       return apiClient.put<T>(url, data, config);
@@ -193,7 +211,13 @@ export class BaseApiService {
     options: RequestOptions = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.basePath}${path}`;
-    const { skipRetry = false, retries, retryDelay, onRetry, ...config } = options;
+    const {
+      skipRetry = false,
+      retries,
+      retryDelay,
+      onRetry,
+      ...config
+    } = options;
 
     if (skipRetry) {
       return apiClient.patch<T>(url, data, config);
@@ -215,7 +239,13 @@ export class BaseApiService {
     options: RequestOptions = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.basePath}${path}`;
-    const { skipRetry = false, retries, retryDelay, onRetry, ...config } = options;
+    const {
+      skipRetry = false,
+      retries,
+      retryDelay,
+      onRetry,
+      ...config
+    } = options;
 
     if (skipRetry) {
       return apiClient.delete<T>(url, config);
@@ -251,7 +281,10 @@ export class BaseApiService {
         lastError = error;
 
         // Don't retry if request was cancelled
-        if (error.code === 'ERR_CANCELED' || error.message?.includes('cancel')) {
+        if (
+          error.code === 'ERR_CANCELED' ||
+          error.message?.includes('cancel')
+        ) {
           throw error;
         }
 
@@ -304,7 +337,11 @@ export class BaseApiService {
    * Extract error message from API error
    */
   protected getErrorMessage(error: AxiosError | Error): string {
-    if ('response' in error && error.response?.data && typeof error.response.data === 'object') {
+    if (
+      'response' in error &&
+      error.response?.data &&
+      typeof error.response.data === 'object'
+    ) {
       const data = error.response.data as { message?: string };
       if (data.message) {
         return data.message;
@@ -335,7 +372,9 @@ export class BaseApiService {
    */
   protected isTimeoutError(error: AxiosError | Error): boolean {
     const axiosError = error as AxiosError;
-    return axiosError.code === 'ECONNABORTED' || axiosError.code === 'ETIMEDOUT';
+    return (
+      axiosError.code === 'ECONNABORTED' || axiosError.code === 'ETIMEDOUT'
+    );
   }
 
   /**
@@ -343,7 +382,9 @@ export class BaseApiService {
    */
   protected isCancellationError(error: AxiosError | Error): boolean {
     const axiosError = error as AxiosError;
-    return axiosError.code === 'ERR_CANCELED' || error.message?.includes('cancel');
+    return (
+      axiosError.code === 'ERR_CANCELED' || error.message?.includes('cancel')
+    );
   }
 
   // ============================================================================
@@ -365,9 +406,7 @@ export class BaseApiService {
    * Execute requests in sequence (one at a time)
    * Returns empty array if requests array is empty
    */
-  protected async sequence<T>(
-    requests: Array<() => Promise<T>>
-  ): Promise<T[]> {
+  protected async sequence<T>(requests: Array<() => Promise<T>>): Promise<T[]> {
     if (requests.length === 0) {
       return [];
     }

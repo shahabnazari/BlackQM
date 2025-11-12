@@ -61,26 +61,39 @@ const INSIGHT_TYPE_COLORS: Record<string, string> = {
   hypothesis: 'bg-pink-50 text-pink-700',
 };
 
-export function InsightCard({ insight, onViewDetails, onAnnotate, onShare, compact = false }: InsightCardProps) {
+export function InsightCard({
+  insight,
+  onViewDetails,
+  onAnnotate,
+  onShare,
+  compact = false,
+}: InsightCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const TypeIcon = INSIGHT_TYPE_ICONS[insight.type] || DocumentTextIcon;
-  const typeColor = INSIGHT_TYPE_COLORS[insight.type] || 'bg-gray-50 text-gray-700';
+  const typeColor =
+    INSIGHT_TYPE_COLORS[insight.type] || 'bg-gray-50 text-gray-700';
 
   // Format type label
-  const typeLabel = insight.type.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const typeLabel = insight.type
+    .replace('_', ' ')
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 
   // Calculate confidence badge color
-  const confidenceBadge = insight.provenance.confidence >= 0.9
-    ? { variant: 'default' as const, label: 'High Confidence' }
-    : insight.provenance.confidence >= 0.7
-    ? { variant: 'secondary' as const, label: 'Medium Confidence' }
-    : { variant: 'destructive' as const, label: 'Low Confidence' };
+  const confidenceBadge =
+    insight.provenance.confidence >= 0.9
+      ? { variant: 'default' as const, label: 'High Confidence' }
+      : insight.provenance.confidence >= 0.7
+        ? { variant: 'secondary' as const, label: 'Medium Confidence' }
+        : { variant: 'destructive' as const, label: 'Low Confidence' };
 
   // Truncate content for compact view
-  const displayContent = compact && !expanded && insight.content.length > 200
-    ? `${insight.content.substring(0, 200)}...`
-    : insight.content;
+  const displayContent =
+    compact && !expanded && insight.content.length > 200
+      ? `${insight.content.substring(0, 200)}...`
+      : insight.content;
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -93,7 +106,9 @@ export function InsightCard({ insight, onViewDetails, onAnnotate, onShare, compa
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-gray-900">{insight.title}</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {insight.title}
+                </h3>
                 {insight.version > 1 && (
                   <Badge variant="secondary">v{insight.version}</Badge>
                 )}
@@ -103,9 +118,7 @@ export function InsightCard({ insight, onViewDetails, onAnnotate, onShare, compa
                 <Badge variant={confidenceBadge.variant}>
                   {confidenceBadge.label}
                 </Badge>
-                {insight.isPublic && (
-                  <Badge variant="default">Public</Badge>
-                )}
+                {insight.isPublic && <Badge variant="default">Public</Badge>}
               </div>
             </div>
           </div>
@@ -157,7 +170,9 @@ export function InsightCard({ insight, onViewDetails, onAnnotate, onShare, compa
                 </Badge>
               ))}
               {insight.keywords.length > 5 && (
-                <span className="text-xs text-gray-500">+{insight.keywords.length - 5} more</span>
+                <span className="text-xs text-gray-500">
+                  +{insight.keywords.length - 5} more
+                </span>
               )}
             </div>
           </div>
@@ -186,13 +201,16 @@ export function InsightCard({ insight, onViewDetails, onAnnotate, onShare, compa
         {!compact && (
           <div className="mb-3 text-xs text-gray-500 space-y-1">
             <div>
-              <span className="font-medium">Extraction Method:</span> {insight.provenance.extractionMethod}
+              <span className="font-medium">Extraction Method:</span>{' '}
+              {insight.provenance.extractionMethod}
             </div>
             <div>
-              <span className="font-medium">Confidence:</span> {(insight.provenance.confidence * 100).toFixed(0)}%
+              <span className="font-medium">Confidence:</span>{' '}
+              {(insight.provenance.confidence * 100).toFixed(0)}%
             </div>
             <div>
-              <span className="font-medium">Generated:</span> {new Date(insight.provenance.generatedAt).toLocaleDateString()}
+              <span className="font-medium">Generated:</span>{' '}
+              {new Date(insight.provenance.generatedAt).toLocaleDateString()}
             </div>
           </div>
         )}

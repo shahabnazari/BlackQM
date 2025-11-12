@@ -18,17 +18,45 @@ import {
   TrashIcon,
   PencilIcon,
 } from '@heroicons/react/24/outline';
-import { Annotation, repositoryApi } from '@/lib/api/services/repository-api.service';
+import {
+  Annotation,
+  repositoryApi,
+} from '@/lib/api/services/repository-api.service';
 
 interface AnnotationPanelProps {
   insightId: string;
 }
 
-const ANNOTATION_TYPES: Array<{ value: Annotation['type']; label: string; icon: any; color: string }> = [
-  { value: 'note', label: 'Note', icon: ChatBubbleBottomCenterTextIcon, color: 'text-blue-600' },
-  { value: 'question', label: 'Question', icon: QuestionMarkCircleIcon, color: 'text-yellow-600' },
-  { value: 'critique', label: 'Critique', icon: ExclamationTriangleIcon, color: 'text-red-600' },
-  { value: 'extension', label: 'Extension', icon: SparklesIcon, color: 'text-green-600' },
+const ANNOTATION_TYPES: Array<{
+  value: Annotation['type'];
+  label: string;
+  icon: any;
+  color: string;
+}> = [
+  {
+    value: 'note',
+    label: 'Note',
+    icon: ChatBubbleBottomCenterTextIcon,
+    color: 'text-blue-600',
+  },
+  {
+    value: 'question',
+    label: 'Question',
+    icon: QuestionMarkCircleIcon,
+    color: 'text-yellow-600',
+  },
+  {
+    value: 'critique',
+    label: 'Critique',
+    icon: ExclamationTriangleIcon,
+    color: 'text-red-600',
+  },
+  {
+    value: 'extension',
+    label: 'Extension',
+    icon: SparklesIcon,
+    color: 'text-green-600',
+  },
 ];
 
 export function AnnotationPanel({ insightId }: AnnotationPanelProps) {
@@ -59,7 +87,11 @@ export function AnnotationPanel({ insightId }: AnnotationPanelProps) {
     if (!newAnnotation.trim()) return;
 
     try {
-      await repositoryApi.createAnnotation(insightId, newAnnotation, selectedType);
+      await repositoryApi.createAnnotation(
+        insightId,
+        newAnnotation,
+        selectedType
+      );
       setNewAnnotation('');
       await loadAnnotations();
     } catch (error) {
@@ -91,14 +123,24 @@ export function AnnotationPanel({ insightId }: AnnotationPanelProps) {
     }
   };
 
-  const getAnnotationType = (type: Annotation['type']): { value: Annotation['type']; label: string; icon: any; color: string } => {
-    return (ANNOTATION_TYPES.find(t => t.value === type) || ANNOTATION_TYPES[0]) as { value: Annotation['type']; label: string; icon: any; color: string };
+  const getAnnotationType = (
+    type: Annotation['type']
+  ): { value: Annotation['type']; label: string; icon: any; color: string } => {
+    return (ANNOTATION_TYPES.find(t => t.value === type) ||
+      ANNOTATION_TYPES[0]) as {
+      value: Annotation['type'];
+      label: string;
+      icon: any;
+      color: string;
+    };
   };
 
   if (loading) {
     return (
       <Card>
-        <div className="p-4 text-center text-gray-500">Loading annotations...</div>
+        <div className="p-4 text-center text-gray-500">
+          Loading annotations...
+        </div>
       </Card>
     );
   }
@@ -113,7 +155,7 @@ export function AnnotationPanel({ insightId }: AnnotationPanelProps) {
         {/* New Annotation Form */}
         <div className="mb-6 space-y-3">
           <div className="flex gap-2">
-            {ANNOTATION_TYPES.map((type) => {
+            {ANNOTATION_TYPES.map(type => {
               const Icon = type.icon;
               return (
                 <button
@@ -134,7 +176,7 @@ export function AnnotationPanel({ insightId }: AnnotationPanelProps) {
 
           <textarea
             value={newAnnotation}
-            onChange={(e) => setNewAnnotation(e.target.value)}
+            onChange={e => setNewAnnotation(e.target.value)}
             placeholder={`Add a ${getAnnotationType(selectedType).label.toLowerCase()}...`}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             rows={3}
@@ -158,13 +200,16 @@ export function AnnotationPanel({ insightId }: AnnotationPanelProps) {
               No annotations yet. Be the first to add one!
             </div>
           ) : (
-            annotations.map((annotation) => {
+            annotations.map(annotation => {
               const typeInfo = getAnnotationType(annotation.type);
               const Icon = typeInfo.icon;
               const isEditing = editingId === annotation.id;
 
               return (
-                <div key={annotation.id} className="p-3 border border-gray-200 rounded-lg">
+                <div
+                  key={annotation.id}
+                  className="p-3 border border-gray-200 rounded-lg"
+                >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Icon className={`w-4 h-4 ${typeInfo.color}`} />
@@ -195,7 +240,7 @@ export function AnnotationPanel({ insightId }: AnnotationPanelProps) {
                     <div className="space-y-2">
                       <textarea
                         value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
+                        onChange={e => setEditContent(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         rows={3}
                       />
@@ -221,7 +266,9 @@ export function AnnotationPanel({ insightId }: AnnotationPanelProps) {
                     </div>
                   ) : (
                     <>
-                      <p className="text-sm text-gray-700 mb-2">{annotation.content}</p>
+                      <p className="text-sm text-gray-700 mb-2">
+                        {annotation.content}
+                      </p>
                       <div className="text-xs text-gray-500">
                         {new Date(annotation.createdAt).toLocaleString()}
                       </div>
