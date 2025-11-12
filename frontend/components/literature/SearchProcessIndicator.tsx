@@ -36,7 +36,6 @@ import {
   Search,
   Shield,
   TrendingUp,
-  FileText,
   Zap,
   Info,
 } from 'lucide-react';
@@ -167,7 +166,7 @@ function exportTransparencyCSV(metadata: SearchMetadata, query: string): void {
   if (metadata.qualificationCriteria) {
     csv.push([''], ['SECTION 2.1: QUALITY CRITERIA DETAILS']);
     csv.push(['Criterion', 'Value', 'Description']);
-    csv.push([
+  csv.push([
       'Relevance Score Minimum',
       metadata.qualificationCriteria.relevanceScoreMin.toString(),
       metadata.qualificationCriteria.relevanceScoreDesc,
@@ -184,7 +183,7 @@ function exportTransparencyCSV(metadata: SearchMetadata, query: string): void {
     ]);
     csv.push([''], ['FILTERS APPLIED']);
     csv.push(['Filter Type', 'Details']);
-    metadata.qualificationCriteria.filtersApplied.forEach(filter => {
+    metadata.qualificationCriteria.filtersApplied.forEach((filter: string) => {
       csv.push([filter, 'Applied']);
     });
     
@@ -485,14 +484,14 @@ export function SearchProcessIndicator({
                   </Badge>
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {query && `Query: "${query}" • `}
+                  {query && <>Query: &ldquo;{query}&rdquo; • </>}
                   Searched {sourcesQueried} research databases {sourcesWithResults > 0 && `(${sourcesWithResults} found relevant papers)`}
                 </p>
                 {queryExpansion && (
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                     <Zap className="w-3 h-3 inline mr-1" />
-                    Query expanded: "{queryExpansion.original}" → "
-                    {queryExpansion.expanded}"
+                    Query expanded: &ldquo;{queryExpansion.original}&rdquo; → &ldquo;
+                    {queryExpansion.expanded}&rdquo;
                   </p>
                 )}
               </div>
@@ -588,7 +587,7 @@ export function SearchProcessIndicator({
                   Allocation Strategy
                   <Info className="w-3 h-3 inline ml-1 opacity-60" />
                   <div className="absolute left-0 top-full mt-2 w-72 p-3 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                    <strong>Why different limits?</strong> High-quality databases (like PubMed) get more requests because they have better peer-reviewed papers. Preprint databases get fewer requests because papers aren't peer-reviewed yet.
+                    <strong>Why different limits?</strong> High-quality databases (like PubMed) get more requests because they have better peer-reviewed papers. Preprint databases get fewer requests because papers aren&apos;t peer-reviewed yet.
                   </div>
                 </span>
               </div>
@@ -598,7 +597,7 @@ export function SearchProcessIndicator({
                   <Badge variant="outline" className="bg-white dark:bg-gray-800 group relative cursor-help">
                     {(metadata as any).allocationStrategy.queryComplexity.toUpperCase()} Query
                     <div className="absolute left-0 top-full mt-2 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                      <strong>BROAD:</strong> 1-2 words (e.g., "climate")<br/>
+                      <strong>BROAD:</strong> 1-2 words (e.g., &ldquo;climate&rdquo;)<br/>
                       <strong>SPECIFIC:</strong> 3-5 words with technical terms<br/>
                       <strong>COMPREHENSIVE:</strong> 5+ words, complex search
                     </div>
@@ -681,30 +680,30 @@ export function SearchProcessIndicator({
             <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
               How We Score Quality <span className="text-gray-500 font-normal">(hover for details)</span>
             </div>
-            <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-4">
               {/* Core Scoring (applies to ALL papers) */}
               <Badge variant="success" className="gap-1 group relative cursor-help">
-                <Check className="w-3 h-3" />
+              <Check className="w-3 h-3" />
                 60% Citations
                 <div className="absolute left-0 top-full mt-2 w-72 p-3 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                   <strong>Citation Impact (60%):</strong> How often other researchers cite this paper. Adjusted by field (math papers get fewer citations than biology, so we normalize). More citations = higher quality.
                 </div>
-              </Badge>
+            </Badge>
               <Badge variant="success" className="gap-1 group relative cursor-help">
-                <Check className="w-3 h-3" />
+              <Check className="w-3 h-3" />
                 40% Journal Quality
                 <div className="absolute left-0 top-full mt-2 w-72 p-3 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                  <strong>Journal Prestige (40%):</strong> Quality of the journal/publisher. Measures: impact factor (how influential the journal is), h-index (journal's citation record), and quartile ranking (Q1 = top 25% of journals).
+                  <strong>Journal Prestige (40%):</strong> Quality of the journal/publisher. Measures: impact factor (how influential the journal is), h-index (journal&apos;s citation record), and quartile ranking (Q1 = top 25% of journals).
                 </div>
-              </Badge>
+            </Badge>
               {/* Optional Bonuses */}
               <Badge variant="outline" className="gap-1 bg-blue-50 text-blue-700 border-blue-300 group relative cursor-help">
-                <TrendingUp className="w-3 h-3" />
+              <TrendingUp className="w-3 h-3" />
                 +10 Free Access
                 <div className="absolute left-0 top-full mt-2 w-72 p-3 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                   <strong>Open Access Bonus (+10 points):</strong> Paper is freely available to read (no paywall). Paywalled papers are NOT penalized—this is just a bonus for accessibility.
                 </div>
-              </Badge>
+            </Badge>
               <Badge variant="outline" className="gap-1 bg-green-50 text-green-700 border-green-300 group relative cursor-help">
                 <Zap className="w-3 h-3" />
                 +5 Data Shared
@@ -724,7 +723,7 @@ export function SearchProcessIndicator({
                 <Info className="w-3 h-3" />
                 No Length Bias
                 <div className="absolute left-0 top-full mt-2 w-72 p-3 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                  <strong>No Length Bias:</strong> We don't judge papers by word count. A short article can be more insightful than a long one.
+                  <strong>No Length Bias:</strong> We don&apos;t judge papers by word count. A short article can be more insightful than a long one.
                 </div>
               </Badge>
               <Badge variant="outline" className="gap-1 bg-emerald-50 text-emerald-700 border-emerald-300 group relative cursor-help">
@@ -800,7 +799,7 @@ export function SearchProcessIndicator({
                             3. Quality Scoring & Filtering
                             <Info className="w-3 h-3 inline ml-1 opacity-60" />
                             <div className="absolute left-0 top-full mt-2 w-80 p-3 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                              <strong>Quality Scoring:</strong> We add citation counts and journal quality data (from OpenAlex database). Then we filter out: (1) papers that don't match your keywords, (2) low-quality papers with no citations or from unknown sources.
+                              <strong>Quality Scoring:</strong> We add citation counts and journal quality data (from OpenAlex database). Then we filter out: (1) papers that don&apos;t match your keywords, (2) low-quality papers with no citations or from unknown sources.
                             </div>
                           </span>
                           <Badge variant="success">{afterQualityFilter} qualified</Badge>
@@ -829,7 +828,7 @@ export function SearchProcessIndicator({
                               </div>
                               <div className="flex items-start gap-1">
                                 <span className="text-red-600">✗</span>
-                                <span>Filtered: Relevance &lt; 3 (keywords don't match your search)</span>
+                                <span>Filtered: Relevance &lt; 3 (keywords don&apos;t match your search)</span>
                               </div>
                             </div>
                           </div>

@@ -95,6 +95,17 @@ export interface SearchMetadata {
     original: string;
     expanded: string;
   };
+
+  // Phase 10.6 Day 14.7: Qualification criteria transparency
+  qualificationCriteria?: {
+    relevanceScoreMin: number;
+    relevanceScoreDesc: string;
+    qualityWeights: {
+      citationImpact: number;
+      journalPrestige: number;
+    };
+    filtersApplied: string[];
+  };
 }
 
 // ============================================================================
