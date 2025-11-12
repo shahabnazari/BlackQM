@@ -49,17 +49,24 @@ interface UseProgressiveSearchReturn {
 // Batch Configuration
 // ============================================================================
 
-// 🔧 FIX: Use consistent batch size for proper page-based pagination
-// Previous design (20, 80, 100) was incompatible with (page-1)*limit offset calculation
-// New design: 10 batches of 20 papers each = 200 total
+// 🔧 Phase 10.6 Day 14.9: Dynamic batch allocation based on query complexity
+// - BROAD queries: 500 papers (25 batches × 20)
+// - SPECIFIC queries: 1000 papers (50 batches × 20)
+// - COMPREHENSIVE queries: 1500 papers (75 batches × 20)
 const BATCH_SIZE = 20;
-const TOTAL_BATCHES = 10;
 
-const BATCH_CONFIGS: BatchConfig[] = Array.from({ length: TOTAL_BATCHES }, (_, i) => ({
-  batchNumber: i + 1,
-  limit: BATCH_SIZE,
-  description: `Batch ${i + 1}/${TOTAL_BATCHES} (papers ${i * BATCH_SIZE + 1}-${(i + 1) * BATCH_SIZE})`,
-}));
+// Function to generate batch configs dynamically
+function generateBatchConfigs(targetPapers: number): BatchConfig[] {
+  const totalBatches = Math.ceil(targetPapers / BATCH_SIZE);
+  return Array.from({ length: totalBatches }, (_, i) => ({
+    batchNumber: i + 1,
+    limit: BATCH_SIZE,
+    description: `Batch ${i + 1}/${totalBatches} (papers ${i * BATCH_SIZE + 1}-${(i + 1) * BATCH_SIZE})`,
+  }));
+}
+
+// Default: 500 papers (25 batches) - will be updated after first response
+let BATCH_CONFIGS: BatchConfig[] = generateBatchConfigs(500);
 
 // ============================================================================
 // Hook Implementation
@@ -221,7 +228,8 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
   // ============================================================================
 
   /**
-   * Execute progressive search: 200 papers in 3 batches
+   * Execute progressive search: Dynamic paper count based on query complexity
+   * Phase 10.6 Day 14.9: 500 (BROAD) / 1000 (SPECIFIC) / 1500 (COMPREHENSIVE)
    */
   const executeProgressiveSearch = useCallback(async () => {
     // Validation
@@ -234,16 +242,18 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
     // Reset cancellation flag
     isCancelledRef.current = false;
 
-    // Start progressive loading
-    // 🐛 FIX: Use console.log instead of logger.group to ensure visibility
+    // Start progressive loading with default target (will be updated after first batch)
+    const initialTarget = BATCH_CONFIGS.length * BATCH_SIZE;
+    
     console.log('='.repeat(80));
     console.log('🚀 [useProgressiveSearch] Starting progressive search');
-    console.log(`📊 Target: 200 papers in ${TOTAL_BATCHES} batches (${BATCH_SIZE} per batch)`);
+    console.log(`📊 Initial Target: ${initialTarget} papers in ${BATCH_CONFIGS.length} batches (${BATCH_SIZE} per batch)`);
     console.log('🔍 Query:', query);
     console.log(`📦 Batch configs count: ${BATCH_CONFIGS.length}`);
+    console.log('⚠️  Target will be adjusted after first batch based on query complexity');
     console.log('='.repeat(80));
 
-    startProgressiveLoading(200);
+    startProgressiveLoading(initialTarget);
 
     let allPapers: Paper[] = [];
     let currentOffset = 0;
@@ -287,6 +297,27 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
           console.log(`  totalCollected: ${searchMetadata.totalCollected}`);
           console.log(`  uniqueAfterDedup: ${searchMetadata.uniqueAfterDedup}`);
           console.log(`  sourceBreakdown:`, Object.keys(searchMetadata.sourceBreakdown));
+          
+          // Phase 10.6 Day 14.9: Adjust batch configs based on backend target
+          if ((searchMetadata as any).allocationStrategy?.targetPaperCount) {
+            const backendTarget = (searchMetadata as any).allocationStrategy.targetPaperCount;
+            const actualAvailable = searchMetadata.totalQualified || 0;
+            const targetToLoad = Math.min(backendTarget, actualAvailable);
+            
+            console.log(`\n🎯 [Dynamic Adjustment] Backend Target: ${backendTarget} papers`);
+            console.log(`📊 [Dynamic Adjustment] Actually Available: ${actualAvailable} papers`);
+            console.log(`📥 [Dynamic Adjustment] Will Load: ${targetToLoad} papers`);
+            
+            // Regenerate batch configs if target is different
+            if (targetToLoad !== BATCH_CONFIGS.length * BATCH_SIZE) {
+              BATCH_CONFIGS = generateBatchConfigs(targetToLoad);
+              console.log(`✅ [Dynamic Adjustment] Updated to ${BATCH_CONFIGS.length} batches (${targetToLoad} papers total)`);
+              
+              // Update progressive loading target
+              startProgressiveLoading(targetToLoad);
+            }
+          }
+          
           console.log(`  Full metadata:`, JSON.stringify(searchMetadata, null, 2));
         } else if (!batchMetadata) {
           console.log(`❌ [Batch ${config.batchNumber}] NO metadata returned from API!`);
@@ -325,7 +356,7 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
 
         // Show toast for batch completion
         toast.success(
-          `Loaded ${allPapers.length}/200 papers (Avg Quality: ${avgQuality}/100)`,
+          `Loaded ${allPapers.length}/${BATCH_CONFIGS.length * BATCH_SIZE} papers (Avg Quality: ${avgQuality}/100)`,
           { duration: 2000 }
         );
       }

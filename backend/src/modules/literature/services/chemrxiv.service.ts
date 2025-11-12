@@ -2,6 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { Paper, LiteratureSource } from '../dto/literature.dto';
+import { FAST_API_TIMEOUT, PREPRINT_SERVER_TIMEOUT } from '../constants/http-config.constants';
 
 /**
  * Phase 10.6 Day 3: ChemRxiv Integration Service
@@ -78,7 +79,7 @@ export class ChemRxivService {
 
       const response = await firstValueFrom(
         this.httpService.post(`${this.FIGSHARE_API}/articles/search`, searchParams, {
-          timeout: 30000,
+          timeout: PREPRINT_SERVER_TIMEOUT, // 30s - Phase 10.6 Day 14.5: Migrated to centralized config
           headers: {
             'Content-Type': 'application/json',
           },
@@ -119,7 +120,7 @@ export class ChemRxivService {
     try {
       const response = await firstValueFrom(
         this.httpService.get(`${this.FIGSHARE_API}/articles/${articleId}`, {
-          timeout: 10000,
+          timeout: FAST_API_TIMEOUT, // 10s - Phase 10.6 Day 14.5: Migrated to centralized config
         }),
       );
 
@@ -209,7 +210,7 @@ export class ChemRxivService {
             order: 'published_date',
             order_direction: 'desc',
           },
-          { timeout: 10000 },
+          { timeout: FAST_API_TIMEOUT }, // 10s - Phase 10.6 Day 14.5: Migrated to centralized config
         ),
       );
 

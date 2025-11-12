@@ -137,3 +137,4 @@ archive/
 PHASE*_DAY*.md
 *REPORT*.md
 !ENTERPRISE_TEST_REPORT_DAY*.md
+.tmp.driveupload/

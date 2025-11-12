@@ -92,6 +92,7 @@ import {
   calculateComprehensiveWordCount,
   isPaperEligible,
 } from '../utils/word-count.util';
+import { PUBLISHER_API_TIMEOUT } from '../constants/http-config.constants';
 
 /**
  * Search options specific to SAGE API
@@ -140,7 +141,7 @@ export class SageService {
             'X-API-Key': this.API_KEY,
             Accept: 'application/json',
           },
-          timeout: 15000,
+          timeout: PUBLISHER_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Migrated to centralized config
         }),
       );
 

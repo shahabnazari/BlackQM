@@ -27,6 +27,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { Paper } from '../dto/literature.dto';
+import { ENRICHMENT_TIMEOUT } from '../constants/http-config.constants';
 
 /**
  * Journal metrics from OpenAlex /sources endpoint
@@ -95,7 +96,7 @@ export class OpenAlexEnrichmentService {
           headers: {
             'User-Agent': 'BlackQMethod-Research-Platform (mailto:research@blackqmethod.com)',
           },
-          timeout: 5000, // 5 second timeout
+          timeout: ENRICHMENT_TIMEOUT, // 5s - Phase 10.6 Day 14.5: Migrated to centralized config
         }),
       );
 
@@ -110,6 +111,47 @@ export class OpenAlexEnrichmentService {
           `✅ [OpenAlex] Updated citations for "${paper.title.substring(0, 50)}...": ${paper.citationCount || 0} → ${citedByCount}`,
         );
       }
+
+      // Phase 10.6 Day 14.8 (v3.0): Extract field of study
+      const topics = work?.topics || [];
+      const fieldOfStudy: string[] = topics
+        .slice(0, 3) // Top 3 topics
+        .map((topic: any) => topic?.display_name)
+        .filter((name: string | null | undefined) => name != null);
+
+      // Phase 10.6 Day 14.8 (v3.0): Extract cited_by_percentile_year (proxy for FWCI)
+      // OpenAlex doesn't directly provide FWCI, but cited_by_percentile_year shows
+      // how paper compares to others in same field/year (0-100 percentile)
+      // We can convert this to a pseudo-FWCI for field normalization
+      const citedByPercentile = work?.cited_by_percentile_year;
+      let fwci: number | undefined;
+      if (citedByPercentile && typeof citedByPercentile.max === 'number') {
+        // Convert percentile (0-100) to FWCI-like score:
+        // - 50th percentile = 1.0 (average for field)
+        // - 75th percentile = 1.5 (above average)
+        // - 90th percentile = 2.0 (excellent)
+        // - 99th percentile = 3.0+ (world-class)
+        const percentile = citedByPercentile.max;
+        fwci = percentile / 50; // 50th percentile = 1.0 FWCI
+      }
+
+      // Phase 10.6 Day 14.8 (v3.0): Extract Open Access status
+      const openAccessInfo = work?.open_access;
+      const isOpenAccess = openAccessInfo?.is_oa === true;
+
+      // Phase 10.6 Day 14.8 (v3.0): Detect data/code availability
+      // Check for GitHub, Zenodo, Figshare, Dryad URLs in related resources
+      const locations = work?.locations || [];
+      const hasDataCode = locations.some((loc: any) => {
+        const url = loc?.landing_page_url || '';
+        return (
+          url.includes('github.com') ||
+          url.includes('zenodo.org') ||
+          url.includes('figshare.com') ||
+          url.includes('dryad.org') ||
+          url.includes('osf.io')
+        );
+      });
 
       // Extract journal information
       const primaryLocation = work?.primary_location;
@@ -138,6 +180,15 @@ export class OpenAlexEnrichmentService {
         );
       }
 
+      // Phase 10.6 Day 14.8 (v3.0): Log new metrics
+      if (fwci || fieldOfStudy.length > 0 || isOpenAccess || hasDataCode) {
+        this.logger.log(
+          `🔬 [OpenAlex v3.0] "${paper.title.substring(0, 40)}...": ` +
+          `Field=${fieldOfStudy[0] || 'N/A'}, FWCI=${fwci?.toFixed(2) || 'N/A'}, ` +
+          `OA=${isOpenAccess ? 'Yes' : 'No'}, Data/Code=${hasDataCode ? 'Yes' : 'No'}`,
+        );
+      }
+
       // Return enriched paper
       return {
         ...paper,
@@ -146,6 +197,11 @@ export class OpenAlexEnrichmentService {
         impactFactor: journalMetrics?.twoYearMeanCitedness ?? undefined,
         hIndexJournal: journalMetrics?.hIndex ?? undefined,
         quartile: quartile ?? undefined,
+        // Phase 10.6 Day 14.8 (v3.0): New metrics
+        fieldOfStudy: fieldOfStudy.length > 0 ? fieldOfStudy : undefined,
+        fwci,
+        isOpenAccess,
+        hasDataCode,
       };
     } catch (error: any) {
       // Silently fail enrichment - don't block on errors
@@ -250,7 +306,7 @@ export class OpenAlexEnrichmentService {
           headers: {
             'User-Agent': 'BlackQMethod-Research-Platform (mailto:research@blackqmethod.com)',
           },
-          timeout: 3000, // 3 second timeout
+          timeout: ENRICHMENT_TIMEOUT, // 5s - Phase 10.6 Day 14.5: Migrated to centralized config (increased from 3s)
         }),
       );
 

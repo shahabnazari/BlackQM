@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { Paper, LiteratureSource } from '../dto/literature.dto';
+import { LARGE_RESPONSE_TIMEOUT, ENRICHMENT_TIMEOUT } from '../constants/http-config.constants';
 
 /**
  * Phase 10.6 Day 3: Google Scholar Integration Service
@@ -93,7 +94,7 @@ export class GoogleScholarService {
       const response = await firstValueFrom(
         this.httpService.get(this.SERPAPI_BASE_URL, {
           params,
-          timeout: 30000, // 30 second timeout
+          timeout: LARGE_RESPONSE_TIMEOUT, // 30s - Phase 10.6 Day 14.5: Migrated to centralized config
         }),
       );
 
@@ -189,7 +190,7 @@ export class GoogleScholarService {
       const response = await firstValueFrom(
         this.httpService.get('https://serpapi.com/account', {
           params: { api_key: this.apiKey },
-          timeout: 5000,
+          timeout: ENRICHMENT_TIMEOUT, // 5s - Phase 10.6 Day 14.5: Migrated to centralized config
         }),
       );
 

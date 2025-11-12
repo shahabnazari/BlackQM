@@ -2,7 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { Paper, LiteratureSource } from '../dto/literature.dto';
-import { PREPRINT_DEFAULT_MONTHS } from '../constants/http-config.constants';
+import { PREPRINT_DEFAULT_MONTHS, PREPRINT_SERVER_TIMEOUT, FAST_API_TIMEOUT } from '../constants/http-config.constants';
 
 /**
  * Phase 10.6 Day 3: bioRxiv and medRxiv Integration Service
@@ -124,7 +124,7 @@ export class BioRxivService {
 
       const response = await firstValueFrom(
         this.httpService.get(url, {
-          timeout: 30000,
+          timeout: PREPRINT_SERVER_TIMEOUT, // 30s - Phase 10.6 Day 14.5: Migrated to centralized config
           headers: {
             'User-Agent': 'VQMethod Research Platform (contact@vqmethod.com)',
           },
@@ -227,7 +227,7 @@ export class BioRxivService {
 
       const response = await firstValueFrom(
         this.httpService.get(url, {
-          timeout: 10000,
+          timeout: FAST_API_TIMEOUT, // 10s - Phase 10.6 Day 14.5: Migrated to centralized config
         }),
       );
 

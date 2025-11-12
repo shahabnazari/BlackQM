@@ -92,6 +92,7 @@ import {
   calculateComprehensiveWordCount,
   isPaperEligible,
 } from '../utils/word-count.util';
+import { LARGE_RESPONSE_TIMEOUT } from '../constants/http-config.constants';
 
 /**
  * Search options specific to Nature API
@@ -168,7 +169,7 @@ export class NatureService {
             'Content-Type': 'application/json',
             Accept: 'application/json',
           },
-          timeout: 30000,
+          timeout: LARGE_RESPONSE_TIMEOUT, // 30s - Phase 10.6 Day 14.5: Migrated to centralized config
         }),
       );
 

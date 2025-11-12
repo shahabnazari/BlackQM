@@ -116,6 +116,7 @@ import {
   calculateComprehensiveWordCount,
   isPaperEligible,
 } from '../utils/word-count.util';
+import { LARGE_RESPONSE_TIMEOUT } from '../constants/http-config.constants';
 
 export interface WebOfScienceSearchOptions {
   yearFrom?: number;
@@ -222,7 +223,7 @@ export class WebOfScienceService {
           headers: {
             'X-ApiKey': this.apiKey,
           },
-          timeout: 30000,
+          timeout: LARGE_RESPONSE_TIMEOUT, // 30s - Phase 10.6 Day 14.5: Migrated to centralized config
         }),
       );
 

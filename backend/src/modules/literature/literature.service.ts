@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
+import { Inject, Injectable, Logger, forwardRef, OnModuleInit } from '@nestjs/common';
 import Parser from 'rss-parser';
 import { firstValueFrom } from 'rxjs';
 import { CacheService } from '../../common/cache.service';
@@ -62,11 +62,28 @@ import {
   calculateComprehensiveWordCount,
   isPaperEligible,
 } from './utils/word-count.util';
+// Phase 10.6 Day 14.9: Tiered source allocation
+import {
+  getSourceAllocation,
+  detectQueryComplexity,
+  getSourceTierInfo,
+  getConfigurationSummary,
+  QueryComplexity,
+  COMPLEXITY_TARGETS,
+  ABSOLUTE_LIMITS,
+  QUALITY_SAMPLING_STRATA,
+  DIVERSITY_CONSTRAINTS,
+} from './constants/source-allocation.constants';
 
 @Injectable()
-export class LiteratureService {
+export class LiteratureService implements OnModuleInit {
   private readonly logger = new Logger(LiteratureService.name);
   private readonly CACHE_TTL = 3600; // 1 hour
+  // Phase 10.6 Day 14.8: Enterprise-grade timeout configuration
+  private readonly MAX_GLOBAL_TIMEOUT = 30000; // 30s - prevent 67s hangs
+  private readonly SOURCE_TIMEOUT_BUFFER = 5000; // 5s buffer for network overhead
+  // Phase 10.6 Day 14.8: Track request times for monitoring
+  private requestTimings = new Map<string, number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -119,6 +136,80 @@ export class LiteratureService {
     private readonly searchLogger: SearchLoggerService,
   ) {}
 
+  /**
+   * Phase 10.6 Day 14.8: Configure HTTP client on module initialization
+   * 
+   * ENTERPRISE-GRADE TIMEOUT CONFIGURATION:
+   * - Sets global timeout to prevent 67s hangs
+   * - Individual sources use their own timeouts (10s, 15s, 30s)
+   * - Global timeout acts as safety net (30s max)
+   * 
+   * BEFORE: All sources took 67s (system default)
+   * AFTER: Fast sources complete in 3-10s, slow sources timeout at 30s
+   */
+  onModuleInit() {
+    // Configure Axios instance with enterprise-grade defaults
+    this.httpService.axiosRef.defaults.timeout = this.MAX_GLOBAL_TIMEOUT;
+    
+    // Add request interceptor for monitoring
+    this.httpService.axiosRef.interceptors.request.use(
+      (config) => {
+        // Track request start time
+        const requestId = `${config.method}-${config.url}`;
+        this.requestTimings.set(requestId, Date.now());
+        return config;
+      },
+      (error) => {
+        this.logger.error(`HTTP Request Error: ${error.message}`);
+        return Promise.reject(error);
+      },
+    );
+
+    // Add response interceptor for monitoring
+    this.httpService.axiosRef.interceptors.response.use(
+      (response) => {
+        const requestId = `${response.config.method}-${response.config.url}`;
+        const startTime = this.requestTimings.get(requestId);
+        if (startTime) {
+          const duration = Date.now() - startTime;
+          this.requestTimings.delete(requestId); // Cleanup
+          if (duration > 10000) {
+            // Log slow responses (>10s)
+            this.logger.warn(
+              `⚠️ Slow HTTP Response: ${response.config.url} took ${duration}ms`,
+            );
+          }
+        }
+        return response;
+      },
+      (error) => {
+        const requestId = `${error.config?.method}-${error.config?.url}`;
+        const startTime = this.requestTimings.get(requestId);
+        if (startTime) {
+          const duration = Date.now() - startTime;
+          this.requestTimings.delete(requestId); // Cleanup
+          if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+            this.logger.warn(
+              `⏱️ HTTP Timeout: ${error.config?.url} after ${duration}ms`,
+            );
+          } else {
+            this.logger.error(
+              `❌ HTTP Error: ${error.config?.url} - ${error.message}`,
+            );
+          }
+        }
+        return Promise.reject(error);
+      },
+    );
+
+    this.logger.log(
+      `✅ [HTTP Config] Global timeout set to ${this.MAX_GLOBAL_TIMEOUT}ms (30s max)`,
+    );
+    this.logger.log(
+      `📊 [HTTP Config] Individual source timeouts: 10s (fast), 15s (complex), 30s (large)`,
+    );
+  }
+
   async searchLiterature(
     searchDto: SearchLiteratureDto,
     userId: string,
@@ -146,6 +237,13 @@ export class LiteratureService {
       displayed: number;
       searchDuration: number;
       queryExpansion?: { original: string; expanded: string };
+      // Phase 10.6 Day 14.7: Qualification criteria transparency
+      qualificationCriteria?: {
+        relevanceScoreMin: number;
+        relevanceScoreDesc: string;
+        qualityWeights: { citationImpact: number; journalPrestige: number };
+        filtersApplied: string[];
+      };
     };
   }> {
     const cacheKey = `literature:search:${JSON.stringify(searchDto)}`;
@@ -169,22 +267,26 @@ export class LiteratureService {
     this.logger.log(`Original query: "${originalQuery}"`);
     this.logger.log(`Expanded query: "${expandedQuery}"`);
 
-    // Phase 10.1 Day 12: Fetch more papers from APIs to support 200-paper progressive loading
-    // Frontend requests 10 batches × 20 papers = 200 total
-    // We need to fetch 100+ papers from each source to have enough after deduplication
-    // Phase 10.6 Day 14.6: Allow override via environment variable or use default
-    const API_FETCH_LIMIT = parseInt(process.env.PAPERS_PER_SOURCE || '100', 10);
+    // Phase 10.6 Day 14.9: ENTERPRISE-GRADE TIERED SOURCE ALLOCATION
+    // Detect query complexity for adaptive limits
+    const queryComplexity = detectQueryComplexity(originalQuery);
+    const complexityConfig = COMPLEXITY_TARGETS[queryComplexity];
     
     this.logger.log(
-      `📊 Search Strategy: Fetching ${API_FETCH_LIMIT} papers from EACH source to ensure sufficient papers after deduplication`,
+      `🎯 Query Complexity: ${queryComplexity.toUpperCase()} - "${complexityConfig.description}"`,
+    );
+    this.logger.log(
+      `📊 Target: ${complexityConfig.totalTarget} papers (${complexityConfig.minPerSource}-${complexityConfig.maxPerSource} per source)`,
     );
 
-    // Create an enhanced search DTO with expanded query and higher fetch limit
-    const enhancedSearchDto = {
-      ...searchDto,
-      query: expandedQuery,
-      limit: API_FETCH_LIMIT // Override limit for API fetching
-    };
+    // Log configuration summary (once per search)
+    const config = getConfigurationSummary();
+    this.logger.log(
+      `⚙️  Allocation Strategy: Tier-1=${config.tierAllocations['Tier 1 (Premium)']}, ` +
+      `Tier-2=${config.tierAllocations['Tier 2 (Good)']}, ` +
+      `Tier-3=${config.tierAllocations['Tier 3 (Preprint)']}, ` +
+      `Tier-4=${config.tierAllocations['Tier 4 (Aggregator)']}`,
+    );
 
     // Phase 10.1 Day 11: Defensive check for empty array ([] is truthy in JS!)
     // Frontend may send sources: [] expecting defaults to be used
@@ -216,11 +318,34 @@ export class LiteratureService {
     // Phase 10.6 Day 14.4: Start enterprise-grade search logging
     const searchLog = this.searchLogger.startSearch(originalQuery, sources as string[], userId);
 
+    // Phase 10.6 Day 14.9: Track allocation per source for transparency
+    const sourceAllocations: Record<string, { allocation: number; tier: string }> = {};
+
     // Track duration for each source search
     const sourcesStartTimes: Record<string, number> = {};
     const searchPromises = sources.map((source) => {
       sourcesStartTimes[source as string] = Date.now();
-      return this.searchBySource(source, enhancedSearchDto);
+      
+      // Phase 10.6 Day 14.9: Get tier-specific allocation for this source
+      const allocation = getSourceAllocation(source);
+      const tierInfo = getSourceTierInfo(source);
+      sourceAllocations[source as string] = {
+        allocation,
+        tier: tierInfo.tierLabel,
+      };
+
+      // Create source-specific search DTO with tiered limit
+      const sourceSpecificDto = {
+        ...searchDto,
+        query: expandedQuery,
+        limit: Math.min(allocation, ABSOLUTE_LIMITS.MAX_PAPERS_PER_SOURCE), // Apply safety cap
+      };
+
+      this.logger.log(
+        `🔍 [${source}] Tier: ${tierInfo.tierLabel}, Limit: ${sourceSpecificDto.limit} papers`,
+      );
+
+      return this.searchBySource(source, sourceSpecificDto);
     });
 
     const results = await Promise.allSettled(searchPromises);
@@ -260,6 +385,7 @@ export class LiteratureService {
     // Recalculate quality scores with enriched journal metrics
     const papersWithUpdatedQuality = enrichedPapers.map((paper) => {
       // Calculate quality components for ALL papers (with or without journal metrics)
+      // Phase 10.6 Day 14.8 (v3.0): Includes field weighting and optional bonuses
       const qualityComponents = calculateQualityScore({
         citationCount: paper.citationCount,
         year: paper.year,
@@ -270,6 +396,11 @@ export class LiteratureService {
         sjrScore: null, // Not yet implemented
         quartile: paper.quartile,
         hIndexJournal: paper.hIndexJournal,
+        // Phase 10.6 Day 14.8 (v3.0): New fields from OpenAlex
+        fwci: paper.fwci,
+        isOpenAccess: paper.isOpenAccess,
+        hasDataCode: paper.hasDataCode,
+        altmetricScore: null, // TODO: Integrate Altmetric API in Phase 2
       });
 
       // Calculate citationsPerYear (may have been updated by OpenAlex)
@@ -280,15 +411,20 @@ export class LiteratureService {
           : 0;
 
       // Phase 10.1 Day 12: Store breakdown for ALL papers for transparency
+      // Phase 10.6 Day 14.8 (v3.0): Includes core score and optional bonuses
       return {
         ...paper,
         citationsPerYear, // Recalculated with potentially updated citation count from OpenAlex
-        qualityScore: qualityComponents.totalScore,
+        qualityScore: qualityComponents.totalScore, // v3.0: Core + bonuses
         isHighQuality: qualityComponents.totalScore >= 50,
         qualityScoreBreakdown: {
-          citationImpact: qualityComponents.citationImpact,
+          citationImpact: qualityComponents.citationImpact, // v3.0: Field-weighted
           journalPrestige: qualityComponents.journalPrestige,
-          contentDepth: qualityComponents.contentDepth,
+          contentDepth: qualityComponents.contentDepth, // Always 0 (removed)
+          // v3.0: Optional bonuses
+          openAccessBonus: qualityComponents.openAccessBonus,
+          reproducibilityBonus: qualityComponents.reproducibilityBonus,
+          altmetricBonus: qualityComponents.altmetricBonus,
         },
       };
     });
@@ -485,11 +621,53 @@ export class LiteratureService {
       sortedPapers = this.sortPapers(relevantPapers, sortOption);
     }
 
-    // Paginate results
+    // Phase 10.6 Day 14.9: SMART QUALITY SAMPLING & SOURCE DIVERSITY
+    // If papers exceed target, apply intelligent sampling
+    const targetPaperCount = complexityConfig.totalTarget;
+    let finalPapers = sortedPapers;
+    let samplingApplied = false;
+    let diversityEnforced = false;
+
+    if (sortedPapers.length > targetPaperCount) {
+      this.logger.log(
+        `📊 Smart Sampling: ${sortedPapers.length} papers > ${targetPaperCount} target. Applying stratified sampling...`,
+      );
+      
+      // Apply quality-stratified sampling to maintain diversity
+      finalPapers = this.applyQualityStratifiedSampling(sortedPapers, targetPaperCount);
+      samplingApplied = true;
+      
+      this.logger.log(
+        `✅ Sampling complete: ${sortedPapers.length} → ${finalPapers.length} papers`,
+      );
+    } else {
+      finalPapers = sortedPapers;
+    }
+
+    // Enforce source diversity (prevent single-source dominance)
+    const diversityReport = this.checkSourceDiversity(finalPapers);
+    if (diversityReport.needsEnforcement) {
+      this.logger.log(
+        `⚖️  Source Diversity: Enforcing constraints (max ${(DIVERSITY_CONSTRAINTS.MAX_PROPORTION_FROM_ONE_SOURCE * 100).toFixed(0)}% per source)...`,
+      );
+      
+      finalPapers = this.enforceSourceDiversity(finalPapers);
+      diversityEnforced = true;
+      
+      this.logger.log(
+        `✅ Diversity enforced: Papers rebalanced across ${diversityReport.sourcesRepresented} sources`,
+      );
+    } else {
+      this.logger.log(
+        `✅ Source Diversity: Natural balance achieved (${diversityReport.sourcesRepresented} sources)`,
+      );
+    }
+
+    // Paginate results (after sampling/diversity enforcement)
     const page = searchDto.page || 1;
     const limit = searchDto.limit || 20;
     const start = (page - 1) * limit;
-    const paginatedPapers = sortedPapers.slice(start, start + limit);
+    const paginatedPapers = finalPapers.slice(start, start + limit);
 
     // Phase 10 Days 2-3: Fallback to stale/archive cache if no results (possible rate limit)
     if (papers.length === 0) {
@@ -543,8 +721,13 @@ export class LiteratureService {
         afterQualityFilter: relevantPapers.length, // After relevance/quality filters
         qualityFiltered: papersWithUpdatedQuality.length - relevantPapers.length, // Papers removed by quality
 
-        // Step 4: Final results
-        totalQualified: sortedPapers.length, // Papers meeting all criteria (pre-pagination)
+        // Step 4: Smart sampling (if applied)
+        beforeSampling: sortedPapers.length, // Before quality sampling
+        afterSampling: finalPapers.length, // After sampling (if applied)
+        samplingApplied, // Boolean flag
+
+        // Step 5: Final results
+        totalQualified: finalPapers.length, // Papers meeting all criteria (pre-pagination)
         displayed: paginatedPapers.length, // Papers shown in current page
 
         // Performance & query info
@@ -555,6 +738,102 @@ export class LiteratureService {
             expanded: expandedQuery,
           },
         }),
+
+        // Phase 10.6 Day 14.9: Allocation strategy transparency
+        allocationStrategy: {
+          queryComplexity,
+          targetPaperCount,
+          tierAllocations: config.tierAllocations,
+          sourceAllocations, // Per-source allocation and tier
+        },
+
+        // Phase 10.6 Day 14.9: Diversity metrics
+        diversityMetrics: diversityReport,
+
+        // Phase 10.6 Day 14.7: Qualification criteria transparency
+        qualificationCriteria: {
+          relevanceScoreMin: MIN_RELEVANCE_SCORE,
+          relevanceScoreDesc: `Papers must score at least ${MIN_RELEVANCE_SCORE}/100 for relevance to search query. Score based on keyword matches in title and abstract.`,
+          qualityWeights: {
+            citationImpact: 60, // Phase 10.6 Day 14.7: Increased from 40%
+            journalPrestige: 40, // Phase 10.6 Day 14.7: Increased from 35%
+            // contentDepth removed: was 25%, now 0% (no length bias)
+          },
+          filtersApplied: [
+            'Relevance Score ≥ 3',
+            ...(searchDto.minCitations ? [`Min Citations: ${searchDto.minCitations}`] : []),
+            ...(searchDto.minWordCount ? [`Min Word Count: ${searchDto.minWordCount}`] : []),
+            ...(searchDto.minAbstractLength ? [`Min Abstract Length: ${searchDto.minAbstractLength}`] : []),
+            ...(searchDto.author ? [`Author Filter: "${searchDto.author}"`] : []),
+            ...(searchDto.publicationType && searchDto.publicationType !== 'all' ? [`Publication Type: ${searchDto.publicationType}`] : []),
+            ...(searchDto.yearFrom || searchDto.yearTo ? [`Years: ${searchDto.yearFrom || 'any'} - ${searchDto.yearTo || 'current'}`] : []),
+          ],
+        },
+
+        // Phase 10.6 Day 14.8 (v3.0): Bias detection and reporting
+        qualityScoringVersion: 'v3.0',
+        biasMetrics: (() => {
+          // Calculate bias metrics for transparency
+          const totalPapers = sortedPapers.length;
+          if (totalPapers === 0) return null;
+
+          // Count papers with each bonus
+          const papersWithOA = sortedPapers.filter(p => p.isOpenAccess).length;
+          const papersWithDataCode = sortedPapers.filter(p => p.hasDataCode).length;
+          const papersWithAltmetric = sortedPapers.filter(p => p.altmetricScore && p.altmetricScore > 0).length;
+          
+          // Count papers with field of study
+          const papersWithField = sortedPapers.filter(p => p.fieldOfStudy && p.fieldOfStudy.length > 0).length;
+          const papersWithFWCI = sortedPapers.filter(p => p.fwci && p.fwci > 0).length;
+
+          // Calculate field distribution
+          const fieldDistribution: Record<string, number> = {};
+          sortedPapers.forEach(p => {
+            if (p.fieldOfStudy && p.fieldOfStudy.length > 0) {
+              const field = p.fieldOfStudy[0]; // Primary field
+              fieldDistribution[field] = (fieldDistribution[field] || 0) + 1;
+            }
+          });
+
+          // Calculate average scores per source
+          const sourceStats: Record<string, { count: number; avgOA: number; avgBonus: number }> = {};
+          sortedPapers.forEach(p => {
+            const source = p.source;
+            if (!sourceStats[source]) {
+              sourceStats[source] = { count: 0, avgOA: 0, avgBonus: 0 };
+            }
+            sourceStats[source].count++;
+            sourceStats[source].avgOA += p.isOpenAccess ? 1 : 0;
+            const totalBonus = (p.qualityScoreBreakdown?.openAccessBonus || 0) + 
+                               (p.qualityScoreBreakdown?.reproducibilityBonus || 0) + 
+                               (p.qualityScoreBreakdown?.altmetricBonus || 0);
+            sourceStats[source].avgBonus += totalBonus;
+          });
+
+          // Finalize averages
+          Object.keys(sourceStats).forEach(source => {
+            sourceStats[source].avgOA = parseFloat((sourceStats[source].avgOA / sourceStats[source].count * 100).toFixed(1));
+            sourceStats[source].avgBonus = parseFloat((sourceStats[source].avgBonus / sourceStats[source].count).toFixed(1));
+          });
+
+          return {
+            bonusApplicability: {
+              openAccess: `${papersWithOA} papers (${(papersWithOA / totalPapers * 100).toFixed(1)}%)`,
+              dataCodeSharing: `${papersWithDataCode} papers (${(papersWithDataCode / totalPapers * 100).toFixed(1)}%)`,
+              altmetric: `${papersWithAltmetric} papers (${(papersWithAltmetric / totalPapers * 100).toFixed(1)}%)`,
+            },
+            fieldNormalization: {
+              papersWithField: `${papersWithField} papers (${(papersWithField / totalPapers * 100).toFixed(1)}%)`,
+              papersWithFWCI: `${papersWithFWCI} papers (${(papersWithFWCI / totalPapers * 100).toFixed(1)}%)`,
+              topFields: Object.entries(fieldDistribution)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([field, count]) => `${field} (${count})`),
+            },
+            sourceComparison: sourceStats,
+            fairnessNote: 'Bonuses are OPTIONAL rewards, not requirements. Papers without bonuses can still score 100/100 via citations and journal prestige.',
+          };
+        })(),
       },
     };
 
@@ -664,6 +943,7 @@ export class LiteratureService {
       }
 
       try {
+        const startTime = Date.now();
         // Call dedicated service (all business logic is there)
         const papers = await this.semanticScholarService.search(searchDto.query, {
           yearFrom: searchDto.yearFrom,
@@ -671,13 +951,37 @@ export class LiteratureService {
           limit: searchDto.limit,
         });
 
+        const duration = Date.now() - startTime;
+        
+        // Phase 10.6 Day 14.8: Enhanced logging for debugging
+        if (papers.length === 0) {
+          this.logger.warn(
+            `⚠️ [Semantic Scholar] Query "${searchDto.query}" returned 0 papers (${duration}ms) - Possible timeout or no matches`,
+          );
+        } else {
+          this.logger.log(
+            `✓ [Semantic Scholar] Found ${papers.length} papers (${duration}ms)`,
+          );
+        }
+
         // Phase 10 Days 2-3: Record successful request
         this.quotaMonitor.recordRequest('semantic-scholar');
         return papers;
       } catch (error: any) {
-        this.logger.error(
-          `[Semantic Scholar] Wrapper error: ${error.message}`,
-        );
+        // Phase 10.6 Day 14.8: Detailed error logging
+        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+          this.logger.error(
+            `⏱️ [Semantic Scholar] Timeout after ${this.MAX_GLOBAL_TIMEOUT}ms - Query: "${searchDto.query}"`,
+          );
+        } else if (error.response?.status === 429) {
+          this.logger.error(
+            `🚫 [Semantic Scholar] Rate limited (429) - Consider adding API key`,
+          );
+        } else {
+          this.logger.error(
+            `❌ [Semantic Scholar] Error: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
+          );
+        }
         return [];
       }
     });
@@ -854,19 +1158,56 @@ export class LiteratureService {
       }
 
       try {
+        const startTime = Date.now();
+        
+        // Phase 10.6 Day 14.8: Improve query specificity for programming topics
+        // PMC is biomedical, so programming queries may get false matches ("ADA" disability act)
+        let enhancedQuery = searchDto.query;
+        const isProgrammingQuery = /\b(programming|software|code|algorithm|language)\b/i.test(searchDto.query);
+        
+        if (isProgrammingQuery) {
+          // Add biomedical context to reduce false matches
+          enhancedQuery = `${searchDto.query} AND (bioinformatics OR medical software OR clinical)`;
+          this.logger.log(
+            `🔍 [PMC] Enhanced programming query: "${enhancedQuery}"`,
+          );
+        }
+        
         // Call dedicated service (all business logic is there)
-        const papers = await this.pmcService.search(searchDto.query, {
+        const papers = await this.pmcService.search(enhancedQuery, {
           yearFrom: searchDto.yearFrom,
           yearTo: searchDto.yearTo,
           limit: searchDto.limit,
           openAccessOnly: true, // Default to Open Access for full-text availability
         });
 
+        const duration = Date.now() - startTime;
+        
+        // Phase 10.6 Day 14.8: Enhanced logging with false match detection
+        if (papers.length > 50 && isProgrammingQuery) {
+          this.logger.warn(
+            `⚠️ [PMC] Found ${papers.length} papers for programming query - May include false matches ("ADA" as disability act)`,
+          );
+        } else {
+          this.logger.log(
+            `✓ [PMC] Found ${papers.length} papers (${duration}ms)`,
+          );
+        }
+
         // Phase 10 Days 2-3: Record successful request
         this.quotaMonitor.recordRequest('pmc');
         return papers;
       } catch (error: any) {
-        this.logger.error(`[PMC] Wrapper error: ${error.message}`);
+        // Phase 10.6 Day 14.8: Detailed error logging
+        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+          this.logger.error(
+            `⏱️ [PMC] Timeout after ${this.MAX_GLOBAL_TIMEOUT}ms - Complex query may need optimization`,
+          );
+        } else {
+          this.logger.error(
+            `❌ [PMC] Error: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
+          );
+        }
         return [];
       }
     });
@@ -4210,5 +4551,166 @@ ER  -`;
       this.logger.error(`[ChemRxiv] Search failed: ${error.message}`);
       return [];
     }
+  }
+
+  /**
+   * Phase 10.6 Day 14.9: Apply quality-stratified sampling
+   * 
+   * When papers exceed target, sample intelligently to maintain quality diversity:
+   * - 40% from top quality (80-100)
+   * - 35% from good quality (60-80)
+   * - 20% from acceptable (40-60)
+   * - 5% from lower (0-40) for completeness
+   * 
+   * Rationale: Avoid bias toward only high-quality papers (miss emerging work)
+   */
+  private applyQualityStratifiedSampling(papers: any[], targetCount: number): any[] {
+    if (papers.length <= targetCount) return papers;
+
+    const sampled: any[] = [];
+
+    // Distribute papers by quality strata
+    QUALITY_SAMPLING_STRATA.forEach((stratum) => {
+      const stratumPapers = papers.filter((p) => {
+        const score = p.qualityScore || 0;
+        return score >= stratum.range[0] && score < stratum.range[1];
+      });
+
+      // Calculate how many to sample from this stratum
+      const targetForStratum = Math.floor(targetCount * stratum.proportion);
+      
+      if (stratumPapers.length <= targetForStratum) {
+        // Take all if stratum is smaller than target
+        sampled.push(...stratumPapers);
+      } else {
+        // Random sample from stratum to maintain diversity
+        const shuffled = [...stratumPapers].sort(() => Math.random() - 0.5);
+        sampled.push(...shuffled.slice(0, targetForStratum));
+      }
+
+      this.logger.log(
+        `  ↳ ${stratum.label}: ${stratumPapers.length} papers, sampled ${Math.min(stratumPapers.length, targetForStratum)}`,
+      );
+    });
+
+    // If we're still short of target (due to empty strata), fill with highest quality remaining
+    if (sampled.length < targetCount) {
+      const remaining = papers.filter((p) => !sampled.includes(p));
+      const needed = targetCount - sampled.length;
+      const topRemaining = remaining
+        .sort((a, b) => (b.qualityScore || 0) - (a.qualityScore || 0))
+        .slice(0, needed);
+      sampled.push(...topRemaining);
+    }
+
+    return sampled;
+  }
+
+  /**
+   * Phase 10.6 Day 14.9: Check source diversity
+   * 
+   * Ensure no single source dominates results
+   */
+  private checkSourceDiversity(papers: any[]): {
+    needsEnforcement: boolean;
+    sourcesRepresented: number;
+    maxProportionFromOneSource: number;
+    dominantSource?: string;
+  } {
+    if (papers.length === 0) {
+      return {
+        needsEnforcement: false,
+        sourcesRepresented: 0,
+        maxProportionFromOneSource: 0,
+      };
+    }
+
+    // Count papers per source
+    const sourceCounts: Record<string, number> = {};
+    papers.forEach((p) => {
+      const source = p.source as string;
+      sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+    });
+
+    const sourcesRepresented = Object.keys(sourceCounts).length;
+    const maxCount = Math.max(...Object.values(sourceCounts));
+    const maxProportionFromOneSource = maxCount / papers.length;
+    const dominantSource = Object.entries(sourceCounts).find(
+      ([, count]) => count === maxCount,
+    )?.[0];
+
+    // Check if diversity constraints are violated
+    const needsEnforcement =
+      sourcesRepresented < DIVERSITY_CONSTRAINTS.MIN_SOURCE_COUNT ||
+      maxProportionFromOneSource > DIVERSITY_CONSTRAINTS.MAX_PROPORTION_FROM_ONE_SOURCE;
+
+    return {
+      needsEnforcement,
+      sourcesRepresented,
+      maxProportionFromOneSource,
+      dominantSource,
+    };
+  }
+
+  /**
+   * Phase 10.6 Day 14.9: Enforce source diversity
+   * 
+   * Cap papers from any single source to prevent dominance
+   */
+  private enforceSourceDiversity(papers: any[]): any[] {
+    if (papers.length === 0) return papers;
+
+    const maxPapersPerSource = Math.ceil(
+      papers.length * DIVERSITY_CONSTRAINTS.MAX_PROPORTION_FROM_ONE_SOURCE,
+    );
+
+    // Group by source
+    const papersBySource: Record<string, any[]> = {};
+    papers.forEach((p) => {
+      const source = p.source as string;
+      if (!papersBySource[source]) papersBySource[source] = [];
+      papersBySource[source].push(p);
+    });
+
+    // Cap each source and collect results
+    const balanced: any[] = [];
+    Object.entries(papersBySource).forEach(([source, sourcePapers]) => {
+      if (sourcePapers.length <= maxPapersPerSource) {
+        // Source is within limit
+        balanced.push(...sourcePapers);
+      } else {
+        // Source exceeds limit - take top quality papers only
+        const topPapers = sourcePapers
+          .sort((a, b) => (b.qualityScore || 0) - (a.qualityScore || 0))
+          .slice(0, maxPapersPerSource);
+        balanced.push(...topPapers);
+
+        this.logger.log(
+          `  ↳ [${source}] Capped: ${sourcePapers.length} → ${maxPapersPerSource} papers (top quality retained)`,
+        );
+      }
+    });
+
+    // Ensure minimum representation per source
+    Object.entries(papersBySource).forEach(([source, sourcePapers]) => {
+      const includedCount = balanced.filter((p) => p.source === source).length;
+      if (
+        includedCount < DIVERSITY_CONSTRAINTS.MIN_PAPERS_PER_SOURCE &&
+        sourcePapers.length >= DIVERSITY_CONSTRAINTS.MIN_PAPERS_PER_SOURCE
+      ) {
+        // Add more papers from this underrepresented source
+        const needed = DIVERSITY_CONSTRAINTS.MIN_PAPERS_PER_SOURCE - includedCount;
+        const additionalPapers = sourcePapers
+          .filter((p) => !balanced.includes(p))
+          .slice(0, needed);
+        balanced.push(...additionalPapers);
+
+        this.logger.log(
+          `  ↳ [${source}] Boosted: Added ${needed} papers to meet minimum representation`,
+        );
+      }
+    });
+
+    return balanced;
   }
 }

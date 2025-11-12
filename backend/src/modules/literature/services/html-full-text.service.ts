@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { JSDOM } from 'jsdom';
 import axios from 'axios';
 import { PrismaService } from '../../../common/prisma.service';
+import { COMPLEX_API_TIMEOUT, ENRICHMENT_TIMEOUT } from '../constants/http-config.constants';
 
 /**
  * Phase 10 Day 30: HTML Full-Text Extraction Service
@@ -34,7 +35,7 @@ export class HtmlFullTextService {
     'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
   private readonly NCBI_EMAIL = 'research@blackq.app'; // Required by NCBI API terms
   private readonly NCBI_TOOL = 'blackqmethod';
-  private readonly REQUEST_TIMEOUT_MS = 15000; // 15 seconds
+  // Phase 10.6 Day 14.5: REQUEST_TIMEOUT_MS removed - migrated to COMPLEX_API_TIMEOUT constant
   private readonly MAX_RETRIES = 2;
 
   constructor(private prisma: PrismaService) {}
@@ -126,7 +127,7 @@ export class HtmlFullTextService {
 
       const response = await axios.get(fetchUrl, {
         params,
-        timeout: this.REQUEST_TIMEOUT_MS,
+        timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Migrated to centralized config
         headers: {
           'User-Agent': 'BlackQMethod/1.0 (research@blackq.app)',
         },
@@ -184,7 +185,7 @@ export class HtmlFullTextService {
 
       const response = await axios.get(converterUrl, {
         params,
-        timeout: 5000,
+        timeout: ENRICHMENT_TIMEOUT, // 5s - Phase 10.6 Day 14.5: Migrated to centralized config
       });
 
       const linksets = response.data?.linksets?.[0];
@@ -287,7 +288,7 @@ export class HtmlFullTextService {
       this.logger.log(`🌐 Fetching HTML from: ${url}`);
 
       const response = await axios.get(url, {
-        timeout: this.REQUEST_TIMEOUT_MS,
+        timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Migrated to centralized config
         headers: {
           'User-Agent':
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',

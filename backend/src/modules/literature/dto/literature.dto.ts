@@ -455,11 +455,23 @@ export class Paper {
   isHighQuality?: boolean; // Meets enterprise quality standards
 
   // Phase 10.1 Day 12: Quality Score Transparency
+  // Phase 10.6 Day 14.8 (v3.0): Updated to bias-resistant scoring
   qualityScoreBreakdown?: {
-    citationImpact: number; // 0-100 (40% weight)
-    journalPrestige: number; // 0-100 (35% weight)
-    contentDepth: number; // 0-100 (25% weight)
+    citationImpact: number; // 0-100 (60% weight, field-weighted)
+    journalPrestige: number; // 0-100 (40% weight)
+    contentDepth: number; // 0-100 (REMOVED in v2.0, kept for compatibility)
+    // v3.0 bonuses (optional, +0 to +20 total)
+    openAccessBonus?: number; // 0-10 (if paper is OA)
+    reproducibilityBonus?: number; // 0-5 (if data/code available)
+    altmetricBonus?: number; // 0-5 (if high social impact)
   };
+
+  // Phase 10.6 Day 14.8 (v3.0): Field normalization and bonus metrics
+  fieldOfStudy?: string[]; // OpenAlex field classification (e.g., ['Biology', 'Medicine'])
+  fwci?: number; // Field-Weighted Citation Impact (OpenAlex)
+  isOpenAccess?: boolean; // Open Access status from OpenAlex
+  hasDataCode?: boolean; // Data/code availability detected
+  altmetricScore?: number; // Altmetric attention score
 
   // Phase 10.6 Day 2-3.5: PubMed-specific rich metadata
   meshTerms?: Array<{ descriptor: string; qualifiers: string[] }>; // Medical Subject Headings

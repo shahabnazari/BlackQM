@@ -3,6 +3,7 @@ import axios from 'axios';
 import * as crypto from 'crypto';
 import { PrismaService } from '../../../common/prisma.service';
 import { HtmlFullTextService } from './html-full-text.service';
+import { ENRICHMENT_TIMEOUT, FULL_TEXT_TIMEOUT } from '../constants/http-config.constants';
 
 // PHASE 10 DAY 32: Fix pdf-parse import for proper TypeScript compatibility
 // Use dynamic import to avoid module resolution issues
@@ -26,7 +27,7 @@ export class PDFParsingService {
   private readonly logger = new Logger(PDFParsingService.name);
   private readonly UNPAYWALL_EMAIL = 'research@blackq.app'; // Required by Unpaywall API
   private readonly MAX_PDF_SIZE_MB = 50;
-  private readonly DOWNLOAD_TIMEOUT_MS = 30000; // 30 seconds
+  // Phase 10.6 Day 14.5: DOWNLOAD_TIMEOUT_MS removed - migrated to FULL_TEXT_TIMEOUT constant
 
   constructor(
     private prisma: PrismaService,
@@ -46,7 +47,7 @@ export class PDFParsingService {
       const unpaywallUrl = `https://api.unpaywall.org/v2/${encodeURIComponent(doi)}?email=${this.UNPAYWALL_EMAIL}`;
 
       const unpaywallResponse = await axios.get(unpaywallUrl, {
-        timeout: 10000, // 10 second timeout for API call
+        timeout: ENRICHMENT_TIMEOUT, // 5s - Phase 10.6 Day 14.5: Migrated to centralized config (metadata lookup)
       });
 
       const data = unpaywallResponse.data;
@@ -98,7 +99,7 @@ export class PDFParsingService {
         `https://doi.org/${doi}`;
       const pdfResponse = await axios.get(pdfUrl, {
         responseType: 'arraybuffer',
-        timeout: this.DOWNLOAD_TIMEOUT_MS,
+        timeout: FULL_TEXT_TIMEOUT, // 30s - Phase 10.6 Day 14.5: Migrated to centralized config (PDF download)
         maxContentLength: this.MAX_PDF_SIZE_MB * 1024 * 1024, // 50MB
         headers: {
           'User-Agent':

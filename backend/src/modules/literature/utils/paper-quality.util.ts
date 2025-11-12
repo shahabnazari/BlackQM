@@ -1,28 +1,51 @@
 /**
  * Paper Quality Scoring Utility
  *
- * Phase 10.1 Day 12: Transparent, Multi-Dimensional Quality Assessment
+ * Phase 10.6 Day 14.8: Bias-Resistant Quality Scoring v3.0
  *
  * Purpose: Calculate composite quality scores for academic papers based on objective metrics
  *
- * Quality Dimensions (v1.0):
- * 1. Citation Impact (40%) - Citations normalized by paper age
- * 2. Journal Prestige (35%) - h-index, quartile, impact factor (OpenAlex)
- * 3. Content Depth (25%) - Word count as proxy for comprehensiveness
+ * Quality Dimensions (v3.0 - Bias-Resistant):
+ * 
+ * CORE SCORING (applies to ALL papers, 0-100):
+ * 1. Citation Impact (60%) - Field-weighted citations normalized by paper age
+ * 2. Journal Prestige (40%) - h-index, quartile, impact factor (OpenAlex)
  *
- * Removed Components (Phase 10.1 Day 11):
- * - Recency Boost: Unfairly favored recent papers
- * - Venue Quality: Subjective heuristics
+ * OPTIONAL BONUSES (when applicable, +0 to +20):
+ * 3. Open Access (+10) - Paper is freely available (encourages accessibility)
+ * 4. Reproducibility (+5) - Data/code sharing detected (encourages transparency)
+ * 5. Altmetric (+5) - High social/policy impact (recognizes real-world influence)
+ *
+ * Total Score: min(Core Score + Bonuses, 100)
+ *
+ * Bias Safeguards:
+ * - Field-weighted citations: Math papers not disadvantaged vs. Biology
+ * - Bonuses are OPTIONAL: Classic papers can still score 100/100 without them
+ * - No penalties for missing bonuses: Papers from any era/field score fairly
+ * - Transparency: Metadata shows which bonuses were applied and why
+ *
+ * Removed Components:
+ * - Content Depth (Phase 10.6 Day 14.7): Short papers can be more impactful than long ones
+ * - Recency Boost (Phase 10.1 Day 11): Unfairly favored recent papers
+ * - Venue Quality (Phase 10.1 Day 11): Subjective heuristics
  * - Citation Bonus: Redundant with citation impact
  * - Critical Terms: Spelling variation issues
  *
+ * Rationale for Content Depth Removal:
+ * - Word count is NOT a reliable indicator of paper quality or insights
+ * - Short papers (letters, brief communications) can have major impact
+ * - Examples: Watson & Crick's DNA structure (900 words), Shannon's Information Theory
+ * - Length bias unfairly penalizes concise, high-impact research
+ *
  * Full Methodology Documentation:
+ * See: /QUALITY_SCORING_V3_BIAS_ANALYSIS.md for complete bias analysis
  * See: /QUALITY_SCORING_METHODOLOGY.md for complete transparency documentation
  *
  * Academic References:
  * - Hirsch, J. E. (2005). An index to quantify an individual's scientific research output
  * - Garfield, E. (2006). The History and Meaning of the Journal Impact Factor
  * - González-Pereira et al. (2010). A new approach to the metric of journals' scientific prestige: The SJR indicator
+ * - Waltman & van Eck (2019). Field normalization of scientometric indicators
  */
 
 export interface JournalMetrics {
@@ -34,12 +57,19 @@ export interface JournalMetrics {
 }
 
 export interface QualityScoreComponents {
-  citationImpact: number; // 0-100
+  citationImpact: number; // 0-100 (field-weighted in v3.0)
   journalPrestige: number; // 0-100
-  contentDepth: number; // 0-100
-  recencyBoost: number; // 0-100
-  venueQuality: number; // 0-100
-  totalScore: number; // Weighted average 0-100
+  contentDepth: number; // 0-100 (REMOVED in v2.0, kept for compatibility)
+  recencyBoost: number; // 0-100 (REMOVED in v1.0, kept for compatibility)
+  venueQuality: number; // 0-100 (REMOVED in v1.0, kept for compatibility)
+  
+  // Phase 10.6 Day 14.8 (v3.0): Optional bonuses
+  openAccessBonus?: number; // 0-10
+  reproducibilityBonus?: number; // 0-5
+  altmetricBonus?: number; // 0-5
+  
+  coreScore: number; // Core score before bonuses (0-100)
+  totalScore: number; // Final score with bonuses (0-100, capped)
 }
 
 /**
@@ -291,26 +321,138 @@ export function calculateVenueQualityScore(
 }
 
 /**
+ * Calculate Open Access bonus (0-10)
+ * 
+ * Phase 10.6 Day 14.8 (v3.0): Optional bonus for freely accessible papers
+ * 
+ * Rationale:
+ * - Rewards papers that are freely available to all researchers
+ * - Encourages open science practices
+ * - No penalty for paywalled papers (bonus, not requirement)
+ * 
+ * @param isOpenAccess - Whether paper is openly accessible
+ * @returns Bonus score 0-10
+ */
+export function calculateOpenAccessBonus(isOpenAccess: boolean | null | undefined): number {
+  if (isOpenAccess === true) return 10;
+  return 0; // No penalty for closed access
+}
+
+/**
+ * Calculate Reproducibility bonus (0-5)
+ * 
+ * Phase 10.6 Day 14.8 (v3.0): Optional bonus for data/code sharing
+ * 
+ * Rationale:
+ * - Rewards transparent research with shared data/code
+ * - Encourages reproducible science
+ * - No penalty for papers without data (bonus, not requirement)
+ * - Field-agnostic: theoretical papers naturally get 0 (no penalty)
+ * 
+ * @param hasDataCode - Whether data/code is available
+ * @returns Bonus score 0-5
+ */
+export function calculateReproducibilityBonus(hasDataCode: boolean | null | undefined): number {
+  if (hasDataCode === true) return 5;
+  return 0; // No penalty for missing data/code
+}
+
+/**
+ * Calculate Altmetric bonus (0-5)
+ * 
+ * Phase 10.6 Day 14.8 (v3.0): Optional bonus for high social/policy impact
+ * 
+ * Rationale:
+ * - Recognizes real-world influence beyond academia
+ * - Bonus for papers that inform policy, practice, or public discourse
+ * - No penalty for papers without social media attention (bonus, not requirement)
+ * - Field-agnostic: fundamental research naturally gets 0 (no penalty)
+ * 
+ * Altmetric Score Interpretation:
+ * - 100+: Top 5% of papers (5 points)
+ * - 50+: Top 25% of papers (3 points)
+ * - 20+: Above average (2 points)
+ * - 10+: Some attention (1 point)
+ * - <10: Limited attention (0 points, no penalty)
+ * 
+ * @param altmetricScore - Altmetric attention score
+ * @returns Bonus score 0-5
+ */
+export function calculateAltmetricBonus(altmetricScore: number | null | undefined): number {
+  if (!altmetricScore || altmetricScore <= 0) return 0;
+  
+  if (altmetricScore >= 100) return 5; // Top 5% - exceptional public/policy impact
+  if (altmetricScore >= 50) return 3; // Top 25% - high attention
+  if (altmetricScore >= 20) return 2; // Above average
+  if (altmetricScore >= 10) return 1; // Some attention
+  return 0; // Limited attention - no penalty
+}
+
+/**
+ * Apply field-weighted normalization to citation impact
+ * 
+ * Phase 10.6 Day 14.8 (v3.0): Field-Weighted Citation Impact (FWCI)
+ * 
+ * Rationale:
+ * - Different fields have vastly different citation patterns
+ * - Biology papers get 5-10x more citations than math papers
+ * - FWCI normalizes by comparing to field average
+ * - Fair comparison across all disciplines
+ * 
+ * FWCI Interpretation (from OpenAlex):
+ * - FWCI = 1.0: Average for field
+ * - FWCI > 1.0: Above field average (multiply raw score)
+ * - FWCI < 1.0: Below field average (reduce raw score)
+ * 
+ * Example:
+ * - Math paper: 5 cites/year, FWCI = 2.5 → Equivalent to 12.5 cites/year
+ * - Biology paper: 20 cites/year, FWCI = 0.8 → Equivalent to 16 cites/year
+ * 
+ * @param citationImpact - Raw citation impact score (0-100)
+ * @param fwci - Field-Weighted Citation Impact from OpenAlex
+ * @returns Field-normalized citation impact score (0-100)
+ */
+export function applyFieldWeighting(
+  citationImpact: number,
+  fwci: number | null | undefined,
+): number {
+  // If no FWCI available, return raw score (no normalization)
+  if (!fwci || fwci <= 0) return citationImpact;
+  
+  // Apply field weighting
+  const fieldWeighted = citationImpact * fwci;
+  
+  // Cap at 100 (can't exceed maximum)
+  return Math.min(fieldWeighted, 100);
+}
+
+/**
  * Calculate composite quality score (0-100)
  *
- * Enterprise-grade quality assessment combining multiple dimensions:
+ * Phase 10.6 Day 14.8: Bias-Resistant Quality Scoring v3.0
+ * 
+ * CORE SCORING (applies to ALL papers):
+ * - Citation Impact: 60% (field-weighted if FWCI available)
+ * - Journal Prestige: 40%
+ * 
+ * OPTIONAL BONUSES (when applicable):
+ * - Open Access: +10 (if freely available)
+ * - Reproducibility: +5 (if data/code shared)
+ * - Altmetric: +5 (if high social impact)
+ * 
+ * Total: min(Core Score + Bonuses, 100)
  *
- * Phase 10.1 Day 12 (Lenient): More generous thresholds for broader inclusion
- * - Citation Impact: 40% (most important - shows actual impact)
- * - Journal Prestige: 35% (publication standards matter)
- * - Content Depth: 25% (comprehensive papers preferred)
+ * Bias Safeguards:
+ * - ALL papers get a core score (0-100) regardless of field/era/source
+ * - Bonuses are REWARDS, not REQUIREMENTS
+ * - Classic papers (pre-OA era) can still score 100/100 via citations + journal
+ * - Theoretical papers (no data) not penalized
+ * - Non-English papers (low Altmetric) not penalized
  *
- * Removed components:
- * - Recency Boost: Unfairly favored recent papers over established work
- * - Venue Quality: Subjective and unclear which venues are high quality
- *
- * LENIENT APPROACH: Thresholds lowered to recognize typical quality papers:
- * - Citations: 2/year → 50 points (was ~35)
- * - Journal: IF=2 → 24 points (was 12), h=20 → 24 points (was 12)
- * - Content: 1000 words → 50 points (was 40)
- *
- * Result: More papers reach "Good" (≥50) and "Excellent" (≥70) tiers,
- * reflecting realistic academic publishing standards.
+ * Examples:
+ * - Classic biology paper (1998, Nature, paywalled): Core 86 + Bonuses 0 = 86/100
+ * - Recent math paper (2023, Q1, arXiv): Core 69 + OA 10 = 79/100
+ * - Applied CS paper (2024, OA, GitHub, tweets): Core 61 + Bonuses 20 = 81/100
  *
  * @param paper - Paper object with all metrics
  * @returns Quality score components and total score
@@ -325,13 +467,25 @@ export function calculateQualityScore(paper: {
   sjrScore?: number | null;
   quartile?: 'Q1' | 'Q2' | 'Q3' | 'Q4' | null;
   hIndexJournal?: number | null;
+  // Phase 10.6 Day 14.8 (v3.0): New fields
+  fwci?: number | null; // Field-Weighted Citation Impact from OpenAlex
+  isOpenAccess?: boolean | null; // Open Access status
+  hasDataCode?: boolean | null; // Data/code availability
+  altmetricScore?: number | null; // Altmetric attention score
 }): QualityScoreComponents {
-  // Calculate each component
+  // ============================================
+  // CORE SCORING (applies to ALL papers)
+  // ============================================
+  
+  // Calculate raw citation impact
   const citationsPerYear = calculateCitationsPerYear(
     paper.citationCount,
     paper.year,
   );
-  const citationImpact = calculateCitationImpactScore(citationsPerYear);
+  let citationImpact = calculateCitationImpactScore(citationsPerYear);
+  
+  // Phase 10.6 Day 14.8 (v3.0): Apply field weighting if available
+  citationImpact = applyFieldWeighting(citationImpact, paper.fwci);
 
   const journalPrestige = calculateJournalPrestigeScore({
     impactFactor: paper.impactFactor ?? undefined,
@@ -340,25 +494,47 @@ export function calculateQualityScore(paper: {
     quartile: paper.quartile ?? undefined,
   });
 
-  const contentDepth = calculateContentDepthScore(paper.wordCount);
+  // Calculate core score (0-100)
+  // Citation Impact: 60% + Journal Prestige: 40%
+  const coreScore = citationImpact * 0.6 + journalPrestige * 0.4;
+  
+  // ============================================
+  // OPTIONAL BONUSES (when applicable)
+  // ============================================
+  
+  const openAccessBonus = calculateOpenAccessBonus(paper.isOpenAccess);
+  const reproducibilityBonus = calculateReproducibilityBonus(paper.hasDataCode);
+  const altmetricBonus = calculateAltmetricBonus(paper.altmetricScore);
+  
+  // Sum all bonuses (max +20)
+  const totalBonus = openAccessBonus + reproducibilityBonus + altmetricBonus;
+  
+  // Final score: core + bonuses, capped at 100
+  const totalScore = Math.min(coreScore + totalBonus, 100);
+
+  // ============================================
+  // RETURN COMPONENTS (with backward compatibility)
+  // ============================================
+  
+  // Phase 10.6 Day 14.7: Content Depth removed (length bias eliminated)
+  const contentDepth = 0; // Disabled - word count doesn't indicate quality
 
   // Phase 10.1 Day 11: Removed recency boost and venue quality
   const recencyBoost = 0; // Disabled
   const venueQuality = 0; // Disabled
 
-  // Apply weights (redistributed after removing recency and venue)
-  const totalScore =
-    citationImpact * 0.4 +  // 30% → 40%
-    journalPrestige * 0.35 + // 25% → 35%
-    contentDepth * 0.25;     // 15% → 25%
-
   return {
-    citationImpact,
+    citationImpact, // Field-weighted if FWCI available
     journalPrestige,
-    contentDepth,
-    recencyBoost,
-    venueQuality,
-    totalScore: Math.round(totalScore * 10) / 10, // Round to 1 decimal place
+    contentDepth, // Returns 0 for backward compatibility
+    recencyBoost, // Returns 0 for backward compatibility
+    venueQuality, // Returns 0 for backward compatibility
+    // Phase 10.6 Day 14.8 (v3.0): New fields
+    openAccessBonus,
+    reproducibilityBonus,
+    altmetricBonus,
+    coreScore: Math.round(coreScore * 10) / 10,
+    totalScore: Math.round(totalScore * 10) / 10,
   };
 }
 
