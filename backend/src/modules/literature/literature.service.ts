@@ -172,7 +172,12 @@ export class LiteratureService {
     // Phase 10.1 Day 12: Fetch more papers from APIs to support 200-paper progressive loading
     // Frontend requests 10 batches × 20 papers = 200 total
     // We need to fetch 100+ papers from each source to have enough after deduplication
-    const API_FETCH_LIMIT = 100; // Fetch 100 papers from each API source
+    // Phase 10.6 Day 14.6: Allow override via environment variable or use default
+    const API_FETCH_LIMIT = parseInt(process.env.PAPERS_PER_SOURCE || '100', 10);
+    
+    this.logger.log(
+      `📊 Search Strategy: Fetching ${API_FETCH_LIMIT} papers from EACH source to ensure sufficient papers after deduplication`,
+    );
 
     // Create an enhanced search DTO with expanded query and higher fetch limit
     const enhancedSearchDto = {
@@ -183,14 +188,30 @@ export class LiteratureService {
 
     // Phase 10.1 Day 11: Defensive check for empty array ([] is truthy in JS!)
     // Frontend may send sources: [] expecting defaults to be used
+    // Phase 10.6 Day 14.6: EXPANDED default sources to include ALL free sources (12 sources)
     const sources =
       searchDto.sources && searchDto.sources.length > 0
         ? searchDto.sources
         : [
+            // Core free sources (always available)
             LiteratureSource.SEMANTIC_SCHOLAR,
             LiteratureSource.CROSSREF,
             LiteratureSource.PUBMED,
+            LiteratureSource.ARXIV,
+            // Phase 10.6 additions - Free academic sources
+            LiteratureSource.PMC,          // PubMed Central - Full-text articles
+            LiteratureSource.ERIC,         // Education research
+            LiteratureSource.BIORXIV,      // Biology preprints
+            LiteratureSource.MEDRXIV,      // Medical preprints
+            LiteratureSource.CHEMRXIV,     // Chemistry preprints
+            // Note: Google Scholar, SSRN excluded (rate-limited/restricted)
+            // Premium sources (Web of Science, Scopus, IEEE, etc.) require API keys
           ];
+
+    // Phase 10.6 Day 14.6: Log number of sources being queried
+    this.logger.log(
+      `🔍 Searching ${sources.length} academic sources: ${sources.join(', ')}`,
+    );
 
     // Phase 10.6 Day 14.4: Start enterprise-grade search logging
     const searchLog = this.searchLogger.startSearch(originalQuery, sources as string[], userId);
