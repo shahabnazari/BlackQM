@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { memo } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,15 @@ import { logger } from '@/lib/utils/logger';
 // ============================================================================
 
 export const ActiveFiltersChips = memo(function ActiveFiltersChips() {
+  // ============================================================================
+  // Hydration Fix - Prevent SSR/Client Mismatch
+  // ============================================================================
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // ============================================================================
   // State from Zustand Store
   // ============================================================================
@@ -76,11 +85,17 @@ export const ActiveFiltersChips = memo(function ActiveFiltersChips() {
   // Render
   // ============================================================================
 
+  // Prevent hydration mismatch - only render after client-side mount
+  if (!isMounted) {
+    return null;
+  }
+
   // Don't render if no filters are applied
   if (appliedFilterCount === 0) {
     return null;
   }
 
+  // Safe to use Date() now - only runs on client
   const currentYear = new Date().getFullYear();
   const defaultYearFrom = 2020;
   const defaultYearTo = currentYear;
