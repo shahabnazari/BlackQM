@@ -73,6 +73,7 @@
 
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
@@ -93,8 +94,18 @@ export interface CrossRefSearchOptions {
 export class CrossRefService {
   private readonly logger = new Logger(CrossRefService.name);
   private readonly API_BASE_URL = 'https://api.crossref.org/works';
+  private readonly userAgent: string;
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {
+    // Phase 10.7.10: CrossRef Polite Pool - Add mailto to User-Agent for better service
+    // https://github.com/CrossRef/rest-api-doc#good-manners--more-reliable-service
+    const contactEmail = this.configService.get<string>('CROSSREF_CONTACT_EMAIL') || 'research@vqmethod.com';
+    this.userAgent = `VQMethod/1.0 (https://github.com/vqmethod/platform; mailto:${contactEmail})`;
+    this.logger.log(`[CrossRef] Polite pool enabled with contact: ${contactEmail}`);
+  }
 
   /**
    * Search CrossRef database
@@ -122,6 +133,9 @@ export class CrossRefService {
       const response = await firstValueFrom(
         this.httpService.get(this.API_BASE_URL, {
           params,
+          headers: {
+            'User-Agent': this.userAgent, // Phase 10.7.10: Polite pool for better service
+          },
           timeout: FAST_API_TIMEOUT, // 10s - Phase 10.6 Day 14.5: Added timeout (was missing)
         }),
       );
