@@ -45,9 +45,6 @@ const SOURCE_DISPLAY_NAMES: Record<string, string> = {
   crossref: 'CrossRef',
   eric: 'ERIC',
   ssrn: 'SSRN',
-  biorxiv: 'bioRxiv',
-  medrxiv: 'medRxiv',
-  chemrxiv: 'ChemRxiv',
   google_scholar: 'Google Scholar',
   web_of_science: 'Web of Science',
   scopus: 'Scopus',
@@ -71,9 +68,6 @@ const SOURCE_DESCRIPTIONS: Record<string, string> = {
   crossref: 'DOI registry across all disciplines (150M+ records)',
   eric: 'Education research database (1.5M+ papers)',
   ssrn: 'Social science research network (1M+ papers)',
-  biorxiv: 'Biology preprints (220k papers)',
-  medrxiv: 'Medical preprints (45k papers)',
-  chemrxiv: 'Chemistry preprints (35k papers)',
   google_scholar: 'Multi-source aggregator (400M+ papers)',
 };
 
@@ -433,7 +427,7 @@ export const ProgressiveLoadingIndicator: React.FC<
     if (!state.stage1 || !state.stage2) return undefined;
     
     return {
-      sourcesQueried: state.stage1.sourcesSearched || 7,
+      sourcesQueried: state.stage1.sourcesSearched || 6,
       sourcesWithResults: state.stage1.sourceBreakdown
         ? Object.values(state.stage1.sourceBreakdown).filter(countData => {
             const count = typeof countData === 'number' ? countData : countData.papers;
@@ -483,7 +477,7 @@ export const ProgressiveLoadingIndicator: React.FC<
                   </h3>
                   <p className="text-sm text-gray-600">
                     {status === 'complete'
-                      ? `From ${state.stage1?.sourcesSearched || 7} academic sources`
+                      ? `From ${state.stage1?.sourcesSearched || 6} academic sources`
                       : status === 'error'
                       ? state.errorMessage || 'An error occurred'
                       : 'Two-stage filtering: Collection → Quality ranking'}
@@ -507,8 +501,8 @@ export const ProgressiveLoadingIndicator: React.FC<
               {...(state.stage1 && { stage1: state.stage1 })}
             />
 
-            {/* 🎯 DETAILED SOURCE BREAKDOWN - Shows which sources are being used */}
-            {state.stage1?.sourceBreakdown && Object.keys(state.stage1.sourceBreakdown).length > 0 && (
+            {/* 🎯 DETAILED SOURCE BREAKDOWN - Shows which sources are being used (ONLY during loading) */}
+            {state.stage1?.sourceBreakdown && Object.keys(state.stage1.sourceBreakdown).length > 0 && status !== 'complete' && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -581,7 +575,7 @@ export const ProgressiveLoadingIndicator: React.FC<
                   <div className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
                     <div className="font-medium mb-1">⚠️ Some sources returned 0 papers</div>
                     <div className="text-amber-600">
-                      This is normal - databases specialize in different fields. Hover over the ⚠️ icon to see each source's specialty.
+                      This is normal - databases specialize in different fields. Hover over the ⚠️ icon to see each source&apos;s specialty.
                     </div>
                   </div>
                 )}

@@ -25,11 +25,9 @@ import { PDFParsingService } from './services/pdf-parsing.service';
 import { PDFQueueService } from './services/pdf-queue.service';
 import { SearchCoalescerService } from './services/search-coalescer.service';
 import { TranscriptionService } from './services/transcription.service';
-// Phase 10.6 Day 3: Additional academic source services
+// Phase 10.6 Day 3: Additional academic source services (bioRxiv/ChemRxiv removed <500k papers)
 import { GoogleScholarService } from './services/google-scholar.service';
-import { BioRxivService } from './services/biorxiv.service';
 import { SSRNService } from './services/ssrn.service';
-import { ChemRxivService } from './services/chemrxiv.service';
 // Phase 10.6 Day 3.5: Extracted old sources to dedicated services (refactoring)
 import { SemanticScholarService } from './services/semantic-scholar.service';
 import { CrossRefService } from './services/crossref.service';
@@ -70,8 +68,6 @@ import {
   getSourceTierInfo,
   getConfigurationSummary,
   groupSourcesByPriority,
-  filterDeprecatedSources,
-  DEPRECATED_SOURCES,
   QueryComplexity,
   COMPLEXITY_TARGETS,
   ABSOLUTE_LIMITS,
@@ -106,11 +102,9 @@ export class LiteratureService implements OnModuleInit {
     private readonly pdfQueueService: PDFQueueService,
     // Phase 10.1 Day 12: Citation & journal metrics enrichment
     private readonly openAlexEnrichment: OpenAlexEnrichmentService,
-    // Phase 10.6 Day 3: Additional academic source integrations
+    // Phase 10.6 Day 3: Additional academic source integrations (bioRxiv/ChemRxiv removed)
     private readonly googleScholarService: GoogleScholarService,
-    private readonly bioRxivService: BioRxivService,
     private readonly ssrnService: SSRNService,
-    private readonly chemRxivService: ChemRxivService,
     // Phase 10.6 Day 3.5: Extracted old sources to dedicated services (refactoring)
     private readonly semanticScholarService: SemanticScholarService,
     private readonly crossRefService: CrossRefService,
@@ -1178,14 +1172,8 @@ export class LiteratureService implements OnModuleInit {
       // Phase 10.6 Day 3: New academic sources
       case LiteratureSource.GOOGLE_SCHOLAR:
         return this.searchGoogleScholar(searchDto);
-      case LiteratureSource.BIORXIV:
-        return this.searchBioRxiv(searchDto);
-      case LiteratureSource.MEDRXIV:
-        return this.searchMedRxiv(searchDto);
       case LiteratureSource.SSRN:
         return this.searchSSRN(searchDto);
-      case LiteratureSource.CHEMRXIV:
-        return this.searchChemRxiv(searchDto);
       // Phase 10.6 Day 4: PubMed Central (PMC) - Full-text articles
       case LiteratureSource.PMC:
         return this.searchPMC(searchDto);
@@ -4890,41 +4878,6 @@ export class LiteratureService implements OnModuleInit {
     }
   }
 
-  /**
-   * Phase 10.6 Day 3: Search bioRxiv
-   */
-  private async searchBioRxiv(searchDto: SearchLiteratureDto): Promise<Paper[]> {
-    try {
-      const papers = await this.bioRxivService.searchBioRxiv(searchDto.query, {
-        yearFrom: searchDto.yearFrom,
-        yearTo: searchDto.yearTo,
-        limit: searchDto.limit || 20,
-      });
-
-      return papers;
-    } catch (error: any) {
-      this.logger.error(`[bioRxiv] Search failed: ${error.message}`);
-      return [];
-    }
-  }
-
-  /**
-   * Phase 10.6 Day 3: Search medRxiv
-   */
-  private async searchMedRxiv(searchDto: SearchLiteratureDto): Promise<Paper[]> {
-    try {
-      const papers = await this.bioRxivService.searchMedRxiv(searchDto.query, {
-        yearFrom: searchDto.yearFrom,
-        yearTo: searchDto.yearTo,
-        limit: searchDto.limit || 20,
-      });
-
-      return papers;
-    } catch (error: any) {
-      this.logger.error(`[medRxiv] Search failed: ${error.message}`);
-      return [];
-    }
-  }
 
   /**
    * Phase 10.6 Day 3: Search SSRN
@@ -4940,24 +4893,6 @@ export class LiteratureService implements OnModuleInit {
       return papers;
     } catch (error: any) {
       this.logger.error(`[SSRN] Search failed: ${error.message}`);
-      return [];
-    }
-  }
-
-  /**
-   * Phase 10.6 Day 3: Search ChemRxiv
-   */
-  private async searchChemRxiv(searchDto: SearchLiteratureDto): Promise<Paper[]> {
-    try {
-      const papers = await this.chemRxivService.search(searchDto.query, {
-        yearFrom: searchDto.yearFrom,
-        yearTo: searchDto.yearTo,
-        limit: searchDto.limit || 20,
-      });
-
-      return papers;
-    } catch (error: any) {
-      this.logger.error(`[ChemRxiv] Search failed: ${error.message}`);
       return [];
     }
   }

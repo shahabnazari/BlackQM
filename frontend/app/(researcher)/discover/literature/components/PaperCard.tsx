@@ -291,9 +291,6 @@ export const PaperCard = memo(function PaperCard({
                   const isKnownOpenSource = paper.url && (
                     // Preprint servers (always open access)
                     paper.url.includes('arxiv.org') ||
-                    paper.url.includes('biorxiv.org') ||
-                    paper.url.includes('medrxiv.org') ||
-                    paper.url.includes('chemrxiv.org') ||
                     paper.url.includes('eric.ed.gov') ||
                     paper.url.includes('europepmc.org') ||
                     // Open access publishers
@@ -814,9 +811,6 @@ export const PaperCard = memo(function PaperCard({
                   // Verified open access sources (matches badge logic)
                   const isKnownOpenSource = paper.url && (
                     paper.url.includes('arxiv.org') ||
-                    paper.url.includes('biorxiv.org') ||
-                    paper.url.includes('medrxiv.org') ||
-                    paper.url.includes('chemrxiv.org') ||
                     paper.url.includes('eric.ed.gov') ||
                     paper.url.includes('europepmc.org') ||
                     paper.url.includes('plos.org') ||

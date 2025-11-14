@@ -291,8 +291,6 @@ function LiteratureSearchContent() {
       pubmed: ['pubmed'],
       pmc: ['pmc'],
       arxiv: ['arxiv'],
-      biorxiv: ['biorxiv', 'medrxiv'], // Both use same backend service
-      chemrxiv: ['chemrxiv'],
       semantic_scholar: ['semantic_scholar'],
       google_scholar: ['google_scholar'],
       ssrn: ['ssrn'],

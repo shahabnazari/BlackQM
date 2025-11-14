@@ -55,39 +55,6 @@ export const ArxivIcon: React.FC<IconProps> = ({ className = 'w-5 h-5' }) => (
   </svg>
 );
 
-// bioRxiv/medRxiv - DNA double helix (BLUE/GREEN theme)
-export const BioRxivIcon: React.FC<IconProps> = ({ className = 'w-5 h-5' }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    className={className}
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    {/* DNA double helix - bioRxiv/medRxiv branding */}
-    <path d="M7 2v20M17 2v20" stroke="currentColor" strokeWidth="2" />
-    <ellipse cx="12" cy="5" rx="5" ry="1.5" fill="none" stroke="currentColor" strokeWidth="1" />
-    <ellipse cx="12" cy="10" rx="5" ry="1.5" fill="none" stroke="currentColor" strokeWidth="1" />
-    <ellipse cx="12" cy="15" rx="5" ry="1.5" fill="none" stroke="currentColor" strokeWidth="1" />
-    <ellipse cx="12" cy="20" rx="5" ry="1.5" fill="none" stroke="currentColor" strokeWidth="1" />
-  </svg>
-);
-
-// ChemRxiv - Chemical flask/beaker (PURPLE theme)
-export const ChemRxivIcon: React.FC<IconProps> = ({ className = 'w-5 h-5' }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    className={className}
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    {/* Erlenmeyer flask - chemistry symbol */}
-    <path d="M9 2v6L5 16c-1 2 0 4 2 4h10c2 0 3-2 2-4l-4-8V2H9zm1 2h4v5.5l3.5 7c.3.6 0 1.5-1 1.5H7.5c-1 0-1.3-.9-1-1.5L10 9.5V4z" />
-    <circle cx="12" cy="14" r="1.5" />
-    <circle cx="9" cy="16" r="1" />
-    <circle cx="15" cy="16" r="1" />
-  </svg>
-);
-
 // Semantic Scholar - Network graph with "S" (TEAL theme)
 export const SemanticScholarIcon: React.FC<IconProps> = ({
   className = 'w-5 h-5',
@@ -315,8 +282,6 @@ export const academicSourceIcons: Record<string, React.FC<IconProps>> = {
   pubmed: PubMedIcon,
   pmc: PMCIcon,
   arxiv: ArxivIcon,
-  biorxiv: BioRxivIcon,
-  chemrxiv: ChemRxivIcon,
   semantic_scholar: SemanticScholarIcon,
   ssrn: SSRNIcon,
   crossref: CrossRefIcon,

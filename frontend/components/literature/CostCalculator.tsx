@@ -40,7 +40,6 @@ const ARTICLE_COSTS: DatabaseCosts = {
   crossref: 35,
   arxiv: 0,
   ieee: 33,
-  biorxiv: 0,
   pmc: 0,
   jstor: 40,
   springer: 39.95,
@@ -78,8 +77,6 @@ export function CostCalculator({
         ? 'arxiv'
         : source.includes('ieee')
         ? 'ieee'
-        : source.includes('biorxiv')
-        ? 'biorxiv'
         : source.includes('semantic')
         ? 'semantic_scholar'
         : source.includes('jstor')

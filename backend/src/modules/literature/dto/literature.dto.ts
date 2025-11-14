@@ -29,11 +29,8 @@ export enum LiteratureSource {
   PUBMED = 'pubmed',
   ARXIV = 'arxiv',
   GOOGLE_SCHOLAR = 'google_scholar',
-  // Phase 10.6 Day 3: Additional academic sources
-  BIORXIV = 'biorxiv',
-  MEDRXIV = 'medrxiv',
+  // Phase 10.6 Day 3: Additional academic sources (bioRxiv/medRxiv/ChemRxiv removed - <500k papers)
   SSRN = 'ssrn',
-  CHEMRXIV = 'chemrxiv',
   // Phase 10.6 Day 4: PubMed Central (PMC) - Full-text articles
   PMC = 'pmc',
   // Phase 10.6 Day 5: ERIC - Education research database

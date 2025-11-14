@@ -115,20 +115,6 @@ const ACADEMIC_DATABASES: AcademicDatabase[] = [
     category: 'Free',
   },
   {
-    id: 'biorxiv',
-    label: 'bioRxiv/medRxiv',
-    icon: '🧬',
-    desc: '~500K papers • Biology & medical preprints',
-    category: 'Free',
-  },
-  {
-    id: 'chemrxiv',
-    label: 'ChemRxiv',
-    icon: '⚗️',
-    desc: '~30K papers • Chemistry preprints',
-    category: 'Free',
-  },
-  {
     id: 'semantic_scholar',
     label: 'Semantic Scholar',
     icon: '🎓',

@@ -111,7 +111,6 @@ describe('AcademicResourcesPanel', () => {
       expect(screen.getByText('PubMed')).toBeInTheDocument();
       expect(screen.getByText('ArXiv')).toBeInTheDocument();
       expect(screen.getByText('PubMed Central')).toBeInTheDocument();
-      expect(screen.getByText('bioRxiv/medRxiv')).toBeInTheDocument();
     });
 
     it('should render premium sources (Web of Science, Scopus, etc.)', () => {

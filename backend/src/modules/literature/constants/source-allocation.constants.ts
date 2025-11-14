@@ -76,10 +76,6 @@ export const SOURCE_TIER_MAP: Record<LiteratureSource, SourceTier> = {
   // Phase 10.7 Day 5: Ordered by article count (highest first for efficiency)
   [LiteratureSource.ARXIV]: SourceTier.TIER_3_PREPRINT,           // 2.4M+ Physics/Math/CS preprints
   [LiteratureSource.SSRN]: SourceTier.TIER_3_PREPRINT,            // 1.1M+ Social sciences preprints
-  // Phase 10.7 Day 5: Keep mappings for backward compatibility but mark as deprecated
-  [LiteratureSource.BIORXIV]: SourceTier.TIER_3_PREPRINT,         // DEPRECATED: 220k (below 500k threshold) - kept for backward compat
-  [LiteratureSource.MEDRXIV]: SourceTier.TIER_3_PREPRINT,         // DEPRECATED: 45k (below 500k threshold) - kept for backward compat
-  [LiteratureSource.CHEMRXIV]: SourceTier.TIER_3_PREPRINT,        // DEPRECATED: 35k (below 500k threshold) - kept for backward compat
 
   // TIER 4: Aggregator - Multi-source, mixed quality
   // Phase 10.7 Day 5: Ordered by article count (highest first for efficiency)
@@ -88,21 +84,6 @@ export const SOURCE_TIER_MAP: Record<LiteratureSource, SourceTier> = {
   [LiteratureSource.ERIC]: SourceTier.TIER_4_AGGREGATOR,          // 1.7M+ Education research, mixed sources
 };
 
-/**
- * Phase 10.7 Day 5: Deprecated sources (<500k papers) - filtered from searches
- */
-export const DEPRECATED_SOURCES: Set<LiteratureSource> = new Set([
-  LiteratureSource.BIORXIV,   // 220k papers
-  LiteratureSource.MEDRXIV,   // 45k papers
-  LiteratureSource.CHEMRXIV,  // 35k papers
-]);
-
-/**
- * Phase 10.7 Day 5: Filter out deprecated sources
- */
-export function filterDeprecatedSources(sources: LiteratureSource[]): LiteratureSource[] {
-  return sources.filter(source => !DEPRECATED_SOURCES.has(source));
-}
 
 /**
  * Get allocation limit for a specific source

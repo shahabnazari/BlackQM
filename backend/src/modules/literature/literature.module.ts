@@ -24,11 +24,9 @@ import { PaperQualityScoringService } from './services/paper-quality-scoring.ser
 import { GuidedBatchSelectorService } from './services/guided-batch-selector.service';
 import { HtmlFullTextService } from './services/html-full-text.service';
 import { OpenAlexEnrichmentService } from './services/openalex-enrichment.service';
-// Phase 10.6 Day 3: Additional academic source integrations
+// Phase 10.6 Day 3: Additional academic source integrations (bioRxiv/ChemRxiv removed <500k papers)
 import { GoogleScholarService } from './services/google-scholar.service';
-import { BioRxivService } from './services/biorxiv.service';
 import { SSRNService } from './services/ssrn.service';
-import { ChemRxivService } from './services/chemrxiv.service';
 // Phase 10.6 Day 3.5: Extracted old sources to dedicated services (refactoring)
 import { SemanticScholarService } from './services/semantic-scholar.service';
 import { CrossRefService } from './services/crossref.service';
@@ -108,11 +106,9 @@ import { AIModule } from '../ai/ai.module';
     GuidedBatchSelectorService, // Phase 10 Day 19.6 - Guided Batch Selection
     HtmlFullTextService, // Phase 10 Day 30 - HTML & PMC Full-Text Fetching
     OpenAlexEnrichmentService, // Phase 10.1 Day 12 - Citation & Journal Metrics Enrichment
-    // Phase 10.6 Day 3: Additional academic sources
+    // Phase 10.6 Day 3: Additional academic sources (bioRxiv/ChemRxiv removed <500k papers)
     GoogleScholarService,
-    BioRxivService,
     SSRNService,
-    ChemRxivService,
     // Phase 10.6 Day 3.5: Extracted old sources to dedicated services (refactoring)
     SemanticScholarService,
     CrossRefService,
@@ -161,11 +157,9 @@ import { AIModule } from '../ai/ai.module';
     PDFQueueService, // Phase 10 Day 5.15 - PDF Background Queue
     LiteratureCacheService, // Phase 10 Day 18 - Iterative Theme Extraction Cache
     HtmlFullTextService, // Phase 10 Day 30 - HTML & PMC Full-Text Fetching
-    // Phase 10.6 Day 3: Additional academic sources
+    // Phase 10.6 Day 3: Additional academic sources (bioRxiv/ChemRxiv removed <500k papers)
     GoogleScholarService,
-    BioRxivService,
     SSRNService,
-    ChemRxivService,
     // Phase 10.6 Day 3.5: Extracted old sources to dedicated services (refactoring)
     SemanticScholarService,
     CrossRefService,
