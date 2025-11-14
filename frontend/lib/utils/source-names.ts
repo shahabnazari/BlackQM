@@ -9,7 +9,7 @@
  * Keep in sync with backend LiteratureSource enum
  */
 const SOURCE_NAMES: Record<string, string> = {
-  // Free academic sources (10 sources)
+  // Free academic sources (11 sources - open access only)
   pubmed: 'PubMed',
   pmc: 'PMC',
   arxiv: 'ArXiv',
@@ -18,13 +18,13 @@ const SOURCE_NAMES: Record<string, string> = {
   crossref: 'CrossRef',
   eric: 'ERIC',
   core: 'CORE',
+  springer: 'SpringerLink Open Access',
 
   // Premium sources (requires API keys/institutional access)
   google_scholar: 'Google Scholar',
   web_of_science: 'Web of Science',
   scopus: 'Scopus',
   ieee_xplore: 'IEEE Xplore',
-  springer: 'Springer',
   nature: 'Nature',
   wiley: 'Wiley',
   sage: 'Sage',

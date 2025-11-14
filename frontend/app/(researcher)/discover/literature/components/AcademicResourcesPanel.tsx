@@ -157,6 +157,13 @@ const ACADEMIC_DATABASES: AcademicDatabase[] = [
     category: 'Free',
   },
   {
+    id: 'springer',
+    label: 'SpringerLink Open Access',
+    icon: '📚',
+    desc: '~15M papers • Springer Nature open access publications',
+    category: 'Free',
+  },
+  {
     id: 'web_of_science',
     label: 'Web of Science',
     icon: '🌐',
@@ -175,13 +182,6 @@ const ACADEMIC_DATABASES: AcademicDatabase[] = [
     label: 'IEEE Xplore',
     icon: '⚡',
     desc: '~6M papers • Engineering, CS & electronics',
-    category: 'Premium',
-  },
-  {
-    id: 'springer',
-    label: 'SpringerLink',
-    icon: '📚',
-    desc: '~15M papers • STM & social sciences',
     category: 'Premium',
   },
   {
