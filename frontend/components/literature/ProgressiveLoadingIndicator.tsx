@@ -71,6 +71,7 @@ const SOURCE_DESCRIPTIONS: Record<string, string> = {
   crossref: 'DOI registry across all disciplines (150M+ records)',
   eric: 'Education research database (1.5M+ papers)',
   core: 'Open access aggregator from 10,000+ repositories (250M+ papers)',
+  springer: 'Springer Nature open access (15M+ papers, Nature journals)',
   ssrn: 'Social science research network (1M+ papers)',
   google_scholar: 'Multi-source aggregator (400M+ papers)',
 };

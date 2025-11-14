@@ -130,8 +130,10 @@ export class SpringerService {
   constructor(private readonly httpService: HttpService) {
     this.logger.log('✅ [SpringerLink] Service initialized');
 
-    // Warn if API key is not configured
-    if (!this.API_KEY) {
+    // Log API key status
+    if (this.API_KEY) {
+      this.logger.log('[SpringerLink] API key configured - using authenticated limits (5,000 calls/day)');
+    } else {
       this.logger.warn(
         '⚠️ [SpringerLink] API key not configured - set SPRINGER_API_KEY environment variable',
       );
