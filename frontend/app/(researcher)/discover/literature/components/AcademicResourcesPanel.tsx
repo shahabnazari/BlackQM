@@ -97,126 +97,126 @@ const ACADEMIC_DATABASES: AcademicDatabase[] = [
     id: 'pubmed',
     label: 'PubMed',
     icon: '🏥',
-    desc: 'Medical/life sciences - FREE',
+    desc: '~36M papers • Medicine & Life Sciences',
     category: 'Free',
   },
   {
     id: 'pmc',
     label: 'PubMed Central',
     icon: '📖',
-    desc: 'Free full-text articles',
+    desc: '~10M papers • Full-text biomedical articles',
     category: 'Free',
   },
   {
     id: 'arxiv',
     label: 'ArXiv',
     icon: '📐',
-    desc: 'Physics/Math/CS preprints - FREE',
+    desc: '~2.4M papers • Physics, Math, CS preprints',
     category: 'Free',
   },
   {
     id: 'biorxiv',
     label: 'bioRxiv/medRxiv',
     icon: '🧬',
-    desc: 'Biology & medical preprints - FREE (shared platform)',
+    desc: '~500K papers • Biology & medical preprints',
     category: 'Free',
   },
   {
     id: 'chemrxiv',
     label: 'ChemRxiv',
     icon: '⚗️',
-    desc: 'Chemistry preprints - FREE',
+    desc: '~30K papers • Chemistry preprints',
     category: 'Free',
   },
   {
     id: 'semantic_scholar',
     label: 'Semantic Scholar',
     icon: '🎓',
-    desc: 'CS/interdisciplinary - FREE',
+    desc: '~220M papers • AI-powered search, all fields',
     category: 'Free',
   },
   {
     id: 'google_scholar',
     label: 'Google Scholar',
     icon: '🔍',
-    desc: 'Multidisciplinary - Requires paid SerpAPI key',
+    desc: '~400M documents • Multidisciplinary search',
     category: 'Premium',
   },
   {
     id: 'ssrn',
     label: 'SSRN',
     icon: '📊',
-    desc: 'Social science papers (demo)',
+    desc: '~1.2M papers • Social sciences & humanities',
     category: 'Free',
   },
   {
     id: 'crossref',
     label: 'CrossRef',
     icon: '🔗',
-    desc: 'DOI database registry',
+    desc: '~150M records • DOI registry, all fields',
     category: 'Free',
   },
   {
     id: 'eric',
     label: 'ERIC',
     icon: '🎓',
-    desc: 'Education research - FREE',
+    desc: '~1.7M papers • Education research database',
     category: 'Free',
   },
   {
     id: 'web_of_science',
     label: 'Web of Science',
     icon: '🌐',
-    desc: 'Premium - 159M+ records (API key required)',
+    desc: '~95M papers • Citation analytics, all sciences',
     category: 'Premium',
   },
   {
     id: 'scopus',
     label: 'Scopus',
     icon: '🔬',
-    desc: 'Premium - 85M+ records, SJR scores (API key required)',
+    desc: '~90M papers • Peer-reviewed, SJR rankings',
     category: 'Premium',
   },
   {
     id: 'ieee_xplore',
     label: 'IEEE Xplore',
     icon: '⚡',
-    desc: 'Premium - 5.5M+ engineering & CS papers (API key required)',
+    desc: '~6M papers • Engineering, CS & electronics',
     category: 'Premium',
   },
   {
     id: 'springer',
     label: 'SpringerLink',
     icon: '📚',
-    desc: 'Premium - 15M+ STM documents (API key required)',
+    desc: '~15M papers • STM & social sciences',
     category: 'Premium',
   },
   {
     id: 'nature',
     label: 'Nature',
     icon: '⭐',
-    desc: 'Premium - High-impact journal (IF ~69, API key required)',
+    desc: '~500K papers • High-impact research (IF ~69)',
     category: 'Premium',
   },
   {
     id: 'wiley',
     label: 'Wiley Online Library',
     icon: '🔬',
-    desc: 'Premium - 6M+ articles, engineering & medicine (API key required)',
+    desc: '~9M papers • Medicine, engineering & sciences',
     category: 'Premium',
   },
   {
     id: 'sage',
     label: 'SAGE Publications',
     icon: '📖',
-    desc: 'Premium - 1000+ journals, social sciences focus (API key required)',
+    desc: '~1.5M papers • Social sciences focus',
     category: 'Premium',
   },
   {
     id: 'taylor_francis',
     label: 'Taylor & Francis',
     icon: '📚',
-    desc: 'Premium - 2,700+ journals, humanities & social sciences (API key required)',
+    desc: '~4M papers • Humanities & social sciences',
     category: 'Premium',
   },
 ];
@@ -327,10 +327,10 @@ export const AcademicResourcesPanel = memo(function AcademicResourcesPanel({
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-3">
               <Badge variant="success" size="sm" className="uppercase text-xs font-bold">
-                Open Access - Free (9 sources)
+                Open Access (9 sources)
               </Badge>
               <span className="text-xs text-gray-500">
-                No subscription or API key required
+                Free to access • No authentication required
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
@@ -430,10 +430,10 @@ export const AcademicResourcesPanel = memo(function AcademicResourcesPanel({
           <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-3">
               <Badge variant="warning" size="sm" className="uppercase text-xs font-bold">
-                Premium Databases (9 sources)
+                Premium (9 sources)
               </Badge>
               <span className="text-xs text-gray-500">
-                Requires API key or institutional access
+                Authentication required for access
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">

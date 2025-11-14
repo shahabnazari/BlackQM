@@ -83,12 +83,16 @@ const nextConfig = {
         splitChunks: false, // Disable code splitting in dev for speed
       };
 
-      // CRITICAL: Faster rebuilds
+      // CRITICAL: Cache configuration with staleness prevention
       config.cache = {
         type: 'filesystem',
         buildDependencies: {
           config: [__filename],
         },
+        // Add timestamp to cache keys to prevent stale cache
+        version: Date.now().toString(),
+        // Reduce cache max age
+        maxAge: 1000 * 60 * 60, // 1 hour (instead of default 2 weeks)
       };
 
       // CRITICAL: Reduce chunk loading timeout

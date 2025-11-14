@@ -1,6 +1,7 @@
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import type { Metadata } from 'next';
 import './globals.css';
+import './globals-accessibility.css'; // Phase 10.8 Day 3: WCAG AA Compliance
 import { ThemeScript } from './theme-script';
 import { AccessibilityProvider } from '@/components/accessibility/AccessibilityManager';
 import { AccessibilityToggle } from '@/components/accessibility/AccessibilityToggle';

@@ -65,6 +65,12 @@ npm run dev:performance
 npm run dev            # Auto-restart, health monitoring, metrics API
                        # Monitoring: http://localhost:9090/status
 
+# 🛡️ BACKEND ONLY: Dev Manager V2.0 (Enterprise-Grade Process Management)
+npm run backend        # Start backend with multi-process prevention
+npm run backend:status # Check backend status & process count
+npm run backend:stop   # Stop backend cleanly
+npm run backend:restart # Full backend restart
+
 # Other commands
 npm run dev:v3         # Legacy V3 dev manager
 npm run stop           # Stop all servers
@@ -73,6 +79,8 @@ npm run dev:clean      # Clean build and restart
 ```
 
 **💡 Performance Tip:** Use `dev:lite` for daily development to reduce CPU/memory usage by ~75%. See [PERFORMANCE_OPTIMIZATION.md](./PERFORMANCE_OPTIMIZATION.md) for details.
+
+**🛡️ Backend Process Management:** Use `npm run backend` to start the backend with **enterprise-grade multi-process prevention**. Automatically kills old processes and ensures only 1 backend runs. See [DEV_MANAGER_V2_GUIDE.md](./DEV_MANAGER_V2_GUIDE.md) for details.
 
 ### Access Points
 

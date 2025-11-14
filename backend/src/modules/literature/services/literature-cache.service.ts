@@ -455,6 +455,151 @@ export class LiteratureCacheService {
   }
 
   /**
+   * Phase 10.7 Day 5: Delete a research corpus
+   *
+   * Enterprise-grade deletion with:
+   * - Security validation (userId ownership check)
+   * - Soft delete option (can be modified to set deletedAt instead)
+   * - Cascade considerations (related cache entries remain for reuse)
+   * - Comprehensive error handling and logging
+   *
+   * @param userId - User ID for ownership verification
+   * @param corpusId - Corpus ID to delete
+   * @throws Error if corpus not found or user doesn't own it
+   */
+  async deleteCorpus(userId: string, corpusId: string): Promise<void> {
+    try {
+      // Phase 10.7 Day 5: Security check - verify user owns this corpus
+      const corpus = await this.prisma.extractionCorpus.findUnique({
+        where: { id: corpusId },
+        select: { userId: true, name: true },
+      });
+
+      if (!corpus) {
+        this.logger.warn(
+          `Delete attempt failed: Corpus ${corpusId} not found`,
+        );
+        throw new Error('Corpus not found');
+      }
+
+      if (corpus.userId !== userId) {
+        this.logger.warn(
+          `Delete attempt failed: User ${userId} does not own corpus ${corpusId} (owner: ${corpus.userId})`,
+        );
+        throw new Error('Unauthorized: You do not own this corpus');
+      }
+
+      // Phase 10.7 Day 5: Delete corpus (hard delete)
+      // NOTE: Cache entries (processedLiterature) are NOT deleted - they remain for future reuse
+      await this.prisma.extractionCorpus.delete({
+        where: { id: corpusId },
+      });
+
+      this.logger.log(
+        `✅ Corpus deleted successfully: ${corpusId} ("${corpus.name}") by user ${userId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `❌ Error deleting corpus ${corpusId} for user ${userId}:`,
+        error,
+      );
+      throw error; // Propagate to controller for proper HTTP error handling
+    }
+  }
+
+  /**
+   * Phase 10.7 Day 5: Update corpus metadata
+   *
+   * Enterprise-grade update with:
+   * - Security validation (userId ownership check)
+   * - Partial updates (only provided fields are updated)
+   * - Validation (name must not be empty)
+   * - Atomic database operation
+   * - Comprehensive error handling and logging
+   *
+   * @param userId - User ID for ownership verification
+   * @param corpusId - Corpus ID to update
+   * @param updates - Partial updates { name?, purpose? }
+   * @returns Updated corpus information
+   * @throws Error if corpus not found, user doesn't own it, or validation fails
+   */
+  async updateCorpus(
+    userId: string,
+    corpusId: string,
+    updates: { name?: string; purpose?: string },
+  ): Promise<CorpusInfo> {
+    try {
+      // Phase 10.7 Day 5: Security check - verify user owns this corpus
+      const corpus = await this.prisma.extractionCorpus.findUnique({
+        where: { id: corpusId },
+        select: { userId: true, name: true },
+      });
+
+      if (!corpus) {
+        this.logger.warn(
+          `Update attempt failed: Corpus ${corpusId} not found`,
+        );
+        throw new Error('Corpus not found');
+      }
+
+      if (corpus.userId !== userId) {
+        this.logger.warn(
+          `Update attempt failed: User ${userId} does not own corpus ${corpusId} (owner: ${corpus.userId})`,
+        );
+        throw new Error('Unauthorized: You do not own this corpus');
+      }
+
+      // Phase 10.7 Day 5: Validation - name must not be empty if provided
+      if (updates.name !== undefined && updates.name.trim() === '') {
+        this.logger.warn(
+          `Update attempt failed: Empty name provided for corpus ${corpusId}`,
+        );
+        throw new Error('Corpus name cannot be empty');
+      }
+
+      // Phase 10.7 Day 5: Build update data object (only include provided fields)
+      const updateData: any = {};
+      if (updates.name !== undefined) {
+        updateData.name = updates.name.trim();
+      }
+      if (updates.purpose !== undefined) {
+        updateData.purpose = updates.purpose;
+      }
+
+      // Phase 10.7 Day 5: Perform atomic update
+      const updated = await this.prisma.extractionCorpus.update({
+        where: { id: corpusId },
+        data: updateData,
+      });
+
+      this.logger.log(
+        `✅ Corpus updated successfully: ${corpusId} by user ${userId} - ${JSON.stringify(updateData)}`,
+      );
+
+      // Phase 10.7 Day 5: Return formatted corpus info
+      return {
+        id: updated.id,
+        userId: updated.userId,
+        name: updated.name,
+        purpose: updated.purpose,
+        paperIds: updated.paperIds as any as string[],
+        themeCount: updated.themeCount,
+        lastExtractedAt: updated.lastExtractedAt,
+        isSaturated: updated.isSaturated,
+        saturationConfidence: updated.saturationConfidence || undefined,
+        costSaved: updated.costSaved,
+        totalExtractions: updated.totalExtractions,
+      };
+    } catch (error) {
+      this.logger.error(
+        `❌ Error updating corpus ${corpusId} for user ${userId}:`,
+        error,
+      );
+      throw error; // Propagate to controller for proper HTTP error handling
+    }
+  }
+
+  /**
    * Helper: Generate MD5 hash for content
    */
   private generateContentHash(content: string): string {

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { AccessibleTooltip } from './accessible-tooltip';
+import { announceToScreenReader } from '@/lib/accessibility/accessibility-utils';
 
 interface HighContrastToggleProps {
   className?: string;
@@ -40,16 +41,6 @@ export function HighContrastToggle({
       localStorage.setItem('highContrastMode', 'false');
       announceToScreenReader('High contrast mode disabled');
     }
-  };
-
-  const announceToScreenReader = (message: string) => {
-    const announcement = document.createElement('div');
-    announcement.setAttribute('role', 'status');
-    announcement.setAttribute('aria-live', 'polite');
-    announcement.className = 'sr-only';
-    announcement.textContent = message;
-    document.body.appendChild(announcement);
-    setTimeout(() => document.body.removeChild(announcement), 1000);
   };
 
   // Prevent hydration mismatch

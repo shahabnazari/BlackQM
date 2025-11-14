@@ -57,52 +57,90 @@ export const FilterPanel = memo(function FilterPanel({
   // ============================================================================
 
   const handleYearFromChange = (value: string) => {
-    const val = parseInt(value);
-    if (isNaN(val)) return; // Don't set if invalid
+    // Edge case: empty string - reset to default (2010)
+    if (value === '') {
+      setFilters({ yearFrom: 2010 });
+      return;
+    }
+
+    const val = parseInt(value, 10);
+    // Edge case: invalid number (NaN, decimals, negative)
+    if (isNaN(val) || val < 0) return;
 
     let correctedVal = val;
-    // Auto-correct: ensure from is not after to
+    const currentYear = new Date().getFullYear();
+
+    // Edge case: year before modern publishing era
+    if (correctedVal < 1900) correctedVal = 1900;
+    // Edge case: future year
+    if (correctedVal > currentYear) correctedVal = currentYear;
+    // Edge case: from year after to year
     if (filters.yearTo && correctedVal > filters.yearTo) {
       correctedVal = filters.yearTo;
     }
-    // Auto-correct: limit to valid range
-    if (correctedVal < 1900) correctedVal = 1900;
-    const currentYear = new Date().getFullYear();
-    if (correctedVal > currentYear) correctedVal = currentYear;
 
     logger.debug('[FilterPanel] Year from changed', { yearFrom: correctedVal });
     setFilters({ yearFrom: correctedVal });
   };
 
   const handleYearToChange = (value: string) => {
-    const val = parseInt(value);
-    if (isNaN(val)) return; // Don't set if invalid
+    // Edge case: empty string - reset to current year
+    if (value === '') {
+      setFilters({ yearTo: new Date().getFullYear() });
+      return;
+    }
+
+    const val = parseInt(value, 10);
+    // Edge case: invalid number (NaN, decimals, negative)
+    if (isNaN(val) || val < 0) return;
 
     let correctedVal = val;
-    // Auto-correct: ensure to is not before from
+    const currentYear = new Date().getFullYear();
+
+    // Edge case: year before modern publishing era
+    if (correctedVal < 1900) correctedVal = 1900;
+    // Edge case: future year
+    if (correctedVal > currentYear) correctedVal = currentYear;
+    // Edge case: to year before from year
     if (filters.yearFrom && correctedVal < filters.yearFrom) {
       correctedVal = filters.yearFrom;
     }
-    // Auto-correct: limit to valid range
-    if (correctedVal < 1900) correctedVal = 1900;
-    const currentYear = new Date().getFullYear();
-    if (correctedVal > currentYear) correctedVal = currentYear;
 
     logger.debug('[FilterPanel] Year to changed', { yearTo: correctedVal });
     setFilters({ yearTo: correctedVal });
   };
 
   const handleAuthorChange = (value: string) => {
-    logger.debug('[FilterPanel] Author filter changed', { author: value });
-    setFilters({ author: value });
+    // Edge case: trim excessive whitespace but preserve internal spaces
+    const trimmedValue = value.replace(/\s+/g, ' ').trimStart();
+    
+    // Edge case: prevent extremely long author names (likely input error)
+    const maxLength = 200;
+    const sanitizedValue = trimmedValue.slice(0, maxLength);
+
+    logger.debug('[FilterPanel] Author filter changed', { author: sanitizedValue });
+    setFilters({ author: sanitizedValue });
   };
 
   const handleMinCitationsChange = (value: string) => {
-    const val = parseInt(value);
-    if (isNaN(val)) return; // Don't set if invalid
+    // Edge case: empty string - reset to 0 (no minimum)
+    if (value === '') {
+      setFilters({ minCitations: 0 });
+      return;
+    }
 
-    logger.debug('[FilterPanel] Min citations changed', { minCitations: val });
-    setFilters({ minCitations: val });
+    const val = parseInt(value, 10);
+    // Edge case: invalid number (NaN, decimals)
+    if (isNaN(val)) return;
+
+    // Edge case: negative citations don't make sense
+    let correctedVal = Math.max(0, val);
+    // Edge case: unreasonably high citation counts (likely typo)
+    // Papers with 50k+ citations are extremely rare (e.g., "Structure of DNA" has ~12k)
+    if (correctedVal > 100000) correctedVal = 100000;
+
+    logger.debug('[FilterPanel] Min citations changed', { minCitations: correctedVal });
+    setFilters({ minCitations: correctedVal });
   };
 
   const handlePublicationTypeChange = (value: string) => {
@@ -221,15 +259,17 @@ Quality Tiers:
         exit={{ height: 0, opacity: 0 }}
         className="space-y-4 pt-4 border-t mt-4"
       >
-        {/* Filter Controls Grid */}
-        <div className="grid grid-cols-5 gap-4">
+        {/* Filter Controls Grid - Phase 10.8 Day 1: Mobile Responsive */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {/* Year Range */}
           <div>
-            <label className="text-sm font-medium">Year Range</label>
+            <label className="text-sm font-medium">
+              Year Range <span className="text-xs text-gray-500 font-normal">(default: 2010-{currentYear})</span>
+            </label>
             <div className="flex gap-2 mt-1">
               <Input
                 type="number"
-                placeholder="From"
+                placeholder="2010"
                 min="1900"
                 max={currentYear}
                 value={filters.yearFrom ?? ''}
@@ -239,7 +279,7 @@ Quality Tiers:
               />
               <Input
                 type="number"
-                placeholder="To"
+                placeholder={currentYear.toString()}
                 min="1900"
                 max={currentYear}
                 value={filters.yearTo ?? ''}
@@ -327,14 +367,10 @@ Quality Tiers:
         <Alert className="bg-blue-50 border-blue-200">
           <Award className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-sm text-blue-900">
-            <strong>Enterprise Research-Grade Filtering:</strong> Results
-            automatically exclude papers with abstracts &lt;100 words. Quality
-            scores (0-100) combine citation impact, journal prestige, content
-            depth, and recency.
+            <strong>Enterprise Research-Grade Filtering:</strong> Quality scores (0-100) use bias-resistant v3.0 methodology: <strong className="text-blue-700">60% Field-Weighted Citation Impact</strong> (fair across disciplines), <strong className="text-blue-700">40% Journal Prestige</strong> (impact factor, h-index, quartile). <strong className="text-green-700">Optional bonuses:</strong> +10 Open Access, +5 Data/Code Sharing, +5 Social Impact.
             <strong className="text-green-700">
               {' '}
-              High-quality papers (≥70) show "Full Text" button for open-access
-              PDFs.
+              Papers scoring ≥50 are "Good Quality"; ≥70 are "Excellent."
             </strong>
             <a
               href="#"
@@ -408,17 +444,21 @@ Quality Tiers:
             </motion.div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex justify-between gap-2 mt-4">
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleResetFilters}>
+          {/* Action Buttons - Phase 10.8 Day 1: Mobile Touch-Friendly */}
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-2 mt-4">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleResetFilters}
+                className="w-full sm:w-auto min-h-[44px]"
+              >
                 Reset Filters
               </Button>
               {!showPresets && (
                 <Button
                   variant="outline"
                   onClick={toggleShowPresets}
-                  className="border-purple-300 text-purple-700 hover:bg-purple-50"
+                  className="w-full sm:w-auto min-h-[44px] border-purple-300 text-purple-700 hover:bg-purple-50"
                 >
                   <Star className="w-4 h-4 mr-2" />
                   Save as Preset
@@ -427,7 +467,7 @@ Quality Tiers:
             </div>
             <Button
               onClick={handleApplyFilters}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+              className="w-full sm:w-auto min-h-[44px] bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
             >
               <Check className="w-4 h-4 mr-2" />
               Apply Filters

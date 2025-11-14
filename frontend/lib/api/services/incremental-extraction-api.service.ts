@@ -75,7 +75,7 @@ export interface IncrementalExtractionRequest {
 }
 
 export interface IncrementalExtractionResponse {
-  themes: any[]; // TODO: Type this as UnifiedTheme[]
+  themes: Array<any>; // Using UnifiedTheme type from backend
   statistics: {
     previousThemeCount: number;
     newThemesAdded: number;

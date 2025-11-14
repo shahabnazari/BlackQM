@@ -30,6 +30,54 @@ import {
 } from 'lucide-react';
 
 // ============================================================================
+// Constants
+// ============================================================================
+
+/**
+ * Source name mapping for display
+ * Maps backend enum values to user-friendly names
+ */
+const SOURCE_DISPLAY_NAMES: Record<string, string> = {
+  pubmed: 'PubMed',
+  pmc: 'PMC (PubMed Central)',
+  arxiv: 'ArXiv',
+  semantic_scholar: 'Semantic Scholar',
+  crossref: 'CrossRef',
+  eric: 'ERIC',
+  ssrn: 'SSRN',
+  biorxiv: 'bioRxiv',
+  medrxiv: 'medRxiv',
+  chemrxiv: 'ChemRxiv',
+  google_scholar: 'Google Scholar',
+  web_of_science: 'Web of Science',
+  scopus: 'Scopus',
+  ieee_xplore: 'IEEE Xplore',
+  springer: 'SpringerLink',
+  nature: 'Nature',
+  wiley: 'Wiley Online Library',
+  sage: 'SAGE Publications',
+  taylor_francis: 'Taylor & Francis',
+};
+
+/**
+ * Source descriptions for tooltips (developer mode)
+ * Explains why a source might return 0 papers
+ */
+const SOURCE_DESCRIPTIONS: Record<string, string> = {
+  pubmed: 'Medical/life sciences (36M+ papers)',
+  pmc: 'Free full-text biomedical articles (8M+ papers)',
+  arxiv: 'Physics/Math/CS preprints (2M+ papers)',
+  semantic_scholar: 'AI-powered academic search (200M+ papers)',
+  crossref: 'DOI registry across all disciplines (150M+ records)',
+  eric: 'Education research database (1.5M+ papers)',
+  ssrn: 'Social science research network (1M+ papers)',
+  biorxiv: 'Biology preprints (220k papers)',
+  medrxiv: 'Medical preprints (45k papers)',
+  chemrxiv: 'Chemistry preprints (35k papers)',
+  google_scholar: 'Multi-source aggregator (400M+ papers)',
+};
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -484,16 +532,22 @@ export const ProgressiveLoadingIndicator: React.FC<
                       const count = typeof countData === 'number' ? countData : countData.papers;
                       const total = state.stage1?.totalCollected || 1;
                       const percentage = ((count / total) * 100).toFixed(1);
-                      const displaySource = source.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                      
+                      const displaySource = SOURCE_DISPLAY_NAMES[source.toLowerCase()] || source.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                      const sourceDescription = SOURCE_DESCRIPTIONS[source.toLowerCase()] || '';
+
                       return (
-                        <div key={source} className="flex items-center gap-2">
+                        <div key={source} className="flex items-center gap-2" title={sourceDescription}>
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-gray-700">
+                              <span className={`text-xs font-medium ${count === 0 ? 'text-amber-600' : 'text-gray-700'}`}>
                                 {displaySource}
+                                {count === 0 && (
+                                  <span className="ml-1.5 text-xs text-amber-600" title={`No results - ${sourceDescription || 'May not index content for this query'}`}>
+                                    ⚠️
+                                  </span>
+                                )}
                               </span>
-                              <span className="text-xs font-semibold text-blue-600">
+                              <span className={`text-xs font-semibold ${count === 0 ? 'text-gray-400' : 'text-blue-600'}`}>
                                 {count.toLocaleString()} papers ({percentage}%)
                               </span>
                             </div>
@@ -519,13 +573,16 @@ export const ProgressiveLoadingIndicator: React.FC<
                       );
                     })}
                 </div>
-                {/* Warning for sources with 0 papers */}
+                {/* Info panel for sources with 0 papers */}
                 {Object.values(state.stage1.sourceBreakdown).some(countData => {
                   const count = typeof countData === 'number' ? countData : countData.papers;
                   return count === 0;
                 }) && (
-                  <div className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
-                    ⚠️ Some sources returned 0 papers for this query
+                  <div className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                    <div className="font-medium mb-1">⚠️ Some sources returned 0 papers</div>
+                    <div className="text-amber-600">
+                      This is normal - databases specialize in different fields. Hover over the ⚠️ icon to see each source's specialty.
+                    </div>
                   </div>
                 )}
               </motion.div>
@@ -640,13 +697,15 @@ export const ProgressiveLoadingIndicator: React.FC<
                            const countB = typeof b === 'number' ? b : b.papers;
                            return countB - countA;
                          })
-                         .filter(([, countData]) => {
-                           const count = typeof countData === 'number' ? countData : countData.papers;
-                           return count > 0;
-                         })
                          .map(([source, countData], index) => {
                            const count = typeof countData === 'number' ? countData : countData.papers;
-                           const percentage = (count / searchMetadata.totalCollected) * 100;
+                           const percentage = searchMetadata.totalCollected > 0
+                             ? (count / searchMetadata.totalCollected) * 100
+                             : 0;
+                           const displaySource = SOURCE_DISPLAY_NAMES[source.toLowerCase()] || source.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                           const sourceDescription = SOURCE_DESCRIPTIONS[source.toLowerCase()] || '';
+                           const isZeroPapers = count === 0;
+
                            return (
                              <motion.div
                                key={source}
@@ -654,25 +713,37 @@ export const ProgressiveLoadingIndicator: React.FC<
                                animate={{ opacity: 1, x: 0 }}
                                transition={{ delay: 0.4 + index * 0.05 }}
                                className="flex items-center gap-3"
+                               title={isZeroPapers ? `No results - ${sourceDescription || 'May not index content for this query'}` : sourceDescription}
                              >
                                <div className="flex-1">
                                  <div className="flex items-center justify-between mb-1">
-                                   <span className="text-xs font-medium text-gray-700">{source}</span>
-                                   <span className="text-xs font-bold text-gray-900">
+                                   <span className={`text-xs font-medium ${isZeroPapers ? 'text-amber-600' : 'text-gray-700'}`}>
+                                     {displaySource}
+                                     {isZeroPapers && (
+                                       <span className="ml-1.5 text-xs text-amber-600" title={`${sourceDescription || 'Database'} - No matching papers for this query`}>
+                                         ⚠️
+                                       </span>
+                                     )}
+                                   </span>
+                                   <span className={`text-xs font-bold ${isZeroPapers ? 'text-gray-400' : 'text-gray-900'}`}>
                                      {count.toLocaleString()}
                                    </span>
                                  </div>
                                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                   <motion.div
-                                     initial={{ width: 0 }}
-                                     animate={{ width: `${percentage}%` }}
-                                     transition={{ duration: 0.8, delay: 0.4 + index * 0.05 }}
-                                     className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full"
-                                   />
+                                   {isZeroPapers ? (
+                                     <div className="h-full w-full bg-gray-300 rounded-full" />
+                                   ) : (
+                                     <motion.div
+                                       initial={{ width: 0 }}
+                                       animate={{ width: `${percentage}%` }}
+                                       transition={{ duration: 0.8, delay: 0.4 + index * 0.05 }}
+                                       className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full"
+                                     />
+                                   )}
                                  </div>
                                </div>
-                               <span className="text-xs text-gray-500 w-12 text-right">
-                                 {percentage.toFixed(0)}%
+                               <span className={`text-xs w-12 text-right ${isZeroPapers ? 'text-gray-400' : 'text-gray-500'}`}>
+                                 {isZeroPapers ? '0%' : `${percentage.toFixed(0)}%`}
                                </span>
                              </motion.div>
                            );

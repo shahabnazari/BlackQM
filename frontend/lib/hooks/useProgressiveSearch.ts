@@ -244,7 +244,7 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
    * Counter: REAL numbers from backend (actual papers loaded)
    */
   const simulateSmoothProgress = useCallback((
-    targetPapers: number,
+    _targetPapers: number, // Unused but required for function signature consistency
     intervalRef: React.MutableRefObject<NodeJS.Timeout | null>,
     backendCompleteRef: React.MutableRefObject<boolean>,
     getRealPaperCount: () => number, // Function to get REAL count from backend
@@ -494,7 +494,8 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
             const convertedSourceBreakdown: Record<string, number | { papers: number; duration: number }> = {};
             if (searchMetadata.sourceBreakdown) {
               Object.entries(searchMetadata.sourceBreakdown).forEach(([source, data]) => {
-                convertedSourceBreakdown[source] = data; // Keep as-is (already correct format)
+                // Type assertion: backend sends the correct format
+                convertedSourceBreakdown[source] = data as number | { papers: number; duration: number };
               });
             }
             console.log(`  Converted sourceBreakdown:`, convertedSourceBreakdown);

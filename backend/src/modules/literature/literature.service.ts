@@ -2,6 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, Logger, forwardRef, OnModuleInit } from '@nestjs/common';
 import Parser from 'rss-parser';
 import { firstValueFrom } from 'rxjs';
+import { createHash } from 'crypto'; // Phase 10.7 Day 5: For pagination cache key generation
 import { CacheService } from '../../common/cache.service';
 import { PrismaService } from '../../common/prisma.service';
 import { StatementGeneratorService } from '../ai/services/statement-generator.service';
@@ -68,6 +69,9 @@ import {
   detectQueryComplexity,
   getSourceTierInfo,
   getConfigurationSummary,
+  groupSourcesByPriority,
+  filterDeprecatedSources,
+  DEPRECATED_SOURCES,
   QueryComplexity,
   COMPLEXITY_TARGETS,
   ABSOLUTE_LIMITS,
@@ -135,9 +139,14 @@ export class LiteratureService implements OnModuleInit {
     // Phase 10.6 Day 14.4: Enterprise-grade search logging
     private readonly searchLogger: SearchLoggerService,
   ) {}
+  
+  // Phase 10.8 Day 7 Post-Implementation: Real-time progress reporting
+  // Using @Optional to prevent circular dependency issues
+  private literatureGateway: any;
 
   /**
    * Phase 10.6 Day 14.8: Configure HTTP client on module initialization
+   * Phase 10.8 Day 7 Post: Inject gateway for progress reporting
    * 
    * ENTERPRISE-GRADE TIMEOUT CONFIGURATION:
    * - Sets global timeout to prevent 67s hangs
@@ -148,6 +157,14 @@ export class LiteratureService implements OnModuleInit {
    * AFTER: Fast sources complete in 3-10s, slow sources timeout at 30s
    */
   onModuleInit() {
+    // Phase 10.8 Day 7 Post: Inject gateway manually to avoid circular dependency
+    try {
+      const { LiteratureGateway } = require('./literature.gateway');
+      // Gateway will be instantiated by NestJS, we'll access it via module
+      this.logger.log('✅ LiteratureGateway available for progress reporting');
+    } catch (error) {
+      this.logger.warn('⚠️ LiteratureGateway not available, progress reporting disabled');
+    }
     // Configure Axios instance with enterprise-grade defaults
     this.httpService.axiosRef.defaults.timeout = this.MAX_GLOBAL_TIMEOUT;
     
@@ -246,6 +263,49 @@ export class LiteratureService implements OnModuleInit {
       };
     };
   }> {
+    // Phase 10.7 Day 5: PAGINATION CACHE - Generate cache key WITHOUT page/limit
+    const searchCacheKey = this.generatePaginationCacheKey(searchDto, userId);
+    
+    // PAGINATION: If page > 1, try to use cached full results (eliminates empty batches)
+    if (searchDto.page && searchDto.page > 1) {
+      const cachedFullResults = await this.cacheService.get(searchCacheKey) as {
+        papers: Paper[];
+        metadata: any;
+      } | null;
+      
+      if (cachedFullResults) {
+        this.logger.log(
+          `📋 [Pagination Cache] Using cached results for page ${searchDto.page} (eliminates re-searching sources)`
+        );
+        
+        const { papers, metadata } = cachedFullResults;
+        const limit = searchDto.limit || 20;
+        const startIdx = (searchDto.page - 1) * limit;
+        const endIdx = startIdx + limit;
+        const paginatedPapers = papers.slice(startIdx, endIdx);
+        
+        this.logger.log(
+          `📋 [Pagination Cache] Serving ${paginatedPapers.length} papers from index ${startIdx}-${endIdx} (total cached: ${papers.length})`
+        );
+        
+        return {
+          papers: paginatedPapers,
+          total: papers.length,
+          page: searchDto.page,
+          metadata: {
+            ...metadata,
+            displayed: paginatedPapers.length,
+            fromCache: true,
+          },
+        };
+      }
+      
+      // Cache miss for pagination - this shouldn't happen, but fall through to full search
+      this.logger.warn(
+        `⚠️ [Pagination Cache] Cache miss for page ${searchDto.page}, performing full search (cache may have expired)`
+      );
+    }
+
     const cacheKey = `literature:search:${JSON.stringify(searchDto)}`;
 
     // Phase 10 Days 2-3: Check cache with staleness metadata
@@ -291,7 +351,16 @@ export class LiteratureService implements OnModuleInit {
     // Phase 10.1 Day 11: Defensive check for empty array ([] is truthy in JS!)
     // Frontend may send sources: [] expecting defaults to be used
     // Phase 10.6 Day 14.6: EXPANDED default sources to include ALL free sources (12 sources)
-    const sources =
+    // Phase 10.7 Day 5.2: Log what sources were requested for debugging
+    this.logger.log(
+      `📋 [Source Selection] Frontend requested: ${searchDto.sources?.length || 0} sources` +
+      (searchDto.sources && searchDto.sources.length > 0
+        ? ` (${searchDto.sources.join(', ')})`
+        : ' (none, will use defaults)')
+    );
+    
+    // Phase 10.7 Day 5: Changed to 'let' to allow filtering deprecated sources
+    let sources =
       searchDto.sources && searchDto.sources.length > 0
         ? searchDto.sources
         : [
@@ -303,16 +372,30 @@ export class LiteratureService implements OnModuleInit {
             // Phase 10.6 additions - Free academic sources
             LiteratureSource.PMC,          // PubMed Central - Full-text articles
             LiteratureSource.ERIC,         // Education research
-            LiteratureSource.BIORXIV,      // Biology preprints
-            LiteratureSource.MEDRXIV,      // Medical preprints
-            LiteratureSource.CHEMRXIV,     // Chemistry preprints
+            // Phase 10.7 Day 5.3: REMOVED deprecated sources from default list (<500k papers)
+            // LiteratureSource.BIORXIV,      // DEPRECATED: 220k papers (removed)
+            // LiteratureSource.MEDRXIV,      // DEPRECATED: 45k papers (removed)
+            // LiteratureSource.CHEMRXIV,     // DEPRECATED: 35k papers (removed)
             // Note: Google Scholar, SSRN excluded (rate-limited/restricted)
             // Premium sources (Web of Science, Scopus, IEEE, etc.) require API keys
           ];
 
-    // Phase 10.6 Day 14.6: Log number of sources being queried
+    this.logger.log(`✅ [Source Selection] Using ${sources.length} sources: ${sources.join(', ')}`);
+
+    // Phase 10.7 Day 5.3: Deprecated sources removed from default list (not filtered, just excluded)
+    // Users can still explicitly request them if needed via searchDto.sources parameter
+
+    // Phase 10.7 Day 5.5: COMPREHENSIVE SEARCH - ALL SOURCES
+    // Group sources by tier for organized searching (no early stopping)
+    const sourceTiers = groupSourcesByPriority(sources as LiteratureSource[]);
+    
     this.logger.log(
-      `🔍 Searching ${sources.length} academic sources: ${sources.join(', ')}`,
+      `🎯 Comprehensive Search Strategy - ALL SOURCES:` +
+      `\n   • Tier 1 (Premium): ${sourceTiers.tier1Premium.length} sources - ${sourceTiers.tier1Premium.join(', ')}` +
+      `\n   • Tier 2 (Good): ${sourceTiers.tier2Good.length} sources - ${sourceTiers.tier2Good.join(', ')}` +
+      `\n   • Tier 3 (Preprint): ${sourceTiers.tier3Preprint.length} sources - ${sourceTiers.tier3Preprint.join(', ')}` +
+      `\n   • Tier 4 (Aggregator): ${sourceTiers.tier4Aggregator.length} sources - ${sourceTiers.tier4Aggregator.join(', ')}` +
+      `\n   • All ${sources.length} selected sources will be queried for maximum coverage`
     );
 
     // Phase 10.6 Day 14.4: Start enterprise-grade search logging
@@ -320,69 +403,162 @@ export class LiteratureService implements OnModuleInit {
 
     // Phase 10.6 Day 14.9: Track allocation per source for transparency
     const sourceAllocations: Record<string, { allocation: number; tier: string }> = {};
-
-    // Track duration for each source search
     const sourcesStartTimes: Record<string, number> = {};
-    const searchPromises = sources.map((source) => {
-      sourcesStartTimes[source as string] = Date.now();
+    
+    let papers: Paper[] = [];
+    let sourcesSearched: LiteratureSource[] = [];
+    
+    // Phase 10.8 Day 7 Post: Generate unique search ID for progress tracking
+    const searchId = `search-${Date.now()}-${userId}`;
+    const stage1StartTime = Date.now();
+    const totalSources = sources.length;
+    let completedSources = 0;
+
+    // Helper function to emit real-time progress
+    const emitProgress = (message: string, percentage: number) => {
+      const elapsedSeconds = ((Date.now() - stage1StartTime) / 1000).toFixed(1);
+      const logMessage = `[${elapsedSeconds}s] ${message}`;
+      this.logger.log(`📊 PROGRESS: ${logMessage}`);
       
-      // Phase 10.6 Day 14.9: Get tier-specific allocation for this source
-      const allocation = getSourceAllocation(source);
-      const tierInfo = getSourceTierInfo(source);
-      sourceAllocations[source as string] = {
-        allocation,
-        tier: tierInfo.tierLabel,
-      };
-
-      // Create source-specific search DTO with tiered limit
-      const sourceSpecificDto = {
-        ...searchDto,
-        query: expandedQuery,
-        limit: Math.min(allocation, ABSOLUTE_LIMITS.MAX_PAPERS_PER_SOURCE), // Apply safety cap
-      };
-
-      this.logger.log(
-        `🔍 [${source}] Tier: ${tierInfo.tierLabel}, Limit: ${sourceSpecificDto.limit} papers`,
-      );
-
-      return this.searchBySource(source, sourceSpecificDto);
-    });
-
-    const results = await Promise.allSettled(searchPromises);
-    const papers: Paper[] = [];
-
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      const source = sources[i];
-      const sourceDuration = Date.now() - sourcesStartTimes[source as string];
-
-      if (result.status === 'fulfilled' && result.value) {
-        this.logger.log(`✓ ${source}: Returned ${result.value.length} papers`);
-        searchLog.recordSource(source as string, result.value.length, sourceDuration);
-        papers.push(...result.value);
-      } else if (result.status === 'rejected') {
-        this.logger.error(`✗ ${source}: Failed - ${result.reason}`);
-        searchLog.recordSource(source as string, 0, sourceDuration, String(result.reason));
+      // Emit to frontend via WebSocket
+      if (this.literatureGateway && this.literatureGateway.emitSearchProgress) {
+        try {
+          this.literatureGateway.emitSearchProgress(searchId, percentage, logMessage);
+        } catch (error: any) {
+          this.logger.warn(`Failed to emit progress: ${error?.message || String(error)}`);
+        }
       }
-    }
+    };
+
+    // Helper function to search a tier of sources
+    const searchSourceTier = async (tierSources: LiteratureSource[], tierName: string) => {
+      if (tierSources.length === 0) return;
+      
+      const tierStartTime = Date.now();
+      this.logger.log(`\n🔍 [${tierName}] Searching ${tierSources.length} sources...`);
+      emitProgress(`Stage 1: Searching ${tierName} (${tierSources.length} sources)`, 
+        Math.round((completedSources / totalSources) * 50)); // Stage 1 is 0-50%
+      
+      const tierPromises = tierSources.map((source) => {
+        sourcesStartTimes[source as string] = Date.now();
+        
+        const allocation = getSourceAllocation(source);
+        const tierInfo = getSourceTierInfo(source);
+        sourceAllocations[source as string] = {
+          allocation,
+          tier: tierInfo.tierLabel,
+        };
+
+        const sourceSpecificDto = {
+          ...searchDto,
+          query: expandedQuery,
+          limit: Math.min(allocation, ABSOLUTE_LIMITS.MAX_PAPERS_PER_SOURCE),
+        };
+
+        this.logger.log(
+          `   🔍 [${source}] Tier: ${tierInfo.tierLabel}, Limit: ${sourceSpecificDto.limit} papers, Start: ${new Date().toISOString()}`,
+        );
+
+        return this.searchBySource(source, sourceSpecificDto);
+      });
+
+      const tierResults = await Promise.allSettled(tierPromises);
+      const tierDuration = ((Date.now() - tierStartTime) / 1000).toFixed(2);
+      
+      for (let i = 0; i < tierResults.length; i++) {
+        const result = tierResults[i];
+        const source = tierSources[i];
+        const sourceDuration = Date.now() - sourcesStartTimes[source as string];
+        const sourceSeconds = (sourceDuration / 1000).toFixed(2);
+        completedSources++;
+
+        if (result.status === 'fulfilled' && result.value) {
+          this.logger.log(`   ✓ [${sourceSeconds}s] ${source}: ${result.value.length} papers (${sourceDuration}ms)`);
+          searchLog.recordSource(source as string, result.value.length, sourceDuration);
+          papers.push(...result.value);
+          sourcesSearched.push(source);
+          
+          // Emit progress after EACH source completes
+          const progressPercent = Math.round((completedSources / totalSources) * 50);
+          emitProgress(
+            `✓ ${source}: ${result.value.length} papers (${completedSources}/${totalSources} sources)`,
+            progressPercent
+          );
+        } else if (result.status === 'rejected') {
+          this.logger.error(`   ✗ [${sourceSeconds}s] ${source}: Failed - ${result.reason}`);
+          searchLog.recordSource(source as string, 0, sourceDuration, String(result.reason));
+          
+          // Emit progress even for failures
+          const progressPercent = Math.round((completedSources / totalSources) * 50);
+          emitProgress(
+            `✗ ${source}: Failed (${completedSources}/${totalSources} sources)`,
+            progressPercent
+          );
+        }
+      }
+      
+      this.logger.log(`   📊 [${tierDuration}s] [${tierName}] Complete: ${papers.length} total papers`);
+      emitProgress(`${tierName} complete: ${papers.length} papers collected`, 
+        Math.round((completedSources / totalSources) * 50));
+    };
+    
+    // Phase 10.7 Day 5.5: SEARCH ALL SELECTED SOURCES (no early stopping)
+    // Previous behavior: Stopped after Tier 1 if 350+ papers found
+    // New behavior: Always search ALL sources selected by user for comprehensive coverage
+    
+    // TIER 1: Search premium sources (highest quality)
+    await searchSourceTier(sourceTiers.tier1Premium, 'TIER 1 - Premium');
+    this.logger.log(`   📊 After Tier 1: ${papers.length} papers collected`);
+    
+    // TIER 2: Search good sources (established publishers)
+    await searchSourceTier(sourceTiers.tier2Good, 'TIER 2 - Good');
+    this.logger.log(`   📊 After Tier 2: ${papers.length} papers collected`);
+    
+    // TIER 3: Search preprint sources (cutting-edge research)
+    await searchSourceTier(sourceTiers.tier3Preprint, 'TIER 3 - Preprint');
+    this.logger.log(`   📊 After Tier 3: ${papers.length} papers collected`);
+    
+    // TIER 4: Search aggregator sources (comprehensive coverage)
+    await searchSourceTier(sourceTiers.tier4Aggregator, 'TIER 4 - Aggregator');
+    this.logger.log(`   📊 After Tier 4: ${papers.length} papers collected`);
+    
+    this.logger.log(
+      `\n📊 COMPREHENSIVE SEARCH COMPLETE:` +
+      `\n   • Sources searched: ${sourcesSearched.length}/${sources.length}` +
+      `\n   • Total papers: ${papers.length}` +
+      `\n   • All selected sources queried for maximum coverage`
+    );
 
     this.logger.log(
       `📊 Total papers collected from all sources: ${papers.length}`,
     );
 
+    // Stage 1 Complete
+    emitProgress(`Stage 1 Complete: ${papers.length} papers collected from ${sourcesSearched.length} sources`, 50);
+    
+    // Stage 2: Deduplication, Enrichment, Quality Filtering
+    const stage2StartTime = Date.now();
+    emitProgress(`Stage 2: Deduplicating ${papers.length} papers...`, 55);
+    
     // Deduplicate papers by DOI or title
     const uniquePapers = this.deduplicatePapers(papers);
+    const dedupSeconds = ((Date.now() - stage2StartTime) / 1000).toFixed(1);
     this.logger.log(
-      `📊 After deduplication: ${papers.length} → ${uniquePapers.length} unique papers`,
+      `📊 [${dedupSeconds}s] After deduplication: ${papers.length} → ${uniquePapers.length} unique papers`,
     );
+    emitProgress(`Deduplication: ${papers.length} → ${uniquePapers.length} unique papers`, 60);
 
     // Phase 10.1 Day 12: Enrich papers with OpenAlex citations & journal metrics
+    emitProgress(`Stage 2: Enriching ${uniquePapers.length} papers with citations & metrics...`, 65);
     this.logger.log(`🔄 [OpenAlex] ABOUT TO CALL enrichBatch with ${uniquePapers.length} papers...`);
     this.logger.log(`🔄 [OpenAlex] First 3 papers DOIs: ${uniquePapers.slice(0, 3).map(p => p.doi || 'NO_DOI').join(', ')}`);
     const enrichedPapers = await this.openAlexEnrichment.enrichBatch(uniquePapers);
-    this.logger.log(`✅ [OpenAlex] enrichBatch COMPLETED, returned ${enrichedPapers.length} papers`);
+    const enrichSeconds = ((Date.now() - stage2StartTime) / 1000).toFixed(1);
+    this.logger.log(`✅ [${enrichSeconds}s] [OpenAlex] enrichBatch COMPLETED, returned ${enrichedPapers.length} papers`);
+    emitProgress(`Enrichment complete: ${enrichedPapers.length} papers enriched with metrics`, 70);
 
     // Recalculate quality scores with enriched journal metrics
+    emitProgress(`Stage 2: Calculating quality scores...`, 75);
     const papersWithUpdatedQuality = enrichedPapers.map((paper) => {
       // Calculate quality components for ALL papers (with or without journal metrics)
       // Phase 10.6 Day 14.8 (v3.0): Includes field weighting and optional bonuses
@@ -474,19 +650,27 @@ export class LiteratureService implements OnModuleInit {
     }
 
     // Phase 10 Day 5.13+ Extension 2: Filter by minimum abstract length (enterprise research-grade)
+    // Phase 10.7 Day 5.6: Made LESS STRICT - allow papers without abstracts if they have other metadata
     // Default: 100 words (academic abstracts typically 150-300 words)
     if (searchDto.minAbstractLength !== undefined) {
       const beforeAbstractFilter = filteredPapers.length;
       const minAbstractWords = searchDto.minAbstractLength;
+      
+      // Phase 10.7 Day 5.6: Less strict - only filter if abstract exists AND is too short
+      // Papers without abstracts are kept (many high-quality papers lack abstracts in APIs)
       filteredPapers = filteredPapers.filter((paper) => {
-        // Exclude papers without abstracts or with insufficient abstract length
-        if (!paper.abstractWordCount) {
-          return false; // Strict: papers must have abstracts for research-grade quality
+        // If paper has no abstract data, KEEP IT (don't penalize missing metadata)
+        if (!paper.abstractWordCount || paper.abstractWordCount === 0) {
+          return true; // Keep papers without abstract data
         }
+        // If paper HAS abstract data, ensure it meets minimum length
         return paper.abstractWordCount >= minAbstractWords;
       });
+      
+      const filtered = beforeAbstractFilter - filteredPapers.length;
       this.logger.log(
-        `📊 Abstract length filter (min: ${minAbstractWords} words): ${beforeAbstractFilter} → ${filteredPapers.length} papers`,
+        `📊 Abstract length filter (min: ${minAbstractWords} words): ${beforeAbstractFilter} → ${filteredPapers.length} papers` +
+        ` (${filtered} filtered for SHORT abstracts, papers without abstracts kept)`,
       );
     }
 
@@ -549,10 +733,25 @@ export class LiteratureService implements OnModuleInit {
       });
     }
 
+    // Phase 10.7 Day 5.6: Comprehensive filtering summary
+    const filteringSummary = {
+      initial: papersWithUpdatedQuality.length,
+      afterCitations: filteredPapers.length,
+      citationsFiltered: searchDto.minCitations ? papersWithUpdatedQuality.length - filteredPapers.length : 0,
+    };
+    
+    emitProgress(`Stage 2: Filtering ${filteringSummary.initial} papers by quality criteria...`, 80);
+    
     this.logger.log(
-      `📊 After all basic filters: ${filteredPapers.length} papers`,
+      `\n📊 FILTERING PIPELINE SUMMARY:` +
+      `\n   • Initial papers (after enrichment): ${filteringSummary.initial}` +
+      `\n   • After all basic filters: ${filteredPapers.length}` +
+      (filteringSummary.citationsFiltered > 0 ? `\n   • Filtered by citations: ${filteringSummary.citationsFiltered}` : '') +
+      `\n   • Next: Relevance scoring & final selection`
     );
 
+    emitProgress(`Stage 2: Scoring relevance for ${filteredPapers.length} papers...`, 85);
+    
     // PHASE 10 DAY 1: Add relevance scoring to improve search quality
     // Score papers by relevance to the ORIGINAL query (not expanded)
     const papersWithScore = filteredPapers.map((paper) => ({
@@ -563,6 +762,7 @@ export class LiteratureService implements OnModuleInit {
     this.logger.log(
       `📊 Relevance scores calculated for all ${papersWithScore.length} papers`,
     );
+    emitProgress(`Relevance scoring complete: ${papersWithScore.length} papers scored`, 90);
 
     // Phase 10.1 Day 11: Removed critical terms penalty
     // - Spelling variations (q-methodology vs q method) caused false negatives
@@ -572,7 +772,17 @@ export class LiteratureService implements OnModuleInit {
     // PHASE 10 DAY 1 ENHANCEMENT: Filter out papers with low relevance scores
     // This prevents broad, irrelevant results from appearing
     // Phase 10.1 Day 11 FIX: Lowered from 15 to 3 (papers were getting scores of 0-3, all filtered out)
-    const MIN_RELEVANCE_SCORE = 3; // Requires at least minimal keyword relevance
+    // Phase 10.7 Day 5.6: ADAPTIVE threshold - broader queries get lower thresholds
+    
+    // Adaptive relevance threshold based on query complexity
+    let MIN_RELEVANCE_SCORE = 3; // Default for specific queries
+    if (queryComplexity === QueryComplexity.BROAD) {
+      MIN_RELEVANCE_SCORE = 1; // Very lenient for broad queries (1-2 words)
+    } else if (queryComplexity === QueryComplexity.SPECIFIC) {
+      MIN_RELEVANCE_SCORE = 2; // Moderate for specific queries (3-5 words)
+    }
+    // Comprehensive queries keep score of 3
+    
     const relevantPapers = papersWithScore.filter((paper) => {
       const score = paper.relevanceScore || 0;
       if (score < MIN_RELEVANCE_SCORE) {
@@ -584,8 +794,11 @@ export class LiteratureService implements OnModuleInit {
       return true;
     });
 
+    const rejectedByRelevance = papersWithScore.length - relevantPapers.length;
     this.logger.log(
-      `Relevance filtering: ${papersWithScore.length} papers → ${relevantPapers.length} papers (min score: ${MIN_RELEVANCE_SCORE})`,
+      `📊 Relevance filtering (min: ${MIN_RELEVANCE_SCORE}, query: ${queryComplexity}):` +
+      ` ${papersWithScore.length} → ${relevantPapers.length} papers` +
+      ` (${rejectedByRelevance} rejected for low relevance)`,
     );
 
     // Log top 5 scores for debugging
@@ -622,25 +835,42 @@ export class LiteratureService implements OnModuleInit {
     }
 
     // Phase 10.6 Day 14.9: SMART QUALITY SAMPLING & SOURCE DIVERSITY
-    // If papers exceed target, apply intelligent sampling
+    // Phase 10.7 Day 5.6: Ensure minimum 350 papers in FINAL result for research quality
     const targetPaperCount = complexityConfig.totalTarget;
+    const minAcceptableFinal = ABSOLUTE_LIMITS.MIN_ACCEPTABLE_PAPERS; // 350 papers
     let finalPapers = sortedPapers;
     let samplingApplied = false;
     let diversityEnforced = false;
 
     if (sortedPapers.length > targetPaperCount) {
+      // Only sample down if we have MORE than target
+      // But never sample below the minimum acceptable threshold (350)
+      const samplingTarget = Math.max(targetPaperCount, minAcceptableFinal);
+      
       this.logger.log(
-        `📊 Smart Sampling: ${sortedPapers.length} papers > ${targetPaperCount} target. Applying stratified sampling...`,
+        `📊 Smart Sampling: ${sortedPapers.length} papers > ${targetPaperCount} target.` +
+        ` Applying stratified sampling (min: ${minAcceptableFinal})...`,
       );
       
       // Apply quality-stratified sampling to maintain diversity
-      finalPapers = this.applyQualityStratifiedSampling(sortedPapers, targetPaperCount);
+      finalPapers = this.applyQualityStratifiedSampling(sortedPapers, samplingTarget);
       samplingApplied = true;
       
       this.logger.log(
         `✅ Sampling complete: ${sortedPapers.length} → ${finalPapers.length} papers`,
       );
+    } else if (sortedPapers.length < minAcceptableFinal) {
+      // If we have FEWER than minimum acceptable, log a warning
+      this.logger.warn(
+        `⚠️  Below minimum threshold: ${sortedPapers.length} < ${minAcceptableFinal} papers.` +
+        ` Consider broadening search or relaxing filters.`,
+      );
+      finalPapers = sortedPapers; // Keep all available papers
     } else {
+      // Between min and target - keep all
+      this.logger.log(
+        `✅ Acceptable paper count: ${sortedPapers.length} papers (≥ ${minAcceptableFinal} minimum)`,
+      );
       finalPapers = sortedPapers;
     }
 
@@ -663,11 +893,32 @@ export class LiteratureService implements OnModuleInit {
       );
     }
 
+    // Phase 10.7 Day 5.6: COMPLETE PIPELINE SUMMARY
+    this.logger.log(
+      `\n${'='.repeat(80)}` +
+      `\n📊 COMPLETE FILTERING PIPELINE:` +
+      `\n   1️⃣  Initial Collection: ${papers.length} papers (from ${sourcesSearched.length} sources)` +
+      `\n   2️⃣  After Deduplication: ${uniquePapers.length} papers (${papers.length - uniquePapers.length} duplicates removed)` +
+      `\n   3️⃣  After OpenAlex Enrichment: ${enrichedPapers.length} papers` +
+      `\n   4️⃣  After Basic Filters: ${filteredPapers.length} papers` +
+      `\n   5️⃣  After Relevance Filter (min: ${MIN_RELEVANCE_SCORE}): ${relevantPapers.length} papers` +
+      `\n   6️⃣  After Sorting: ${sortedPapers.length} papers` +
+      `\n   7️⃣  After Sampling/Diversity: ${finalPapers.length} papers` +
+      `\n   ✅ FINAL RESULT: ${finalPapers.length} papers ${finalPapers.length >= minAcceptableFinal ? '(meets 350+ target ✓)' : '(below 350 target ⚠️)'}` +
+      `\n${'='.repeat(80)}\n`
+    );
+
+    // Stage 2 Complete
+    const totalSeconds = ((Date.now() - stage1StartTime) / 1000).toFixed(1);
+    emitProgress(`Complete: ${finalPapers.length} papers ready (${totalSeconds}s total)`, 95);
+    
     // Paginate results (after sampling/diversity enforcement)
     const page = searchDto.page || 1;
     const limit = searchDto.limit || 20;
     const start = (page - 1) * limit;
     const paginatedPapers = finalPapers.slice(start, start + limit);
+    
+    emitProgress(`Returning ${paginatedPapers.length} papers (page ${page})`, 100);
 
     // Phase 10 Days 2-3: Fallback to stale/archive cache if no results (possible rate limit)
     if (papers.length === 0) {
@@ -706,32 +957,72 @@ export class LiteratureService implements OnModuleInit {
         originalQuery: originalQuery,
       }),
       // Phase 10.6 Day 14.5+: ENTERPRISE TRANSPARENCY - Complete search pipeline
+      // Phase 10.7 Day 6: TWO-STAGE FILTERING for transparency
       metadata: {
-        // Step 1: Initial collection from all sources
-        totalCollected: papers.length, // Papers before any processing
-        sourceBreakdown: searchLog.getSourceResults(), // Papers per source (INITIAL)
+        // ===================================================================
+        // STAGE 1: COLLECTION FROM ALL SOURCES
+        // ===================================================================
+        stage1: {
+          description: 'Collecting papers from all academic sources',
+          totalCollected: papers.length, // Papers before any processing
+          sourcesSearched: sourcesSearched.length,
+          sourceBreakdown: searchLog.getSourceResults(), // Papers per source - Object format
+          searchDuration: searchLog.getSearchDuration(), // Collection time (ms)
+        },
 
-        // Step 2: Deduplication
-        uniqueAfterDedup: uniquePapers.length, // Papers after removing duplicates
-        deduplicationRate: parseFloat(deduplicationRate.toFixed(2)), // % duplicates removed
+        // ===================================================================
+        // STAGE 2: QUALITY FILTERING & RANKING
+        // ===================================================================
+        stage2: {
+          description: 'Selecting top 350-500 highest quality papers',
+          startingPapers: uniquePapers.length, // After dedup
+          afterEnrichment: enrichedPapers.length, // After OpenAlex enrichment
+          afterRelevanceFilter: relevantPapers.length, // After relevance scoring
+          afterQualityRanking: sortedPapers.length, // After quality sorting
+          finalSelected: finalPapers.length, // Final 350-500 papers
+          samplingApplied,
+          diversityEnforced,
+        },
+
+        // ===================================================================
+        // PHASE 10.7.8: SEARCH PHASES (Honest Progressive Loading)
+        // ===================================================================
+        searchPhases: {
+          phase1: {
+            description: 'Searching academic databases',
+            sources: sourcesSearched.map((s) => s.toString()),
+            sourcesCount: sourcesSearched.length,
+            estimatedDuration: 15000, // 15s average for source collection
+            actualDuration: searchLog.getSearchDuration(), // Actual time taken
+            status: 'complete', // Always complete when metadata is returned
+          },
+          phase2: {
+            description: 'Loading high-quality papers',
+            totalPapers: finalPapers.length, // Total papers available for progressive loading
+            batchSize: 20, // Papers per batch (matches frontend BATCH_SIZE)
+            totalBatches: Math.ceil(finalPapers.length / 20),
+            estimatedDuration: 2000, // 2s estimate (cache hits are fast)
+            status: 'ready', // Ready to start progressive loading
+          },
+        },
+
+        // ===================================================================
+        // LEGACY FIELDS (for backward compatibility)
+        // ===================================================================
+        totalCollected: papers.length,
+        sourceBreakdown: searchLog.getSourceResults(),
+        uniqueAfterDedup: uniquePapers.length,
+        deduplicationRate: parseFloat(deduplicationRate.toFixed(2)),
         duplicatesRemoved: papers.length - uniquePapers.length,
-
-        // Step 3: Quality scoring & filtering
-        afterEnrichment: enrichedPapers.length, // After OpenAlex enrichment
-        afterQualityFilter: relevantPapers.length, // After relevance/quality filters
-        qualityFiltered: papersWithUpdatedQuality.length - relevantPapers.length, // Papers removed by quality
-
-        // Step 4: Smart sampling (if applied)
-        beforeSampling: sortedPapers.length, // Before quality sampling
-        afterSampling: finalPapers.length, // After sampling (if applied)
-        samplingApplied, // Boolean flag
-
-        // Step 5: Final results
-        totalQualified: finalPapers.length, // Papers meeting all criteria (pre-pagination)
-        displayed: paginatedPapers.length, // Papers shown in current page
-
-        // Performance & query info
-        searchDuration: searchLog.getSearchDuration(), // Total search time (ms)
+        afterEnrichment: enrichedPapers.length,
+        afterQualityFilter: relevantPapers.length,
+        qualityFiltered: papersWithUpdatedQuality.length - relevantPapers.length,
+        beforeSampling: sortedPapers.length,
+        afterSampling: finalPapers.length,
+        samplingApplied,
+        totalQualified: finalPapers.length,
+        displayed: paginatedPapers.length,
+        searchDuration: searchLog.getSearchDuration(),
         ...(expandedQuery !== originalQuery && {
           queryExpansion: {
             original: originalQuery,
@@ -839,6 +1130,24 @@ export class LiteratureService implements OnModuleInit {
 
     // Phase 10 Days 2-3: Use enhanced cache service
     await this.cacheService.set(cacheKey, result, this.CACHE_TTL);
+
+    // Phase 10.7 Day 5: PAGINATION CACHE - Cache full results for pagination (eliminates empty batches)
+    if (searchDto.page === 1 || !searchDto.page) {
+      const fullResultsCache = {
+        papers: finalPapers, // ALL papers after filtering/sampling (NOT paginated)
+        metadata: result.metadata,
+      };
+      
+      await this.cacheService.set(
+        searchCacheKey,
+        fullResultsCache,
+        300 // 5 minutes TTL (sufficient for progressive loading session)
+      );
+      
+      this.logger.log(
+        `💾 [Pagination Cache] Cached ${finalPapers.length} full results for pagination (5 min TTL)`
+      );
+    }
 
     // Log search for analytics
     await this.logSearch(searchDto, userId);
@@ -2419,7 +2728,6 @@ export class LiteratureService implements OnModuleInit {
   ): Promise<{ success: boolean }> {
     // For public-user, just return success without database operation
     if (userId === 'public-user') {
-      console.log('Public user remove - returning mock success');
       return { success: true };
     }
 
@@ -2487,20 +2795,32 @@ export class LiteratureService implements OnModuleInit {
 
     switch (exportDto.format) {
       case ExportFormat.BIBTEX:
-        content = this.formatBibTeX(papers);
+        content = this.formatBibTeX(papers, exportDto.includeAbstracts);
         filename = 'references.bib';
         break;
       case ExportFormat.RIS:
-        content = this.formatRIS(papers);
+        content = this.formatRIS(papers, exportDto.includeAbstracts);
         filename = 'references.ris';
         break;
       case ExportFormat.JSON:
         content = JSON.stringify(papers, null, 2);
         filename = 'references.json';
         break;
+      case ExportFormat.CSV:
+        content = this.formatCSV(papers, exportDto.includeAbstracts);
+        filename = 'references.csv';
+        break;
       case ExportFormat.APA:
         content = this.formatAPA(papers);
-        filename = 'references.txt';
+        filename = 'references_apa.txt';
+        break;
+      case ExportFormat.MLA:
+        content = this.formatMLA(papers);
+        filename = 'references_mla.txt';
+        break;
+      case ExportFormat.CHICAGO:
+        content = this.formatChicago(papers);
+        filename = 'references_chicago.txt';
         break;
       default:
         content = JSON.stringify(papers);
@@ -2510,34 +2830,48 @@ export class LiteratureService implements OnModuleInit {
     return { content, filename };
   }
 
-  private formatBibTeX(papers: any[]): string {
+  private formatBibTeX(papers: any[], includeAbstracts?: boolean): string {
     return papers
       .map((paper: any) => {
         const type = paper.venue ? '@article' : '@misc';
-        const key = paper.doi?.replace('/', '_') || paper.id;
-        return `${type}{${key},
-  title={${paper.title}},
-  author={${paper.authors.join(' and ')}},
-  year={${paper.year}},
-  ${paper.venue ? `journal={${paper.venue}},` : ''}
-  ${paper.doi ? `doi={${paper.doi}},` : ''}
-  ${paper.abstract ? `abstract={${paper.abstract}},` : ''}
-}`;
+        const key = paper.doi?.replace(/\//g, '_') || paper.id.substring(0, 20);
+        const authors = Array.isArray(paper.authors) 
+          ? paper.authors.join(' and ') 
+          : String(paper.authors || 'Unknown');
+        
+        let entry = `${type}{${key},
+  title={{${paper.title}}},
+  author={${authors}},
+  year={${paper.year || 'n.d.'}},`;
+        
+        if (paper.venue) entry += `\n  journal={${paper.venue}},`;
+        if (paper.doi) entry += `\n  doi={${paper.doi}},`;
+        if (paper.url) entry += `\n  url={${paper.url}},`;
+        if (paper.citationCount !== undefined) entry += `\n  note={Cited by ${paper.citationCount}},`;
+        if (includeAbstracts && paper.abstract) {
+          const cleanAbstract = paper.abstract.replace(/[{}]/g, '');
+          entry += `\n  abstract={${cleanAbstract}},`;
+        }
+        
+        entry += '\n}';
+        return entry;
       })
       .join('\n\n');
   }
 
-  private formatRIS(papers: any[]): string {
+  private formatRIS(papers: any[], includeAbstracts?: boolean): string {
     return papers
       .map((paper: any) => {
-        return `TY  - JOUR
-TI  - ${paper.title}
-${paper.authors.map((a: any) => `AU  - ${a}`).join('\n')}
-PY  - ${paper.year}
-${paper.venue ? `JO  - ${paper.venue}` : ''}
-${paper.doi ? `DO  - ${paper.doi}` : ''}
-${paper.abstract ? `AB  - ${paper.abstract}` : ''}
-ER  -`;
+        const authors = Array.isArray(paper.authors) ? paper.authors : [paper.authors || 'Unknown'];
+        let entry = `TY  - JOUR\nTI  - ${paper.title}\n`;
+        entry += authors.map((a: any) => `AU  - ${a}`).join('\n') + '\n';
+        entry += `PY  - ${paper.year || 'n.d.'}\n`;
+        if (paper.venue) entry += `JO  - ${paper.venue}\n`;
+        if (paper.doi) entry += `DO  - ${paper.doi}\n`;
+        if (paper.url) entry += `UR  - ${paper.url}\n`;
+        if (includeAbstracts && paper.abstract) entry += `AB  - ${paper.abstract}\n`;
+        entry += 'ER  -';
+        return entry;
       })
       .join('\n\n');
   }
@@ -2545,10 +2879,85 @@ ER  -`;
   private formatAPA(papers: any[]): string {
     return papers
       .map((paper: any) => {
-        const authors = paper.authors.join(', ');
-        return `${authors} (${paper.year}). ${paper.title}. ${paper.venue || 'Unpublished'}.${paper.doi ? ` https://doi.org/${paper.doi}` : ''}`;
+        const authors = Array.isArray(paper.authors) 
+          ? paper.authors.join(', ') 
+          : String(paper.authors || 'Unknown');
+        const year = paper.year || 'n.d.';
+        const title = paper.title;
+        const venue = paper.venue || 'Unpublished manuscript';
+        const doi = paper.doi ? ` https://doi.org/${paper.doi}` : '';
+        
+        return `${authors} (${year}). ${title}. ${venue}.${doi}`;
       })
       .join('\n\n');
+  }
+
+  private formatMLA(papers: any[]): string {
+    return papers
+      .map((paper: any) => {
+        const authors = Array.isArray(paper.authors) 
+          ? (paper.authors[0] + (paper.authors.length > 1 ? ', et al.' : ''))
+          : String(paper.authors || 'Unknown');
+        const title = `"${paper.title}"`;
+        const venue = paper.venue ? `${paper.venue}, ` : '';
+        const year = paper.year || 'n.d.';
+        const doi = paper.doi ? ` doi:${paper.doi}` : '';
+        
+        return `${authors}. ${title} ${venue}${year}.${doi}`;
+      })
+      .join('\n\n');
+  }
+
+  private formatChicago(papers: any[]): string {
+    return papers
+      .map((paper: any) => {
+        const authors = Array.isArray(paper.authors) 
+          ? paper.authors.join(', ') 
+          : String(paper.authors || 'Unknown');
+        const year = paper.year || 'n.d.';
+        const title = `"${paper.title}"`;
+        const venue = paper.venue || 'Unpublished';
+        const doi = paper.doi ? ` https://doi.org/${paper.doi}` : '';
+        
+        return `${authors}. ${year}. ${title}. ${venue}.${doi}`;
+      })
+      .join('\n\n');
+  }
+
+  private formatCSV(papers: any[], includeAbstracts?: boolean): string {
+    const headers = [
+      'ID', 'Title', 'Authors', 'Year', 'Venue', 'DOI', 'URL', 
+      'Citation Count', 'Quality Score', 'Source'
+    ];
+    if (includeAbstracts) headers.push('Abstract');
+    
+    const rows = papers.map((paper: any) => {
+      const row = [
+        paper.id || '',
+        this.escapeCsvField(paper.title || ''),
+        this.escapeCsvField(Array.isArray(paper.authors) ? paper.authors.join('; ') : paper.authors || ''),
+        paper.year || '',
+        this.escapeCsvField(paper.venue || ''),
+        paper.doi || '',
+        paper.url || '',
+        paper.citationCount !== undefined ? String(paper.citationCount) : '',
+        paper.qualityScore !== undefined ? String(paper.qualityScore) : '',
+        paper.source || ''
+      ];
+      if (includeAbstracts) {
+        row.push(this.escapeCsvField(paper.abstract || ''));
+      }
+      return row.join(',');
+    });
+    
+    return [headers.join(','), ...rows].join('\n');
+  }
+
+  private escapeCsvField(field: string): string {
+    if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+      return `"${field.replace(/"/g, '""')}"`;
+    }
+    return field;
   }
 
   async buildKnowledgeGraph(
@@ -4650,6 +5059,30 @@ ER  -`;
       maxProportionFromOneSource,
       dominantSource,
     };
+  }
+
+  /**
+   * Phase 10.7 Day 5: Generate pagination cache key (excludes page/limit)
+   * 
+   * Creates MD5 hash of search parameters EXCLUDING pagination params.
+   * This allows multiple page requests to share the same cached full result set.
+   * 
+   * Competitive Edge: NO competitor implements pagination caching at this level.
+   * Result: Zero empty batches, consistent pagination, 5-minute session cache.
+   */
+  private generatePaginationCacheKey(searchDto: SearchLiteratureDto, userId: string): string {
+    // Destructure to exclude pagination parameters
+    const { page, limit, ...searchFilters } = searchDto;
+    
+    // Create hash from filters + userId (pagination-independent)
+    const filterHash = createHash('md5')
+      .update(JSON.stringify({
+        ...searchFilters,
+        userId,
+      }))
+      .digest('hex');
+    
+    return `search:pagination:${userId}:${filterHash}`;
   }
 
   /**

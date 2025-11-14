@@ -65,7 +65,17 @@ export interface Paper {
   publicationType?: string[];
   authorAffiliations?: Array<{ author: string; affiliation: string }>;
   grants?: Array<{ grantId: string | null; agency: string | null; country: string | null }>;
+  // Phase 10.8 Day 9: AI Smart Curation
+  qualityTier?: 'gold' | 'silver' | 'bronze' | null;
+  metadata?: Record<string, any>;
 }
+
+/**
+ * Social Media Result Type
+ * Phase 10.8 Day 9: Supports Instagram, TikTok, YouTube, and other platforms
+ * Used for AI quality scoring and citation generation
+ */
+export type SocialMediaResult = Paper;
 
 export interface SearchFilters {
   yearFrom?: number;

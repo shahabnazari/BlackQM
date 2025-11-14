@@ -166,31 +166,63 @@ export class PMCService {
       this.logger.log(`[PMC] Found ${ids.length} article IDs, fetching full-text...`);
 
       // ========================================================================
-      // STEP 2: Fetch full XML using efetch
+      // STEP 2: Fetch full XML using efetch (WITH BATCHING)
       // ========================================================================
-      // 📝 TO CHANGE XML STRUCTURE: Update retmode parameter or parse additional sections
-      const fetchParams = {
-        db: 'pmc',
-        id: ids.join(','),
-        retmode: 'xml', // XML format for full-text content
-        rettype: 'full', // Full article (not just abstract)
-      };
+      // Phase 10.7 Day 5: FIX HTTP 414 - Batch IDs to avoid URL length limit
+      // NCBI eUtils has ~2000 character URL limit. With 600 IDs, URL becomes too long.
+      // Solution: Batch IDs in chunks of 200 per request (enterprise-grade pattern)
 
-      const fetchResponse = await firstValueFrom(
-        this.httpService.get(this.EFETCH_URL, {
-          params: fetchParams,
-          timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Added timeout (was missing)
-        }),
+      const BATCH_SIZE = 200; // Optimal: balances request count vs URL length
+      const batches: string[][] = [];
+
+      for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+        batches.push(ids.slice(i, i + BATCH_SIZE));
+      }
+
+      this.logger.log(
+        `[PMC] Batching ${ids.length} IDs into ${batches.length} requests (${BATCH_SIZE} IDs per batch)`
       );
 
-      // ========================================================================
-      // STEP 3: Parse XML response
-      // ========================================================================
-      // 📝 TO CHANGE XML PARSING: Update parsePaper() method below (line 221)
-      const xmlData = fetchResponse.data;
-      const articles = xmlData.match(/<article[\s\S]*?<\/article>/g) || [];
+      const allPapers: any[] = [];
 
-      const papers = articles.map((article: string) => this.parsePaper(article));
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        this.logger.log(
+          `[PMC] Fetching batch ${batchIndex + 1}/${batches.length} (${batch.length} IDs)...`
+        );
+
+        const fetchParams = {
+          db: 'pmc',
+          id: batch.join(','),
+          retmode: 'xml',
+          rettype: 'full',
+        };
+
+        const fetchResponse = await firstValueFrom(
+          this.httpService.get(this.EFETCH_URL, {
+            params: fetchParams,
+            timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.7 Day 5: Added timeout (was missing)
+          }),
+        );
+
+        // Phase 10.7 Day 5: Parse XML response for this batch
+        const xmlData = fetchResponse.data;
+        const articles = xmlData.match(/<article[\s\S]*?<\/article>/g) || [];
+
+        const batchPapers = articles.map((article: string) => this.parsePaper(article));
+        allPapers.push(...batchPapers);
+
+        this.logger.log(
+          `[PMC] Batch ${batchIndex + 1}/${batches.length} complete: ${batchPapers.length} papers parsed`
+        );
+      }
+
+      this.logger.log(`[PMC] All batches complete: ${allPapers.length} total papers with full-text`);
+
+      // ========================================================================
+      // STEP 3: Parse XML response (COMPLETED IN BATCHES ABOVE)
+      // ========================================================================
+      const papers = allPapers;
 
       this.logger.log(`[PMC] Returned ${papers.length} papers with full-text`);
       return papers;

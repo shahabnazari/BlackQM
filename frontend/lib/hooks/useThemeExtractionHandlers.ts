@@ -593,6 +593,14 @@ export function useThemeExtractionHandlers(
           `   ✅ API call completed in ${(apiDuration / 1000).toFixed(1)}s`
         );
 
+        // Phase 10.7 Day 5 FIX: Validate result before processing
+        // extractThemesV2 hook returns null on error instead of throwing
+        if (!result) {
+          throw new Error(
+            'Theme extraction failed: API returned null (authentication or network error)'
+          );
+        }
+
         // ===========================
         // STEP 7: PROCESS RESULTS
         // ===========================

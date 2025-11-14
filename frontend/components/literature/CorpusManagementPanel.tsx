@@ -1,11 +1,18 @@
 /**
- * Phase 10 Day 18: Corpus Management Panel
+ * Phase 10.7 Day 5: Corpus Management Panel (REFACTORED TO ENTERPRISE PATTERN)
  *
  * Enterprise-grade corpus management interface:
- * - List all research corpuses with metadata
- * - Create, edit, delete corpuses
+ * - Pure presentation component (receives state from hook)
+ * - Single source of truth (hook manages all state)
+ * - Callback pattern (no direct API calls)
  * - Visual status badges (active, saturated, in-progress)
  * - Quick statistics and actions
+ *
+ * Changes from Day 18:
+ * - Removed internal state management (corpuses, loading, error)
+ * - Removed direct API calls (now uses callbacks)
+ * - Added onEdit and onDelete callbacks
+ * - Component now receives hook state as props
  *
  * User communication: Clear organization of iterative research projects
  * Research backing: Supports corpus building methodology (Noblit & Hare 1988)
@@ -13,11 +20,8 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import {
-  incrementalExtractionApi,
-  type CorpusInfo,
-} from '@/lib/api/services/incremental-extraction-api.service';
+import React, { useState } from 'react';
+import type { CorpusInfo } from '@/lib/api/services/incremental-extraction-api.service';
 import {
   Plus,
   Edit2,
@@ -31,43 +35,32 @@ import {
 } from 'lucide-react';
 
 interface CorpusManagementPanelProps {
+  // Phase 10.7 Day 5: Hook state (single source of truth)
+  corpuses: CorpusInfo[];
+  loading: boolean;
+  error: string | null;
+  // Phase 10.7 Day 5: Hook actions (callback pattern)
   onSelectCorpus?: (corpus: CorpusInfo) => void;
   onCreateCorpus?: () => void;
+  onEditCorpus?: (corpus: CorpusInfo) => void;
+  onDeleteCorpus?: (corpusId: string, corpusName: string) => Promise<void>;
+  onRetry?: () => void;
 }
 
 export function CorpusManagementPanel({
+  corpuses,
+  loading,
+  error,
   onSelectCorpus,
   onCreateCorpus,
+  onEditCorpus,
+  onDeleteCorpus,
+  onRetry,
 }: CorpusManagementPanelProps) {
-  const [corpuses, setCorpuses] = useState<CorpusInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Phase 10.7 Day 5: Only track local UI state (which corpus is being deleted)
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadCorpuses();
-  }, []);
-
-  const loadCorpuses = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await incrementalExtractionApi.getCorpusList();
-      setCorpuses(
-        data.sort(
-          (a, b) =>
-            new Date(b.lastExtractedAt).getTime() -
-            new Date(a.lastExtractedAt).getTime()
-        )
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load corpuses');
-      console.error('Error loading corpuses:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Phase 10.7 Day 5: Handle delete with callback pattern
   const handleDelete = async (corpusId: string, corpusName: string) => {
     if (
       !confirm(`Delete corpus "${corpusName}"? This action cannot be undone.`)
@@ -77,10 +70,9 @@ export function CorpusManagementPanel({
 
     try {
       setDeletingId(corpusId);
-      await incrementalExtractionApi.deleteCorpus(corpusId);
-      setCorpuses(prev => prev.filter(c => c.id !== corpusId));
+      await onDeleteCorpus?.(corpusId, corpusName);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete corpus');
+      // Error handling done by hook/parent
       console.error('Error deleting corpus:', err);
     } finally {
       setDeletingId(null);
@@ -150,12 +142,14 @@ export function CorpusManagementPanel({
           <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-            <button
-              onClick={loadCorpuses}
-              className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-            >
-              Try again
-            </button>
+            {onRetry && (
+              <button
+                onClick={onRetry}
+                className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                Try again
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -314,16 +308,16 @@ export function CorpusManagementPanel({
                     </div>
                   </div>
 
-                  {/* Actions */}
+                  {/* Phase 10.7 Day 5: Actions with callback pattern */}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={e => {
                         e.stopPropagation();
-                        // TODO: Implement edit modal
-                        alert('Edit functionality coming soon');
+                        onEditCorpus?.(corpus);
                       }}
-                      className="p-2 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                      title="Edit corpus"
+                      disabled={!onEditCorpus}
+                      className="p-2 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={onEditCorpus ? 'Edit corpus' : 'Edit not available'}
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
@@ -332,9 +326,9 @@ export function CorpusManagementPanel({
                         e.stopPropagation();
                         handleDelete(corpus.id, corpus.name);
                       }}
-                      disabled={deletingId === corpus.id}
+                      disabled={deletingId === corpus.id || !onDeleteCorpus}
                       className="p-2 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Delete corpus"
+                      title={onDeleteCorpus ? 'Delete corpus' : 'Delete not available'}
                     >
                       {deletingId === corpus.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />

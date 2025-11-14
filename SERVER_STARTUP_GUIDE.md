@@ -129,7 +129,20 @@ curl http://localhost:3000
 
 ## 📝 HOW TO START BOTH SERVERS
 
-### Option 1: Manual (Two Terminals)
+### ✅ Option 1: **RECOMMENDED** - Dev Manager V2.0 (Backend Only)
+
+**Enterprise-grade backend with multi-process prevention:**
+
+```bash
+# From project root
+npm run backend        # Start backend (auto-kills old processes)
+npm run backend:status # Check status (should show 1 process)
+npm run backend:stop   # Stop backend
+```
+
+**Why use this?** Prevents the "5 backend processes running" bug. Always ensures exactly 1 backend process. See [DEV_MANAGER_V2_GUIDE.md](./DEV_MANAGER_V2_GUIDE.md).
+
+### Option 2: Manual (Two Terminals)
 
 **Terminal 1 - Frontend:**
 
@@ -141,6 +154,8 @@ npm run dev
 **Terminal 2 - Backend:**
 
 ```bash
+# ⚠️ WARNING: Manual start can lead to multiple processes!
+# Use Option 1 (dev-manager) instead for production-grade process management
 cd /Users/shahabnazariadli/Documents/blackQmethhod/backend
 npm run start:dev
 ```

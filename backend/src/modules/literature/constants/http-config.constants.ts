@@ -43,8 +43,9 @@ export const FAST_API_TIMEOUT = 10000; // 10 seconds
  * Timeout for complex multi-step APIs
  * Used by: PubMed (esearch + efetch), PMC (esearch + efetch)
  * Rationale: Two-step workflow (search → fetch), needs extra time
+ * Phase 10.7 Day 5.2: Increased to 20s for PMC (XML parsing can be slow)
  */
-export const COMPLEX_API_TIMEOUT = 15000; // 15 seconds
+export const COMPLEX_API_TIMEOUT = 20000; // 20 seconds
 
 /**
  * Timeout for large response APIs

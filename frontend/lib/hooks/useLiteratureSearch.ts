@@ -82,18 +82,18 @@ export interface UseLiteratureSearchReturn {
 
 // Default academic databases - Phase 10.6 Day 14.3: Truly free sources only (no API keys required)
 // BUG FIX #1 (Day 14.2): Changed 'semantic-scholar' to 'semantic_scholar' to match backend enum
+// Phase 10.7.10: Removed deprecated sources (<500k papers): biorxiv, medrxiv, chemrxiv
 // BUG FIX #2 (Day 14.3): Removed 'google_scholar' - requires paid SERPAPI_KEY ($50-500/month)
-// ENHANCEMENT: Expanded from 4 to 9 truly free sources
+// ENHANCEMENT: High-quality sources with 500k+ papers
 const DEFAULT_ACADEMIC_DATABASES = [
   'pubmed',              // PubMed - Medical/life sciences (36M+ papers, free NCBI API)
   'pmc',                 // PubMed Central - Free full-text (8M+ articles, free NCBI API)
   'arxiv',               // ArXiv - Physics/Math/CS preprints (2M+ papers, free API)
-  'biorxiv',             // bioRxiv/medRxiv - Biology/medical preprints (250K+ papers, free API)
-  'chemrxiv',            // ChemRxiv - Chemistry preprints (20K+ papers, free Figshare API)
   'semantic_scholar',    // Semantic Scholar - CS/interdisciplinary (200M+ papers, free S2 API)
   'ssrn',                // SSRN - Social science papers (1M+ papers, free RSS feeds)
   'crossref',            // CrossRef - DOI database (150M+ records, free REST API)
   'eric',                // ERIC - Education research (1.5M+ papers, free US Dept of Education API)
+  // REMOVED (Phase 10.7.10): biorxiv (220k), medrxiv (45k), chemrxiv (35k) - all under 500k papers
   // NOTE: 'google_scholar' removed - requires paid SerpAPI subscription
   // To enable Google Scholar, set SERPAPI_KEY in backend .env ($50-500/month)
 ];
@@ -146,6 +146,7 @@ export function useLiteratureSearch(
     setTotalResults,
     getAppliedFilterCount,
     setSearchMetadata, // Phase 10.6 Day 14.5: Store search transparency data
+    setShowSuggestions, // Phase 10.7.10: Close AI suggestions dropdown when search starts
   } = useLiteratureSearchStore();
 
   // Prevent duplicate search requests
@@ -189,6 +190,9 @@ export function useLiteratureSearch(
       );
       return;
     }
+
+    // Phase 10.7.10: Close AI suggestions dropdown when search starts
+    setShowSuggestions(false);
 
     isSearchingRef.current = true;
     setLoading(true);
@@ -356,6 +360,7 @@ export function useLiteratureSearch(
     setTotalResults,
     getAppliedFilterCount,
     setSearchMetadata, // Phase 10.6 Day 14.5
+    setShowSuggestions, // Phase 10.7.10: Close suggestions on search
   ]);
 
   /**

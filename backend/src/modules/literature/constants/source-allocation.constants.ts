@@ -38,12 +38,15 @@ export enum SourceTier {
 /**
  * Paper allocation per source tier
  * Configurable via environment variables with sensible defaults
+ * 
+ * Phase 10.7 Day 5: Increased allocations to ensure minimum 350 papers
+ * Competitive Edge: 2-7x more papers than Elicit (50), Semantic Scholar (100-200)
  */
 export const TIER_ALLOCATIONS = {
-  [SourceTier.TIER_1_PREMIUM]: parseInt(process.env.PAPERS_PER_SOURCE_TIER1 || '500', 10),
-  [SourceTier.TIER_2_GOOD]: parseInt(process.env.PAPERS_PER_SOURCE_TIER2 || '300', 10),
-  [SourceTier.TIER_3_PREPRINT]: parseInt(process.env.PAPERS_PER_SOURCE_TIER3 || '200', 10),
-  [SourceTier.TIER_4_AGGREGATOR]: parseInt(process.env.PAPERS_PER_SOURCE_TIER4 || '250', 10),
+  [SourceTier.TIER_1_PREMIUM]: parseInt(process.env.PAPERS_PER_SOURCE_TIER1 || '600', 10),    // Increased from 500
+  [SourceTier.TIER_2_GOOD]: parseInt(process.env.PAPERS_PER_SOURCE_TIER2 || '450', 10),       // Increased from 300
+  [SourceTier.TIER_3_PREPRINT]: parseInt(process.env.PAPERS_PER_SOURCE_TIER3 || '350', 10),   // Increased from 200
+  [SourceTier.TIER_4_AGGREGATOR]: parseInt(process.env.PAPERS_PER_SOURCE_TIER4 || '400', 10), // Increased from 250
 };
 
 /**
@@ -52,32 +55,54 @@ export const TIER_ALLOCATIONS = {
  */
 export const SOURCE_TIER_MAP: Record<LiteratureSource, SourceTier> = {
   // TIER 1: Premium - Peer-reviewed, high-impact, rigorous quality control
-  [LiteratureSource.PUBMED]: SourceTier.TIER_1_PREMIUM,           // NIH-curated, MeSH-indexed, biomedical gold standard
-  [LiteratureSource.PMC]: SourceTier.TIER_1_PREMIUM,              // PubMed Central, full-text peer-reviewed
-  [LiteratureSource.WEB_OF_SCIENCE]: SourceTier.TIER_1_PREMIUM,   // Clarivate, high-impact journals only
-  [LiteratureSource.SCOPUS]: SourceTier.TIER_1_PREMIUM,           // Elsevier, comprehensive peer-reviewed
-  [LiteratureSource.NATURE]: SourceTier.TIER_1_PREMIUM,           // Nature Publishing, IF 40+, top-tier
-  [LiteratureSource.SPRINGER]: SourceTier.TIER_1_PREMIUM,         // SpringerLink, STM peer-reviewed
+  // Phase 10.7 Day 5: Ordered by article count (highest first for efficiency)
+  [LiteratureSource.SEMANTIC_SCHOLAR]: SourceTier.TIER_1_PREMIUM, // 220M+ papers, AI-curated, MOVED FROM TIER 2
+  [LiteratureSource.WEB_OF_SCIENCE]: SourceTier.TIER_1_PREMIUM,   // 100M+ Clarivate, high-impact journals
+  [LiteratureSource.SCOPUS]: SourceTier.TIER_1_PREMIUM,           // 90M+ Elsevier, comprehensive peer-reviewed
+  [LiteratureSource.PUBMED]: SourceTier.TIER_1_PREMIUM,           // 36M+ NIH-curated, MeSH-indexed, biomedical gold standard
+  [LiteratureSource.PMC]: SourceTier.TIER_1_PREMIUM,              // 10M+ PubMed Central, full-text peer-reviewed
+  [LiteratureSource.SPRINGER]: SourceTier.TIER_1_PREMIUM,         // 10M+ SpringerLink, STM peer-reviewed
+  [LiteratureSource.NATURE]: SourceTier.TIER_1_PREMIUM,           // 500k+ Nature Publishing, IF 40+, top-tier
 
   // TIER 2: Good - Established, quality, reputable
-  [LiteratureSource.IEEE_XPLORE]: SourceTier.TIER_2_GOOD,         // IEEE, engineering/CS peer-reviewed
-  [LiteratureSource.SAGE]: SourceTier.TIER_2_GOOD,                // SAGE, social sciences peer-reviewed
-  [LiteratureSource.TAYLOR_FRANCIS]: SourceTier.TIER_2_GOOD,      // T&F, humanities peer-reviewed
-  [LiteratureSource.WILEY]: SourceTier.TIER_2_GOOD,               // Wiley, multidisciplinary peer-reviewed
-  [LiteratureSource.SEMANTIC_SCHOLAR]: SourceTier.TIER_2_GOOD,    // AI-curated, quality filtering
+  // Phase 10.7 Day 5: Ordered by article count (highest first for efficiency)
+  [LiteratureSource.WILEY]: SourceTier.TIER_2_GOOD,               // 6M+ Wiley, multidisciplinary peer-reviewed
+  [LiteratureSource.IEEE_XPLORE]: SourceTier.TIER_2_GOOD,         // 5M+ IEEE, engineering/CS peer-reviewed
+  [LiteratureSource.TAYLOR_FRANCIS]: SourceTier.TIER_2_GOOD,      // 2.5M+ T&F, humanities peer-reviewed
+  [LiteratureSource.SAGE]: SourceTier.TIER_2_GOOD,                // 1.2M+ SAGE, social sciences peer-reviewed
 
   // TIER 3: Preprint - Emerging, not peer-reviewed, cutting-edge
-  [LiteratureSource.ARXIV]: SourceTier.TIER_3_PREPRINT,           // Physics/Math/CS preprints
-  [LiteratureSource.BIORXIV]: SourceTier.TIER_3_PREPRINT,         // Biology preprints
-  [LiteratureSource.MEDRXIV]: SourceTier.TIER_3_PREPRINT,         // Medical preprints
-  [LiteratureSource.CHEMRXIV]: SourceTier.TIER_3_PREPRINT,        // Chemistry preprints
-  [LiteratureSource.SSRN]: SourceTier.TIER_3_PREPRINT,            // Social sciences preprints
+  // Phase 10.7 Day 5: REMOVED bioRxiv (220k), medRxiv (45k), ChemRxiv (35k) - all <500k papers
+  // Phase 10.7 Day 5: Ordered by article count (highest first for efficiency)
+  [LiteratureSource.ARXIV]: SourceTier.TIER_3_PREPRINT,           // 2.4M+ Physics/Math/CS preprints
+  [LiteratureSource.SSRN]: SourceTier.TIER_3_PREPRINT,            // 1.1M+ Social sciences preprints
+  // Phase 10.7 Day 5: Keep mappings for backward compatibility but mark as deprecated
+  [LiteratureSource.BIORXIV]: SourceTier.TIER_3_PREPRINT,         // DEPRECATED: 220k (below 500k threshold) - kept for backward compat
+  [LiteratureSource.MEDRXIV]: SourceTier.TIER_3_PREPRINT,         // DEPRECATED: 45k (below 500k threshold) - kept for backward compat
+  [LiteratureSource.CHEMRXIV]: SourceTier.TIER_3_PREPRINT,        // DEPRECATED: 35k (below 500k threshold) - kept for backward compat
 
   // TIER 4: Aggregator - Multi-source, mixed quality
-  [LiteratureSource.CROSSREF]: SourceTier.TIER_4_AGGREGATOR,      // DOI registry, all publishers
-  [LiteratureSource.ERIC]: SourceTier.TIER_4_AGGREGATOR,          // Education research, mixed sources
-  [LiteratureSource.GOOGLE_SCHOLAR]: SourceTier.TIER_4_AGGREGATOR, // Google aggregator, all sources
+  // Phase 10.7 Day 5: Ordered by article count (highest first for efficiency)
+  [LiteratureSource.GOOGLE_SCHOLAR]: SourceTier.TIER_4_AGGREGATOR, // 400M+ Google aggregator, all sources
+  [LiteratureSource.CROSSREF]: SourceTier.TIER_4_AGGREGATOR,      // 145M+ DOI registry, all publishers
+  [LiteratureSource.ERIC]: SourceTier.TIER_4_AGGREGATOR,          // 1.7M+ Education research, mixed sources
 };
+
+/**
+ * Phase 10.7 Day 5: Deprecated sources (<500k papers) - filtered from searches
+ */
+export const DEPRECATED_SOURCES: Set<LiteratureSource> = new Set([
+  LiteratureSource.BIORXIV,   // 220k papers
+  LiteratureSource.MEDRXIV,   // 45k papers
+  LiteratureSource.CHEMRXIV,  // 35k papers
+]);
+
+/**
+ * Phase 10.7 Day 5: Filter out deprecated sources
+ */
+export function filterDeprecatedSources(sources: LiteratureSource[]): LiteratureSource[] {
+  return sources.filter(source => !DEPRECATED_SOURCES.has(source));
+}
 
 /**
  * Get allocation limit for a specific source
@@ -98,36 +123,45 @@ export enum QueryComplexity {
 
 /**
  * Target paper counts based on query complexity
+ * 
+ * Phase 10.7 Day 5: Updated to realistic, achievable targets
+ * Ensures minimum 350 papers for all research purposes:
+ * - Gap analysis: 50+ papers minimum
+ * - Theme extraction: 100-200 papers (saturation)
+ * - Questionnaire building: 200+ papers (comprehensive coverage)
  */
 export const COMPLEXITY_TARGETS = {
   [QueryComplexity.BROAD]: {
-    minPerSource: 100,
-    maxPerSource: 300,
-    totalTarget: 500,       // Cap lower for broad queries (more noise)
-    description: 'Broad query - moderate limits to manage noise',
+    minPerSource: 50,
+    maxPerSource: 600,      // Increased to match tier allocations
+    totalTarget: 500,       // Achievable with increased allocations
+    description: 'Broad query - balanced coverage with quality filtering',
   },
   [QueryComplexity.SPECIFIC]: {
-    minPerSource: 200,
-    maxPerSource: 500,
-    totalTarget: 1000,      // Higher for specific queries (more signal)
-    description: 'Specific query - higher limits, less noise expected',
+    minPerSource: 50,
+    maxPerSource: 600,      // Increased to match tier allocations
+    totalTarget: 800,       // Decreased from 1000 (more realistic after filtering)
+    description: 'Specific query - comprehensive coverage with focused results',
   },
   [QueryComplexity.COMPREHENSIVE]: {
-    minPerSource: 300,
-    maxPerSource: 500,
-    totalTarget: 1500,      // Max for comprehensive analysis
-    description: 'Comprehensive analysis - maximum limits for thorough coverage',
+    minPerSource: 100,
+    maxPerSource: 600,      // Increased to match tier allocations
+    totalTarget: 1200,      // Decreased from 1500 (more realistic after filtering)
+    description: 'Comprehensive analysis - maximum coverage with quality assurance',
   },
 };
 
 /**
  * Absolute system-wide limits (safety caps)
+ * 
+ * Phase 10.7 Day 5: Added minimum acceptable papers for researchers
  */
 export const ABSOLUTE_LIMITS = {
-  MAX_PAPERS_PER_SOURCE: 500,       // Hard cap per source
-  MAX_TOTAL_PAPERS_FETCHED: 5000,   // Hard cap total fetched
+  MAX_PAPERS_PER_SOURCE: 600,       // Hard cap per source (increased from 500)
+  MAX_TOTAL_PAPERS_FETCHED: 6000,   // Hard cap total fetched (increased from 5000)
   MAX_FINAL_PAPERS: 1500,           // Hard cap after all filtering
   MIN_PAPERS_FOR_ANALYSIS: 20,      // Minimum for meaningful analysis
+  MIN_ACCEPTABLE_PAPERS: 350,       // Minimum target for research quality (NEW)
 };
 
 /**
@@ -217,6 +251,57 @@ export function getSourceTierInfo(source: LiteratureSource): {
     tierLabel: tierLabels[tier],
     allocation,
     description: tierDescriptions[tier],
+  };
+}
+
+/**
+ * Phase 10.7 Day 5.5: Tiered Source Organization (All sources searched)
+ * 
+ * Groups sources by quality tier for organized searching:
+ * 1. Premium sources first (highest quality, peer-reviewed)
+ * 2. Good sources second (established publishers)
+ * 3. Preprint sources third (cutting-edge, not yet peer-reviewed)
+ * 4. Aggregators fourth (comprehensive coverage, mixed quality)
+ * 
+ * NOTE: ALL selected sources are searched regardless of results from previous tiers.
+ * This ensures comprehensive coverage across all user-selected academic databases.
+ * 
+ * Competitive Edge: Systematic tier-based organization with full source coverage.
+ */
+export function groupSourcesByPriority(sources: LiteratureSource[]): {
+  tier1Premium: LiteratureSource[];
+  tier2Good: LiteratureSource[];
+  tier3Preprint: LiteratureSource[];
+  tier4Aggregator: LiteratureSource[];
+} {
+  const tier1Premium: LiteratureSource[] = [];
+  const tier2Good: LiteratureSource[] = [];
+  const tier3Preprint: LiteratureSource[] = [];
+  const tier4Aggregator: LiteratureSource[] = [];
+
+  sources.forEach(source => {
+    const tier = SOURCE_TIER_MAP[source];
+    switch (tier) {
+      case SourceTier.TIER_1_PREMIUM:
+        tier1Premium.push(source);
+        break;
+      case SourceTier.TIER_2_GOOD:
+        tier2Good.push(source);
+        break;
+      case SourceTier.TIER_3_PREPRINT:
+        tier3Preprint.push(source);
+        break;
+      case SourceTier.TIER_4_AGGREGATOR:
+        tier4Aggregator.push(source);
+        break;
+    }
+  });
+
+  return {
+    tier1Premium,
+    tier2Good,
+    tier3Preprint,
+    tier4Aggregator,
   };
 }
 

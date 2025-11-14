@@ -14,6 +14,7 @@ import {
   Patch,
   Post,
   Query,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -1409,10 +1410,9 @@ export class LiteratureController {
    * Search YouTube with optional transcription and theme extraction
    */
   @Post('multimedia/youtube-search')
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: '🎥 Search YouTube videos with optional transcription',
+    summary: '🎥 Search YouTube videos with optional transcription (Public)',
   })
   @ApiResponse({
     status: 200,
@@ -3647,7 +3647,12 @@ export class LiteratureController {
   }
 
   /**
-   * Phase 10 Day 18: Update corpus metadata
+   * Phase 10.7 Day 5: Update corpus metadata (REFACTORED TO ENTERPRISE-GRADE)
+   *
+   * Enterprise Pattern: Delegates to service layer instead of direct Prisma usage
+   * Security: Service validates user ownership before update
+   * Validation: Service validates input (name not empty)
+   * Atomicity: Service handles database transaction
    */
   @Patch('/corpus/:id')
   @UseGuards(JwtAuthGuard)
@@ -3663,36 +3668,40 @@ export class LiteratureController {
     @Body() updates: { name?: string; purpose?: string },
   ): Promise<any> {
     try {
-      // First verify corpus belongs to user
-      const corpuses = await this.literatureCacheService.getUserCorpuses(
+      // Phase 10.7 Day 5: Delegate to service layer (enterprise pattern)
+      return await this.literatureCacheService.updateCorpus(
         user.userId,
+        corpusId,
+        updates,
       );
-      const corpus = corpuses.find((c) => c.id === corpusId);
-      if (!corpus) {
+    } catch (error) {
+      // Phase 10.7 Day 5: Convert service errors to appropriate HTTP exceptions
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      if (errorMessage === 'Corpus not found') {
         throw new NotFoundException('Corpus not found');
       }
 
-      // Update corpus
-      await this.prisma.extractionCorpus.update({
-        where: { id: corpusId },
-        data: {
-          ...(updates.name && { name: updates.name }),
-          ...(updates.purpose && { purpose: updates.purpose }),
-        },
-      });
-
-      return await this.getCorpus(user, corpusId);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
+      if (errorMessage.includes('Unauthorized') || errorMessage.includes('do not own')) {
+        throw new UnauthorizedException('You do not have permission to update this corpus');
       }
-      this.logger.error(`Error updating corpus:`, error);
+
+      if (errorMessage.includes('cannot be empty')) {
+        throw new BadRequestException('Corpus name cannot be empty');
+      }
+
+      this.logger.error(`Error updating corpus ${corpusId}:`, error);
       throw new InternalServerErrorException('Failed to update corpus');
     }
   }
 
   /**
-   * Phase 10 Day 18: Delete a research corpus
+   * Phase 10.7 Day 5: Delete a research corpus (REFACTORED TO ENTERPRISE-GRADE)
+   *
+   * Enterprise Pattern: Delegates to service layer instead of direct Prisma usage
+   * Security: Service validates user ownership before deletion
+   * Data Integrity: Service preserves cache entries for future reuse
+   * Audit Trail: Service logs deletion with corpus name and user ID
    */
   @Delete('/corpus/:id')
   @UseGuards(JwtAuthGuard)
@@ -3700,31 +3709,28 @@ export class LiteratureController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Delete a research corpus',
-    description: 'Permanently delete a corpus and its cached data',
+    description: 'Permanently delete a corpus (cache entries remain for reuse)',
   })
   async deleteCorpus(
     @CurrentUser() user: any,
     @Param('id') corpusId: string,
   ): Promise<void> {
     try {
-      // First verify corpus belongs to user
-      const corpuses = await this.literatureCacheService.getUserCorpuses(
-        user.userId,
-      );
-      const corpus = corpuses.find((c) => c.id === corpusId);
-      if (!corpus) {
+      // Phase 10.7 Day 5: Delegate to service layer (enterprise pattern)
+      await this.literatureCacheService.deleteCorpus(user.userId, corpusId);
+    } catch (error) {
+      // Phase 10.7 Day 5: Convert service errors to appropriate HTTP exceptions
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      if (errorMessage === 'Corpus not found') {
         throw new NotFoundException('Corpus not found');
       }
 
-      // Delete corpus
-      await this.prisma.extractionCorpus.delete({
-        where: { id: corpusId },
-      });
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
+      if (errorMessage.includes('Unauthorized') || errorMessage.includes('do not own')) {
+        throw new UnauthorizedException('You do not have permission to delete this corpus');
       }
-      this.logger.error(`Error deleting corpus:`, error);
+
+      this.logger.error(`Error deleting corpus ${corpusId}:`, error);
       throw new InternalServerErrorException('Failed to delete corpus');
     }
   }

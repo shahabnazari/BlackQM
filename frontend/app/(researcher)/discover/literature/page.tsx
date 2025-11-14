@@ -8,21 +8,45 @@
 
 import { getAcademicIcon } from '@/components/literature/AcademicSourceIcons';
 import { CrossPlatformDashboard } from '@/components/literature/CrossPlatformDashboard';
-import DatabaseSourcesInfo from '@/components/literature/DatabaseSourcesInfo';
+// Phase 10.7 Day 1: Removed DatabaseSourcesInfo - redundant with AcademicResourcesPanel
 import EnterpriseThemeCard from '@/components/literature/EnterpriseThemeCard';
-import PurposeSelectionWizard from '@/components/literature/PurposeSelectionWizard';
+// Phase 10.8 Day 2: Lazy load heavy components for performance
+import dynamic from 'next/dynamic';
 import ThemeCountGuidance from '@/components/literature/ThemeCountGuidance';
 import ThemeExtractionProgressModal from '@/components/literature/ThemeExtractionProgressModal';
 import { ThemeMethodologyExplainer } from '@/components/literature/ThemeMethodologyExplainer';
-import { VideoSelectionPanel } from '@/components/literature/VideoSelectionPanel';
-import { YouTubeChannelBrowser } from '@/components/literature/YouTubeChannelBrowser';
+// Phase 10.7 Day 2: Export Functionality
+import { ExportButton } from '@/components/literature/ExportButton';
+// Phase 10.7 Day 1: VideoSelectionPanel and YouTubeChannelBrowser now used within SocialMediaPanel
 // Phase 10 Day 18: Incremental Theme Extraction Components
 import { CorpusManagementPanel } from '@/components/literature/CorpusManagementPanel';
-import { IncrementalExtractionModal } from '@/components/literature/IncrementalExtractionModal';
 import { SaturationDashboard } from '@/components/literature/SaturationDashboard';
+// Phase 10.8 Day 2: Lazy load modals for performance (only loaded when opened)
+const IncrementalExtractionModal = dynamic(() => import('@/components/literature/IncrementalExtractionModal').then(mod => ({ default: mod.IncrementalExtractionModal })), {
+  loading: () => <div className="flex items-center justify-center p-8"><Loader2 className="w-8 h-8 animate-spin" /></div>,
+  ssr: false
+});
+// Phase 10.7 Day 5: Edit Corpus Modal
+const EditCorpusModal = dynamic(() => import('@/components/literature/EditCorpusModal').then(mod => ({ default: mod.EditCorpusModal })), {
+  loading: () => <div className="flex items-center justify-center p-8"><Loader2 className="w-8 h-8 animate-spin" /></div>,
+  ssr: false
+});
 // Phase 10 Day 31: Mode Selection & Guided Extraction
-import { GuidedExtractionWizard } from '@/components/literature/GuidedExtractionWizard';
-import { ModeSelectionModal } from '@/components/literature/ModeSelectionModal';
+const ModeSelectionModal = dynamic(() => import('@/components/literature/ModeSelectionModal').then(mod => ({ default: mod.ModeSelectionModal })), {
+  loading: () => <div className="flex items-center justify-center p-8"><Loader2 className="w-8 h-8 animate-spin" /></div>,
+  ssr: false
+});
+
+// Phase 10.8 Day 2: Lazy-loaded heavy components (1000+ lines) for performance
+const PurposeSelectionWizard = dynamic(() => import('@/components/literature/PurposeSelectionWizard'), {
+  loading: () => <div className="flex items-center justify-center p-8"><Loader2 className="w-8 h-8 animate-spin" /></div>,
+  ssr: false
+});
+
+const GuidedExtractionWizard = dynamic(() => import('@/components/literature/GuidedExtractionWizard').then(mod => ({ default: mod.GuidedExtractionWizard })), {
+  loading: () => <div className="flex items-center justify-center p-8"><Loader2 className="w-8 h-8 animate-spin" /></div>,
+  ssr: false
+});
 // Phase 10 Day 5.12: Enhanced Theme Integration Components
 import type {
   ConstructMapping as ConstructMappingType,
@@ -33,10 +57,14 @@ import type {
 import {
   AIHypothesisSuggestions,
   AIResearchQuestionSuggestions,
-  CompleteSurveyFromThemesModal,
   GeneratedSurveyPreview,
   ThemeConstructMap,
 } from '@/components/literature';
+// Phase 10.8 Day 2: Lazy load large survey modal
+const CompleteSurveyFromThemesModal = dynamic(() => import('@/components/literature').then(mod => ({ default: mod.CompleteSurveyFromThemesModal })), {
+  loading: () => <div className="flex items-center justify-center p-8"><Loader2 className="w-8 h-8 animate-spin" /></div>,
+  ssr: false
+});
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -75,6 +103,8 @@ import { useThemeExtractionHandlers } from '@/lib/hooks/useThemeExtractionHandle
 import { useThemeExtractionWorkflow } from '@/lib/hooks/useThemeExtractionWorkflow';
 // Phase 10.1 Day 7: Progressive Search Hook (200 papers)
 import { useProgressiveSearch } from '@/lib/hooks/useProgressiveSearch';
+// Phase 10.7 Day 4: Gap Analysis Hook
+import { useGapAnalysis } from '@/lib/hooks/useGapAnalysis';
 import {
   literatureAPI,
   // type Paper, // Available if needed
@@ -83,15 +113,15 @@ import {
 // Phase 10 Day 5.17.4: State persistence for back button navigation
 // Phase 10.1 Day 4: State persistence now handled by useStatePersistence hook
 // import { clearLiteratureState, getSavedStateSummary, loadLiteratureState, saveLiteratureState } from '@/lib/services/literature-state-persistence.service';
-import { cn } from '@/lib/utils';
+// Phase 10.7 Day 1: cn, AnimatePresence now used within SocialMediaPanel
 import confetti from 'canvas-confetti';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Award,
   BookOpen,
   Calendar,
   Check,
-  ChevronRight,
+  // Phase 10.7 Day 1: ChevronRight now used within SocialMediaPanel
   Database,
   ExternalLink,
   FileText,
@@ -124,12 +154,12 @@ import { PaperCard } from './components/PaperCard';
 // Phase 10.1 Day 3: Extracted Panel Components
 import { AcademicResourcesPanel } from './components/AcademicResourcesPanel';
 import { AlternativeSourcesPanel } from './components/AlternativeSourcesPanel';
-// Phase 10.1 Day 7: Social Media Panel Component (DEFERRED - requires Day 6 useYouTubeIntegration hook)
-// import { SocialMediaPanel } from './components/SocialMediaPanel';
+// Phase 10.7 Day 1: Social Media Panel Component (INTEGRATED - uses useAlternativeSources)
+import { SocialMediaPanel } from './components/SocialMediaPanel';
 // Phase 10.1 Day 7: Progressive Loading Components
 import { ProgressiveLoadingIndicator } from '@/components/literature/ProgressiveLoadingIndicator';
-// Phase 10.6 Day 14.5+: Search Process Transparency Component (Enterprise-Grade)
-import { SearchProcessIndicator } from '@/components/literature/SearchProcessIndicator';
+// Phase 10.7 Day 4: Gap Visualization Panel Component
+import { GapVisualizationPanel } from '@/components/literature/GapVisualizationPanel';
 // Phase 10 Day 31: useSearch hook available for future migration
 import { useLiteratureSearchStore } from '@/lib/stores/literature-search.store';
 
@@ -139,6 +169,7 @@ function LiteratureSearchContent() {
   // const LIBRARY_MAX_PAPERS = 1000; // Maximum papers to fetch from library
   // const ABSTRACT_OVERFLOW_THRESHOLD = 2000; // Characters threshold for abstract overflow
   // const MIN_CONTENT_LENGTH = 50; // Minimum content length for analysis
+  const ITEMS_PER_PAGE = 20; // Papers to show per page
 
   // PHASE 10 DAY 1: URL state management for bookmarkable searches
   const router = useRouter();
@@ -218,6 +249,7 @@ function LiteratureSearchContent() {
   // Phase 10 Day 31: Filter handlers now managed by Zustand (applyFilters, resetFilters, presets)
 
   // Phase 10.1 Day 4: Paper Management Hook (replaces manual state declarations)
+  // Phase 10.7 Day 5 FIX: Moved BEFORE useEffect to fix initialization order
   const {
     selectedPapers,
     savedPapers,
@@ -232,6 +264,16 @@ function LiteratureSearchContent() {
     loadUserLibrary: loadUserLibraryFromHook,
     // handleSavePaper, handleRemovePaper, isSelected, isSaved, isExtracting, isExtracted - available if needed
   } = usePaperManagement();
+
+  // Phase 10.7 Day 5: Auto-select ALL papers by default (researcher workflow optimization)
+  // Updates automatically as progressive batches load
+  useEffect(() => {
+    if (papers.length === 0) return;
+
+    // Auto-select all loaded papers
+    const allPaperIds = new Set(papers.map(p => p.id));
+    setSelectedPapers(allPaperIds);
+  }, [papers, setSelectedPapers]);
 
   // Phase 10.1 Day 7: Progressive Search Hook (200 papers)
   const { executeProgressiveSearch, cancelProgressiveSearch, isSearching } =
@@ -299,18 +341,22 @@ function LiteratureSearchContent() {
   // SearchMetadata contains complete pipeline: Collection → Dedup → Quality → Final
   const { searchMetadata } = useLiteratureSearchStore();
 
-  // DEBUG: Log metadata from store
-  console.log('[LiteraturePage] Search metadata from store:', {
-    hasMetadata: searchMetadata !== null,
-    metadata: searchMetadata,
-    papersCount: papers.length,
-  });
+  // 🚨 CRITICAL FIX: Move logging to useEffect to prevent infinite loop
+  React.useEffect(() => {
+    if (searchMetadata) {
+      console.log('[LiteraturePage] Search metadata updated:', {
+        hasMetadata: searchMetadata !== null,
+        papersCount: papers.length,
+        metadata: searchMetadata,
+      });
+    }
+  }, [searchMetadata, papers.length]); // Only log when metadata or paper count changes
 
   // Analysis state
   const [unifiedThemes, setUnifiedThemes] = useState<UnifiedTheme[]>([]);
   const [gaps, setGaps] = useState<ResearchGap[]>([]);
   const [analyzingThemes, setAnalyzingThemes] = useState(false);
-  const [analyzingGaps, setAnalyzingGaps] = useState(false);
+  // Phase 10.7 Day 4: analyzingGaps now provided by useGapAnalysis hook (DRY principle)
 
   // Phase 10 Day 5.13: V2 Purpose-driven extraction state
   const [extractionPurpose, setExtractionPurpose] =
@@ -340,6 +386,35 @@ function LiteratureSearchContent() {
 
   // Phase 10 Day 18: Incremental extraction state management
   const incrementalExtraction = useIncrementalExtraction();
+
+  // Phase 10.7 Day 5: Edit corpus modal state
+  const [editCorpusModal, setEditCorpusModal] = useState<{
+    isOpen: boolean;
+    corpus: any | null;
+  }>({ isOpen: false, corpus: null });
+
+  // Phase 10.7 Day 5: Corpus edit handler (enterprise pattern with toast notifications)
+  const handleEditCorpus = async (corpusId: string, updates: { name?: string }) => {
+    try {
+      await incrementalExtraction.updateCorpus(corpusId, updates);
+      setEditCorpusModal({ isOpen: false, corpus: null });
+      toast.success('Corpus updated successfully');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update corpus');
+      throw error; // Re-throw for modal to handle
+    }
+  };
+
+  // Phase 10.7 Day 5: Corpus delete handler (enterprise pattern with toast notifications)
+  const handleDeleteCorpus = async (corpusId: string, corpusName: string) => {
+    try {
+      await incrementalExtraction.deleteCorpus(corpusId);
+      toast.success(`Corpus "${corpusName}" deleted successfully`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete corpus');
+      throw error; // Re-throw for component to handle
+    }
+  };
 
   // Phase 10 Day 31.4: Full-text waiting before extraction
   // const { waitForFullText } = useWaitForFullText(); // Available if needed
@@ -378,15 +453,14 @@ function LiteratureSearchContent() {
     transcribedVideos,
     setTranscribedVideos,
     transcriptionOptions,
-    setTranscriptionOptions,
+    // setTranscriptionOptions, // Phase 10.7 Day 1: Not used in page, managed in SocialMediaPanel
     socialPlatforms,
     setSocialPlatforms,
     socialResults,
     socialInsights,
     loadingSocial,
     handleSearchAlternativeSources,
-    handleSearchSocialMedia,
-    // handleSearchAllSources removed - always using progressive search (200 papers)
+    // handleSearchSocialMedia not used - SocialMediaPanel has its own useSocialMediaSearch hook
   } = useAlternativeSources({
     query,
     mainSearchHandler: handleSearch,
@@ -394,6 +468,102 @@ function LiteratureSearchContent() {
     mainSourcesCount: academicDatabases.length,
     onSwitchTab: setActiveTab,
   });
+
+  // ===========================
+  // Phase 10.7 Day 1: Social Media Panel Handlers
+  // ===========================
+
+  /**
+   * Handle video transcription for Social Media Panel
+   * Transcribes selected YouTube videos and adds them to transcribedVideos state
+   */
+  const handleTranscribeVideos = useCallback(async () => {
+    if (youtubeVideos.length === 0) {
+      toast.error('No videos selected for transcription');
+      return;
+    }
+
+    try {
+      toast.info(`Starting transcription for ${youtubeVideos.length} videos...`);
+
+      const result = await literatureAPI.searchYouTubeWithTranscription(query, {
+        ...transcriptionOptions,
+        includeTranscripts: true,
+        maxResults: youtubeVideos.length,
+      });
+
+      if (result.transcripts && result.transcripts.length > 0) {
+        const newTranscriptions = result.transcripts.map((transcript: any) => ({
+          id: transcript.id || transcript.videoId,
+          title: transcript.title || 'Untitled Video',
+          sourceId: transcript.videoId,
+          url: `https://www.youtube.com/watch?v=${transcript.videoId}`,
+          channel: transcript.channel,
+          duration: transcript.duration || 0,
+          cost: transcript.cost || 0,
+          transcript: transcript.transcript || transcript.text || '',
+          themes: transcript.themes || [],
+          extractedAt: transcript.extractedAt || new Date().toISOString(),
+          cached: transcript.cached || false,
+        }));
+
+        setTranscribedVideos(prev => [...prev, ...newTranscriptions]);
+
+        toast.success(
+          `Successfully transcribed ${result.transcripts.length} videos` +
+          (result.transcriptionCost ? ` ($${result.transcriptionCost.toFixed(2)})` : '')
+        );
+
+        // Switch to transcriptions tab
+        setActiveTab('results');
+        setActiveResultsSubTab('videos');
+      } else {
+        toast.error('Transcription failed - no results returned');
+      }
+    } catch (error) {
+      console.error('❌ Transcription error:', error);
+      toast.error('Failed to transcribe videos. Please try again.');
+    }
+  }, [youtubeVideos, query, transcriptionOptions, setTranscribedVideos, setActiveTab]);
+
+  /**
+   * Handle individual video selection (toggle)
+   */
+  const handleVideoSelect = useCallback((video: any) => {
+    setYoutubeVideos(prev => {
+      const isSelected = prev.some(v => (v.videoId || v.id) === (video.videoId || video.id));
+      if (isSelected) {
+        // Deselect
+        return prev.filter(v => (v.videoId || v.id) !== (video.videoId || video.id));
+      } else {
+        // Select
+        return [...prev, video];
+      }
+    });
+  }, [setYoutubeVideos]);
+
+  /**
+   * Toggle YouTube channel browser visibility
+   */
+  const handleToggleChannelBrowser = useCallback(() => {
+    setExpandedPanel(prev => prev === 'youtube-browser' ? null : 'youtube-browser');
+  }, []);
+
+  /**
+   * Toggle video selection panel visibility
+   */
+  const handleToggleVideoSelection = useCallback(() => {
+    setExpandedPanel(prev => prev === 'video-selection' ? null : 'video-selection');
+  }, []);
+
+  // Phase 10.7 Day 1: transcribing and transcriptionProgress state removed
+  // These are now managed internally by SocialMediaPanel via loadingAlternative
+  const transcribing = loadingAlternative; // Map to existing state
+  const transcriptionProgress = ''; // Placeholder for compatibility
+
+  // ===========================
+  // End Phase 10.7 Day 1 Handlers
+  // ===========================
 
   // Phase 10.1 Day 7: Always execute progressive search (200 papers with quality sorting)
   const handleSearchWithMode = useCallback(async () => {
@@ -445,6 +615,7 @@ function LiteratureSearchContent() {
     });
 
   // PHASE 9 DAY 24: UX Reorganization - Panel and tab navigation state
+  // Phase 10.7 Day 4: Moved before useGapAnalysis hook (hooks must be called in same order)
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null); // Which panel section is expanded
   const [activeResultsSubTab, setActiveResultsSubTab] = useState<
     'papers' | 'videos' | 'library'
@@ -452,6 +623,15 @@ function LiteratureSearchContent() {
   const [activeAnalysisSubTab, setActiveAnalysisSubTab] = useState<
     'themes' | 'gaps' | 'synthesis'
   >('themes');
+
+  // Phase 10.7 Day 4: Gap Analysis Hook (Enterprise Pattern - DRY Principle)
+  const { analyzingGaps, handleAnalyzeGaps } = useGapAnalysis({
+    selectedPapers,
+    papers,
+    setGaps,
+    setActiveTab,
+    setActiveAnalysisSubTab,
+  });
 
   // PHASE 9 DAY 25: Academic categorization - Institution auth state
   // Phase 10.1 Day 5: academicDatabases now managed by useLiteratureSearch hook
@@ -636,17 +816,19 @@ function LiteratureSearchContent() {
 
       // Phase 10.1 Day 12: Move papers from extracting to extracted state
       // This enables the "Extracted" badge to show on individual papers
-      setExtractedPapers(prev => {
-        const newExtracted = new Set(prev);
-        extractingPapers.forEach(paperId => newExtracted.add(paperId));
-        console.log(
-          `✅ Marked ${extractingPapers.size} papers as extracted (total: ${newExtracted.size})`
-        );
-        return newExtracted;
+      // Use functional update to avoid dependency issues
+      setExtractingPapers(currentExtracting => {
+        setExtractedPapers(prev => {
+          const newExtracted = new Set(prev);
+          currentExtracting.forEach(paperId => newExtracted.add(paperId));
+          console.log(
+            `✅ Marked ${currentExtracting.size} papers as extracted (total: ${newExtracted.size})`
+          );
+          return newExtracted;
+        });
+        // Clear extracting state
+        return new Set();
       });
-
-      // Clear extracting state
-      setExtractingPapers(new Set());
 
       // Celebration animation
       if (themesCount > 0) {
@@ -675,7 +857,7 @@ function LiteratureSearchContent() {
         socketRef.current = null;
       }
     };
-  }, [user?.id, updateProgress, completeExtraction, setExtractionError]); // Phase 10 Day 33 Fix: Reconnect when user changes (login/logout)
+  }, [user?.id, updateProgress, completeExtraction, setExtractionError, setExtractedPapers, setExtractingPapers]); // Phase 10 Day 33 Fix: Reconnect when user changes (login/logout)
 
   // PHASE 10 DAY 5.17.5: Clear incompatible results when purpose changes
   // Prevents stale data from previous purposes persisting in state
@@ -930,95 +1112,64 @@ function LiteratureSearchContent() {
     }
   }, [selectedThemeIds, unifiedThemes, mapUnifiedThemeToTheme, setLoadingSurvey, setGeneratedSurvey]);
 
-  // Phase 10.1 Day 8: Wrapped with useCallback for performance
-  const handleAnalyzeGaps = useCallback(async () => {
-    // Use selected papers for gap analysis
-    if (selectedPapers.size === 0) {
-      toast.error('Please select papers to analyze for research gaps');
-      return;
-    }
-
-    setAnalyzingGaps(true);
-    try {
-      console.log(
-        '🔍 Analyzing research gaps from',
-        selectedPapers.size,
-        'papers'
-      );
-
-      // Get full paper objects for selected IDs
-      const selectedPaperObjects = papers.filter(p => selectedPapers.has(p.id));
-
-      console.log(
-        '📄 Selected paper objects:',
-        selectedPaperObjects.length,
-        'papers'
-      );
-      console.log(
-        '📝 Sample paper:',
-        selectedPaperObjects[0]
-          ? {
-              id: selectedPaperObjects[0].id,
-              title: selectedPaperObjects[0].title,
-              hasAbstract: !!selectedPaperObjects[0].abstract,
-            }
-          : 'No papers'
-      );
-
-      // Send full paper objects to API
-      const researchGaps =
-        await literatureAPI.analyzeGapsFromPapers(selectedPaperObjects);
-
-      console.log(
-        '✅ Gap analysis complete:',
-        researchGaps.length,
-        'gaps found'
-      );
-
-      setGaps(researchGaps);
-      setActiveTab('analysis'); // PHASE 9 DAY 24: Switch to analysis tab
-      setActiveAnalysisSubTab('gaps'); // Show gaps sub-tab
-      toast.success(
-        `Identified ${researchGaps.length} research opportunities from ${selectedPaperObjects.length} papers`
-      );
-    } catch (error: any) {
-      console.error('❌ Gap analysis failed:', error);
-      toast.error(`Gap analysis failed: ${error.message || 'Unknown error'}`);
-    } finally {
-      setAnalyzingGaps(false);
-    }
-  }, [selectedPapers, papers, setAnalyzingGaps, setGaps, setActiveTab, setActiveAnalysisSubTab]);
+  // Phase 10.7 Day 4: handleAnalyzeGaps now provided by useGapAnalysis hook (58 lines removed - DRY principle)
+  // Removed inline implementation that duplicated hook logic
 
   // Phase 10.1 Day 8: Wrapped with useCallback for performance
-  const handleExportCitations = useCallback(async (format: 'bibtex' | 'ris' | 'apa') => {
-    if (selectedPapers.size === 0) {
-      toast.error('Please select papers to export');
-      return;
-    }
+  const [isExporting, setIsExporting] = useState(false);
 
-    try {
-      const paperIds = Array.from(selectedPapers);
-      const { content, filename } = await literatureAPI.exportCitations(
-        paperIds,
-        format
-      );
+  const handleExportCitations = useCallback(
+    async (
+      format: 'bibtex' | 'ris' | 'json' | 'csv' | 'apa' | 'mla' | 'chicago',
+      includeAbstracts = false
+    ) => {
+      if (selectedPapers.size === 0) {
+        toast.error('Please select papers to export');
+        return;
+      }
 
-      // Create download link
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      setIsExporting(true);
+      try {
+        const paperIds = Array.from(selectedPapers);
+        const { content, filename } = await literatureAPI.exportCitations(
+          paperIds,
+          format,
+          includeAbstracts
+        );
 
-      toast.success(
-        `Exported ${paperIds.length} citations as ${format.toUpperCase()}`
-      );
-    } catch (error) {
-      toast.error('Export failed');
-    }
-  }, [selectedPapers]);
+        // Create download link with appropriate MIME type
+        const mimeTypes: Record<string, string> = {
+          bibtex: 'application/x-bibtex',
+          ris: 'application/x-research-info-systems',
+          json: 'application/json',
+          csv: 'text/csv',
+          apa: 'text/plain',
+          mla: 'text/plain',
+          chicago: 'text/plain',
+        };
+
+        const blob = new Blob([content], { type: mimeTypes[format] || 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        toast.success(
+          `Exported ${paperIds.length} paper${paperIds.length > 1 ? 's' : ''} as ${format.toUpperCase()}`
+        );
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to export citations';
+        toast.error(message);
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    [selectedPapers]
+  );
 
   // Phase 10.1 Day 8: Wrapped with useCallback for performance
   const handleGenerateStatements = useCallback(async () => {
@@ -1081,32 +1232,32 @@ function LiteratureSearchContent() {
   // Phase 10.1 Day 4: togglePaperSelection, handleTogglePaperSave now provided by usePaperManagement hook
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Literature Discovery</h1>
-          <p className="text-gray-600 mt-1">
+    <div className="container mx-auto py-4 sm:py-6 md:py-8 px-4 space-y-4 sm:space-y-6">
+      {/* Header - Phase 10.7 Day 3: Mobile Responsive */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold">Literature Discovery</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
             Search and analyze academic literature to build your research
             foundation
           </p>
         </div>
-        <div className="flex gap-3">
-          <Badge variant="outline" className="py-2 px-4">
-            <Database className="w-4 h-4 mr-2" />
-            {totalResults} papers found
+        <div className="flex flex-wrap gap-2 sm:gap-3">
+          <Badge variant="outline" className="py-2 px-3 sm:px-4 text-xs sm:text-sm min-h-[36px]">
+            <Database className="w-4 h-4 mr-1 sm:mr-2" />
+            {totalResults} papers
           </Badge>
-          <Badge variant="outline" className="py-2 px-4">
-            <Check className="w-4 h-4 mr-2" />
+          <Badge variant="outline" className="py-2 px-3 sm:px-4 text-xs sm:text-sm min-h-[36px]">
+            <Check className="w-4 h-4 mr-1 sm:mr-2" />
             {selectedPapers.size} selected
           </Badge>
           {/* Phase 10 Day 5.7: Extracting papers badge (real-time) */}
           {extractingPapers.size > 0 && (
             <Badge
               variant="outline"
-              className="py-2 px-4 border-amber-500 text-amber-700 bg-amber-50 animate-pulse"
+              className="py-2 px-3 sm:px-4 text-xs sm:text-sm min-h-[36px] border-amber-500 text-amber-700 bg-amber-50 animate-pulse"
             >
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 mr-1 sm:mr-2 animate-spin" />
               {extractingPapers.size} extracting
             </Badge>
           )}
@@ -1114,14 +1265,14 @@ function LiteratureSearchContent() {
           {extractedPapers.size > 0 && (
             <Badge
               variant="outline"
-              className="py-2 px-4 border-green-500 text-green-700 bg-green-50"
+              className="py-2 px-3 sm:px-4 text-xs sm:text-sm min-h-[36px] border-green-500 text-green-700 bg-green-50"
             >
-              <Sparkles className="w-4 h-4 mr-2" />
+              <Sparkles className="w-4 h-4 mr-1 sm:mr-2" />
               {extractedPapers.size} extracted
             </Badge>
           )}
-          <Badge variant="outline" className="py-2 px-4">
-            <Star className="w-4 h-4 mr-2" />
+          <Badge variant="outline" className="py-2 px-3 sm:px-4 text-xs sm:text-sm min-h-[36px]">
+            <Star className="w-4 h-4 mr-1 sm:mr-2" />
             {savedPapers.length} saved
           </Badge>
         </div>
@@ -1189,7 +1340,7 @@ function LiteratureSearchContent() {
       )}
 
       {/* PHASE 9 DAY 25.1: Global Search Bar - Searches ALL Sources */}
-      <Card className="border-2 border-gradient-to-r from-blue-500 to-purple-500 bg-gradient-to-r from-blue-50 to-purple-50">
+      <Card className="border-2 bg-gradient-to-r from-blue-50 to-purple-50">
         <CardContent className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Search className="w-5 h-5 text-blue-600" />
@@ -1216,32 +1367,6 @@ function LiteratureSearchContent() {
 
           {/* Phase 10 Day 31: Extracted FilterPanel Component */}
           <FilterPanel isVisible={showFilters} />
-
-          {/* Phase 10.6 Day 14.5+: ENTERPRISE TRANSPARENCY INDICATOR */}
-          {/* Shows complete pipeline: Collection → Dedup → Quality → Final */}
-          {/* Now uses REAL backend metadata instead of frontend calculations */}
-          {/* FIXED: Show during AND after progressive loading (not blocked) */}
-          {(() => {
-            const isVisible = searchMetadata !== null && papers.length > 0;
-            console.log('🔍 [SearchProcessIndicator] Visibility Check:', {
-              searchMetadata: searchMetadata ? 'HAS DATA' : 'NULL',
-              papersLength: papers.length,
-              isVisible,
-              metadataKeys: searchMetadata ? Object.keys(searchMetadata) : [],
-            });
-            return (
-              <SearchProcessIndicator
-                query={query}
-                metadata={searchMetadata}
-                searchStatus={
-                  loading ? 'searching' :
-                  progressiveLoading.status === 'loading' ? 'searching' :
-                  papers.length > 0 ? 'completed' : 'idle'
-                }
-                isVisible={isVisible}
-              />
-            );
-          })()}
 
           {/* Phase 10.1 Day 7: Progressive Loading Indicator */}
           <ProgressiveLoadingIndicator
@@ -1280,556 +1405,25 @@ function LiteratureSearchContent() {
         loadingAlternative={loadingAlternative}
         onSearch={handleSearchAlternativeSources}
       />
-      {/* PHASE 9 DAY 25: Panel 3 - Social Media Intelligence (with YouTube moved here) */}
-      <Card className="border-2 border-indigo-200">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-indigo-600" />
-              Social Media Intelligence
-            </span>
-            <Badge
-              variant="secondary"
-              className="bg-indigo-100 text-indigo-700"
-            >
-              🔥 New
-            </Badge>
-          </CardTitle>
-          <p className="text-sm text-gray-600 mt-2">
-            Research social media platforms for trends, public opinion, and
-            content analysis. Each platform unlocks specific research tools.
-            <span className="block mt-1 text-xs font-medium text-pink-600">
-              💡 Select a platform below to see available research options
-            </span>
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Select Social Media Platforms
-            </label>
-            <div className="flex gap-2 flex-wrap">
-              {[
-                { id: 'youtube', label: 'YouTube', icon: '🎥', color: 'red' },
-                {
-                  id: 'instagram',
-                  label: 'Instagram',
-                  icon: '📸',
-                  color: 'pink',
-                },
-                { id: 'tiktok', label: 'TikTok', icon: '🎵', color: 'cyan' },
-                {
-                  id: 'twitter',
-                  label: 'Twitter/X',
-                  icon: '🐦',
-                  color: 'blue',
-                },
-              ].map(platform => (
-                <Badge
-                  key={platform.id}
-                  variant={
-                    socialPlatforms.includes(platform.id)
-                      ? 'default'
-                      : 'outline'
-                  }
-                  className="cursor-pointer py-2 px-4 text-sm"
-                  onClick={() => {
-                    const newPlatforms = socialPlatforms.includes(platform.id)
-                      ? socialPlatforms.filter(p => p !== platform.id)
-                      : [...socialPlatforms, platform.id];
-                    setSocialPlatforms(newPlatforms);
-                  }}
-                >
-                  <span className="mr-2">{platform.icon}</span>
-                  {platform.label}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          {/* PHASE 9 DAY 25: Conditional YouTube Section */}
-          {socialPlatforms.includes('youtube') && (
-            <div className="space-y-4 p-4 bg-gradient-to-r from-red-50 to-purple-50 dark:from-red-900/20 dark:to-purple-900/20 rounded-lg border-2 border-red-200">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
-                <Video className="w-4 h-4 text-red-600" />
-                🎥 YouTube Video Research & Transcription
-                <Badge
-                  variant="secondary"
-                  className="ml-auto bg-red-100 text-red-700"
-                >
-                  AI-Powered
-                </Badge>
-              </h4>
-
-              {/* Transcription options */}
-              <div className="space-y-3">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={transcriptionOptions.includeTranscripts}
-                    onChange={e =>
-                      setTranscriptionOptions({
-                        ...transcriptionOptions,
-                        includeTranscripts: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4 rounded border-gray-300"
-                  />
-                  <div className="flex-1">
-                    <span className="text-sm font-medium">
-                      Include video transcriptions
-                    </span>
-                    <p className="text-xs text-muted-foreground">
-                      Transcribe audio to searchable text (~$0.006/min)
-                    </p>
-                  </div>
-                </label>
-
-                {transcriptionOptions.includeTranscripts && (
-                  <div className="ml-7 p-3 rounded bg-red-50 dark:bg-red-900/20 border border-red-200">
-                    <p className="text-xs font-medium text-red-800 dark:text-red-200">
-                      💰 Estimated cost: $0.60 for 10 videos (~10 min each)
-                    </p>
-                    <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-                      ✓ All transcriptions cached - pay only once per video
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* YouTube Channel Browser (collapsible) */}
-              <div className="pt-2 border-t border-red-200">
-                <Button
-                  variant="ghost"
-                  onClick={() =>
-                    setExpandedPanel(
-                      expandedPanel === 'youtube-browser'
-                        ? null
-                        : 'youtube-browser'
-                    )
-                  }
-                  className="w-full justify-between hover:bg-red-100"
-                >
-                  <span className="flex items-center gap-2 text-sm">
-                    <Video className="w-4 h-4 text-red-600" />
-                    Browse YouTube Channels
-                  </span>
-                  <ChevronRight
-                    className={cn(
-                      'w-4 h-4 transition-transform',
-                      expandedPanel === 'youtube-browser' && 'rotate-90'
-                    )}
-                  />
-                </Button>
-                <AnimatePresence>
-                  {expandedPanel === 'youtube-browser' && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="mt-2"
-                    >
-                      <YouTubeChannelBrowser
-                        onVideosSelected={videos => {
-                          setYoutubeVideos(prev => {
-                            const existingIds = new Set(
-                              prev.map((v: any) => v.videoId || v.id)
-                            );
-                            const newVideos = videos.filter(
-                              v => !existingIds.has(v.videoId)
-                            );
-                            if (newVideos.length === 0) {
-                              toast.info(
-                                'All selected videos are already in the queue'
-                              );
-                              return prev;
-                            }
-                            toast.success(
-                              `Added ${newVideos.length} videos to selection queue`
-                            );
-                            setExpandedPanel('video-selection');
-                            return [...prev, ...newVideos];
-                          });
-                        }}
-                        researchContext={query}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Video Selection Panel (collapsible) */}
-              <div className="pt-2 border-t border-red-200">
-                <Button
-                  variant="ghost"
-                  onClick={() =>
-                    setExpandedPanel(
-                      expandedPanel === 'video-selection'
-                        ? null
-                        : 'video-selection'
-                    )
-                  }
-                  className="w-full justify-between hover:bg-red-100"
-                >
-                  <span className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-red-600" />
-                    Video Selection Queue
-                    {youtubeVideos.length > 0 && (
-                      <Badge variant="secondary" className="ml-2">
-                        {youtubeVideos.length}
-                      </Badge>
-                    )}
-                  </span>
-                  <ChevronRight
-                    className={cn(
-                      'w-4 h-4 transition-transform',
-                      expandedPanel === 'video-selection' && 'rotate-90'
-                    )}
-                  />
-                </Button>
-                <AnimatePresence>
-                  {expandedPanel === 'video-selection' && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="mt-2"
-                    >
-                      {youtubeVideos.length > 0 ? (
-                        <VideoSelectionPanel
-                          videos={youtubeVideos.map((video: any) => ({
-                            videoId: video.videoId || video.id,
-                            title: video.title,
-                            description: video.description || '',
-                            channelName:
-                              video.channelName || video.channel || '',
-                            channelId: video.channelId || '',
-                            thumbnailUrl:
-                              video.thumbnailUrl ||
-                              video.thumbnail ||
-                              'https://via.placeholder.com/320x180',
-                            duration: video.duration || 0,
-                            viewCount: video.viewCount || video.views || 0,
-                            publishedAt: video.publishedAt
-                              ? new Date(video.publishedAt)
-                              : new Date(),
-                            relevanceScore: video.relevanceScore,
-                            isTranscribed: video.isTranscribed || false,
-                            transcriptionStatus:
-                              video.transcriptionStatus || 'not_started',
-                            cachedTranscript: video.cachedTranscript || false,
-                          }))}
-                          researchContext={query}
-                          onTranscribe={async videoIds => {
-                            try {
-                              toast.info(
-                                `Starting transcription for ${videoIds.length} videos...`
-                              );
-                              const result =
-                                await literatureAPI.searchYouTubeWithTranscription(
-                                  query,
-                                  {
-                                    ...transcriptionOptions,
-                                    includeTranscripts: true,
-                                    maxResults: videoIds.length,
-                                  }
-                                );
-                              if (
-                                result.transcripts &&
-                                result.transcripts.length > 0
-                              ) {
-                                const newTranscriptions =
-                                  result.transcripts.map((transcript: any) => ({
-                                    id: transcript.id || transcript.videoId,
-                                    title: transcript.title || 'Untitled Video',
-                                    sourceId: transcript.videoId,
-                                    url: `https://www.youtube.com/watch?v=${transcript.videoId}`,
-                                    channel: transcript.channel,
-                                    duration: transcript.duration || 0,
-                                    cost: transcript.cost || 0,
-                                    transcript:
-                                      transcript.transcript ||
-                                      transcript.text ||
-                                      '',
-                                    themes: transcript.themes || [],
-                                    extractedAt:
-                                      transcript.extractedAt ||
-                                      new Date().toISOString(),
-                                    cached: transcript.cached || false,
-                                  }));
-                                setTranscribedVideos(prev => [
-                                  ...prev,
-                                  ...newTranscriptions,
-                                ]);
-                                toast.success(
-                                  `Successfully transcribed ${result.transcripts.length} videos`
-                                );
-                                setActiveTab('results');
-                                setActiveResultsSubTab('videos');
-                              } else {
-                                toast.error(
-                                  'Transcription failed - no results returned'
-                                );
-                              }
-                            } catch (error) {
-                              console.error('Transcription error:', error);
-                              toast.error(
-                                'Failed to transcribe videos. Please try again.'
-                              );
-                            }
-                          }}
-                          isLoading={loadingAlternative}
-                        />
-                      ) : (
-                        <div className="text-center py-6 text-gray-500 border border-dashed rounded-lg bg-white">
-                          <Video className="w-6 h-6 mx-auto mb-2 text-gray-300" />
-                          <p className="text-xs">No videos in queue</p>
-                          <p className="text-xs mt-1">
-                            Browse channels to add videos
-                          </p>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-          )}
-
-          {/* PHASE 9 DAY 25: Conditional Instagram Section */}
-          {socialPlatforms.includes('instagram') && (
-            <div className="p-4 bg-gradient-to-r from-pink-50 to-orange-50 dark:from-pink-900/20 dark:to-orange-900/20 rounded-lg border-2 border-pink-200">
-              <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
-                📸 Instagram Research
-              </h4>
-              <p className="text-xs text-gray-600 mb-2">
-                Manual upload, hashtag trends, and profile analysis
-              </p>
-              <p className="text-xs text-gray-500">
-                Coming soon: Instagram research tools
-              </p>
-            </div>
-          )}
-
-          {/* PHASE 9 DAY 25: Conditional TikTok Section */}
-          {socialPlatforms.includes('tiktok') && (
-            <div className="p-4 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-lg border-2 border-cyan-200">
-              <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
-                🎵 TikTok Research
-              </h4>
-              <p className="text-xs text-gray-600 mb-2">
-                Hashtag search, trend analysis, and content discovery
-              </p>
-              <p className="text-xs text-gray-500">
-                Coming soon: TikTok research tools
-              </p>
-            </div>
-          )}
-
-          {/* Show empty state when no platform selected */}
-          {socialPlatforms.length === 0 && (
-            <div className="text-center py-12 text-gray-500 border-2 border-dashed rounded-lg">
-              <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p className="font-medium mb-2">Select a platform above</p>
-              <p className="text-sm">
-                Choose YouTube, Instagram, TikTok, or Twitter to see research
-                options
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <Button
-                onClick={handleSearchSocialMedia}
-                disabled={loadingSocial || socialPlatforms.length === 0}
-                variant="default"
-                className="bg-indigo-600 hover:bg-indigo-700"
-              >
-                {loadingSocial ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Search className="w-4 h-4 mr-2" />
-                )}
-                Search These Platforms Only
-              </Button>
-              {socialResults.length > 0 && (
-                <Badge variant="secondary" className="self-center">
-                  {socialResults.length} posts analyzed
-                </Badge>
-              )}
-            </div>
-            {socialPlatforms.length === 0 && (
-              <p className="text-xs text-orange-600">
-                ⚠️ Select at least one platform above to enable search
-              </p>
-            )}
-          </div>
-
-          {socialResults.length > 0 && (
-            <div className="mt-4 space-y-4">
-              {/* Sentiment Insights */}
-              {socialInsights && (
-                <div className="border rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50">
-                  <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4" />
-                    Sentiment Analysis
-                  </h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">
-                        {socialInsights.sentimentDistribution?.positivePercentage?.toFixed(
-                          0
-                        ) || 0}
-                        %
-                      </div>
-                      <div className="text-xs text-gray-600">Positive</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-600">
-                        {socialInsights.sentimentDistribution?.neutralPercentage?.toFixed(
-                          0
-                        ) || 0}
-                        %
-                      </div>
-                      <div className="text-xs text-gray-600">Neutral</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-red-600">
-                        {socialInsights.sentimentDistribution?.negativePercentage?.toFixed(
-                          0
-                        ) || 0}
-                        %
-                      </div>
-                      <div className="text-xs text-gray-600">Negative</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Social Media Posts */}
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {socialResults.map((post, idx) => (
-                  <div
-                    key={idx}
-                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {post.platform}
-                        </Badge>
-                        {post.sentiment && (
-                          <Badge
-                            variant="secondary"
-                            className={cn(
-                              'text-xs',
-                              post.sentiment.label === 'positive' &&
-                                'bg-green-100 text-green-800',
-                              post.sentiment.label === 'negative' &&
-                                'bg-red-100 text-red-800',
-                              post.sentiment.label === 'neutral' &&
-                                'bg-gray-100 text-gray-800'
-                            )}
-                          >
-                            {post.sentiment.label === 'positive' && '😊'}
-                            {post.sentiment.label === 'negative' && '😞'}
-                            {post.sentiment.label === 'neutral' && '😐'}
-                            {post.sentiment.label}
-                          </Badge>
-                        )}
-                        {post.weights && (
-                          <Badge variant="secondary" className="text-xs">
-                            Influence:{' '}
-                            {(post.weights.influence * 100).toFixed(0)}%
-                          </Badge>
-                        )}
-                      </div>
-                      {post.url && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(post.url, '_blank')}
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="font-semibold">{post.author}</span>
-                        {post.authorVerified && (
-                          <Badge variant="secondary" className="text-xs">
-                            ✓
-                          </Badge>
-                        )}
-                        {post.authorFollowers && (
-                          <span className="text-xs text-gray-500">
-                            {post.authorFollowers.toLocaleString()} followers
-                          </span>
-                        )}
-                      </div>
-
-                      {post.title && (
-                        <h4 className="font-semibold text-sm">{post.title}</h4>
-                      )}
-
-                      <p className="text-sm text-gray-700 line-clamp-3">
-                        {post.content}
-                      </p>
-
-                      {post.engagement && (
-                        <div className="flex gap-4 text-xs text-gray-600 mt-2">
-                          {post.engagement.likes && (
-                            <span>
-                              👍 {post.engagement.likes.toLocaleString()}
-                            </span>
-                          )}
-                          {post.engagement.comments && (
-                            <span>
-                              💬 {post.engagement.comments.toLocaleString()}
-                            </span>
-                          )}
-                          {post.engagement.shares && (
-                            <span>
-                              🔄 {post.engagement.shares.toLocaleString()}
-                            </span>
-                          )}
-                          {post.engagement.views && (
-                            <span>
-                              👁️ {post.engagement.views.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {post.hashtags && post.hashtags.length > 0 && (
-                        <div className="flex gap-1 flex-wrap mt-2">
-                          {post.hashtags
-                            .slice(0, 5)
-                            .map((tag: string, i: number) => (
-                              <Badge
-                                key={i}
-                                variant="outline"
-                                className="text-xs"
-                              >
-                                #{tag}
-                              </Badge>
-                            ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Database Sources Transparency */}
-      <DatabaseSourcesInfo />
+      {/* Phase 10.7 Day 1: Social Media Intelligence Panel - Enterprise Integration */}
+      <SocialMediaPanel
+        socialPlatforms={socialPlatforms}
+        onPlatformsChange={setSocialPlatforms}
+        socialResults={socialResults}
+        socialInsights={socialInsights}
+        loadingSocial={loadingSocial}
+        query={query}
+        selectedVideos={youtubeVideos}
+        onVideoSelect={handleVideoSelect}
+        transcribedVideos={transcribedVideos}
+        onTranscribeVideos={handleTranscribeVideos}
+        transcribing={transcribing}
+        transcriptionProgress={transcriptionProgress}
+        showChannelBrowser={expandedPanel === 'youtube-browser'}
+        onToggleChannelBrowser={handleToggleChannelBrowser}
+        showVideoSelection={expandedPanel === 'video-selection'}
+        onToggleVideoSelection={handleToggleVideoSelection}
+      />
 
       {/* PHASE 10 DAY 5.13: Theme Extraction Action Card */}
       <Card className="border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50">
@@ -1981,44 +1575,46 @@ function LiteratureSearchContent() {
         </CardContent>
       </Card>
 
-      {/* PHASE 9 DAY 24: Consolidated Results Tabs (9 → 3 tabs) */}
+      {/* PHASE 9 DAY 24: Consolidated Results Tabs (9 → 3 tabs) - Phase 10.7 Day 3: Mobile Responsive */}
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
         className="space-y-4"
       >
-        <TabsList className="grid w-full grid-cols-3 h-14">
-          <TabsTrigger value="results" className="flex-col h-full">
-            <span className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4" />
-              Results & Library
+        <TabsList className="grid w-full grid-cols-3 h-auto sm:h-14">
+          <TabsTrigger value="results" className="flex-col h-full py-2 sm:py-3 px-2 sm:px-4 min-h-[44px] touch-manipulation">
+            <span className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <BookOpen className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Results & Library</span>
+              <span className="sm:hidden">Results</span>
             </span>
             {papers.length + transcribedVideos.length + savedPapers.length >
               0 && (
-              <Badge className="mt-1" variant="secondary">
-                {papers.length + transcribedVideos.length + savedPapers.length}{' '}
-                total
+              <Badge className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs py-0 px-1" variant="secondary">
+                {papers.length + transcribedVideos.length + savedPapers.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="analysis" className="flex-col h-full">
-            <span className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" />
-              Analysis & Insights
+          <TabsTrigger value="analysis" className="flex-col h-full py-2 sm:py-3 px-2 sm:px-4 min-h-[44px] touch-manipulation">
+            <span className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Analysis & Insights</span>
+              <span className="sm:hidden">Analysis</span>
             </span>
             {unifiedThemes.length + gaps.length > 0 && (
-              <Badge className="mt-1" variant="secondary">
-                {unifiedThemes.length + gaps.length} insights
+              <Badge className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs py-0 px-1" variant="secondary">
+                {unifiedThemes.length + gaps.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="transcriptions" className="flex-col h-full">
-            <span className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
-              Transcriptions
+          <TabsTrigger value="transcriptions" className="flex-col h-full py-2 sm:py-3 px-2 sm:px-4 min-h-[44px] touch-manipulation">
+            <span className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Transcriptions</span>
+              <span className="sm:hidden">Transcripts</span>
             </span>
             {transcribedVideos.length > 0 && (
-              <Badge className="mt-1" variant="secondary">
+              <Badge className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs py-0 px-1" variant="secondary">
                 {transcribedVideos.length}
               </Badge>
             )}
@@ -2100,14 +1696,6 @@ function LiteratureSearchContent() {
                 </Alert>
               )}
 
-              {/* Phase 10.1 Day 7: Progressive Loading Indicator */}
-              {progressiveLoading.isActive && progressiveLoading.status === 'loading' && (
-                <ProgressiveLoadingIndicator
-                  state={progressiveLoading}
-                  onCancel={cancelProgressiveSearch}
-                />
-              )}
-
               {/* Show loading spinner ONLY if not in progressive mode OR if progressive hasn't started yet */}
               {loading && !progressiveLoading.isActive ? (
                 <div className="flex justify-center py-12">
@@ -2130,8 +1718,8 @@ function LiteratureSearchContent() {
                           <p className="text-xs text-gray-600 mt-2">
                             <span className="inline-flex items-center gap-1">
                               <span className="w-1 h-1 bg-blue-500 rounded-full"></span>
-                              Auto-corrected from: "
-                              {queryCorrectionMessage.original}"
+                              Auto-corrected from: &ldquo;
+                              {queryCorrectionMessage.original}&rdquo;
                             </span>
                           </p>
                         )}
@@ -2254,8 +1842,34 @@ function LiteratureSearchContent() {
                       </Alert>
                     )}
 
-                  {/* Papers List */}
-                  {filteredPapers.map(paper => (
+                  {/* Phase 10.7 Day 2: Export Button Section - Phase 10.7 Day 3: Mobile Responsive */}
+                  {filteredPapers.length > 0 && (
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs sm:text-sm text-gray-600">
+                          {selectedPapers.size > 0 ? (
+                            <span className="font-medium text-gray-900">
+                              {selectedPapers.size} paper{selectedPapers.size > 1 ? 's' : ''} selected
+                            </span>
+                          ) : (
+                            <span>Select papers to export citations</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex sm:flex-shrink-0">
+                        <ExportButton
+                          selectedCount={selectedPapers.size}
+                          onExport={handleExportCitations}
+                          isExporting={isExporting}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Papers List - Paginated */}
+                  {filteredPapers
+                    .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+                    .map(paper => (
                     <PaperCard
                       key={paper.id}
                       paper={paper}
@@ -3281,236 +2895,25 @@ function LiteratureSearchContent() {
             </div>
           )}
 
-          {/* Gaps sub-tab */}
+          {/* Phase 10.7 Day 4: Gaps sub-tab - Enterprise-Grade Visualization */}
           {activeAnalysisSubTab === 'gaps' && (
             <div className="space-y-4">
-              {gaps.length > 0 ? (
-                gaps.map(gap => (
-                  <Card key={gap.id} className="border-l-4 border-l-orange-500">
-                    <CardContent className="pt-6">
-                      <h3 className="font-semibold text-lg">{gap.title}</h3>
-                      <p className="text-gray-700 mt-2">{gap.description}</p>
+              {/* Enterprise Gap Visualization Panel (239 lines → 1 component) */}
+              <GapVisualizationPanel
+                gaps={gaps}
+                loading={analyzingGaps}
+              />
 
-                      {/* Methodology Section */}
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-                        <div className="flex items-start gap-2 mb-3">
-                          <Sparkles className="w-5 h-5 text-blue-600 mt-0.5" />
-                          <div className="flex-1">
-                            <h4 className="text-sm font-semibold text-blue-900 mb-1">
-                              Gap Identification Methodology
-                            </h4>
-                            <p className="text-xs text-blue-700 mb-2">
-                              This gap was identified using a rigorous
-                              multi-stage analysis pipeline:
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2 text-xs text-gray-700">
-                          <div className="flex items-start gap-2">
-                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <span className="text-blue-700 font-semibold text-xs">
-                                1
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                Keyword Extraction & Analysis
-                              </p>
-                              <p className="text-gray-600">
-                                TF-IDF-inspired frequency analysis with
-                                co-occurrence mapping across{' '}
-                                {selectedPapers.size} papers
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start gap-2">
-                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <span className="text-blue-700 font-semibold text-xs">
-                                2
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                Topic Modeling
-                              </p>
-                              <p className="text-gray-600">
-                                LDA-like clustering with coherence scoring to
-                                identify research themes
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start gap-2">
-                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <span className="text-blue-700 font-semibold text-xs">
-                                3
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                Trend Detection
-                              </p>
-                              <p className="text-gray-600">
-                                Time-series analysis with linear regression to
-                                identify emerging trends
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start gap-2">
-                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <span className="text-blue-700 font-semibold text-xs">
-                                4
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                Gap Identification
-                              </p>
-                              <p className="text-gray-600">
-                                AI-assisted analysis combined with rule-based
-                                detection of under-researched areas
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start gap-2">
-                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <span className="text-blue-700 font-semibold text-xs">
-                                5
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                Multi-Factor Scoring
-                              </p>
-                              <p className="text-gray-600">
-                                Composite score: Importance (35%) + Feasibility
-                                (25%) + Market Potential (25%) + Confidence
-                                (15%)
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="mt-3 pt-3 border-t border-blue-200">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-600">
-                              Analysis Confidence:
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-blue-600 rounded-full"
-                                  style={{ width: '75%' }}
-                                ></div>
-                              </div>
-                              <span className="font-medium text-gray-900">
-                                75%
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Based on {selectedPapers.size} papers, trend
-                            analysis, and topic coverage validation
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 mt-4">
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">
-                            Opportunity Score
-                          </span>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="flex-1 bg-gray-200 rounded-full h-2">
-                              <div
-                                className="bg-gradient-to-r from-orange-400 to-orange-600 h-2 rounded-full"
-                                style={{
-                                  width: `${
-                                    gap.opportunityScore &&
-                                    !isNaN(gap.opportunityScore)
-                                      ? gap.opportunityScore * 100
-                                      : 0
-                                  }%`,
-                                }}
-                              />
-                            </div>
-                            <span className="text-sm font-semibold">
-                              {gap.opportunityScore &&
-                              !isNaN(gap.opportunityScore)
-                                ? Math.round(gap.opportunityScore * 100)
-                                : 0}
-                              %
-                            </span>
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-500">
-                            Impact
-                          </span>
-                          <p className="text-sm mt-1">{gap.potentialImpact}</p>
-                        </div>
-                      </div>
-                      {gap.suggestedMethods &&
-                        gap.suggestedMethods.length > 0 && (
-                          <div className="mt-4">
-                            <span className="text-sm font-medium text-gray-500">
-                              Suggested Methods
-                            </span>
-                            <div className="flex gap-2 mt-2 flex-wrap">
-                              {gap.suggestedMethods.map(method => (
-                                <Badge key={method} variant="outline">
-                                  {method}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      {gap.fundingOpportunities &&
-                        gap.fundingOpportunities.length > 0 && (
-                          <div className="mt-4">
-                            <span className="text-sm font-medium text-gray-500">
-                              Funding Opportunities
-                            </span>
-                            <ul className="list-disc list-inside text-sm mt-2 text-gray-700">
-                              {gap.fundingOpportunities.map(funding => (
-                                <li key={funding}>{funding}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg font-medium mb-4">
-                    No research gaps analyzed yet
-                  </p>
-                  <p className="text-sm text-gray-400 mb-6">
-                    Identify unexplored research opportunities from your
-                    selected papers
-                  </p>
+              {/* Analyze Button (shown when no gaps) */}
+              {gaps.length === 0 && !analyzingGaps && (
+                <div className="text-center py-6">
                   <Button
                     onClick={handleAnalyzeGaps}
-                    disabled={selectedPapers.size === 0 || analyzingGaps}
+                    disabled={selectedPapers.size === 0}
                     className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700"
                   >
-                    {analyzingGaps ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Analyzing Gaps...
-                      </>
-                    ) : (
-                      <>
-                        <TrendingUp className="w-4 h-4 mr-2" />
-                        Find Research Gaps from {selectedPapers.size} Papers
-                      </>
-                    )}
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    Find Research Gaps from {selectedPapers.size} Papers
                   </Button>
                   {selectedPapers.size === 0 && (
                     <p className="text-xs text-amber-600 mt-3">
@@ -3560,7 +2963,7 @@ function LiteratureSearchContent() {
             </Button>
             <div className="flex items-center gap-2">
               {Array.from(
-                { length: Math.min(5, Math.ceil(totalResults / 20)) },
+                { length: Math.min(5, Math.ceil(filteredPapers.length / ITEMS_PER_PAGE)) },
                 (_, i) => i + 1
               ).map(page => (
                 <Button
@@ -3576,7 +2979,7 @@ function LiteratureSearchContent() {
             <Button
               variant="outline"
               onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage >= Math.ceil(totalResults / 20)}
+              disabled={currentPage >= Math.ceil(filteredPapers.length / ITEMS_PER_PAGE)}
             >
               Next
             </Button>
@@ -3639,9 +3042,12 @@ function LiteratureSearchContent() {
         onClose={resetExtractionProgress}
       />
 
-      {/* Phase 10 Day 19: Incremental Extraction Modals */}
+      {/* Phase 10.7 Day 5: Incremental Extraction Modals (Enterprise Pattern - Hook State) */}
       {incrementalExtraction.showCorpusManagementModal && (
         <CorpusManagementPanel
+          corpuses={incrementalExtraction.corpusList}
+          loading={incrementalExtraction.isLoadingCorpuses}
+          error={incrementalExtraction.corpusError}
           onSelectCorpus={(corpus: any) => {
             incrementalExtraction.selectCorpus(corpus);
             incrementalExtraction.closeCorpusManagement();
@@ -3651,6 +3057,21 @@ function LiteratureSearchContent() {
             incrementalExtraction.closeCorpusManagement();
             incrementalExtraction.openIncrementalExtraction();
           }}
+          onEditCorpus={(corpus: any) => {
+            setEditCorpusModal({ isOpen: true, corpus });
+          }}
+          onDeleteCorpus={handleDeleteCorpus}
+          onRetry={incrementalExtraction.retryLoadCorpusData}
+        />
+      )}
+
+      {/* Phase 10.7 Day 5: Edit Corpus Modal */}
+      {editCorpusModal.isOpen && editCorpusModal.corpus && (
+        <EditCorpusModal
+          isOpen={editCorpusModal.isOpen}
+          corpus={editCorpusModal.corpus}
+          onClose={() => setEditCorpusModal({ isOpen: false, corpus: null })}
+          onSave={handleEditCorpus}
         />
       )}
 

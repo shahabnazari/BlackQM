@@ -74,9 +74,7 @@ export function useIncrementalExtraction() {
     } catch (error: any) {
       // Phase 10.1 Day 7: Suppress expected 401 errors for unauthenticated users
       if (error?.response?.status === 401 || error?.message === 'Unauthorized') {
-        console.log(
-          '👤 [useIncrementalExtraction] User not authenticated, skipping corpus load'
-        );
+        // Silent skip for unauthenticated users (expected behavior)
         setState(prev => ({
           ...prev,
           corpusList: [],
@@ -84,7 +82,7 @@ export function useIncrementalExtraction() {
           isLoadingCorpuses: false,
         }));
       } else {
-        console.error('Failed to load corpus data:', error);
+        // Store error in state for UI display
         setState(prev => ({
           ...prev,
           corpusError:
@@ -199,7 +197,7 @@ export function useIncrementalExtraction() {
 
         return result;
       } catch (error) {
-        console.error('Incremental extraction failed:', error);
+        // Store error in state for UI display
         setState(prev => ({
           ...prev,
           isExtracting: false,
@@ -224,7 +222,7 @@ export function useIncrementalExtraction() {
         await loadCorpusData();
         return newCorpus;
       } catch (error) {
-        console.error('Failed to create corpus:', error);
+        // Error propagated to caller for handling
         throw error;
       }
     },
@@ -241,7 +239,7 @@ export function useIncrementalExtraction() {
         await loadCorpusData();
         return updatedCorpus;
       } catch (error) {
-        console.error('Failed to update corpus:', error);
+        // Error propagated to caller for handling
         throw error;
       }
     },
@@ -261,7 +259,7 @@ export function useIncrementalExtraction() {
             prev.selectedCorpus?.id === corpusId ? null : prev.selectedCorpus,
         }));
       } catch (error) {
-        console.error('Failed to delete corpus:', error);
+        // Error propagated to caller for handling
         throw error;
       }
     },

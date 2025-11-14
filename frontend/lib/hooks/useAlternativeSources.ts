@@ -51,6 +51,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { literatureAPI } from '@/lib/services/literature-api.service';
+import type { SocialMediaResult } from '@/lib/types/literature.types';
 
 /**
  * Transcription configuration options
@@ -124,14 +125,22 @@ export interface UseAlternativeSourcesReturn {
   // Social media state
   socialPlatforms: string[];
   setSocialPlatforms: (platforms: string[]) => void;
-  socialResults: any[];
-  socialInsights: any | null;
+  socialResults: SocialMediaResult[];
+  socialInsights: Record<string, unknown> | null;
   loadingSocial: boolean;
+
+  // Phase 10.8 Day 9: Per-platform loading states
+  loadingInstagram: boolean;
+  loadingTikTok: boolean;
 
   // Search handlers
   handleSearchAlternativeSources: () => Promise<void>;
   handleSearchSocialMedia: () => Promise<void>;
   handleSearchAllSources: () => Promise<void>;
+
+  // Phase 10.8 Day 9: AI Smart Curation functions
+  calculateQualityScore: (result: SocialMediaResult, query: string) => number;
+  getQualityTier: (score: number) => 'gold' | 'silver' | 'bronze' | null;
 
   // Utilities
   clearAll: () => void;
@@ -193,13 +202,102 @@ export function useAlternativeSources(
 
   // Social media state
   const [socialPlatforms, setSocialPlatforms] = useState<string[]>([]);
-  const [socialResults, setSocialResults] = useState<any[]>([]);
-  const [socialInsights, setSocialInsights] = useState<any | null>(null);
+  const [socialResults, setSocialResults] = useState<SocialMediaResult[]>([]);
+  const [socialInsights, setSocialInsights] = useState<Record<string, unknown> | null>(null);
   const [loadingSocial, setLoadingSocial] = useState(false);
+
+  // Phase 10.8 Day 9: Per-platform loading states
+  const [loadingInstagram, setLoadingInstagram] = useState(false);
+  const [loadingTikTok, setLoadingTikTok] = useState(false);
 
   // Prevent duplicate requests
   const isSearchingAlternativeRef = useRef(false);
   const isSearchingSocialRef = useRef(false);
+
+  // ===========================
+  // Phase 10.8 Day 9: AI SMART CURATION
+  // ===========================
+
+  /**
+   * Calculate AI quality score for social media content
+   *
+   * Factors:
+   * 1. Engagement rate (likes+comments)/views (0-40 points)
+   * 2. Creator credibility (followers, verified) (0-30 points)
+   * 3. Semantic relevance to query (0-20 points)
+   * 4. Recency (newer = higher) (0-10 points)
+   *
+   * @returns Quality score 0-100
+   */
+  const calculateQualityScore = useCallback((result: SocialMediaResult, query: string): number => {
+    let score = 0;
+
+    // Factor 1: Engagement Rate (0-40 points)
+    const metadata = result.metadata as Record<string, any> | undefined;
+    const views = metadata?.['viewCount'] || metadata?.['views'] || 0;
+    const likes = metadata?.['likeCount'] || metadata?.['likes'] || 0;
+    const comments = metadata?.['commentCount'] || metadata?.['comments'] || 0;
+
+    if (views > 0) {
+      const engagementRate = (likes + comments) / views;
+      // 10% engagement = 40 points, scales linearly
+      score += Math.min(40, engagementRate * 400);
+    }
+
+    // Factor 2: Creator Credibility (0-30 points)
+    const followers = metadata?.['followerCount'] || metadata?.['followers'] || 0;
+    const isVerified = metadata?.['verified'] || false;
+
+    // Verified badge = 10 points
+    if (isVerified) score += 10;
+
+    // Followers (logarithmic scale): 1M followers = 20 points
+    if (followers > 0) {
+      score += Math.min(20, Math.log10(followers) * 3.33);
+    }
+
+    // Factor 3: Semantic Relevance (0-20 points)
+    // Simple keyword matching (can be enhanced with embeddings later)
+    const title = (result.title || '').toLowerCase();
+    const description = (result.abstract || metadata?.['description'] || '').toLowerCase();
+    const queryLower = query.toLowerCase();
+    const queryWords = queryLower.split(' ').filter(w => w.length > 2);
+
+    let matchCount = 0;
+    queryWords.forEach(word => {
+      if (title.includes(word)) matchCount += 2; // Title matches worth more
+      if (description.includes(word)) matchCount += 1;
+    });
+
+    score += Math.min(20, matchCount * 2);
+
+    // Factor 4: Recency (0-10 points)
+    const publishDate = metadata?.['publishedAt'] || metadata?.['createdAt'] || result.year;
+    if (publishDate) {
+      const date = new Date(publishDate);
+      const now = new Date();
+      const daysSince = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
+
+      // Content within 30 days = 10 points, decays linearly over 365 days
+      if (daysSince < 30) {
+        score += 10;
+      } else if (daysSince < 365) {
+        score += 10 * (1 - (daysSince - 30) / 335);
+      }
+    }
+
+    return Math.min(100, Math.round(score));
+  }, []);
+
+  /**
+   * Get quality tier based on score
+   */
+  const getQualityTier = useCallback((score: number): 'gold' | 'silver' | 'bronze' | null => {
+    if (score >= 90) return 'gold';
+    if (score >= 70) return 'silver';
+    if (score >= 50) return 'bronze';
+    return null;
+  }, []);
 
   // ===========================
   // ALTERNATIVE SOURCES SEARCH
@@ -325,9 +423,42 @@ export function useAlternativeSources(
           `Found ${results.length} results from ${alternativeSources.length} alternative sources`
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Alternative search error:', error);
-      toast.error('Alternative sources search failed');
+
+      // Phase 10.8 Day 1: Enhanced error messages with source-specific details
+      const failedSources: string[] = [];
+      if (alternativeSources.includes('github') && error.message?.includes('GitHub')) {
+        failedSources.push('GitHub (API rate limit or network error)');
+      }
+      if (alternativeSources.includes('stackoverflow') && error.message?.includes('StackOverflow')) {
+        failedSources.push('StackOverflow (API quota exceeded)');
+      }
+      if (alternativeSources.includes('youtube') && error.message?.includes('YouTube')) {
+        failedSources.push('YouTube (API key required or quota exceeded)');
+      }
+      if (alternativeSources.includes('podcasts') && error.message?.includes('Podcast')) {
+        failedSources.push('Podcasts (RSS feed unavailable)');
+      }
+
+      if (failedSources.length > 0) {
+        toast.error(
+          `Alternative sources search failed: ${failedSources.join(', ')}`,
+          {
+            description: 'Some sources may still have returned results. Check the results panel below.',
+            duration: 5000,
+          }
+        );
+      } else {
+        toast.error('Alternative sources search failed', {
+          description: error.message || 'Unknown error occurred. Please try again.',
+          action: {
+            label: 'Retry',
+            onClick: () => handleSearchAlternativeSources(),
+          },
+          duration: 5000,
+        });
+      }
     } finally {
       setLoadingAlternative(false);
       isSearchingAlternativeRef.current = false;
@@ -375,6 +506,10 @@ export function useAlternativeSources(
     isSearchingSocialRef.current = true;
     setLoadingSocial(true);
 
+    // Phase 10.8 Day 9: Set per-platform loading states
+    if (socialPlatforms.includes('instagram')) setLoadingInstagram(true);
+    if (socialPlatforms.includes('tiktok')) setLoadingTikTok(true);
+
     try {
       console.log(
         '🔍 Social Media Search:',
@@ -388,29 +523,78 @@ export function useAlternativeSources(
         socialPlatforms
       );
 
-      setSocialResults(results);
+      // Phase 10.8 Day 9: Apply AI quality scores to results
+      const scoredResults = results.map(result => ({
+        ...result,
+        qualityScore: calculateQualityScore(result, query),
+        qualityTier: getQualityTier(calculateQualityScore(result, query)),
+      }));
+
+      // Sort by quality score (highest first)
+      scoredResults.sort((a, b) => (b.qualityScore || 0) - (a.qualityScore || 0));
+
+      setSocialResults(scoredResults);
 
       // Generate insights from results
-      if (results.length > 0) {
-        const insights = await literatureAPI.getSocialMediaInsights(results);
+      if (scoredResults.length > 0) {
+        const insights = await literatureAPI.getSocialMediaInsights(scoredResults);
         setSocialInsights(insights);
 
+        // Count high-quality results (score >= 70)
+        const highQualityCount = scoredResults.filter(r => (r.qualityScore || 0) >= 70).length;
+
         toast.success(
-          `Found ${results.length} posts from ${socialPlatforms.length} platforms with sentiment analysis`
+          `Found ${scoredResults.length} posts (${highQualityCount} high-quality) from ${socialPlatforms.length} platforms`
         );
       } else {
         toast.info(
           'No social media results found. Try different platforms or queries.'
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Social media search error:', error);
-      toast.error('Social media search failed');
+
+      // Phase 10.8 Day 9: Platform-specific error messages
+      const failedPlatforms: string[] = [];
+      if (socialPlatforms.includes('instagram') && error.message?.includes('Instagram')) {
+        failedPlatforms.push('Instagram (API rate limit)');
+      }
+      if (socialPlatforms.includes('tiktok') && error.message?.includes('TikTok')) {
+        failedPlatforms.push('TikTok (API quota exceeded)');
+      }
+      if (socialPlatforms.includes('twitter') && error.message?.includes('Twitter')) {
+        failedPlatforms.push('Twitter/X (API authentication required)');
+      }
+
+      if (failedPlatforms.length > 0) {
+        toast.error(
+          `Social media search failed: ${failedPlatforms.join(', ')}`,
+          {
+            description: 'Some platforms may still have returned results.',
+            action: {
+              label: 'Retry',
+              onClick: () => handleSearchSocialMedia(),
+            },
+            duration: 5000,
+          }
+        );
+      } else {
+        toast.error('Social media search failed', {
+          description: error.message || 'Unknown error occurred.',
+          action: {
+            label: 'Retry',
+            onClick: () => handleSearchSocialMedia(),
+          },
+          duration: 5000,
+        });
+      }
     } finally {
       setLoadingSocial(false);
+      setLoadingInstagram(false);
+      setLoadingTikTok(false);
       isSearchingSocialRef.current = false;
     }
-  }, [query, socialPlatforms]);
+  }, [query, socialPlatforms, calculateQualityScore, getQualityTier]);
 
   // ===========================
   // MASTER SEARCH ORCHESTRATION
@@ -547,10 +731,18 @@ export function useAlternativeSources(
     socialInsights,
     loadingSocial,
 
+    // Phase 10.8 Day 9: Per-platform loading states
+    loadingInstagram,
+    loadingTikTok,
+
     // Search handlers
     handleSearchAlternativeSources,
     handleSearchSocialMedia,
     handleSearchAllSources,
+
+    // Phase 10.8 Day 9: AI Smart Curation functions
+    calculateQualityScore,
+    getQualityTier,
 
     // Utilities
     clearAll,

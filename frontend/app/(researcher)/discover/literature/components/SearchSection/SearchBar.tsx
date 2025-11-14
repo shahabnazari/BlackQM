@@ -258,7 +258,7 @@ export const SearchBar = memo(function SearchBar({
                   <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-purple-100 flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-purple-600" />
                     <span className="text-sm font-semibold text-purple-900">
-                      AI-Refined Questions (GPT-4)
+                      AI-Suggested Searches
                     </span>
                     {loadingSuggestions && (
                       <Loader2 className="w-3 h-3 animate-spin text-purple-600 ml-auto" />
