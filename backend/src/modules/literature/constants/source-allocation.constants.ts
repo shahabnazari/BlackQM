@@ -80,6 +80,7 @@ export const SOURCE_TIER_MAP: Record<LiteratureSource, SourceTier> = {
   // TIER 4: Aggregator - Multi-source, mixed quality
   // Phase 10.7 Day 5: Ordered by article count (highest first for efficiency)
   [LiteratureSource.GOOGLE_SCHOLAR]: SourceTier.TIER_4_AGGREGATOR, // 400M+ Google aggregator, all sources
+  [LiteratureSource.CORE]: SourceTier.TIER_4_AGGREGATOR,          // 250M+ CORE open access aggregator, 10k+ repositories
   [LiteratureSource.CROSSREF]: SourceTier.TIER_4_AGGREGATOR,      // 145M+ DOI registry, all publishers
   [LiteratureSource.ERIC]: SourceTier.TIER_4_AGGREGATOR,          // 1.7M+ Education research, mixed sources
 };

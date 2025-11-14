@@ -150,6 +150,13 @@ const ACADEMIC_DATABASES: AcademicDatabase[] = [
     category: 'Free',
   },
   {
+    id: 'core',
+    label: 'CORE',
+    icon: '🌍',
+    desc: '~250M papers • Open access aggregator from 10,000+ repositories',
+    category: 'Free',
+  },
+  {
     id: 'web_of_science',
     label: 'Web of Science',
     icon: '🌐',

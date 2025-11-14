@@ -93,6 +93,7 @@ const DEFAULT_ACADEMIC_DATABASES = [
   'ssrn',                // SSRN - Social science papers (1M+ papers, free RSS feeds)
   'crossref',            // CrossRef - DOI database (150M+ records, free REST API)
   'eric',                // ERIC - Education research (1.5M+ papers, free US Dept of Education API)
+  'core',                // CORE - Open access aggregator (250M+ papers, free CORE API)
   // REMOVED (Phase 10.7.10): biorxiv (220k), medrxiv (45k), chemrxiv (35k) - all under 500k papers
   // NOTE: 'google_scholar' removed - requires paid SerpAPI subscription
   // To enable Google Scholar, set SERPAPI_KEY in backend .env ($50-500/month)

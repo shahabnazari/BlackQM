@@ -129,6 +129,26 @@ export const ERICIcon: React.FC<IconProps> = ({ className = 'w-5 h-5' }) => (
   </svg>
 );
 
+// CORE - Globe with repository network (TEAL/GREEN theme)
+export const COREIcon: React.FC<IconProps> = ({ className = 'w-5 h-5' }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    {/* Globe with connected repositories - open access aggregator */}
+    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
+    <ellipse cx="12" cy="12" rx="5" ry="10" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    <path d="M2 12h20" stroke="currentColor" strokeWidth="1.5" />
+    <circle cx="12" cy="12" r="2.5" />
+    <circle cx="7" cy="7" r="1.5" />
+    <circle cx="17" cy="7" r="1.5" />
+    <circle cx="7" cy="17" r="1.5" />
+    <circle cx="17" cy="17" r="1.5" />
+  </svg>
+);
+
 // ============================================================================
 // PREMIUM/SUBSCRIPTION SOURCES (9)
 // ============================================================================
@@ -278,7 +298,7 @@ export const TaylorFrancisIcon: React.FC<IconProps> = ({
 // ============================================================================
 
 export const academicSourceIcons: Record<string, React.FC<IconProps>> = {
-  // Free & Open Access (10)
+  // Free & Open Access (11)
   pubmed: PubMedIcon,
   pmc: PMCIcon,
   arxiv: ArxivIcon,
@@ -286,7 +306,8 @@ export const academicSourceIcons: Record<string, React.FC<IconProps>> = {
   ssrn: SSRNIcon,
   crossref: CrossRefIcon,
   eric: ERICIcon,
-  
+  core: COREIcon,
+
   // Premium (9)
   google_scholar: GoogleScholarIcon,
   web_of_science: WebOfScienceIcon,

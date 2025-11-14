@@ -35,6 +35,8 @@ export enum LiteratureSource {
   PMC = 'pmc',
   // Phase 10.6 Day 5: ERIC - Education research database
   ERIC = 'eric',
+  // Phase 10.7.10: CORE - Open access aggregator (250M+ papers)
+  CORE = 'core',
   // Phase 10.6 Day 6: Web of Science - Premium academic database
   WEB_OF_SCIENCE = 'web_of_science',
   // Phase 10.6 Day 7: Scopus - Premium Elsevier database

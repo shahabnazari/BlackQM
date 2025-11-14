@@ -36,6 +36,8 @@ import { ArxivService } from './services/arxiv.service';
 import { PMCService } from './services/pmc.service';
 // Phase 10.6 Day 5: ERIC - Education research database
 import { ERICService } from './services/eric.service';
+// Phase 10.7.10: CORE - Open access aggregator
+import { CoreService } from './services/core.service';
 // Phase 10.6 Day 6: Web of Science - Premium academic database
 import { WebOfScienceService } from './services/web-of-science.service';
 // Phase 10.6 Day 7: Scopus - Premium Elsevier database
@@ -118,6 +120,8 @@ import { AIModule } from '../ai/ai.module';
     PMCService,
     // Phase 10.6 Day 5: ERIC - Education research database
     ERICService,
+    // Phase 10.7.10: CORE - Open access aggregator
+    CoreService,
     // Phase 10.6 Day 6: Web of Science - Premium academic database
     WebOfScienceService,
     // Phase 10.6 Day 7: Scopus - Premium Elsevier database
@@ -169,6 +173,8 @@ import { AIModule } from '../ai/ai.module';
     PMCService,
     // Phase 10.6 Day 5: ERIC - Education research database
     ERICService,
+    // Phase 10.7.10: CORE - Open access aggregator
+    CoreService,
     // Phase 10.6 Day 6: Web of Science - Premium academic database
     WebOfScienceService,
     // Phase 10.6 Day 7: Scopus - Premium Elsevier database

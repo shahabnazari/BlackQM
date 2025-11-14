@@ -37,6 +37,8 @@ import { ArxivService } from './services/arxiv.service';
 import { PMCService } from './services/pmc.service';
 // Phase 10.6 Day 5: ERIC - Education research database
 import { ERICService } from './services/eric.service';
+// Phase 10.7.10: CORE - Open access aggregator
+import { CoreService } from './services/core.service';
 // Phase 10.6 Day 6: Web of Science - Premium academic database
 import { WebOfScienceService } from './services/web-of-science.service';
 // Phase 10.6 Day 7: Scopus - Premium Elsevier database
@@ -114,6 +116,8 @@ export class LiteratureService implements OnModuleInit {
     private readonly pmcService: PMCService,
     // Phase 10.6 Day 5: ERIC - Education research database
     private readonly ericService: ERICService,
+    // Phase 10.7.10: CORE - Open access aggregator
+    private readonly coreService: CoreService,
     // Phase 10.6 Day 6: Web of Science - Premium academic database
     private readonly webOfScienceService: WebOfScienceService,
     // Phase 10.6 Day 7: Scopus - Premium Elsevier database
@@ -1180,6 +1184,9 @@ export class LiteratureService implements OnModuleInit {
       // Phase 10.6 Day 5: ERIC - Education research database
       case LiteratureSource.ERIC:
         return this.searchERIC(searchDto);
+      // Phase 10.7.10: CORE - Open access aggregator
+      case LiteratureSource.CORE:
+        return this.searchCore(searchDto);
       // Phase 10.6 Day 6: Web of Science - Premium academic database
       case LiteratureSource.WEB_OF_SCIENCE:
         return this.searchWebOfScience(searchDto);
@@ -1538,6 +1545,38 @@ export class LiteratureService implements OnModuleInit {
         return papers;
       } catch (error: any) {
         this.logger.error(`[ERIC] Wrapper error: ${error.message}`);
+        return [];
+      }
+    });
+  }
+
+  /**
+   * Phase 10.7.10: Thin wrapper for CORE service
+   * @see backend/src/modules/literature/services/core.service.ts
+   */
+  private async searchCore(searchDto: SearchLiteratureDto): Promise<Paper[]> {
+    // Phase 10 Days 2-3: Request deduplication via SearchCoalescer
+    const coalescerKey = `core:${JSON.stringify(searchDto)}`;
+    return await this.searchCoalescer.coalesce(coalescerKey, async () => {
+      // Phase 10 Days 2-3: Check quota before making API call
+      if (!this.quotaMonitor.canMakeRequest('core')) {
+        this.logger.warn(`🚫 [CORE] Quota exceeded - using cache instead`);
+        return [];
+      }
+
+      try {
+        // Call dedicated service (all business logic is there)
+        const papers = await this.coreService.search(searchDto.query, {
+          yearFrom: searchDto.yearFrom,
+          yearTo: searchDto.yearTo,
+          limit: searchDto.limit,
+        });
+
+        // Phase 10 Days 2-3: Record successful request
+        this.quotaMonitor.recordRequest('core');
+        return papers;
+      } catch (error: any) {
+        this.logger.error(`[CORE] Wrapper error: ${error.message}`);
         return [];
       }
     });

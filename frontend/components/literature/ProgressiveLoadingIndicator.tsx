@@ -27,7 +27,9 @@ import {
   Database,
   Filter,
   Shield,
+  HelpCircle,
 } from 'lucide-react';
+import { Tooltip } from '@/components/ui/tooltip';
 
 // ============================================================================
 // Constants
@@ -44,6 +46,7 @@ const SOURCE_DISPLAY_NAMES: Record<string, string> = {
   semantic_scholar: 'Semantic Scholar',
   crossref: 'CrossRef',
   eric: 'ERIC',
+  core: 'CORE',
   ssrn: 'SSRN',
   google_scholar: 'Google Scholar',
   web_of_science: 'Web of Science',
@@ -67,6 +70,7 @@ const SOURCE_DESCRIPTIONS: Record<string, string> = {
   semantic_scholar: 'AI-powered academic search (200M+ papers)',
   crossref: 'DOI registry across all disciplines (150M+ records)',
   eric: 'Education research database (1.5M+ papers)',
+  core: 'Open access aggregator from 10,000+ repositories (250M+ papers)',
   ssrn: 'Social science research network (1M+ papers)',
   google_scholar: 'Multi-source aggregator (400M+ papers)',
 };
@@ -530,15 +534,38 @@ export const ProgressiveLoadingIndicator: React.FC<
                       const sourceDescription = SOURCE_DESCRIPTIONS[source.toLowerCase()] || '';
 
                       return (
-                        <div key={source} className="flex items-center gap-2" title={sourceDescription}>
+                        <div key={source} className="flex items-center gap-2">
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
-                              <span className={`text-xs font-medium ${count === 0 ? 'text-amber-600' : 'text-gray-700'}`}>
+                              <span className={`text-xs font-medium ${count === 0 ? 'text-amber-600' : 'text-gray-700'} flex items-center gap-1`}>
                                 {displaySource}
                                 {count === 0 && (
-                                  <span className="ml-1.5 text-xs text-amber-600" title={`No results - ${sourceDescription || 'May not index content for this query'}`}>
-                                    ⚠️
-                                  </span>
+                                  <Tooltip
+                                    content={
+                                      <div className="max-w-xs">
+                                        <div className="font-semibold mb-1">{displaySource}</div>
+                                        <div className="text-xs">{sourceDescription || 'May not index content for this query'}</div>
+                                        <div className="text-xs mt-1 text-gray-300">This is normal - databases specialize in different fields.</div>
+                                      </div>
+                                    }
+                                    position="top"
+                                  >
+                                    <span className="inline-flex items-center cursor-help text-amber-600">
+                                      ⚠️
+                                    </span>
+                                  </Tooltip>
+                                )}
+                                {count > 0 && sourceDescription && (
+                                  <Tooltip
+                                    content={
+                                      <div className="max-w-xs text-xs">
+                                        {sourceDescription}
+                                      </div>
+                                    }
+                                    position="top"
+                                  >
+                                    <HelpCircle className="w-3 h-3 text-gray-400 cursor-help" />
+                                  </Tooltip>
                                 )}
                               </span>
                               <span className={`text-xs font-semibold ${count === 0 ? 'text-gray-400' : 'text-blue-600'}`}>
@@ -575,7 +602,7 @@ export const ProgressiveLoadingIndicator: React.FC<
                   <div className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
                     <div className="font-medium mb-1">⚠️ Some sources returned 0 papers</div>
                     <div className="text-amber-600">
-                      This is normal - databases specialize in different fields. Hover over the ⚠️ icon to see each source&apos;s specialty.
+                      This is normal - databases specialize in different fields. Hover over ⚠️ or <HelpCircle className="inline w-3 h-3" /> icons for details.
                     </div>
                   </div>
                 )}
@@ -691,34 +718,56 @@ export const ProgressiveLoadingIndicator: React.FC<
                            const countB = typeof b === 'number' ? b : b.papers;
                            return countB - countA;
                          })
-                         .map(([source, countData], index) => {
-                           const count = typeof countData === 'number' ? countData : countData.papers;
-                           const percentage = searchMetadata.totalCollected > 0
-                             ? (count / searchMetadata.totalCollected) * 100
-                             : 0;
-                           const displaySource = SOURCE_DISPLAY_NAMES[source.toLowerCase()] || source.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                           const sourceDescription = SOURCE_DESCRIPTIONS[source.toLowerCase()] || '';
-                           const isZeroPapers = count === 0;
+                        .map(([source, countData], index) => {
+                          const count = typeof countData === 'number' ? countData : countData.papers;
+                          const percentage = searchMetadata.totalCollected > 0
+                            ? (count / searchMetadata.totalCollected) * 100
+                            : 0;
+                          const displaySource = SOURCE_DISPLAY_NAMES[source.toLowerCase()] || source.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                          const sourceDescription = SOURCE_DESCRIPTIONS[source.toLowerCase()] || '';
+                          const isZeroPapers = count === 0;
 
-                           return (
-                             <motion.div
-                               key={source}
-                               initial={{ opacity: 0, x: -20 }}
-                               animate={{ opacity: 1, x: 0 }}
-                               transition={{ delay: 0.4 + index * 0.05 }}
-                               className="flex items-center gap-3"
-                               title={isZeroPapers ? `No results - ${sourceDescription || 'May not index content for this query'}` : sourceDescription}
-                             >
-                               <div className="flex-1">
-                                 <div className="flex items-center justify-between mb-1">
-                                   <span className={`text-xs font-medium ${isZeroPapers ? 'text-amber-600' : 'text-gray-700'}`}>
-                                     {displaySource}
-                                     {isZeroPapers && (
-                                       <span className="ml-1.5 text-xs text-amber-600" title={`${sourceDescription || 'Database'} - No matching papers for this query`}>
-                                         ⚠️
-                                       </span>
-                                     )}
-                                   </span>
+                          return (
+                            <motion.div
+                              key={source}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.4 + index * 0.05 }}
+                              className="flex items-center gap-3"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className={`text-xs font-medium ${isZeroPapers ? 'text-amber-600' : 'text-gray-700'} flex items-center gap-1`}>
+                                    {displaySource}
+                                    {isZeroPapers && (
+                                      <Tooltip
+                                        content={
+                                          <div className="max-w-xs">
+                                            <div className="font-semibold mb-1">{displaySource}</div>
+                                            <div className="text-xs">{sourceDescription || 'May not index content for this query'}</div>
+                                            <div className="text-xs mt-1 text-gray-300">This is normal - databases specialize in different fields.</div>
+                                          </div>
+                                        }
+                                        position="top"
+                                      >
+                                        <span className="inline-flex items-center cursor-help text-amber-600">
+                                          ⚠️
+                                        </span>
+                                      </Tooltip>
+                                    )}
+                                    {!isZeroPapers && sourceDescription && (
+                                      <Tooltip
+                                        content={
+                                          <div className="max-w-xs text-xs">
+                                            {sourceDescription}
+                                          </div>
+                                        }
+                                        position="top"
+                                      >
+                                        <HelpCircle className="w-3 h-3 text-gray-400 cursor-help" />
+                                      </Tooltip>
+                                    )}
+                                  </span>
                                    <span className={`text-xs font-bold ${isZeroPapers ? 'text-gray-400' : 'text-gray-900'}`}>
                                      {count.toLocaleString()}
                                    </span>
