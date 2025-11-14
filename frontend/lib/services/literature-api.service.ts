@@ -72,10 +72,22 @@ export interface ResearchGap {
   id: string;
   title: string;
   description: string;
-  relatedThemes: string[];
-  opportunityScore: number;
-  suggestedMethods: string[];
-  potentialImpact: string;
+  // Phase 10.7 Day 4: Enhanced fields from backend gap-analyzer.service.ts
+  keywords: string[];
+  relatedPapers: string[];
+  importance: number; // 0-10 scale
+  feasibility: number; // 0-10 scale
+  marketPotential: number; // 0-10 scale
+  suggestedMethodology?: string;
+  suggestedStudyDesign?: string;
+  estimatedImpact?: string;
+  trendDirection?: 'emerging' | 'growing' | 'stable' | 'declining';
+  confidenceScore: number; // 0-1 scale
+  // Legacy fields (may be deprecated)
+  relatedThemes?: string[];
+  opportunityScore?: number;
+  suggestedMethods?: string[];
+  potentialImpact?: string;
   fundingOpportunities?: string[];
   collaborators?: string[];
 }
@@ -232,8 +244,27 @@ class LiteratureAPIService {
     total: number;
     page: number;
     metadata?: {
+      // Phase 10.7 Day 6: TWO-STAGE FILTERING METADATA
+      stage1?: {
+        description: string;
+        totalCollected: number;
+        sourcesSearched: number;
+        sourceBreakdown: Record<string, { papers: number; duration: number; error?: string } | number>;
+        searchDuration: number;
+      };
+      stage2?: {
+        description: string;
+        startingPapers: number;
+        afterEnrichment: number;
+        afterRelevanceFilter: number;
+        afterQualityRanking: number;
+        finalSelected: number;
+        samplingApplied: boolean;
+        diversityEnforced: boolean;
+      };
+      // Legacy fields for backward compatibility
       totalCollected: number;
-      sourceBreakdown: Record<string, { papers: number; duration: number; error?: string }>;
+      sourceBreakdown: Record<string, { papers: number; duration: number; error?: string } | number>;
       uniqueAfterDedup: number;
       deduplicationRate: number;
       duplicatesRemoved: number;
@@ -244,6 +275,7 @@ class LiteratureAPIService {
       displayed: number;
       searchDuration: number;
       queryExpansion?: { original: string; expanded: string };
+      allocationStrategy?: any;
     };
   }> {
     try {
@@ -466,7 +498,8 @@ class LiteratureAPIService {
   // Export citations in various formats
   async exportCitations(
     paperIds: string[],
-    format: 'bibtex' | 'ris' | 'json' | 'apa' | 'mla'
+    format: 'bibtex' | 'ris' | 'json' | 'csv' | 'apa' | 'mla' | 'chicago',
+    includeAbstracts?: boolean
   ): Promise<{
     content: string;
     filename: string;
@@ -475,10 +508,11 @@ class LiteratureAPIService {
       const response = await this.api.post('/literature/export', {
         paperIds,
         format,
+        includeAbstracts,
       });
+      
       return response.data;
     } catch (error) {
-      console.error('Failed to export citations:', error);
       throw error;
     }
   }

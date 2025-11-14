@@ -34,7 +34,7 @@ function deduplicatePapersByID(papers: Paper[]): Paper[] {
 
 // Default filter values
 const defaultFilters: SearchFilters = {
-  yearFrom: 2020,
+  yearFrom: 2010, // Default to last 15 years of research
   yearTo: new Date().getFullYear(),
   sortBy: 'relevance',
   publicationType: 'all',
@@ -56,6 +56,20 @@ export interface ProgressiveLoadingState {
   averageQualityScore: number;
   status: 'idle' | 'loading' | 'complete' | 'error';
   errorMessage?: string;
+  // Phase 10.7 Day 6: Two-stage filtering
+  currentStage?: 1 | 2; // 1 = collecting from sources, 2 = quality filtering
+  visualPercentage?: number; // Smooth time-based percentage for animation (0-100)
+  stage1?: {
+    totalCollected: number;
+    sourcesSearched: number;
+    sourceBreakdown: Record<string, number | { papers: number; duration: number }>;
+  };
+  stage2?: {
+    startingPapers: number;
+    afterEnrichment: number;
+    afterRelevanceFilter: number;
+    finalSelected: number;
+  };
 }
 
 // ============================================================================
@@ -452,18 +466,27 @@ export const useLiteratureSearchStore = create<SearchState>()(
             targetPapers,
             averageQualityScore: 0,
             status: 'loading',
+            // Phase 10.7 Day 6: Start at Stage 1 (collecting from sources)
+            currentStage: 1,
+            // Omit stage1 and stage2 instead of setting to undefined (exactOptionalPropertyTypes compliance)
           },
           papers: [], // Clear existing papers
           loading: true,
         }),
 
-      updateProgressiveLoading: updates =>
-        set(state => ({
-          progressiveLoading: {
+      updateProgressiveLoading: updates => {
+        console.log('🔄 [Zustand] updateProgressiveLoading called with:', updates);
+        set(state => {
+          const newState = {
             ...state.progressiveLoading,
             ...updates,
-          },
-        })),
+          };
+          console.log('🔄 [Zustand] New progressiveLoading state:', newState);
+          return {
+            progressiveLoading: newState,
+          };
+        });
+      },
 
       completeProgressiveLoading: () =>
         set(state => ({

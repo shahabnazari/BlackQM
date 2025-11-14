@@ -88,10 +88,16 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
     cancelProgressiveLoading,
     progressiveLoading,
     setSearchMetadata, // Phase 10.6 Day 14.5: Store aggregated metadata
+    setShowSuggestions, // Phase 10.7.10: Close AI suggestions dropdown when search starts
   } = useLiteratureSearchStore();
 
   // Ref to track if search should be cancelled
   const isCancelledRef = useRef(false);
+
+  // 🎯 CRITICAL FIX: Refs to prevent animation restart and track animation state
+  const backendCompleteRef = useRef(false); // Backend completion flag
+  const animationStartedRef = useRef(false); // Prevents restart
+  const hasBackendDataRef = useRef(false); // Ensures real data before animation
 
   // ============================================================================
   // Quality Score Calculation
@@ -161,9 +167,12 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
         // - Batch 10 (page 10): papers 180-199
         const page = config.batchNumber;
 
+        // Phase 10.7 Day 5.2: Source selection is handled by useLiteratureSearch hook
+        // which calls handleSearch() that sets sources before progressive search starts
+        // Progressive search just needs to paginate, not re-select sources
         const searchParams: SearchLiteratureParams = {
           query,
-          sources: [], // Will use all sources
+          sources: [], // Empty = use backend's configured sources (already set by initial search)
           ...(appliedFilters.yearFrom && { yearFrom: appliedFilters.yearFrom }),
           ...(appliedFilters.yearTo && { yearTo: appliedFilters.yearTo }),
           ...(appliedFilters.minCitations !== undefined && {
@@ -224,12 +233,134 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
   );
 
   // ============================================================================
+  // SMOOTH UX + REAL NUMBERS: Time-based animation with real backend data
+  // ============================================================================
+
+  /**
+   * Smooth 30-second progress animation with beautiful heat map
+   * BUT counter shows REAL backend numbers (not estimates)
+   *
+   * Animation: 30 seconds smooth (0% → 50% → 100%)
+   * Counter: REAL numbers from backend (actual papers loaded)
+   */
+  const simulateSmoothProgress = useCallback((
+    targetPapers: number,
+    intervalRef: React.MutableRefObject<NodeJS.Timeout | null>,
+    backendCompleteRef: React.MutableRefObject<boolean>,
+    getRealPaperCount: () => number, // Function to get REAL count from backend
+    getStage1Metadata: () => any,
+    getStage2Metadata: () => any
+  ) => {
+    // 🚨 BUG FIX: Prevent animation restart
+    if (animationStartedRef.current) {
+      console.log(`⚠️  [Animation] Already running - preventing restart`);
+      return;
+    }
+
+    animationStartedRef.current = true;
+    const startTime = Date.now();
+    const STAGE1_DURATION = 15; // 15 seconds for Stage 1 (0-50%)
+    const STAGE2_DURATION = 15; // 15 seconds for Stage 2 (50-98%)
+    const TOTAL_DURATION = STAGE1_DURATION + STAGE2_DURATION;
+
+    console.log(`⏱️  [Animation] Started - 30 second journey with REAL numbers`);
+    console.log(`   Animation: Time-based | Counter: Real backend data`);
+    console.log(`   Protection: Animation restart prevented`);
+
+    let lastStage = 1;
+    let lastPercentage = 0; // 🎯 CRITICAL: Track last percentage to prevent backwards movement
+
+    intervalRef.current = setInterval(() => {
+      const elapsed = (Date.now() - startTime) / 1000;
+      let percentage: number;
+      let currentStage: 1 | 2;
+
+      // Calculate percentage based on time (smooth animation)
+      if (elapsed < STAGE1_DURATION) {
+        // Stage 1: 0% → 50% over 15 seconds (exponential ease-out)
+        const stage1Progress = elapsed / STAGE1_DURATION;
+        const eased = 1 - Math.pow(1 - stage1Progress, 3);
+        percentage = eased * 50;
+        currentStage = 1;
+      } else if (elapsed < TOTAL_DURATION) {
+        // Stage 2: 50% → 98% over 15 seconds
+        const stage2Progress = (elapsed - STAGE1_DURATION) / STAGE2_DURATION;
+        const eased = 1 - Math.pow(1 - stage2Progress, 3);
+        percentage = 50 + (eased * 48);
+        currentStage = 2;
+      } else {
+        percentage = 98;
+        currentStage = 2;
+      }
+
+      // Stage transition logging
+      if (currentStage !== lastStage) {
+        console.log(`\n🎬 STAGE TRANSITION: ${lastStage} → ${currentStage}`);
+        lastStage = currentStage;
+      }
+
+      // If backend finished, accelerate to 100%
+      if (backendCompleteRef.current && percentage < 100) {
+        const accelerationRate = 2;
+        percentage = Math.min(100, percentage + accelerationRate);
+      }
+
+      // 🚨 CRITICAL BUG FIX: Ensure percentage NEVER decreases (prevents shrinking back)
+      percentage = Math.max(lastPercentage, percentage);
+      lastPercentage = percentage;
+
+      // 🎯 KEY FIX: Use REAL paper count from backend, not estimates!
+      const realPaperCount = getRealPaperCount();
+      const stage1Meta = getStage1Metadata();
+      const stage2Meta = getStage2Metadata();
+
+      // Track if we have backend data
+      if (stage1Meta && stage1Meta.totalCollected > 0) {
+        hasBackendDataRef.current = true;
+      }
+
+      // Update UI with smooth animation + real numbers
+      updateProgressiveLoading({
+        loadedPapers: realPaperCount, // REAL count, not interpolated!
+        currentStage,
+        visualPercentage: percentage, // Smooth time-based percentage for animation
+        ...(stage1Meta && { stage1: stage1Meta }),
+        ...(stage2Meta && { stage2: stage2Meta }),
+      });
+
+      // Stop when 100%
+      if (percentage >= 100) {
+        console.log(`✅ Animation complete at 100%`);
+        updateProgressiveLoading({
+          loadedPapers: realPaperCount,
+          currentStage: 2,
+          visualPercentage: 100,
+        });
+
+        setTimeout(() => {
+          completeProgressiveLoading();
+          // 🎯 CRITICAL: Reset animation flag so next search can start
+          animationStartedRef.current = false;
+          backendCompleteRef.current = false;
+          hasBackendDataRef.current = false;
+        }, 300);
+
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      }
+    }, 100);
+  }, [updateProgressiveLoading, completeProgressiveLoading]);
+
+  // ============================================================================
   // Progressive Search Execution
   // ============================================================================
 
   /**
    * Execute progressive search: Dynamic paper count based on query complexity
    * Phase 10.6 Day 14.9: 500 (BROAD) / 1000 (SPECIFIC) / 1500 (COMPREHENSIVE)
+   * Phase 10.7 Day 6: Added smooth progress simulation for better UX
    */
   const executeProgressiveSearch = useCallback(async () => {
     // Validation
@@ -239,8 +370,17 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
       return;
     }
 
+    // Phase 10.7.10: Close AI suggestions dropdown when search starts
+    setShowSuggestions(false);
+
     // Reset cancellation flag
     isCancelledRef.current = false;
+
+    // 🚨 CRITICAL FIX: Reset animation refs at START of each search
+    console.log('🔄 [useProgressiveSearch] Resetting animation refs for new search');
+    animationStartedRef.current = false;
+    backendCompleteRef.current = false;
+    hasBackendDataRef.current = false;
 
     // Start progressive loading with default target (will be updated after first batch)
     const initialTarget = BATCH_CONFIGS.length * BATCH_SIZE;
@@ -255,10 +395,26 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
 
     startProgressiveLoading(initialTarget);
 
+    // Start smooth animation with REAL numbers from backend
+    backendCompleteRef.current = false;
+    const progressIntervalRef = { current: null as NodeJS.Timeout | null };
+
     let allPapers: Paper[] = [];
-    let currentOffset = 0;
-    // Phase 10.6 Day 14.5: Store metadata (will use from first batch since all pages return same metadata)
+    let stage1Metadata: any = null;
+    let stage2Metadata: any = null;
     let searchMetadata: any = null;
+    let animationStarted = false; // 🚨 CRITICAL FIX: Track if animation has started
+
+    // Functions to get REAL backend data (closures)
+    const getRealPaperCount = () => allPapers.length;
+    const getStage1Metadata = () => stage1Metadata;
+    const getStage2Metadata = () => stage2Metadata;
+
+    // 🚨 CRITICAL FIX: Don't start animation yet - wait for backend data first!
+    // Animation will start after first batch returns with stage1/stage2 metadata
+    // This ensures counter and progress bar are always in sync
+
+    let currentOffset = 0;
 
     try {
       // Execute batches sequentially
@@ -268,6 +424,10 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
         // Check if cancelled before each batch
         if (isCancelledRef.current) {
           console.log('⚠️ [useProgressiveSearch] Search cancelled by user');
+          if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current);
+            progressIntervalRef.current = null;
+          }
           toast.info('Search cancelled');
           cancelProgressiveLoading();
           return;
@@ -290,6 +450,7 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
         console.log(`📊 [Batch ${config.batchNumber}] Metadata:`, batchMetadata);
 
         // Phase 10.6 Day 14.5: Store metadata from first batch
+        // Phase 10.7 Day 6: Extract two-stage filtering information
         // NOTE: Each paginated page returns the SAME metadata (for full search), so we only need it once
         if (batchMetadata && !searchMetadata) {
           console.log(`✓ [Batch ${config.batchNumber}] Storing metadata (first batch with metadata)`);
@@ -297,6 +458,87 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
           console.log(`  totalCollected: ${searchMetadata.totalCollected}`);
           console.log(`  uniqueAfterDedup: ${searchMetadata.uniqueAfterDedup}`);
           console.log(`  sourceBreakdown:`, Object.keys(searchMetadata.sourceBreakdown));
+          
+          // Phase 10.7 Day 6: Update progressive loading with stage information
+          // 🚨 CRITICAL FIX: Add fallback if stage1/stage2 are missing (robustness)
+          if (searchMetadata.stage1 && searchMetadata.stage2) {
+            console.log(`\n📤 [SENDING TO FRONTEND]`);
+            console.log(`  Stage 1: ${searchMetadata.stage1.totalCollected.toLocaleString()} collected from ${searchMetadata.stage1.sourcesSearched} sources`);
+            console.log(`  Stage 2: ${searchMetadata.stage2.finalSelected.toLocaleString()} final papers selected`);
+            console.log(`  ✅ Storing in Zustand store...`);
+            
+            // Store stage metadata (but stage transition will be handled dynamically)
+            updateProgressiveLoading({
+              stage1: searchMetadata.stage1,
+              stage2: searchMetadata.stage2,
+            });
+            
+            console.log(`  ✅ Data stored! Counter will update on next render.`);
+
+            // Also store stage metadata in closures for animation
+            stage1Metadata = searchMetadata.stage1;
+            stage2Metadata = searchMetadata.stage2;
+          } else {
+            // 🚨 FALLBACK: Backend didn't send stage1/stage2, construct from available data
+            console.log(`\n⚠️  [FALLBACK] Backend missing stage1/stage2 metadata - constructing from available data`);
+            console.log(`  searchMetadata.sourceBreakdown:`, searchMetadata.sourceBreakdown);
+
+            const totalCollected = searchMetadata.totalCollected || searchMetadata.uniqueAfterDedup || batchPapers.length;
+            const sourcesSearched = searchMetadata.sourceBreakdown ? Object.keys(searchMetadata.sourceBreakdown).length : 0;
+            const finalSelected = Math.min(initialTarget, totalCollected); // Estimate final based on initial target
+
+            console.log(`  Constructed Stage 1: ${totalCollected.toLocaleString()} papers from ${sourcesSearched} sources`);
+            console.log(`  Constructed Stage 2: ${finalSelected.toLocaleString()} final papers (estimated)`);
+
+            // Convert sourceBreakdown from backend format to component format if needed
+            const convertedSourceBreakdown: Record<string, number | { papers: number; duration: number }> = {};
+            if (searchMetadata.sourceBreakdown) {
+              Object.entries(searchMetadata.sourceBreakdown).forEach(([source, data]) => {
+                convertedSourceBreakdown[source] = data; // Keep as-is (already correct format)
+              });
+            }
+            console.log(`  Converted sourceBreakdown:`, convertedSourceBreakdown);
+
+            stage1Metadata = {
+              totalCollected,
+              sourcesSearched,
+              sourceBreakdown: convertedSourceBreakdown
+            };
+            
+            stage2Metadata = {
+              startingPapers: totalCollected,
+              afterEnrichment: totalCollected,
+              afterRelevanceFilter: finalSelected,
+              finalSelected
+            };
+            
+            // Store in Zustand
+            updateProgressiveLoading({
+              stage1: stage1Metadata,
+              stage2: stage2Metadata,
+            });
+            
+            console.log(`  ✅ Fallback data stored! Animation can proceed.`);
+          }
+
+          // 🚨 CRITICAL FIX: NOW start animation (we have real backend data!)
+          if (!animationStarted && stage1Metadata && stage2Metadata) {
+            console.log(`\n🎬 [ANIMATION START] Backend data received - starting smooth animation NOW`);
+            console.log(`   Stage 1 Max: ${stage1Metadata.totalCollected.toLocaleString()}`);
+            console.log(`   Stage 2 Final: ${stage2Metadata.finalSelected.toLocaleString()}`);
+            
+            simulateSmoothProgress(
+              initialTarget,
+              progressIntervalRef,
+              backendCompleteRef,
+              getRealPaperCount,
+              getStage1Metadata,
+              getStage2Metadata
+            );
+            
+            animationStarted = true;
+            console.log(`   ✅ Animation started with REAL data - counter will be in sync!`);
+          }
           
           // Phase 10.6 Day 14.9: Adjust batch configs based on backend target
           if ((searchMetadata as any).allocationStrategy?.targetPaperCount) {
@@ -312,11 +554,36 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
             if (targetToLoad !== BATCH_CONFIGS.length * BATCH_SIZE) {
               BATCH_CONFIGS = generateBatchConfigs(targetToLoad);
               console.log(`✅ [Dynamic Adjustment] Updated to ${BATCH_CONFIGS.length} batches (${targetToLoad} papers total)`);
-              
-              // Update progressive loading target
+
+              // 🚨 CRITICAL FIX: Reset animation lock BEFORE restarting
+              console.log(`🔄 [Dynamic Adjustment] Clearing animation lock for restart...`);
+              animationStartedRef.current = false; // ← UNLOCK!
+
+              // Stop current animation
+              if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
+                progressIntervalRef.current = null;
+              }
+
               startProgressiveLoading(targetToLoad);
+
+              // Restart animation with new target (lock is now cleared, so it will work!)
+              simulateSmoothProgress(
+                targetToLoad,
+                progressIntervalRef,
+                backendCompleteRef,
+                getRealPaperCount,
+                getStage1Metadata,
+                getStage2Metadata
+              );
+
+              console.log(`✅ [Dynamic Adjustment] Restarted animation with new target: ${targetToLoad} papers`);
             }
           }
+
+          // Store stage metadata for real numbers in counter
+          stage1Metadata = searchMetadata.stage1;
+          stage2Metadata = searchMetadata.stage2;
           
           console.log(`  Full metadata:`, JSON.stringify(searchMetadata, null, 2));
         } else if (!batchMetadata) {
@@ -342,9 +609,20 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
         // Calculate quality score
         const avgQuality = calculateAverageQualityScore(allPapers);
 
-        // Update progress
+        // Log backend progress (animation shows smooth progress, this is real data)
+        const currentTarget = BATCH_CONFIGS.length * BATCH_SIZE;
+        const backendPercentage = (allPapers.length / currentTarget) * 100;
+
+        console.log(
+          `✅ [Batch ${config.batchNumber}/${BATCH_CONFIGS.length}] ` +
+          `Backend: ${allPapers.length.toLocaleString()}/${currentTarget.toLocaleString()} papers ` +
+          `(${backendPercentage.toFixed(1)}%) | ` +
+          `Avg Quality: ${avgQuality.toFixed(1)}/100 | ` +
+          `This batch: +${batchPapers.length} papers`
+        );
+
+        // Update quality score (animation handles loadedPapers from getRealPaperCount)
         updateProgressiveLoading({
-          loadedPapers: allPapers.length,
           averageQualityScore: avgQuality,
         });
 
@@ -354,11 +632,7 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
           avgQuality,
         });
 
-        // Show toast for batch completion
-        toast.success(
-          `Loaded ${allPapers.length}/${BATCH_CONFIGS.length * BATCH_SIZE} papers (Avg Quality: ${avgQuality}/100)`,
-          { duration: 2000 }
-        );
+        // Phase 10.7 Day 6: Removed batch completion toasts - too spammy, progress bar shows this
       }
 
       // All batches complete
@@ -373,24 +647,59 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
       }
 
       setTotalResults(allPapers.length);
-      completeProgressiveLoading();
+
+      // Signal backend complete (animation will accelerate to 100%)
+      backendCompleteRef.current = true;
+
+      console.log('\n' + '█'.repeat(80));
+      console.log('🎯 BACKEND COMPLETE - All Data Loaded');
+      console.log('█'.repeat(80));
+      console.log(`📚 Total papers loaded: ${allPapers.length}`);
+      console.log(`⭐ Average quality: ${finalQuality.toFixed(1)}/100`);
+      console.log(`🎬 Animation will accelerate to 100% (smooth completion)`);
+      console.log('█'.repeat(80) + '\n');
+
+      // Animation will naturally reach 100% and stop itself
+      // Counter already shows real numbers via getRealPaperCount closure
 
       console.log('='.repeat(80));
       console.log('✅ [useProgressiveSearch] Progressive search COMPLETE!');
       console.log(`📚 Total papers loaded: ${allPapers.length}`);
       console.log(`⭐ Average quality: ${finalQuality}/100`);
       console.log(`📊 Search metadata:`, searchMetadata);
+      
+      // Phase 10.7 Day 6: Comprehensive UX Timeline Analysis
+      if (searchMetadata?.stage1 && searchMetadata?.stage2) {
+        console.log('\n⏱️  UX TIMELINE ANALYSIS:');
+        console.log('─────────────────────────────────────────');
+        console.log(`Stage 1 (Collection):`);
+        console.log(`  • Sources searched: ${searchMetadata.stage1.sourcesSearched}`);
+        console.log(`  • Papers collected: ${searchMetadata.stage1.totalCollected.toLocaleString()}`);
+        console.log(`  • Duration: ${(searchMetadata.searchDuration / 1000).toFixed(1)}s`);
+        console.log(`\nStage 2 (Filtering):`);
+        console.log(`  • Starting papers: ${searchMetadata.stage2.startingPapers.toLocaleString()}`);
+        console.log(`  • After enrichment: ${searchMetadata.stage2.afterEnrichment.toLocaleString()}`);
+        console.log(`  • After relevance: ${searchMetadata.stage2.afterRelevanceFilter.toLocaleString()}`);
+        console.log(`  • Final selected: ${searchMetadata.stage2.finalSelected.toLocaleString()}`);
+        console.log(`\n📊 Efficiency:`);
+        console.log(`  • Selection rate: ${((searchMetadata.stage2.finalSelected / searchMetadata.stage1.totalCollected) * 100).toFixed(1)}%`);
+        console.log(`  • Papers/second: ${(searchMetadata.stage2.finalSelected / (searchMetadata.searchDuration / 1000)).toFixed(1)}`);
+      }
+      
       console.log('='.repeat(80));
 
-      toast.success(
-        `🎉 Loaded ${allPapers.length} high-quality papers (Avg: ${finalQuality}/100)!`,
-        { duration: 5000 }
-      );
+      // Phase 10.7 Day 6: Removed success toast - completion celebration in UI is enough
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown search error';
 
       console.error('❌ [useProgressiveSearch] Search failed:', error);
+
+      // Clean up animation on error
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
 
       // Update state to show error
       updateProgressiveLoading({
@@ -409,8 +718,6 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
           { duration: 4000 }
         );
       }
-    } finally {
-      // No longer using logger.group, so no groupEnd needed
     }
   }, [
     query,
@@ -420,9 +727,11 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
     cancelProgressiveLoading,
     addPapers,
     setTotalResults,
-    setSearchMetadata, // Phase 10.6 Day 14.5
+    setSearchMetadata,
+    setShowSuggestions,
     executeBatch,
     calculateAverageQualityScore,
+    simulateSmoothProgress, // Smooth animation with real numbers
   ]);
 
   // ============================================================================
