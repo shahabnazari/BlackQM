@@ -82,6 +82,7 @@
 
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
@@ -130,8 +131,20 @@ export class PubMedService {
   private readonly ESEARCH_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi';
   private readonly EFETCH_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
   private readonly OPENALEX_BASE_URL = 'https://api.openalex.org/works';
+  private readonly apiKey: string;
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {
+    // Phase 10.7.10: NCBI API key from environment (increases rate limit from 3/sec to 10/sec)
+    this.apiKey = this.configService.get<string>('NCBI_API_KEY') || '';
+    if (this.apiKey) {
+      this.logger.log('[PubMed] NCBI API key configured - using enhanced rate limits (10 req/sec)');
+    } else {
+      this.logger.warn('[PubMed] No NCBI API key - using default rate limits (3 req/sec)');
+    }
+  }
 
   /**
    * Search PubMed database using NCBI E-utilities
@@ -161,7 +174,7 @@ export class PubMedService {
       // STEP 1: Search for PubMed IDs using esearch
       // ========================================================================
       // 📝 TO ADD FILTERS: Update searchParams object below
-      const searchParams = {
+      const searchParams: any = {
         db: 'pubmed',
         term: query,
         retmode: 'json',
@@ -169,6 +182,11 @@ export class PubMedService {
         // 📝 TO ADD DATE FILTER: Add mindate/maxdate parameters
         // Example: mindate: '2020/01/01', maxdate: '2023/12/31'
       };
+
+      // Phase 10.7.10: Add API key if configured (increases rate limit 3→10 req/sec)
+      if (this.apiKey) {
+        searchParams.api_key = this.apiKey;
+      }
 
       const searchResponse = await firstValueFrom(
         this.httpService.get(this.ESEARCH_URL, {
@@ -211,12 +229,17 @@ export class PubMedService {
           `[PubMed] Fetching batch ${batchIndex + 1}/${batches.length} (${batch.length} IDs)...`
         );
 
-        const fetchParams = {
+        const fetchParams: any = {
           db: 'pubmed',
           id: batch.join(','),
           retmode: 'xml',
           rettype: 'abstract',
         };
+
+        // Phase 10.7.10: Add API key if configured
+        if (this.apiKey) {
+          fetchParams.api_key = this.apiKey;
+        }
 
         const fetchResponse = await firstValueFrom(
           this.httpService.get(this.EFETCH_URL, {

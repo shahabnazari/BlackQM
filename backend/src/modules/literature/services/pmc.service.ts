@@ -83,6 +83,7 @@
 
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
@@ -105,8 +106,20 @@ export class PMCService {
   private readonly logger = new Logger(PMCService.name);
   private readonly ESEARCH_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi';
   private readonly EFETCH_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
+  private readonly apiKey: string;
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {
+    // Phase 10.7.10: NCBI API key from environment (increases rate limit from 3/sec to 10/sec)
+    this.apiKey = this.configService.get<string>('NCBI_API_KEY') || '';
+    if (this.apiKey) {
+      this.logger.log('[PMC] NCBI API key configured - using enhanced rate limits (10 req/sec)');
+    } else {
+      this.logger.warn('[PMC] No NCBI API key - using default rate limits (3 req/sec)');
+    }
+  }
 
   /**
    * Search PubMed Central database using NCBI E-utilities
@@ -150,6 +163,11 @@ export class PMCService {
         searchParams.term += ' AND open access[filter]';
       }
 
+      // Phase 10.7.10: Add API key if configured (increases rate limit 3→10 req/sec)
+      if (this.apiKey) {
+        searchParams.api_key = this.apiKey;
+      }
+
       const searchResponse = await firstValueFrom(
         this.httpService.get(this.ESEARCH_URL, {
           params: searchParams,
@@ -191,12 +209,17 @@ export class PMCService {
           `[PMC] Fetching batch ${batchIndex + 1}/${batches.length} (${batch.length} IDs)...`
         );
 
-        const fetchParams = {
+        const fetchParams: any = {
           db: 'pmc',
           id: batch.join(','),
           retmode: 'xml',
           rettype: 'full',
         };
+
+        // Phase 10.7.10: Add API key if configured
+        if (this.apiKey) {
+          fetchParams.api_key = this.apiKey;
+        }
 
         const fetchResponse = await firstValueFrom(
           this.httpService.get(this.EFETCH_URL, {
