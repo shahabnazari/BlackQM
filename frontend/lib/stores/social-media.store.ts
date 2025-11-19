@@ -16,6 +16,7 @@ import { devtools, persist } from 'zustand/middleware';
 export type SocialPlatform =
   | 'instagram'
   | 'tiktok'
+  | 'youtube'
   | 'twitter'
   | 'reddit'
   | 'linkedin'

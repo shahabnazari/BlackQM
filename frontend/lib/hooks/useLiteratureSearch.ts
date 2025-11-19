@@ -1,4 +1,31 @@
 /**
+ * ⚠️ MANDATORY READING BEFORE MODIFYING THIS FILE ⚠️
+ *
+ * READ FIRST: Main Docs/PHASE_TRACKER_PART3.md
+ * Section: "📖 LITERATURE PAGE DEVELOPMENT PRINCIPLES (MANDATORY FOR ALL FUTURE WORK)"
+ * Location: Lines 4092-4244 (RIGHT BEFORE Phase 10.7)
+ *
+ * This hook is part of the Literature Discovery Page (/discover/literature)
+ * ALL modifications must follow 10 enterprise-grade principles documented in Phase Tracker Part 3
+ *
+ * Key Requirements for Hook Layer:
+ * - ✅ Single Responsibility: Manage ONE feature's state (literature search only)
+ * - ✅ Hook-based state management (useState, useEffect, useCallback)
+ * - ✅ NO business logic (business logic belongs in Service layer)
+ * - ✅ API calls through dedicated API service layer only
+ * - ✅ Type safety: strict TypeScript, explicit return types, no any types
+ * - ✅ Error handling: user-friendly messages, no silent failures
+ * - ✅ Zero TypeScript errors (MANDATORY before commit)
+ *
+ * Architecture Pattern (Hook Layer Position):
+ * User → Component → **[HOOK]** → API Service → Controller → Main Service → Source Services → External APIs
+ *
+ * Reference: IMPLEMENTATION_GUIDE_PART6.md for hook implementation patterns
+ *
+ * ⚠️ DO NOT add business logic here. Read the principles first. ⚠️
+ */
+
+/**
  * Literature Search Hook - Phase 10.1 Day 5
  *
  * Enterprise-grade hook for managing academic literature search operations.
@@ -31,7 +58,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useLiteratureSearchStore } from '@/lib/stores/literature-search.store';
-import { literatureAPI } from '@/lib/services/literature-api.service';
+import { useProgressiveSearch } from './useProgressiveSearch';
 
 /**
  * Query correction message structure
@@ -46,7 +73,7 @@ export interface QueryCorrectionMessage {
  */
 export interface UseLiteratureSearchConfig {
   /** Callback when search completes successfully */
-  onSearchSuccess?: (paperCount: number, total: number) => void;
+  onSearchSuccess?: (paperCount: number, total: number, papers: any[]) => void;
   /** Callback when search fails */
   onSearchError?: (error: Error) => void;
   /** Auto-select all papers after search (default: true) */
@@ -80,33 +107,13 @@ export interface UseLiteratureSearchReturn {
   appliedFilters: any;
 }
 
-// Default academic databases - Phase 10.6 Day 14.3: Truly free sources only (no API keys required)
-// BUG FIX #1 (Day 14.2): Changed 'semantic-scholar' to 'semantic_scholar' to match backend enum
-// Phase 10.7.10: Removed deprecated sources (<500k papers): biorxiv, medrxiv, chemrxiv
-// BUG FIX #2 (Day 14.3): Removed 'google_scholar' - requires paid SERPAPI_KEY ($50-500/month)
-// ENHANCEMENT: High-quality sources with 500k+ papers
-const DEFAULT_ACADEMIC_DATABASES = [
-  'pubmed',              // PubMed - Medical/life sciences (36M+ papers, free NCBI API)
-  'pmc',                 // PubMed Central - Free full-text (8M+ articles, free NCBI API)
-  'arxiv',               // ArXiv - Physics/Math/CS preprints (2M+ papers, free API)
-  'semantic_scholar',    // Semantic Scholar - CS/interdisciplinary (200M+ papers, free S2 API)
-  'ssrn',                // SSRN - Social science papers (1M+ papers, free RSS feeds)
-  'crossref',            // CrossRef - DOI database (150M+ records, free REST API)
-  'eric',                // ERIC - Education research (1.5M+ papers, free US Dept of Education API)
-  'core',                // CORE - Open access aggregator (250M+ papers, free CORE API)
-  'springer',            // SpringerLink - Open access STM (15M+ papers, free Springer API)
-  // REMOVED (Phase 10.7.10): biorxiv (220k), medrxiv (45k), chemrxiv (35k) - all under 500k papers
-  // NOTE: 'google_scholar' removed - requires paid SerpAPI subscription
-  // To enable Google Scholar, set SERPAPI_KEY in backend .env ($50-500/month)
-];
-
 /**
  * Hook for managing literature search operations
  *
  * **Architecture:**
  * - Wraps Zustand store for global state management
  * - Adds search-specific logic and handlers
- * - Provides database selection (not in Zustand)
+ * - Database selection now in Zustand (Phase 10.7.10: persisted in localStorage)
  * - Handles query correction notifications
  *
  * @param {UseLiteratureSearchConfig} config - Configuration options
@@ -118,7 +125,7 @@ export function useLiteratureSearch(
   const {
     onSearchSuccess,
     onSearchError,
-    autoSelectPapers = true,
+    // autoSelectPapers handled by page.tsx after progressive search completes
     // autoSwitchToResults not implemented yet - reserved for future use
   } = config;
 
@@ -127,56 +134,54 @@ export function useLiteratureSearch(
   // ===========================
 
   // Local state (not in Zustand)
-  const [academicDatabases, setAcademicDatabases] = useState<string[]>(
-    DEFAULT_ACADEMIC_DATABASES
-  );
   const [queryCorrectionMessage, setQueryCorrectionMessage] =
     useState<QueryCorrectionMessage | null>(null);
 
-  // Zustand store state and actions
+  // Zustand store state and actions (Phase 10.7.10: academicDatabases moved to Zustand)
   const {
     query,
     papers,
     loading,
     totalResults,
-    currentPage,
     filters,
     appliedFilters,
-    // setQuery, setCurrentPage - not used, only reading
-    setPapers,
-    setLoading,
-    setTotalResults,
-    getAppliedFilterCount,
-    setSearchMetadata, // Phase 10.6 Day 14.5: Store search transparency data
-    setShowSuggestions, // Phase 10.7.10: Close AI suggestions dropdown when search starts
+    academicDatabases, // Phase 10.7.10: Now from Zustand store (persisted in localStorage)
+    setAcademicDatabases, // Phase 10.7.10: Action to update source selection
   } = useLiteratureSearchStore();
 
   // Prevent duplicate search requests
   const isSearchingRef = useRef(false);
+
+  // Progressive search integration (Phase 10.1 Day 7)
+  const { executeProgressiveSearch, isSearching: progressiveSearching } = useProgressiveSearch();
 
   // ===========================
   // SEARCH OPERATIONS
   // ===========================
 
   /**
-   * Execute academic literature search
+   * Execute academic literature search with progressive loading
+   *
+   * **Phase 10.1 Day 7: Progressive Loading Integration**
+   * Now uses progressive search hook to load papers in batches with:
+   * - Real-time progress bar with source breakdown
+   * - Quality score tracking
+   * - Two-stage filtering visualization
+   * - Smooth 30-second animation
    *
    * **Features:**
    * - Validates query before searching
-   * - Applies all filters from Zustand store
-   * - Handles query auto-correction
+   * - Delegates to progressive search for execution
    * - Auto-selects papers for extraction
-   * - Provides helpful error messages based on filters
+   * - Maintains backward compatibility with callbacks
    * - Prevents duplicate concurrent searches
    *
    * **Flow:**
    * 1. Validate query
-   * 2. Build search parameters with filters
-   * 3. Call API
-   * 4. Handle query correction
-   * 5. Update state with results
-   * 6. Auto-select papers (if enabled)
-   * 7. Show appropriate toast messages
+   * 2. Prevent duplicate searches
+   * 3. Execute progressive search (handles all loading, progress, metadata)
+   * 4. Trigger callbacks for success/error
+   * 5. Auto-select papers (handled by page.tsx)
    */
   const handleSearch = useCallback(async () => {
     // Input validation
@@ -186,183 +191,60 @@ export function useLiteratureSearch(
     }
 
     // Prevent duplicate searches
-    if (isSearchingRef.current) {
+    if (isSearchingRef.current || progressiveSearching) {
       console.log(
         '⏳ Search already in progress, skipping duplicate request...'
       );
       return;
     }
 
-    // Phase 10.7.10: Close AI suggestions dropdown when search starts
-    setShowSuggestions(false);
-
     isSearchingRef.current = true;
-    setLoading(true);
 
     try {
       console.log('='.repeat(80));
-      console.log('🔍 SEARCH START');
+      console.log('🔍 SEARCH START (Progressive Loading)');
       console.log('Query:', query);
       console.log('Applied Filters:', appliedFilters);
-      console.log('🔍 [DEBUG] Selected Sources (academicDatabases):', academicDatabases);
-      console.log('🔍 [DEBUG] Sources count:', academicDatabases.length);
-      console.log('🔍 [DEBUG] Sources type:', typeof academicDatabases);
-      console.log('🔍 [DEBUG] Is Array:', Array.isArray(academicDatabases));
-      console.log('🔍 [DEBUG] Sources JSON:', JSON.stringify(academicDatabases));
-
-      // Build search parameters with filters
-      const searchParams = {
-        query,
-        sources: academicDatabases,
-        ...(appliedFilters.yearFrom && { yearFrom: appliedFilters.yearFrom }),
-        ...(appliedFilters.yearTo && { yearTo: appliedFilters.yearTo }),
-        ...(appliedFilters.minCitations !== undefined && {
-          minCitations: appliedFilters.minCitations,
-        }),
-        ...(appliedFilters.publicationType !== 'all'
-          ? { publicationType: appliedFilters.publicationType }
-          : {}),
-        ...(appliedFilters.author &&
-          appliedFilters.author.trim().length > 0 && {
-            author: appliedFilters.author.trim(),
-            authorSearchMode: appliedFilters.authorSearchMode,
-          }),
-        // Enhanced sorting with quality metrics
-        ...(appliedFilters.sortBy !== undefined && {
-          sortByEnhanced: appliedFilters.sortBy,
-        }),
-        page: currentPage,
-        limit: 20,
-        includeCitations: true,
-        // Enterprise research-grade: 100-word minimum abstract
-        minAbstractLength: 100,
-      };
-
-      console.log('📤 Sending search params:', searchParams);
-      console.log('📤 [DEBUG] searchParams.sources:', searchParams.sources);
-      console.log('📤 [DEBUG] searchParams.sources type:', typeof searchParams.sources);
-      console.log('📤 [DEBUG] searchParams.sources length:', searchParams.sources?.length);
-
-      const result = await literatureAPI.searchLiterature(searchParams);
-
-      console.log('✅ Search result received:', result);
-      console.log('📚 Papers array:', result.papers);
-      console.log('📚 Papers count:', result.papers?.length);
-      console.log('📈 Total results:', result.total);
-      console.log('📊 Metadata:', result.metadata); // Phase 10.6 Day 14.5
+      console.log('Selected Sources:', academicDatabases);
       console.log('='.repeat(80));
 
-      // Phase 10.6 Day 14.5: Store search metadata for transparency
-      if (result.metadata) {
-        console.log('💾 Storing search metadata:', result.metadata);
-        setSearchMetadata(result.metadata as any); // Cast needed for type compatibility
-      }
+      // Execute progressive search (handles all loading, progress, metadata, toasts)
+      // This will:
+      // - Show progress bar with source breakdown
+      // - Load papers in batches
+      // - Update store with results
+      // - Display completion summary
+      await executeProgressiveSearch();
 
-      // Check if query was auto-corrected (Google-like UX)
-      if ((result as any).correctedQuery && (result as any).originalQuery) {
-        setQueryCorrectionMessage({
-          original: (result as any).originalQuery,
-          corrected: (result as any).correctedQuery,
-        });
-      } else {
-        setQueryCorrectionMessage(null);
-      }
+      // Get results from store (progressive search updates it)
+      const finalPapers = useLiteratureSearchStore.getState().papers;
+      const finalTotal = useLiteratureSearchStore.getState().totalResults;
 
-      // Check if filters are too restrictive (no results)
-      if (result.total === 0 && getAppliedFilterCount() > 0) {
-        const hasStrictFilters =
-          (appliedFilters.minCitations && appliedFilters.minCitations > 0) ||
-          (appliedFilters.yearFrom &&
-            appliedFilters.yearFrom >= new Date().getFullYear() - 2);
+      console.log('✅ Progressive search complete');
+      console.log(`📚 Final papers count: ${finalPapers.length}`);
+      console.log(`📈 Total results: ${finalTotal}`);
+      console.log('='.repeat(80));
 
-        if (hasStrictFilters) {
-          toast.warning(
-            'No papers found with current filters. Try removing the citation filter or expanding the year range.',
-            { duration: 6000 }
-          );
-        }
-      }
-
-      // Handle results
-      if (result.papers && result.papers.length > 0) {
-        setPapers(result.papers);
-        setTotalResults(result.total);
-
-        console.log(
-          '✅ Papers state updated with',
-          result.papers.length,
-          'papers'
-        );
-
-        // Success callback
-        onSearchSuccess?.(result.papers.length, result.total);
-
-        // Note: autoSelectPapers is handled by page.tsx after search completes
-        const selectionMessage = autoSelectPapers
-          ? ' All papers selected by default.'
-          : '';
-        toast.success(
-          `Found ${result.total} papers across ${academicDatabases.length} databases.${selectionMessage}`
-        );
-      } else {
-        // No results found
-        console.warn('⚠️ No papers in result');
-        setPapers([]);
-        setTotalResults(0);
-
-        // Provide helpful error messages based on filters
-        if (getAppliedFilterCount() > 0) {
-          const filterHints = [];
-          if (appliedFilters.minCitations && appliedFilters.minCitations > 0) {
-            filterHints.push(
-              `citation filter (≥${appliedFilters.minCitations})`
-            );
-          }
-          if (
-            appliedFilters.yearFrom &&
-            appliedFilters.yearFrom >= new Date().getFullYear() - 2
-          ) {
-            filterHints.push(
-              `recent year filter (${appliedFilters.yearFrom}+)`
-            );
-          }
-
-          if (filterHints.length > 0) {
-            toast.info(
-              `No papers found. Your ${filterHints.join(' and ')} may be too restrictive. Try removing filters or adjusting the year range.`,
-              { duration: 7000 }
-            );
-          } else {
-            toast.info(
-              'No papers found with current filters. Try removing some filters.'
-            );
-          }
-        } else {
-          toast.info('No papers found. Try adjusting your search terms.');
-        }
+      // Success callback - pass papers array for auto-selection
+      // (page.tsx uses this to auto-select papers)
+      if (finalPapers.length > 0) {
+        onSearchSuccess?.(finalPapers.length, finalTotal, finalPapers);
       }
     } catch (error) {
-      console.error('❌ Search error:', error);
-      toast.error('Search failed. Please try again.');
+      console.error('❌ Progressive search error:', error);
+      // Error toast already shown by progressive search hook
       onSearchError?.(error as Error);
     } finally {
-      setLoading(false);
       isSearchingRef.current = false;
     }
   }, [
     query,
     appliedFilters,
     academicDatabases,
-    currentPage,
-    autoSelectPapers,
+    executeProgressiveSearch,
+    progressiveSearching,
     onSearchSuccess,
     onSearchError,
-    setLoading,
-    setPapers,
-    setTotalResults,
-    getAppliedFilterCount,
-    setSearchMetadata, // Phase 10.6 Day 14.5
-    setShowSuggestions, // Phase 10.7.10: Close suggestions on search
   ]);
 
   /**
