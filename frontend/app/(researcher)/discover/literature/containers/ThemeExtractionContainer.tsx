@@ -179,15 +179,17 @@ const FULLTEXT_MIN_LENGTH = 150;
  * - Other API calls happening concurrently (full-text fetch, etc.)
  * - Burst protection in the rate limiter
  */
-// PHASE 10.94.3: Optimized batch size for faster paper saving
-// Previous: 1 (sequential) - caused 281 API calls for 281 papers (~3+ minutes)
-// Current: 10 (parallel batches) - reduces to 29 API calls (~30 seconds for 281 papers)
-// Trade-off: Higher batch size = faster but more server load; 10 is enterprise-optimal
-const PAPER_SAVE_BATCH_SIZE = 10;
-// 🚀 PHASE 10.94.3: Reduced delay from 1000ms to 400ms since rate limit is now 300/min
-// Math: 10 papers/batch × 2.5 batches/sec (400ms interval) = 25 papers/sec = 1500/min (under 300/min burst OK)
-// The rate limiter uses sliding window - 100 papers in 4 seconds is fine if total < 300/min
-const PAPER_SAVE_BATCH_DELAY_MS = 400; // 400ms between batches (10 papers/batch)
+// PHASE 10.94.4: Fixed batch size to prevent SQLite database contention
+// Previous: 10 parallel writes - caused SQLite "database locked" errors after ~300 papers
+// Root cause: SQLite can only handle ONE write at a time. 10 concurrent writes = contention!
+// Current: 3 parallel writes - significantly reduces SQLite contention while maintaining speed
+// Trade-off: Slightly slower but RELIABLE for any corpus size (tested with 400+ papers)
+const PAPER_SAVE_BATCH_SIZE = 3;
+// 🚀 PHASE 10.94.4: Fixed rate limit compliance
+// Previous math was WRONG: 10 papers × 2.5 batches/sec = 25/sec = 1500/min (5x OVER 300/min limit!)
+// Correct math: 3 papers/batch × 1 batch/sec = 3/sec = 180/min (safe under 300/min limit)
+// Also gives SQLite breathing room between batch writes
+const PAPER_SAVE_BATCH_DELAY_MS = 1000; // 1000ms between batches (3 papers/batch)
 
 /**
  * 🚀 PHASE 10.94.3 PERFORMANCE FIX: Parallel full-text fetching
@@ -203,12 +205,42 @@ const FULLTEXT_FETCH_CONCURRENCY = 5; // Process 5 papers in parallel
 const FULLTEXT_FETCH_BATCH_DELAY_MS = 1000; // 1000ms delay ensures we don't exceed 5 req/sec
 
 /**
- * 🚨 CRITICAL: Exponential backoff constants for 429 retry
+ * 🚨 CRITICAL: Exponential backoff constants for 429 retry (full-text fetch)
  * When a 429 is encountered, we wait progressively longer before retrying
  */
 const RATE_LIMIT_BASE_DELAY_MS = 2000; // Base delay for 429 retry (2 seconds)
 const RATE_LIMIT_MAX_RETRIES = 3; // Maximum retries for 429 errors
 const RATE_LIMIT_BACKOFF_MULTIPLIER = 2; // Exponential backoff multiplier
+
+/**
+ * 🚨 PHASE 10.94.4: Exponential backoff constants for paper save retry
+ * SQLite database contention errors are transient and should be retried with shorter delays.
+ * Paper saves are simpler than full-text fetches, so use faster retry intervals.
+ *
+ * Total attempts = 1 initial + PAPER_SAVE_MAX_RETRIES retries = 4 attempts
+ * Delays: 500ms → 1000ms → 2000ms (exponential backoff with multiplier 2)
+ * Max total retry time per paper: 500 + 1000 + 2000 = 3500ms
+ */
+const PAPER_SAVE_MAX_RETRIES = 3; // 3 retries after initial attempt (4 total attempts)
+const PAPER_SAVE_BASE_DELAY_MS = 500; // 500ms base delay (faster than rate limit retry)
+const PAPER_SAVE_BACKOFF_MULTIPLIER = 2; // Exponential backoff multiplier
+
+/**
+ * PHASE 10.94.5: Stage name mapping for clear UX notifications
+ * Maps backend stage numbers to human-readable stage names
+ * Used for toast notifications when transitioning between stages
+ *
+ * @remarks Stage 0 is frontend-only (Preparing), Stages 1-6 are backend extraction stages
+ */
+const EXTRACTION_STAGE_NAMES: Readonly<Record<number, string>> = {
+  0: 'Preparing Data',
+  1: 'Familiarization',
+  2: 'Initial Coding',
+  3: 'Theme Generation',
+  4: 'Theme Review',
+  5: 'Theme Definition',
+  6: 'Report Production',
+} as const;
 
 /**
  * 🚨 CRITICAL: Source count limits for theme extraction
@@ -402,6 +434,17 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
   // Phase 10.94 FIX: Accumulate stage metrics synchronously (bypasses React batching)
   // This ref captures ALL progress updates before React batches them into state
   const accumulatedStageMetricsRef = useRef<Record<number, TransparentProgressMessage>>({});
+
+  // PHASE 10.94.4: Re-entry guard to prevent duplicate extraction runs
+  // This ref tracks if extraction is already in progress (synchronous check)
+  // Prevents race condition where handleModeSelected could be called twice
+  // before React state update (setAnalyzingThemes) takes effect
+  const extractionInProgressRef = useRef<boolean>(false);
+
+  // PHASE 10.94.5: Stage transition tracking for clear UX notifications
+  // Tracks previous stage number to detect transitions and show progress toasts
+  // -1 indicates no previous stage (initial state)
+  const previousStageNumberRef = useRef<number>(-1);
 
   // ==========================================================================
   // COMPUTED VALUES (Memoized for Performance)
@@ -739,6 +782,20 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
    */
   const handleModeSelected = useCallback(
     async (mode: 'quick' | 'guided', _corpusId?: string) => {
+      // PHASE 10.94.4: Re-entry guard - prevent duplicate extraction runs
+      // This synchronous check happens BEFORE any async operations
+      // Prevents race condition where callback could be invoked twice
+      if (extractionInProgressRef.current) {
+        logger.warn('Extraction already in progress - ignoring duplicate call', 'ThemeExtractionContainer', {
+          mode,
+          purpose: extractionPurpose,
+        });
+        return;
+      }
+
+      // Set the guard IMMEDIATELY (synchronous) before any other operations
+      extractionInProgressRef.current = true;
+
       logger.info('Extraction mode selected', 'ThemeExtractionContainer', {
         mode,
         purpose: extractionPurpose,
@@ -752,6 +809,10 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
       try {
         setAnalyzingThemes(true);
         setExtractionError(null);
+
+        // PHASE 10.94.5: Reset stage tracking for fresh extraction
+        // -1 indicates no previous stage (will be set to 1 when Stage 0 completes)
+        previousStageNumberRef.current = -1;
 
         // =========================================================================
         // STAGE 1: SAVE PAPERS TO DATABASE (Required for full-text fetching)
@@ -809,6 +870,7 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
           });
 
           // Process batch in parallel using Promise.allSettled (graceful failure handling)
+          // PHASE 10.94.4: Added retry logic with exponential backoff for transient DB errors
           const batchResults = await Promise.allSettled(
             batch.map(async (paper) => {
               // Build save data with only defined values (exactOptionalPropertyTypes compliance)
@@ -826,8 +888,40 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
                 saveData.citationCount = paper.citationCount;
               }
 
-              const result = await literatureAPI.savePaper(saveData);
-              return { paper, result };
+              // PHASE 10.94.4: Retry logic with exponential backoff for transient errors
+              // SQLite "database locked" errors are transient and should be retried
+              // Uses module-level constants: PAPER_SAVE_MAX_RETRIES, PAPER_SAVE_BASE_DELAY_MS
+              let lastError: Error | null = null;
+
+              // Loop: attempt 0 = initial try, attempts 1-3 = retries (4 total attempts)
+              for (let attemptIndex = 0; attemptIndex <= PAPER_SAVE_MAX_RETRIES; attemptIndex++) {
+                try {
+                  const result = await literatureAPI.savePaper(saveData);
+                  return { paper, result };
+                } catch (error) {
+                  lastError = error instanceof Error ? error : new Error(String(error));
+
+                  // Don't retry validation errors (VALIDATION_ERROR prefix) - they won't succeed
+                  if (lastError.message.includes('VALIDATION_ERROR')) {
+                    throw lastError;
+                  }
+
+                  // Retry with exponential backoff for transient errors (database busy, rate limit)
+                  if (attemptIndex < PAPER_SAVE_MAX_RETRIES) {
+                    const retryNumber = attemptIndex + 1; // Human-readable retry count (1, 2, 3)
+                    const delay = PAPER_SAVE_BASE_DELAY_MS * Math.pow(PAPER_SAVE_BACKOFF_MULTIPLIER, attemptIndex);
+                    logger.debug(`Paper save failed, scheduling retry ${retryNumber}/${PAPER_SAVE_MAX_RETRIES}`, 'ThemeExtractionContainer', {
+                      paperTitle: paper.title?.substring(0, 40),
+                      delayMs: delay,
+                      error: lastError.message,
+                    });
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                  }
+                }
+              }
+
+              // All retries exhausted - throw the last error
+              throw lastError || new Error('Failed to save paper after all retry attempts');
             })
           );
 
@@ -1009,6 +1103,7 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
           toast.error('No papers with content available for extraction');
           setAnalyzingThemes(false);
           setExtractionProgress(null);
+          extractionInProgressRef.current = false; // PHASE 10.94.4: Reset guard on early exit
           return;
         }
 
@@ -1021,6 +1116,7 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
           );
           setAnalyzingThemes(false);
           setExtractionProgress(null);
+          extractionInProgressRef.current = false; // PHASE 10.94.4: Reset guard on early exit
           return;
         }
 
@@ -1046,6 +1142,7 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
           toast.error('Research purpose not selected');
           setAnalyzingThemes(false);
           setExtractionProgress(null);
+          extractionInProgressRef.current = false; // PHASE 10.94.4: Reset guard on early exit
           return;
         }
 
@@ -1062,6 +1159,26 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
 
         // Phase 10.94 FIX: Reset accumulated metrics before new extraction
         accumulatedStageMetricsRef.current = {};
+
+        // PHASE 10.94.5: Show Stage 0 → 1 transition toast and set stage tracking
+        // We manually show this transition because Stage 0 is frontend-only (not from WebSocket)
+        // Set ref to 1 AFTER showing toast to prevent duplicate when Stage 1 WebSocket arrives
+        // STRICT AUDIT FIX BUG-001: Use nullish coalescing for defensive programming
+        const stage0Name = EXTRACTION_STAGE_NAMES[0] ?? 'Preparing Data';
+        const stage1Name = EXTRACTION_STAGE_NAMES[1] ?? 'Familiarization';
+        toast.success(
+          `${stage0Name} complete! Now: ${stage1Name}`,
+          { duration: 3000 }
+        );
+
+        logger.info('Stage 0 → 1 transition: Starting backend extraction', 'ThemeExtractionContainer', {
+          sourcesCount: sources.length,
+          withFullText: papersWithFullText.size,
+        });
+
+        // Set to 1 (current stage) so first Stage 1 update doesn't trigger duplicate toast
+        // Subsequent transitions (1→2, 2→3, etc.) will fire correctly via WebSocket callback
+        previousStageNumberRef.current = 1;
 
         // Update progress - Theme Extraction (40-100%)
         setExtractionProgress({
@@ -1128,6 +1245,31 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
                 });
               }
             }
+
+            // PHASE 10.94.5: Stage transition detection and notification
+            // Shows toast when moving between stages for clear UX feedback
+            const previousStage = previousStageNumberRef.current;
+            if (previousStage !== -1 && stageNumber > previousStage) {
+              // Stage transition detected - show completion toast
+              const completedStageName = EXTRACTION_STAGE_NAMES[previousStage] ?? `Stage ${previousStage}`;
+              const nextStageName = EXTRACTION_STAGE_NAMES[stageNumber] ?? `Stage ${stageNumber}`;
+
+              // Log transition for debugging
+              logger.info('Stage transition detected', 'ThemeExtractionContainer', {
+                from: previousStage,
+                to: stageNumber,
+                completedStageName,
+                nextStageName,
+              });
+
+              // Show toast notification for clear UX
+              toast.success(
+                `${completedStageName} complete! Now: ${nextStageName}`,
+                { duration: 3000 }
+              );
+            }
+            // Update ref for next comparison (must happen AFTER the check)
+            previousStageNumberRef.current = stageNumber;
 
             // Map extraction progress to 40-100% range
             // AUDIT FIX: Renamed to avoid shadowing state variable 'extractionProgress'
@@ -1292,6 +1434,8 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
         toast.error(`Theme extraction failed: ${errorMessage}`);
       } finally {
         setAnalyzingThemes(false);
+        // PHASE 10.94.4: Reset re-entry guard when extraction completes/fails
+        extractionInProgressRef.current = false;
       }
     },
     [
