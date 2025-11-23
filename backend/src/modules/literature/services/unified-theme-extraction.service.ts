@@ -5,6 +5,18 @@ import OpenAI from 'openai';
 import pLimit from 'p-limit';
 import { PrismaService } from '../../../common/prisma.service';
 
+// Phase 10.943: Import type-safe interfaces (eliminates all `any` types)
+import type {
+  CachedThemeData,
+  IThemeExtractionGateway,
+  PrismaUnifiedThemeWithRelations,
+  PrismaThemeSourceRelation,
+  DBPaperWithFullText,
+  InfluentialSourceSummary,
+  SourceType,
+} from '../types/theme-extraction.types';
+import { isSuccessfulExtraction } from '../types/theme-extraction.types';
+
 /**
  * Unified Theme Extraction Service
  *
@@ -224,8 +236,10 @@ const PURPOSE_CONFIGS: Record<ResearchPurpose, PurposeConfig> = {
 export class UnifiedThemeExtractionService implements OnModuleInit {
   private readonly logger = new Logger(UnifiedThemeExtractionService.name);
   private readonly openai: OpenAI;
-  private readonly cache = new Map<string, { data: any; timestamp: number }>();
-  private themeGateway: any;
+  // Phase 10.943 TYPE-FIX: Typed cache (was: Map<string, { data: any; timestamp: number }>)
+  private readonly cache = new Map<string, CachedThemeData>();
+  // Phase 10.943 TYPE-FIX: Typed gateway (was: any)
+  private themeGateway: IThemeExtractionGateway | null = null;
 
   // Phase 10 Day 31.2: Embedding configuration constants (eliminates magic numbers)
   private static readonly EMBEDDING_MODEL = 'text-embedding-3-large';
@@ -272,32 +286,97 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
   /**
    * Set the WebSocket gateway for progress updates
    * Phase 10 Day 5.17.3: Called by LiteratureModule
+   * Phase 10.943 TYPE-FIX: Typed parameter (was: any)
    */
-  setGateway(gateway: any) {
+  setGateway(gateway: IThemeExtractionGateway) {
     this.themeGateway = gateway;
     this.logger.log('✅ ThemeExtractionGateway connected');
   }
 
+  /**
+   * Emit progress update to user via WebSocket
+   * Phase 10.943 TYPE-FIX: Uses TransparentProgressMessage or flexible object
+   * Phase 10.943 PERF-FIX: Production guard for debug logging
+   */
   private emitProgress(
     userId: string,
     stage: string,
     percentage: number,
     message: string,
-    details?: any,
+    details?: TransparentProgressMessage | Record<string, unknown>,
   ) {
     if (this.themeGateway) {
-      // Log userId for debugging WebSocket room mismatch issues
-      this.logger.debug(
-        `📡 Emitting progress to userId: ${userId} (${stage}: ${percentage}%)`,
-      );
+      // Phase 10.943 PERF-FIX: Only log in development to reduce production overhead
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.debug(
+          `📡 Emitting progress to userId: ${userId} (${stage}: ${percentage}%)`,
+        );
+      }
+      // Cast to Record<string, unknown> for gateway compatibility
       this.themeGateway.emitProgress({
         userId,
         stage,
         percentage,
         message,
-        details,
+        details: details as Record<string, unknown>,
       });
     }
+  }
+
+  /**
+   * Phase 10.95: Emit progress even for failed/skipped papers
+   * ENTERPRISE FIX: User visibility requires showing ALL papers, not just successes
+   * This prevents the "0 counts for batches 1-22" bug when early papers fail validation
+   *
+   * Phase 10.95 AUDIT FIX: Added return type, safe division, proper type handling
+   */
+  private emitFailedPaperProgress(
+    userId: string | undefined,
+    index: number,
+    total: number,
+    stats: { processedCount: number; fullTextCount: number; abstractCount: number; totalWords: number },
+    failureReason: string,
+    sourceTitle: string,
+    progressCallback?: (stage: number, totalStages: number, message: string, details?: any) => void,
+  ): void {
+    // Phase 10.95 AUDIT FIX: Safe division - prevent NaN when total is 0
+    const FAMILIARIZATION_PROGRESS_WEIGHT = 20; // Stage 1 contributes 20% of total progress
+    const progressWithinStage = total > 0
+      ? Math.round((stats.processedCount / total) * FAMILIARIZATION_PROGRESS_WEIGHT)
+      : 0;
+
+    // Phase 10.95 AUDIT FIX: Use 'abstract' as fallback type since 'skipped' is not in the union
+    // The articleTitle already indicates the paper was skipped
+    const transparentMessage = {
+      stageName: 'Familiarization',
+      stageNumber: 1,
+      totalStages: 6,
+      percentage: progressWithinStage,
+      whatWeAreDoing: `Paper ${index + 1}/${total} skipped: ${failureReason}`,
+      whyItMatters: 'Some papers cannot be processed due to missing content or metadata. This is normal for large datasets. The analysis continues with available papers.',
+      liveStats: {
+        sourcesAnalyzed: stats.processedCount,
+        currentOperation: `Skipped paper ${index + 1}/${total}: ${failureReason}`,
+        fullTextRead: stats.fullTextCount,
+        abstractsRead: stats.abstractCount,
+        totalWordsRead: stats.totalWords,
+        currentArticle: index + 1,
+        totalArticles: total,
+        articleTitle: sourceTitle ? `${sourceTitle.substring(0, 60)}... (skipped)` : `(Skipped: ${failureReason})`,
+        articleType: 'abstract' as const, // Phase 10.95 AUDIT FIX: Use valid type, title indicates skip
+        articleWords: 0,
+      },
+    };
+
+    if (userId && this.themeGateway) {
+      this.emitProgress(userId, 'familiarization', progressWithinStage, `Skipped paper ${index + 1}/${total}`, transparentMessage);
+    }
+
+    if (progressCallback) {
+      progressCallback(1, 6, `Skipped paper ${index + 1}/${total}`, transparentMessage);
+    }
+
+    this.logger.debug(`📡 Emitted skipped paper progress: ${index + 1}/${total} - ${failureReason}`);
   }
 
   /**
@@ -448,10 +527,11 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
         const dbSourceMap = new Map(dbSources.map(s => [s.id, s]));
 
         // For each provided source, use database version if it has full-text, otherwise use provided
+        // Phase 10.943 TYPE-FIX: Use DBPaperWithFullText interface (was: as any)
         sources = providedSources.map(providedSource => {
-          const dbSource = dbSourceMap.get(providedSource.id);
+          const dbSource = dbSourceMap.get(providedSource.id) as DBPaperWithFullText | undefined;
 
-          if (dbSource && (dbSource as any).fullText) {
+          if (dbSource && dbSource.fullText) {
             this.logger.log(`✅ Using full-text from database for paper: ${providedSource.title.substring(0, 50)}...`);
             return dbSource; // Has full-text in database
           } else {
@@ -460,7 +540,8 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
           }
         });
 
-        const fullTextCount = sources.filter(s => (s as any).contentSource === 'full-text').length;
+        // Phase 10.943 TYPE-FIX: Use contentSource from SourceContent (was: as any)
+        const fullTextCount = sources.filter(s => s.contentSource === 'full-text').length;
         const abstractCount = sources.length - fullTextCount;
         this.logger.log(`📊 Content sources: ${fullTextCount} full-text, ${abstractCount} abstracts`);
 
@@ -578,13 +659,14 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
    * @returns Detailed transparency report
    */
   async getThemeProvenanceReport(themeId: string) {
+    // Phase 10.943 TYPE-FIX: Cast Prisma result to typed interface
     const theme = await this.prisma.unifiedTheme.findUnique({
       where: { id: themeId },
       include: {
         sources: true,
         provenance: true,
       },
-    });
+    }) as PrismaUnifiedThemeWithRelations | null;
 
     if (!theme) {
       throw new Error(`Theme not found: ${themeId}`);
@@ -594,10 +676,11 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
     const citationChain = this.buildCitationChain(theme.sources);
 
     // Calculate influential sources
-    const influentialSources = theme.sources
-      .sort((a: any, b: any) => b.influence - a.influence)
+    // Phase 10.943 TYPE-FIX: Use PrismaThemeSourceRelation (was: any)
+    const influentialSources: InfluentialSourceSummary[] = theme.sources
+      .sort((a: PrismaThemeSourceRelation, b: PrismaThemeSourceRelation) => b.influence - a.influence)
       .slice(0, 10)
-      .map((s: any) => ({
+      .map((s: PrismaThemeSourceRelation) => ({
         source: s.sourceTitle,
         type: s.sourceType,
         influence: s.influence,
@@ -667,18 +750,19 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
     );
 
     // Extract themes from each source type
+    // Phase 10.943 TYPE-FIX: Use SourceType (was: as any)
     const extractionPromises = Object.entries(sourcesByType).map(
       async ([type, typeSources]) => {
         const sourceIds = typeSources.map((s) => s.id);
         // Pass the full source data to avoid database queries
         const themes = await this.extractThemesFromSource(
-          type as any,
+          type as SourceType,
           sourceIds,
           options,
           typeSources, // Pass the full source data
         );
         return {
-          type: type as any,
+          type: type as SourceType,
           themes,
           sourceIds,
         };
@@ -732,6 +816,7 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
       `Filtering themes for study ${studyId}, type=${sourceType}, minInfluence=${minInfluence}`,
     );
 
+    // Phase 10.943 TYPE-FIX: Cast Prisma result to typed interface
     const themes = await this.prisma.unifiedTheme.findMany({
       where: {
         studyId,
@@ -740,28 +825,29 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
         sources: true,
         provenance: true,
       },
-    });
+    }) as PrismaUnifiedThemeWithRelations[];
 
     // Filter by source type if specified
+    // Phase 10.943 TYPE-FIX: Use typed interface (was: any)
     let filtered = themes;
     if (sourceType) {
-      filtered = themes.filter((theme: any) =>
-        theme.sources.some((s: any) => s.sourceType === sourceType),
+      filtered = themes.filter((theme: PrismaUnifiedThemeWithRelations) =>
+        theme.sources.some((s: PrismaThemeSourceRelation) => s.sourceType === sourceType),
       );
     }
 
     // Filter by minimum influence if specified
     if (minInfluence !== undefined) {
-      filtered = filtered.filter((theme: any) => {
+      filtered = filtered.filter((theme: PrismaUnifiedThemeWithRelations) => {
         const sources = theme.sources.filter(
-          (s: any) => !sourceType || s.sourceType === sourceType,
+          (s: PrismaThemeSourceRelation) => !sourceType || s.sourceType === sourceType,
         );
-        const maxInfluence = Math.max(...sources.map((s: any) => s.influence));
+        const maxInfluence = Math.max(...sources.map((s: PrismaThemeSourceRelation) => s.influence));
         return maxInfluence >= minInfluence;
       });
     }
 
-    return filtered.map((t: any) => this.mapToUnifiedTheme(t));
+    return filtered.map((t: PrismaUnifiedThemeWithRelations) => this.mapToUnifiedTheme(t));
   }
 
   /**
@@ -773,6 +859,7 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
   async getCollectionThemes(collectionId: string): Promise<UnifiedTheme[]> {
     this.logger.log(`Fetching themes for collection ${collectionId}`);
 
+    // Phase 10.943 TYPE-FIX: Cast Prisma result to typed interface
     const themes = await this.prisma.unifiedTheme.findMany({
       where: {
         collectionId,
@@ -781,9 +868,9 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
         sources: true,
         provenance: true,
       },
-    });
+    }) as PrismaUnifiedThemeWithRelations[];
 
-    return themes.map((t: any) => this.mapToUnifiedTheme(t));
+    return themes.map((t: PrismaUnifiedThemeWithRelations) => this.mapToUnifiedTheme(t));
   }
 
   /**
@@ -800,6 +887,7 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
     this.logger.log(`Comparing themes across ${studyIds.length} studies`);
 
     // Fetch themes for each study
+    // Phase 10.943 TYPE-FIX: Cast Prisma result to typed interface
     const themesByStudy: Record<string, UnifiedTheme[]> = {};
     for (const studyId of studyIds) {
       const themes = await this.prisma.unifiedTheme.findMany({
@@ -808,8 +896,8 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
           sources: true,
           provenance: true,
         },
-      });
-      themesByStudy[studyId] = themes.map((t: any) =>
+      }) as PrismaUnifiedThemeWithRelations[];
+      themesByStudy[studyId] = themes.map((t: PrismaUnifiedThemeWithRelations) =>
         this.mapToUnifiedTheme(t),
       );
     }
@@ -861,29 +949,65 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
   /**
    * Map database theme to UnifiedTheme interface
    * @private
+   * Phase 10.943 TYPE-FIX: Typed parameter (was: any)
    */
-  private mapToUnifiedTheme(dbTheme: any): UnifiedTheme {
+  private mapToUnifiedTheme(dbTheme: PrismaUnifiedThemeWithRelations): UnifiedTheme {
+    // Map Prisma source relation to ThemeSource interface
+    const mappedSources: ThemeSource[] = (dbTheme.sources || []).map((s: PrismaThemeSourceRelation) => ({
+      id: s.id,
+      sourceType: s.sourceType as 'paper' | 'youtube' | 'podcast' | 'tiktok' | 'instagram',
+      sourceId: s.sourceId,
+      sourceUrl: s.sourceUrl || undefined,
+      sourceTitle: s.sourceTitle,
+      sourceAuthor: s.sourceAuthor || undefined,
+      influence: s.influence,
+      keywordMatches: s.keywordMatches,
+      excerpts: s.excerpts,
+      timestamps: s.timestamps as Array<{ start: number; end: number; text: string }> | undefined,
+      doi: s.doi || undefined,
+      authors: Array.isArray(s.authors) ? s.authors as string[] : undefined,
+      year: s.year || undefined,
+    }));
+
+    // Map provenance with citationChain handling
+    const provenance: ThemeProvenance = dbTheme.provenance
+      ? {
+          paperInfluence: dbTheme.provenance.paperInfluence,
+          videoInfluence: dbTheme.provenance.videoInfluence,
+          podcastInfluence: dbTheme.provenance.podcastInfluence,
+          socialInfluence: dbTheme.provenance.socialInfluence,
+          paperCount: dbTheme.provenance.paperCount,
+          videoCount: dbTheme.provenance.videoCount,
+          podcastCount: dbTheme.provenance.podcastCount,
+          socialCount: dbTheme.provenance.socialCount,
+          averageConfidence: dbTheme.provenance.averageConfidence,
+          citationChain: Array.isArray(dbTheme.provenance.citationChain)
+            ? dbTheme.provenance.citationChain as string[]
+            : [],
+        }
+      : {
+          paperInfluence: 0,
+          videoInfluence: 0,
+          podcastInfluence: 0,
+          socialInfluence: 0,
+          paperCount: 0,
+          videoCount: 0,
+          podcastCount: 0,
+          socialCount: 0,
+          averageConfidence: dbTheme.confidence,
+          citationChain: [],
+        };
+
     return {
       id: dbTheme.id,
       label: dbTheme.label,
-      description: dbTheme.description,
-      keywords: dbTheme.keywords as string[],
+      description: dbTheme.description || undefined,
+      keywords: Array.isArray(dbTheme.keywords) ? dbTheme.keywords as string[] : [],
       weight: dbTheme.weight,
       controversial: dbTheme.controversial,
       confidence: dbTheme.confidence,
-      sources: dbTheme.sources || [],
-      provenance: dbTheme.provenance || {
-        paperInfluence: 0,
-        videoInfluence: 0,
-        podcastInfluence: 0,
-        socialInfluence: 0,
-        paperCount: 0,
-        videoCount: 0,
-        podcastCount: 0,
-        socialCount: 0,
-        averageConfidence: dbTheme.confidence,
-        citationChain: [],
-      },
+      sources: mappedSources,
+      provenance,
       extractedAt: dbTheme.extractedAt,
       extractionModel: dbTheme.extractionModel,
     };
@@ -956,10 +1080,11 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
   /**
    * Fetch multimedia content
    * @private
+   * Phase 10.943 TYPE-FIX: Changed parameter type and cast types
    */
   private async fetchMultimedia(
     sourceIds: string[],
-    sourceType: string,
+    sourceType: SourceType,
   ): Promise<SourceContent[]> {
     const transcripts = await this.prisma.videoTranscript.findMany({
       where: {
@@ -967,18 +1092,30 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
       },
     });
 
-    return transcripts.map((transcript) => ({
-      id: transcript.id,
-      type: sourceType as any,
-      title: transcript.title,
-      content: transcript.transcript,
-      author: transcript.author || undefined,
-      keywords: [],
-      url: transcript.sourceUrl,
-      timestampedSegments: Array.isArray(transcript.timestampedText)
-        ? (transcript.timestampedText as any[])
-        : undefined,
-    }));
+    return transcripts.map((transcript) => {
+      // Phase 10.943 TYPE-FIX: Safely map JsonValue to timestampedSegments
+      let timestampedSegments: Array<{ timestamp: number; text: string }> | undefined;
+      if (Array.isArray(transcript.timestampedText)) {
+        timestampedSegments = transcript.timestampedText.map((item: unknown) => {
+          const segment = item as Record<string, unknown>;
+          return {
+            timestamp: typeof segment.timestamp === 'number' ? segment.timestamp : 0,
+            text: typeof segment.text === 'string' ? segment.text : '',
+          };
+        });
+      }
+
+      return {
+        id: transcript.id,
+        type: sourceType, // Phase 10.943 TYPE-FIX: Now properly typed (was: as any)
+        title: transcript.title,
+        content: transcript.transcript,
+        author: transcript.author || undefined,
+        keywords: [],
+        url: transcript.sourceUrl,
+        timestampedSegments,
+      };
+    });
   }
 
   /**
@@ -993,7 +1130,7 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
   async extractThemesFromSingleSource(
     source: SourceContent,
     researchContext?: string,
-    userId?: string,
+    _userId?: string,
   ): Promise<any[]> {
     // Generate content-based cache key (papers with same content get same themes)
     const contentHash = crypto
@@ -1119,7 +1256,8 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
             );
 
             return { success: true, themes, source };
-          } catch (error: any) {
+          } catch (error: unknown) {
+            // Phase 10.943 TYPE-FIX: Use unknown instead of any
             const sourceTime = Date.now() - sourceStart;
             stats.processingTimes.push(sourceTime);
             stats.failedSources++;
@@ -1164,9 +1302,10 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
     const deduplicatedThemes = this.deduplicateThemes(allThemes);
 
     // Calculate unified influence across all SUCCESSFUL sources
+    // Phase 10.943 TYPE-FIX: Use isSuccessfulExtraction type guard (was: as any)
     const successfulSources = sources.filter((_, index) => {
       const result = results[index];
-      return result.status === 'fulfilled' && (result.value as any).success;
+      return isSuccessfulExtraction(result);
     });
 
     const themesWithInfluence = await this.calculateInfluence(
@@ -1546,6 +1685,7 @@ Return JSON format:
 
   /**
    * Extract relevant text excerpts containing keywords
+   * Enhanced with relevance scoring and whole-word matching
    * @private
    */
   private extractRelevantExcerpts(
@@ -1554,22 +1694,68 @@ Return JSON format:
     maxExcerpts: number = 3,
   ): string[] {
     const excerpts: string[] = [];
-    const sentences = content.split(/[.!?]+/);
-
-    for (const sentence of sentences) {
-      const lowerSentence = sentence.toLowerCase();
-      const hasKeyword = keywords.some((k) =>
-        lowerSentence.includes(k.toLowerCase()),
-      );
-
-      if (hasKeyword) {
-        excerpts.push(sentence.trim());
+    
+    // Better sentence splitting (handles abbreviations better)
+    const sentences = content.match(/[^.!?]+[.!?]+/g) || content.split(/[.!?]+/);
+    
+    // Score each sentence by keyword relevance
+    const scoredSentences = sentences.map(sentence => {
+      // Note: lowerSentence was previously declared but unused since regex uses 'gi' flag
+      let score = 0;
+      let matchedKeywords = 0;
+      
+      for (const keyword of keywords) {
+        const lowerKeyword = keyword.toLowerCase();
+        
+        // Whole word matching (not substring) - prevents "AI" matching in "SAID"
+        const regex = new RegExp(`\\b${this.escapeRegex(lowerKeyword)}\\b`, 'gi');
+        const matches = sentence.match(regex);
+        
+        if (matches) {
+          matchedKeywords++;
+          score += matches.length; // More occurrences = higher score
+        }
+      }
+      
+      // Bonus for matching multiple keywords (more relevant)
+      if (matchedKeywords > 1) {
+        score *= 1.5;
+      }
+      
+      return { 
+        sentence: sentence.trim(), 
+        score, 
+        matchedKeywords 
+      };
+    });
+    
+    // Sort by score (best matches first)
+    scoredSentences.sort((a, b) => b.score - a.score);
+    
+    // Return top N sentences with at least 1 keyword match
+    for (const item of scoredSentences) {
+      if (item.matchedKeywords > 0 && item.sentence.length > 20) { // Skip very short sentences
+        excerpts.push(item.sentence);
         if (excerpts.length >= maxExcerpts) break;
       }
     }
-
+    
     return excerpts;
   }
+
+
+  /**
+=======
+  /**
+   * Escape special regex characters
+   * @private
+   */
+  private escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /**
+=======
 
   /**
    * Find relevant timestamps in multimedia content
@@ -1647,15 +1833,18 @@ Return JSON format:
       // Calculate and store provenance
       await this.calculateAndStoreProvenance(created.id, theme.sources);
 
+      // Phase 10.943 TYPE-FIX: Cast to typed interface and map to UnifiedTheme
       const themeWithProvenance = await this.prisma.unifiedTheme.findUnique({
         where: { id: created.id },
         include: {
           sources: true,
           provenance: true,
         },
-      });
+      }) as PrismaUnifiedThemeWithRelations | null;
 
-      stored.push(themeWithProvenance as any);
+      if (themeWithProvenance) {
+        stored.push(this.mapToUnifiedTheme(themeWithProvenance));
+      }
     }
 
     return stored;
@@ -1861,8 +2050,9 @@ Return JSON format:
   /**
    * Set cache
    * @private
+   * Phase 10.943 TYPE-FIX: Typed parameter (was: any)
    */
-  private setCache(key: string, data: any): void {
+  private setCache(key: string, data: UnifiedTheme[]): void {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
@@ -1986,7 +2176,8 @@ Return JSON format:
       );
 
       // Phase 10 Day 5.17.3: Pass userId, progressCallback, userLevel for per-article progress
-      const embeddings = await this.generateSemanticEmbeddings(
+      // BUG FIX: Destructure to get both embeddings AND familiarization stats
+      const { embeddings, familiarizationStats } = await this.generateSemanticEmbeddings(
         sources,
         userId,
         progressCallback,
@@ -1994,6 +2185,7 @@ Return JSON format:
       );
       const stage1Duration = ((Date.now() - stage1Start) / 1000).toFixed(2);
       this.logger.log(`   ✅ Stage 1 complete in ${stage1Duration}s`);
+      this.logger.log(`   📊 Familiarization stats: ${familiarizationStats.fullTextRead} full-text, ${familiarizationStats.abstractsRead} abstracts, ${familiarizationStats.totalWordsRead.toLocaleString()} words`);
 
       // ===== STAGE 2: INITIAL CODING (30%) =====
       this.logger.log(
@@ -2400,6 +2592,9 @@ Return JSON format:
           embeddingModel: 'text-embedding-3-large',
           analysisModel: 'gpt-4-turbo-preview',
         },
+        // BUG FIX: Include familiarization stats in HTTP response
+        // This allows frontend to display Stage 1 data even if WebSocket fails
+        familiarizationStats,
       };
 
       // Add rejection diagnostics if available (helps users understand why themes were rejected)
@@ -2881,11 +3076,43 @@ Return JSON format:
     userId?: string,
     progressCallback?: AcademicProgressCallback,
     userLevel: 'novice' | 'researcher' | 'expert' = 'researcher',
-  ): Promise<Map<string, number[]>> {
+  ): Promise<{
+    embeddings: Map<string, number[]>;
+    familiarizationStats: {
+      fullTextRead: number;
+      abstractsRead: number;
+      totalWordsRead: number;
+      totalArticles: number;
+      embeddingStats: {
+        model: string;
+        dimensions: number;
+        totalEmbeddingsGenerated: number;
+        averageEmbeddingMagnitude: number;
+        chunkedArticleCount: number;
+        totalChunksProcessed: number;
+      };
+    };
+  }> {
     // Phase 10 Day 31.2: Input validation (defensive programming)
     if (!sources || sources.length === 0) {
       this.logger.warn('generateSemanticEmbeddings called with empty sources array');
-      return new Map<string, number[]>();
+      return {
+        embeddings: new Map<string, number[]>(),
+        familiarizationStats: {
+          fullTextRead: 0,
+          abstractsRead: 0,
+          totalWordsRead: 0,
+          totalArticles: 0,
+          embeddingStats: {
+            model: UnifiedThemeExtractionService.EMBEDDING_MODEL,
+            dimensions: UnifiedThemeExtractionService.EMBEDDING_DIMENSIONS,
+            totalEmbeddingsGenerated: 0,
+            averageEmbeddingMagnitude: 0,
+            chunkedArticleCount: 0,
+            totalChunksProcessed: 0,
+          },
+        },
+      };
     }
 
     const embeddings = new Map<string, number[]>();
@@ -2912,20 +3139,62 @@ Return JSON format:
     let magnitudeM2 = 0; // Running variance sum for Welford's algorithm
     const failedSources: Array<{ id: string; title: string; error: string }> = []; // Track failures
 
+    // Phase 10.95: Emit IMMEDIATE initialization message so frontend knows extraction has started
+    // ENTERPRISE FIX: Prevents "is it stuck?" confusion during WebSocket setup
+    // This message is sent BEFORE any papers are processed, ensuring the frontend sees it immediately
+    const initMessage = {
+      stageName: 'Familiarization',
+      stageNumber: 1,
+      totalStages: 6,
+      percentage: 0,
+      whatWeAreDoing: `Starting familiarization with ${sources.length} papers...`,
+      whyItMatters: 'Beginning semantic embedding generation for thematic analysis. Each paper will be converted into a mathematical representation that captures its meaning.',
+      liveStats: {
+        sourcesAnalyzed: 0,
+        currentOperation: 'Initializing familiarization stage...',
+        fullTextRead: 0,
+        abstractsRead: 0,
+        totalWordsRead: 0,
+        currentArticle: 0,
+        totalArticles: sources.length,
+        articleTitle: 'Starting...',
+        articleType: 'abstract' as const, // Phase 10.95 AUDIT: Use 'as const' for cleaner typing
+        articleWords: 0,
+      },
+    };
+
+    if (userId && this.themeGateway) {
+      this.emitProgress(userId, 'familiarization', 0, `Starting familiarization with ${sources.length} papers...`, initMessage);
+      this.logger.log(`📡 Phase 10.95: Emitted initialization message for ${sources.length} papers to userId: ${userId}`);
+    }
+
+    if (progressCallback) {
+      progressCallback(1, 6, `Starting familiarization with ${sources.length} papers...`, initMessage);
+    }
+
     const embeddingTasks = sources.map((source, index) =>
       limit(async () => {
         const sourceStart = Date.now();
 
         try {
           // Phase 10 Day 31.2: Validate source data (defensive programming)
+          // Phase 10.95 ENTERPRISE FIX: Emit progress for ALL papers including validation failures
+          // This prevents the "0 counts for batches 1-22" bug when early papers fail validation
           if (!source.id) {
-            this.logger.error(`Source at index ${index} has no ID, skipping`);
+            // Phase 10.95 AUDIT FIX: Use warn() for validation failures (not error())
+            this.logger.warn(`Source at index ${index} has no ID, skipping`);
             failedSources.push({ id: 'unknown', title: source.title || 'Unknown', error: 'Missing source ID' });
+            // CRITICAL: Still increment counter and emit progress for visibility
+            stats.processedCount++;
+            this.emitFailedPaperProgress(userId, index, sources.length, stats, 'Missing source ID', source.title || 'Unknown', progressCallback);
             return false;
           }
           if (!source.content || source.content.trim().length === 0) {
             this.logger.warn(`Source ${source.id} has no content, skipping`);
             failedSources.push({ id: source.id, title: source.title || 'Unknown', error: 'Empty content' });
+            // CRITICAL: Still increment counter and emit progress for visibility
+            stats.processedCount++;
+            this.emitFailedPaperProgress(userId, index, sources.length, stats, 'Empty content', source.title || 'Unknown', progressCallback);
             return false;
           }
 
@@ -3058,16 +3327,10 @@ Return JSON format:
           );
 
           // Phase 10 Day 5.17.3: Detailed per-article progress (Patent Claim #9: 4-Part Transparency)
-          const detailedStats = {
-            currentArticle: index + 1,
-            totalArticles: sources.length,
-            articleTitle: source.title.substring(0, 80),
-            articleType: isFullText ? 'full-text' : 'abstract',
-            articleWords: wordCount,
-            fullTextRead: stats.fullTextCount,
-            abstractsRead: stats.abstractCount,
-            totalWordsRead: stats.totalWords,
-          };
+          // Detailed stats available but not currently tracked:
+          // - currentArticle: index + 1, totalArticles: sources.length
+          // - articleTitle, articleType, articleWords
+          // - fullTextRead, abstractsRead, totalWordsRead
 
           // Progressive disclosure: different detail levels
           let progressMessage = '';
@@ -3149,10 +3412,17 @@ Return JSON format:
           }
 
           return true;
-        } catch (error) {
+        } catch (error: unknown) {
           // Phase 10 Day 31.2: Enhanced error handling with failure tracking
-          const errorMessage = (error as Error).message;
-          this.logger.error(
+          // Phase 10.95 ENTERPRISE FIX: Emit progress for ALL papers including API failures
+          // Phase 10.95 AUDIT FIX: Safe error extraction with type guard
+          const errorMessage = error instanceof Error
+            ? error.message
+            : typeof error === 'string'
+              ? error
+              : 'Unknown error';
+
+          this.logger.warn(
             `   ⚠️ Failed to embed source ${source.id}: ${errorMessage}`,
           );
 
@@ -3162,6 +3432,17 @@ Return JSON format:
             title: source.title || 'Unknown',
             error: errorMessage,
           });
+
+          // CRITICAL: Still increment counter and emit progress for visibility
+          // This prevents the "0 counts for batches 1-22" bug when API calls fail
+          stats.processedCount++;
+          // Phase 10.95 AUDIT FIX: Sanitize error message - remove potential secrets/paths
+          const sanitizedError = errorMessage
+            .replace(/\/[^\s]+/g, '[path]') // Remove file paths
+            .replace(/Bearer\s+\S+/gi, 'Bearer [token]') // Remove auth tokens
+            .replace(/key[=:]\s*\S+/gi, 'key=[redacted]'); // Remove API keys
+          const shortError = sanitizedError.length > 50 ? `${sanitizedError.substring(0, 47)}...` : sanitizedError;
+          this.emitFailedPaperProgress(userId, index, sources.length, stats, `API Error: ${shortError}`, source.title || 'Unknown', progressCallback);
 
           // Don't fail entire extraction if one source fails
           return false;
@@ -3210,7 +3491,25 @@ Return JSON format:
     this.logger.log(`      • Scientific use: Hierarchical clustering, semantic similarity, provenance tracking`);
     this.logger.log(`      • Methodology: Braun & Clarke (2019) Reflexive Thematic Analysis - Stage 1`);
 
-    return embeddings;
+    // BUG FIX: Return both embeddings AND familiarization stats
+    // This allows the stats to be included in HTTP response as fallback when WebSocket fails
+    return {
+      embeddings,
+      familiarizationStats: {
+        fullTextRead: stats.fullTextCount,
+        abstractsRead: stats.abstractCount,
+        totalWordsRead: stats.totalWords,
+        totalArticles: sources.length,
+        embeddingStats: {
+          model: UnifiedThemeExtractionService.EMBEDDING_MODEL,
+          dimensions: UnifiedThemeExtractionService.EMBEDDING_DIMENSIONS,
+          totalEmbeddingsGenerated: embeddingCount,
+          averageEmbeddingMagnitude: avgMagnitude,
+          chunkedArticleCount,
+          totalChunksProcessed,
+        },
+      },
+    };
   }
 
   /**
@@ -3221,7 +3520,7 @@ Return JSON format:
    */
   private async extractInitialCodes(
     sources: SourceContent[],
-    embeddings: Map<string, number[]>,
+    _embeddings: Map<string, number[]>,
   ): Promise<InitialCode[]> {
     // Phase 10 Day 31.3: Input validation (defensive programming)
     if (!sources || sources.length === 0) {
@@ -3294,11 +3593,17 @@ ${s.content}
   )
   .join('\n')}
 
-For each source, identify 5-10 key codes (concepts that appear in the content).
+CRITICAL REQUIREMENTS:
+1. Identify 5-10 key codes (concepts) per source
+2. Each code MUST include 1-3 direct text excerpts from the source
+3. Excerpts must be VERBATIM quotes (copy exact text, don't paraphrase)
+4. Codes without excerpts will be REJECTED during validation
+
 Each code should be:
 - Specific and data-driven
-- Grounded in the actual text
+- Grounded in the actual text (not inferred)
 - Distinct from other codes
+- Supported by direct quotes from the source
 
 Return JSON format:
 {
@@ -3307,10 +3612,30 @@ Return JSON format:
       "label": "Code name (2-4 words)",
       "description": "What this code represents",
       "sourceId": "source ID",
-      "excerpts": ["relevant quote 1", "relevant quote 2"]
+      "excerpts": [
+        "Direct quote from source text that supports this code",
+        "Another relevant quote showing this concept"
+      ]
     }
   ]
-}`;
+}
+
+EXAMPLE:
+{
+  "codes": [
+    {
+      "label": "Climate Adaptation Strategies",
+      "description": "Methods communities use to adapt to climate change",
+      "sourceId": "paper_123",
+      "excerpts": [
+        "Communities implemented water conservation measures including rainwater harvesting and drip irrigation systems",
+        "Local governments developed heat action plans to protect vulnerable populations during extreme weather events"
+      ]
+    }
+  ]
+}
+
+IMPORTANT: Every code MUST have at least 1 excerpt. If you cannot find a direct quote, do not include that code.`;
 
       try {
         // Phase 10 Day 31.3: Use class constants instead of magic numbers
@@ -3324,11 +3649,107 @@ Return JSON format:
         const result = JSON.parse(response.choices[0].message.content || '{}');
 
         if (result.codes && Array.isArray(result.codes)) {
-          codes.push(
-            ...result.codes.map((code: any) => ({
-              ...code,
-              id: `code_${crypto.randomBytes(8).toString('hex')}`,
-            })),
+          // PHASE 10 DAY 5.17.6 FIX: Ensure all codes have valid excerpts
+          // Enterprise-grade validation with defensive programming and DRY compliance
+
+          // Create source lookup map for O(1) performance (instead of O(n) find in loop)
+          const sourceMap = new Map(batch.map((s) => [s.id, s]));
+
+          const processedCodes: InitialCode[] = [];
+
+          for (const rawCode of result.codes) {
+            try {
+              // DEFENSIVE PROGRAMMING: Validate all required fields from GPT-4
+              if (!rawCode || typeof rawCode !== 'object') {
+                this.logger.warn('Skipping invalid code: not an object');
+                continue;
+              }
+
+              if (!rawCode.label || typeof rawCode.label !== 'string') {
+                this.logger.warn('Skipping code with missing or invalid label');
+                continue;
+              }
+
+              if (!rawCode.sourceId || typeof rawCode.sourceId !== 'string') {
+                this.logger.warn(`Skipping code "${rawCode.label}": missing or invalid sourceId`);
+                continue;
+              }
+
+              // TYPE SAFETY: Create properly typed code object
+              const baseCode: InitialCode = {
+                id: `code_${crypto.randomBytes(8).toString('hex')}`,
+                label: rawCode.label,
+                description: rawCode.description || '',
+                sourceId: rawCode.sourceId,
+                excerpts: [], // Will be populated below
+              };
+
+              // CRITICAL FIX: Ensure excerpts array exists and has content
+              const hasValidExcerpts =
+                rawCode.excerpts &&
+                Array.isArray(rawCode.excerpts) &&
+                rawCode.excerpts.length > 0 &&
+                rawCode.excerpts.every((e: unknown) => typeof e === 'string' && e.trim().length > 0);
+
+              if (hasValidExcerpts) {
+                baseCode.excerpts = rawCode.excerpts;
+                this.logger.debug(
+                  `Code "${baseCode.label}" has ${baseCode.excerpts.length} excerpts from GPT-4 ✅`,
+                );
+              } else {
+                // Fallback: Extract excerpts using existing DRY-compliant method
+                this.logger.debug(
+                  `Code "${baseCode.label}" has no valid excerpts from GPT-4, extracting from source content...`,
+                );
+
+                const source = sourceMap.get(baseCode.sourceId);
+                if (source && source.content && source.content.length > 0) {
+                  // DRY COMPLIANCE: Reuse existing extractRelevantExcerpts method
+                  const keywords = baseCode.label.split(/\s+/).filter((k) => k.length > 0);
+                  const extractedExcerpts = this.extractRelevantExcerpts(
+                    keywords,
+                    source.content,
+                    UnifiedThemeExtractionService.MAX_EXCERPTS_PER_SOURCE,
+                  );
+
+                  if (extractedExcerpts.length > 0) {
+                    baseCode.excerpts = extractedExcerpts;
+                    this.logger.debug(
+                      `  ✅ Extracted ${baseCode.excerpts.length} excerpts for code "${baseCode.label}"`,
+                    );
+                  } else {
+                    // Emergency fallback: Use description
+                    baseCode.excerpts = baseCode.description
+                      ? [baseCode.description]
+                      : ['[Generated from code analysis]'];
+                    this.logger.debug(
+                      `  ⚙️ No keyword matches for code "${baseCode.label}", using description as excerpt`,
+                    );
+                  }
+                } else {
+                  // Source not found or empty
+                  baseCode.excerpts = baseCode.description
+                    ? [baseCode.description]
+                    : ['[No content available]'];
+                  this.logger.warn(
+                    `  ⚠️ Source "${baseCode.sourceId}" not found or empty for code "${baseCode.label}", using description`,
+                  );
+                }
+              }
+
+              processedCodes.push(baseCode);
+            } catch (error) {
+              // ERROR HANDLING: Don't let single code failure crash entire batch
+              this.logger.error(
+                `Failed to process code "${rawCode?.label || 'unknown'}": ${(error as Error).message}`,
+              );
+              // Continue processing other codes
+            }
+          }
+
+          codes.push(...processedCodes);
+          this.logger.log(
+            `Processed ${processedCodes.length}/${result.codes.length} codes from batch starting at ${startIndex}`,
           );
         }
       } catch (error) {
@@ -3347,7 +3768,7 @@ Return JSON format:
   private async generateCandidateThemes(
     codes: InitialCode[],
     sources: SourceContent[],
-    embeddings: Map<string, number[]>,
+    _embeddings: Map<string, number[]>,
     options: AcademicExtractionOptions,
   ): Promise<CandidateTheme[]> {
     // Phase 10 Day 31.3: Input validation (defensive programming)
@@ -3458,16 +3879,11 @@ Return JSON format:
    */
   private async labelThemeClusters(
     clusters: Array<{ codes: InitialCode[]; centroid: number[] }>,
-    sources: SourceContent[],
+    _sources: SourceContent[],
   ): Promise<CandidateTheme[]> {
     const themes: CandidateTheme[] = [];
 
     for (const [index, cluster] of clusters.entries()) {
-      const codeLabels = cluster.codes.map((c) => c.label).join(', ');
-      const codeDescriptions = cluster.codes
-        .map((c) => c.description)
-        .join('\n');
-
       const prompt = `Based on these related research codes, generate a cohesive theme.
 
 Codes in this cluster:
@@ -3518,10 +3934,11 @@ Return JSON:
         );
 
         // Fallback: use code labels
+        const codeDescriptions = cluster.codes.map((c) => c.label).join(', ');
         themes.push({
           id: `theme_${crypto.randomBytes(8).toString('hex')}`,
           label: `Theme ${index + 1}: ${cluster.codes[0].label}`,
-          description: codeDescriptions,
+          description: `Theme based on codes: ${codeDescriptions}`,
           keywords: cluster.codes.flatMap((c) =>
             c.label.toLowerCase().split(' '),
           ),
@@ -3562,7 +3979,6 @@ Return JSON:
     const hasFullText = contentTypes.some(
       (t) => t === 'full_text' || t === 'abstract_overflow',
     );
-    const allAbstracts = contentTypes.every((t) => t === 'abstract');
 
     // Determine if content is actually full-text despite being in abstract field
     const avgLengthSuggestsFullText = avgContentLength > 2000; // >2000 chars likely full articles
@@ -3831,7 +4247,7 @@ Return JSON:
   private async validateThemesAcademic(
     themes: CandidateTheme[],
     sources: SourceContent[],
-    embeddings: Map<string, number[]>,
+    _embeddings: Map<string, number[]>,
     options: AcademicExtractionOptions,
   ): Promise<ValidationResult> {
     // Phase 10 Day 31.3: Input validation (defensive programming)
@@ -4154,7 +4570,7 @@ Return JSON:
    */
   private async refineThemesAcademic(
     themes: CandidateTheme[],
-    embeddings: Map<string, number[]>,
+    _embeddings: Map<string, number[]>,
   ): Promise<CandidateTheme[]> {
     // Phase 10 Day 31.3: Input validation (defensive programming)
     if (!themes || themes.length === 0) {
@@ -4477,7 +4893,7 @@ Return JSON:
    */
   private calculateCoherenceScore(
     themes: UnifiedTheme[],
-    embeddings: Map<string, number[]>,
+    _embeddings: Map<string, number[]>,
   ): number {
     if (themes.length === 0) return 0;
 

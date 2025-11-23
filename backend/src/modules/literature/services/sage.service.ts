@@ -153,7 +153,7 @@ export class SageService {
         .filter((paper: Paper | null) => paper !== null) as Paper[];
 
       const eligiblePapers = papers.filter((paper) =>
-        isPaperEligible(paper.wordCount || 0),
+        isPaperEligible(paper.wordCount || 0, 150),
       );
       this.logger.log(
         `✅ [SAGE] ${eligiblePapers.length}/${papers.length} papers eligible (100+ words)`,

@@ -10,6 +10,8 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  MaxLength,
+  MinLength,
   ValidateNested,
 } from 'class-validator';
 
@@ -56,8 +58,10 @@ export enum LiteratureSource {
 }
 
 export class SearchLiteratureDto {
-  @ApiProperty({ description: 'Search query string' })
+  @ApiProperty({ description: 'Search query string', minLength: 1, maxLength: 500 })
   @IsString()
+  @MinLength(1, { message: 'Query must not be empty' })
+  @MaxLength(500, { message: 'Query must not exceed 500 characters' })
   query!: string;
 
   @ApiPropertyOptional({ description: 'Databases to search', type: [String] })
@@ -400,6 +404,8 @@ export class Paper {
   abstract?: string;
   doi?: string;
   pmid?: string; // Phase 10.6 Day 3.5: PubMed ID for PMC full-text lookup
+  pmcId?: string; // Phase 10.94 Day 1-2: PubMed Central ID for direct full-text access
+  arXivId?: string; // Phase 10.94 Day 1-2: arXiv ID for preprint identification
   url?: string;
   venue?: string;
   citationCount?: number;

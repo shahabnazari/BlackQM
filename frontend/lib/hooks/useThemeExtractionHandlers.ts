@@ -44,6 +44,7 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 import type { ContentAnalysis, Paper } from './useThemeExtractionWorkflow';
 
 // ============================================================================
@@ -83,7 +84,7 @@ export interface UseThemeExtractionHandlersConfig {
   contentAnalysis: ContentAnalysis | null;
   papers: Paper[];
   selectedPapers: Set<string>;
-  userExpertiseLevel: 'novice' | 'researcher' | 'expert';
+  userExpertiseLevel: 'novice' | 'intermediate' | 'advanced' | 'researcher' | 'expert';
 
   // State setters
   setShowModeSelectionModal: (show: boolean) => void;
@@ -100,6 +101,12 @@ export interface UseThemeExtractionHandlersConfig {
 
   // Progress tracking
   startExtraction: (totalSources: number) => void;
+  updateProgress: (
+    currentSource: number,
+    totalSources: number,
+    transparentMessage?: any
+  ) => void;
+  completeExtraction: (themesCount: number) => void; // CRITICAL FIX (Nov 18, 2025): Set progress to 'complete' state
 
   // API functions
   extractThemesV2: (
@@ -197,6 +204,8 @@ export function useThemeExtractionHandlers(
     setContentAnalysis,
     setPapers,
     startExtraction,
+    updateProgress, // CRITICAL FIX (Nov 18, 2025): Added for WebSocket progress updates
+    completeExtraction, // CRITICAL FIX (Nov 18, 2025): Added for modal close functionality
     extractThemesV2,
     onExtractionComplete,
     onExtractionError,
@@ -218,21 +227,17 @@ export function useThemeExtractionHandlers(
   const handleModeSelected = useCallback(
     async (mode: ExtractionMode) => {
       const requestId = currentRequestId || 'unknown';
-      console.log(`\n🎯 [${requestId}] Mode selected: ${mode.toUpperCase()}`);
+      logger.info('Mode selected', 'ThemeExtractionHandlers', { requestId, mode });
 
       setShowModeSelectionModal(false);
 
       if (mode === 'quick') {
         // Quick mode: Show purpose wizard (existing flow)
-        console.log(
-          `⚡ [${requestId}] Opening Purpose Selection Wizard for quick extraction...`
-        );
+        logger.info('Opening Purpose Selection Wizard', 'ThemeExtractionHandlers', { requestId });
         setShowPurposeWizard(true);
       } else {
         // Guided mode: Show guided extraction wizard
-        console.log(
-          `🤖 [${requestId}] Opening Guided Extraction Wizard for AI-powered extraction...`
-        );
+        logger.info('Opening Guided Extraction Wizard', 'ThemeExtractionHandlers', { requestId });
         setShowGuidedWizard(true);
       }
     },
@@ -277,19 +282,16 @@ export function useThemeExtractionHandlers(
       // ===========================
 
       const requestId = currentRequestId || 'unknown';
-      console.log(`\n${'='.repeat(80)}`);
-      console.log(`🎯 [${requestId}] STEP 2: PURPOSE SELECTED`);
-      console.log(`${'='.repeat(80)}`);
-      console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
-      console.log(`🎯 Selected purpose: "${purpose}"`);
-      console.log(`📋 Purpose requirements:`);
-
       const requirement = PURPOSE_REQUIREMENTS[purpose];
-      if (requirement) {
-        console.log(`   • Purpose: ${requirement.name}`);
-        console.log(`   • Methodology: ${requirement.methodology}`);
-        console.log(`   • Min full-text papers: ${requirement.minFullText}`);
-      }
+
+      logger.info('Purpose selected - handlePurposeSelected called', 'ThemeExtractionHandlers', {
+        requestId,
+        purpose,
+        purposeName: requirement?.name,
+        methodology: requirement?.methodology,
+        minFullTextRequired: requirement?.minFullText,
+        timestamp: new Date().toISOString(),
+      });
 
       setExtractionPurpose(purpose);
       setShowPurposeWizard(false);
@@ -300,100 +302,168 @@ export function useThemeExtractionHandlers(
       // ===========================
 
       if (!contentAnalysis) {
-        console.error(`❌ [${requestId}] Content analysis data missing!`);
+        logger.error('Content analysis data missing', 'ThemeExtractionHandlers', { requestId });
         toast.error('Content analysis data missing. Please try again.');
         setAnalyzingThemes(false);
+        setIsExtractionInProgress(false);
         return;
       }
 
-      console.log(`✅ [${requestId}] Content analysis data available`);
-      console.log(`   • Full-text papers: ${contentAnalysis.fullTextCount}`);
-      console.log(
-        `   • Abstract overflow: ${contentAnalysis.abstractOverflowCount}`
-      );
-      console.log(`   • Abstract-only: ${contentAnalysis.abstractCount}`);
-      console.log(`   • No content: ${contentAnalysis.noContentCount}`);
-      console.log(
-        `   • Avg content length: ${Math.round(contentAnalysis.avgContentLength).toLocaleString()} chars`
-      );
-      console.log(
-        `   • Quality: ${contentAnalysis.hasFullTextContent ? 'HIGH' : 'MODERATE'}`
-      );
+      // BUGFIX: Validate sources array exists and has content
+      if (!contentAnalysis.sources || contentAnalysis.sources.length === 0) {
+        logger.error('No sources in contentAnalysis', 'ThemeExtractionHandlers', {
+          requestId,
+          contentAnalysis,
+        });
+        toast.error(
+          'No papers with content available for extraction. Please select papers with abstracts or full-text.',
+          { duration: 8000 }
+        );
+        setAnalyzingThemes(false);
+        setIsExtractionInProgress(false);
+        return;
+      }
+
+      logger.info('Content analysis data available', 'ThemeExtractionHandlers', {
+        requestId,
+        fullTextCount: contentAnalysis.fullTextCount,
+        abstractOverflowCount: contentAnalysis.abstractOverflowCount,
+        abstractCount: contentAnalysis.abstractCount,
+        noContentCount: contentAnalysis.noContentCount,
+        avgContentLength: Math.round(contentAnalysis.avgContentLength),
+        quality: contentAnalysis.hasFullTextContent ? 'HIGH' : 'MODERATE',
+      });
 
       // ===========================
       // STEP 3: VALIDATE CONTENT REQUIREMENTS
       // ===========================
 
-      const fullTextCount =
-        contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
+      // ✅ FIXED (Phase 10.92 Day 2): Count ONLY actual full-text, not abstract overflow
+      // Abstract overflow (250-500 words) is NOT equivalent to full-text (3000-15000 words)
+      const fullTextCount = contentAnalysis.fullTextCount;
+      const abstractOverflowCount = contentAnalysis.abstractOverflowCount;
+      const abstractCount = contentAnalysis.abstractCount;
 
-      console.log(`\n🔍 [${requestId}] VALIDATION: Content Requirements`);
-      console.log(`${'─'.repeat(60)}`);
-      console.log(
-        `   📊 Full-text count (including overflow): ${fullTextCount}`
-      );
-      console.log(`      • Pure full-text: ${contentAnalysis.fullTextCount}`);
-      console.log(
-        `      • Abstract overflow: ${contentAnalysis.abstractOverflowCount}`
-      );
+      logger.info('Validating content requirements', 'ThemeExtractionHandlers', {
+        requestId,
+        fullTextCount,
+        abstractOverflowCount,
+        abstractCount,
+        noContentCount: contentAnalysis.noContentCount,
+      });
 
       // Required validations (block extraction)
+      // ✅ FIXED (Phase 10.92 Day 2): Updated validation with nuanced messaging
       if (purpose === 'literature_synthesis' && fullTextCount < 10) {
-        console.error(
-          `❌ [${requestId}] VALIDATION FAILED: Literature Synthesis requires 10+ full-text, have ${fullTextCount}`
-        );
-        toast.error(
-          `Cannot extract themes: Literature Synthesis requires at least 10 full-text papers for methodologically sound meta-ethnography. You have ${fullTextCount} full-text paper${fullTextCount !== 1 ? 's' : ''}.`,
-          { duration: 8000 }
-        );
-        setShowPurposeWizard(false);
-        setAnalyzingThemes(false);
-        return;
+        // Check if we have abstract overflow papers as partial mitigation
+        if (abstractOverflowCount >= 5) {
+          // Soft warning - can proceed but quality may suffer
+          logger.warn('Literature Synthesis: Insufficient full-text papers', 'ThemeExtractionHandlers', {
+            requestId,
+            fullTextCount,
+            required: 10,
+            abstractOverflowCount,
+          });
+          toast.warning(
+            `Literature Synthesis works best with 10+ full-text papers for methodologically sound meta-ethnography. ` +
+              `You have ${fullTextCount} full-text and ${abstractOverflowCount} extended abstract${abstractOverflowCount !== 1 ? 's' : ''}. ` +
+              `Theme extraction will proceed, but quality may be lower than expected. ` +
+              `Consider waiting for full-text extraction to complete for better results.`,
+            { duration: 10000 }
+          );
+        } else {
+          // Hard error - block extraction
+          logger.error('Validation failed: Literature Synthesis requires 10+ full-text', 'ThemeExtractionHandlers', {
+            requestId,
+            fullTextCount,
+            required: 10,
+          });
+          toast.error(
+            `Cannot extract themes: Literature Synthesis requires at least 10 full-text papers ` +
+              `for methodologically sound meta-ethnography. You have ${fullTextCount} full-text paper${fullTextCount !== 1 ? 's' : ''} ` +
+              `and ${abstractOverflowCount} extended abstract${abstractOverflowCount !== 1 ? 's' : ''}. ` +
+              `Please select more papers with full-text or wait for full-text extraction to complete.`,
+            { duration: 10000 }
+          );
+          setShowPurposeWizard(false);
+          setAnalyzingThemes(false);
+          return;
+        }
       } else if (purpose === 'literature_synthesis') {
-        console.log(
-          `   ✅ Literature Synthesis validation passed (${fullTextCount} >= 10)`
-        );
+        logger.info('Literature Synthesis validation passed', 'ThemeExtractionHandlers', {
+          requestId,
+          fullTextCount,
+        });
       }
 
       if (purpose === 'hypothesis_generation' && fullTextCount < 8) {
-        console.error(
-          `❌ [${requestId}] VALIDATION FAILED: Hypothesis Generation requires 8+ full-text, have ${fullTextCount}`
-        );
-        toast.error(
-          `Cannot extract themes: Hypothesis Generation requires at least 8 full-text papers for grounded theory. You have ${fullTextCount} full-text paper${fullTextCount !== 1 ? 's' : ''}.`,
-          { duration: 8000 }
-        );
-        setShowPurposeWizard(false);
-        setAnalyzingThemes(false);
-        return;
+        // ✅ FIXED (Phase 10.92 Day 2): Updated validation with nuanced messaging
+        if (abstractOverflowCount >= 4) {
+          // Soft warning - can proceed but quality may suffer
+          logger.warn('Hypothesis Generation: Insufficient full-text papers', 'ThemeExtractionHandlers', {
+            requestId,
+            fullTextCount,
+            required: 8,
+            abstractOverflowCount,
+          });
+          toast.warning(
+            `Hypothesis Generation works best with 8+ full-text papers for grounded theory analysis. ` +
+              `You have ${fullTextCount} full-text and ${abstractOverflowCount} extended abstract${abstractOverflowCount !== 1 ? 's' : ''}. ` +
+              `Theme extraction will proceed, but hypothesis quality may be lower than expected.`,
+            { duration: 10000 }
+          );
+        } else {
+          // Hard error - block extraction
+          logger.error('Validation failed: Hypothesis Generation requires 8+ full-text', 'ThemeExtractionHandlers', {
+            requestId,
+            fullTextCount,
+            required: 8,
+          });
+          toast.error(
+            `Cannot extract themes: Hypothesis Generation requires at least 8 full-text papers for grounded theory. ` +
+              `You have ${fullTextCount} full-text paper${fullTextCount !== 1 ? 's' : ''} ` +
+              `and ${abstractOverflowCount} extended abstract${abstractOverflowCount !== 1 ? 's' : ''}. ` +
+              `Please select more papers with full-text or wait for full-text extraction to complete.`,
+            { duration: 10000 }
+          );
+          setShowPurposeWizard(false);
+          setAnalyzingThemes(false);
+          return;
+        }
       } else if (purpose === 'hypothesis_generation') {
-        console.log(
-          `   ✅ Hypothesis Generation validation passed (${fullTextCount} >= 8)`
-        );
+        logger.info('Hypothesis Generation validation passed', 'ThemeExtractionHandlers', {
+          requestId,
+          fullTextCount,
+        });
       }
 
       // Recommended validations (warn but proceed)
+      // ✅ FIXED (Phase 10.92 Day 2): Updated validation with content breakdown
       if (purpose === 'survey_construction' && fullTextCount < 5) {
-        console.warn(
-          `⚠️ [${requestId}] Survey Construction: Recommended 5+ full-text papers, have ${fullTextCount} (proceeding)`
-        );
+        logger.warn('Survey Construction: Below recommended full-text papers', 'ThemeExtractionHandlers', {
+          requestId,
+          fullTextCount,
+          recommended: 5,
+          abstractOverflowCount,
+        });
         toast.warning(
-          `Survey Construction works best with at least 5 full-text papers. You have ${fullTextCount}. Proceeding anyway...`,
+          `Survey Construction works best with at least 5 full-text papers. ` +
+            `You have ${fullTextCount} full-text and ${abstractOverflowCount} extended abstract${abstractOverflowCount !== 1 ? 's' : ''}. ` +
+            `Proceeding with theme extraction...`,
           { duration: 6000 }
         );
       } else if (purpose === 'survey_construction') {
-        console.log(
-          `   ✅ Survey Construction validation passed (${fullTextCount} >= 5)`
-        );
+        logger.info('Survey Construction validation passed', 'ThemeExtractionHandlers', {
+          requestId,
+          fullTextCount,
+        });
       }
 
       if (purpose === 'q_methodology') {
-        console.log(`   ℹ️ Q-Methodology: No minimum full-text requirement`);
+        logger.info('Q-Methodology: No minimum full-text requirement', 'ThemeExtractionHandlers', { requestId });
       }
 
-      console.log(
-        `✅ [${requestId}] Content validation complete - proceeding with extraction`
-      );
+      logger.info('Content validation complete - proceeding with extraction', 'ThemeExtractionHandlers', { requestId });
 
       // ===========================
       // STEP 4: PREPARE FOR EXTRACTION
@@ -402,61 +472,26 @@ export function useThemeExtractionHandlers(
       let allSources = contentAnalysis.sources;
       let totalSources = allSources.length;
 
-      console.log(`\n📦 [${requestId}] STEP 3: Preparing Extraction`);
-      console.log(`${'─'.repeat(60)}`);
-      console.log(`   📊 Total sources to process: ${totalSources}`);
-
       // Mark all selected papers as "extracting" (real-time UX)
       const paperIds = Array.from(selectedPapers);
       setExtractingPapers(new Set(paperIds));
-      console.log(`   🟡 Marked ${paperIds.length} papers as "extracting"`);
-      console.log(
-        `   🆔 Paper IDs:`,
-        paperIds.slice(0, 5).join(', ') + (paperIds.length > 5 ? '...' : '')
-      );
+
+      logger.info('Preparing extraction', 'ThemeExtractionHandlers', {
+        requestId,
+        totalSources,
+        paperIdsCount: paperIds.length,
+        samplePaperIds: paperIds.slice(0, 5),
+      });
 
       // Start progress tracking
       startExtraction(totalSources);
-      console.log(
-        `   ✅ Progress tracking initialized for ${totalSources} sources`
-      );
 
       // ===========================
       // STEP 5: FULL-TEXT STATUS CHECK
       // ===========================
 
-      console.log(`\n⏳ [${requestId}] STEP 3.5: Checking Full-Text Status`);
-      console.log(`${'─'.repeat(60)}`);
-
-      // DIAGNOSTIC - Show what papers we're checking
-      console.log(
-        `🔍 [${requestId}] DIAGNOSTIC - Papers being checked for full-text:`
-      );
       const paperIdSet = new Set(paperIds);
       const selectedPapersForDiag = papers.filter(p => paperIdSet.has(p.id));
-
-      selectedPapersForDiag.slice(0, 5).forEach((paper, idx) => {
-        console.log(`   ${idx + 1}. "${paper.title?.substring(0, 50)}..."`);
-        console.log(`      • DOI: ${paper.doi || 'MISSING'}`);
-        console.log(
-          `      • URL: ${paper.url ? paper.url.substring(0, 60) + '...' : 'MISSING'}`
-        );
-        console.log(
-          `      • Has identifiers: ${paper.doi || paper.url ? '✅ YES' : '❌ NO (cannot fetch full-text)'}`
-        );
-        console.log(
-          `      • Full-text status: ${paper.fullTextStatus || 'not_fetched'}`
-        );
-        console.log(
-          `      • Has full-text NOW: ${paper.hasFullText ? '✅ YES' : '❌ NO'}`
-        );
-      });
-
-      if (selectedPapersForDiag.length > 5) {
-        console.log(
-          `   ... and ${selectedPapersForDiag.length - 5} more papers`
-        );
-      }
 
       // Count papers with identifiers
       const papersWithIdentifiers = selectedPapersForDiag.filter(
@@ -465,34 +500,43 @@ export function useThemeExtractionHandlers(
       const papersWithoutIdentifiers =
         selectedPapersForDiag.length - papersWithIdentifiers;
 
-      console.log(`📊 [${requestId}] Identifier Summary:`);
-      console.log(
-        `   • Papers WITH identifiers (DOI/PMID/URL): ${papersWithIdentifiers}`
-      );
-      console.log(
-        `   • Papers WITHOUT identifiers: ${papersWithoutIdentifiers}`
-      );
+      logger.info('Checking full-text status', 'ThemeExtractionHandlers', {
+        requestId,
+        totalPapers: selectedPapersForDiag.length,
+        papersWithIdentifiers,
+        papersWithoutIdentifiers,
+        samplePapers: selectedPapersForDiag.slice(0, 3).map(p => ({
+          title: p.title?.substring(0, 50),
+          hasDoi: !!p.doi,
+          hasUrl: !!p.url,
+          fullTextStatus: p.fullTextStatus || 'not_fetched',
+          hasFullText: p.hasFullText,
+        })),
+      });
 
       // CRITICAL USER WARNING - Surface identifier issues prominently
       if (papersWithoutIdentifiers > 0) {
-        console.warn(
-          `   ⚠️ ${papersWithoutIdentifiers} papers CANNOT fetch full-text (no DOI/PMID/URL)!`
-        );
-
         const percentage = Math.round(
           (papersWithoutIdentifiers / selectedPapersForDiag.length) * 100
         );
 
+        logger.warn('Papers missing identifiers for full-text extraction', 'ThemeExtractionHandlers', {
+          requestId,
+          papersWithoutIdentifiers,
+          totalPapers: selectedPapersForDiag.length,
+          percentageMissing: percentage,
+        });
+
         if (papersWithoutIdentifiers === selectedPapersForDiag.length) {
           // ALL papers lack identifiers
           toast.error(
-            `⚠️ CRITICAL: All ${papersWithoutIdentifiers} papers lack DOI/PMID/URL identifiers. Full-text extraction is IMPOSSIBLE. Only abstracts will be used for theme extraction.`,
+            `CRITICAL: All ${papersWithoutIdentifiers} papers lack DOI/PMID/URL identifiers. Full-text extraction is IMPOSSIBLE. Only abstracts will be used for theme extraction.`,
             { duration: 10000 }
           );
         } else if (percentage >= 50) {
           // More than half lack identifiers
           toast.warning(
-            `⚠️ WARNING: ${papersWithoutIdentifiers} of ${selectedPapersForDiag.length} papers (${percentage}%) lack identifiers. They cannot fetch full-text and will use abstracts only.`,
+            `WARNING: ${papersWithoutIdentifiers} of ${selectedPapersForDiag.length} papers (${percentage}%) lack identifiers. They cannot fetch full-text and will use abstracts only.`,
             { duration: 8000 }
           );
         } else {
@@ -503,9 +547,7 @@ export function useThemeExtractionHandlers(
           );
         }
       } else {
-        console.log(
-          `   ✅ All papers have identifiers - full-text extraction possible!`
-        );
+        logger.info('All papers have identifiers - full-text extraction possible', 'ThemeExtractionHandlers', { requestId });
       }
 
       // ===========================
@@ -513,14 +555,6 @@ export function useThemeExtractionHandlers(
       // ===========================
 
       try {
-        console.log(`\n🚀 [${requestId}] STEP 4: API Call to Backend`);
-        console.log(`${'─'.repeat(60)}`);
-        console.log(`   🎯 Purpose: ${purpose}`);
-        console.log(`   👤 Expertise level: ${userExpertiseLevel}`);
-        console.log(`   🔬 Methodology: reflexive_thematic`);
-        console.log(`   ✅ Validation level: rigorous`);
-        console.log(`   🔄 Iterative refinement: enabled`);
-
         // CRITICAL VALIDATION - Count actual full-text in sources array
         const actualFullTextCount = allSources.filter(
           s => s.type === 'paper' && s.metadata?.contentType === 'full_text'
@@ -534,64 +568,65 @@ export function useThemeExtractionHandlers(
             s.metadata?.contentType === 'abstract_overflow'
         ).length;
 
-        console.log(`\n   📊 Content Breakdown (VALIDATION):`);
-        console.log(
-          `      • Full-text papers in allSources: ${actualFullTextCount}`
-        );
-        console.log(
-          `      • Abstract overflow in allSources: ${actualAbstractOverflowCount}`
-        );
-        console.log(
-          `      • Abstract-only in allSources: ${actualAbstractCount}`
-        );
-        console.log(`      • Total sources being sent: ${allSources.length}`);
+        logger.info('Initiating API call to extractThemesV2', 'ThemeExtractionHandlers', {
+          requestId,
+          purpose,
+          userExpertiseLevel,
+          methodology: 'reflexive_thematic',
+          validationLevel: 'rigorous',
+          iterativeRefinement: true,
+          contentBreakdown: {
+            fullText: actualFullTextCount,
+            abstractOverflow: actualAbstractOverflowCount,
+            abstractOnly: actualAbstractCount,
+            totalSources: allSources.length,
+          },
+          firstSourceSample: allSources.length > 0 ? {
+            title: allSources[0]?.title?.substring(0, 80),
+            type: allSources[0]?.type,
+            contentLength: allSources[0]?.content?.length || 0,
+          } : null,
+        });
 
         // Validate sources match
         if (
           actualFullTextCount === 0 &&
           allSources.filter(s => s.type === 'paper').length > 0
         ) {
-          console.warn(
-            `⚠️ [${requestId}] WARNING: NO FULL-TEXT IN SOURCES ARRAY! This will cause 0 full articles in familiarization!`
-          );
-        } else {
-          console.log(
-            `✅ [${requestId}] Validation passed: ${actualFullTextCount} full-text papers in sources array`
-          );
+          logger.warn('No full-text in sources array - only abstracts available', 'ThemeExtractionHandlers', { requestId });
         }
 
-        if (allSources.length > 0) {
-          const firstSource = allSources[0];
-          console.log(`\n   📄 Sample of first source:`);
-          console.log(
-            `      • Title: "${(firstSource?.title || '').substring(0, 80)}${(firstSource?.title?.length || 0) > 80 ? '...' : ''}"`
-          );
-          console.log(`      • Type: ${firstSource?.type || 'unknown'}`);
-          console.log(
-            `      • Content length: ${(firstSource?.content?.length || 0).toLocaleString()} chars`
-          );
-          console.log(
-            `      • Preview: "${(firstSource?.content || '').substring(0, 150).replace(/\n/g, ' ')}..."`
-          );
-        }
-
-        // Use V2 purpose-driven extraction with transparent progress
-        console.log(`\n   📡 Initiating API call to extractThemesV2...`);
         const apiStartTime = Date.now();
 
-        const result = await extractThemesV2(allSources, {
-          sources: allSources,
-          purpose,
-          userExpertiseLevel,
-          methodology: 'reflexive_thematic',
-          validationLevel: 'rigorous',
-          iterativeRefinement: true,
-        });
+        // CRITICAL FIX (Nov 18, 2025): Pass onProgress callback for WebSocket progress updates
+        // This enables real-time modal progress (prevents stuck on familiarization)
+        const result = await extractThemesV2(
+          allSources,
+          {
+            sources: allSources,
+            purpose,
+            userExpertiseLevel,
+            methodology: 'reflexive_thematic',
+            validationLevel: 'rigorous',
+            iterativeRefinement: true,
+          },
+          (stageNumber: number, totalStages: number, message: string, transparentMessage?: any) => {
+            logger.debug('Progress update received', 'ThemeExtractionHandlers', {
+              requestId,
+              stageNumber,
+              totalStages,
+              message,
+            });
+            updateProgress(stageNumber, totalStages, transparentMessage);
+          }
+        );
 
         const apiDuration = Date.now() - apiStartTime;
-        console.log(
-          `   ✅ API call completed in ${(apiDuration / 1000).toFixed(1)}s`
-        );
+        logger.info('API call completed', 'ThemeExtractionHandlers', {
+          requestId,
+          durationMs: apiDuration,
+          durationSeconds: (apiDuration / 1000).toFixed(1),
+        });
 
         // Phase 10.7 Day 5 FIX: Validate result before processing
         // extractThemesV2 hook returns null on error instead of throwing
@@ -605,26 +640,30 @@ export function useThemeExtractionHandlers(
         // STEP 7: PROCESS RESULTS
         // ===========================
 
-        console.log(`\n✅ [${requestId}] STEP 5: Processing Results`);
-        console.log(`${'─'.repeat(60)}`);
-        console.log(`   📊 Themes extracted: ${result.themes?.length || 0}`);
+        logger.info('Processing extraction results', 'ThemeExtractionHandlers', {
+          requestId,
+          themesExtracted: result.themes?.length || 0,
+        });
 
         // Phase 10.1 Day 12: Move papers from extracting to extracted state
         // This ensures "Extracted" badges show on papers even if WebSocket fails
         setExtractedPapers(prev => {
           const newExtracted = new Set(prev);
           paperIds.forEach(id => newExtracted.add(id));
-          console.log(
-            `   ✅ Marked ${paperIds.length} papers as extracted (total: ${newExtracted.size})`
-          );
+          logger.info('Papers marked as extracted', 'ThemeExtractionHandlers', {
+            requestId,
+            papersMarked: paperIds.length,
+            totalExtracted: newExtracted.size,
+          });
           return newExtracted;
         });
 
         // Clear extracting state
         setExtractingPapers(new Set());
-        console.log(
-          `   ✅ Cleared "extracting" state for ${paperIds.length} papers`
-        );
+
+        // CRITICAL FIX (Nov 18, 2025): Set progress to 'complete' state
+        // This enables modal close handlers (ESC key and click-outside)
+        completeExtraction(result.themes?.length || 0);
 
         // Call completion callback
         if (onExtractionComplete && result.themes) {
@@ -639,50 +678,28 @@ export function useThemeExtractionHandlers(
         // STEP 8: ERROR HANDLING
         // ===========================
 
-        console.error(`\n${'='.repeat(80)}`);
-        console.error(`❌ [${requestId}] THEME EXTRACTION ERROR`);
-        console.error(`${'='.repeat(80)}`);
-        console.error(`⏰ Timestamp: ${new Date().toISOString()}`);
-        console.error(`🔍 Error Type: ${error.name || 'Unknown'}`);
-        console.error(`💬 Error Message: ${error.message || 'No message'}`);
-
-        // Log error details
-        if (error.response) {
-          console.error(`\n📡 API Error Details:`);
-          console.error(`   • Status: ${error.response.status}`);
-          console.error(`   • Status Text: ${error.response.statusText}`);
-          console.error(`   • Response Data:`, error.response.data);
-        } else if (error.request) {
-          console.error(`\n🌐 Network Error (no response received):`);
-          console.error(`   • Request:`, error.request);
-          console.error(
-            `   • Possible causes: timeout, network issue, CORS, server down`
-          );
-        } else {
-          console.error(`\n⚙️ Client-side Error:`);
-          console.error(`   • Error:`, error);
-        }
-
-        // Log stack trace
-        if (error.stack) {
-          console.error(`\n📚 Stack Trace:`);
-          console.error(error.stack);
-        }
-
-        // Log context
-        console.error(`\n📊 Context at time of error:`);
-        console.error(`   • Purpose: ${purpose}`);
-        console.error(`   • Sources: ${allSources.length}`);
-        console.error(
-          `   • Full-text papers: ${contentAnalysis?.fullTextCount}`
-        );
-        console.error(`   • Papers being extracted:`, paperIds);
+        logger.error('Theme extraction error', 'ThemeExtractionHandlers', {
+          requestId,
+          timestamp: new Date().toISOString(),
+          errorType: error.name || 'Unknown',
+          errorMessage: error.message || 'No message',
+          apiError: error.response ? {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            data: error.response.data,
+          } : null,
+          isNetworkError: !error.response && !!error.request,
+          context: {
+            purpose,
+            sourcesCount: allSources.length,
+            fullTextPapers: contentAnalysis?.fullTextCount,
+            paperIds,
+          },
+          stack: error.stack,
+        });
 
         // Clear extracting state on error
         setExtractingPapers(new Set());
-        console.error(
-          `   ✅ Cleared "extracting" state for ${paperIds.length} papers`
-        );
 
         // Set error in progress
         setExtractionError(error.message || 'Unknown error');
@@ -695,8 +712,6 @@ export function useThemeExtractionHandlers(
         // CRITICAL FIX: Reset extraction in progress on error
         setIsExtractionInProgress(false);
 
-        console.error(`${'='.repeat(80)}\n`);
-
         toast.error(
           `Theme extraction failed: ${error.message || 'Unknown error'}`
         );
@@ -706,9 +721,7 @@ export function useThemeExtractionHandlers(
         // CRITICAL FIX: Always reset extraction in progress in finally block
         setIsExtractionInProgress(false);
 
-        console.log(
-          `🏁 [${requestId}] handlePurposeSelected finally block - cleanup complete`
-        );
+        logger.info('handlePurposeSelected cleanup complete', 'ThemeExtractionHandlers', { requestId });
       }
     },
     [
@@ -726,6 +739,8 @@ export function useThemeExtractionHandlers(
       setContentAnalysis,
       setPapers,
       startExtraction,
+      updateProgress, // CRITICAL FIX (Nov 18, 2025): Added for WebSocket progress updates
+      completeExtraction, // CRITICAL FIX (Nov 18, 2025): Added for modal close functionality
       extractThemesV2,
       onExtractionComplete,
       onExtractionError,

@@ -31,11 +31,27 @@ export interface Paper {
   hIndexJournal?: number;
   qualityScore?: number;
   isHighQuality?: boolean;
+  /** Phase 10.942: v4.0 Quality Score Breakdown */
   qualityScoreBreakdown?: {
-    citationImpact: number;
-    journalPrestige: number;
-    contentDepth: number;
+    /** Citation impact score (0-100), 30% weight */
+    citationImpact?: number;
+    /** Journal prestige score (0-100), 50% weight */
+    journalPrestige?: number;
+    /** Recency boost score (0-100), 20% weight - Phase 10.942 */
+    recencyBoost?: number;
+    /** Open access bonus (+10) - Phase 10.942 */
+    openAccessBonus?: number;
+    /** Reproducibility bonus (+5) - Phase 10.942 */
+    reproducibilityBonus?: number;
+    /** Altmetric bonus (+5) - Phase 10.942 */
+    altmetricBonus?: number;
+    /** Core score before bonuses */
+    coreScore?: number;
+    /** @deprecated Use recencyBoost instead */
+    contentDepth?: number;
   };
+  /** Phase 10.942: BM25 relevance score (0-200+) */
+  relevanceScore?: number;
   fullText?: string;
   hasFullText?: boolean;
   fullTextStatus?:

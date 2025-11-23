@@ -14,6 +14,9 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react';
+// TYPE SAFETY: Import ContentType enum for proper type checking
+import { ContentType } from '@/lib/types/content-types';
+import { logger } from '@/lib/utils/logger';
 
 /**
  * PurposeSelectionWizard Component
@@ -66,6 +69,18 @@ interface ContentAnalysis {
   avgContentLength: number;
   hasFullTextContent: boolean;
   sources: any[];
+  // BUGFIX: Transparency fields
+  totalSelected: number;
+  totalWithContent: number;
+  totalSkipped: number;
+  selectedPapersList: Array<{
+    id: string;
+    title: string;
+    hasContent: boolean;
+    contentType: ContentType; // TYPE SAFETY: Use ContentType enum instead of any
+    contentLength: number;
+    skipReason?: string;
+  }>;
 }
 
 interface PurposeSelectionWizardProps {
@@ -291,22 +306,26 @@ export default function PurposeSelectionWizard({
 
   // Step 3: Confirm Selection
   const handleConfirm = () => {
-    if (selectedPurpose) {
-      // PHASE 10 DAY 5.17: Safety check - validate content before confirming
-      const validation = validateContentSufficiency(selectedPurpose);
+    logger.info('handleConfirm() called', 'PurposeSelectionWizard', { selectedPurpose, sourcesCount: contentAnalysis.sources?.length });
 
-      if (validation.isBlocking) {
-        // Should never reach here due to Step 2/3 button disabling,
-        // but add safety check as defense in depth
-        console.error(
-          '⛔ Cannot confirm extraction with insufficient content:',
-          validation
-        );
-        return;
-      }
-
-      onPurposeSelected(selectedPurpose);
+    if (!selectedPurpose) {
+      logger.error('No purpose selected', 'PurposeSelectionWizard');
+      return;
     }
+
+    // PHASE 10 DAY 5.17: Safety check - validate content before confirming
+    const validation = validateContentSufficiency(selectedPurpose);
+    logger.debug('Validation result', 'PurposeSelectionWizard', { validation });
+
+    if (validation.isBlocking) {
+      // Should never reach here due to Step 2/3 button disabling,
+      // but add safety check as defense in depth
+      logger.error('Cannot confirm extraction with insufficient content', 'PurposeSelectionWizard', { validation });
+      return;
+    }
+
+    logger.info('Calling onPurposeSelected', 'PurposeSelectionWizard', { purpose: selectedPurpose });
+    onPurposeSelected(selectedPurpose);
   };
 
   const handleBack = () => {
@@ -407,10 +426,10 @@ export default function PurposeSelectionWizard({
                           {contentAnalysis.abstractOverflowCount}
                         </div>
                         <div className="text-sm text-purple-600 mt-1">
-                          Full articles
+                          Extended abstracts
                         </div>
                         <div className="text-xs text-purple-500 mt-1">
-                          In abstract field (&gt;2k chars)
+                          250+ words (richer content)
                         </div>
                       </div>
                     )}
@@ -420,11 +439,10 @@ export default function PurposeSelectionWizard({
                           {contentAnalysis.abstractCount}
                         </div>
                         <div className="text-sm text-gray-600 mt-1">
-                          Abstracts only
+                          Standard abstracts
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          ~{Math.round(contentAnalysis.avgContentLength)} chars
-                          avg
+                          &lt;250 words (~{Math.round(contentAnalysis.avgContentLength)} chars avg)
                         </div>
                       </div>
                     )}
@@ -477,6 +495,94 @@ export default function PurposeSelectionWizard({
                     </div>
                   </div>
                 </div>
+
+                {/* BUGFIX: Show ALL selected sources (papers + videos) with their content status */}
+                {contentAnalysis.selectedPapersList && contentAnalysis.selectedPapersList.length > 0 && (
+                  <div className="bg-white border-2 border-blue-200 rounded-lg p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <Info className="w-5 h-5 text-blue-600" />
+                        Selected Sources ({contentAnalysis.totalSelected})
+                      </h3>
+                      {contentAnalysis.totalSkipped > 0 && (
+                        <span className="text-sm text-red-600 font-medium">
+                          ⚠️ {contentAnalysis.totalSkipped} will be skipped
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {contentAnalysis.selectedPapersList.map((paper, idx) => (
+                        <div
+                          key={paper.id || idx}
+                          className={`p-3 rounded-lg border-2 ${
+                            paper.hasContent
+                              ? 'bg-green-50 border-green-200'
+                              : 'bg-red-50 border-red-200'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 mt-1">
+                              {paper.hasContent ? (
+                                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                              ) : (
+                                <AlertCircle className="w-5 h-5 text-red-600" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate" title={paper.title}>
+                                {paper.title}
+                              </p>
+                              <div className="flex items-center gap-3 mt-1">
+                                <span
+                                  className={`text-xs px-2 py-0.5 rounded font-medium ${
+                                    paper.hasContent
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-red-100 text-red-700'
+                                  }`}
+                                >
+                                  {paper.hasContent ? '✅ Will be used' : '❌ Will be skipped'}
+                                </span>
+                                {paper.hasContent && (
+                                  <span className="text-xs text-gray-600">
+                                    {paper.contentType === ContentType.FULL_TEXT && '📄 Full-text'}
+                                    {paper.contentType === ContentType.ABSTRACT_OVERFLOW && '📋 Extended abstract'}
+                                    {paper.contentType === ContentType.ABSTRACT && '📃 Abstract'}
+                                    {paper.contentType === ContentType.VIDEO_TRANSCRIPT && '🎥 Video transcript'}
+                                    {' • '}
+                                    {paper.contentLength.toLocaleString()} chars
+                                  </span>
+                                )}
+                                {!paper.hasContent && paper.skipReason && (
+                                  <span className="text-xs text-red-600 italic">
+                                    {paper.skipReason}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Summary Stats */}
+                    <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-4">
+                        <span className="text-green-700 font-medium">
+                          ✅ {contentAnalysis.totalWithContent} will be used
+                        </span>
+                        {contentAnalysis.totalSkipped > 0 && (
+                          <span className="text-red-700 font-medium">
+                            ❌ {contentAnalysis.totalSkipped} will be skipped
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-gray-600">
+                        Total: {contentAnalysis.totalSelected} sources
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* What Happens Next Preview */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">

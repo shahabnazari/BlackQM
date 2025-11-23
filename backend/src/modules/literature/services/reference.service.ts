@@ -523,7 +523,7 @@ export class ReferenceService {
     });
   }
 
-  async extractTextFromPDF(pdfPath: string): Promise<string> {
+  async extractTextFromPDF(_pdfPath: string): Promise<string> {
     // This would use a PDF parsing library like pdf-parse
     // For now, return a placeholder
     this.logger.warn('PDF text extraction not yet implemented');

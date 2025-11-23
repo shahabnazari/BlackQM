@@ -201,7 +201,7 @@ export class CrossRefService {
       source: LiteratureSource.CROSSREF,
       wordCount,
       wordCountExcludingRefs,
-      isEligible: isPaperEligible(wordCount),
+      isEligible: isPaperEligible(wordCount, 150),
       abstractWordCount,
       citationsPerYear: year
         ? citationCount / Math.max(1, new Date().getFullYear() - year)

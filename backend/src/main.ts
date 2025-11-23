@@ -12,6 +12,32 @@ import * as dotenv from 'dotenv';
 // Load environment variables first
 dotenv.config();
 
+// Global error handlers to prevent crashes
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  console.error('❌ Unhandled Promise Rejection:', reason);
+  console.error('Promise:', promise);
+  Sentry.captureException(reason);
+  // Don't exit - log and continue
+});
+
+process.on('uncaughtException', (error: Error) => {
+  console.error('❌ Uncaught Exception:', error);
+  console.error('Stack:', error.stack);
+  Sentry.captureException(error);
+  // Don't exit - log and continue
+  // In production, you might want to exit and restart via process manager
+});
+
+process.on('SIGTERM', () => {
+  console.log('👋 SIGTERM signal received: closing server gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('👋 SIGINT signal received: closing server gracefully');
+  process.exit(0);
+});
+
 async function bootstrap() {
   // Initialize Sentry before creating the app
   const sentryConfig = new SentryConfig({
@@ -60,31 +86,21 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // Dynamic CORS configuration
-  console.log('[CORS] Initializing with NODE_ENV:', process.env.NODE_ENV);
-
+  // Phase 10.943: Reduced CORS logging - only log rejections to reduce noise
   const corsOrigin = (
     origin: string | undefined,
     callback: (err: Error | null, allow?: boolean) => void,
   ) => {
-    console.log('[CORS] Checking origin:', origin);
-    console.log('[CORS] NODE_ENV:', process.env.NODE_ENV);
-
     // Allow requests with no origin (like mobile apps or Postman)
     if (!origin) {
-      console.log('[CORS] No origin - allowing');
       callback(null, true);
       return;
     }
 
     // In development, allow any localhost port
     if (process.env.NODE_ENV !== 'production') {
-      // Allow localhost with any port, or 127.0.0.1 with any port
       const localhostRegex = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
-      const isLocalhost = localhostRegex.test(origin);
-      console.log('[CORS] Development mode - localhost test:', isLocalhost);
-
-      if (isLocalhost) {
-        console.log('[CORS] Allowing localhost origin:', origin);
+      if (localhostRegex.test(origin)) {
         callback(null, true);
         return;
       }
@@ -97,12 +113,11 @@ async function bootstrap() {
       'https://www.vqmethod.com',
     ].filter(Boolean);
 
-    console.log('[CORS] Checking production origins:', allowedOrigins);
     if (allowedOrigins.includes(origin)) {
-      console.log('[CORS] Allowing production origin:', origin);
       callback(null, true);
     } else {
-      console.log('[CORS] Rejecting origin:', origin);
+      // Phase 10.943: Only log CORS rejections (important security events)
+      console.warn(`[CORS] Rejected origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   };
@@ -112,7 +127,8 @@ async function bootstrap() {
     origin: corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Correlation-ID'],
+    exposedHeaders: ['X-Correlation-ID'], // Phase 10.943: Expose correlation ID to frontend
   });
 
   // Global validation pipe

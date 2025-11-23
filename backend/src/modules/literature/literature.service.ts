@@ -1,5 +1,34 @@
+/**
+ * ⚠️ MANDATORY READING BEFORE MODIFYING THIS FILE ⚠️
+ *
+ * READ FIRST: Main Docs/PHASE_TRACKER_PART3.md
+ * Section: "📖 LITERATURE PAGE DEVELOPMENT PRINCIPLES (MANDATORY FOR ALL FUTURE WORK)"
+ * Location: Lines 4092-4244 (RIGHT BEFORE Phase 10.7)
+ *
+ * This is the MAIN SERVICE for the Literature Discovery Page (/discover/literature)
+ * ALL modifications must follow 10 enterprise-grade principles documented in Phase Tracker Part 3
+ *
+ * Key Requirements for Service Layer:
+ * - ✅ Single Responsibility: Orchestrate literature search operations ONLY
+ * - ✅ Business logic isolation: NO HTTP routing logic (belongs in Controller)
+ * - ✅ NO database operations directly (use PrismaService via dependency injection)
+ * - ✅ Coordinate source services (ArxivService, PubMedService, etc.)
+ * - ✅ Type safety: strict TypeScript, explicit return types, no any types
+ * - ✅ Comprehensive error handling: throw meaningful exceptions
+ * - ✅ Zero TypeScript errors (MANDATORY before commit)
+ * - ✅ Audit logging: log all search operations, API calls, errors
+ * - ✅ Security: validate all inputs, prevent injection attacks
+ *
+ * Architecture Pattern (Service Layer Position):
+ * User → Component → Hook → API Service → Controller → **[MAIN SERVICE]** → Source Services → External APIs
+ *
+ * Reference: IMPLEMENTATION_GUIDE_PART6.md for service implementation patterns
+ *
+ * ⚠️ DO NOT add HTTP logic here. NO Prisma direct calls. Read the principles first. ⚠️
+ */
+
 import { HttpService } from '@nestjs/axios';
-import { Inject, Injectable, Logger, forwardRef, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException, forwardRef, OnModuleInit } from '@nestjs/common';
 import Parser from 'rss-parser';
 import { firstValueFrom } from 'rxjs';
 import { createHash } from 'crypto'; // Phase 10.7 Day 5: For pagination cache key generation
@@ -21,7 +50,6 @@ import {
 import { APIQuotaMonitorService } from './services/api-quota-monitor.service';
 import { MultiMediaAnalysisService } from './services/multimedia-analysis.service';
 import { OpenAlexEnrichmentService } from './services/openalex-enrichment.service';
-import { PDFParsingService } from './services/pdf-parsing.service';
 import { PDFQueueService } from './services/pdf-queue.service';
 import { SearchCoalescerService } from './services/search-coalescer.service';
 import { TranscriptionService } from './services/transcription.service';
@@ -58,6 +86,9 @@ import { TaylorFrancisService } from './services/taylor-francis.service';
 // Phase 10.6 Day 14.4: Enterprise-grade search logging
 import { SearchLoggerService } from './services/search-logger.service';
 import { calculateQualityScore } from './utils/paper-quality.util';
+// Phase 10.942: BM25 Relevance Scoring (Robertson & Walker, 1994)
+// Gold standard for information retrieval - used by PubMed, Elasticsearch, Lucene
+import { calculateBM25RelevanceScore } from './utils/relevance-scoring.util';
 import {
   calculateAbstractWordCount,
   calculateComprehensiveWordCount,
@@ -83,7 +114,6 @@ export class LiteratureService implements OnModuleInit {
   private readonly CACHE_TTL = 3600; // 1 hour
   // Phase 10.6 Day 14.8: Enterprise-grade timeout configuration
   private readonly MAX_GLOBAL_TIMEOUT = 30000; // 30s - prevent 67s hangs
-  private readonly SOURCE_TIMEOUT_BUFFER = 5000; // 5s buffer for network overhead
   // Phase 10.6 Day 14.8: Track request times for monitoring
   private requestTimings = new Map<string, number>();
 
@@ -100,7 +130,6 @@ export class LiteratureService implements OnModuleInit {
     @Inject(forwardRef(() => StatementGeneratorService))
     private readonly statementGenerator: StatementGeneratorService,
     // Phase 10 Day 30: PDF services for full-text extraction
-    private readonly pdfParsingService: PDFParsingService,
     private readonly pdfQueueService: PDFQueueService,
     // Phase 10.1 Day 12: Citation & journal metrics enrichment
     private readonly openAlexEnrichment: OpenAlexEnrichmentService,
@@ -157,7 +186,7 @@ export class LiteratureService implements OnModuleInit {
   onModuleInit() {
     // Phase 10.8 Day 7 Post: Inject gateway manually to avoid circular dependency
     try {
-      const { LiteratureGateway } = require('./literature.gateway');
+      const { LiteratureGateway: _LiteratureGateway } = require('./literature.gateway');
       // Gateway will be instantiated by NestJS, we'll access it via module
       this.logger.log('✅ LiteratureGateway available for progress reporting');
     } catch (error) {
@@ -370,6 +399,9 @@ export class LiteratureService implements OnModuleInit {
             // Phase 10.6 additions - Free academic sources
             LiteratureSource.PMC,          // PubMed Central - Full-text articles
             LiteratureSource.ERIC,         // Education research
+            // Phase 10.7.10: Open access sources (API keys configured)
+            LiteratureSource.CORE,         // CORE - 250M+ open access papers
+            LiteratureSource.SPRINGER,     // Springer Nature - 2M+ documents (API key configured)
             // Phase 10.7 Day 5.3: REMOVED deprecated sources from default list (<500k papers)
             // LiteratureSource.BIORXIV,      // DEPRECATED: 220k papers (removed)
             // LiteratureSource.MEDRXIV,      // DEPRECATED: 45k papers (removed)
@@ -750,11 +782,12 @@ export class LiteratureService implements OnModuleInit {
 
     emitProgress(`Stage 2: Scoring relevance for ${filteredPapers.length} papers...`, 85);
     
-    // PHASE 10 DAY 1: Add relevance scoring to improve search quality
-    // Score papers by relevance to the ORIGINAL query (not expanded)
+    // Phase 10.942: BM25 Relevance Scoring (Robertson & Walker, 1994)
+    // Gold standard algorithm used by PubMed, Elasticsearch, Lucene
+    // Features: term frequency saturation, length normalization, position weighting
     const papersWithScore = filteredPapers.map((paper) => ({
       ...paper,
-      relevanceScore: this.calculateRelevanceScore(paper, originalQuery),
+      relevanceScore: calculateBM25RelevanceScore(paper, originalQuery),
     }));
 
     this.logger.log(
@@ -1039,14 +1072,16 @@ export class LiteratureService implements OnModuleInit {
         // Phase 10.6 Day 14.9: Diversity metrics
         diversityMetrics: diversityReport,
 
-        // Phase 10.6 Day 14.7: Qualification criteria transparency
+        // Phase 10.942: Qualification criteria transparency
         qualificationCriteria: {
+          relevanceAlgorithm: 'BM25', // Phase 10.942: Gold standard (Robertson & Walker 1994)
           relevanceScoreMin: MIN_RELEVANCE_SCORE,
-          relevanceScoreDesc: `Papers must score at least ${MIN_RELEVANCE_SCORE}/100 for relevance to search query. Score based on keyword matches in title and abstract.`,
+          relevanceScoreDesc: `BM25 relevance scoring (Robertson & Walker 1994) - gold standard used by PubMed, Elasticsearch. Features: term frequency saturation, document length normalization, position weighting (title 4x, keywords 3x, abstract 2x).`,
           qualityWeights: {
-            citationImpact: 60, // Phase 10.6 Day 14.7: Increased from 40%
-            journalPrestige: 40, // Phase 10.6 Day 14.7: Increased from 35%
-            // contentDepth removed: was 25%, now 0% (no length bias)
+            citationImpact: 30, // Phase 10.942: Field-Weighted Citation Impact (FWCI)
+            journalPrestige: 50, // Phase 10.942: h-index, quartile, impact factor
+            recencyBoost: 20, // Phase 10.942: Exponential decay (λ=0.15, half-life 4.6 years)
+            // Optional bonuses: +10 OA, +5 reproducibility, +5 altmetric
           },
           filtersApplied: [
             'Relevance Score ≥ 3',
@@ -1930,218 +1965,9 @@ export class LiteratureService implements OnModuleInit {
     });
   }
 
-  /**
-   * PHASE 10 DAY 1: Calculate relevance score for a paper based on query
-   * Uses TF-IDF-like scoring to rank papers by relevance
-   */
-  private calculateRelevanceScore(paper: Paper, query: string): number {
-    if (!query || query.trim().length === 0) return 0;
-
-    const queryLower = query.toLowerCase();
-    const queryTerms = queryLower
-      .split(/\s+/)
-      .filter((term) => term.length > 2); // Ignore short words
-
-    if (queryTerms.length === 0) return 0;
-
-    let score = 0;
-    let matchedTermsCount = 0;
-
-    // Title matching (highest weight)
-    const titleLower = (paper.title || '').toLowerCase();
-
-    // Exact phrase match in title (VERY high score)
-    if (titleLower.includes(queryLower)) {
-      score += 80; // Increased from 50
-      matchedTermsCount = queryTerms.length; // All terms matched
-    } else {
-      // Individual term matching
-      queryTerms.forEach((term) => {
-        if (titleLower.includes(term)) {
-          score += 15; // Increased from 10
-          matchedTermsCount++;
-          // Bonus for term at start of title
-          if (titleLower.startsWith(term)) {
-            score += 8; // Increased from 5
-          }
-        }
-      });
-    }
-
-    // Abstract matching (medium weight)
-    const abstractLower = (paper.abstract || '').toLowerCase();
-    if (abstractLower.length > 0) {
-      // Exact phrase match in abstract
-      if (abstractLower.includes(queryLower)) {
-        score += 25; // Increased from 20
-      }
-      // Individual term matches
-      queryTerms.forEach((term) => {
-        if (abstractLower.includes(term)) {
-          const termCount = (abstractLower.match(new RegExp(term, 'g')) || [])
-            .length;
-          score += Math.min(termCount * 2, 10); // Cap at 10 points per term
-        }
-      });
-    }
-
-    // Author matching (low-medium weight)
-    if (paper.authors && paper.authors.length > 0) {
-      const authorsLower = paper.authors.join(' ').toLowerCase();
-      queryTerms.forEach((term) => {
-        if (authorsLower.includes(term)) {
-          score += 3;
-        }
-      });
-    }
-
-    // Venue/journal matching (low weight)
-    const venueLower = (paper.venue || '').toLowerCase();
-    queryTerms.forEach((term) => {
-      if (venueLower.includes(term)) {
-        score += 2;
-      }
-    });
-
-    // Keywords matching (medium weight - increased importance)
-    if (paper.keywords && Array.isArray(paper.keywords)) {
-      const keywordsLower = paper.keywords.join(' ').toLowerCase();
-      queryTerms.forEach((term) => {
-        if (keywordsLower.includes(term)) {
-          score += 8; // Increased from 5
-        }
-      });
-    }
-
-    // PHASE 10 DAY 1: Penalize papers that match too few query terms
-    // This prevents broad matches where only 1 out of 5 terms match
-    const termMatchRatio = matchedTermsCount / queryTerms.length;
-    if (termMatchRatio < 0.4) {
-      // Less than 40% of terms matched
-      score *= 0.5; // Cut score in half
-      this.logger.debug(
-        `Paper penalized for low term match ratio (${Math.round(termMatchRatio * 100)}%): "${paper.title.substring(0, 50)}..."`,
-      );
-    } else if (termMatchRatio >= 0.7) {
-      // 70% or more terms matched - bonus!
-      score *= 1.2;
-    }
-
-    // Phase 10.1 Day 11: Removed recency and citation bonuses
-    // - Recency bonus was giving unfair advantage to recent papers
-    // - Citation bonus was redundant (already in quality score)
-
-    return Math.round(score); // Return rounded score for cleaner logs
-  }
-
-  /**
-   * PHASE 10 DAY 1: Identify critical/unique terms in query
-   * These terms MUST be present in papers for them to be relevant
-   */
-  private identifyCriticalTerms(query: string): string[] {
-    if (!query || query.trim().length === 0) return [];
-
-    const queryLower = query.toLowerCase();
-    const criticalTerms: string[] = [];
-
-    // Define patterns for critical terms
-    const criticalPatterns = [
-      // Q-methodology variants (HIGHEST PRIORITY)
-      {
-        patterns: [
-          /\bq-method/i,
-          /\bqmethod/i,
-          /\bvqmethod/i,
-          /\bq method/i,
-          /\bq-sort/i,
-          /\bqsort/i,
-        ],
-        term: 'Q-methodology',
-      },
-      // Specific methodologies
-      {
-        patterns: [/\bgrounded theory\b/i],
-        term: 'grounded theory',
-      },
-      {
-        patterns: [/\bethnography\b/i, /\bethnographic\b/i],
-        term: 'ethnography',
-      },
-      {
-        patterns: [/\bphenomenology\b/i, /\bphenomenological\b/i],
-        term: 'phenomenology',
-      },
-      {
-        patterns: [/\bcase study\b/i, /\bcase studies\b/i],
-        term: 'case study',
-      },
-      {
-        patterns: [/\bmixed methods\b/i, /\bmixed-methods\b/i],
-        term: 'mixed methods',
-      },
-      // Specific techniques/tools
-      {
-        patterns: [/\bmachine learning\b/i],
-        term: 'machine learning',
-      },
-      {
-        patterns: [/\bdeep learning\b/i],
-        term: 'deep learning',
-      },
-      {
-        patterns: [/\bneural network/i],
-        term: 'neural network',
-      },
-      // Specific domains (only if combined with specific methodology)
-      // Skip generic terms like "psychology", "research", "applications"
-    ];
-
-    // Check each pattern
-    for (const { patterns, term } of criticalPatterns) {
-      if (patterns.some((pattern) => pattern.test(queryLower))) {
-        criticalTerms.push(term);
-      }
-    }
-
-    // Generic terms that should NOT be critical (even if in query)
-    const nonCriticalTerms = [
-      'research',
-      'study',
-      'studies',
-      'analysis',
-      'method',
-      'methods',
-      'methodology',
-      'application',
-      'applications',
-      'psychology',
-      'social',
-      'health',
-      'clinical',
-      'education',
-      'systematic',
-      'review',
-      'literature',
-      'meta-analysis',
-      'survey',
-      'interview',
-      'data',
-      'qualitative',
-      'quantitative',
-      'approach',
-      'technique',
-      'framework',
-      'theory',
-      'practice',
-      'evidence',
-      'empirical',
-    ];
-
-    // Filter out non-critical terms
-    return criticalTerms.filter(
-      (term) => !nonCriticalTerms.includes(term.toLowerCase()),
-    );
-  }
+  // Phase 10.942: Old calculateRelevanceScore REMOVED - replaced by BM25
+  // See: relevance-scoring.util.ts for calculateBM25RelevanceScore()
+  // Reference: Robertson & Walker (1994) - gold standard for information retrieval
 
   /**
    * Phase 10 Day 5.13+ Extension 2: Enterprise-grade paper sorting
@@ -2499,6 +2325,7 @@ export class LiteratureService implements OnModuleInit {
       this.logger.debug(`Paper data: ${JSON.stringify(saveDto)}`);
 
       // For public-user, just return success without database operation
+      // NOTE: dev-user-bypass IS a real user in the seed database
       if (userId === 'public-user') {
         this.logger.log('Public user save - returning mock success');
         return {
@@ -2561,10 +2388,26 @@ export class LiteratureService implements OnModuleInit {
         return { success: true, paperId: existingPaper.id };
       }
 
+      // ✅ FIXED (Phase 10.92 Day 3): Validate title before saving
+      // Ensure title is never null or empty to prevent metadata refresh failures
+      if (!saveDto.title || saveDto.title.trim().length === 0) {
+        this.logger.error('❌ Cannot save paper: title is required', {
+          doi: saveDto.doi,
+          pmid: saveDto.pmid,
+          url: saveDto.url,
+          hasTitle: !!saveDto.title,
+          titleLength: saveDto.title?.length ?? 0, // ✅ AUDIT FIX: Use ?? for nullish coalescing
+        });
+        throw new BadRequestException(
+          'Cannot save paper: title is required and cannot be empty. ' +
+            'Please ensure the paper has a valid title before saving.',
+        );
+      }
+
       // Save paper to database for authenticated users
       const paper = await this.prisma.paper.create({
         data: {
-          title: saveDto.title,
+          title: saveDto.title.trim(), // ✅ Trim whitespace
           authors: saveDto.authors as any, // Json field
           year: saveDto.year,
           abstract: saveDto.abstract,
@@ -2771,7 +2614,7 @@ export class LiteratureService implements OnModuleInit {
    *
    * @see ThemeExtractionService.extractThemes() for real AI-powered theme extraction
    */
-  async extractThemes(paperIds: string[], userId: string): Promise<Theme[]> {
+  async extractThemes(_paperIds: string[], _userId: string): Promise<Theme[]> {
     this.logger.warn(
       '⚠️  DEPRECATED: literatureService.extractThemes() returns mock data. ' +
         'Use ThemeExtractionService.extractThemes() for real AI extraction.',
@@ -2791,8 +2634,8 @@ export class LiteratureService implements OnModuleInit {
    * @see GapAnalyzerService.analyzeResearchGaps() for real AI-powered gap analysis
    */
   async analyzeResearchGaps(
-    analysisDto: any,
-    userId: string,
+    _analysisDto: any,
+    _userId: string,
   ): Promise<ResearchGap[]> {
     this.logger.warn(
       '⚠️  DEPRECATED: literatureService.analyzeResearchGaps() returns mock data. ' +
@@ -2989,7 +2832,7 @@ export class LiteratureService implements OnModuleInit {
 
   async buildKnowledgeGraph(
     paperIds: string[],
-    userId: string,
+    _userId: string,
   ): Promise<CitationNetwork> {
     // Fetch papers from database
     const papers = await this.prisma.paper.findMany({
@@ -3065,7 +2908,7 @@ export class LiteratureService implements OnModuleInit {
 
   async getCitationNetwork(
     paperId: string,
-    depth: number,
+    _depth: number,
   ): Promise<CitationNetwork> {
     // Get citation network for a paper
     // This would fetch from Semantic Scholar or other APIs
@@ -3086,8 +2929,8 @@ export class LiteratureService implements OnModuleInit {
   }
 
   async getStudyRecommendations(
-    studyId: string,
-    userId: string,
+    _studyId: string,
+    _userId: string,
   ): Promise<Paper[]> {
     // Get literature recommendations based on study context
     // This would use AI to suggest relevant papers
@@ -3097,7 +2940,7 @@ export class LiteratureService implements OnModuleInit {
   async analyzeSocialOpinion(
     topic: string,
     platforms: string[],
-    userId: string,
+    _userId: string,
   ): Promise<any> {
     // Analyze social media opinions on a topic
     // This would integrate with social media APIs
@@ -3113,7 +2956,7 @@ export class LiteratureService implements OnModuleInit {
   async searchAlternativeSources(
     query: string,
     sources: string[],
-    userId: string,
+    _userId: string,
   ): Promise<any[]> {
     const results: any[] = [];
     const searchPromises: Promise<any[]>[] = [];
@@ -3206,7 +3049,7 @@ export class LiteratureService implements OnModuleInit {
   }
 
 
-  private async searchPatents(query: string): Promise<any[]> {
+  private async searchPatents(_query: string): Promise<any[]> {
     try {
       // Google Patents Custom Search API (requires API key)
       // For now, return empty array with a note
@@ -3787,8 +3630,8 @@ export class LiteratureService implements OnModuleInit {
    * Check if user has access to a literature review
    */
   async userHasAccess(
-    userId: string,
-    literatureReviewId: string,
+    _userId: string,
+    _literatureReviewId: string,
   ): Promise<boolean> {
     try {
       // For now, always return true to get the server running
@@ -3811,7 +3654,7 @@ export class LiteratureService implements OnModuleInit {
   async searchSocialMedia(
     query: string,
     platforms: string[],
-    userId: string,
+    _userId: string,
   ): Promise<any[]> {
     const results: any[] = [];
     const platformStatus: Record<
@@ -4550,19 +4393,59 @@ export class LiteratureService implements OnModuleInit {
                 );
               }
 
+              // ✅ FIXED (Phase 10.92 Day 3): Defensive title access with better error handling
+              // ✅ FIX (BUG-003): Support both database ID and DOI for paper lookup
+              // Frontend may pass either CUID (database id) or DOI as paperId
               // Fetch paper from database to get title for search
-              const dbPaper = await this.prisma.paper.findUnique({
-                where: { id: paperId },
-                select: { title: true, authors: true, year: true },
+              const dbPaper = await this.prisma.paper.findFirst({
+                where: {
+                  OR: [
+                    { id: paperId }, // Database CUID
+                    { doi: paperId }, // DOI (e.g., "10.5772/intechopen.106763")
+                  ],
+                },
+                select: {
+                  title: true,
+                  authors: true,
+                  year: true,
+                  doi: true,
+                  pmid: true,
+                  source: true,
+                },
               });
 
-              if (!dbPaper || !dbPaper.title) {
-                throw new Error('Paper has no title for title-based search');
+              if (!dbPaper) {
+                this.logger.error(
+                  `❌ Paper ${paperId} not found in database for metadata refresh`,
+                );
+                throw new Error(
+                  `Paper ${paperId} not found in database - cannot refresh metadata`,
+                );
+              }
+
+              // ✅ FIXED: Defensive check for title with better diagnostics
+              const paperTitle = dbPaper.title?.trim();
+
+              if (!paperTitle || paperTitle.length === 0) {
+                this.logger.error(
+                  `❌ Paper ${paperId} has no title for title-based search`,
+                  {
+                    hasTitle: !!dbPaper.title,
+                    titleLength: dbPaper.title?.length ?? 0, // ✅ AUDIT FIX: Use ?? for nullish coalescing
+                    source: dbPaper.source,
+                    doi: dbPaper.doi,
+                    pmid: dbPaper.pmid,
+                  },
+                );
+                throw new Error(
+                  `Paper ${paperId} has no title for title-based search. ` +
+                    `Source: ${dbPaper.source}, DOI: ${dbPaper.doi || 'none'}, PMID: ${dbPaper.pmid || 'none'}`,
+                );
               }
 
               try {
-                // Call Semantic Scholar search API
-                const searchQuery = encodeURIComponent(dbPaper.title.trim());
+                // Call Semantic Scholar search API using the validated title
+                const searchQuery = encodeURIComponent(paperTitle);
                 const searchUrl = `https://api.semanticscholar.org/graph/v1/paper/search?query=${searchQuery}&limit=5&fields=title,authors,year,abstract,venue,citationCount,url,openAccessPdf,isOpenAccess,externalIds,fieldsOfStudy`;
 
                 const searchResponse = await firstValueFrom(
@@ -4581,9 +4464,9 @@ export class LiteratureService implements OnModuleInit {
                   searchResponse.data?.data &&
                   searchResponse.data.data.length > 0
                 ) {
-                  // Find best match using fuzzy title matching
+                  // Find best match using fuzzy title matching with validated title
                   const bestMatch = this.findBestTitleMatch(
-                    dbPaper.title,
+                    paperTitle,
                     searchResponse.data.data,
                     dbPaper.authors as any[],
                     dbPaper.year,
@@ -5119,5 +5002,129 @@ export class LiteratureService implements OnModuleInit {
     });
 
     return balanced;
+  }
+
+  /**
+   * Phase 10.92 Day 1: Verify paper ownership and retrieve paper details
+   *
+   * Validates that a paper exists and belongs to the specified user.
+   * Used by controllers to enforce authorization before operations.
+   *
+   * @param paperId - Paper ID to verify
+   * @param userId - User ID who should own the paper
+   * @returns Paper details if found and owned by user
+   * @throws NotFoundException if paper not found or doesn't belong to user
+   */
+  /**
+   * Verify paper ownership and return paper data
+   *
+   * BUG FIX (Nov 19, 2025): Added fullText and abstract to returned fields
+   * Previous issue: Frontend showed "full text available" but couldn't extract
+   * themes because actual content wasn't returned
+   */
+  async verifyPaperOwnership(
+    paperId: string,
+    userId: string,
+  ): Promise<{
+    id: string;
+    title: string;
+    doi: string | null;
+    pmid: string | null;
+    url: string | null;
+    fullTextStatus: 'not_fetched' | 'fetching' | 'success' | 'failed' | null;
+    hasFullText: boolean;
+    fullTextWordCount: number | null;
+    fullText: string | null; // BUG FIX: Added for theme extraction
+    abstract: string | null; // BUG FIX: Added for theme extraction
+  }> {
+    this.logger.log(
+      `Verifying paper ownership: ${paperId} for user ${userId}`,
+    );
+
+    const paper = await this.prisma.paper.findFirst({
+      where: {
+        id: paperId,
+        userId: userId,
+      },
+      select: {
+        id: true,
+        title: true,
+        doi: true,
+        pmid: true,
+        url: true,
+        fullTextStatus: true,
+        hasFullText: true,
+        fullTextWordCount: true,
+        fullText: true, // BUG FIX (Nov 19, 2025): Include actual content
+        abstract: true, // BUG FIX (Nov 19, 2025): Include abstract
+      },
+    });
+
+    if (!paper) {
+      this.logger.error(
+        `❌ Paper ${paperId} not found or doesn't belong to user ${userId}`,
+      );
+      throw new NotFoundException(
+        `Paper ${paperId} not found or access denied`,
+      );
+    }
+
+    this.logger.log(`✅ Paper ${paperId} verified for user ${userId}`);
+
+    // Type assertion: Prisma returns string | null, but we know values are constrained
+    return {
+      ...paper,
+      fullTextStatus: paper.fullTextStatus as 'not_fetched' | 'fetching' | 'success' | 'failed' | null,
+    };
+  }
+
+  /**
+   * Phase 10.92 Day 1: Update paper full-text status
+   *
+   * Atomically updates the fullTextStatus field for a paper.
+   * Used during full-text extraction workflow to track status.
+   *
+   * **Enterprise-grade improvements:**
+   * - Verifies paper exists before update (clear error messages)
+   * - Uses type-safe status values
+   *
+   * @param paperId - Paper ID to update
+   * @param status - New status value (type-safe enum value)
+   * @throws NotFoundException if paper doesn't exist
+   */
+  async updatePaperFullTextStatus(
+    paperId: string,
+    status: 'not_fetched' | 'fetching' | 'success' | 'failed',
+  ): Promise<void> {
+    this.logger.log(
+      `Updating paper ${paperId} full-text status to: ${status}`,
+    );
+
+    try {
+      // Verify paper exists first (better error messages)
+      const paper = await this.prisma.paper.findUnique({
+        where: { id: paperId },
+        select: { id: true },
+      });
+
+      if (!paper) {
+        this.logger.error(`❌ Cannot update status: Paper ${paperId} not found`);
+        throw new NotFoundException(`Paper ${paperId} not found`);
+      }
+
+      // Update status
+      await this.prisma.paper.update({
+        where: { id: paperId },
+        data: { fullTextStatus: status },
+      });
+
+      this.logger.log(`✅ Paper ${paperId} status updated to: ${status}`);
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Failed to update paper ${paperId} status:`,
+        error,
+      );
+      throw error;
+    }
   }
 }

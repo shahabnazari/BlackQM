@@ -13,6 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import * as QueryExpansionAPI from '@/lib/api/services/query-expansion-api.service';
+import { logger } from '@/lib/utils/logger';
 import {
   AlertCircle,
   ArrowRight,
@@ -96,7 +97,7 @@ export const AISearchAssistant: React.FC<AISearchAssistantProps> = ({
         setExpandedResult(result);
       } catch (err) {
         setError('Failed to expand query. Please try again.');
-        console.error(err);
+        logger.error('AI search error', 'AISearchAssistant', { error: err });
       } finally {
         setIsExpanding(false);
       }
@@ -117,7 +118,7 @@ export const AISearchAssistant: React.FC<AISearchAssistantProps> = ({
         const terms = await QueryExpansionAPI.suggestTerms(queryText, domain);
         setSuggestedTerms(terms);
       } catch (err) {
-        console.error('Failed to fetch suggested terms:', err);
+        logger.error('Failed to fetch suggested terms', 'AISearchAssistant', { error: err });
       } finally {
         setIsSuggesting(false);
       }

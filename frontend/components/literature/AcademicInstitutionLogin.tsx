@@ -43,16 +43,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import type { Institution } from '@/lib/services/institution.service';
-
-interface InstitutionAuthState {
-  isAuthenticated: boolean;
-  institution: Institution | null;
-  authMethod: 'shibboleth' | 'openathens' | 'orcid' | null;
-  userName?: string;
-  freeAccess: boolean;
-  accessibleDatabases: string[];
-}
+import { logger } from '@/lib/utils/logger';
+import type { InstitutionAuth as InstitutionAuthState } from '@/lib/stores/institution-auth.store';
 
 interface OrcidUser {
   id: string;
@@ -87,7 +79,7 @@ export function AcademicInstitutionLogin({
           setIsOrcidAuthenticated(true);
         }
       } catch (error) {
-        console.error('Error checking ORCID auth:', error);
+        logger.error('Error checking ORCID auth', 'AcademicInstitutionLogin', { error });
       }
     };
 

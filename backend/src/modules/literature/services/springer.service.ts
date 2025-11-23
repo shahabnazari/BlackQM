@@ -301,18 +301,7 @@ export class SpringerService {
       // Extract subjects/fields of study
       const subjects = this.extractSubjects(record.subjects);
 
-      // Extract Springer-specific metadata
-      const springerMetadata = {
-        contentType: record.contentType || null,
-        copyright: record.copyright || null,
-        publisher: record.publisher || 'Springer Nature',
-        issn: record.issn || null,
-        isbn: record.isbn || null,
-        volume: record.volume || null,
-        issue: record.issue || null,
-        startingPage: record.startingPage || null,
-        endingPage: record.endingPage || null,
-      };
+      // Extract Springer-specific metadata (available if needed in future)
 
       // Calculate word counts
       const abstractWordCount = calculateAbstractWordCount(abstract);
@@ -340,6 +329,8 @@ export class SpringerService {
       const pdfUrl = isOpenAccess && doi ? `https://link.springer.com/content/pdf/${doi}.pdf` : null;
       const hasFullText = !!pdfUrl || !!abstract;
 
+      // FIX: API sources without full text only have title+abstract (~200-300 words)
+      // Use lower threshold (150 words) instead of default (1000 words) for API sources
       return {
         id: doi || `springer_${Date.now()}_${Math.random()}`,
         title,
@@ -354,7 +345,7 @@ export class SpringerService {
         fieldsOfStudy: subjects.length > 0 ? subjects : undefined,
         wordCount,
         wordCountExcludingRefs: wordCount,
-        isEligible: isPaperEligible(wordCount),
+        isEligible: isPaperEligible(wordCount, 150),
         abstractWordCount,
         pdfUrl: pdfUrl || undefined,
         openAccessStatus: isOpenAccess ? 'OPEN_ACCESS' : null,

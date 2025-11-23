@@ -349,7 +349,7 @@ export class APIQuotaMonitorService {
   onModuleInit(): void {
     this.logger.log('📊 API Quota Monitor initialized');
     this.logger.log(`   Monitoring ${this.providers.size} API providers:`);
-    this.providers.forEach((config, key) => {
+    this.providers.forEach((config, _key) => {
       this.logger.log(
         `   • ${config.name}: ${config.requestsPerWindow} req/${config.windowMs}ms (warn: ${config.warningThreshold * 100}%, block: ${config.blockingThreshold * 100}%)`,
       );

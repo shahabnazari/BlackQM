@@ -56,6 +56,10 @@ import { SageService } from './services/sage.service';
 import { TaylorFrancisService } from './services/taylor-francis.service';
 // Phase 10.6 Day 14.4: Enterprise-grade search logging
 import { SearchLoggerService } from './services/search-logger.service';
+// Phase 10.94 Day 1-2: Identifier Enrichment Service
+import { IdentifierEnrichmentService } from './services/identifier-enrichment.service';
+// Phase 10.94 Day 4-5: GROBID PDF Extraction Service
+import { GrobidExtractionService } from './services/grobid-extraction.service';
 import { PDFController } from './controllers/pdf.controller';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
@@ -140,6 +144,10 @@ import { AIModule } from '../ai/ai.module';
     TaylorFrancisService,
     // Phase 10.6 Day 14.4: Enterprise-grade search logging
     SearchLoggerService,
+    // Phase 10.94 Day 1-2: Identifier Enrichment Service
+    IdentifierEnrichmentService,
+    // Phase 10.94 Day 4-5: GROBID PDF Extraction Service
+    GrobidExtractionService,
   ],
   exports: [
     LiteratureService,
@@ -191,6 +199,10 @@ import { AIModule } from '../ai/ai.module';
     SageService,
     // Phase 10.6 Day 13: Taylor & Francis - 2700+ journals, humanities
     TaylorFrancisService,
+    // Phase 10.94 Day 1-2: Identifier Enrichment Service
+    IdentifierEnrichmentService,
+    // Phase 10.94 Day 4-5: GROBID PDF Extraction Service
+    GrobidExtractionService,
   ],
 })
 export class LiteratureModule implements OnModuleInit {

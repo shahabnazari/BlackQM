@@ -3,6 +3,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Logger,
   Post,
   UseGuards,
   UsePipes,
@@ -11,6 +12,7 @@ import {
 import { AICostService } from '../../ai/services/ai-cost.service';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import type { ValidatedUser } from '../../auth/types/jwt.types';
 import { ApiRateLimit } from '../../rate-limiting/decorators/rate-limit.decorator';
 import { RateLimitingGuard } from '../../rate-limiting/guards/rate-limiting.guard';
 import { StudyService } from '../../study/study.service';
@@ -57,11 +59,13 @@ interface CreateStudyScaffoldingDto {
 @UseGuards(JwtAuthGuard)
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class PipelineController {
+  private readonly logger = new Logger(PipelineController.name);
+
   constructor(
     private readonly themeToStatementService: ThemeToStatementService,
     private readonly literatureService: LiteratureService,
     private readonly studyService: StudyService,
-    private readonly aiCostService: AICostService,
+    _aiCostService: AICostService,
   ) {}
 
   // Note: auditLogService not available in this controller
@@ -82,7 +86,7 @@ export class PipelineController {
   @HttpCode(HttpStatus.OK)
   async generateStatementsFromThemes(
     @Body() dto: ThemeToStatementDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: ValidatedUser,
   ) {
     const startTime = Date.now();
 
@@ -91,7 +95,7 @@ export class PipelineController {
       const result = await this.themeToStatementService.generateFromThemes(
         dto.themeIds,
         dto.studyContext,
-        user.id,
+        user.userId,
       );
 
       // Track AI costs (commented out - needs proper method implementation)
@@ -106,13 +110,14 @@ export class PipelineController {
           aiCost,
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Log failure for security monitoring
       // TODO: Add audit logging when AuditLogService is injected
-      console.error('Pipeline error:', {
-        userId: user.id,
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Pipeline error: GENERATE_STATEMENTS_FROM_THEMES_FAILED', {
+        userId: user.userId,
         action: 'GENERATE_STATEMENTS_FROM_THEMES_FAILED',
-        error: error.message,
+        error: errorMessage,
       });
 
       throw error;
@@ -135,14 +140,14 @@ export class PipelineController {
   @HttpCode(HttpStatus.CREATED)
   async createStudyScaffolding(
     @Body() dto: CreateStudyScaffoldingDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: ValidatedUser,
   ) {
     const startTime = Date.now();
 
     try {
       // Verify user has access to the literature review
       const hasAccess = await this.literatureService.userHasAccess(
-        user.id,
+        user.userId,
         dto.literatureReviewId,
       );
 
@@ -153,7 +158,7 @@ export class PipelineController {
       // Create the study with all components
       const study = await this.studyService.createFromLiterature({
         ...dto,
-        userId: user.id,
+        userId: user.userId,
       });
 
       // Track AI costs if statements were generated (commented out - needs proper method)
@@ -174,7 +179,7 @@ export class PipelineController {
             .map(([component]) => component),
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw error;
     }
   }
@@ -185,10 +190,10 @@ export class PipelineController {
    */
   @Post('health')
   @HttpCode(HttpStatus.OK)
-  async health(@CurrentUser() user: any) {
+  async health(@CurrentUser() user: ValidatedUser) {
     return {
       status: 'healthy',
-      userId: user.id,
+      userId: user.userId,
       timestamp: new Date().toISOString(),
     };
   }

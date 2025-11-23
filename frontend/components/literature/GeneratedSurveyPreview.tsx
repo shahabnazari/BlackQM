@@ -71,7 +71,7 @@ export interface GeneratedSurvey {
   };
 }
 
-interface GeneratedSurveyPreviewProps {
+interface GeneratedSurveyPreviewProps{
   survey: GeneratedSurvey;
   onEdit?: () => void;
   onExport?: (format: 'json' | 'csv' | 'pdf' | 'word') => void;

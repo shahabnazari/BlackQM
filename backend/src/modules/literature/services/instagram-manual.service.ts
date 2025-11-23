@@ -147,7 +147,7 @@ export class InstagramManualService {
    * @param context Research context
    * @returns Instructions for user
    */
-  async processInstagramUrl(url: string, context?: string) {
+  async processInstagramUrl(url: string, _context?: string) {
     this.logger.log(`Processing Instagram URL: ${url}`);
 
     // Validate URL
@@ -448,7 +448,6 @@ export class InstagramManualService {
    * @private
    */
   private async extractAudioFromVideo(videoPath: string): Promise<string> {
-    const audioPath = videoPath.replace(/\.[^.]+$/, '.mp3');
     // Audio extraction is handled by TranscriptionService
     return videoPath;
   }

@@ -3,7 +3,13 @@
  * Provides JWT token from localStorage for authenticated API requests
  * Phase 10 Day 14: Fixed to use correct token key 'access_token'
  * Phase 10 Day 34: Added enterprise-grade validation and environment-conditional logging
+ * PHASE 10.94.3: Added warning rate limiting to prevent console spam
  */
+
+// PERF FIX: Rate limit "no token" warnings to prevent console spam
+// Only warn once per 10 seconds instead of on every call
+let lastNoTokenWarning = 0;
+const NO_TOKEN_WARNING_INTERVAL_MS = 10000; // 10 seconds
 
 export function getAuthHeaders(): Record<string, string> {
   if (typeof window === 'undefined') {
@@ -17,8 +23,11 @@ export function getAuthHeaders(): Record<string, string> {
     localStorage.getItem('access_token') || localStorage.getItem('auth_token');
 
   if (!token) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('[Auth Headers] No token found in localStorage');
+    // PERF FIX: Rate limit warnings to prevent console spam (8+ calls on page load)
+    const now = Date.now();
+    if (process.env.NODE_ENV !== 'production' && now - lastNoTokenWarning > NO_TOKEN_WARNING_INTERVAL_MS) {
+      console.warn('[Auth Headers] No token found in localStorage (this warning is rate-limited to once per 10s)');
+      lastNoTokenWarning = now;
     }
     return {};
   }

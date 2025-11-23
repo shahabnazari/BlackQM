@@ -1,6 +1,5 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
-import { firstValueFrom } from 'rxjs';
 import { Paper, LiteratureSource } from '../dto/literature.dto';
 
 /**
@@ -37,14 +36,12 @@ import { Paper, LiteratureSource } from '../dto/literature.dto';
 @Injectable()
 export class SSRNService {
   private readonly logger = new Logger(SSRNService.name);
-  private readonly SSRN_BASE_URL = 'https://www.ssrn.com';
-  private readonly SSRN_SEARCH_URL = 'https://papers.ssrn.com/sol3/papers.cfm';
 
   // Rate limiting: minimum 2 seconds between requests
   private lastRequestTime = 0;
   private readonly MIN_REQUEST_INTERVAL = 2000; // 2 seconds
 
-  constructor(private readonly httpService: HttpService) {
+  constructor(_httpService: HttpService) {
     this.logger.log('✅ [SSRN] Service initialized');
     this.logger.warn(
       '[SSRN] Note: SSRN has no official API. Using RSS feeds and respectful scraping.',
@@ -93,7 +90,6 @@ export class SSRNService {
 
       // Note: This is a simplified implementation
       // In production, you'd need more sophisticated scraping or use Elsevier API
-      const url = `${this.SSRN_SEARCH_URL}?${params.toString()}`;
 
       this.logger.warn(
         '[SSRN] Search implementation simplified. Consider using Elsevier API for production.',

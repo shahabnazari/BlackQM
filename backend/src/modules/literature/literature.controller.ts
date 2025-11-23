@@ -1,3 +1,32 @@
+/**
+ * ⚠️ MANDATORY READING BEFORE MODIFYING THIS FILE ⚠️
+ *
+ * READ FIRST: Main Docs/PHASE_TRACKER_PART3.md
+ * Section: "📖 LITERATURE PAGE DEVELOPMENT PRINCIPLES (MANDATORY FOR ALL FUTURE WORK)"
+ * Location: Lines 4092-4244 (RIGHT BEFORE Phase 10.7)
+ *
+ * This is the CONTROLLER for the Literature Discovery Page (/discover/literature)
+ * ALL modifications must follow 10 enterprise-grade principles documented in Phase Tracker Part 3
+ *
+ * Key Requirements for Controller Layer:
+ * - ✅ Single Responsibility: HTTP routing and request/response mapping ONLY
+ * - ✅ NO business logic (business logic belongs in Service layer)
+ * - ✅ NO direct database operations (NO direct Prisma calls)
+ * - ✅ Delegate to LiteratureService for all business operations
+ * - ✅ HTTP error code mapping: 400 (Bad Request), 401 (Unauthorized), 404 (Not Found), 500 (Internal)
+ * - ✅ Type safety: strict TypeScript, DTOs for all requests/responses
+ * - ✅ Zero TypeScript errors (MANDATORY before commit)
+ * - ✅ Security: validate inputs, use guards (JwtAuthGuard), rate limiting
+ * - ✅ API documentation: @ApiOperation, @ApiResponse, @ApiTags for Swagger
+ *
+ * Architecture Pattern (Controller Layer Position):
+ * User → Component → Hook → API Service → **[CONTROLLER]** → Main Service → Source Services → External APIs
+ *
+ * Reference: IMPLEMENTATION_GUIDE_PART6.md for controller implementation patterns
+ *
+ * ⚠️ DO NOT add business logic here. NO direct Prisma calls. Read the principles first. ⚠️
+ */
+
 import {
   BadRequestException,
   Body,
@@ -53,6 +82,16 @@ import {
   SuggestHypothesesDto,
   SuggestQuestionsDto,
 } from './dto/literature.dto';
+import {
+  FetchFullTextParamsDto,
+  FetchFullTextResponseDto,
+  FullTextStatus,
+  AuthenticatedUser,
+} from './dto/fetch-fulltext.dto';
+import {
+  GetPaperParamsDto,
+  GetPaperResponseDto,
+} from './dto/get-paper.dto';
 import { LiteratureService } from './literature.service';
 import { CrossPlatformSynthesisService } from './services/cross-platform-synthesis.service'; // Phase 9 Day 22
 import { EnhancedThemeIntegrationService } from './services/enhanced-theme-integration.service'; // Phase 10 Day 5.12
@@ -61,7 +100,6 @@ import { GuidedBatchSelectorService } from './services/guided-batch-selector.ser
 import { KnowledgeGraphService } from './services/knowledge-graph.service'; // Phase 9 Day 14
 import { LiteratureCacheService } from './services/literature-cache.service'; // Phase 10 Day 18
 import { MultiMediaAnalysisService } from './services/multimedia-analysis.service'; // Phase 9 Day 18
-import { PaperQualityScoringService } from './services/paper-quality-scoring.service'; // Phase 10 Day 19.6
 import { PDFQueueService } from './services/pdf-queue.service'; // Phase 10 Day 30
 import { PredictiveGapService } from './services/predictive-gap.service'; // Phase 9 Day 15
 import { CitationStyle, ReferenceService } from './services/reference.service';
@@ -93,7 +131,6 @@ export class LiteratureController {
     private readonly literatureCacheService: LiteratureCacheService, // Phase 10 Day 18
     private readonly configService: ConfigService, // Phase 10 Day 5.9 - Needed for ThemeToSurveyItemService
     private readonly prisma: PrismaService, // Phase 10 Day 18 - Needed for corpus CRUD
-    private readonly paperQualityScoring: PaperQualityScoringService, // Phase 10 Day 19.6
     private readonly guidedBatchSelector: GuidedBatchSelectorService, // Phase 10 Day 19.6
     private readonly pdfQueueService: PDFQueueService, // Phase 10 Day 30 - Background full-text processing
   ) {}
@@ -130,7 +167,7 @@ export class LiteratureController {
 
   // Public save paper endpoint for development
   @Post('save/public')
-  @CustomRateLimit(60, 30) // Allow 30 saves per minute (higher for bulk operations)
+  @CustomRateLimit(60, 300) // Phase 10.94.3: Increased to 300 saves/min (parallel batch saving for 100+ papers)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Public save paper for testing (dev only)' })
   @ApiResponse({ status: 200, description: 'Paper saved successfully' })
@@ -186,8 +223,8 @@ export class LiteratureController {
   })
   @ApiResponse({ status: 200, description: 'Gap analysis complete' })
   async analyzeGapsField(
-    @Query() analysisDto: AnalyzeGapsDto,
-    @CurrentUser() user: any,
+    @Query() _analysisDto: AnalyzeGapsDto,
+    @CurrentUser() _user: any,
   ) {
     // Return helpful error message directing to correct endpoint
     return {
@@ -204,7 +241,7 @@ export class LiteratureController {
   @Post('save')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @CustomRateLimit(60, 30) // Phase 10 Day 32: Allow 30 saves/min for bulk operations
+  @CustomRateLimit(60, 300) // Phase 10.94.3: Increased to 300 saves/min (parallel batch saving for 100+ papers)
   @ApiOperation({ summary: 'Save paper to user library' })
   @ApiResponse({ status: 201, description: 'Paper saved successfully' })
   async savePaper(@Body() saveDto: SavePaperDto, @CurrentUser() user: any) {
@@ -245,6 +282,36 @@ export class LiteratureController {
     );
   }
 
+  @Get('library/:paperId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @CustomRateLimit(60, 600) // Phase 10.94.3: 600 requests/min for polling during theme extraction (50 papers × 20 polls)
+  @ApiOperation({ summary: 'Get a single paper from library by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Paper returned successfully',
+    type: GetPaperResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid paper ID format (must be valid CUID)',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Paper not found or access denied',
+  })
+  async getPaperById(
+    @Param() params: GetPaperParamsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<GetPaperResponseDto> {
+    const { paperId } = params;
+    const paper = await this.literatureService.verifyPaperOwnership(
+      paperId,
+      user.userId,
+    );
+    return { paper };
+  }
+
   @Delete('library/:paperId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -265,7 +332,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Themes extracted' })
   async extractThemes(
     @Body() themesDto: ExtractThemesDto,
-    @CurrentUser() user: any,
+    @CurrentUser() _user: any,
   ) {
     // Use theme extraction service for real AI extraction
     return await this.themeExtractionService.extractThemes(themesDto.paperIds);
@@ -885,7 +952,7 @@ export class LiteratureController {
   })
   async extractThemesWithAI(
     @Body() body: { paperIds: string[] },
-    @CurrentUser() user: any,
+    @CurrentUser() _user: any,
   ) {
     return await this.themeExtractionService.extractThemes(body.paperIds);
   }
@@ -898,7 +965,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Controversies detected' })
   async detectControversies(
     @Body() body: { paperIds: string[] },
-    @CurrentUser() user: any,
+    @CurrentUser() _user: any,
   ) {
     return await this.themeExtractionService.detectControversies(body.paperIds);
   }
@@ -911,7 +978,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Statements generated from themes' })
   async themeToStatements(
     @Body() body: { themes: any[]; studyContext: any },
-    @CurrentUser() user: any,
+    @CurrentUser() _user: any,
   ) {
     return await this.themeExtractionService.themeToStatements(
       body.themes,
@@ -927,7 +994,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Statement hints generated' })
   async generateStatementHints(
     @Body() body: { themes: any[] },
-    @CurrentUser() user: any,
+    @CurrentUser() _user: any,
   ) {
     return await this.themeExtractionService.generateStatementHints(
       body.themes,
@@ -1007,7 +1074,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Research opportunities generated' })
   async generateOpportunities(
     @Body() body: { gaps: any[] },
-    @CurrentUser() user: any,
+    @CurrentUser() _user: any,
   ) {
     return await this.gapAnalyzerService.generateOpportunities(body.gaps);
   }
@@ -1020,7 +1087,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Keywords analyzed' })
   async analyzeKeywords(
     @Body() body: { paperIds: string[] },
-    @CurrentUser() user: any,
+    @CurrentUser() _user: any,
   ) {
     const papers = await this.gapAnalyzerService['fetchPapersWithMetadata'](
       body.paperIds,
@@ -1036,7 +1103,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Trends detected' })
   async detectTrends(
     @Body() body: { paperIds: string[] },
-    @CurrentUser() user: any,
+    @CurrentUser() _user: any,
   ) {
     const papers = await this.gapAnalyzerService['fetchPapersWithMetadata'](
       body.paperIds,
@@ -1054,7 +1121,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Topics modeled' })
   async modelTopics(
     @Body() body: { paperIds: string[]; numTopics?: number },
-    @CurrentUser() user: any,
+    @CurrentUser() _user: any,
   ) {
     const papers = await this.gapAnalyzerService['fetchPapersWithMetadata'](
       body.paperIds,
@@ -1909,7 +1976,7 @@ export class LiteratureController {
     @Query('studyId') studyId: string,
     @Query('sourceType') sourceType?: string,
     @Query('minInfluence') minInfluence?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() _user?: any,
   ) {
     this.logger.log(
       `Filtering themes for study ${studyId}, sourceType=${sourceType}, minInfluence=${minInfluence}`,
@@ -2092,7 +2159,7 @@ export class LiteratureController {
   async getEmergingTopics(
     @Query('query') query: string,
     @Query('timeWindow') timeWindow?: number,
-    @CurrentUser() user?: any,
+    @CurrentUser() _user?: any,
   ) {
     this.logger.log(`Fetching emerging topics for: "${query}"`);
 
@@ -2137,7 +2204,7 @@ export class LiteratureController {
     @Param('theme') theme: string,
     @Query('query') query: string,
     @Query('timeWindow') timeWindow?: number,
-    @CurrentUser() user?: any,
+    @CurrentUser() _user?: any,
   ) {
     this.logger.log(`Tracking dissemination for theme: "${theme}"`);
 
@@ -2195,7 +2262,7 @@ export class LiteratureController {
   async getPlatformInsights(
     @Query('query') query: string,
     @Query('platforms') platforms?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() _user?: any,
   ) {
     this.logger.log(`Fetching platform insights for: "${query}"`);
 
@@ -2414,7 +2481,7 @@ export class LiteratureController {
   async suggestTerms(
     @Query('query') query: string,
     @Query('field') field?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() _user?: any,
   ) {
     this.logger.log(`Suggesting terms for: "${query}"`);
 
@@ -2877,7 +2944,7 @@ export class LiteratureController {
           requestId: dto.requestId, // PHASE 10 DAY 5.17.3: Pass request ID for end-to-end tracing
         },
         // Progress callback for 4-part transparent messaging
-        (stage, total, message, transparentMessage) => {
+        (stage, total, _message, transparentMessage) => {
           if (transparentMessage) {
             this.logger.debug(
               `V2 Progress (${dto.userExpertiseLevel || 'researcher'}): ${stage}/${total} - ${transparentMessage.whatWeAreDoing}`,
@@ -3012,7 +3079,7 @@ export class LiteratureController {
           userExpertiseLevel: dto.userExpertiseLevel || 'researcher',
           allowIterativeRefinement: dto.allowIterativeRefinement || false,
         },
-        (stage, total, message, transparentMessage) => {
+        (stage, total, _message, transparentMessage) => {
           if (transparentMessage) {
             this.logger.debug(
               `[PUBLIC] V2 Progress: ${stage}/${total} - ${transparentMessage.whatWeAreDoing}`,
@@ -4390,6 +4457,118 @@ export class LiteratureController {
   })
   async batchProcessFullText(@CurrentUser() user: any) {
     return this.batchProcessFullTextInternal(user.userId);
+  }
+
+  /**
+   * Phase 10.92 Day 1: Fetch Full-Text for Single Paper (REFACTORED)
+   *
+   * Queues a single paper for full-text extraction via waterfall strategy.
+   * Used immediately after saving papers to trigger full-text fetch.
+   *
+   * **Architecture:** Delegates to service layer (no direct Prisma calls)
+   * **Validation:** UUID v4 format validation via DTO
+   * **Authorization:** Verifies paper ownership via service
+   * **Idempotent:** Returns early if full-text already exists
+   *
+   * @param params - Validated paper ID params (UUID v4)
+   * @param user - Authenticated user from JWT
+   * @returns Job status and paper full-text status
+   */
+  @Post('fetch-fulltext/:paperId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @CustomRateLimit(60, 300) // Phase 10.94.3: 300 requests/min for theme extraction (processing 50-100 papers)
+  @ApiOperation({
+    summary: '📄 Fetch full-text for a single paper',
+    description:
+      'Queues a single paper for full-text extraction via waterfall strategy (PMC API → PDF → HTML). Returns immediately with job status. Poll paper status to check completion.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Paper queued for full-text extraction',
+    type: FetchFullTextResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid paper ID (must be valid CUID format)',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Paper not found or access denied',
+  })
+  async fetchFullTextForPaper(
+    @Param() params: FetchFullTextParamsDto,
+    @CurrentUser() user: AuthenticatedUser
+  ): Promise<FetchFullTextResponseDto> {
+    const { paperId } = params;
+
+    try {
+      this.logger.log(
+        `📄 [Full-Text Fetch] Request for paper ${paperId} (User: ${user.userId})`
+      );
+
+      // REFACTORED: Delegate to service layer (no direct Prisma)
+      const paper = await this.literatureService.verifyPaperOwnership(
+        paperId,
+        user.userId
+      );
+
+      // Check if already has full-text (idempotent)
+      if (paper.hasFullText && paper.fullTextStatus === FullTextStatus.SUCCESS) {
+        this.logger.log(
+          `✅ Paper ${paperId} already has full-text - skipping queue`
+        );
+        return {
+          success: true,
+          jobId: 'already-complete',
+          paperId: paper.id,
+          message: 'Paper already has full-text',
+          fullTextStatus: FullTextStatus.SUCCESS,
+        };
+      }
+
+      // REFACTORED: Queue job first, then update status (fixes race condition)
+      // If queueing fails, paper remains in original state
+      let jobId: string;
+      try {
+        jobId = await this.pdfQueueService.addJob(paperId);
+      } catch (queueError) {
+        this.logger.error(
+          `❌ Failed to queue paper ${paperId} for extraction:`,
+          queueError
+        );
+        throw new InternalServerErrorException(
+          'Failed to queue paper for full-text extraction'
+        );
+      }
+
+      // Update status only after successful queue
+      await this.literatureService.updatePaperFullTextStatus(
+        paperId,
+        FullTextStatus.FETCHING
+      );
+
+      this.logger.log(
+        `✅ Queued paper ${paperId} for full-text extraction (Job: ${jobId})`
+      );
+
+      return {
+        success: true,
+        jobId,
+        paperId: paper.id,
+        message: `Paper queued for full-text extraction. Job ID: ${jobId}`,
+        fullTextStatus: FullTextStatus.FETCHING,
+      };
+    } catch (error: any) {
+      // Error handling: Let NestJS handle NotFoundException naturally
+      // Don't try to update status here - job was never queued
+      this.logger.error(
+        `❌ Failed to process full-text request for ${paperId}:`,
+        error
+      );
+
+      throw error;
+    }
   }
 
   /**

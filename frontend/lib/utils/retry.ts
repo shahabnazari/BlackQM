@@ -118,6 +118,27 @@ class RetryMonitor {
 export const retryMonitor = new RetryMonitor();
 
 /**
+ * AUDIT FIX TYPE-001: Enterprise-grade error type for retry operations
+ * Replaces `any` with a structured type that handles common error shapes
+ */
+export interface RetryableError {
+  /** Error message */
+  message?: string;
+  /** HTTP status code (direct or from response) */
+  status?: number;
+  /** Axios-style response object */
+  response?: {
+    status?: number;
+    statusText?: string;
+    data?: unknown;
+  };
+  /** Error code (e.g., 'ECONNREFUSED', 'ETIMEDOUT') */
+  code?: string;
+  /** Error name */
+  name?: string;
+}
+
+/**
  * Configuration options for retry behavior
  */
 export interface RetryOptions {
@@ -134,10 +155,10 @@ export interface RetryOptions {
   jitterMs?: number;
 
   /** Custom function to determine if error is retryable */
-  isRetryable?: (error: any) => boolean;
+  isRetryable?: (error: RetryableError) => boolean;
 
   /** Callback invoked before each retry attempt */
-  onRetry?: (attempt: number, error: any, delayMs: number) => void;
+  onRetry?: (attempt: number, error: Error, delayMs: number) => void;
 
   /** Enable debug logging (default: false) */
   debug?: boolean;
@@ -175,12 +196,14 @@ const DEFAULT_OPTIONS: Required<Omit<RetryOptions, 'onRetry'>> = {
 /**
  * Default error detection logic
  * Retries on: rate limits, network errors, server errors, timeouts
+ *
+ * AUDIT FIX TYPE-002: Uses RetryableError instead of `any`
  */
-function defaultIsRetryable(error: any): boolean {
+function defaultIsRetryable(error: RetryableError): boolean {
   // HTTP status code checks
   const status = error.response?.status || error.status;
   if (status === 429) return true; // Rate limit
-  if (status >= 500 && status < 600) return true; // Server errors
+  if (status !== undefined && status >= 500 && status < 600) return true; // Server errors
 
   // Error message checks
   const message = error.message?.toLowerCase() || '';
@@ -240,7 +263,8 @@ export async function retryWithBackoff<T>(
   options: RetryOptions = {}
 ): Promise<RetryResult<T>> {
   const config = { ...DEFAULT_OPTIONS, ...options };
-  let lastError: any;
+  // AUDIT FIX TYPE-003: Use RetryableError instead of `any`
+  let lastError: RetryableError | undefined;
   let errorType: string | undefined;
 
   for (let attempt = 1; attempt <= config.maxRetries; attempt++) {
@@ -259,7 +283,9 @@ export async function retryWithBackoff<T>(
         data,
         attempts: attempt,
       };
-    } catch (error: any) {
+    } catch (caughtError: unknown) {
+      // AUDIT FIX TYPE-004: Safely cast unknown to RetryableError
+      const error = toRetryableError(caughtError);
       lastError = error;
       const isLastAttempt = attempt === config.maxRetries;
       const isRetryable = config.isRetryable(error);
@@ -298,7 +324,9 @@ export async function retryWithBackoff<T>(
 
       // Invoke retry callback if provided
       if (options.onRetry) {
-        options.onRetry(attempt, error, delayMs);
+        // AUDIT FIX: Convert to standard Error for callback compatibility
+        const standardError = new Error(error.message || 'Unknown error');
+        options.onRetry(attempt, standardError, delayMs);
       }
 
       if (config.debug) {
@@ -320,14 +348,65 @@ export async function retryWithBackoff<T>(
 }
 
 /**
- * Classify error type for monitoring
+ * AUDIT FIX TYPE-005: Convert unknown error to RetryableError
+ * Safely handles any error type and extracts relevant properties
+ *
+ * Uses conditional property spreading for exactOptionalPropertyTypes compliance
  */
-function classifyError(error: any): string {
+function toRetryableError(error: unknown): RetryableError {
+  if (error instanceof Error) {
+    // Standard Error - extract axios-style properties if present
+    const axiosError = error as Error & {
+      response?: { status?: number; statusText?: string; data?: unknown };
+      status?: number;
+      code?: string;
+    };
+    // Build result with only defined properties (exactOptionalPropertyTypes compliance)
+    const result: RetryableError = {
+      message: axiosError.message,
+      name: axiosError.name,
+    };
+    if (axiosError.status !== undefined) result.status = axiosError.status;
+    if (axiosError.response !== undefined) result.response = axiosError.response;
+    if (axiosError.code !== undefined) result.code = axiosError.code;
+    return result;
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    // Object-like error (could be axios error response)
+    // Use bracket notation for index signature access (TypeScript strict mode)
+    const objError = error as Record<string, unknown>;
+    const result: RetryableError = {
+      message: typeof objError['message'] === 'string' ? objError['message'] : 'Unknown error',
+    };
+    if (typeof objError['status'] === 'number') result.status = objError['status'];
+    // Check response exists AND is an object before assigning
+    const responseVal = objError['response'];
+    if (responseVal !== undefined && typeof responseVal === 'object' && responseVal !== null) {
+      result.response = responseVal as { status?: number; statusText?: string; data?: unknown };
+    }
+    if (typeof objError['code'] === 'string') result.code = objError['code'];
+    if (typeof objError['name'] === 'string') result.name = objError['name'];
+    return result;
+  }
+
+  // Primitive or null - convert to string
+  return {
+    message: String(error),
+  };
+}
+
+/**
+ * Classify error type for monitoring
+ *
+ * AUDIT FIX TYPE-006: Uses RetryableError instead of `any`
+ */
+function classifyError(error: RetryableError): string {
   const status = error.response?.status || error.status;
   const message = error.message?.toLowerCase() || '';
 
   if (status === 429 || message.includes('rate limit')) return 'RATE_LIMIT';
-  if (status >= 500 && status < 600) return `SERVER_ERROR_${status}`;
+  if (status !== undefined && status >= 500 && status < 600) return `SERVER_ERROR_${status}`;
   if (status === 401 || status === 403) return 'AUTH_ERROR';
   if (message.includes('network')) return 'NETWORK_ERROR';
   if (message.includes('timeout')) return 'TIMEOUT';

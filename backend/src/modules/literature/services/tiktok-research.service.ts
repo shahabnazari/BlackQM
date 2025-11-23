@@ -197,8 +197,8 @@ export class TikTokResearchService {
    * @private
    */
   private async searchViaFallback(
-    query: string,
-    maxResults: number,
+    _query: string,
+    _maxResults: number,
   ): Promise<TikTokSearchResult> {
     this.logger.warn(
       'Using fallback search (limited functionality). For production, use TikTok Research API.',
@@ -451,8 +451,6 @@ export class TikTokResearchService {
    * @private
    */
   private async extractAudioFromVideo(videoPath: string): Promise<string> {
-    const audioPath = videoPath.replace('.mp4', '.mp3');
-
     // Use ffmpeg to extract audio (implementation depends on your setup)
     // For now, return video path as audio extraction is handled in TranscriptionService
     return videoPath;

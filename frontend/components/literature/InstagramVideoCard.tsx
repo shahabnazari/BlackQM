@@ -154,13 +154,12 @@ export const InstagramVideoCard = memo(function InstagramVideoCard({
     relevanceScore,
     author,
     engagementRate,
-    qualityScore,
-    isSponsored,
+    qualityScore: _qualityScore,
+    isSponsored: _isSponsored,
   } = video;
 
   const hasTranscript = transcription?.status === 'completed';
   const displayUsername = author?.username || username;
-  const displayName = author?.displayName || username;
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-200 group">

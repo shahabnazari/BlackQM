@@ -288,8 +288,6 @@ export class ERICService {
     // STEP 5: Extract education-specific metadata
     // ============================================================================
     const educationLevel = doc.e_educationlevel || [];
-    const audience = doc.e_audience || [];
-    const peerReviewed = doc.e_peerreviewed === 'T';
 
     // ============================================================================
     // STEP 6: Construct normalized Paper object

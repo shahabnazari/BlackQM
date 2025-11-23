@@ -762,7 +762,7 @@ Each item should be clear, concise, and appropriate for the target audience.`;
    * Template bipolar pairs
    */
   private generateTemplateBipolarPairs(
-    theme: Theme,
+    _theme: Theme,
     count: number,
   ): Array<{ left: string; right: string; dimension: string }> {
     const pairs = [
@@ -844,7 +844,7 @@ Each item should be clear, concise, and appropriate for the target audience.`;
    */
   private buildResult(
     items: SurveyItem[],
-    options: GenerateSurveyItemsOptions,
+    _options: GenerateSurveyItemsOptions,
   ): SurveyItemGenerationResult {
     const itemsByType = items.reduce(
       (acc, item) => {

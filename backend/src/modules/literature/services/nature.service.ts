@@ -305,7 +305,7 @@ export class NatureService {
         fieldsOfStudy: subjects.length > 0 ? subjects : undefined,
         wordCount,
         wordCountExcludingRefs: wordCount,
-        isEligible: isPaperEligible(wordCount),
+        isEligible: isPaperEligible(wordCount, 150),
         abstractWordCount,
         pdfUrl: pdfUrl || undefined,
         openAccessStatus: isOpenAccess ? 'OPEN_ACCESS' : null,

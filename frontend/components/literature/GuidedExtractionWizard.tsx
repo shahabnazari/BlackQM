@@ -32,6 +32,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { incrementalExtractionApi } from '@/lib/api/services/incremental-extraction-api.service';
+import { logger } from '@/lib/utils/logger';
 
 // Types
 interface Paper {
@@ -165,7 +166,7 @@ export function GuidedExtractionWizard({
         batchSize: 5,
       };
 
-      console.log('🔍 [Guided Extraction] Sending request:', {
+      logger.info('Sending guided extraction request', 'GuidedExtractionWizard', {
         allPapersCount: allPapers.length,
         allPaperIds: requestData.allPaperIds,
         processedPaperIdsCount: requestData.processedPaperIds.length,
@@ -176,20 +177,16 @@ export function GuidedExtractionWizard({
       const data =
         await incrementalExtractionApi.selectGuidedBatch(requestData);
 
-      console.log(
-        '✅ [Guided Extraction] Batch recommendation received:',
-        data
-      );
+      logger.info('Batch recommendation received', 'GuidedExtractionWizard', { data });
 
       setBatchRecommendation(data);
       setDiversityMetrics(data.diversityMetrics);
       setCorpusStats(data.corpusStats);
       setStep('recommendation');
     } catch (err) {
-      console.error('❌ [Guided Extraction] Error:', err);
       const errorMessage =
         err instanceof Error ? err.message : 'Analysis failed';
-      console.error('❌ [Guided Extraction] Error message:', errorMessage);
+      logger.error('Guided extraction error', 'GuidedExtractionWizard', { error: err });
       setError(errorMessage);
       setStep('purpose-selection'); // Go back to purpose selection on error
     } finally {

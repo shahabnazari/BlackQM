@@ -1,19 +1,24 @@
 /**
- * Paper Management Hook - Phase 10.1 Day 4
+ * Paper Management Hook - Phase 10.91 Day 5 (MIGRATED TO ZUSTAND)
+ *
+ * **MIGRATION NOTE:** This hook is now a thin wrapper around PaperManagementStore.
+ * All state management has been migrated to Zustand for consistency and better performance.
  *
  * Enterprise-grade hook for managing paper selection, saving, and extraction state.
  * Extracted from God Component pattern to improve code organization and reusability.
  *
  * @module usePaperManagement
  * @since Phase 10.1 Day 4
+ * @migrated Phase 10.91 Day 5 - Zustand Migration
  * @author VQMethod Team
  *
  * **Features:**
- * - Paper selection state management
+ * - Paper selection state management (via Zustand store)
  * - Saved papers library with localStorage sync
  * - Extraction progress tracking
  * - Automatic backend synchronization
  * - TypeScript strict mode compliance
+ * - No useState - all state in Zustand store
  *
  * **Usage:**
  * ```typescript
@@ -35,9 +40,8 @@
  * ```
  */
 
-import { useState, useCallback, useRef } from 'react';
-import { toast } from 'sonner';
-import { literatureAPI, Paper } from '@/lib/services/literature-api.service';
+import { usePaperManagementStore } from '@/lib/stores/paper-management.store';
+import type { Paper } from '@/lib/services/literature-api.service';
 
 /**
  * Paper management state and operations
@@ -50,16 +54,22 @@ export interface UsePaperManagementReturn {
   extractedPapers: Set<string>;
 
   // Setters (for integration with existing code)
-  setSelectedPapers: React.Dispatch<React.SetStateAction<Set<string>>>;
-  setSavedPapers: React.Dispatch<React.SetStateAction<Paper[]>>;
-  setExtractingPapers: React.Dispatch<React.SetStateAction<Set<string>>>;
-  setExtractedPapers: React.Dispatch<React.SetStateAction<Set<string>>>;
+  setSelectedPapers: (
+    papers: Set<string> | ((prev: Set<string>) => Set<string>)
+  ) => void;
+  setSavedPapers: (papers: Paper[] | ((prev: Paper[]) => Paper[])) => void;
+  setExtractingPapers: (
+    papers: Set<string> | ((prev: Set<string>) => Set<string>)
+  ) => void;
+  setExtractedPapers: (
+    papers: Set<string> | ((prev: Set<string>) => Set<string>)
+  ) => void;
 
   // Handlers
   togglePaperSelection: (paperId: string) => void;
   handleSavePaper: (paper: Paper) => Promise<void>;
   handleRemovePaper: (paperId: string) => Promise<void>;
-  handleTogglePaperSave: (paper: Paper) => void;
+  handleTogglePaperSave: (paper: Paper) => Promise<void>;
   loadUserLibrary: () => Promise<void>;
 
   // Helper utilities
@@ -71,264 +81,55 @@ export interface UsePaperManagementReturn {
   selectAll: (paperIds: string[]) => void;
 }
 
-const LIBRARY_MAX_PAPERS = 1000; // Maximum papers to fetch from library
-
 /**
  * Hook for managing paper selection, saving, and extraction state
+ *
+ * **Phase 10.91 Day 5 Migration:**
+ * - Removed all useState declarations
+ * - Removed useCallback wrappers (store actions are stable)
+ * - Removed useRef for loading state (now in store)
+ * - Hook now directly returns store state and actions
+ * - Maintains exact same API for backward compatibility
  *
  * @returns {UsePaperManagementReturn} Paper management state and operations
  */
 export function usePaperManagement(): UsePaperManagementReturn {
   // ===========================
-  // STATE MANAGEMENT
+  // ZUSTAND STORE INTEGRATION
   // ===========================
 
-  const [selectedPapers, setSelectedPapers] = useState<Set<string>>(new Set());
-  const [savedPapers, setSavedPapers] = useState<Paper[]>([]);
-  const [extractingPapers, setExtractingPapers] = useState<Set<string>>(
-    new Set()
+  // Get all state and actions from store
+  const selectedPapers = usePaperManagementStore(state => state.selectedPapers);
+  const savedPapers = usePaperManagementStore(state => state.savedPapers);
+  const extractingPapers = usePaperManagementStore(state => state.extractingPapers);
+  const extractedPapers = usePaperManagementStore(state => state.extractedPapers);
+
+  const togglePaperSelection = usePaperManagementStore(
+    state => state.togglePaperSelection
   );
-  const [extractedPapers, setExtractedPapers] = useState<Set<string>>(
-    new Set()
+  const clearSelection = usePaperManagementStore(state => state.clearSelection);
+  const selectAll = usePaperManagementStore(state => state.selectAll);
+  const setSelectedPapers = usePaperManagementStore(state => state.setSelectedPapers);
+
+  const handleSavePaper = usePaperManagementStore(state => state.handleSavePaper);
+  const handleRemovePaper = usePaperManagementStore(state => state.handleRemovePaper);
+  const handleTogglePaperSave = usePaperManagementStore(
+    state => state.handleTogglePaperSave
   );
+  const loadUserLibrary = usePaperManagementStore(state => state.loadUserLibrary);
+  const setSavedPapers = usePaperManagementStore(state => state.setSavedPapers);
 
-  // Track if library is currently being loaded to prevent duplicate requests
-  const isLoadingLibraryRef = useRef(false);
-
-  // ===========================
-  // PAPER SELECTION HANDLERS
-  // ===========================
-
-  /**
-   * Toggle paper selection for bulk operations
-   *
-   * @param {string} paperId - The ID of the paper to toggle
-   */
-  const togglePaperSelection = useCallback((paperId: string) => {
-    setSelectedPapers(prev => {
-      const newSelected = new Set(prev);
-      if (newSelected.has(paperId)) {
-        newSelected.delete(paperId);
-      } else {
-        newSelected.add(paperId);
-      }
-      return newSelected;
-    });
-  }, []);
-
-  /**
-   * Clear all paper selections
-   */
-  const clearSelection = useCallback(() => {
-    setSelectedPapers(new Set());
-  }, []);
-
-  /**
-   * Select all papers
-   *
-   * @param {string[]} paperIds - Array of paper IDs to select
-   */
-  const selectAll = useCallback((paperIds: string[]) => {
-    setSelectedPapers(new Set(paperIds));
-  }, []);
-
-  // ===========================
-  // LIBRARY MANAGEMENT HANDLERS
-  // ===========================
-
-  /**
-   * Save a paper to the user's library
-   *
-   * **Features:**
-   * - Backend API persistence
-   * - localStorage sync
-   * - Automatic library refresh
-   * - Error handling with user feedback
-   *
-   * @param {Paper} paper - The paper to save
-   */
-  const handleSavePaper = useCallback(async (paper: Paper) => {
-    try {
-      console.log('💾 [usePaperManagement] Saving paper:', paper.title);
-      const result = await literatureAPI.savePaper(paper);
-
-      if (result.success) {
-        console.log('✅ [usePaperManagement] Paper saved successfully');
-
-        // Update local state optimistically
-        setSavedPapers(prevPapers => {
-          // Avoid duplicates
-          if (prevPapers.some(p => p.id === paper.id)) {
-            return prevPapers;
-          }
-          return [...prevPapers, paper];
-        });
-
-        toast.success('Paper saved to library');
-
-        // Refresh library from backend to ensure sync (debounced)
-        setTimeout(() => loadUserLibrary(), 500);
-      }
-    } catch (error) {
-      console.error('❌ [usePaperManagement] Error saving paper:', error);
-      toast.error('Failed to save paper');
-    }
-  }, []);
-
-  /**
-   * Remove a paper from the user's library
-   *
-   * **Features:**
-   * - Backend API deletion
-   * - localStorage sync
-   * - Automatic library refresh
-   * - Error handling with user feedback
-   *
-   * @param {string} paperId - The ID of the paper to remove
-   */
-  const handleRemovePaper = useCallback(async (paperId: string) => {
-    try {
-      console.log('🗑️ [usePaperManagement] Removing paper:', paperId);
-      const result = await literatureAPI.removePaper(paperId);
-
-      if (result.success) {
-        console.log('✅ [usePaperManagement] Paper removed successfully');
-
-        // Update local state
-        setSavedPapers(prevPapers => prevPapers.filter(p => p.id !== paperId));
-        toast.success('Paper removed from library');
-
-        // Refresh library from backend to ensure sync (debounced)
-        setTimeout(() => loadUserLibrary(), 500);
-      }
-    } catch (error) {
-      console.error('❌ [usePaperManagement] Error removing paper:', error);
-      toast.error('Failed to remove paper');
-    }
-  }, []);
-
-  /**
-   * Toggle paper save status (convenience wrapper)
-   *
-   * If paper is saved, removes it. If not saved, saves it.
-   *
-   * @param {Paper} paper - The paper to toggle
-   */
-  const handleTogglePaperSave = useCallback(
-    (paper: Paper) => {
-      const paperIsSaved = savedPapers.some(p => p.id === paper.id);
-      if (paperIsSaved) {
-        handleRemovePaper(paper.id);
-      } else {
-        handleSavePaper(paper);
-      }
-    },
-    [savedPapers, handleSavePaper, handleRemovePaper]
+  const setExtractingPapers = usePaperManagementStore(
+    state => state.setExtractingPapers
+  );
+  const setExtractedPapers = usePaperManagementStore(
+    state => state.setExtractedPapers
   );
 
-  /**
-   * Load user's library from backend
-   *
-   * **Features:**
-   * - Fetches all saved papers from database
-   * - Prevents duplicate concurrent requests
-   * - Error handling
-   * - Console logging for debugging
-   * - Skips loading for unauthenticated users (prevents 401 errors)
-   */
-  const loadUserLibrary = useCallback(async () => {
-    // Prevent duplicate concurrent requests
-    if (isLoadingLibraryRef.current) {
-      console.log(
-        '⏳ [usePaperManagement] Library load already in progress, skipping...'
-      );
-      return;
-    }
-
-    try {
-      isLoadingLibraryRef.current = true;
-      console.log('📚 [usePaperManagement] Loading user library...');
-
-      const response = await literatureAPI.getUserLibrary(
-        1,
-        LIBRARY_MAX_PAPERS
-      );
-
-      console.log(
-        `✅ [usePaperManagement] Loaded ${response.papers.length} papers from library`
-      );
-      setSavedPapers(response.papers);
-    } catch (error: any) {
-      // Phase 10.1 Day 7: Suppress expected 401 errors for unauthenticated users
-      if (error?.response?.status === 401) {
-        console.log(
-          '👤 [usePaperManagement] User not authenticated, skipping library load'
-        );
-        setSavedPapers([]); // Set empty library for unauthenticated users
-      } else {
-        console.error('❌ [usePaperManagement] Error loading library:', error);
-      }
-      // Don't show toast here as it may be called frequently
-    } finally {
-      isLoadingLibraryRef.current = false;
-    }
-  }, []);
-
-  // ===========================
-  // HELPER UTILITIES
-  // ===========================
-
-  /**
-   * Check if a paper is selected
-   *
-   * @param {string} paperId - The paper ID to check
-   * @returns {boolean} True if paper is selected
-   */
-  const isSelected = useCallback(
-    (paperId: string): boolean => {
-      return selectedPapers.has(paperId);
-    },
-    [selectedPapers]
-  );
-
-  /**
-   * Check if a paper is saved
-   *
-   * @param {string} paperId - The paper ID to check
-   * @returns {boolean} True if paper is saved
-   */
-  const isSaved = useCallback(
-    (paperId: string): boolean => {
-      return savedPapers.some(p => p.id === paperId);
-    },
-    [savedPapers]
-  );
-
-  /**
-   * Check if a paper is currently being extracted
-   *
-   * @param {string} paperId - The paper ID to check
-   * @returns {boolean} True if paper is extracting
-   */
-  const isExtracting = useCallback(
-    (paperId: string): boolean => {
-      return extractingPapers.has(paperId);
-    },
-    [extractingPapers]
-  );
-
-  /**
-   * Check if a paper has been extracted
-   *
-   * @param {string} paperId - The paper ID to check
-   * @returns {boolean} True if paper is extracted
-   */
-  const isExtracted = useCallback(
-    (paperId: string): boolean => {
-      return extractedPapers.has(paperId);
-    },
-    [extractedPapers]
-  );
+  const isSelected = usePaperManagementStore(state => state.isSelected);
+  const isSaved = usePaperManagementStore(state => state.isSaved);
+  const isExtracting = usePaperManagementStore(state => state.isExtracting);
+  const isExtracted = usePaperManagementStore(state => state.isExtracted);
 
   // ===========================
   // RETURN INTERFACE

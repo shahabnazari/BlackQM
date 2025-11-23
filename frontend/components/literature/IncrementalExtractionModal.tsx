@@ -13,7 +13,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   incrementalExtractionApi,
   type CorpusInfo,
@@ -30,6 +30,7 @@ import {
   CheckCircle,
   AlertTriangle,
 } from 'lucide-react';
+import { logger } from '@/lib/utils/logger';
 
 interface Paper {
   id: string;
@@ -71,30 +72,40 @@ export function IncrementalExtractionModal({
   );
   const [corpusName, setCorpusName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingCorpuses, setLoadingCorpuses] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen && !existingCorpus) {
-      loadCorpuses();
+  // BUG FIX #3 & #4: Wrap in useCallback with proper dependencies and add loading state
+  const loadCorpuses = useCallback(async () => {
+    try {
+      setLoadingCorpuses(true);
+      setError(null);
+      const data = await incrementalExtractionApi.getCorpusList();
+      setCorpuses(data);
+    } catch (err) {
+      // BUG FIX #1: Display error to user instead of silent swallowing
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load existing corpuses';
+      logger.error('Error loading corpuses', 'IncrementalExtractionModal', err instanceof Error ? err : { error: err });
+      setError(errorMessage);
+    } finally {
+      setLoadingCorpuses(false);
     }
-  }, [isOpen, existingCorpus]);
+  }, []);
 
+  // BUG FIX #2: Consolidate useEffects to prevent race condition
   useEffect(() => {
+    if (!isOpen) return;
+
+    // If existingCorpus is provided, skip to paper selection
     if (existingCorpus) {
       setSelectedCorpus(existingCorpus);
       setStep('select-papers');
       setPurpose(existingCorpus.purpose as ResearchPurpose);
+    } else {
+      // Otherwise load available corpuses
+      loadCorpuses();
     }
-  }, [existingCorpus]);
-
-  const loadCorpuses = async () => {
-    try {
-      const data = await incrementalExtractionApi.getCorpusList();
-      setCorpuses(data);
-    } catch (err) {
-      console.error('Error loading corpuses:', err);
-    }
-  };
+  }, [isOpen, existingCorpus, loadCorpuses]);
 
   const togglePaper = (paperId: string) => {
     const newSet = new Set(selectedPaperIds);
@@ -158,6 +169,7 @@ export function IncrementalExtractionModal({
     }
   };
 
+  // BUG FIX #5: Add missing loading states to cleanup
   const resetModal = () => {
     setStep('select-corpus');
     setSelectedCorpus(null);
@@ -166,6 +178,8 @@ export function IncrementalExtractionModal({
     setPurpose(ResearchPurpose.QUALITATIVE_ANALYSIS);
     setExpertiseLevel(UserExpertiseLevel.INTERMEDIATE);
     setError(null);
+    setLoading(false);
+    setLoadingCorpuses(false);
   };
 
   const handleClose = () => {
@@ -185,7 +199,7 @@ export function IncrementalExtractionModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div>
@@ -216,7 +230,43 @@ export function IncrementalExtractionModal({
                 Select a corpus or create new
               </h3>
 
-              {corpuses.length > 0 && (
+              {/* BUG FIX #6: Show loading indicator while fetching corpuses */}
+              {loadingCorpuses && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <Loader2 className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto mb-3 animate-spin" />
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Loading existing corpuses...
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Show error if corpus loading failed */}
+              {error && !loadingCorpuses && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-red-900 dark:text-red-100">
+                        Failed to load corpuses
+                      </p>
+                      <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                        {error}
+                      </p>
+                      <button
+                        onClick={loadCorpuses}
+                        className="mt-2 text-sm text-red-600 dark:text-red-400 hover:underline font-medium"
+                      >
+                        Try again
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Show corpuses list only when not loading and no error */}
+              {!loadingCorpuses && !error && corpuses.length > 0 && (
                 <div className="space-y-2 mb-6">
                   {corpuses.map(corpus => (
                     <button
@@ -300,7 +350,7 @@ export function IncrementalExtractionModal({
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-96 overflow-y-auto">
+                <div className="space-y-2 max-h-[40vh] overflow-y-auto">
                   {availableNewPapers.map(paper => (
                     <label
                       key={paper.id}

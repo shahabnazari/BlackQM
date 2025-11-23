@@ -1,0 +1,1151 @@
+/**
+ * Theme Extraction Workflow Hook - Phase 10.1 Day 6 Sub-Phase 2A
+ *
+ * Enterprise-grade hook for managing theme extraction preparation workflow.
+ * Extracts the 761-line handleExtractThemes function from God Component.
+ *
+ * @module useThemeExtractionWorkflow
+ * @since Phase 10.1 Day 6
+ * @author VQMethod Team
+ *
+ * **Features:**
+ * - Paper selection validation
+ * - Duplicate extraction prevention
+ * - Automatic metadata refresh for stale papers
+ * - Paper database synchronization with retry logic
+ * - Content analysis and filtering
+ * - Content type breakdown (full-text, abstract, etc.)
+ * - Modal state management
+ * - Request ID tracking for debugging
+ *
+ * **Workflow Steps:**
+ * 1. Validate paper/video selection
+ * 2. Prevent duplicate extraction sessions
+ * 3. Open modal with preparing state
+ * 4. Check for stale paper metadata
+ * 5. Refresh metadata if needed
+ * 6. Save papers to database (with retry)
+ * 7. Perform content analysis
+ * 8. Filter sources by content length
+ * 9. Calculate content type breakdown
+ * 10. Update modal state for mode selection
+ *
+ * **Usage:**
+ * ```typescript
+ * const {
+ *   // State
+ *   isExtractionInProgress,
+ *   preparingMessage,
+ *   contentAnalysis,
+ *   currentRequestId,
+ *   showModeSelectionModal,
+ *
+ *   // Handlers
+ *   handleExtractThemes,
+ *
+ *   // Setters
+ *   setShowModeSelectionModal,
+ *   setIsExtractionInProgress,
+ * } = useThemeExtractionWorkflow({
+ *   selectedPapers,
+ *   papers,
+ *   setPapers,
+ *   transcribedVideos,
+ * });
+ * ```
+ */
+
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
+import { literatureAPI } from '@/lib/services/literature-api.service';
+import { retryApiCall } from '@/lib/utils/retry';
+import type { SourceContent } from '@/lib/api/services/unified-theme-api.service';
+import type { Paper as LiteraturePaper } from '@/lib/types/literature.types';
+import {
+  ContentType,
+  classifyContentType,
+} from '@/lib/types/content-types';
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+/** Minimum content length for analysis (characters) */
+const MIN_CONTENT_LENGTH = 50;
+
+/** Maximum number of concurrent paper save operations */
+const MAX_CONCURRENT_SAVES = 3;
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+/**
+ * Content analysis data structure
+ */
+export interface ContentAnalysis {
+  /** Number of papers with full-text */
+  fullTextCount: number;
+  /** Number of papers with abstract overflow (>250 words) */
+  abstractOverflowCount: number;
+  /** Number of papers with abstract only */
+  abstractCount: number;
+  /** Number of papers with no content */
+  noContentCount: number;
+  /** Average content length across all sources */
+  avgContentLength: number;
+  /** Whether any full-text content is available */
+  hasFullTextContent: boolean;
+  /** All valid source content objects */
+  sources: SourceContent[];
+  /** BUGFIX: Total papers selected (before filtering) */
+  totalSelected: number;
+  /** BUGFIX: Papers with content that will be used */
+  totalWithContent: number;
+  /** BUGFIX: Papers without content that will be skipped */
+  totalSkipped: number;
+  /** BUGFIX: List of all selected papers with their content status */
+  selectedPapersList: Array<{
+    id: string;
+    title: string;
+    hasContent: boolean;
+    contentType: ContentType;
+    contentLength: number;
+    skipReason?: string;
+  }>;
+}
+
+/**
+ * Paper type (re-exported from literature.types.ts for consistency)
+ */
+export type Paper = LiteraturePaper;
+
+/**
+ * Transcribed video structure
+ */
+export interface TranscribedVideo {
+  id: string;
+  title: string;
+  sourceId: string;
+  url: string;
+  channel?: string;
+  duration: number;
+  cost: number;
+  transcript: string;
+  themes?: any[];
+  extractedAt: string;
+  cached: boolean;
+}
+
+/**
+ * Hook configuration
+ */
+export interface UseThemeExtractionWorkflowConfig {
+  /** Currently selected paper IDs */
+  selectedPapers: Set<string>;
+  /** All papers in search results */
+  papers: Paper[];
+  /** Setter for updating papers array */
+  setPapers: (papers: Paper[] | ((prev: Paper[]) => Paper[])) => void;
+  /** Transcribed videos for extraction */
+  transcribedVideos: TranscribedVideo[];
+  /** ENTERPRISE FIX: User authentication object for early auth validation */
+  user: { id: string; email?: string } | null;
+}
+
+/**
+ * Hook return type
+ */
+export interface UseThemeExtractionWorkflowReturn {
+  // State
+  isExtractionInProgress: boolean;
+  preparingMessage: string;
+  contentAnalysis: ContentAnalysis | null;
+  currentRequestId: string | null;
+  showModeSelectionModal: boolean;
+
+  // Handlers
+  handleExtractThemes: () => Promise<void>;
+  cancelExtraction: () => void;
+
+  // Setters (for external control)
+  setShowModeSelectionModal: (show: boolean) => void;
+  setIsExtractionInProgress: (inProgress: boolean) => void;
+  setPreparingMessage: (message: string) => void;
+  setContentAnalysis: (analysis: ContentAnalysis | null) => void;
+}
+
+// ============================================================================
+// HOOK
+// ============================================================================
+
+/**
+ * Hook for managing theme extraction preparation workflow
+ *
+ * **Architecture:**
+ * - Validates selection before starting
+ * - Prevents concurrent extraction sessions
+ * - Automatically refreshes stale metadata
+ * - Saves papers to database with retry logic
+ * - Analyzes content quality and availability
+ * - Prepares data for mode selection wizard
+ *
+ * **Error Handling:**
+ * - Graceful degradation on metadata refresh failure
+ * - Retry logic with exponential backoff for paper saving
+ * - User-friendly error messages in modal
+ * - Automatic cleanup on errors
+ *
+ * @param {UseThemeExtractionWorkflowConfig} config - Configuration object
+ * @returns {UseThemeExtractionWorkflowReturn} State and handlers
+ */
+export function useThemeExtractionWorkflow(
+  config: UseThemeExtractionWorkflowConfig
+): UseThemeExtractionWorkflowReturn {
+  const { selectedPapers, papers, setPapers, transcribedVideos, user } = config;
+
+  // ===========================
+  // STATE MANAGEMENT
+  // ===========================
+
+  const [isExtractionInProgress, setIsExtractionInProgress] = useState(false);
+  const [preparingMessage, setPreparingMessage] = useState<string>('');
+  const [contentAnalysis, setContentAnalysis] =
+    useState<ContentAnalysis | null>(null);
+  const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);
+  const [showModeSelectionModal, setShowModeSelectionModal] = useState(false);
+
+  // Phase 10.92 Day 1: Mounted ref to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+
+  // ✅ FIX (CRITICAL-003): Track latest papers to prevent stale data filtering
+  const latestPapersRef = useRef<Paper[]>(papers);
+
+  // ✅ ENHANCEMENT: AbortController for user cancellation support
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    latestPapersRef.current = papers;
+  }, [papers]);
+
+  useEffect(() => {
+    // Set mounted flag
+    isMountedRef.current = true;
+
+    // Cleanup: mark as unmounted when component unmounts and abort any ongoing operations
+    return () => {
+      isMountedRef.current = false;
+
+      // Cancel any ongoing extraction
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, []);
+
+  // ===========================
+  // MAIN EXTRACTION HANDLER
+  // ===========================
+
+  /**
+   * Main theme extraction preparation handler
+   *
+   * **Process:**
+   * 1. Validation - Check if papers/videos selected
+   * 2. Duplication Check - Prevent concurrent extractions
+   * 3. Modal Opening - Show preparing state
+   * 4. Metadata Refresh - Update stale paper data
+   * 5. Database Sync - Save papers for full-text extraction
+   * 6. Content Analysis - Evaluate source quality
+   * 7. Filtering - Remove sources without content
+   * 8. Ready State - Clear preparing message for mode selection
+   */
+  const handleExtractThemes = useCallback(async () => {
+    // ✅ ENHANCEMENT: Create AbortController for cancellation support
+    abortControllerRef.current = new AbortController();
+    const { signal } = abortControllerRef.current;
+
+    try {
+      // ===========================
+      // STEP 0: VALIDATION
+      // ===========================
+
+      // ENTERPRISE FIX: EARLY AUTHENTICATION CHECK
+      // Full-text extraction requires saving papers to database, which requires authentication
+      if (!user || !user.id) {
+        console.error('❌ Authentication required for theme extraction');
+        toast.error(
+          'Please log in to extract themes. Theme extraction requires full-text access, which needs paper saving to your library.',
+          {
+            duration: 10000,
+            style: {
+              background: '#FEE2E2',
+              border: '2px solid #EF4444',
+              color: '#991B1B',
+            }
+          }
+        );
+        return;
+      }
+
+      // ✅ ENHANCEMENT: Check if operation was cancelled
+      if (signal.aborted) {
+        console.log('❌ Operation cancelled before starting');
+        return;
+      }
+
+    console.log(`✅ User authenticated: ${user.email || user.id}`);
+
+    // Phase 10 Day 34: CRITICAL FIX - Prevent duplicate extraction sessions
+    if (isExtractionInProgress) {
+      console.warn(
+        '⚠️ Extraction already in progress - ignoring duplicate click'
+      );
+      return; // Silently ignore, modal already shows progress
+    }
+
+    // Phase 10 Day 34: Check if any papers are selected
+    const totalSources = selectedPapers.size + transcribedVideos.length;
+    if (totalSources === 0) {
+      console.error('❌ No sources selected - aborting');
+      toast.error(
+        'Please select at least one paper or video for theme extraction'
+      );
+      return;
+    }
+
+    // Set extraction in progress
+    setIsExtractionInProgress(true);
+
+    // Phase 10 Day 34: Open modal immediately with preparing state
+    setPreparingMessage('Analyzing papers and preparing for extraction...');
+    setShowModeSelectionModal(true);
+
+    // PHASE 10 DAY 5.17.3: Generate unique request ID for tracing
+    const requestId = `extract_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    setCurrentRequestId(requestId);
+
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`🚀 [${requestId}] THEME EXTRACTION STARTED`);
+    console.log(`${'='.repeat(80)}`);
+    console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
+    console.log(`📊 [${requestId}] Initial counts:`, {
+      selectedPapers: selectedPapers.size,
+      transcribedVideos: transcribedVideos.length,
+      totalSources,
+    });
+
+    // ✅ CRITICAL FIX (Phase 10.92 Day 18 - Strict Audit):
+    // Create a COPY of selectedPapers Set, not a reference!
+    // If we just assign `selectedPapers`, when the store action `setSelectedPapers()`
+    // is called (e.g., after saving papers), both variables point to the same Set object,
+    // and papersToAnalyze becomes empty, causing "No sources with content" error!
+    const papersToAnalyze = new Set(selectedPapers); // Create an independent copy
+
+    // ===========================
+    // STEP 0.5: METADATA REFRESH
+    // ===========================
+
+    console.log(
+      `\n╔════════════════════════════════════════════════════════════╗`
+    );
+    console.log(`║   🔄 STEP 0.5: AUTO-REFRESH STALE METADATA               ║`);
+    console.log(
+      `╚════════════════════════════════════════════════════════════╝`
+    );
+    console.log(`   Checking for papers with outdated full-text metadata...`);
+
+    // ✅ FIX (CRITICAL-003): Use latestPapersRef instead of stale papers prop
+    const papersToCheck = latestPapersRef.current.filter(p => papersToAnalyze.has(p.id));
+
+    // ✅ FIX (HIGH-004): Correct logic - only refresh if:
+    // 1. Has identifiers (doi/url) for fetching
+    // 2. AND doesn't have full-text
+    // 3. AND hasn't permanently failed
+    const stalePapers = papersToCheck.filter(
+      p =>
+        (p.doi || p.url) &&       // Has identifiers
+        !p.hasFullText &&         // Missing full-text
+        p.fullTextStatus !== 'failed' // Not permanently failed
+    );
+
+    console.log(`   📊 Analysis:`);
+    console.log(`      • Total selected papers: ${papersToCheck.length}`);
+    console.log(`      • Papers with stale metadata: ${stalePapers.length}`);
+    console.log(
+      `      • Papers with up-to-date metadata: ${papersToCheck.length - stalePapers.length}`
+    );
+
+    if (stalePapers.length > 0) {
+      console.log(
+        `\n   🔄 Refreshing metadata for ${stalePapers.length} papers...`
+      );
+      setPreparingMessage(
+        `Updating metadata for ${stalePapers.length} papers...`
+      );
+
+      try {
+        const paperIdsToRefresh = stalePapers.map(p => p.id);
+        const refreshResult =
+          await literatureAPI.refreshPaperMetadata(paperIdsToRefresh);
+
+        console.log(`   ✅ Metadata refresh complete:`);
+        console.log(
+          `      • Successfully refreshed: ${refreshResult.refreshed}`
+        );
+        console.log(`      • Failed: ${refreshResult.failed}`);
+        console.log(
+          `      • Papers with full-text: ${refreshResult.papers.filter(p => p.hasFullText).length}`
+        );
+
+        // Update the papers array with refreshed metadata
+        // ✅ FIX (BUG-001): Use latestPapersRef instead of stale papers prop
+        const refreshedPapersMap = new Map(
+          refreshResult.papers.map(p => [p.id, p])
+        );
+        const updatedPapers = latestPapersRef.current.map(
+          p => refreshedPapersMap.get(p.id) || p
+        );
+        setPapers(updatedPapers);
+
+        console.log(`   ✅ Papers array updated with fresh metadata`);
+      } catch (error: unknown) {
+        // ✅ FIX (CRITICAL-006): Properly typed error handling
+        const errorMessage = error instanceof Error ? error.message : 'Metadata refresh failed';
+        console.error(`   ❌ Metadata refresh failed:`, errorMessage);
+        // Continue anyway - not critical for extraction
+      }
+    } else {
+      console.log(
+        `   ✅ All selected papers have up-to-date metadata - skipping refresh`
+      );
+    }
+    console.log(``);
+
+    // ✅ ENHANCEMENT: Check for cancellation after metadata refresh
+    if (signal.aborted) {
+      console.log('❌ Operation cancelled after metadata refresh');
+      return;
+    }
+
+    // ===========================
+    // STEP 1: CONTENT ANALYSIS
+    // ===========================
+
+    console.log(
+      `📄 [${requestId}] STEP 1: Content Analysis - Analyzing ${papersToAnalyze.size} papers...`
+    );
+
+    // Phase 10 Day 31.5: CRITICAL FIX - Save papers to database FIRST
+    console.log(
+      `💾 [${requestId}] Saving papers to database to enable full-text extraction...`
+    );
+
+    // ✅ FIX (CRITICAL-003): Use latestPapersRef instead of stale papers prop
+    const papersToSave = latestPapersRef.current.filter(p => papersToAnalyze.has(p.id));
+    let savedCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+    const failedPapers: Array<{ title: string; error: string }> = [];
+
+    // Paper save function with retry logic
+    const savePaperWithRetry = async (
+      paper: Paper
+    ): Promise<{ success: boolean; paperId: string; error?: string }> => {
+      // Build save payload with only defined fields
+      // ✅ FIX (CRITICAL-006): Properly typed payload
+      const savePayload: {
+        title: string;
+        authors: string[];
+        year?: number;
+        source: string;
+        abstract?: string;
+        doi?: string;
+        url?: string;
+        venue?: string;
+        citationCount?: number;
+        keywords?: string[];
+      } = {
+        title: paper.title,
+        authors: paper.authors || [],
+        source: paper.source,
+      };
+
+      // Add optional fields only if defined
+      if (paper.year !== undefined) savePayload.year = paper.year;
+      if (paper.abstract) savePayload.abstract = paper.abstract;
+      if (paper.doi) savePayload.doi = paper.doi;
+      if (paper.url) savePayload.url = paper.url;
+      if (paper.venue) savePayload.venue = paper.venue;
+      if (paper.citationCount !== undefined)
+        savePayload.citationCount = paper.citationCount;
+      if (paper.keywords) savePayload.keywords = paper.keywords;
+
+      // Use shared retry utility with jitter and exponential backoff
+      const result = await retryApiCall(
+        async () => {
+          const saveResult = await literatureAPI.savePaper(savePayload);
+          if (!saveResult.success) {
+            throw new Error('Save returned false');
+          }
+          return saveResult;
+        },
+        {
+          maxRetries: 3,
+          onRetry: (attempt: number, error: Error, delayMs: number) => {
+            console.warn(
+              `   ⚠️  Retry ${attempt}/3 for "${paper.title?.substring(0, 40)}..." - waiting ${Math.round(delayMs)}ms (${error.message})`
+            );
+          },
+        }
+      );
+
+      // Unwrap RetryResult - retryApiCall wraps the response
+      if (!result.success || !result.data) {
+        return { success: false, paperId: '', error: result.error || 'Save failed' };
+      }
+      return result.data;
+    };
+
+    // ✅ ENHANCEMENT: Collect full-text promises to wait for completion
+    const fullTextPromises: Promise<void>[] = [];
+
+    // ✅ ENHANCEMENT: Save papers in PARALLEL with concurrency limit for performance
+    // BEFORE: Sequential saves took 3.5s for 7 papers (500ms each)
+    // AFTER:  Parallel saves take ~1.2s for 7 papers (3 concurrent, 3 rounds)
+    console.log(
+      `\n⚡ Processing ${papersToSave.length} papers in parallel (max ${MAX_CONCURRENT_SAVES} concurrent)...`
+    );
+
+    // Process papers in batches for controlled parallelism
+    for (let i = 0; i < papersToSave.length; i += MAX_CONCURRENT_SAVES) {
+      // ✅ ENHANCEMENT: Check for cancellation before each batch
+      if (signal.aborted) {
+        console.log('❌ Paper saving cancelled by user');
+        return;
+      }
+
+      const batch = papersToSave.slice(i, i + MAX_CONCURRENT_SAVES);
+      const batchNumber = Math.floor(i / MAX_CONCURRENT_SAVES) + 1;
+      const totalBatches = Math.ceil(papersToSave.length / MAX_CONCURRENT_SAVES);
+
+      console.log(
+        `   📦 Batch ${batchNumber}/${totalBatches}: Processing ${batch.length} papers in parallel...`
+      );
+
+      // Process batch in parallel using Promise.allSettled (doesn't fail if one fails)
+      const batchResults = await Promise.allSettled(
+        batch.map(async (paper) => {
+          const saveResult = await savePaperWithRetry(paper);
+          return { paper, saveResult };
+        })
+      );
+
+      // Process results from this batch
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled') {
+          const { paper, saveResult } = result.value;
+
+          if (saveResult.success) {
+            savedCount++;
+
+            // ✅ FIX (CRITICAL-002): Don't mutate paper object - preserve original ID
+            const originalId = paper.id;
+            const dbPaperId = saveResult.paperId;
+
+            console.log(
+              `   ✅ Saved: "${paper.title?.substring(0, 50)}..." (DB ID: ${dbPaperId.substring(0, 8)}...)`
+            );
+
+            // Start full-text extraction (non-blocking)
+            const fullTextPromise = literatureAPI
+              .fetchFullTextForPaper(dbPaperId)
+              .then(updatedPaper => {
+                if (isMountedRef.current && !signal.aborted) {
+                  // Update state immutably
+                  setPapers((prev: Paper[]) =>
+                    prev.map((p: Paper) =>
+                      p.id === originalId || p.id === dbPaperId ? updatedPaper : p
+                    )
+                  );
+
+                  console.log(
+                    `   📄 Full-text: ${updatedPaper.hasFullText ? 'SUCCESS' : 'FAILED'} ` +
+                      `for "${paper.title?.substring(0, 40)}..." ` +
+                      `(${updatedPaper.fullTextWordCount || 0} words)`
+                  );
+                }
+              })
+              .catch((fullTextError: unknown) => {
+                const errorMessage = fullTextError instanceof Error
+                  ? fullTextError.message
+                  : 'Full-text fetch failed';
+
+                console.warn(
+                  `   ⚠️  Full-text fetch failed for "${paper.title?.substring(0, 40)}...": ${errorMessage}`
+                );
+              });
+
+            fullTextPromises.push(fullTextPromise);
+
+            console.log(
+              `   🔄 Full-text extraction started (Paper ID: ${dbPaperId.substring(0, 8)}...)`
+            );
+          } else {
+            // Handle save failure
+            const errorMsg = saveResult.error || 'Unknown error';
+
+            if (
+              errorMsg.includes('already exists') ||
+              errorMsg.includes('duplicate')
+            ) {
+              skippedCount++;
+              console.log(
+                `   ⏭️  Skipped (duplicate): "${paper.title?.substring(0, 50)}..."`
+              );
+            } else if (errorMsg.includes('AUTHENTICATION_REQUIRED') || errorMsg.includes('401')) {
+              failedCount++;
+              failedPapers.push({
+                title: paper.title || 'Unknown',
+                error: 'AUTHENTICATION_REQUIRED',
+              });
+              console.warn(
+                `   🔒 Skipped (requires login): "${paper.title?.substring(0, 50)}..."`
+              );
+            } else {
+              failedCount++;
+              failedPapers.push({
+                title: paper.title || 'Unknown',
+                error: errorMsg,
+              });
+              console.error(
+                `   ❌ Failed after retries: "${paper.title?.substring(0, 50)}..." - ${errorMsg}`
+              );
+            }
+          }
+        } else {
+          // Handle promise rejection (shouldn't happen with savePaperWithRetry, but defensive)
+          failedCount++;
+          console.error(`   ❌ Unexpected error processing paper:`, result.reason);
+        }
+
+        // ✅ ENHANCEMENT: Real-time progress tracking
+        const progress = savedCount + skippedCount + failedCount;
+        const percentage = Math.round((progress / papersToSave.length) * 100);
+        setPreparingMessage(
+          `Saving papers (${progress}/${papersToSave.length} - ${percentage}%)...`
+        );
+      }
+    }
+
+    console.log(`\n✅ Paper saving complete:`);
+    console.log(`   • Saved: ${savedCount}`);
+    console.log(`   • Skipped (duplicates): ${skippedCount}`);
+    console.log(`   • Failed: ${failedCount}`);
+
+    // ✅ ENHANCEMENT: WAIT for all full-text extractions with real-time progress
+    if (fullTextPromises.length > 0) {
+      // ✅ ENHANCEMENT: Check for cancellation
+      if (signal.aborted) {
+        console.log('❌ Full-text extraction cancelled by user');
+        return;
+      }
+
+      console.log(
+        `\n⏰ Waiting for ${fullTextPromises.length} full-text extraction${fullTextPromises.length === 1 ? '' : 's'} to complete...`
+      );
+
+      // ✅ ENHANCEMENT: Real-time progress tracking for full-text extraction
+      let completedCount = 0;
+      const total = fullTextPromises.length;
+
+      // Wrap each promise to track completion
+      const trackedPromises = fullTextPromises.map((promise) =>
+        promise.finally(() => {
+          completedCount++;
+          const percentage = Math.round((completedCount / total) * 100);
+
+          // Update progress message in real-time
+          if (isMountedRef.current && !signal.aborted) {
+            setPreparingMessage(
+              `Extracting full-text (${completedCount}/${total} - ${percentage}%)...`
+            );
+          }
+
+          console.log(
+            `   📊 Progress: ${completedCount}/${total} full-text extractions complete (${percentage}%)`
+          );
+        })
+      );
+
+      // Initial progress message
+      setPreparingMessage(`Extracting full-text (0/${total} - 0%)...`);
+
+      // Wait for all extractions (don't fail if one extraction fails)
+      await Promise.allSettled(trackedPromises);
+
+      console.log(`✅ All full-text extractions complete!`);
+
+      // ✅ CRITICAL FIX (BUG-004): Ensure ref is synced with latest papers after full-text extraction
+      // Papers were updated via setPapers() during extraction, but we need to ensure the ref
+      // has the latest data. Use setPapers callback to access and sync the updated array.
+      setPapers((currentPapers) => {
+        latestPapersRef.current = currentPapers;
+        console.log(
+          `🔄 Synced paper ref: ${currentPapers.length} papers total, ` +
+          `${currentPapers.filter(p => p.hasFullText).length} with full-text`
+        );
+        return currentPapers; // Return unchanged (identity function)
+      });
+    }
+
+    // ✅ IMPROVED: Better UX for authentication errors
+    if (failedCount > 0) {
+      // Separate authentication errors from other failures
+      const authErrors = failedPapers.filter(p => p.error === 'AUTHENTICATION_REQUIRED');
+      const otherErrors = failedPapers.filter(p => p.error !== 'AUTHENTICATION_REQUIRED');
+
+      if (authErrors.length > 0) {
+        console.warn(
+          `\n🔒 ${authErrors.length} ${authErrors.length === 1 ? 'paper requires' : 'papers require'} authentication to save:`
+        );
+        authErrors.forEach(({ title }) => {
+          console.warn(`   • "${title.substring(0, 50)}..."`);
+        });
+        console.info(
+          `   💡 Tip: Log in to save papers and enable full-text extraction for theme analysis`
+        );
+      }
+
+      if (otherErrors.length > 0) {
+        console.warn(`\n⚠️  ${otherErrors.length} papers failed to save:`);
+        otherErrors.forEach(({ title, error }) => {
+          console.warn(`   • "${title.substring(0, 50)}...": ${error}`);
+        });
+      }
+    }
+
+    // ✅ ENHANCEMENT: Check for cancellation before content analysis
+    if (signal.aborted) {
+      console.log('❌ Content analysis cancelled by user');
+      return;
+    }
+
+    // Phase 10 Day 34: Update preparing message for content analysis
+    setPreparingMessage('Analyzing paper content...');
+
+    // BUGFIX: Build comprehensive paper list with content status BEFORE filtering
+    // ✅ FIX (CRITICAL-003): Use latestPapersRef instead of stale papers prop
+    const selectedPapersToAnalyze = latestPapersRef.current.filter(p => papersToAnalyze.has(p.id));
+    const selectedPapersList: ContentAnalysis['selectedPapersList'] = [];
+
+    console.log(`\n📋 [${requestId}] Building selected papers list with content status...`);
+
+    // Prepare paper sources AND track all selected papers with status
+    const paperSources: SourceContent[] = selectedPapersToAnalyze
+      .map(p => {
+        // ✅ FIXED (Phase 10.92 Day 2 + Audit): Use shared content type classification helper
+        // This ensures consistent word counting logic across the codebase (DRY principle)
+        let content = '';
+        let contentType: ContentType = ContentType.NONE;
+        let skipReason: string | undefined;
+
+        if (p.hasFullText && p.fullText) {
+          content = p.fullText.trim();
+          contentType = ContentType.FULL_TEXT;
+        } else if (p.abstract) {
+          // Use classifyContentType helper to avoid code duplication and ensure
+          // consistent word counting (with proper whitespace trimming)
+          content = p.abstract.trim();
+          contentType = classifyContentType(p.abstract, false);
+        }
+
+        // BUGFIX: Determine if paper will be skipped
+        const hasContent = content.length > MIN_CONTENT_LENGTH;
+        if (!hasContent) {
+          if (!p.abstract && !p.fullText) {
+            skipReason = 'No abstract or full-text available';
+          } else if (content.length <= MIN_CONTENT_LENGTH) {
+            skipReason = `Content too short (${content.length} chars, need >${MIN_CONTENT_LENGTH})`;
+          }
+        }
+
+        // BUGFIX: Add to comprehensive list (ALL papers, not just valid ones)
+        const paperListEntry: ContentAnalysis['selectedPapersList'][number] = {
+          id: p.id,
+          title: p.title,
+          hasContent,
+          contentType,
+          contentLength: content.length,
+        };
+        if (skipReason) {
+          paperListEntry.skipReason = skipReason;
+        }
+        selectedPapersList.push(paperListEntry);
+
+        // Log paper status
+        const statusIcon = hasContent ? '✅' : '❌';
+        const statusText = hasContent ? 'WILL BE USED' : 'WILL BE SKIPPED';
+        console.log(
+          `   ${statusIcon} "${p.title.substring(0, 60)}..." - ${statusText}` +
+          (skipReason ? ` (${skipReason})` : ` (${contentType}, ${content.length} chars)`)
+        );
+
+        return {
+          id: p.id,
+          type: 'paper' as const,
+          title: p.title,
+          content,
+          keywords: p.keywords || [],
+          url: p.url || p.doi || '',
+          metadata: {
+            authors: p.authors?.join(', ') || '',
+            year: p.year,
+            venue: p.venue,
+            citationCount: p.citationCount,
+            contentType,
+            fullTextStatus: p.hasFullText
+              ? ('success' as const)
+              : ('failed' as const),
+          },
+        };
+      });
+
+    // Add transcribed videos (with defensive validation)
+    const videoSources: SourceContent[] = transcribedVideos.map(video => {
+      const content = video.transcript || ''; // DEFENSIVE: Handle undefined/null transcripts
+      const hasContent = content.length > MIN_CONTENT_LENGTH;
+      let skipReason: string | undefined;
+
+      // BUGFIX: Track video status in selectedPapersList (enterprise-grade transparency)
+      if (!hasContent) {
+        if (!video.transcript) {
+          skipReason = 'No transcript available';
+        } else if (content.length <= MIN_CONTENT_LENGTH) {
+          skipReason = `Transcript too short (${content.length} chars, need >${MIN_CONTENT_LENGTH})`;
+        }
+      }
+
+      // Add video to comprehensive tracking list
+      const videoListEntry: ContentAnalysis['selectedPapersList'][number] = {
+        id: video.id,
+        title: video.title,
+        hasContent,
+        contentType: ContentType.VIDEO_TRANSCRIPT,
+        contentLength: content.length,
+      };
+      if (skipReason) {
+        videoListEntry.skipReason = skipReason;
+      }
+      selectedPapersList.push(videoListEntry);
+
+      // Log video status
+      const statusIcon = hasContent ? '✅' : '❌';
+      const statusText = hasContent ? 'WILL BE USED' : 'WILL BE SKIPPED';
+      console.log(
+        `   ${statusIcon} "${video.title.substring(0, 60)}..." (VIDEO) - ${statusText}` +
+        (skipReason ? ` (${skipReason})` : ` (VIDEO_TRANSCRIPT, ${content.length} chars)`)
+      );
+
+      return {
+        id: video.id,
+        type: 'youtube' as const,
+        title: video.title,
+        content,
+        // ✅ FIX (CRITICAL-006): Properly typed theme mapping
+        keywords: video.themes?.map((t: string | { label: string }) =>
+          typeof t === 'string' ? t : t.label
+        ) || [],
+        url: video.url,
+        metadata: {
+          videoId: video.sourceId,
+          duration: video.duration,
+          channel: video.channel,
+        },
+      };
+    });
+
+    // BUGFIX: Filter out sources without content WITH transparent logging
+    console.log(
+      `\n🔍 [${requestId}] Filtering sources with sufficient content (>${MIN_CONTENT_LENGTH} chars)...`
+    );
+    const beforeFilter = paperSources.length;
+    const beforeFilterVideos = videoSources.length;
+
+    // DEFENSIVE: Filter BOTH papers AND videos for content
+    const allSources = [
+      ...paperSources.filter(
+        s => s.content && s.content.length > MIN_CONTENT_LENGTH
+      ),
+      ...videoSources.filter(
+        s => s.content && s.content.length > MIN_CONTENT_LENGTH
+      ),
+    ];
+    const papersWithContent = allSources.filter(s => s.type === 'paper').length;
+    const videosWithContent = allSources.filter(s => s.type === 'youtube').length;
+    const papersSkipped = beforeFilter - papersWithContent;
+    const videosSkipped = beforeFilterVideos - videosWithContent;
+
+    console.log(`\n📊 [${requestId}] FILTERING RESULTS:`);
+    console.log(`   • Total papers selected: ${beforeFilter}`);
+    console.log(`   • Papers WITH content (will be used): ${papersWithContent}`);
+    console.log(`   • Papers WITHOUT content (skipped): ${papersSkipped}`);
+    console.log(`   • Total videos: ${beforeFilterVideos}`);
+    console.log(`   • Videos WITH content (will be used): ${videosWithContent}`);
+    if (videosSkipped > 0) {
+      console.warn(`   ⚠️  Videos WITHOUT content (skipped): ${videosSkipped}`);
+    }
+    console.log(`   • TOTAL sources for extraction: ${allSources.length}`);
+
+    // BUGFIX: Better error message with actionable guidance
+    if (allSources.length === 0) {
+      console.error(`❌ [${requestId}] No sources with content - aborting`);
+
+      // Build detailed error message
+      let errorMessage = '';
+      const papersWithoutContent = selectedPapersList.filter(p => !p.hasContent);
+
+      if (beforeFilter === 0) {
+        errorMessage = '❌ No papers were selected for extraction.';
+      } else {
+        // Show why papers were skipped
+        errorMessage = `❌ All ${beforeFilter} selected papers were skipped:\n\n`;
+        papersWithoutContent.slice(0, 5).forEach((paper) => {
+          errorMessage += `• ${paper.title.substring(0, 60)}...\n  ${paper.skipReason || 'No content available'}\n`;
+        });
+        if (papersWithoutContent.length > 5) {
+          errorMessage += `\n...and ${papersWithoutContent.length - 5} more papers`;
+        }
+      }
+
+      // ✅ FIX (BUG-002): DON'T close modal - let user see error and close manually
+      setPreparingMessage(errorMessage);
+      setIsExtractionInProgress(false); // Stop the "in progress" state
+
+      // Show toast with actionable guidance
+      toast.error(
+        'No papers with sufficient content for theme extraction',
+        {
+          duration: 10000,
+          description: 'Papers need either full-text or abstracts with at least 50 characters.',
+          style: {
+            background: '#FEE2E2',
+            border: '2px solid #EF4444',
+            color: '#991B1B',
+          }
+        }
+      );
+
+      console.log(`\n📋 Papers without content:`);
+      papersWithoutContent.forEach((paper) => {
+        console.log(`   ❌ "${paper.title}" - ${paper.skipReason}`);
+      });
+
+      return; // Exit but keep modal open
+    }
+
+    // BUGFIX: Warn user if significant papers were skipped
+    if (papersSkipped > 0) {
+      const skippedPercentage = Math.round((papersSkipped / beforeFilter) * 100);
+      if (skippedPercentage >= 50) {
+        console.warn(
+          `⚠️ [${requestId}] WARNING: ${papersSkipped}/${beforeFilter} papers (${skippedPercentage}%) have no content and will be skipped!`
+        );
+        toast.warning(
+          `${papersSkipped} of ${beforeFilter} papers have no content and will be skipped. Only ${papersWithContent} papers will be used for extraction.`,
+          { duration: 8000 }
+        );
+      } else if (papersSkipped > 0) {
+        console.warn(
+          `⚠️ [${requestId}] ${papersSkipped} papers will be skipped (no content)`
+        );
+        toast.info(
+          `${papersSkipped} papers will be skipped (no content). ${papersWithContent} papers will be used.`,
+          { duration: 6000 }
+        );
+      }
+    }
+
+    // ✅ FIXED (Phase 10.92 Day 2): Use ContentType enum instead of string literals
+    const contentTypeBreakdown = {
+      fullText: paperSources.filter(
+        s => s.metadata?.contentType === ContentType.FULL_TEXT
+      ).length,
+      abstractOverflow: paperSources.filter(
+        s => s.metadata?.contentType === ContentType.ABSTRACT_OVERFLOW
+      ).length,
+      abstract: paperSources.filter(
+        s => s.metadata?.contentType === ContentType.ABSTRACT
+      ).length,
+      noContent: paperSources.filter(
+        s => s.metadata?.contentType === ContentType.NONE
+      ).length,
+    };
+
+    const totalContentLength = allSources.reduce(
+      (sum, s) => sum + (s.content?.length || 0),
+      0
+    );
+    const avgContentLength = totalContentLength / allSources.length;
+    const hasFullTextContent =
+      contentTypeBreakdown.fullText + contentTypeBreakdown.abstractOverflow > 0;
+
+    // BUGFIX: Store COMPLETE content analysis for Purpose Wizard (with transparency data)
+    setContentAnalysis({
+      fullTextCount: contentTypeBreakdown.fullText,
+      abstractOverflowCount: contentTypeBreakdown.abstractOverflow,
+      abstractCount: contentTypeBreakdown.abstract,
+      noContentCount: contentTypeBreakdown.noContent,
+      avgContentLength: allSources.length > 0 ? avgContentLength : 0, // DEFENSIVE: Prevent NaN
+      hasFullTextContent,
+      sources: allSources,
+      // BUGFIX: Add transparency fields (now includes videos)
+      totalSelected: beforeFilter + beforeFilterVideos,
+      totalWithContent: papersWithContent + videosWithContent,
+      totalSkipped: papersSkipped + videosSkipped,
+      selectedPapersList,
+    });
+
+    console.log(
+      `\n✅ [${requestId}] STEP 1 COMPLETE: Content Analysis Summary`
+    );
+    console.log(`${'─'.repeat(60)}`);
+    console.log(`   📋 SELECTION SUMMARY:`);
+    console.log(`      • Total papers selected: ${beforeFilter}`);
+    console.log(`      • Papers WITH content (will be used): ${papersWithContent} ✅`);
+    console.log(`      • Papers WITHOUT content (skipped): ${papersSkipped} ❌`);
+    console.log(`      • Total videos: ${beforeFilterVideos}`);
+    console.log(`      • Videos WITH content (will be used): ${videosWithContent} ✅`);
+    if (videosSkipped > 0) {
+      console.log(`      • Videos WITHOUT content (skipped): ${videosSkipped} ❌`);
+    }
+    console.log(`      • TOTAL for extraction: ${allSources.length}`);
+    console.log(`\n   📊 Content Type Breakdown (of papers with content):`);
+    console.log(`      • Full-text papers: ${contentTypeBreakdown.fullText}`);
+    console.log(
+      `      • Abstract overflow: ${contentTypeBreakdown.abstractOverflow}`
+    );
+    console.log(
+      `      • Abstract-only papers: ${contentTypeBreakdown.abstract}`
+    );
+    console.log(`   📏 Content Quality:`);
+    console.log(
+      `      • Average content length: ${Math.round(avgContentLength)} chars`
+    );
+    console.log(
+      `      • Has full-text: ${hasFullTextContent ? 'Yes ✅' : 'No ⚠️'}`
+    );
+    console.log(`${'─'.repeat(60)}`);
+
+      // Phase 10 Day 34: Clear preparing message when ready for mode selection
+      setPreparingMessage('');
+
+    } catch (error: unknown) {
+      // ✅ FIX (HIGH-001): Top-level error handler
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'An unexpected error occurred';
+
+      console.error('❌ [handleExtractThemes] Unexpected error:', error);
+
+      // ✅ FIX (BUG-001): Complete state cleanup (consistent with cancelExtraction)
+      if (isMountedRef.current) {
+        setIsExtractionInProgress(false);
+        setShowModeSelectionModal(false);
+        setPreparingMessage('');
+        setContentAnalysis(null);
+        setCurrentRequestId(null);
+      }
+
+      // User feedback
+      toast.error(
+        `Theme extraction failed: ${errorMessage}. Please try again.`,
+        {
+          duration: 8000,
+          style: {
+            background: '#FEE2E2',
+            border: '2px solid #EF4444',
+            color: '#991B1B',
+          }
+        }
+      );
+    }
+  }, [
+    user, // ENTERPRISE FIX: Added for early auth check
+    isExtractionInProgress,
+    selectedPapers,
+    transcribedVideos,
+    // ✅ FIX (HOOKS-001): REMOVED `papers` from deps - we use latestPapersRef.current instead
+    // This prevents unnecessary callback recreation while maintaining access to latest data
+    setPapers,
+    // ✅ FIX (CRITICAL-001): Add all missing setter dependencies
+    setIsExtractionInProgress,
+    setPreparingMessage,
+    setShowModeSelectionModal,
+    setContentAnalysis,
+    setCurrentRequestId,
+    // NOTE: isMountedRef and latestPapersRef are refs, don't need to be in deps
+  ]);
+
+  // ===========================
+  // CANCELLATION HANDLER
+  // ===========================
+
+  /**
+   * Cancel ongoing theme extraction
+   *
+   * Aborts the current extraction workflow and cleans up state.
+   * Safe to call even if no extraction is in progress.
+   */
+  const cancelExtraction = useCallback(() => {
+    console.log('🛑 User requested extraction cancellation');
+
+    // Abort ongoing operations via AbortController
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
+    // Clean up state only if mounted
+    if (isMountedRef.current) {
+      setIsExtractionInProgress(false);
+      setShowModeSelectionModal(false);
+      setPreparingMessage('');
+      setContentAnalysis(null);
+      setCurrentRequestId(null);
+    }
+
+    // User feedback
+    toast.info('Theme extraction cancelled', { duration: 3000 });
+  }, [
+    setIsExtractionInProgress,
+    setShowModeSelectionModal,
+    setPreparingMessage,
+    setContentAnalysis,
+    setCurrentRequestId,
+  ]);
+
+  // ===========================
+  // RETURN INTERFACE
+  // ===========================
+
+  return {
+    // State
+    isExtractionInProgress,
+    preparingMessage,
+    contentAnalysis,
+    currentRequestId,
+    showModeSelectionModal,
+
+    // Handlers
+    handleExtractThemes,
+    cancelExtraction,
+
+    // Setters
+    setShowModeSelectionModal,
+    setIsExtractionInProgress,
+    setPreparingMessage,
+    setContentAnalysis,
+  };
+}

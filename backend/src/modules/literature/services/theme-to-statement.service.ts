@@ -54,7 +54,7 @@ export class ThemeToStatementService {
 
   constructor(
     private prisma: PrismaService,
-    private themeExtractionService: ThemeExtractionService,
+    _themeExtractionService: ThemeExtractionService,
     private statementGeneratorService: StatementGeneratorService,
   ) {}
 
@@ -294,7 +294,7 @@ export class ThemeToStatementService {
   private buildPerspectivePrompt(
     theme: ExtractedTheme,
     perspective: string,
-    academicLevel: string,
+    _academicLevel: string,
   ): string {
     const baseContext = `${theme.label}: ${theme.description || ''}`;
 

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { logger } from '@/lib/utils/logger';
 import {
   Lightbulb,
   FlaskConical,
@@ -101,7 +102,7 @@ export const ThemeActionPanel: React.FC<ThemeActionPanelProps> = ({
     try {
       await actionFn(getSelectedThemes());
     } catch (error) {
-      console.error(`Action ${actionName} failed:`, error);
+      logger.error('Theme action failed', 'ThemeActionPanel', { actionName, error });
     } finally {
       setLoadingAction(null);
     }

@@ -1,38 +1,43 @@
 /**
- * Gap Analysis Hook - Phase 10.1 Day 7
+ * Gap Analysis Hook - Phase 10.91 Day 5 (MIGRATED TO ZUSTAND)
+ *
+ * **MIGRATION NOTE:** This hook is now a thin wrapper around GapAnalysisStore.
+ * All state management has been migrated to Zustand for consistency and better performance.
  *
  * Enterprise-grade hook for analyzing research gaps from selected papers.
  * Extracts gap analysis logic from God Component.
  *
  * @module useGapAnalysis
  * @since Phase 10.1 Day 7
+ * @migrated Phase 10.91 Day 5 - Zustand Migration
  * @author VQMethod Team
  *
  * **Features:**
- * - Analyzes research gaps from selected papers
+ * - Analyzes research gaps from selected papers (via Zustand store)
  * - Validates paper selection
  * - Manages loading state
  * - Comprehensive error handling
  * - Detailed logging for debugging
+ * - No useState - all state in Zustand store
  *
  * **Usage:**
  * ```typescript
  * const {
+ *   gaps,
  *   analyzingGaps,
  *   handleAnalyzeGaps,
  * } = useGapAnalysis({
  *   selectedPapers,
  *   papers,
- *   setGaps,
  *   setActiveTab,
  *   setActiveAnalysisSubTab,
  * });
  * ```
  */
 
-import { useState, useCallback } from 'react';
-import { toast } from 'sonner';
-import { literatureAPI, type ResearchGap, type Paper } from '@/lib/services/literature-api.service';
+import { useCallback } from 'react';
+import { useGapAnalysisStore } from '@/lib/stores/gap-analysis.store';
+import type { Paper, ResearchGap } from '@/lib/services/literature-api.service';
 
 // ============================================================================
 // TYPES
@@ -46,11 +51,9 @@ export interface UseGapAnalysisConfig {
   selectedPapers: Set<string>;
   /** All available papers */
   papers: Paper[];
-  /** Setter for updating gaps */
-  setGaps: (gaps: ResearchGap[]) => void;
-  /** Tab navigation setter */
+  /** Tab navigation setter (optional) */
   setActiveTab?: (tab: string) => void;
-  /** Sub-tab navigation setter */
+  /** Sub-tab navigation setter (optional) */
   setActiveAnalysisSubTab?: (tab: 'themes' | 'gaps' | 'synthesis') => void;
 }
 
@@ -58,6 +61,8 @@ export interface UseGapAnalysisConfig {
  * Hook return type
  */
 export interface UseGapAnalysisReturn {
+  /** Identified research gaps */
+  gaps: ResearchGap[];
   /** Whether gap analysis is in progress */
   analyzingGaps: boolean;
   /** Handler to trigger gap analysis */
@@ -70,6 +75,12 @@ export interface UseGapAnalysisReturn {
 
 /**
  * Hook for managing research gap analysis
+ *
+ * **Phase 10.91 Day 5 Migration:**
+ * - Removed useState for analyzingGaps (now in store)
+ * - Removed setGaps parameter (gaps now in store)
+ * - Hook now wraps store action with navigation callbacks
+ * - Maintains backward compatibility with existing components
  *
  * **Architecture:**
  * - Validates paper selection before analysis
@@ -89,19 +100,17 @@ export interface UseGapAnalysisReturn {
 export function useGapAnalysis(
   config: UseGapAnalysisConfig
 ): UseGapAnalysisReturn {
-  const {
-    selectedPapers,
-    papers,
-    setGaps,
-    setActiveTab,
-    setActiveAnalysisSubTab,
-  } = config;
+  const { selectedPapers, papers, setActiveTab, setActiveAnalysisSubTab } = config;
 
   // ===========================
-  // STATE MANAGEMENT
+  // ZUSTAND STORE INTEGRATION
   // ===========================
 
-  const [analyzingGaps, setAnalyzingGaps] = useState(false);
+  const gaps = useGapAnalysisStore(state => state.gaps);
+  const analyzingGaps = useGapAnalysisStore(state => state.analyzingGaps);
+  const handleAnalyzeGapsStore = useGapAnalysisStore(
+    state => state.handleAnalyzeGaps
+  );
 
   // ===========================
   // GAP ANALYSIS HANDLER
@@ -119,78 +128,20 @@ export function useGapAnalysis(
    * 6. Show success/error toast
    */
   const handleAnalyzeGaps = useCallback(async () => {
-    // Validation
-    if (selectedPapers.size === 0) {
-      toast.error('Please select papers to analyze for research gaps');
-      return;
-    }
-
-    setAnalyzingGaps(true);
-    try {
-      console.log(
-        '🔍 Analyzing research gaps from',
-        selectedPapers.size,
-        'papers'
-      );
-
-      // Get full paper objects for selected IDs
-      const selectedPaperObjects = papers.filter(p => selectedPapers.has(p.id));
-
-      console.log(
-        '📄 Selected paper objects:',
-        selectedPaperObjects.length,
-        'papers'
-      );
-      console.log(
-        '📝 Sample paper:',
-        selectedPaperObjects[0]
-          ? {
-              id: selectedPaperObjects[0].id,
-              title: selectedPaperObjects[0].title,
-              hasAbstract: !!selectedPaperObjects[0].abstract,
-            }
-          : 'No papers'
-      );
-
-      // Send full paper objects to API
-      const researchGaps =
-        await literatureAPI.analyzeGapsFromPapers(selectedPaperObjects);
-
-      console.log(
-        '✅ Gap analysis complete:',
-        researchGaps.length,
-        'gaps found'
-      );
-
-      // Update gaps state
-      setGaps(researchGaps);
-
-      // Navigate to analysis tab (if setters provided)
-      if (setActiveTab) setActiveTab('analysis');
-      if (setActiveAnalysisSubTab) setActiveAnalysisSubTab('gaps');
-
-      toast.success(
-        `Identified ${researchGaps.length} research opportunities from ${selectedPaperObjects.length} papers`
-      );
-    } catch (error: any) {
-      console.error('❌ Gap analysis failed:', error);
-      toast.error(`Gap analysis failed: ${error.message || 'Unknown error'}`);
-    } finally {
-      setAnalyzingGaps(false);
-    }
-  }, [
-    selectedPapers,
-    papers,
-    setGaps,
-    setActiveTab,
-    setActiveAnalysisSubTab,
-  ]);
+    await handleAnalyzeGapsStore(
+      selectedPapers,
+      papers,
+      setActiveTab,
+      setActiveAnalysisSubTab
+    );
+  }, [selectedPapers, papers, setActiveTab, setActiveAnalysisSubTab, handleAnalyzeGapsStore]);
 
   // ===========================
   // RETURN INTERFACE
   // ===========================
 
   return {
+    gaps,
     analyzingGaps,
     handleAnalyzeGaps,
   };

@@ -91,7 +91,45 @@ async function main() {
 
   console.log('✅ Created legacy admin user:', legacyAdmin.email);
 
-  console.log('🎉 Database seeded successfully with 4 test accounts!');
+  // 🚀 PHASE 10.94.3: Create dev-user-bypass for JWT auth bypass mode
+  // This user is required for dev mode to work with paper saving
+  // The ID must be exactly 'dev-user-bypass' to match jwt-auth.guard.ts
+  const devBypassPassword = await bcryptjs.hash('dev-bypass-password', 10);
+
+  // First, try to find existing user by ID
+  const existingDevUser = await prisma.user.findUnique({
+    where: { id: 'dev-user-bypass' }
+  });
+
+  let devBypassUser;
+  if (existingDevUser) {
+    // Update existing user
+    devBypassUser = await prisma.user.update({
+      where: { id: 'dev-user-bypass' },
+      data: {
+        password: devBypassPassword,
+        name: 'Dev Bypass User',
+        role: 'RESEARCHER',
+        emailVerified: true,
+      },
+    });
+    console.log('✅ Updated dev-user-bypass:', devBypassUser.email);
+  } else {
+    // Create new user with specific ID
+    devBypassUser = await prisma.user.create({
+      data: {
+        id: 'dev-user-bypass',
+        email: 'dev-bypass@localhost',
+        password: devBypassPassword,
+        name: 'Dev Bypass User',
+        role: 'RESEARCHER',
+        emailVerified: true,
+      },
+    });
+    console.log('✅ Created dev-user-bypass:', devBypassUser.email);
+  }
+
+  console.log('🎉 Database seeded successfully with 5 test accounts!');
 }
 
 main()

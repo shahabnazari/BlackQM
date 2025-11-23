@@ -107,12 +107,12 @@ export class CrossPlatformSynthesisService {
   private readonly logger = new Logger(CrossPlatformSynthesisService.name);
 
   constructor(
-    private prisma: PrismaService,
+    _prisma: PrismaService,
     private literatureService: LiteratureService,
     private tiktokService: TikTokResearchService,
-    private instagramService: InstagramManualService,
-    private transcriptionService: TranscriptionService,
-    private multimediaAnalysisService: MultiMediaAnalysisService,
+    _instagramService: InstagramManualService,
+    _transcriptionService: TranscriptionService,
+    _multimediaAnalysisService: MultiMediaAnalysisService,
   ) {}
 
   /**
@@ -195,7 +195,7 @@ export class CrossPlatformSynthesisService {
   async traceDisseminationPaths(
     themeClusters: ThemeCluster[],
     sources: MultiPlatformSource[],
-    timeWindow: number,
+    _timeWindow: number,
   ): Promise<DisseminationPath[]> {
     this.logger.log('Tracing dissemination paths across platforms');
 
@@ -361,7 +361,7 @@ export class CrossPlatformSynthesisService {
    */
   analyzePlatformDifferences(
     sources: MultiPlatformSource[],
-    clusters: ThemeCluster[],
+    _clusters: ThemeCluster[],
   ): Array<{
     platform: string;
     sourceCount: number;
@@ -499,7 +499,7 @@ export class CrossPlatformSynthesisService {
   private async searchYouTube(
     query: string,
     maxResults: number,
-    includeTranscripts?: boolean,
+    _includeTranscripts?: boolean,
   ): Promise<MultiPlatformSource[]> {
     try {
       const videos = await this.literatureService['searchYouTube'](query);
@@ -720,7 +720,7 @@ export class CrossPlatformSynthesisService {
    */
   private extractPlatformSpecificLanguage(
     sources: MultiPlatformSource[],
-    platform: string,
+    _platform: string,
   ): string[] {
     const words = new Map<string, number>();
 

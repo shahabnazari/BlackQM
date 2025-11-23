@@ -190,7 +190,7 @@ export class EnhancedThemeIntegrationService {
   private hypothesisCache = new Map<string, HypothesisSuggestion[]>();
 
   constructor(
-    private readonly prisma: PrismaService,
+    _prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
@@ -786,7 +786,7 @@ Return a JSON array with this structure:
    */
   private async clusterThemes(
     themes: Theme[],
-    algorithm: 'semantic' | 'statistical' | 'hybrid',
+    _algorithm: 'semantic' | 'statistical' | 'hybrid',
   ): Promise<Theme[][]> {
     // Simple keyword-based clustering for now
     // In production, use embeddings + cosine similarity or hierarchical clustering
@@ -834,7 +834,7 @@ Return a JSON array with this structure:
    */
   private async createConstructFromCluster(
     cluster: Theme[],
-    allThemes: Theme[],
+    _allThemes: Theme[],
   ): Promise<ConstructMapping> {
     // Use the most confident theme as the construct name
     const primaryTheme = cluster.reduce((prev, curr) =>
@@ -923,7 +923,7 @@ Return a JSON array with this structure:
    * Generate introduction section for survey
    */
   private async generateIntroductionSection(
-    options: GenerateCompleteSurveyOptions,
+    _options: GenerateCompleteSurveyOptions,
   ): Promise<CompleteSurveyGeneration['sections'][0]> {
     return {
       id: 'intro',
@@ -944,7 +944,7 @@ Return a JSON array with this structure:
    * Generate demographics section
    */
   private generateDemographicsSection(
-    options: GenerateCompleteSurveyOptions,
+    _options: GenerateCompleteSurveyOptions,
   ): CompleteSurveyGeneration['sections'][0] {
     return {
       id: 'demographics',
@@ -1056,7 +1056,7 @@ Return a JSON array with this structure:
    * Generate validity check section
    */
   private generateValidityCheckSection(
-    options: GenerateCompleteSurveyOptions,
+    _options: GenerateCompleteSurveyOptions,
   ): CompleteSurveyGeneration['sections'][0] {
     return {
       id: 'validity_checks',
@@ -1085,7 +1085,7 @@ Return a JSON array with this structure:
    * Generate debrief section
    */
   private generateDebriefSection(
-    options: GenerateCompleteSurveyOptions,
+    _options: GenerateCompleteSurveyOptions,
   ): CompleteSurveyGeneration['sections'][0] {
     return {
       id: 'debrief',

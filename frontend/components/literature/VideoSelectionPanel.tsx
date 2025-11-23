@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { logger } from '@/lib/utils/logger';
 import {
   Dialog,
   DialogContent,
@@ -238,7 +239,7 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
       await onTranscribe(Array.from(selectedVideoIds));
       setSelectedVideoIds(new Set()); // Clear selection after successful transcription
     } catch (error) {
-      console.error('Transcription failed:', error);
+      logger.error('Video transcription failed', 'VideoSelectionPanel', { error });
     } finally {
       setIsTranscribing(false);
     }
@@ -251,7 +252,7 @@ export const VideoSelectionPanel: React.FC<VideoSelectionPanelProps> = ({
     try {
       await onScoreRelevance(sortedAndFilteredVideos);
     } catch (error) {
-      console.error('Scoring failed:', error);
+      logger.error('Video scoring failed', 'VideoSelectionPanel', { error });
     } finally {
       setScoringVideos(false);
     }

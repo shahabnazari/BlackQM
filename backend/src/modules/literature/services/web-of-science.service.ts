@@ -386,7 +386,7 @@ export class WebOfScienceService {
       // Content metrics (Phase 10 Day 5.13+)
       wordCount,
       wordCountExcludingRefs,
-      isEligible: isPaperEligible(wordCount),
+      isEligible: isPaperEligible(wordCount, 150),
       abstractWordCount,
 
       // PDF and full-text availability

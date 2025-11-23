@@ -79,7 +79,7 @@ export const FilterPanel = memo(function FilterPanel({
       correctedVal = filters.yearTo;
     }
 
-    logger.debug('[FilterPanel] Year from changed', { yearFrom: correctedVal });
+    logger.debug('Year from changed', 'FilterPanel', { yearFrom: correctedVal });
     setFilters({ yearFrom: correctedVal });
   };
 
@@ -106,7 +106,7 @@ export const FilterPanel = memo(function FilterPanel({
       correctedVal = filters.yearFrom;
     }
 
-    logger.debug('[FilterPanel] Year to changed', { yearTo: correctedVal });
+    logger.debug('Year to changed', 'FilterPanel', { yearTo: correctedVal });
     setFilters({ yearTo: correctedVal });
   };
 
@@ -118,7 +118,7 @@ export const FilterPanel = memo(function FilterPanel({
     const maxLength = 200;
     const sanitizedValue = trimmedValue.slice(0, maxLength);
 
-    logger.debug('[FilterPanel] Author filter changed', { author: sanitizedValue });
+    logger.debug('Author filter changed', 'FilterPanel', { author: sanitizedValue });
     setFilters({ author: sanitizedValue });
   };
 
@@ -139,12 +139,12 @@ export const FilterPanel = memo(function FilterPanel({
     // Papers with 50k+ citations are extremely rare (e.g., "Structure of DNA" has ~12k)
     if (correctedVal > 100000) correctedVal = 100000;
 
-    logger.debug('[FilterPanel] Min citations changed', { minCitations: correctedVal });
+    logger.debug('Min citations changed', 'FilterPanel', { minCitations: correctedVal });
     setFilters({ minCitations: correctedVal });
   };
 
   const handlePublicationTypeChange = (value: string) => {
-    logger.debug('[FilterPanel] Publication type changed', {
+    logger.debug('Publication type changed', 'FilterPanel', {
       publicationType: value,
     });
     const publicationType = value as SearchFilters['publicationType'];
@@ -154,7 +154,7 @@ export const FilterPanel = memo(function FilterPanel({
   };
 
   const handleSortByChange = (value: string) => {
-    logger.debug('[FilterPanel] Sort by changed', { sortBy: value });
+    logger.debug('Sort by changed', 'FilterPanel', { sortBy: value });
     const sortBy = value as SearchFilters['sortBy'];
     if (sortBy !== undefined) {
       setFilters({ sortBy });
@@ -162,7 +162,7 @@ export const FilterPanel = memo(function FilterPanel({
   };
 
   const handleAuthorSearchModeChange = (value: string) => {
-    logger.debug('[FilterPanel] Author search mode changed', { mode: value });
+    logger.debug('Author search mode changed', 'FilterPanel', { mode: value });
     const authorSearchMode = value as SearchFilters['authorSearchMode'];
     if (authorSearchMode !== undefined) {
       setFilters({ authorSearchMode });
@@ -171,76 +171,76 @@ export const FilterPanel = memo(function FilterPanel({
 
   const handleSavePreset = () => {
     if (!presetName.trim()) {
-      logger.warn('[FilterPanel] Attempted to save preset with empty name');
+      logger.warn('Attempted to save preset with empty name', 'FilterPanel');
       return;
     }
 
-    logger.info('[FilterPanel] Saving filter preset', { name: presetName });
+    logger.info('Saving filter preset', 'FilterPanel', { name: presetName });
     addPreset(presetName.trim());
     setPresetName('');
   };
 
   const handleLoadPreset = (presetId: string) => {
-    logger.info('[FilterPanel] Loading filter preset', { presetId });
+    logger.info('Loading filter preset', 'FilterPanel', { presetId });
     loadPreset(presetId);
   };
 
   const handleDeletePreset = (presetId: string) => {
-    logger.info('[FilterPanel] Deleting filter preset', { presetId });
+    logger.info('Deleting filter preset', 'FilterPanel', { presetId });
     deletePreset(presetId);
   };
 
   const handleApplyFilters = () => {
-    logger.info('[FilterPanel] Applying filters', { filters });
+    logger.info('Applying filters', 'FilterPanel', { filters });
     applyFilters();
   };
 
   const handleResetFilters = () => {
-    logger.info('[FilterPanel] Resetting filters to defaults');
+    logger.info('Resetting filters to defaults', 'FilterPanel');
     resetFilters();
   };
 
   const handleShowQualityInfo = () => {
-    alert(`Quality Score Algorithm (Enterprise Research-Grade):
+    alert(`Quality Score Algorithm v4.0 (Enterprise Research-Grade):
 
-🏆 5-Dimensional Composite Score (0-100):
+🏆 CORE SCORING (0-100):
 
-1. Citation Impact (30%):
-   • 50+ cites/year = World-class (100 pts)
-   • 10+ cites/year = Excellent (70 pts)
-   • 5+ cites/year = Good (50 pts)
-   • 1+ cites/year = Average (20 pts)
+1. Field-Weighted Citation Impact (30%):
+   • 20+ cites/year = World-class (100 pts)
+   • 10+ cites/year = Excellent (85 pts)
+   • 5+ cites/year = Good (70 pts)
+   • 2+ cites/year = Average (50 pts)
+   • FWCI normalization: Fair across all disciplines
 
-2. Journal Prestige (25%):
-   • Impact Factor (IF)
-   • SCImago Journal Rank (SJR)
-   • Quartile (Q1-Q4)
-   • Journal h-index
+2. Journal Prestige (50%):
+   • Impact Factor ≥5 = 60 pts
+   • Quartile Q1 = +25 pts, Q2 = +18 pts
+   • SJR Score bonus (0-15 pts)
+   • h-index fallback when IF unavailable
 
-3. Content Depth (15%):
-   • 8000+ words = Extensive (100 pts)
-   • 3000-8000 = Comprehensive (70-100 pts)
-   • 1000-3000 = Standard (40-70 pts)
+3. Recency Boost (20%):
+   • Exponential decay: score = 100 × e^(-0.15 × age)
+   • Half-life: 4.6 years (science-backed)
+   • Floor: 20 pts (classic papers still valued)
 
-4. Recency Boost (15%):
-   • Current year = 100 pts
-   • 1 year old = 80 pts
-   • 2 years old = 60 pts
-
-5. Venue Quality (15%):
-   • Top-tier (Nature/Science) = 100 pts
-   • Peer-reviewed journal = 70-90 pts
-   • Conference = 50-70 pts
-   • Preprint = 30-50 pts
+🎁 OPTIONAL BONUSES (+0 to +20):
+   • Open Access: +10 pts
+   • Data/Code Sharing: +5 pts
+   • Altmetric Impact: +5 pts
 
 Quality Tiers:
 ✅ Exceptional (80-100): Breakthrough research
 ✅ Excellent (70-79): High-quality methodology
 ✅ Very Good (60-69): Solid research
 ✅ Good (50-59): Acceptable research quality
-⚠️  Acceptable (40-49): Marginal quality, use with caution
-⚠️  Fair (30-39): Limited quality, consider excluding
-❌ Limited (<30): Below research-grade standards`);
+⚠️ Acceptable (40-49): Marginal quality
+⚠️ Fair (30-39): Limited quality
+❌ Limited (<30): Below research-grade
+
+References:
+• Robertson & Walker (1994): BM25 Algorithm
+• Garfield (1980): Citation Half-Life Theory
+• Waltman & van Eck (2019): Field Normalization`);
   };
 
   // ============================================================================
@@ -367,7 +367,7 @@ Quality Tiers:
         <Alert className="bg-blue-50 border-blue-200">
           <Award className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-sm text-blue-900">
-            <strong>Enterprise Research-Grade Filtering:</strong> Quality scores (0-100) use bias-resistant v3.0 methodology: <strong className="text-blue-700">60% Field-Weighted Citation Impact</strong> (fair across disciplines), <strong className="text-blue-700">40% Journal Prestige</strong> (impact factor, h-index, quartile). <strong className="text-green-700">Optional bonuses:</strong> +10 Open Access, +5 Data/Code Sharing, +5 Social Impact.
+            <strong>Enterprise Research-Grade Filtering:</strong> Quality scores (0-100) use bias-resistant v4.0 methodology: <strong className="text-blue-700">30% FWCI</strong> (field-weighted citations), <strong className="text-blue-700">50% Journal Prestige</strong> (h-index, quartile), <strong className="text-blue-700">20% Recency</strong> (exp decay, λ=0.15). <strong className="text-green-700">Optional bonuses:</strong> +10 OA, +5 Data/Code, +5 Altmetric.
             <strong className="text-green-700">
               {' '}
               Papers scoring ≥50 are "Good Quality"; ≥70 are "Excellent."

@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { getAuthToken } from '../auth/auth-utils';
+import { logger } from '@/lib/utils/logger';
 
 export interface Paper {
   id: string;
@@ -134,6 +135,15 @@ class LiteratureAPIService {
   private api: AxiosInstance;
   private baseURL: string;
 
+  // Phase 10.92 Day 1: Full-text polling configuration constants
+  // DRY Principle: Centralize magic numbers for easy tuning
+  private readonly FULL_TEXT_POLL_INTERVAL_MS = 3000; // Poll every 3 seconds
+  private readonly FULL_TEXT_MAX_POLL_ATTEMPTS = 20; // ✅ FIX (BUG-004): Increased from 10 to 20 (60s total) - PDF extraction can be slow for large files
+  private readonly FULL_TEXT_MAX_CONSECUTIVE_FAILURES = 3; // Abort after 3 consecutive errors
+
+  // Phase 10.92 Day 18: Token refresh promise to prevent race conditions
+  private refreshPromise: Promise<string | null> | null = null;
+
   constructor() {
     this.baseURL =
       process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000/api';
@@ -142,6 +152,8 @@ class LiteratureAPIService {
       headers: {
         'Content-Type': 'application/json',
       },
+      // CRITICAL FIX: Add timeout to prevent hanging requests
+      timeout: 60000, // 60 seconds - literature search can take time
       // Configure params serialization for arrays
       // NestJS expects 'sources=youtube' not 'sources[]=youtube'
       paramsSerializer: {
@@ -174,68 +186,258 @@ class LiteratureAPIService {
       },
     });
 
-    // Add auth interceptor with enterprise-grade validation
+    // Add auth interceptor with enterprise-grade validation and automatic token refresh
     this.api.interceptors.request.use(async config => {
-      const token = await getAuthToken();
+      // CRITICAL FIX: Skip token processing for auth endpoints to prevent recursion
+      if (config.url?.includes('/auth/')) {
+        return config; // Let auth endpoints through without token manipulation
+      }
+
+      // PHASE 10.94.3: Development mode auth bypass for testing
+      // When NEXT_PUBLIC_DEV_AUTH_BYPASS=true, skip token validation
+      // This allows testing theme extraction without authentication
+      const devAuthBypass = process.env['NEXT_PUBLIC_DEV_AUTH_BYPASS'] === 'true';
+      if (devAuthBypass && process.env['NODE_ENV'] !== 'production') {
+        logger.info('DEV_AUTH_BYPASS enabled - skipping token validation', 'LiteratureAPIService');
+        // Set a development token header that backend can recognize
+        config.headers['X-Dev-Auth-Bypass'] = 'true';
+        return config;
+      }
+
+      let token = await getAuthToken();
 
       if (process.env.NODE_ENV !== 'production') {
-        console.log(
-          '🔑 [Auth Token]:',
-          token ? `${token.substring(0, 20)}...` : 'No token found'
-        );
+        logger.debug('Auth token retrieved', 'LiteratureAPIService', {
+          hasToken: !!token,
+          tokenPreview: token ? `${token.substring(0, 20)}...` : null,
+        });
       }
 
       if (token) {
-        // Enterprise-grade validation: Ensure token is complete
-        const tokenParts = token.split('.');
+        // PERMANENT FIX: Check if token is expired BEFORE sending request
+        try {
+          const tokenParts = token.split('.');
 
-        if (tokenParts.length !== 3) {
-          console.error(
-            `❌ [Auth] Invalid JWT format! Expected 3 parts, got ${tokenParts.length}`
-          );
-          console.error(`❌ [Auth] Token: ${token.substring(0, 50)}...`);
-          return config; // Don't send incomplete token
-        }
+          if (tokenParts.length !== 3) {
+            logger.error('Invalid JWT format', 'LiteratureAPIService', {
+              expectedParts: 3,
+              actualParts: tokenParts.length,
+            });
+            // Try to refresh token
+            token = await this.refreshTokenIfNeeded();
+            if (!token) {
+              logger.error('Token refresh failed - clearing auth', 'LiteratureAPIService');
+              this.clearAuth();
+              return config; // Don't send incomplete token
+            }
+          } else {
+            // Decode payload to check expiration
+            const payloadBase64 = tokenParts[1];
+            if (!payloadBase64) {
+              logger.error('Token missing payload part', 'LiteratureAPIService');
+              return config;
+            }
+            const payload = JSON.parse(atob(payloadBase64));
+            const now = Math.floor(Date.now() / 1000);
 
-        if (token.length < 100) {
-          console.error(
-            `❌ [Auth] Token too short! Length: ${token.length} (expected >100)`
-          );
-          console.error(`❌ [Auth] Token: ${token}`);
-          return config; // Don't send suspicious token
-        }
+            // PROACTIVE REFRESH: If token expires in less than 5 minutes, refresh it now
+            if (payload.exp && payload.exp - now < 300) {
+              logger.info('Token expires soon, refreshing proactively', 'LiteratureAPIService', {
+                expiresIn: payload.exp - now,
+              });
+              const newToken = await this.refreshTokenIfNeeded();
+              if (newToken) {
+                token = newToken;
+                logger.info('Token refreshed proactively', 'LiteratureAPIService');
+              }
+            }
 
-        // Token is valid, set Authorization header
-        config.headers.Authorization = `Bearer ${token}`;
+            // If already expired, refresh immediately
+            if (payload.exp && payload.exp < now) {
+              logger.warn('Token expired, refreshing', 'LiteratureAPIService');
+              const newToken = await this.refreshTokenIfNeeded();
+              if (newToken) {
+                token = newToken;
+                logger.info('Token refreshed successfully', 'LiteratureAPIService');
+              } else {
+                logger.error('Token expired and refresh failed - clearing auth', 'LiteratureAPIService');
+                this.clearAuth();
+                return config;
+              }
+            }
+          }
 
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('✅ [Auth] Authorization header set successfully');
+          if (token.length < 100) {
+            logger.error('Token too short', 'LiteratureAPIService', {
+              tokenLength: token.length,
+              expectedMinLength: 100,
+            });
+            // Try to refresh token
+            const newToken = await this.refreshTokenIfNeeded();
+            if (newToken) {
+              token = newToken;
+            } else {
+              logger.error('Token refresh failed after short token detected', 'LiteratureAPIService');
+              this.clearAuth();
+              return config; // Don't send suspicious token
+            }
+          }
+
+          // Token is valid, set Authorization header
+          config.headers.Authorization = `Bearer ${token}`;
+
+          if (process.env.NODE_ENV !== 'production') {
+            logger.debug('Authorization header set successfully', 'LiteratureAPIService');
+          }
+        } catch (error) {
+          logger.error('Error processing token', 'LiteratureAPIService', { error });
+          // Try to refresh token on any error
+          const newToken = await this.refreshTokenIfNeeded();
+          if (newToken) {
+            token = newToken;
+            config.headers.Authorization = `Bearer ${token}`;
+          }
         }
       } else {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn(
-            '⚠️ [Auth] No token available - request will be unauthorized'
-          );
+          logger.warn('No token available - request will be unauthorized', 'LiteratureAPIService');
         }
       }
 
       return config;
     });
 
-    // Add response interceptor for error handling
+    // Add response interceptor with automatic token refresh on 401
     this.api.interceptors.response.use(
       response => response,
-      error => {
-        if (error.response?.status === 401) {
-          // For development, just log the error instead of redirecting
-          console.log('🔐 Authentication required for this endpoint');
-          // TODO: Re-enable redirect after auth is implemented
-          // window.location.href = '/login';
+      async error => {
+        const originalRequest = error.config;
+
+        // PERMANENT FIX: Automatic token refresh on 401
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+
+          logger.info('Got 401, attempting token refresh', 'LiteratureAPIService');
+
+          try {
+            // Try to refresh the token
+            const newToken = await this.refreshTokenIfNeeded();
+
+            if (newToken) {
+              logger.info('Token refreshed, retrying original request', 'LiteratureAPIService');
+
+              // Update the Authorization header with new token
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+
+              // Retry the original request
+              return this.api(originalRequest);
+            } else {
+              logger.error('Token refresh failed', 'LiteratureAPIService');
+              this.clearAuth();
+              // Show user-friendly error
+              logger.error('Session expired - user must log in again', 'LiteratureAPIService');
+            }
+          } catch (refreshError) {
+            logger.error('Error during token refresh', 'LiteratureAPIService', { error: refreshError });
+            this.clearAuth();
+          }
         }
+
         return Promise.reject(error);
       }
     );
   }
+
+  // ========== PERMANENT TOKEN REFRESH SOLUTION ==========
+  // Phase 10.92 Day 18: Automatic token refresh helpers
+
+  /**
+   * Refresh the access token using the refresh token
+   * Returns new access token or null if refresh fails
+   * INCLUDES: Promise coalescing to prevent multiple concurrent refresh calls
+   */
+  private async refreshTokenIfNeeded(): Promise<string | null> {
+    // CRITICAL FIX: If refresh already in progress, reuse existing promise
+    if (this.refreshPromise) {
+      logger.debug('Refresh already in progress, waiting for completion', 'LiteratureAPIService');
+      return this.refreshPromise;
+    }
+
+    // Start new refresh and store promise
+    this.refreshPromise = this.performTokenRefresh();
+
+    try {
+      const token = await this.refreshPromise;
+      return token;
+    } finally {
+      // Clear promise after completion (success or failure)
+      this.refreshPromise = null;
+    }
+  }
+
+  /**
+   * Actual token refresh implementation
+   * Called by refreshTokenIfNeeded() with promise coalescing
+   */
+  private async performTokenRefresh(): Promise<string | null> {
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+
+      if (!refreshToken) {
+        logger.error('No refresh token available', 'LiteratureAPIService');
+        return null;
+      }
+
+      logger.info('Calling refresh endpoint', 'LiteratureAPIService');
+
+      // Call the refresh endpoint
+      const response = await this.api.post('/auth/refresh', {
+        refreshToken,
+      });
+
+      // Extract tokens from response (handle both accessToken and access_token)
+      const newAccessToken = response.data.accessToken || response.data.access_token;
+      const newRefreshToken = response.data.refreshToken || response.data.refresh_token;
+
+      if (!newAccessToken) {
+        logger.error('No access token in refresh response', 'LiteratureAPIService');
+        return null;
+      }
+
+      // Update localStorage with new tokens
+      localStorage.setItem('access_token', newAccessToken);
+      if (newRefreshToken) {
+        localStorage.setItem('refresh_token', newRefreshToken);
+      }
+
+      logger.info('Tokens refreshed and stored', 'LiteratureAPIService');
+
+      return newAccessToken;
+    } catch (error: any) {
+      logger.error('Token refresh failed', 'LiteratureAPIService', { errorMessage: error.message });
+
+      // If refresh fails with 401, the refresh token is also expired
+      if (error.response?.status === 401) {
+        logger.error('Refresh token expired - user must log in again', 'LiteratureAPIService');
+        this.clearAuth();
+      }
+
+      return null;
+    }
+  }
+
+  /**
+   * Clear all authentication data from localStorage
+   */
+  private clearAuth(): void {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('auth_token'); // Legacy key
+    logger.info('Cleared all auth data', 'LiteratureAPIService');
+  }
+
+  // ========== END TOKEN REFRESH SOLUTION ==========
 
   // Search literature across multiple databases
   // Phase 10.6 Day 14.5+: Returns enhanced metadata for transparency
@@ -279,22 +481,18 @@ class LiteratureAPIService {
     };
   }> {
     try {
-      console.log('📡 API: Sending search request with params:', params);
-      console.log('📡 [DEBUG] API params.sources:', params.sources);
-      console.log('📡 [DEBUG] API params.sources type:', typeof params.sources);
-      console.log('📡 [DEBUG] API params.sources length:', params.sources?.length);
-      console.log('📡 [DEBUG] API params.sources JSON:', JSON.stringify(params.sources));
+      logger.info('Sending search request', 'LiteratureAPIService', {
+        query: params.query,
+        sources: params.sources,
+        sourcesCount: params.sources?.length,
+      });
       // Temporarily use public endpoint for development
       const response = await this.api.post('/literature/search/public', params);
-      console.log('📥 API: Raw response:', response);
-      console.log('📥 API: Response.data:', response.data);
 
       // apiClient.post returns response.data already, which contains {data: actualData}
       // Backend returns {papers, total, page} directly
       // So response = {data: {papers, total, page}}
       const actualData = response.data || response;
-      console.log('📥 API: Actual data:', actualData);
-      console.log('📚 API: Papers count:', actualData.papers?.length || 0);
 
       // Ensure we have the expected structure
       // Phase 10.6 Day 14.5: Include metadata for transparency
@@ -305,20 +503,23 @@ class LiteratureAPIService {
         metadata: actualData.metadata || null, // CRITICAL: Pass through metadata from backend
       };
 
-      console.log('✅ API: Returning result:', result);
-      console.log('📊 API: Metadata included:', {
-        hasMetadata: !!actualData.metadata,
-        metadataKeys: actualData.metadata ? Object.keys(actualData.metadata) : []
+      logger.info('Search completed', 'LiteratureAPIService', {
+        papersCount: result.papers.length,
+        total: result.total,
+        hasMetadata: !!result.metadata,
       });
       return result;
     } catch (error: any) {
-      console.error('❌ API: Literature search failed:', error);
+      logger.error('Literature search failed', 'LiteratureAPIService', {
+        error,
+        status: error.response?.status,
+        message: error.response?.data?.message,
+      });
       // Better error handling
       if (error.response?.status === 401) {
-        console.log('🔐 API: Authentication required - using public endpoint');
+        logger.warn('Authentication required - using public endpoint', 'LiteratureAPIService');
       }
       if (error.response?.data?.message) {
-        console.error('❌ API Error message:', error.response.data.message);
         throw new Error(error.response.data.message);
       }
       throw error;
@@ -341,10 +542,10 @@ class LiteratureAPIService {
       });
       return response.data;
     } catch (error: any) {
-      console.error('Gap analysis failed:', error);
+      logger.error('Gap analysis failed', 'LiteratureAPIService', { error });
       // Return mock data for development if auth fails
       if (error.response?.status === 401) {
-        console.log('Using mock gap data for development');
+        logger.warn('Using mock gap data for development', 'LiteratureAPIService');
         return [];
       }
       throw error;
@@ -359,16 +560,53 @@ class LiteratureAPIService {
     }
   ): Promise<{ success: boolean; paperId: string }> {
     try {
+      // 🚀 PHASE 10.94.3: Validate required fields BEFORE sending to avoid 400 errors
+      // This prevents batch failures from validation issues
+      if (!paper.title || typeof paper.title !== 'string' || paper.title.trim().length === 0) {
+        logger.error('Paper validation failed: missing or empty title', 'LiteratureAPIService', {
+          paperId: paper.id,
+          hasTitle: !!paper.title,
+          titleType: typeof paper.title,
+        });
+        throw new Error('VALIDATION_ERROR: Paper title is required');
+      }
+
+      // 🚀 PHASE 10.94.3: Ensure authors is an array (some APIs return single string)
+      // Use type assertion for runtime type checking since some APIs may return non-standard data
+      let authorsArray: string[];
+      const authorsValue = paper.authors as unknown;
+      if (Array.isArray(authorsValue)) {
+        authorsArray = authorsValue.filter((a): a is string => typeof a === 'string');
+      } else if (typeof authorsValue === 'string' && authorsValue.length > 0) {
+        // Convert single author string to array
+        authorsArray = [authorsValue];
+      } else {
+        authorsArray = [];
+      }
+
+      // 🚀 PHASE 10.94.3: Ensure year is a valid number
+      let yearNumber: number;
+      if (typeof paper.year === 'number' && !isNaN(paper.year)) {
+        yearNumber = paper.year;
+      } else if (typeof paper.year === 'string') {
+        yearNumber = parseInt(paper.year, 10);
+        if (isNaN(yearNumber)) {
+          yearNumber = new Date().getFullYear();
+        }
+      } else {
+        yearNumber = new Date().getFullYear();
+      }
+
       // Extract only the fields allowed by SavePaperDto
       const saveData = {
-        title: paper.title!,
-        authors: paper.authors || [],
-        year: paper.year!,
+        title: paper.title.trim(),
+        authors: authorsArray,
+        year: yearNumber,
         abstract: paper.abstract,
         doi: paper.doi,
         url: paper.url,
         venue: paper.venue,
-        citationCount: paper.citationCount,
+        citationCount: typeof paper.citationCount === 'number' ? paper.citationCount : undefined,
         tags: paper.tags,
         collectionId: paper.collectionId,
       };
@@ -383,19 +621,33 @@ class LiteratureAPIService {
 
       return response.data;
     } catch (error: any) {
-      console.error('Failed to save paper:', error);
+      // 🚀 PHASE 10.94.3: Enhanced error logging with response body details
+      logger.error('Failed to save paper', 'LiteratureAPIService', {
+        paperId: paper.id,
+        title: paper.title?.substring(0, 50),
+        status: error.response?.status,
+        responseData: error.response?.data, // Backend validation error details
+        message: error.message,
+      });
 
       // Phase 10 Day 32: CRITICAL FIX - Don't return success on authentication failures
       // Misleading success breaks theme extraction (no DB save = no full-text jobs)
       if (error.response?.status === 401) {
-        console.error('❌ Authentication required to save papers');
+        logger.error('Authentication required to save papers', 'LiteratureAPIService');
         throw new Error('AUTHENTICATION_REQUIRED');
       }
 
+      // 🚀 PHASE 10.94.3: Handle 400 validation errors with details
+      if (error.response?.status === 400) {
+        const validationMessage = error.response?.data?.message || 'Validation failed';
+        logger.error('Validation error from backend', 'LiteratureAPIService', {
+          validationMessage,
+          errors: error.response?.data?.errors,
+        });
+        throw new Error(`VALIDATION_ERROR: ${validationMessage}`);
+      }
+
       // Re-throw other errors without misleading success
-      console.error(
-        `Save failed: ${error.response?.status || 'unknown'} - ${error.message}`
-      );
       throw error;
     }
   }
@@ -420,11 +672,11 @@ class LiteratureAPIService {
       });
       return response.data;
     } catch (error: any) {
-      console.error('Failed to get user library:', error);
+      logger.error('Failed to get user library', 'LiteratureAPIService', { error });
 
       // Fallback to localStorage for development
       if (error.response?.status === 401 || error.response?.status === 404) {
-        console.log('Using localStorage fallback for library');
+        logger.warn('Using localStorage fallback for library', 'LiteratureAPIService');
         return this.getFromLocalStorage(page, limit);
       }
       throw error;
@@ -447,7 +699,7 @@ class LiteratureAPIService {
         total: papers.length,
       };
     } catch (e) {
-      console.error('Failed to get from localStorage:', e);
+      logger.error('Failed to get from localStorage', 'LiteratureAPIService', { error: e });
       return { papers: [], total: 0 };
     }
   }
@@ -465,7 +717,7 @@ class LiteratureAPIService {
 
       return response.data;
     } catch (error: any) {
-      console.error('Failed to remove paper:', error);
+      logger.error('Failed to remove paper', 'LiteratureAPIService', { error, paperId });
 
       // Fallback to localStorage for development
       if (
@@ -473,7 +725,7 @@ class LiteratureAPIService {
         error.response?.status === 404 ||
         error.response?.status === 500
       ) {
-        console.log('Using localStorage fallback for remove');
+        logger.warn('Using localStorage fallback for remove', 'LiteratureAPIService');
         this.removeFromLocalStorage(paperId);
         return { success: true };
       }
@@ -489,9 +741,9 @@ class LiteratureAPIService {
       const filtered = papers.filter((p: any) => p.id !== paperId);
 
       localStorage.setItem('savedPapers', JSON.stringify(filtered));
-      console.log('✅ Paper removed from localStorage:', paperId);
+      logger.info('Paper removed from localStorage', 'LiteratureAPIService', { paperId });
     } catch (e) {
-      console.error('Failed to remove from localStorage:', e);
+      logger.error('Failed to remove from localStorage', 'LiteratureAPIService', { error: e });
     }
   }
 
@@ -536,11 +788,11 @@ class LiteratureAPIService {
           });
           return authResponse.data;
         } catch (authError) {
-          console.error('Failed to extract themes with auth:', authError);
+          logger.error('Failed to extract themes with auth', 'LiteratureAPIService', { error: authError });
           throw authError;
         }
       }
-      console.error('Failed to extract themes:', error);
+      logger.error('Failed to extract themes', 'LiteratureAPIService', { error });
       throw error;
     }
   }
@@ -634,10 +886,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error(
-        'Failed to extract themes with academic methodology:',
-        error
-      );
+      logger.error('Failed to extract themes with academic methodology', 'LiteratureAPIService', { error });
       throw error;
     }
   }
@@ -672,7 +921,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to build knowledge graph:', error);
+      logger.error('Failed to build knowledge graph', 'LiteratureAPIService', { error });
       throw error;
     }
   }
@@ -706,7 +955,7 @@ class LiteratureAPIService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to get knowledge graph:', error);
+      logger.error('Failed to get knowledge graph', 'LiteratureAPIService', { error });
       throw error;
     }
   }
@@ -726,7 +975,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to track influence flow:', error);
+      logger.error('Failed to track influence flow', 'LiteratureAPIService', { error, nodeId });
       throw error;
     }
   }
@@ -745,7 +994,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to predict missing links:', error);
+      logger.error('Failed to predict missing links', 'LiteratureAPIService', { error });
       throw error;
     }
   }
@@ -769,7 +1018,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to export knowledge graph:', error);
+      logger.error('Failed to export knowledge graph', 'LiteratureAPIService', { error, format });
       throw error;
     }
   }
@@ -792,7 +1041,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to score research opportunities:', error);
+      logger.error('Failed to score research opportunities', 'LiteratureAPIService', { error, gapIds });
       throw error;
     }
   }
@@ -814,7 +1063,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to predict funding probability:', error);
+      logger.error('Failed to predict funding probability', 'LiteratureAPIService', { error, gapIds });
       throw error;
     }
   }
@@ -836,7 +1085,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to optimize timeline:', error);
+      logger.error('Failed to optimize timeline', 'LiteratureAPIService', { error, gapIds });
       throw error;
     }
   }
@@ -858,7 +1107,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to predict impact:', error);
+      logger.error('Failed to predict impact', 'LiteratureAPIService', { error, gapIds });
       throw error;
     }
   }
@@ -881,7 +1130,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to forecast trends:', error);
+      logger.error('Failed to forecast trends', 'LiteratureAPIService', { error, topics });
       throw error;
     }
   }
@@ -892,7 +1141,9 @@ class LiteratureAPIService {
    */
   async analyzeGapsFromPapers(papers: Paper[]): Promise<any[]> {
     try {
-      console.log(`🔍 Analyzing research gaps from ${papers.length} papers...`);
+      logger.info('Analyzing research gaps from papers', 'LiteratureAPIService', {
+        papersCount: papers.length,
+      });
 
       // Send full paper content to backend
       const response = await this.api.post('/literature/gaps/analyze', {
@@ -909,16 +1160,16 @@ class LiteratureAPIService {
         })),
       });
 
-      console.log(
-        `✅ Gap analysis complete: ${response.data?.length || 0} gaps found`
-      );
+      logger.info('Gap analysis complete', 'LiteratureAPIService', {
+        gapsFound: response.data?.length || 0,
+      });
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to analyze gaps from papers:', error);
+      logger.error('Failed to analyze gaps from papers', 'LiteratureAPIService', { error });
 
       // Fallback to public endpoint for development
       if (error.response?.status === 401 || error.response?.status === 404) {
-        console.log('🔄 Trying public endpoint for gap analysis...');
+        logger.info('Trying public endpoint for gap analysis', 'LiteratureAPIService');
         try {
           const publicResponse = await this.api.post(
             '/literature/gaps/analyze/public',
@@ -936,12 +1187,12 @@ class LiteratureAPIService {
               })),
             }
           );
-          console.log(
-            `✅ Public gap analysis complete: ${publicResponse.data?.length || 0} gaps found`
-          );
+          logger.info('Public gap analysis complete', 'LiteratureAPIService', {
+            gapsFound: publicResponse.data?.length || 0,
+          });
           return publicResponse.data;
         } catch (publicError) {
-          console.error('❌ Public endpoint also failed:', publicError);
+          logger.error('Public endpoint also failed', 'LiteratureAPIService', { error: publicError });
           throw publicError;
         }
       }
@@ -961,7 +1212,7 @@ class LiteratureAPIService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to get citation network:', error);
+      logger.error('Failed to get citation network', 'LiteratureAPIService', { error, paperId });
       throw error;
     }
   }
@@ -974,7 +1225,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to get recommendations:', error);
+      logger.error('Failed to get recommendations', 'LiteratureAPIService', { error, studyId });
       throw error;
     }
   }
@@ -989,17 +1240,19 @@ class LiteratureAPIService {
       // In production, this should use the authenticated endpoint
       const endpoint = '/literature/statements/generate/public';
 
-      console.log(`📝 [Q-Statements] Generating from ${themes.length} themes`);
+      logger.info('Generating Q-Statements from themes', 'LiteratureAPIService', {
+        themesCount: themes.length,
+      });
       const response = await this.api.post(endpoint, {
         themes,
         studyContext,
       });
-      console.log(
-        `✅ [Q-Statements] Generated ${response.data?.length || 0} statements`
-      );
+      logger.info('Q-Statements generated', 'LiteratureAPIService', {
+        statementsCount: response.data?.length || 0,
+      });
       return response.data;
     } catch (error) {
-      console.error('❌ [Q-Statements] Generation failed:', error);
+      logger.error('Q-Statements generation failed', 'LiteratureAPIService', { error });
       throw error;
     }
   }
@@ -1012,7 +1265,7 @@ class LiteratureAPIService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to analyze social opinion:', error);
+      logger.error('Failed to analyze social opinion', 'LiteratureAPIService', { error, topic, platforms });
       throw error;
     }
   }
@@ -1023,7 +1276,11 @@ class LiteratureAPIService {
     sources: string[]
   ): Promise<any[]> {
     try {
-      console.log('🔍 [Alternative Sources] Searching...', { query, sources });
+      logger.info('Starting alternative sources search', 'LiteratureAPIService', {
+        query,
+        sources,
+        sourcesCount: sources.length,
+      });
 
       // Use public endpoint for development/testing to avoid authentication issues
       // TODO: Switch back to '/literature/alternative' when authentication is properly implemented
@@ -1031,36 +1288,30 @@ class LiteratureAPIService {
         params: { query, sources },
       });
 
-      console.log('✅ [Alternative Sources] Results received:', response.data);
-      console.log(
-        '📊 [Alternative Sources] Result count:',
-        response.data?.length || 0
-      );
-
       // Ensure we always return an array
       const results = Array.isArray(response.data) ? response.data : [];
-      console.log(
-        '📦 [Alternative Sources] Returning:',
-        results.length,
-        'results'
-      );
+
+      logger.info('Alternative sources search completed', 'LiteratureAPIService', {
+        resultCount: results.length,
+        sources,
+      });
 
       return results;
     } catch (error: any) {
-      console.error('❌ [Alternative Sources] Search failed:', error);
-      console.error(
-        '❌ [Alternative Sources] Error details:',
-        error.response?.data
-      );
-      console.error(
-        '❌ [Alternative Sources] Error status:',
-        error.response?.status
-      );
+      logger.error('Alternative sources search failed', 'LiteratureAPIService', {
+        error,
+        query,
+        sources,
+        status: error.response?.status,
+        errorDetails: error.response?.data,
+      });
 
       // Provide helpful error message about authentication
       if (error.response?.status === 401) {
-        console.error(
-          '🔐 Authentication required. Using public endpoint as fallback.'
+        logger.warn(
+          'Authentication required for alternative sources',
+          'LiteratureAPIService',
+          { endpoint: '/literature/alternative/public' }
         );
       }
 
@@ -1079,7 +1330,7 @@ class LiteratureAPIService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to search social media:', error);
+      logger.error('Failed to search social media', 'LiteratureAPIService', { error, query, platforms });
       throw error;
     }
   }
@@ -1095,7 +1346,7 @@ class LiteratureAPIService {
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to get social media insights:', error);
+      logger.error('Failed to get social media insights', 'LiteratureAPIService', { error, postsCount: posts.length });
       // Return basic insights on failure
       return {
         totalPosts: posts.length,
@@ -1134,7 +1385,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to search YouTube with transcription:', error);
+      logger.error('Failed to search YouTube with transcription', 'LiteratureAPIService', { error, query });
       throw error;
     }
   }
@@ -1158,7 +1409,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to transcribe media:', error);
+      logger.error('Failed to transcribe media', 'LiteratureAPIService', { error, sourceId, sourceType });
       throw error;
     }
   }
@@ -1180,7 +1431,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to extract themes:', error);
+      logger.error('Failed to extract themes from transcript', 'LiteratureAPIService', { error, transcriptId });
       throw error;
     }
   }
@@ -1198,7 +1449,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to extract citations:', error);
+      logger.error('Failed to extract citations from transcript', 'LiteratureAPIService', { error, transcriptId });
       throw error;
     }
   }
@@ -1220,7 +1471,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to estimate cost:', error);
+      logger.error('Failed to estimate transcription cost', 'LiteratureAPIService', { error, sourceId, sourceType });
       throw error;
     }
   }
@@ -1238,7 +1489,7 @@ class LiteratureAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('Failed to add multimedia to graph:', error);
+      logger.error('Failed to add multimedia to graph', 'LiteratureAPIService', { error, transcriptId });
       throw error;
     }
   }
@@ -1254,7 +1505,7 @@ class LiteratureAPIService {
       });
       return response.data.channel;
     } catch (error) {
-      console.error('Failed to fetch YouTube channel:', error);
+      logger.error('Failed to fetch YouTube channel', 'LiteratureAPIService', { error, channelIdentifier });
       throw error;
     }
   }
@@ -1297,7 +1548,7 @@ class LiteratureAPIService {
         hasMore: response.data.hasMore || false,
       };
     } catch (error) {
-      console.error('Failed to fetch channel videos:', error);
+      logger.error('Failed to fetch channel videos', 'LiteratureAPIService', { error, channelId });
       throw error;
     }
   }
@@ -1410,7 +1661,7 @@ class LiteratureAPIService {
 
       return response.data;
     } catch (error) {
-      console.error('Failed to generate survey items from themes:', error);
+      logger.error('Failed to generate survey items from themes', 'LiteratureAPIService', { error });
       throw error;
     }
   }
@@ -1431,17 +1682,9 @@ class LiteratureAPIService {
     errors: Array<{ paperId: string; error: string }>;
   }> {
     try {
-      console.log(
-        `\n╔════════════════════════════════════════════════════════════╗`
-      );
-      console.log(
-        `║   🔄 REFRESH PAPER METADATA - STARTING                   ║`
-      );
-      console.log(
-        `╚════════════════════════════════════════════════════════════╝`
-      );
-      console.log(`   Papers to refresh: ${paperIds.length}`);
-      console.log(``);
+      logger.info('Refresh paper metadata starting', 'LiteratureAPIService', {
+        papersCount: paperIds.length,
+      });
 
       const response = await this.api.post(
         '/literature/papers/refresh-metadata',
@@ -1450,45 +1693,240 @@ class LiteratureAPIService {
         }
       );
 
-      console.log(``);
-      console.log(
-        `╔════════════════════════════════════════════════════════════╗`
-      );
-      console.log(
-        `║   ✅ METADATA REFRESH COMPLETE                           ║`
-      );
-      console.log(
-        `╚════════════════════════════════════════════════════════════╝`
-      );
-      console.log(`   📊 Statistics:`);
-      console.log(`      • Total papers: ${paperIds.length}`);
-      console.log(`      • Successfully refreshed: ${response.data.refreshed}`);
-      console.log(`      • Failed: ${response.data.failed}`);
+      const withFullText = response.data.papers?.filter((p: Paper) => p.hasFullText).length || 0;
 
-      if (response.data.papers && response.data.papers.length > 0) {
-        const withFullText = response.data.papers.filter(
-          (p: Paper) => p.hasFullText
-        ).length;
-        console.log(
-          `      • Papers with full-text: ${withFullText}/${response.data.papers.length}`
-        );
-      }
-
-      if (response.data.errors && response.data.errors.length > 0) {
-        console.warn(`   ⚠️  Failed papers:`);
-        response.data.errors.forEach(
-          (err: { paperId: string; error: string }) => {
-            console.warn(`      • ${err.paperId}: ${err.error}`);
-          }
-        );
-      }
-      console.log(``);
+      logger.info('Metadata refresh complete', 'LiteratureAPIService', {
+        totalPapers: paperIds.length,
+        refreshed: response.data.refreshed,
+        failed: response.data.failed,
+        papersWithFullText: withFullText,
+        errors: response.data.errors?.length || 0,
+      });
 
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to refresh paper metadata:', error);
-      console.error('   Error message:', error.message);
-      console.error('   Error response:', error.response?.data);
+      logger.error('Failed to refresh paper metadata', 'LiteratureAPIService', {
+        error,
+        errorMessage: error.message,
+        responseData: error.response?.data,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Phase 10.92 Day 1: Fetch Full-Text for Single Paper
+   *
+   * Triggers full-text extraction for a single paper via backend waterfall strategy.
+   * Backend immediately updates paper status to 'fetching' and queues for processing.
+   *
+   * **Workflow:**
+   * 1. Call backend endpoint to trigger full-text fetch job
+   * 2. Backend queues paper for extraction (PMC → PDF → HTML waterfall)
+   * 3. Poll for completion using pollFullTextStatus helper
+   * 4. Return updated paper with full-text when available
+   *
+   * **Polling Strategy:**
+   * - Max 20 attempts (60 seconds total) - Increased to handle large PDF extraction
+   * - 3-second intervals
+   * - Returns early on 'success' or 'failed' status
+   * - Timeout handling with current paper state
+   *
+   * @param paperId - Paper ID to fetch full-text for
+   * @returns Promise<Paper> - Updated paper with full-text status
+   * @throws Error if paper not found or fetch trigger fails
+   *
+   * @example
+   * ```typescript
+   * const updatedPaper = await literatureAPI.fetchFullTextForPaper('paper-123');
+   * if (updatedPaper.hasFullText) {
+   *   console.log(`Full-text: ${updatedPaper.fullTextWordCount} words`);
+   * }
+   * ```
+   */
+  async fetchFullTextForPaper(paperId: string): Promise<Paper> {
+    try {
+      logger.info('Full-text fetch starting', 'LiteratureAPIService', { paperId });
+
+      // Step 1: Trigger full-text extraction job
+      const triggerResponse = await this.api.post<{
+        success: boolean;
+        jobId: string;
+        paperId: string;
+        message: string;
+        fullTextStatus: string;
+      }>(`/literature/fetch-fulltext/${paperId}`);
+
+      logger.info('Full-text fetch job triggered', 'LiteratureAPIService', {
+        paperId,
+        jobId: triggerResponse.data.jobId,
+      });
+
+      // If already has full-text, return immediately
+      if (triggerResponse.data.fullTextStatus === 'success') {
+        logger.info('Paper already has full-text', 'LiteratureAPIService', { paperId });
+        const paper = await this.getPaperById(paperId);
+        return paper;
+      }
+
+      // Step 2: Poll for completion
+      // ✅ BUG FIX (Phase 10.942): Use class constant instead of hardcoded 10
+      // Previously: 10 attempts × 3s = 30s timeout (too short for large PDFs)
+      // Now: FULL_TEXT_MAX_POLL_ATTEMPTS (20) × 3s = 60s timeout
+      const updatedPaper = await this.pollFullTextStatus(paperId);
+
+      logger.info('Full-text fetch completed', 'LiteratureAPIService', {
+        paperId,
+        status: updatedPaper.fullTextStatus,
+        hasFullText: updatedPaper.hasFullText,
+        wordCount: updatedPaper.fullTextWordCount || 0,
+      });
+
+      return updatedPaper;
+    } catch (error: any) {
+      logger.error('Full-text fetch failed', 'LiteratureAPIService', {
+        paperId,
+        errorMessage: error.message,
+      });
+
+      // Handle 404 error (paper not found)
+      if (error.response?.status === 404) {
+        throw new Error(
+          `Paper ${paperId} not found in database - save it first`
+        );
+      }
+
+      // Re-throw other errors
+      throw error;
+    }
+  }
+
+  /**
+   * Helper: Poll paper status for full-text completion
+   *
+   * Polls the paper library endpoint to check if full-text extraction completed.
+   * Stops early on 'success' or 'failed' status.
+   *
+   * **Enterprise Error Handling:**
+   * - Tracks consecutive failures to detect persistent issues
+   * - Aborts after MAX_CONSECUTIVE_FAILURES (likely network/backend issue)
+   * - Continues on transient errors (occasional failures are OK)
+   *
+   * **Configuration:**
+   * - Poll interval: FULL_TEXT_POLL_INTERVAL_MS (configurable)
+   * - Max attempts: FULL_TEXT_MAX_POLL_ATTEMPTS (configurable)
+   * - Max consecutive failures: FULL_TEXT_MAX_CONSECUTIVE_FAILURES (configurable)
+   *
+   * @param paperId - Paper ID to poll
+   * @param maxAttempts - Maximum polling attempts (default: from class constant)
+   * @returns Promise<Paper> - Updated paper when status changes
+   * @throws Error if consecutive polling failures exceed threshold
+   * @private
+   */
+  private async pollFullTextStatus(
+    paperId: string,
+    maxAttempts = this.FULL_TEXT_MAX_POLL_ATTEMPTS
+  ): Promise<Paper> {
+    const pollInterval = this.FULL_TEXT_POLL_INTERVAL_MS;
+    const maxConsecutiveFailures = this.FULL_TEXT_MAX_CONSECUTIVE_FAILURES;
+    let consecutiveFailures = 0;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      // Wait before polling (except first attempt)
+      if (attempt > 1) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      }
+
+      logger.debug('Polling for full-text status', 'LiteratureAPIService', {
+        paperId,
+        attempt,
+        maxAttempts,
+      });
+
+      try {
+        // Get updated paper from library
+        const paper = await this.getPaperById(paperId);
+
+        // Reset consecutive failure counter on successful poll
+        consecutiveFailures = 0;
+
+        // Check if full-text fetch completed (success or failed)
+        if (
+          paper.fullTextStatus === 'success' ||
+          paper.fullTextStatus === 'failed'
+        ) {
+          logger.info('Full-text status changed', 'LiteratureAPIService', {
+            paperId,
+            status: paper.fullTextStatus,
+          });
+          return paper;
+        }
+
+        logger.debug('Full-text still processing', 'LiteratureAPIService', {
+          paperId,
+          status: paper.fullTextStatus || 'not_fetched',
+        });
+      } catch (error: any) {
+        consecutiveFailures++;
+
+        logger.warn('Polling error', 'LiteratureAPIService', {
+          paperId,
+          consecutiveFailures,
+          maxConsecutiveFailures,
+          errorMessage: error.message,
+        });
+
+        // Abort if too many consecutive failures (likely persistent issue)
+        if (consecutiveFailures >= maxConsecutiveFailures) {
+          logger.error('Aborting polling after consecutive failures', 'LiteratureAPIService', {
+            paperId,
+            consecutiveFailures,
+          });
+          throw new Error(
+            `Polling failed after ${consecutiveFailures} consecutive attempts - likely network or backend issue`
+          );
+        }
+
+        logger.debug('Transient error - continuing to poll', 'LiteratureAPIService', {
+          consecutiveFailures,
+          maxConsecutiveFailures,
+        });
+      }
+    }
+
+    // Timeout - return paper as-is
+    logger.warn('Full-text fetch timeout', 'LiteratureAPIService', {
+      paperId,
+      timeoutSeconds: maxAttempts * pollInterval / 1000,
+    });
+
+    try {
+      const finalPaper = await this.getPaperById(paperId);
+      return finalPaper;
+    } catch (error) {
+      logger.error('Failed to get final paper state', 'LiteratureAPIService', { error, paperId });
+      throw error;
+    }
+  }
+
+  /**
+   * Helper: Get single paper by ID from library
+   *
+   * @param paperId - Paper ID
+   * @returns Promise<Paper> - Paper object
+   * @private
+   */
+  private async getPaperById(paperId: string): Promise<Paper> {
+    try {
+      const response = await this.api.get<{ paper: Paper }>(
+        `/literature/library/${paperId}`
+      );
+      return response.data.paper;
+    } catch (error: any) {
+      logger.error('Failed to get paper by ID', 'LiteratureAPIService', {
+        paperId,
+        errorMessage: error.message,
+      });
       throw error;
     }
   }

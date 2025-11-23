@@ -9,7 +9,7 @@ import { AuditService } from './audit.service';
 export class TwoFactorService {
   constructor(
     private prisma: PrismaService,
-    private configService: ConfigService,
+    _configService: ConfigService,
     private auditService: AuditService,
   ) {}
 
@@ -132,7 +132,7 @@ export class TwoFactorService {
   /**
    * Disable 2FA for a user
    */
-  async disable2FA(userId: string, password: string, ipAddress?: string) {
+  async disable2FA(userId: string, _password: string, ipAddress?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { twoFactorEnabled: true },

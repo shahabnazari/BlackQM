@@ -246,7 +246,6 @@ export class ArxivService {
       entry
         .match(/<category term="([^"]+)"/g)
         ?.map((cat: string) => cat.match(/term="([^"]+)"/)?.[1] || '') || [];
-    const primaryCategory = categories[0] || null;
 
     // ==========================================================================
     // STEP 5: Calculate word counts for content depth analysis
@@ -299,7 +298,7 @@ export class ArxivService {
       // Content metrics
       wordCount,
       wordCountExcludingRefs,
-      isEligible: isPaperEligible(wordCount),
+      isEligible: isPaperEligible(wordCount, 150),
       abstractWordCount,
 
       // PDF availability (arXiv provides PDF for ALL papers)

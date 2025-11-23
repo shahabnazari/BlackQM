@@ -209,35 +209,43 @@ export class PMCService {
           `[PMC] Fetching batch ${batchIndex + 1}/${batches.length} (${batch.length} IDs)...`
         );
 
-        const fetchParams: any = {
-          db: 'pmc',
-          id: batch.join(','),
-          retmode: 'xml',
-          rettype: 'full',
-        };
+        try {
+          const fetchParams: any = {
+            db: 'pmc',
+            id: batch.join(','),
+            retmode: 'xml',
+            rettype: 'full',
+          };
 
-        // Phase 10.7.10: Add API key if configured
-        if (this.apiKey) {
-          fetchParams.api_key = this.apiKey;
+          // Phase 10.7.10: Add API key if configured
+          if (this.apiKey) {
+            fetchParams.api_key = this.apiKey;
+          }
+
+          const fetchResponse = await firstValueFrom(
+            this.httpService.get(this.EFETCH_URL, {
+              params: fetchParams,
+              timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.7 Day 5: Added timeout (was missing)
+            }),
+          );
+
+          // Phase 10.7 Day 5: Parse XML response for this batch
+          const xmlData = fetchResponse.data;
+          const articles = xmlData.match(/<article[\s\S]*?<\/article>/g) || [];
+
+          const batchPapers = articles.map((article: string) => this.parsePaper(article));
+          allPapers.push(...batchPapers);
+
+          this.logger.log(
+            `[PMC] Batch ${batchIndex + 1}/${batches.length} complete: ${batchPapers.length} papers parsed`
+          );
+        } catch (batchError: any) {
+          // Phase 10.7.10: Handle batch failures gracefully - return what we got so far
+          this.logger.warn(
+            `[PMC] ⚠️  Batch ${batchIndex + 1}/${batches.length} failed: ${batchError.message} - Continuing with ${allPapers.length} papers from successful batches`
+          );
+          // Don't throw - continue to next batch or return what we have
         }
-
-        const fetchResponse = await firstValueFrom(
-          this.httpService.get(this.EFETCH_URL, {
-            params: fetchParams,
-            timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.7 Day 5: Added timeout (was missing)
-          }),
-        );
-
-        // Phase 10.7 Day 5: Parse XML response for this batch
-        const xmlData = fetchResponse.data;
-        const articles = xmlData.match(/<article[\s\S]*?<\/article>/g) || [];
-
-        const batchPapers = articles.map((article: string) => this.parsePaper(article));
-        allPapers.push(...batchPapers);
-
-        this.logger.log(
-          `[PMC] Batch ${batchIndex + 1}/${batches.length} complete: ${batchPapers.length} papers parsed`
-        );
       }
 
       this.logger.log(`[PMC] All batches complete: ${allPapers.length} total papers with full-text`);
@@ -333,7 +341,6 @@ export class PMCService {
     // STEP 3: Extract DOI (if not found in article-id)
     // ==========================================================================
     if (!doi) {
-      const doiMatch = article.match(/<article-id pub-id-type="doi">(.*?)<\/article-id>/);
       // Already extracted above
     }
 
@@ -466,7 +473,7 @@ export class PMCService {
       // Content metrics
       wordCount,
       wordCountExcludingRefs,
-      isEligible: isPaperEligible(wordCount), // Full-text articles always meet threshold
+      isEligible: isPaperEligible(wordCount, 150),
       abstractWordCount,
 
       // Full-text content (PMC's unique value)

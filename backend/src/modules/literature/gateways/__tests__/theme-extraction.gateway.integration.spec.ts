@@ -1,9 +1,10 @@
 /**
  * Theme Extraction Gateway Integration Tests
  * Phase 10 Day 33: Enterprise-grade WebSocket testing
+ * Phase 10.942 Day 8: STRICT AUDIT fixes applied
  *
  * Tests:
- * - Real authentication flow
+ * - Real WebSocket connection flow
  * - Room join/leave lifecycle
  * - Progress message broadcasting
  * - Cleanup on disconnect
@@ -13,30 +14,43 @@
  * Requirements:
  * - @nestjs/testing
  * - socket.io-client
- * - Test database with Prisma
  */
 
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { io as ioClient, Socket as ClientSocket } from 'socket.io-client';
-import { PrismaService } from '../../../../common/prisma.service';
+import ioClient from 'socket.io-client';
 import { ThemeExtractionGateway } from '../theme-extraction.gateway';
+
+// ============================================================================
+// TEST CONSTANTS (Eliminates magic numbers)
+// ============================================================================
+
+const TEST_TIMEOUTS = {
+  /** Time to wait for socket operations to complete */
+  SOCKET_OPERATION: 100,
+  /** Time to wait for multiple socket operations */
+  MULTI_SOCKET_OPERATION: 200,
+  /** Short delay between rapid reconnections */
+  RAPID_RECONNECT: 50,
+  /** Timeout for connection error tests */
+  CONNECTION_ERROR: 1000,
+} as const;
 
 describe('ThemeExtractionGateway (Integration)', () => {
   let app: INestApplication;
   let gateway: ThemeExtractionGateway;
-  let prisma: PrismaService;
-  let clientSocket: ClientSocket;
+  let clientSocket: ReturnType<typeof ioClient>;
   let serverUrl: string;
+  // Track additional sockets for proper cleanup (STRICT AUDIT FIX)
+  const additionalSockets: ReturnType<typeof ioClient>[] = [];
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      providers: [ThemeExtractionGateway, PrismaService],
+      providers: [ThemeExtractionGateway],
     }).compile();
 
     app = moduleFixture.createNestApplication();
     gateway = moduleFixture.get<ThemeExtractionGateway>(ThemeExtractionGateway);
-    prisma = moduleFixture.get<PrismaService>(PrismaService);
 
     await app.listen(0); // Random port
     const address = app.getHttpServer().address();
@@ -48,9 +62,17 @@ describe('ThemeExtractionGateway (Integration)', () => {
   });
 
   afterEach(() => {
+    // Cleanup main client socket
     if (clientSocket?.connected) {
       clientSocket.disconnect();
     }
+    // Cleanup any additional sockets created in tests (STRICT AUDIT FIX)
+    additionalSockets.forEach((socket) => {
+      if (socket?.connected) {
+        socket.disconnect();
+      }
+    });
+    additionalSockets.length = 0; // Clear the array
   });
 
   describe('Connection Lifecycle', () => {
@@ -65,7 +87,7 @@ describe('ThemeExtractionGateway (Integration)', () => {
         done();
       });
 
-      clientSocket.on('connect_error', (error) => {
+      clientSocket.on('connect_error', (error: Error) => {
         done(error);
       });
     });
@@ -82,7 +104,7 @@ describe('ThemeExtractionGateway (Integration)', () => {
         setTimeout(() => {
           expect(clientSocket.connected).toBe(true);
           done();
-        }, 100);
+        }, TEST_TIMEOUTS.SOCKET_OPERATION);
       });
     });
 
@@ -96,7 +118,7 @@ describe('ThemeExtractionGateway (Integration)', () => {
         // Disconnect after joining
         setTimeout(() => {
           clientSocket.disconnect();
-        }, 100);
+        }, TEST_TIMEOUTS.SOCKET_OPERATION);
       });
 
       clientSocket.on('disconnect', () => {
@@ -113,6 +135,8 @@ describe('ThemeExtractionGateway (Integration)', () => {
 
       const client1 = ioClient(serverUrl, { transports: ['websocket'] });
       const client2 = ioClient(serverUrl, { transports: ['websocket'] });
+      // Track for cleanup (STRICT AUDIT FIX)
+      additionalSockets.push(client1, client2);
 
       let connectCount = 0;
 
@@ -125,11 +149,8 @@ describe('ThemeExtractionGateway (Integration)', () => {
           setTimeout(() => {
             expect(client1.connected).toBe(true);
             expect(client2.connected).toBe(true);
-
-            client1.disconnect();
-            client2.disconnect();
             done();
-          }, 200);
+          }, TEST_TIMEOUTS.MULTI_SOCKET_OPERATION);
         }
       };
 
@@ -151,8 +172,8 @@ describe('ThemeExtractionGateway (Integration)', () => {
           setTimeout(() => {
             expect(clientSocket.connected).toBe(true);
             done();
-          }, 100);
-        }, 100);
+          }, TEST_TIMEOUTS.SOCKET_OPERATION);
+        }, TEST_TIMEOUTS.SOCKET_OPERATION);
       });
     });
   });
@@ -166,22 +187,22 @@ describe('ThemeExtractionGateway (Integration)', () => {
         clientSocket.emit('join', userId);
 
         // Listen for progress events
-        clientSocket.on('extraction-progress', (data) => {
+        clientSocket.on('extraction-progress', (data: { userId: string; stage: string; percentage: number; message: string; details?: unknown }) => {
           expect(data).toBeDefined();
-          expect(data.extractionId).toBeDefined();
-          expect(data.progress).toBeGreaterThanOrEqual(0);
-          expect(data.progress).toBeLessThanOrEqual(100);
+          expect(data.userId).toBeDefined();
+          expect(data.percentage).toBeGreaterThanOrEqual(0);
+          expect(data.percentage).toBeLessThanOrEqual(100);
           done();
         });
 
         // Simulate server emitting progress (requires gateway method)
-        // For full test, would need to trigger actual extraction
         setTimeout(() => {
-          // Mock progress event
-          gateway.emitProgress(userId, {
-            extractionId: 'test-extraction',
-            progress: 50,
+          // Mock progress event - actual gateway.emitProgress takes ExtractionProgress object
+          gateway.emitProgress({
+            userId,
             stage: 'extracting',
+            percentage: 50,
+            message: 'Analyzing patterns',
             details: {
               transparentMessage: {
                 stageName: 'Coding',
@@ -198,7 +219,7 @@ describe('ThemeExtractionGateway (Integration)', () => {
               },
             },
           });
-        }, 100);
+        }, TEST_TIMEOUTS.SOCKET_OPERATION);
       });
     });
 
@@ -209,23 +230,18 @@ describe('ThemeExtractionGateway (Integration)', () => {
       clientSocket.on('connect', () => {
         clientSocket.emit('join', userId);
 
-        clientSocket.on('extraction-complete', (data) => {
+        clientSocket.on('extraction-complete', (data: { userId: string; stage: string; percentage: number; message: string; details?: { themesExtracted: number } }) => {
           expect(data).toBeDefined();
-          expect(data.extractionId).toBeDefined();
+          expect(data.userId).toBeDefined();
           expect(data.details).toBeDefined();
+          expect(data.details?.themesExtracted).toBe(5);
           done();
         });
 
-        // Simulate completion
+        // Simulate completion - actual gateway.emitComplete takes (userId, themesCount)
         setTimeout(() => {
-          gateway.emitComplete(userId, {
-            extractionId: 'test-extraction',
-            details: {
-              themesExtracted: 5,
-              totalSources: 10,
-            },
-          });
-        }, 100);
+          gateway.emitComplete(userId, 5);
+        }, TEST_TIMEOUTS.SOCKET_OPERATION);
       });
     });
 
@@ -236,20 +252,17 @@ describe('ThemeExtractionGateway (Integration)', () => {
       clientSocket.on('connect', () => {
         clientSocket.emit('join', userId);
 
-        clientSocket.on('extraction-error', (data) => {
+        clientSocket.on('extraction-error', (data: { userId: string; stage: string; percentage: number; message: string }) => {
           expect(data).toBeDefined();
-          expect(data.extractionId).toBeDefined();
+          expect(data.userId).toBeDefined();
           expect(data.message).toBeDefined();
           done();
         });
 
-        // Simulate error
+        // Simulate error - actual gateway.emitError takes (userId, errorString)
         setTimeout(() => {
-          gateway.emitError(userId, {
-            extractionId: 'test-extraction',
-            message: 'Test error message',
-          });
-        }, 100);
+          gateway.emitError(userId, 'Test error message');
+        }, TEST_TIMEOUTS.SOCKET_OPERATION);
       });
     });
   });
@@ -260,10 +273,12 @@ describe('ThemeExtractionGateway (Integration)', () => {
       const badClient = ioClient('http://localhost:9999/theme-extraction', {
         transports: ['websocket'],
         reconnection: false,
-        timeout: 1000,
+        timeout: TEST_TIMEOUTS.CONNECTION_ERROR,
       });
+      // Track for cleanup (STRICT AUDIT FIX)
+      additionalSockets.push(badClient);
 
-      badClient.on('connect_error', (error) => {
+      badClient.on('connect_error', (error: Error) => {
         expect(error).toBeDefined();
         done();
       });
@@ -280,7 +295,7 @@ describe('ThemeExtractionGateway (Integration)', () => {
         setTimeout(() => {
           expect(clientSocket.connected).toBe(true);
           done();
-        }, 100);
+        }, TEST_TIMEOUTS.SOCKET_OPERATION);
       });
     });
   });
@@ -307,7 +322,7 @@ describe('ThemeExtractionGateway (Integration)', () => {
               expect(connectionCount).toBe(maxConnections);
               done();
             }
-          }, 50);
+          }, TEST_TIMEOUTS.RAPID_RECONNECT);
         });
       };
 
@@ -334,14 +349,14 @@ describe('ThemeExtractionGateway (Integration)', () => {
         // Send multiple progress updates rapidly
         setTimeout(() => {
           for (let i = 0; i < expectedCount; i++) {
-            gateway.emitProgress(userId, {
-              extractionId: 'test-extraction',
-              progress: (i + 1) * 10,
+            gateway.emitProgress({
+              userId,
               stage: 'extracting',
-              details: {},
+              percentage: (i + 1) * 10,
+              message: `Processing batch ${i + 1}`,
             });
           }
-        }, 100);
+        }, TEST_TIMEOUTS.SOCKET_OPERATION);
       });
     });
   });

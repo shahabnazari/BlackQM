@@ -4,7 +4,6 @@ import {
   ConflictException,
   BadRequestException,
   ForbiddenException,
-  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -73,7 +72,7 @@ export class AuthService {
     });
 
     // Generate tokens
-    const tokens = await this.generateTokens(user.id);
+    const tokens = await this.generateTokens(user.id, user.email);
 
     // Log registration
     await this.auditService.log({
@@ -134,7 +133,7 @@ export class AuthService {
     });
 
     // Generate tokens
-    const tokens = await this.generateTokens(user.id, rememberMe);
+    const tokens = await this.generateTokens(user.id, user.email, rememberMe);
 
     // Log successful login
     await this.auditService.log({
@@ -178,8 +177,8 @@ export class AuthService {
       throw new ForbiddenException('Account is deactivated');
     }
 
-    // Generate new tokens
-    const tokens = await this.generateTokens(session.userId);
+    // Generate new tokens (email already available from session.user)
+    const tokens = await this.generateTokens(session.userId, session.user.email);
 
     // Delete old session
     await this.prisma.session.delete({
@@ -348,16 +347,28 @@ export class AuthService {
    * Generate JWT tokens for OAuth users (public method)
    * Day 27: ORCID OAuth
    */
-  async generateOAuthTokens(userId: string) {
-    return this.generateTokens(userId, false);
+  async generateOAuthTokens(userId: string, email: string) {
+    return this.generateTokens(userId, email, false);
   }
 
-  private async generateTokens(userId: string, rememberMe = false) {
-    // Add a unique identifier to prevent duplicate tokens
+  /**
+   * ✅ CRITICAL FIX: Generate JWT tokens with email in payload
+   *
+   * BEFORE: Payload only had { sub, jti } → JWT validation failed
+   * AFTER: Payload has { sub, email, jti } → Matches JwtStrategy expectations
+   */
+  private async generateTokens(
+    userId: string,
+    email: string,
+    rememberMe = false,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    // ✅ CRITICAL: Include email in JWT payload
     const payload = {
       sub: userId,
+      email,
       jti: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
     };
+
     const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '15m');
     const refreshExpiresIn = rememberMe
       ? '30d'

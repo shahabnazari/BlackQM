@@ -21,6 +21,8 @@
  */
 
 import { apiClient } from '../client';
+import { ContentType } from '@/lib/types/content-types';
+import { logger } from '@/lib/utils/logger';
 
 /**
  * Interfaces matching backend models
@@ -81,8 +83,9 @@ export interface SourceContent {
   year?: number;
   timestampedSegments?: Array<{ timestamp: number; text: string }>;
   // Phase 10 Day 5.16: Content type metadata for adaptive validation
+  // ENTERPRISE FIX: Use ContentType enum for type safety (includes video_transcript)
   metadata?: {
-    contentType?: 'none' | 'abstract' | 'full_text' | 'abstract_overflow';
+    contentType?: ContentType;
     contentSource?: string;
     contentLength?: number;
     hasFullText?: boolean;
@@ -159,6 +162,21 @@ export interface TransparentProgressMessage {
     articleTitle?: string;
     articleType?: 'full-text' | 'abstract';
     articleWords?: number;
+    // BUG FIX: Add embeddingStats for scientific metrics
+    embeddingStats?: {
+      dimensions: number;
+      model: string;
+      totalEmbeddingsGenerated: number;
+      averageEmbeddingMagnitude?: number;
+      processingMethod: 'single' | 'chunked-averaged';
+      chunksProcessed?: number;
+      scientificExplanation?: string;
+    };
+    familiarizationReport?: {
+      downloadUrl?: string;
+      embeddingVectors?: boolean;
+      completedAt?: string;
+    };
   };
 }
 
@@ -251,6 +269,21 @@ export interface V2ExtractionResponse {
     averageConfidence?: number;
     [key: string]: any;
   };
+  // BUG FIX: Familiarization stats from HTTP response (fallback when WebSocket fails)
+  familiarizationStats?: {
+    fullTextRead: number;
+    abstractsRead: number;
+    totalWordsRead: number;
+    totalArticles: number;
+    embeddingStats?: {
+      model: string;
+      dimensions: number;
+      totalEmbeddingsGenerated: number;
+      averageEmbeddingMagnitude: number;
+      chunkedArticleCount: number;
+      totalChunksProcessed: number;
+    };
+  };
 }
 
 export type V2ProgressCallback = (
@@ -296,13 +329,11 @@ export class UnifiedThemeAPIService {
       ? `${this.baseUrl}/unified-extract-batch`
       : `${this.baseUrl}/unified-extract`;
 
-    console.log('🟢 UnifiedThemeAPI.extractFromMultipleSources called');
-    console.log('   URL:', endpoint);
-    console.log('   Sources:', sources.length);
-    console.log(
-      '   Mode:',
-      useBatchEndpoint ? '⚡ BATCH (optimized)' : '🔄 Regular'
-    );
+    logger.info('extractFromMultipleSources called', 'UnifiedThemeAPIService', {
+      url: endpoint,
+      sourcesCount: sources.length,
+      mode: useBatchEndpoint ? 'BATCH (optimized)' : 'Regular',
+    });
 
     // PHASE 10 DAY 5.6: Progress tracking
     let progressInterval: NodeJS.Timeout | null = null;
@@ -347,13 +378,10 @@ export class UnifiedThemeAPIService {
         onProgress(sources.length, sources.length, 'Deduplicating themes...');
       }
 
-      console.log('🟢 API Response received:');
-      console.log('   Themes count:', response?.themes?.length);
-      console.log(
-        '   Processing time:',
-        response?.metadata?.processingTimeMs,
-        'ms'
-      );
+      logger.info('API Response received', 'UnifiedThemeAPIService', {
+        themesCount: response?.themes?.length,
+        processingTimeMs: response?.metadata?.processingTimeMs,
+      });
 
       // Return formatted response
       return {
@@ -369,11 +397,11 @@ export class UnifiedThemeAPIService {
         progressInterval = null;
       }
 
-      console.error('🔴 [UnifiedThemeAPI] Extract failed:', error);
+      logger.error('Extract failed', 'UnifiedThemeAPIService', { error: error.message });
 
       // PHASE 10 DAY 5.6: Auto-fallback to public endpoint on 401
       if (error.response?.status === 401) {
-        console.warn('⚠️ Authentication required. Trying public endpoint...');
+        logger.warn('Authentication required. Trying public endpoint...', 'UnifiedThemeAPIService');
         return this.extractWithPublicEndpoint(sources, options, onProgress);
       }
 
@@ -396,7 +424,7 @@ export class UnifiedThemeAPIService {
         ? `${this.baseUrl}/unified-extract-batch/public`
         : `${this.baseUrl}/unified-extract`;
 
-    console.log('🔓 Using public endpoint (no auth required):');
+    logger.info('Using public endpoint (no auth required)', 'UnifiedThemeAPIService');
 
     let progressInterval: NodeJS.Timeout | null = null;
 
@@ -435,7 +463,7 @@ export class UnifiedThemeAPIService {
         onProgress(sources.length, sources.length, 'Complete!');
       }
 
-      console.log('✅ Public endpoint successful');
+      logger.info('Public endpoint successful', 'UnifiedThemeAPIService');
 
       return {
         themes: response.themes || [],
@@ -447,7 +475,7 @@ export class UnifiedThemeAPIService {
       if (progressInterval) {
         clearInterval(progressInterval);
       }
-      console.error('❌ Public endpoint failed:', error.message);
+      logger.error('Public endpoint failed', 'UnifiedThemeAPIService', { error: error.message });
       throw new Error('Authentication failed and public endpoint unavailable.');
     }
   }
@@ -482,33 +510,34 @@ export class UnifiedThemeAPIService {
       request.requestId ||
       `frontend_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    console.log('🚀 UnifiedThemeAPI.extractThemesV2 called');
-    console.log('   Request ID:', requestId);
-    console.log('   URL:', endpoint);
-    console.log('   Purpose:', request.purpose);
-    console.log('   Sources:', sources.length);
-    console.log(
-      '   Expertise Level:',
-      request.userExpertiseLevel || 'researcher'
-    );
-    console.log(
-      '   Iterative Refinement:',
-      request.allowIterativeRefinement || false
-    );
+    logger.info('extractThemesV2 called', 'UnifiedThemeAPIService', {
+      requestId,
+      url: endpoint,
+      purpose: request.purpose,
+      sourcesCount: sources.length,
+      expertiseLevel: request.userExpertiseLevel || 'researcher',
+      iterativeRefinement: request.allowIterativeRefinement || false,
+    });
 
     // Phase 10 Day 5.17.3: Connect to WebSocket for real-time progress
     let socket: any = null;
+    let wsConnected = false;
+    let wsConnectionTimeout: NodeJS.Timeout | null = null;
 
     try {
       // Phase 10 Day 5.17.3: Initialize WebSocket connection for real-time progress
       if (onProgress && typeof window !== 'undefined') {
+        logger.info('Attempting to establish WebSocket connection...', 'UnifiedThemeAPIService');
         const socketIO = await import('socket.io-client');
         const wsUrl =
           process.env['NEXT_PUBLIC_BACKEND_URL'] || 'http://localhost:4000';
 
+        logger.debug('WebSocket URL', 'UnifiedThemeAPIService', { url: `${wsUrl}/theme-extraction` });
+
         socket = socketIO.default(`${wsUrl}/theme-extraction`, {
           transports: ['websocket', 'polling'],
           reconnection: false, // Don't reconnect for one-time extraction
+          timeout: 10000, // 10-second connection timeout
         });
 
         // BUG FIX: Get actual userId from JWT token to match backend WebSocket room
@@ -523,7 +552,7 @@ export class UnifiedThemeAPIService {
             // Decode JWT payload (format: header.payload.signature)
             const base64Url = token.split('.')[1];
             if (!base64Url) {
-              console.error('Invalid JWT token format');
+              logger.error('Invalid JWT token format', 'UnifiedThemeAPIService');
               return null;
             }
             const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -536,7 +565,7 @@ export class UnifiedThemeAPIService {
             const payload = JSON.parse(jsonPayload);
             return payload.userId || payload.sub || payload.id || null;
           } catch (error) {
-            console.error('Failed to decode JWT token:', error);
+            logger.error('Failed to decode JWT token', 'UnifiedThemeAPIService', { error });
             return null;
           }
         };
@@ -545,25 +574,72 @@ export class UnifiedThemeAPIService {
           getUserIdFromToken() ||
           `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        console.log('🔐 WebSocket userId resolution:');
-        console.log(`   From JWT: ${getUserIdFromToken()}`);
-        console.log(`   Final userId: ${userId}`);
-        console.log(`   Is fallback session: ${!getUserIdFromToken()}`);
+        // 🚨 STRICT AUDIT FIX: Enhanced userId logging for WebSocket room matching issue
+        // If the userId doesn't match what the backend extracts from JWT, messages won't be received
+        logger.info('🔑 WebSocket userId resolution', 'UnifiedThemeAPIService', {
+          fromJWT: getUserIdFromToken(),
+          finalUserId: userId,
+          isFallbackSession: !getUserIdFromToken(),
+          note: 'This userId MUST match the backend @CurrentUser userId for WebSocket to work',
+        });
 
+        // CRITICAL FIX (Nov 18, 2025): Add WebSocket connection error handling
         socket.on('connect', () => {
-          console.log('✅ WebSocket connected to theme-extraction namespace');
-          console.log(`   Joining room: ${userId}`);
+          logger.info('WebSocket connected to theme-extraction namespace', 'UnifiedThemeAPIService', { joiningRoom: userId });
+          wsConnected = true;
+          if (wsConnectionTimeout) {
+            clearTimeout(wsConnectionTimeout);
+            wsConnectionTimeout = null;
+          }
           socket.emit('join', userId);
         });
 
+        socket.on('connect_error', (error: any) => {
+          logger.error('WebSocket connection error', 'UnifiedThemeAPIService', {
+            error: error.message,
+            note: 'Backend may not be running or WebSocket endpoint unavailable',
+          });
+          logger.warn('Will proceed without real-time progress updates', 'UnifiedThemeAPIService');
+        });
+
+        socket.on('disconnect', (reason: string) => {
+          logger.info('WebSocket disconnected', 'UnifiedThemeAPIService', { reason });
+        });
+
         socket.on('extraction-progress', (progress: any) => {
-          console.log('📊 Real-time progress update:', progress);
+          // 🚨 STRICT AUDIT FIX: Enhanced diagnostic logging for Stage 1 stats issue
+          // Log the raw WebSocket data to trace if backend is sending correct values
+          logger.info('📡 WebSocket extraction-progress received', 'UnifiedThemeAPIService', {
+            stage: progress.stage,
+            percentage: progress.percentage,
+            hasDetails: !!progress.details,
+            detailsKeys: progress.details ? Object.keys(progress.details) : [],
+          });
 
           // Phase 10 Day 5.17.3: Map backend progress to frontend callback format
           if (onProgress) {
             if (progress.details && progress.details.stageNumber) {
               // Full TransparentProgressMessage available
               const transparentMessage = progress.details;
+
+              // 🚨 CRITICAL DIAGNOSTIC: Log the familiarization stats being extracted
+              if (transparentMessage.stageNumber === 1) {
+                logger.info('📊 Stage 1 Familiarization stats from WebSocket', 'UnifiedThemeAPIService', {
+                  fullTextRead: transparentMessage.liveStats?.fullTextRead,
+                  abstractsRead: transparentMessage.liveStats?.abstractsRead,
+                  totalWordsRead: transparentMessage.liveStats?.totalWordsRead,
+                  currentArticle: transparentMessage.liveStats?.currentArticle,
+                  totalArticles: transparentMessage.liveStats?.totalArticles,
+                  articleTitle: transparentMessage.liveStats?.articleTitle?.substring(0, 40),
+                  sourcesAnalyzed: transparentMessage.liveStats?.sourcesAnalyzed,
+                });
+              }
+
+              logger.debug('Calling onProgress callback with transparentMessage', 'UnifiedThemeAPIService', {
+                stageNumber: transparentMessage.stageNumber,
+                hasLiveStats: !!transparentMessage.liveStats,
+              });
+
               onProgress(
                 transparentMessage.stageNumber,
                 transparentMessage.totalStages || 6,
@@ -572,25 +648,116 @@ export class UnifiedThemeAPIService {
               );
             } else {
               // Fallback: Estimate stage from percentage or use basic message
+              logger.warn('⚠️ WebSocket progress missing details.stageNumber', 'UnifiedThemeAPIService', {
+                hasDetails: !!progress.details,
+                detailsStageNumber: progress.details?.stageNumber,
+                percentage: progress.percentage,
+              });
               const estimatedStage = Math.max(
                 1,
                 Math.ceil((progress.percentage / 100) * 6)
               );
               onProgress(estimatedStage, 6, progress.message, undefined);
             }
+          } else {
+            logger.warn('⚠️ onProgress callback is null/undefined', 'UnifiedThemeAPIService');
           }
         });
 
         socket.on('extraction-error', (error: any) => {
-          console.error('❌ WebSocket error:', error);
+          logger.error('WebSocket extraction error', 'UnifiedThemeAPIService', { error });
         });
 
         socket.on('extraction-complete', (result: any) => {
-          console.log('✅ Extraction complete via WebSocket:', result);
+          logger.info('Extraction complete via WebSocket', 'UnifiedThemeAPIService', { result });
         });
+
+        // 🚨 CRITICAL FIX: Wait for WebSocket to connect BEFORE calling API
+        // This prevents the race condition where backend emits progress before frontend joins room
+        // Without this, Stage 1 familiarization metrics are lost (all zeros)
+        //
+        // TIMING CONSTANTS (named for maintainability)
+        // FIX 2025-01-XX: Increased from 3s to 5s for better reliability under load
+        const WS_MAX_WAIT_MS = 5000;      // Max time to wait for WebSocket connection (increased for reliability)
+        const WS_POLL_INTERVAL_MS = 50;   // Polling interval to check connection status
+        const WS_JOIN_SETTLE_MS = 200;    // Time for server to process 'join' event after connect (increased)
+
+        let wsConnectionFailed = false;
+
+        // Track connection failure to short-circuit polling
+        socket.on('connect_error', () => {
+          wsConnectionFailed = true;
+        });
+
+        await new Promise<void>((resolve) => {
+          let elapsed = 0;
+          let resolving = false; // Prevent double-resolve
+
+          const checkConnection = () => {
+            if (resolving) return;
+
+            // Case 1: Connection failed - proceed without real-time progress
+            if (wsConnectionFailed) {
+              resolving = true;
+              logger.warn('WebSocket connection failed - proceeding without real-time progress', 'UnifiedThemeAPIService', {
+                fallback: 'HTTP response will provide familiarization stats',
+              });
+              resolve();
+              return;
+            }
+
+            // Case 2: Connected - wait for join to settle, then proceed
+            if (wsConnected) {
+              resolving = true;
+              logger.info('WebSocket connected - waiting for room join to settle...', 'UnifiedThemeAPIService');
+              // CRITICAL: Give server time to process 'join' event before calling API
+              // Without this delay, backend emits to room before client has joined
+              setTimeout(() => {
+                logger.info('Room join settled - proceeding with API call', 'UnifiedThemeAPIService', {
+                  note: 'Real-time familiarization progress will be available',
+                });
+                resolve();
+              }, WS_JOIN_SETTLE_MS);
+              return;
+            }
+
+            // Case 3: Timeout - proceed anyway (HTTP fallback will provide data)
+            if (elapsed >= WS_MAX_WAIT_MS) {
+              resolving = true;
+              logger.warn('WebSocket did not connect within timeout - proceeding anyway', 'UnifiedThemeAPIService', {
+                maxWaitMs: WS_MAX_WAIT_MS,
+                note: 'Real-time familiarization progress may be unavailable',
+                fallback: 'HTTP response will provide familiarization stats',
+              });
+              resolve();
+              return;
+            }
+
+            // Case 4: Still waiting - continue polling
+            elapsed += WS_POLL_INTERVAL_MS;
+            setTimeout(checkConnection, WS_POLL_INTERVAL_MS);
+          };
+
+          logger.info('Waiting for WebSocket connection before API call...', 'UnifiedThemeAPIService', {
+            maxWaitMs: WS_MAX_WAIT_MS,
+          });
+          checkConnection();
+        });
+
+        // Fallback timeout for WebSocket disconnection during extraction (10 seconds)
+        wsConnectionTimeout = setTimeout(() => {
+          if (!wsConnected) {
+            logger.warn('WebSocket disconnected during extraction', 'UnifiedThemeAPIService');
+            // Provide minimal progress update so modal doesn't get stuck
+            if (onProgress) {
+              logger.info('Providing fallback progress update to advance modal', 'UnifiedThemeAPIService');
+              onProgress(2, 6, 'Processing... (progress tracking unavailable)', undefined);
+            }
+          }
+        }, 10000);
       }
 
-      // Make API call with full request body
+      // Make API call with full request body (WebSocket is now connected)
       const response: any = await apiClient.post(
         endpoint,
         {
@@ -610,7 +777,12 @@ export class UnifiedThemeAPIService {
       // Phase 10 Day 5.17.3: Disconnect WebSocket after completion
       if (socket) {
         socket.disconnect();
-        console.log('🔌 WebSocket disconnected');
+        logger.info('WebSocket disconnected', 'UnifiedThemeAPIService');
+      }
+
+      // CRITICAL FIX (Nov 18, 2025): Clean up WebSocket connection timeout
+      if (wsConnectionTimeout) {
+        clearTimeout(wsConnectionTimeout);
       }
 
       if (onProgress) {
@@ -622,13 +794,11 @@ export class UnifiedThemeAPIService {
         );
       }
 
-      console.log('✅ V2 API Response received:');
-      console.log('   Success:', response?.success);
-      console.log('   Themes count:', response?.themes?.length);
-      console.log(
-        '   Saturation reached:',
-        response?.saturationData?.saturationReached
-      );
+      logger.info('V2 API Response received', 'UnifiedThemeAPIService', {
+        success: response?.success,
+        themesCount: response?.themes?.length,
+        saturationReached: response?.saturationData?.saturationReached,
+      });
 
       // BUG FIX: apiClient.post() already returns response.data, so don't double-access
       // Return formatted V2 response
@@ -645,12 +815,15 @@ export class UnifiedThemeAPIService {
         socket.disconnect();
       }
 
-      console.error('🔴 [UnifiedThemeAPI] V2 extract failed:', error);
-      console.error('   Status:', error.response?.status);
-      console.error(
-        '   Message:',
-        error.response?.data?.message || error.message
-      );
+      // CRITICAL FIX (Nov 18, 2025): Clean up WebSocket connection timeout
+      if (wsConnectionTimeout) {
+        clearTimeout(wsConnectionTimeout);
+      }
+
+      logger.error('V2 extract failed', 'UnifiedThemeAPIService', {
+        status: error.response?.status,
+        message: error.response?.data?.message || error.message,
+      });
 
       throw new Error(
         `Failed to extract themes (V2): ${error.response?.data?.message || error.message}`
@@ -669,7 +842,7 @@ export class UnifiedThemeAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('[UnifiedThemeAPI] Get provenance failed:', error);
+      logger.error('Get provenance failed', 'UnifiedThemeAPIService', { error });
       throw new Error('Failed to get theme provenance');
     }
   }
@@ -699,7 +872,7 @@ export class UnifiedThemeAPIService {
       // Cast to access themes property
       return (response as any).themes || response;
     } catch (error) {
-      console.error('[UnifiedThemeAPI] Filter themes failed:', error);
+      logger.error('Filter themes failed', 'UnifiedThemeAPIService', { error });
       throw new Error('Failed to filter themes by sources');
     }
   }
@@ -717,7 +890,7 @@ export class UnifiedThemeAPIService {
       // Cast to access themes property
       return (response as any).themes || response;
     } catch (error) {
-      console.error('[UnifiedThemeAPI] Get collection themes failed:', error);
+      logger.error('Get collection themes failed', 'UnifiedThemeAPIService', { error });
       throw new Error('Failed to get collection themes');
     }
   }
@@ -755,7 +928,7 @@ export class UnifiedThemeAPIService {
         similarity: responseData.similarity || 0,
       };
     } catch (error) {
-      console.error('[UnifiedThemeAPI] Compare themes failed:', error);
+      logger.error('Compare themes failed', 'UnifiedThemeAPIService', { error });
       throw new Error('Failed to compare study themes');
     }
   }
@@ -777,7 +950,7 @@ export class UnifiedThemeAPIService {
       );
       return response.data;
     } catch (error) {
-      console.error('[UnifiedThemeAPI] Export themes failed:', error);
+      logger.error('Export themes failed', 'UnifiedThemeAPIService', { error });
       throw new Error('Failed to export themes with provenance');
     }
   }
@@ -824,27 +997,27 @@ export function useUnifiedThemeAPI(): UseUnifiedThemeAPIReturn {
     ) => {
       setLoading(true);
       setError(null);
-      console.log('🔵 useUnifiedThemeAPI.extractThemes called');
-      console.log('   Sources count:', sources.length);
-      console.log('   Options:', options);
+      logger.info('useUnifiedThemeAPI.extractThemes called', 'useUnifiedThemeAPI', {
+        sourcesCount: sources.length,
+        options,
+      });
       try {
-        console.log('🔵 Calling unifiedThemeAPI.extractFromMultipleSources...');
+        logger.debug('Calling unifiedThemeAPI.extractFromMultipleSources...', 'useUnifiedThemeAPI');
         const result = await unifiedThemeAPI.extractFromMultipleSources(
           sources,
           options,
           onProgress
         );
-        console.log('🔵 API returned result:', result);
-        console.log('   Result type:', typeof result);
-        console.log('   Result has themes?', result?.themes ? 'YES' : 'NO');
+        logger.info('API returned result', 'useUnifiedThemeAPI', {
+          resultType: typeof result,
+          hasThemes: result?.themes ? true : false,
+        });
         return result;
       } catch (err) {
-        console.error('🔴 Error in extractThemes:', err);
-        console.error('   Error type:', typeof err);
-        console.error(
-          '   Error message:',
-          err instanceof Error ? err.message : 'Unknown'
-        );
+        logger.error('Error in extractThemes', 'useUnifiedThemeAPI', {
+          errorType: typeof err,
+          errorMessage: err instanceof Error ? err.message : 'Unknown',
+        });
         setError(err instanceof Error ? err.message : 'Unknown error');
         return null;
       } finally {
@@ -862,30 +1035,27 @@ export function useUnifiedThemeAPI(): UseUnifiedThemeAPIReturn {
     ) => {
       setLoading(true);
       setError(null);
-      console.log('🔵 useUnifiedThemeAPI.extractThemesV2 called');
-      console.log('   Purpose:', request.purpose);
-      console.log('   Sources count:', sources.length);
+      logger.info('useUnifiedThemeAPI.extractThemesV2 called', 'useUnifiedThemeAPI', {
+        purpose: request.purpose,
+        sourcesCount: sources.length,
+      });
       try {
-        console.log('🔵 Calling unifiedThemeAPI.extractThemesV2...');
+        logger.debug('Calling unifiedThemeAPI.extractThemesV2...', 'useUnifiedThemeAPI');
         const result = await unifiedThemeAPI.extractThemesV2(
           sources,
           request,
           onProgress
         );
-        console.log('🔵 V2 API returned result:', result);
-        console.log('   Success:', result?.success);
-        console.log('   Themes count:', result?.themes?.length);
-        console.log(
-          '   Has saturation data?',
-          result?.saturationData ? 'YES' : 'NO'
-        );
+        logger.info('V2 API returned result', 'useUnifiedThemeAPI', {
+          success: result?.success,
+          themesCount: result?.themes?.length,
+          hasSaturationData: result?.saturationData ? true : false,
+        });
         return result;
       } catch (err) {
-        console.error('🔴 Error in extractThemesV2:', err);
-        console.error(
-          '   Error message:',
-          err instanceof Error ? err.message : 'Unknown'
-        );
+        logger.error('Error in extractThemesV2', 'useUnifiedThemeAPI', {
+          errorMessage: err instanceof Error ? err.message : 'Unknown',
+        });
         setError(err instanceof Error ? err.message : 'Unknown error');
         return null;
       } finally {

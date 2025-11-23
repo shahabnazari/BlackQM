@@ -1,5 +1,5 @@
 /**
- * Enterprise Logger Utility - Phase 10.1 Day 9
+ * Enterprise Logger Utility - Phase 10.1 Day 9, Enhanced Phase 10.92 Day 4
  *
  * Production-grade centralized logging system with:
  * - 5 log levels (DEBUG, INFO, WARN, ERROR, FATAL)
@@ -9,15 +9,18 @@
  * - Sensitive data masking (passwords, tokens, API keys, SSNs)
  * - Log buffering and batching (configurable batch size and interval)
  * - Export functionality (download as JSON or CSV)
- * - Backend integration (ready for /api/logs endpoint)
+ * - Backend integration (optional, disabled by default)
+ * - Graceful fallback when backend endpoint unavailable (Phase 10.92 Day 4)
+ * - One-time warning for missing endpoint (Phase 10.92 Day 4)
+ * - Runtime enable/disable backend logging (Phase 10.92 Day 4)
  * - Global error handlers (catches unhandled errors and promise rejections)
  * - User action tracking for analytics
  * - Statistics dashboard (getStats() method)
  * - Development helper (window.logger in dev mode)
  * - Cleanup on destroy (stops timers, flushes buffer)
  *
- * @version 2.0.0
- * @date November 9, 2025
+ * @version 2.1.0
+ * @date November 16, 2025 (Phase 10.92 Day 4)
  * @enterprise-grade YES
  */
 
@@ -35,12 +38,15 @@ export interface LogEntry {
   message: string;
   context?: string;
   userId?: string;
+  correlationId?: string; // Phase 10.943: Request correlation ID
   data?: Record<string, unknown>;
   stack?: string;
   performance?: {
     duration: number;
     operation: string;
   };
+  url?: string; // Phase 10.943: Current page URL
+  userAgent?: string; // Phase 10.943: Browser user agent
 }
 
 interface LoggerConfig {
@@ -51,6 +57,8 @@ interface LoggerConfig {
   batchInterval: number;
   maskSensitiveData: boolean;
   backendEndpoint?: string;
+  enableBackendLogging: boolean; // ✅ Phase 10.92 Day 4: Enable/disable backend logging
+  correlationId?: string; // ✅ Phase 10.943: Current request correlation ID
 }
 
 class EnterpriseLogger {
@@ -58,8 +66,16 @@ class EnterpriseLogger {
   private buffer: LogEntry[] = [];
   private batchTimer: ReturnType<typeof setInterval> | null = null;
   private performanceMarks: Map<string, number> = new Map();
+  private backendAvailable: boolean | null = null; // ✅ Phase 10.92 Day 4: Track endpoint availability
+  private backendWarningShown = false; // ✅ Phase 10.92 Day 4: Show warning only once
+  private currentCorrelationId: string | null = null; // ✅ Phase 10.943: Current correlation ID
 
   constructor(config?: Partial<LoggerConfig>) {
+    // Determine backend URL based on environment
+    const backendUrl = typeof window !== 'undefined'
+      ? (process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000')
+      : '';
+
     this.config = {
       minLevel: process.env.NODE_ENV === 'production' ? LogLevel.INFO : LogLevel.DEBUG,
       enableConsole: true,
@@ -67,7 +83,8 @@ class EnterpriseLogger {
       bufferSize: 100,
       batchInterval: 5000,
       maskSensitiveData: true,
-      backendEndpoint: '/api/logs',
+      backendEndpoint: `${backendUrl}/api/logs`, // Phase 10.943: Full backend URL
+      enableBackendLogging: true, // ✅ Phase 10.943: Enabled by default (endpoint now implemented)
       ...config,
     };
 
@@ -275,6 +292,10 @@ class EnterpriseLogger {
       ? this.maskSensitiveData(data as Record<string, unknown>)
       : data;
 
+    // Get browser context (Phase 10.943)
+    const url = typeof window !== 'undefined' ? window.location.href : undefined;
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
+
     // Create log entry
     const entry: LogEntry = {
       timestamp: new Date(),
@@ -282,8 +303,11 @@ class EnterpriseLogger {
       message,
       ...(context && { context }),
       ...(userId && { userId }),
+      ...(this.currentCorrelationId && { correlationId: this.currentCorrelationId }),
       ...(maskedData && typeof maskedData === 'object' && maskedData !== null ? { data: maskedData as Record<string, unknown> } : {}),
       ...(stack && { stack }),
+      ...(url && { url }),
+      ...(userAgent && { userAgent }),
     };
 
     // Console output
@@ -343,9 +367,22 @@ class EnterpriseLogger {
    * Flush buffer to backend
    * Sends all buffered logs to backend endpoint
    * Safe to call multiple times (no-op if buffer is empty)
+   *
+   * ✅ Phase 10.92 Day 4: Enhanced with graceful fallback and endpoint availability check
    */
   async flushBuffer(): Promise<void> {
     if (this.buffer.length === 0) {
+      return;
+    }
+
+    // ✅ Phase 10.92 Day 4: Skip backend logging if disabled or endpoint unavailable
+    if (!this.config.enableBackendLogging) {
+      // Keep logs in buffer for local export/debugging
+      return;
+    }
+
+    // ✅ Phase 10.92 Day 4: Skip if we've already determined endpoint is unavailable
+    if (this.backendAvailable === false) {
       return;
     }
 
@@ -355,17 +392,74 @@ class EnterpriseLogger {
     // Send to backend if endpoint configured
     if (this.config.backendEndpoint) {
       try {
-        await fetch(this.config.backendEndpoint, {
+        const response = await fetch(this.config.backendEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ logs: logsToSend }),
         });
-      } catch (error) {
-        // Failed to send logs - restore to buffer
-        console.error('Failed to send logs to backend:', error);
+
+        // ✅ Phase 10.92 Day 4: Check if endpoint exists
+        if (response.status === 404) {
+          this.backendAvailable = false;
+
+          // Show one-time warning in development
+          if (process.env.NODE_ENV === 'development' && !this.backendWarningShown) {
+            console.warn(
+              '⚠️  [Logger] Backend logging endpoint not found. ' +
+              'Logs will be buffered locally only. ' +
+              'To enable backend logging, implement POST /api/logs or set enableBackendLogging: false'
+            );
+            this.backendWarningShown = true;
+          }
+
+          // Restore logs to buffer for local access
+          this.buffer = [...logsToSend, ...this.buffer];
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        // ✅ Mark endpoint as available
+        this.backendAvailable = true;
+
+      } catch (error: unknown) {
+        // ✅ Phase 10.92 Day 4: Graceful error handling - don't spam console
+
+        // Check if it's a network error (endpoint doesn't exist)
+        const isNetworkError = error instanceof TypeError &&
+          (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'));
+
+        if (isNetworkError) {
+          this.backendAvailable = false;
+
+          // Show one-time warning in development
+          if (process.env.NODE_ENV === 'development' && !this.backendWarningShown) {
+            console.warn(
+              '⚠️  [Logger] Backend logging endpoint unavailable. ' +
+              'Logs will be buffered locally only.'
+            );
+            this.backendWarningShown = true;
+          }
+        } else {
+          // Other errors (temporary network issues, etc.) - log in development only
+          if (process.env.NODE_ENV === 'development') {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.warn(`[Logger] Failed to send logs to backend: ${errorMessage}`);
+          }
+        }
+
+        // Restore logs to buffer
         this.buffer = [...logsToSend, ...this.buffer];
+
+        // ✅ Prevent buffer from growing indefinitely
+        if (this.buffer.length > this.config.bufferSize * 2) {
+          // Keep only the most recent logs
+          this.buffer = this.buffer.slice(-this.config.bufferSize);
+        }
       }
     }
   }
@@ -581,6 +675,108 @@ class EnterpriseLogger {
    */
   clearLogs(): void {
     this.buffer = [];
+  }
+
+  /**
+   * Enable backend logging
+   * Call this method when backend logging endpoint is implemented
+   *
+   * ✅ Phase 10.92 Day 4: Allow runtime enabling of backend logging
+   *
+   * @example
+   * // When /api/logs endpoint is implemented:
+   * logger.enableBackendLogging();
+   */
+  enableBackendLogging(): void {
+    this.config.enableBackendLogging = true;
+    this.backendAvailable = null; // Reset availability check
+    this.backendWarningShown = false; // Reset warning flag
+  }
+
+  /**
+   * Disable backend logging
+   * Stops sending logs to backend, keeps them in local buffer only
+   *
+   * ✅ Phase 10.92 Day 4: Allow runtime disabling of backend logging
+   */
+  disableBackendLogging(): void {
+    this.config.enableBackendLogging = false;
+  }
+
+  /**
+   * Check if backend logging is enabled
+   *
+   * ✅ Phase 10.92 Day 4: Public getter for backend logging status
+   */
+  isBackendLoggingEnabled(): boolean {
+    return this.config.enableBackendLogging;
+  }
+
+  /**
+   * Reset backend availability check
+   * Forces logger to retry backend endpoint on next flush
+   *
+   * ✅ AUDIT FIX: Public method for debugging/troubleshooting
+   *
+   * @example
+   * // If backend was marked unavailable but is now working:
+   * logger.resetBackendAvailability();
+   */
+  resetBackendAvailability(): void {
+    this.backendAvailable = null;
+    this.backendWarningShown = false;
+  }
+
+  /**
+   * Set correlation ID for current request context
+   * Call this when receiving responses with X-Correlation-ID header
+   *
+   * ✅ Phase 10.943: Correlation ID tracking for request tracing
+   *
+   * @example
+   * // After API call:
+   * const correlationId = response.headers.get('X-Correlation-ID');
+   * if (correlationId) logger.setCorrelationId(correlationId);
+   */
+  setCorrelationId(correlationId: string | null): void {
+    this.currentCorrelationId = correlationId;
+  }
+
+  /**
+   * Get current correlation ID
+   *
+   * ✅ Phase 10.943: Get correlation ID for propagation
+   */
+  getCorrelationId(): string | null {
+    return this.currentCorrelationId;
+  }
+
+  /**
+   * Clear correlation ID (e.g., on navigation)
+   *
+   * ✅ Phase 10.943: Clear correlation context
+   */
+  clearCorrelationId(): void {
+    this.currentCorrelationId = null;
+  }
+
+  /**
+   * Get backend availability status
+   * Returns null if not yet checked, true if available, false if unavailable
+   *
+   * ✅ AUDIT FIX: Public getter for debugging/monitoring
+   */
+  getBackendAvailability(): boolean | null {
+    return this.backendAvailable;
+  }
+
+  /**
+   * Check if backend warning has been shown
+   *
+   * ✅ AUDIT FIX: Public getter for debugging
+   */
+  hasShownBackendWarning(): boolean {
+    return this.backendWarningShown;
   }
 
   /**

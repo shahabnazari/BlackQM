@@ -15,7 +15,7 @@ import { AuthService } from '../services/auth.service';
 @Injectable()
 export class OrcidStrategy extends PassportStrategy(Strategy, 'orcid') {
   constructor(
-    private configService: ConfigService,
+    configService: ConfigService,
     private authService: AuthService,
   ) {
     super({
@@ -32,7 +32,7 @@ export class OrcidStrategy extends PassportStrategy(Strategy, 'orcid') {
   async validate(
     accessToken: string,
     refreshToken: string,
-    params: any,
+    _params: any,
     profile: any,
     done: (err: any, user: any, info?: any) => void,
   ): Promise<any> {

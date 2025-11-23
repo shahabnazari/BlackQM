@@ -136,40 +136,70 @@ export class CoreService {
    * @returns Array of Paper objects with full-text URLs
    */
   async search(query: string, options?: CoreSearchOptions): Promise<Paper[]> {
+    // CORE requires API key - exit early if not configured
+    if (!this.apiKey) {
+      this.logger.warn('[CORE] Search skipped - no API key configured');
+      return [];
+    }
+
+    this.logger.log(`[CORE] Searching: "${query}"`);
+
+    // Phase 10.8: Use retry logic to handle Elasticsearch infrastructure failures
+    return this.searchWithRetry(query, options);
+  }
+
+  /**
+   * Execute CORE search with retry logic for infrastructure failures
+   *
+   * Phase 10.8: CORE's Elasticsearch cluster frequently returns HTTP 500 when shards
+   * are overloaded (es_rejected_execution_exception). Retry with exponential backoff
+   * to improve reliability without changing our code when CORE has capacity issues.
+   *
+   * RETRY STRATEGY:
+   * - Max 3 attempts (initial + 2 retries)
+   * - Exponential backoff: 1s, 2s between retries
+   * - Only retry HTTP 500 (infrastructure errors)
+   * - Don't retry 401 (auth), 429 (rate limit), or other errors
+   *
+   * @param query Search query string
+   * @param options Search filters
+   * @param attempt Current attempt number (for recursion)
+   * @returns Array of Paper objects
+   */
+  private async searchWithRetry(
+    query: string,
+    options?: CoreSearchOptions,
+    attempt: number = 1,
+  ): Promise<Paper[]> {
+    const MAX_ATTEMPTS = 3;
+    const RETRY_DELAYS = [1000, 2000]; // 1s, 2s
+
     try {
-      // CORE requires API key - exit early if not configured
-      if (!this.apiKey) {
-        this.logger.warn('[CORE] Search skipped - no API key configured');
-        return [];
+      // ========================================================================
+      // STEP 1: Construct query parameters
+      // ========================================================================
+      // Phase 10.8: Use query parameters for year filtering (not query string syntax)
+      // CORE API requires yearPublished.gte/lte parameters, NOT query string syntax
+      const params: any = {
+        q: query,
+        limit: options?.limit || 20,
+        offset: options?.offset || 0,
+      };
+
+      // Add year filtering as query parameters (not in query string)
+      if (options?.yearFrom) {
+        params['yearPublished.gte'] = options.yearFrom;
       }
-
-      this.logger.log(`[CORE] Searching: "${query}"`);
-
-      // ========================================================================
-      // STEP 1: Construct query with filters
-      // ========================================================================
-      let coreQuery = query;
-
-      // Add year filtering if provided
-      if (options?.yearFrom && options?.yearTo) {
-        coreQuery = `${query} AND yearPublished:[${options.yearFrom} TO ${options.yearTo}]`;
-      } else if (options?.yearFrom) {
-        coreQuery = `${query} AND yearPublished>=${options.yearFrom}`;
-      } else if (options?.yearTo) {
-        coreQuery = `${query} AND yearPublished<=${options.yearTo}`;
+      if (options?.yearTo) {
+        params['yearPublished.lte'] = options.yearTo;
       }
 
       // ========================================================================
       // STEP 2: Execute API request
       // ========================================================================
-      const params = {
-        q: coreQuery,
-        limit: options?.limit || 20,
-        offset: options?.offset || 0,
-      };
 
       const response = await firstValueFrom(
-        this.httpService.get(`${this.API_BASE_URL}/search/works`, {
+        this.httpService.get(`${this.API_BASE_URL}/search/works/`, {
           params,
           headers: {
             'Authorization': `Bearer ${this.apiKey}`,
@@ -186,19 +216,50 @@ export class CoreService {
         .map((item: any) => this.parsePaper(item))
         .filter((paper: Paper | null) => paper !== null);
 
-      this.logger.log(`[CORE] Returned ${papers.length} papers`);
+      // Log success (especially important if this was a retry)
+      if (attempt > 1) {
+        this.logger.log(`[CORE] ✅ Retry succeeded on attempt ${attempt} - returned ${papers.length} papers`);
+      } else {
+        this.logger.log(`[CORE] Returned ${papers.length} papers`);
+      }
+
       return papers;
     } catch (error: any) {
-      // Enterprise-grade error handling: Log but don't throw
-      if (error.response?.status === 401) {
+      const status = error.response?.status;
+
+      // ========================================================================
+      // RETRY LOGIC: Only retry HTTP 500 (Elasticsearch infrastructure failures)
+      // ========================================================================
+      if (status === 500 && attempt < MAX_ATTEMPTS) {
+        const delay = RETRY_DELAYS[attempt - 1];
+        this.logger.warn(
+          `[CORE] ⚠️  HTTP 500 (Elasticsearch overload) - Retry ${attempt}/${MAX_ATTEMPTS - 1} in ${delay}ms`,
+        );
+
+        // Wait with exponential backoff
+        await new Promise(resolve => setTimeout(resolve, delay));
+
+        // Recursive retry
+        return this.searchWithRetry(query, options, attempt + 1);
+      }
+
+      // ========================================================================
+      // TERMINAL ERRORS: Don't retry these
+      // ========================================================================
+      if (status === 401) {
         this.logger.error(`[CORE] ⚠️  UNAUTHORIZED (401) - Invalid API key`);
-      } else if (error.response?.status === 429) {
+      } else if (status === 429) {
         this.logger.error(`[CORE] ⚠️  RATE LIMITED (429) - Exceeded 10 req/sec`);
+      } else if (status === 500) {
+        this.logger.error(
+          `[CORE] ❌ HTTP 500 failed after ${attempt} attempts - Elasticsearch cluster overloaded`,
+        );
       } else {
         this.logger.error(
-          `[CORE] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
+          `[CORE] Search failed: ${error.message} (Status: ${status || 'N/A'})`,
         );
       }
+
       return [];
     }
   }
@@ -231,7 +292,6 @@ export class CoreService {
       const id = item.id?.toString() || '';
       const title = item.title || 'Untitled';
       const abstract = item.abstract || '';
-      const publishedDate = item.publishedDate || item.yearPublished?.toString() || '';
       const year = item.yearPublished || null;
 
       // Skip if no title (invalid paper)
@@ -279,11 +339,9 @@ export class CoreService {
         sjrScore: null,
       });
 
-      // Apply eligibility check (300+ word minimum)
-      if (!isPaperEligible(wordCount)) {
-        this.logger.debug(`[CORE] Paper filtered out: "${title}" (insufficient word count)`);
-        return null;
-      }
+      // Phase 10.7.10: REMOVED EARLY FILTER - Let papers be returned with isEligible flag
+      // Papers will be filtered later in the pipeline if needed, but we don't throw them away here
+      // This matches the pattern used by other sources (CrossRef, ArXiv, etc.)
 
       // Build paper object
       return {
@@ -301,7 +359,9 @@ export class CoreService {
         abstractWordCount,
         wordCount,
         wordCountExcludingRefs,
-        isEligible: isPaperEligible(wordCount),
+        // FIX: API sources without full text only have title+abstract (~200-300 words)
+        // Use lower threshold (150 words) instead of default (1000 words)
+        isEligible: isPaperEligible(wordCount, 150),
         qualityScore: qualityComponents.totalScore,
         isHighQuality: qualityComponents.totalScore >= 50,
       };

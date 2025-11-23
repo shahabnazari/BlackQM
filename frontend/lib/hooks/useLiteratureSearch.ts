@@ -59,6 +59,7 @@ import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useLiteratureSearchStore } from '@/lib/stores/literature-search.store';
 import { useProgressiveSearch } from './useProgressiveSearch';
+import { logger } from '@/lib/utils/logger';
 
 /**
  * Query correction message structure
@@ -138,16 +139,16 @@ export function useLiteratureSearch(
     useState<QueryCorrectionMessage | null>(null);
 
   // Zustand store state and actions (Phase 10.7.10: academicDatabases moved to Zustand)
-  const {
-    query,
-    papers,
-    loading,
-    totalResults,
-    filters,
-    appliedFilters,
-    academicDatabases, // Phase 10.7.10: Now from Zustand store (persisted in localStorage)
-    setAcademicDatabases, // Phase 10.7.10: Action to update source selection
-  } = useLiteratureSearchStore();
+  // ✅ PERFORMANCE FIX: Use selective subscriptions to prevent re-render storm
+  // Each selector only subscribes to its specific value, not the entire store
+  const query = useLiteratureSearchStore((state) => state.query);
+  const papers = useLiteratureSearchStore((state) => state.papers);
+  const loading = useLiteratureSearchStore((state) => state.loading);
+  const totalResults = useLiteratureSearchStore((state) => state.totalResults);
+  const filters = useLiteratureSearchStore((state) => state.filters);
+  const appliedFilters = useLiteratureSearchStore((state) => state.appliedFilters);
+  const academicDatabases = useLiteratureSearchStore((state) => state.academicDatabases);
+  const setAcademicDatabases = useLiteratureSearchStore((state) => state.setAcademicDatabases);
 
   // Prevent duplicate search requests
   const isSearchingRef = useRef(false);
@@ -192,21 +193,20 @@ export function useLiteratureSearch(
 
     // Prevent duplicate searches
     if (isSearchingRef.current || progressiveSearching) {
-      console.log(
-        '⏳ Search already in progress, skipping duplicate request...'
-      );
+      logger.debug('Search already in progress, skipping duplicate request', 'useLiteratureSearch');
       return;
     }
 
     isSearchingRef.current = true;
 
     try {
-      console.log('='.repeat(80));
-      console.log('🔍 SEARCH START (Progressive Loading)');
-      console.log('Query:', query);
-      console.log('Applied Filters:', appliedFilters);
-      console.log('Selected Sources:', academicDatabases);
-      console.log('='.repeat(80));
+      logger.group('SEARCH START (Progressive Loading)');
+      logger.info('Search parameters', 'useLiteratureSearch', {
+        query,
+        appliedFilters,
+        selectedSources: academicDatabases,
+        sourceCount: academicDatabases.length,
+      });
 
       // Execute progressive search (handles all loading, progress, metadata, toasts)
       // This will:
@@ -220,10 +220,11 @@ export function useLiteratureSearch(
       const finalPapers = useLiteratureSearchStore.getState().papers;
       const finalTotal = useLiteratureSearchStore.getState().totalResults;
 
-      console.log('✅ Progressive search complete');
-      console.log(`📚 Final papers count: ${finalPapers.length}`);
-      console.log(`📈 Total results: ${finalTotal}`);
-      console.log('='.repeat(80));
+      logger.info('Progressive search complete', 'useLiteratureSearch', {
+        finalPapersCount: finalPapers.length,
+        totalResults: finalTotal,
+      });
+      logger.groupEnd();
 
       // Success callback - pass papers array for auto-selection
       // (page.tsx uses this to auto-select papers)
@@ -231,7 +232,10 @@ export function useLiteratureSearch(
         onSearchSuccess?.(finalPapers.length, finalTotal, finalPapers);
       }
     } catch (error) {
-      console.error('❌ Progressive search error:', error);
+      logger.error('Progressive search error', 'useLiteratureSearch', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      logger.groupEnd();
       // Error toast already shown by progressive search hook
       onSearchError?.(error as Error);
     } finally {

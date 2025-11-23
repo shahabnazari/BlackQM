@@ -18,6 +18,7 @@ import {
   incrementalExtractionApi,
   type CorpusStats,
 } from '@/lib/api/services/incremental-extraction-api.service';
+import { logger } from '@/lib/utils/logger';
 import { DollarSign, TrendingDown, Database, BarChart3 } from 'lucide-react';
 
 export function CostSavingsCard() {
@@ -39,7 +40,7 @@ export function CostSavingsCard() {
       setError(
         err instanceof Error ? err.message : 'Failed to load cost savings'
       );
-      console.error('Error loading corpus stats:', err);
+      logger.error('Error loading corpus stats', 'CostSavingsCard', { error: err });
     } finally {
       setLoading(false);
     }

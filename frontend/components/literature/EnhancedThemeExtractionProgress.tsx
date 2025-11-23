@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen,
@@ -14,7 +14,9 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
+  Database, // PHASE 10.94.3: Added for Stage 0 (Preparing)
 } from 'lucide-react';
+import { logger } from '@/lib/utils/logger';
 
 /**
  * EnhancedThemeExtractionProgress Component
@@ -95,6 +97,9 @@ export interface EnhancedThemeExtractionProgressProps {
   // Phase 10 Day 19.5: Iteration support
   mode?: 'quick' | 'iterative';
   iterationData?: IterationData;
+  // Phase 10.94 FIX: Accumulated metrics from Container (bypasses React batching)
+  // This is the source of truth for completed stage metrics
+  accumulatedStageMetrics?: Record<number, TransparentProgressMessage>;
 }
 
 // ============================================================================
@@ -107,17 +112,32 @@ interface StageConfig {
   icon: React.ElementType;
   color: string;
   bgColor: string;
+  // PERF FIX P-HIGH-002: Pre-computed border color to avoid string.replace() in render
+  borderColor: string;
   description: string;
   canRefine: boolean;
 }
 
 const STAGES: StageConfig[] = [
+  // PHASE 10.94.3: Stage 0 (Preparing) - Distinct from Familiarization
+  // This stage covers paper saving and full-text fetching (0-40%)
+  {
+    number: 0,
+    name: 'Preparing Data',
+    icon: Database,
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-100',
+    borderColor: 'border-gray-600', // PERF FIX P-HIGH-002
+    description: 'Saving papers to database and fetching full-text content',
+    canRefine: false,
+  },
   {
     number: 1,
     name: 'Familiarization',
     icon: BookOpen,
     color: 'text-blue-600',
     bgColor: 'bg-blue-100',
+    borderColor: 'border-blue-600', // PERF FIX P-HIGH-002
     description: 'Reading and immersing in the full dataset',
     canRefine: false,
   },
@@ -127,6 +147,7 @@ const STAGES: StageConfig[] = [
     icon: Code2,
     color: 'text-purple-600',
     bgColor: 'bg-purple-100',
+    borderColor: 'border-purple-600', // PERF FIX P-HIGH-002
     description: 'Generating systematic codes across all sources',
     canRefine: false,
   },
@@ -136,6 +157,7 @@ const STAGES: StageConfig[] = [
     icon: Search,
     color: 'text-green-600',
     bgColor: 'bg-green-100',
+    borderColor: 'border-green-600', // PERF FIX P-HIGH-002
     description: 'Clustering codes into candidate themes',
     canRefine: false,
   },
@@ -145,6 +167,7 @@ const STAGES: StageConfig[] = [
     icon: GitBranch,
     color: 'text-orange-600',
     bgColor: 'bg-orange-100',
+    borderColor: 'border-orange-600', // PERF FIX P-HIGH-002
     description: 'Reviewing themes against codes and full dataset',
     canRefine: true,
   },
@@ -154,6 +177,7 @@ const STAGES: StageConfig[] = [
     icon: FileText,
     color: 'text-pink-600',
     bgColor: 'bg-pink-100',
+    borderColor: 'border-pink-600', // PERF FIX P-HIGH-002
     description: 'Defining and naming each theme clearly',
     canRefine: true,
   },
@@ -163,6 +187,7 @@ const STAGES: StageConfig[] = [
     icon: CheckCircle,
     color: 'text-teal-600',
     bgColor: 'bg-teal-100',
+    borderColor: 'border-teal-600', // PERF FIX P-HIGH-002
     description: 'Generating final analysis report',
     canRefine: true,
   },
@@ -181,6 +206,7 @@ export default function EnhancedThemeExtractionProgress({
   allowIterativeRefinement = false,
   mode = 'quick',
   iterationData,
+  accumulatedStageMetrics, // Phase 10.94 FIX: Source of truth from Container
 }: EnhancedThemeExtractionProgressProps) {
   const [expertiseLevel, setExpertiseLevel] =
     useState<UserExpertiseLevel>('researcher');
@@ -188,22 +214,13 @@ export default function EnhancedThemeExtractionProgress({
     new Set([currentStage])
   );
 
-  // Phase 10 Day 30: Store completed stage metrics for persistent display
-  const [completedStageMetrics, setCompletedStageMetrics] = useState<Record<number, TransparentProgressMessage>>({});
+  // Phase 10.94 FIX: Use passed-in accumulatedStageMetrics as source of truth
+  // This is populated synchronously in the Container before React batches state updates
+  // Fallback to empty object if not provided (for backwards compatibility)
+  const completedStageMetrics = accumulatedStageMetrics || {};
 
-  // Phase 10 Day 30: Capture and persist metrics as stages progress
-  useEffect(() => {
-    if (transparentMessage && transparentMessage.liveStats) {
-      // Always save the latest metrics for each stage
-      // This ensures we have the final state when a stage completes
-      setCompletedStageMetrics(prev => ({
-        ...prev,
-        [transparentMessage.stageNumber]: transparentMessage
-      }));
-    }
-  }, [transparentMessage]);
-
-  const toggleStageExpansion = (stageNumber: number) => {
+  // AUDIT FIX H1: Memoize toggleStageExpansion to prevent unnecessary re-renders
+  const toggleStageExpansion = useCallback((stageNumber: number) => {
     setExpandedStages(prev => {
       const newSet = new Set(prev);
       if (newSet.has(stageNumber)) {
@@ -213,9 +230,38 @@ export default function EnhancedThemeExtractionProgress({
       }
       return newSet;
     });
-  };
+  }, []);
 
   const currentStageConfig = STAGES.find(s => s.number === currentStage);
+
+  // 🚨 PHASE 10.94.3: Diagnostic logging for Stage 0 (Preparing Data)
+  // Helps trace paper save progress during data preparation phase
+  // AUDIT FIX P-MINOR-001: Only log in development to avoid performance impact
+  if (process.env.NODE_ENV === 'development' && currentStage === 0 && transparentMessage?.liveStats) {
+    logger.debug('🖥️ EnhancedThemeExtractionProgress render - Stage 0 stats', 'EnhancedThemeExtractionProgress', {
+      currentStage,
+      percentage,
+      currentArticle: transparentMessage.liveStats.currentArticle,
+      totalArticles: transparentMessage.liveStats.totalArticles,
+      stageName: transparentMessage.stageName,
+    });
+  }
+
+  // 🚨 STRICT AUDIT FIX: Diagnostic logging for Stage 1 stats issue
+  // This helps trace if the component is receiving correct data from the modal
+  // AUDIT FIX P-MINOR-001: Only log in development to avoid performance impact
+  if (process.env.NODE_ENV === 'development' && currentStage === 1 && transparentMessage?.liveStats) {
+    logger.debug('🖥️ EnhancedThemeExtractionProgress render - Stage 1 stats', 'EnhancedThemeExtractionProgress', {
+      currentStage,
+      percentage,
+      fullTextRead: transparentMessage.liveStats.fullTextRead,
+      abstractsRead: transparentMessage.liveStats.abstractsRead,
+      totalWordsRead: transparentMessage.liveStats.totalWordsRead,
+      currentArticle: transparentMessage.liveStats.currentArticle,
+      totalArticles: transparentMessage.liveStats.totalArticles,
+      hasArticleTitle: !!transparentMessage.liveStats.articleTitle,
+    });
+  }
 
   return (
     <div className="w-full space-y-6">
@@ -234,12 +280,14 @@ export default function EnhancedThemeExtractionProgress({
         {/* Progressive Disclosure Toggle (Patent Claim #10) */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Detail Level:</span>
-          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+          {/* AUDIT FIX A1: Added aria-pressed for toggle state accessibility */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1" role="group" aria-label="Detail level selection">
             {(['novice', 'researcher', 'expert'] as UserExpertiseLevel[]).map(
               level => (
                 <button
                   key={level}
                   onClick={() => setExpertiseLevel(level)}
+                  aria-pressed={expertiseLevel === level}
                   className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
                     expertiseLevel === level
                       ? 'bg-white text-blue-600 shadow-sm'
@@ -370,9 +418,89 @@ export default function EnhancedThemeExtractionProgress({
                 )}
               </div>
 
+              {/* PHASE 10.94.3: Stage 0 (Preparing Data) - Main Display */}
+              {/* Shows paper save progress during data preparation phase */}
+              {currentStage === 0 && transparentMessage?.liveStats && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-3 p-4 bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg border-2 border-gray-300"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <Database className="w-5 h-5 text-gray-600" />
+                    <h5 className="text-sm font-bold text-gray-900">
+                      Data Preparation Progress
+                    </h5>
+                    <motion.span
+                      animate={{ opacity: [1, 0.4, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className="ml-auto px-2 py-0.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-full"
+                    >
+                      ⚙️ PREPARING
+                    </motion.span>
+                  </div>
+
+                  {/* Progress Grid */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <p className="text-xs text-gray-600 mb-1">
+                        📚 Papers Saved
+                      </p>
+                      <p className="text-2xl font-bold text-gray-600">
+                        {transparentMessage.liveStats.currentArticle || 0}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        To database
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <p className="text-xs text-gray-600 mb-1">
+                        📁 Total Selected
+                      </p>
+                      <p className="text-2xl font-bold text-gray-700">
+                        {transparentMessage.liveStats.totalArticles || 0}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Papers to process
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  {transparentMessage.liveStats.totalArticles && transparentMessage.liveStats.totalArticles > 0 && (
+                    <div className="mb-3">
+                      <div className="flex justify-between text-xs text-gray-600 mb-1">
+                        <span>Saving papers...</span>
+                        <span>
+                          {Math.round(((transparentMessage.liveStats.currentArticle || 0) / transparentMessage.liveStats.totalArticles) * 100)}%
+                        </span>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <motion.div
+                          className="h-full bg-gray-500"
+                          initial={{ width: 0 }}
+                          animate={{
+                            width: `${((transparentMessage.liveStats.currentArticle || 0) / transparentMessage.liveStats.totalArticles) * 100}%`
+                          }}
+                          transition={{ duration: 0.3 }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Info Note */}
+                  <div className="text-xs text-gray-700 bg-gray-100 rounded p-2">
+                    💡 <strong>Why this matters:</strong> We save papers to the database in batches of 10 for optimal performance. Full-text content is fetched from open access sources where available.
+                  </div>
+                </motion.div>
+              )}
+
               {/* Phase 10 Day 30: Real-time Familiarization Metrics (Stage 1 - Main Display) */}
               {/* ONLY show during active Stage 1 processing (top section) */}
-              {currentStage === 1 && transparentMessage?.liveStats && (transparentMessage.liveStats.totalWordsRead || 0) > 0 && (
+              {/* 🚨 STRICT AUDIT FIX: Removed totalWordsRead > 0 requirement */}
+              {/* This was preventing the section from showing until the first paper was fully processed */}
+              {/* Now shows immediately with zeros, then updates in real-time */}
+              {currentStage === 1 && transparentMessage?.liveStats && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -671,15 +799,18 @@ export default function EnhancedThemeExtractionProgress({
               key={stage.number}
               className={`rounded-lg border-2 transition-all ${
                 isCurrent
-                  ? `${stage.bgColor} ${stage.color.replace('text-', 'border-')}`
+                  ? `${stage.bgColor} ${stage.borderColor}` // PERF FIX P-HIGH-002: Use pre-computed borderColor
                   : isCompleted
                     ? 'bg-green-50 border-green-200'
                     : 'bg-gray-50 border-gray-200'
               }`}
             >
               {/* Stage Header */}
+              {/* AUDIT FIX A2/A3: Added aria-expanded and aria-controls for accordion accessibility */}
               <button
                 onClick={() => toggleStageExpansion(stage.number)}
+                aria-expanded={expandedStages.has(stage.number)}
+                aria-controls={`stage-${stage.number}-content`}
                 className="w-full flex items-center justify-between p-4 text-left"
               >
                 <div className="flex items-center gap-3">
@@ -751,6 +882,7 @@ export default function EnhancedThemeExtractionProgress({
               <AnimatePresence>
                 {isExpanded && (
                   <motion.div
+                    id={`stage-${stage.number}-content`}
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
@@ -762,6 +894,8 @@ export default function EnhancedThemeExtractionProgress({
                       <div className="bg-white/50 rounded-lg p-3 text-sm text-gray-700">
                         {expertiseLevel === 'novice' && (
                           <p>
+                            {stage.number === 0 &&
+                              "We're saving your selected papers to the database and downloading full-text content where available."}
                             {stage.number === 1 &&
                               "We're carefully reading all your sources to understand the content."}
                             {stage.number === 2 &&
@@ -778,6 +912,8 @@ export default function EnhancedThemeExtractionProgress({
                         )}
                         {expertiseLevel === 'researcher' && (
                           <p>
+                            {stage.number === 0 &&
+                              'Persisting selected corpus to database. Fetching full-text content from open access sources and publisher APIs where available.'}
                             {stage.number === 1 &&
                               'Immersive reading of full dataset with note-taking on patterns and meanings (Braun & Clarke 2006).'}
                             {stage.number === 2 &&
@@ -794,6 +930,8 @@ export default function EnhancedThemeExtractionProgress({
                         )}
                         {expertiseLevel === 'expert' && (
                           <p>
+                            {stage.number === 0 &&
+                              'Batch paper persistence (batch_size=10, 1s delay). GROBID PDF extraction + publisher HTML scrapers. Rate-limited API calls with exponential backoff.'}
                             {stage.number === 1 &&
                               'Corpus-level semantic embedding: OpenAI text-embedding-3-large (3072 dims). Initial pattern notation.'}
                             {stage.number === 2 &&
@@ -810,62 +948,313 @@ export default function EnhancedThemeExtractionProgress({
                         )}
                       </div>
 
-                      {/* Phase 10 Day 30: Familiarization Metrics Summary (Stage 1 - Accordion) */}
-                      {/* ONLY show after Stage 1 completes (persistent display in accordion) */}
-                      {stage.number === 1 &&
-                        isCompleted &&
-                        completedStageMetrics[1]?.liveStats && (
+                      {/* PHASE 10.94.3: Stage 0 (Preparing Data) Accordion Section */}
+                      {/* Shows paper save progress - distinct from familiarization */}
+                      {stage.number === 0 && (isCurrent || isCompleted) && (() => {
+                        // Stage 0 uses currentArticle/totalArticles for batch progress
+                        const liveStats = isCurrent
+                          ? transparentMessage?.liveStats
+                          : completedStageMetrics[0]?.liveStats;
+
+                        // Only show if we have progress data
+                        if (!liveStats?.currentArticle && !liveStats?.totalArticles) {
+                          // Show minimal preparing indicator if no stats yet
+                          if (isCurrent) {
+                            return (
+                              <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-3 p-4 bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg border-2 border-gray-300"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Database className="w-5 h-5 text-gray-600 animate-pulse" />
+                                  <h5 className="text-sm font-bold text-gray-900">
+                                    Initializing Data Preparation...
+                                  </h5>
+                                </div>
+                                <p className="text-xs text-gray-600 mt-2">
+                                  Preparing to save papers to database and fetch full-text content.
+                                </p>
+                              </motion.div>
+                            );
+                          }
+                          return null;
+                        }
+
+                        const papersSaved = liveStats.currentArticle || 0;
+                        const totalPapers = liveStats.totalArticles || 0;
+                        const progressPercent = totalPapers > 0 ? Math.round((papersSaved / totalPapers) * 100) : 0;
+
+                        return (
                           <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="mt-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200"
+                            className={`mt-3 p-4 rounded-lg border-2 ${
+                              isCurrent
+                                ? 'bg-gradient-to-br from-gray-50 to-slate-50 border-gray-300'
+                                : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200'
+                            }`}
                           >
                             <div className="flex items-center gap-2 mb-3">
-                              <BookOpen className="w-5 h-5 text-blue-600" />
+                              <Database className={`w-5 h-5 ${isCurrent ? 'text-gray-600' : 'text-green-600'}`} />
                               <h5 className="text-sm font-bold text-gray-900">
-                                Familiarization Summary
+                                {isCurrent ? '💾 Saving Papers to Database' : '✅ Data Preparation Complete'}
                               </h5>
+                              {isCurrent && (
+                                <motion.span
+                                  animate={{ opacity: [1, 0.4, 1] }}
+                                  transition={{ duration: 1.5, repeat: Infinity }}
+                                  className="ml-auto px-2 py-0.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-full"
+                                >
+                                  ⚙️ PREPARING
+                                </motion.span>
+                              )}
                             </div>
 
-                            {/* Progress Grid - Completed Metrics */}
-                            <div className="grid grid-cols-3 gap-3 mb-3">
-                              <div className="bg-white rounded-lg p-3 shadow-sm">
-                                <p className="text-xs text-gray-600 mb-1">
-                                  📖 Total Words Read
-                                </p>
-                                <p className="text-2xl font-bold text-blue-600">
-                                  {completedStageMetrics[1].liveStats.totalWordsRead?.toLocaleString() || 0}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Final count
-                                </p>
+                            {/* Progress Bar */}
+                            <div className="mb-3">
+                              <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                <span>Papers Saved</span>
+                                <span>{papersSaved} of {totalPapers} ({progressPercent}%)</span>
                               </div>
-                              <div className="bg-white rounded-lg p-3 shadow-sm">
-                                <p className="text-xs text-gray-600 mb-1">
-                                  📄 Full Articles
-                                </p>
-                                <p className="text-2xl font-bold text-green-600">
-                                  {completedStageMetrics[1].liveStats.fullTextRead || 0}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Complete texts
-                                </p>
-                              </div>
-                              <div className="bg-white rounded-lg p-3 shadow-sm">
-                                <p className="text-xs text-gray-600 mb-1">
-                                  📝 Abstracts
-                                </p>
-                                <p className="text-2xl font-bold text-purple-600">
-                                  {completedStageMetrics[1].liveStats.abstractsRead || 0}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Summaries
-                                </p>
+                              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <motion.div
+                                  className={`h-full ${isCurrent ? 'bg-gray-500' : 'bg-green-500'}`}
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${progressPercent}%` }}
+                                  transition={{ duration: 0.3 }}
+                                />
                               </div>
                             </div>
 
-                            {/* Phase 10 Day 31.2: Scientific Embedding Statistics (Accordion) */}
-                            {completedStageMetrics[1].liveStats.embeddingStats && (
+                            {/* Stats Grid */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-white rounded-lg p-3 shadow-sm">
+                                <p className="text-xs text-gray-600 mb-1">📚 Papers Saved</p>
+                                <motion.p
+                                  key={papersSaved}
+                                  initial={isCurrent ? { scale: 1.1, color: '#4b5563' } : false}
+                                  animate={{ scale: 1, color: isCurrent ? '#4b5563' : '#16a34a' }}
+                                  className="text-2xl font-bold"
+                                >
+                                  {papersSaved}
+                                </motion.p>
+                              </div>
+                              <div className="bg-white rounded-lg p-3 shadow-sm">
+                                <p className="text-xs text-gray-600 mb-1">📁 Total Selected</p>
+                                <p className="text-2xl font-bold text-gray-700">
+                                  {totalPapers}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Info Note */}
+                            <div className={`mt-3 text-xs rounded p-2 ${
+                              isCurrent
+                                ? 'text-gray-700 bg-gray-100'
+                                : 'text-green-700 bg-green-50'
+                            }`}>
+                              💡 <strong>What happens here:</strong>{' '}
+                              {isCurrent
+                                ? 'Each paper is saved to database in batches of 10. Full-text content is fetched from open access sources and publisher APIs where available.'
+                                : 'All papers have been saved. Next: Stage 1 (Familiarization) will read and analyze the content to build semantic understanding.'
+                              }
+                            </div>
+                          </motion.div>
+                        );
+                      })()}
+
+                      {/* Phase 10.94 FIX: Familiarization Metrics (Stage 1 - Accordion) */}
+                      {/* 🚨 CRITICAL FIX (2025-01-XX): Relaxed display conditions */}
+                      {/* Show data whenever it exists, regardless of stage state */}
+                      {/* This ensures counts display even if WebSocket was slow or React batched updates */}
+                      {stage.number === 1 && (isCurrent || isCompleted) && (() => {
+                        // 🚨 BUG FIX: Use isCurrent to determine data source
+                        // When Stage 1 is completed and we're on Stage 2+, transparentMessage
+                        // contains Stage 2+ data, NOT Stage 1 data!
+                        // We must use completedStageMetrics[1] for Stage 1's cached data
+                        const liveStats = isCurrent
+                          ? transparentMessage?.liveStats             // During Stage 1: use live WebSocket
+                          : completedStageMetrics[1]?.liveStats;      // After Stage 1: use cached Stage 1 data
+
+                        // STRICT AUDIT FIX DX2: Use enterprise logger instead of console.log
+                        // This diagnostic logging helps trace Stage 1 stats issues
+                        logger.debug('🖥️ Stage 1 accordion render', 'EnhancedThemeExtractionProgress', {
+                          isCurrent,
+                          isCompleted,
+                          currentStage,
+                          hasLiveWebSocketData: !!transparentMessage?.liveStats,
+                          liveWebSocket: transparentMessage?.liveStats ? {
+                            fullTextRead: transparentMessage.liveStats.fullTextRead,
+                            abstractsRead: transparentMessage.liveStats.abstractsRead,
+                            totalWordsRead: transparentMessage.liveStats.totalWordsRead,
+                            currentArticle: transparentMessage.liveStats.currentArticle,
+                          } : null,
+                          hasCachedStage1Data: !!completedStageMetrics[1]?.liveStats,
+                          cachedStage1: completedStageMetrics[1]?.liveStats ? {
+                            fullTextRead: completedStageMetrics[1].liveStats.fullTextRead,
+                            abstractsRead: completedStageMetrics[1].liveStats.abstractsRead,
+                            totalWordsRead: completedStageMetrics[1].liveStats.totalWordsRead,
+                          } : null,
+                          displayedStats: liveStats ? {
+                            fullTextRead: liveStats.fullTextRead,
+                            abstractsRead: liveStats.abstractsRead,
+                            totalWordsRead: liveStats.totalWordsRead,
+                          } : null,
+                          dataSource: isCurrent ? 'LIVE WebSocket' :
+                                     completedStageMetrics[1]?.liveStats ? 'CACHED Stage 1' : 'NONE',
+                        });
+                        
+                        // 🚨 CRITICAL FIX: Show accordion as soon as liveStats exists
+                        // Don't wait for non-zero counts - show "0" is better than hiding the section
+                        // This ensures users see the familiarization section immediately
+                        if (!liveStats) {
+                          logger.warn('No liveStats available for Stage 1 accordion', 'EnhancedThemeExtractionProgress');
+                          return null;
+                        }
+
+                        logger.debug('Rendering Stage 1 accordion with data', 'EnhancedThemeExtractionProgress', {
+                          totalWordsRead: liveStats.totalWordsRead || 0,
+                          fullTextRead: liveStats.fullTextRead || 0,
+                          abstractsRead: liveStats.abstractsRead || 0,
+                        });
+                        
+                        return (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={`mt-3 p-4 rounded-lg border-2 ${
+                              isCurrent
+                                ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300'
+                                : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-3">
+                              <BookOpen className={`w-5 h-5 ${isCurrent ? 'text-green-600' : 'text-blue-600'}`} />
+                              <h5 className="text-sm font-bold text-gray-900">
+                                {isCurrent ? '📖 Live Reading Progress' : '✅ Familiarization Complete'}
+                              </h5>
+                              {/* Phase 10.94: Data source indicator */}
+                              {/* BUG FIX: Properly indicate source - live only during Stage 1, cached after */}
+                              {(() => {
+                                const hasLiveData = isCurrent && transparentMessage?.liveStats;
+                                const hasCachedData = !isCurrent && completedStageMetrics[1]?.liveStats;
+                                
+                                if (hasLiveData) {
+                                  return (
+                                    <motion.span
+                                      animate={{ opacity: [1, 0.4, 1] }}
+                                      transition={{ duration: 1.5, repeat: Infinity }}
+                                      className="ml-auto px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full"
+                                    >
+                                      🟢 LIVE
+                                    </motion.span>
+                                  );
+                                } else if (hasCachedData) {
+                                  return (
+                                    <span className="ml-auto px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                                      🔵 CACHED
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+
+                            {/* Current article being read (only during Stage 1) */}
+                            {isCurrent && transparentMessage?.liveStats?.articleTitle && (
+                              <motion.div
+                                key={transparentMessage.liveStats.currentArticle || 0}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="mb-3 p-3 bg-white rounded-lg border border-green-200 shadow-sm"
+                              >
+                                <p className="text-xs text-gray-600 mb-1">Currently Reading:</p>
+                                <p className="text-sm font-medium text-gray-800 truncate">
+                                  {transparentMessage.liveStats.articleTitle}
+                                </p>
+                                <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                                  <span>
+                                    Article {transparentMessage.liveStats.currentArticle || 0} of {transparentMessage.liveStats.totalArticles || 0}
+                                  </span>
+                                  {transparentMessage.liveStats.articleType && (
+                                    <span className={`px-1.5 py-0.5 rounded ${
+                                      transparentMessage.liveStats.articleType === 'full-text'
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-purple-100 text-purple-700'
+                                    }`}>
+                                      {transparentMessage.liveStats.articleType === 'full-text' ? '📄 Full-text' : '📝 Abstract'}
+                                    </span>
+                                  )}
+                                  {transparentMessage.liveStats.articleWords && (
+                                    <span>{transparentMessage.liveStats.articleWords.toLocaleString()} words</span>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+
+                            {/* Progress Grid - Use real-time data during Stage 1, preserved data after */}
+                            {(() => {
+                              const stats = isCurrent
+                                ? transparentMessage?.liveStats
+                                : completedStageMetrics[1]?.liveStats;
+                              if (!stats) return null;
+                              return (
+                                <div className="grid grid-cols-3 gap-3 mb-3">
+                                  <div className="bg-white rounded-lg p-3 shadow-sm">
+                                    <p className="text-xs text-gray-600 mb-1">
+                                      📖 Total Words Read
+                                    </p>
+                                    <motion.p
+                                      key={stats.totalWordsRead || 0}
+                                      initial={isCurrent ? { scale: 1.1, color: '#16a34a' } : false}
+                                      animate={{ scale: 1, color: isCurrent ? '#16a34a' : '#2563eb' }}
+                                      className="text-2xl font-bold"
+                                    >
+                                      {(stats.totalWordsRead || 0).toLocaleString()}
+                                    </motion.p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {isCurrent ? 'Counting...' : 'Final count'}
+                                    </p>
+                                  </div>
+                                  <div className="bg-white rounded-lg p-3 shadow-sm">
+                                    <p className="text-xs text-gray-600 mb-1">
+                                      📄 Full Articles
+                                    </p>
+                                    <motion.p
+                                      key={stats.fullTextRead || 0}
+                                      initial={isCurrent ? { scale: 1.1, color: '#16a34a' } : false}
+                                      animate={{ scale: 1, color: '#16a34a' }}
+                                      className="text-2xl font-bold"
+                                    >
+                                      {stats.fullTextRead || 0}
+                                    </motion.p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Complete texts
+                                    </p>
+                                  </div>
+                                  <div className="bg-white rounded-lg p-3 shadow-sm">
+                                    <p className="text-xs text-gray-600 mb-1">
+                                      📝 Abstracts
+                                    </p>
+                                    <motion.p
+                                      key={stats.abstractsRead || 0}
+                                      initial={isCurrent ? { scale: 1.1, color: '#9333ea' } : false}
+                                      animate={{ scale: 1, color: '#9333ea' }}
+                                      className="text-2xl font-bold"
+                                    >
+                                      {stats.abstractsRead || 0}
+                                    </motion.p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Summaries
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Phase 10 Day 31.2: Scientific Embedding Statistics - Only show when completed */}
+                            {isCompleted && completedStageMetrics[1]?.liveStats?.embeddingStats && (
                               <div className="mt-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
                                 <div className="flex items-center gap-2 mb-3">
                                   <Sparkles className="w-5 h-5 text-indigo-600" />
@@ -877,31 +1266,31 @@ export default function EnhancedThemeExtractionProgress({
                                   <div className="bg-white rounded-lg p-3 shadow-sm">
                                     <p className="text-xs text-gray-600 mb-1">AI Model</p>
                                     <p className="text-sm font-bold text-indigo-700">
-                                      {completedStageMetrics[1].liveStats.embeddingStats.model}
+                                      {completedStageMetrics[1]?.liveStats?.embeddingStats?.model || 'N/A'}
                                     </p>
                                   </div>
                                   <div className="bg-white rounded-lg p-3 shadow-sm">
                                     <p className="text-xs text-gray-600 mb-1">Vector Dimensions</p>
                                     <p className="text-sm font-bold text-indigo-700">
-                                      {completedStageMetrics[1].liveStats.embeddingStats.dimensions.toLocaleString()}
+                                      {completedStageMetrics[1]?.liveStats?.embeddingStats?.dimensions?.toLocaleString() || 'N/A'}
                                     </p>
                                   </div>
                                   <div className="bg-white rounded-lg p-3 shadow-sm">
                                     <p className="text-xs text-gray-600 mb-1">Embeddings Generated</p>
                                     <p className="text-sm font-bold text-indigo-700">
-                                      {completedStageMetrics[1].liveStats.embeddingStats.totalEmbeddingsGenerated}
+                                      {completedStageMetrics[1]?.liveStats?.embeddingStats?.totalEmbeddingsGenerated || 0}
                                     </p>
                                   </div>
                                   <div className="bg-white rounded-lg p-3 shadow-sm">
                                     <p className="text-xs text-gray-600 mb-1">Processing Method</p>
                                     <p className="text-sm font-bold text-indigo-700">
-                                      {completedStageMetrics[1].liveStats.embeddingStats.processingMethod === 'chunked-averaged'
+                                      {completedStageMetrics[1]?.liveStats?.embeddingStats?.processingMethod === 'chunked-averaged'
                                         ? 'Chunked & Averaged'
                                         : 'Single-pass'}
                                     </p>
                                   </div>
                                 </div>
-                                {completedStageMetrics[1].liveStats.embeddingStats.averageEmbeddingMagnitude && (
+                                {completedStageMetrics[1]?.liveStats?.embeddingStats?.averageEmbeddingMagnitude && (
                                   <div className="bg-white rounded-lg p-3 shadow-sm mb-3">
                                     <p className="text-xs text-gray-600 mb-1">Average Embedding Magnitude (L2 Norm)</p>
                                     <p className="text-lg font-bold text-indigo-700">
@@ -912,7 +1301,7 @@ export default function EnhancedThemeExtractionProgress({
                                     </p>
                                   </div>
                                 )}
-                                {completedStageMetrics[1].liveStats.embeddingStats.scientificExplanation && (
+                                {completedStageMetrics[1]?.liveStats?.embeddingStats?.scientificExplanation && (
                                   <div className="text-xs text-indigo-800 bg-indigo-100/60 rounded p-3">
                                     <p className="font-semibold mb-1">📚 Scientific Process:</p>
                                     <p>{completedStageMetrics[1].liveStats.embeddingStats.scientificExplanation}</p>
@@ -921,26 +1310,61 @@ export default function EnhancedThemeExtractionProgress({
                               </div>
                             )}
 
-                            {/* Total Articles Processed Summary */}
-                            {completedStageMetrics[1].liveStats.totalArticles && (
-                              <div className="bg-white/50 rounded-lg p-3 border border-blue-200 mt-3">
-                                <p className="text-xs font-semibold text-blue-700 mb-1">
-                                  ✅ Completed: All {completedStageMetrics[1].liveStats.totalArticles} sources analyzed
-                                </p>
-                                <div className="flex items-center gap-3 text-xs mt-2">
-                                  <span className="text-gray-700">
-                                    🎯 <strong>Next:</strong> Stage 2 will now systematically code all this content using GPT-4
-                                  </span>
+                            {/* Progress/Completion Summary */}
+                            {(() => {
+                              const stats = isCurrent
+                                ? transparentMessage?.liveStats
+                                : completedStageMetrics[1]?.liveStats;
+                              if (!stats || !stats.totalArticles) return null;
+                              return (
+                                <div className={`rounded-lg p-3 border mt-3 ${
+                                  isCurrent
+                                    ? 'bg-green-50/50 border-green-200'
+                                    : 'bg-white/50 border-blue-200'
+                                }`}>
+                                  <p className={`text-xs font-semibold mb-1 ${
+                                    isCurrent ? 'text-green-700' : 'text-blue-700'
+                                  }`}>
+                                    {isCurrent
+                                      ? `📖 Reading: ${stats.currentArticle || 0} of ${stats.totalArticles} sources`
+                                      : `✅ Completed: All ${stats.totalArticles} sources analyzed`
+                                    }
+                                  </p>
+                                  <div className="flex items-center gap-3 text-xs mt-2">
+                                    <span className="text-gray-700">
+                                      {isCurrent
+                                        ? '⏳ Building semantic understanding of your corpus...'
+                                        : '🎯 Next: Stage 2 will systematically code all content using GPT-4'
+                                      }
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              );
+                            })()}
 
-                            {/* Methodology Note */}
-                            <div className="mt-3 text-xs text-blue-700 bg-blue-50 rounded p-2">
-                              📚 <strong>Braun & Clarke (2006):</strong> Familiarization is complete. We've read and embedded all {completedStageMetrics[1].liveStats.totalArticles} sources. These semantic embeddings enable the AI to understand context and relationships across your entire corpus.
-                            </div>
+                            {/* Methodology Note - Dynamic based on state */}
+                            {(() => {
+                              const stats = isCurrent
+                                ? transparentMessage?.liveStats
+                                : completedStageMetrics[1]?.liveStats;
+                              const totalArticles = stats?.totalArticles || '...';
+                              return (
+                                <div className={`mt-3 text-xs rounded p-2 ${
+                                  isCurrent
+                                    ? 'text-green-700 bg-green-50'
+                                    : 'text-blue-700 bg-blue-50'
+                                }`}>
+                                  📚 <strong>Braun & Clarke (2006):</strong>{' '}
+                                  {isCurrent
+                                    ? `Familiarization in progress. Reading and embedding ${totalArticles} sources to build deep semantic understanding.`
+                                    : `Familiarization complete. We've read and embedded all ${totalArticles} sources. These semantic embeddings enable the AI to understand context and relationships across your entire corpus.`
+                                  }
+                                </div>
+                              );
+                            })()}
                           </motion.div>
-                        )}
+                        );
+                      })()}
 
                       {/* Refinement Option for Stages 4-6 */}
                       {allowIterativeRefinement &&

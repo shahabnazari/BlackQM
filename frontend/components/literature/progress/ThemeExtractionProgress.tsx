@@ -21,6 +21,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import io from 'socket.io-client';
+import { logger } from '@/lib/utils/logger';
 
 interface ExtractionProgress {
   userId: string;
@@ -75,24 +76,24 @@ export function ThemeExtractionProgress({
     });
 
     newSocket.on('connect', () => {
-      console.log('WebSocket connected');
+      logger.info('WebSocket connected', 'ThemeExtractionProgressWS');
       setIsConnected(true);
       // Join user's room
       newSocket.emit('join', userId);
     });
 
     newSocket.on('disconnect', () => {
-      console.log('WebSocket disconnected');
+      logger.warn('WebSocket disconnected', 'ThemeExtractionProgressWS');
       setIsConnected(false);
     });
 
     newSocket.on('extraction-progress', (data: ExtractionProgress) => {
-      console.log('Progress update:', data);
+      logger.debug('Extraction progress update', 'ThemeExtractionProgressWS', { data });
       setProgress(data);
     });
 
     newSocket.on('extraction-complete', (data: ExtractionProgress) => {
-      console.log('Extraction complete:', data);
+      logger.info('Extraction complete', 'ThemeExtractionProgressWS', { data });
       setProgress(data);
       if (onComplete && data.details?.themesExtracted !== undefined) {
         setTimeout(() => onComplete(data.details!.themesExtracted!), 1000);
@@ -100,7 +101,7 @@ export function ThemeExtractionProgress({
     });
 
     newSocket.on('extraction-error', (data: ExtractionProgress) => {
-      console.error('Extraction error:', data);
+      logger.error('Extraction error', 'ThemeExtractionProgressWS', { data });
       setProgress(data);
       if (onError) {
         setTimeout(() => onError(data.message), 1000);

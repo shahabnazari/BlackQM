@@ -1,11 +1,15 @@
 /**
  * Phase 10 Day 5.6: Theme Extraction Progress Component
  * Interactive progress visualization for theme extraction
+ *
+ * PERF-001: Logger calls moved to useEffect (not render body)
+ * PERF-002: Wrapped with React.memo() for shallow prop comparison
+ * PERF-003: getStageIcon/getStageColor moved outside component (no re-creation)
  */
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState, useMemo } from 'react';
 import { ExtractionProgress } from '@/lib/hooks/useThemeExtractionProgress';
 import {
   Loader2,
@@ -14,12 +18,24 @@ import {
   Brain,
   Sparkles,
 } from 'lucide-react';
+import { logger } from '@/lib/utils/logger';
 
 interface ThemeExtractionProgressProps {
   progress: ExtractionProgress;
 }
 
-export function ThemeExtractionProgressComponent({
+// PERF-003: Stage color map moved outside component (no re-creation)
+const STAGE_COLORS: Record<string, string> = {
+  preparing: 'bg-purple-500',
+  extracting: 'bg-blue-500',
+  deduplicating: 'bg-yellow-500',
+  complete: 'bg-green-500',
+  error: 'bg-red-500',
+  default: 'bg-gray-500',
+};
+
+// PERF-002: Wrapped with React.memo for shallow prop comparison
+export const ThemeExtractionProgressComponent = memo(function ThemeExtractionProgressComponent({
   progress,
 }: ThemeExtractionProgressProps) {
   const [animatedProgress, setAnimatedProgress] = useState(0);
@@ -32,30 +48,23 @@ export function ThemeExtractionProgressComponent({
     return () => clearTimeout(timer);
   }, [progress.progress]);
 
-  // Debug logging
+  // PERF-001: Debug logging in useEffect (not render body)
+  // PERF-004: Specific dependencies instead of entire progress object
   useEffect(() => {
-    console.log('🟣 ThemeExtractionProgress component received props:', {
-      isExtracting: progress.isExtracting,
-      stage: progress.stage,
-      progress: progress.progress,
-      message: progress.message,
-      currentSource: progress.currentSource,
-      totalSources: progress.totalSources,
-    });
-  }, [progress]);
+    if (process.env.NODE_ENV === 'development') {
+      logger.debug('ThemeExtractionProgress received props', 'ThemeExtractionProgress', {
+        isExtracting: progress.isExtracting,
+        stage: progress.stage,
+        progress: progress.progress,
+        message: progress.message,
+        currentSource: progress.currentSource,
+        totalSources: progress.totalSources,
+      });
+    }
+  }, [progress.isExtracting, progress.stage, progress.progress, progress.message, progress.currentSource, progress.totalSources]);
 
-  if (
-    !progress.isExtracting &&
-    progress.stage !== 'complete' &&
-    progress.stage !== 'error'
-  ) {
-    console.log('🟣 ThemeExtractionProgress: Returning null (not showing)');
-    return null;
-  }
-
-  console.log('🟣 ThemeExtractionProgress: Rendering component');
-
-  const getStageIcon = () => {
+  // PERF-003: Memoized stage icon to prevent re-creation
+  const stageIcon = useMemo(() => {
     switch (progress.stage) {
       case 'preparing':
         return <Brain className="w-5 h-5 animate-pulse text-purple-500" />;
@@ -70,24 +79,19 @@ export function ThemeExtractionProgressComponent({
       default:
         return <Loader2 className="w-5 h-5 animate-spin" />;
     }
-  };
+  }, [progress.stage]);
 
-  const getStageColor = () => {
-    switch (progress.stage) {
-      case 'preparing':
-        return 'bg-purple-500';
-      case 'extracting':
-        return 'bg-blue-500';
-      case 'deduplicating':
-        return 'bg-yellow-500';
-      case 'complete':
-        return 'bg-green-500';
-      case 'error':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
+  // PERF-003: Use lookup instead of function
+  const stageColor = STAGE_COLORS[progress.stage] || STAGE_COLORS['default'];
+
+  // Early return AFTER hooks (Rules of Hooks compliance)
+  if (
+    !progress.isExtracting &&
+    progress.stage !== 'complete' &&
+    progress.stage !== 'error'
+  ) {
+    return null;
+  }
 
   return (
     <div
@@ -97,7 +101,7 @@ export function ThemeExtractionProgressComponent({
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          {getStageIcon()}
+          {stageIcon}
           <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
             {progress.stage === 'complete'
               ? 'Extraction Complete'
@@ -112,7 +116,7 @@ export function ThemeExtractionProgressComponent({
       {/* Progress Bar */}
       <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-3">
         <div
-          className={`absolute left-0 top-0 h-full ${getStageColor()} transition-all duration-500 ease-out`}
+          className={`absolute left-0 top-0 h-full ${stageColor} transition-all duration-500 ease-out`}
           style={{ width: `${animatedProgress}%` }}
         >
           {progress.isExtracting && (
@@ -164,4 +168,7 @@ export function ThemeExtractionProgressComponent({
       )}
     </div>
   );
-}
+});
+
+// PERF-002: displayName for React DevTools debugging
+ThemeExtractionProgressComponent.displayName = 'ThemeExtractionProgressComponent';

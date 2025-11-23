@@ -218,7 +218,6 @@ export class GapAnalyzerService {
       const content = (paper as any).fullText || paper.abstract || '';
       const text = `${paper.title} ${content}`;
       const keywords = await this.extractKeywords(text);
-      const year = paper.year || new Date().getFullYear();
 
       for (const keyword of keywords) {
         if (!keywordMap.has(keyword)) {
@@ -456,13 +455,8 @@ IMPORTANT: Use specific terminology from the papers. Do NOT use generic placehol
     trends: TrendAnalysis[],
   ): Promise<ResearchGap[]> {
     for (const gap of gaps) {
-      // Calculate composite scores
-      const trendScore = this.calculateTrendScore(gap, trends);
-      const noveltyScore = await this.calculateNoveltyScore(gap);
-      const impactScore =
-        gap.importance * 0.4 +
-        gap.marketPotential * 0.3 +
-        gap.feasibility * 0.3;
+      // Note: Composite scores (_trendScore, _noveltyScore, _impactScore) can be calculated
+      // here for future use in gap scoring refinement
 
       // Adjust scores based on trend analysis
       if (gap.trendDirection === 'emerging') {
@@ -758,7 +752,7 @@ IMPORTANT: Use specific terminology from the papers. Do NOT use generic placehol
 
     // Simple linear regression for projection
     const n = timeSeries.length;
-    const sumX = timeSeries.reduce((sum, point, i) => sum + i, 0);
+    const sumX = timeSeries.reduce((sum, _point, i) => sum + i, 0);
     const sumY = timeSeries.reduce((sum, point) => sum + point.frequency, 0);
     const sumXY = timeSeries.reduce(
       (sum, point, i) => sum + i * point.frequency,
@@ -821,47 +815,6 @@ IMPORTANT: Use specific terminology from the papers. Do NOT use generic placehol
       timeSeries.length;
 
     return lengthScore * 0.3 + consistencyScore * 0.4 + dataCompleteness * 0.3;
-  }
-
-  /**
-   * Helper: Create analysis context for AI
-   */
-  private createAnalysisContext(
-    papers: any[],
-    topics: TopicModel[],
-    trends: TrendAnalysis[],
-  ): string {
-    return `
-      Research Landscape Analysis:
-      - Total papers analyzed: ${papers.length}
-      - Time range: ${this.getTimeRange(papers)}
-      - Main topics: ${topics
-        .slice(0, 5)
-        .map((t) => t.label)
-        .join(', ')}
-      - Emerging trends: ${trends
-        .filter((t) => t.trendType === 'emerging')
-        .map((t) => t.topic)
-        .join(', ')}
-      - Growing areas: ${trends
-        .filter((t) => t.trendType === 'growing')
-        .map((t) => t.topic)
-        .join(', ')}
-      - Declining topics: ${trends
-        .filter((t) => t.trendType === 'declining')
-        .map((t) => t.topic)
-        .join(', ')}
-    `;
-  }
-
-  /**
-   * Helper: Get time range of papers
-   */
-  private getTimeRange(papers: any[]): string {
-    const years = papers.map((p) => p.year || new Date().getFullYear());
-    const minYear = Math.min(...years);
-    const maxYear = Math.max(...years);
-    return `${minYear}-${maxYear}`;
   }
 
   /**
@@ -1031,7 +984,7 @@ IMPORTANT: Use specific terminology from the papers. Do NOT use generic placehol
 
     // Identify gaps based on topic coverage
     const wellCoveredTopics = topics.filter((t) => t.prevalence > 0.2);
-    const underCoveredTopics = topics.filter((t) => t.prevalence < 0.05);
+    // Note: Under-covered topics (prevalence < 0.05) can be used for future gap detection
 
     // Gap 1: Under-researched emerging topics
     for (const trend of trends.filter((t) => t.trendType === 'emerging')) {
@@ -1079,7 +1032,7 @@ IMPORTANT: Use specific terminology from the papers. Do NOT use generic placehol
   private findTopicIntersection(
     topic1: TopicModel,
     topic2: TopicModel,
-    papers: any[],
+    _papers: any[],
   ): any {
     const intersection = topic1.papers.filter((p) => topic2.papers.includes(p));
 
@@ -1106,44 +1059,6 @@ IMPORTANT: Use specific terminology from the papers. Do NOT use generic placehol
     }
 
     return { gapIdentified: false };
-  }
-
-  /**
-   * Helper: Calculate trend score
-   */
-  private calculateTrendScore(
-    gap: ResearchGap,
-    trends: TrendAnalysis[],
-  ): number {
-    let score = 0;
-
-    for (const keyword of gap.keywords) {
-      const trend = trends.find(
-        (t) => t.topic.toLowerCase() === keyword.toLowerCase(),
-      );
-      if (trend) {
-        if (trend.trendType === 'emerging') score += 3;
-        if (trend.trendType === 'growing') score += 2;
-        if (trend.projectedGrowth > 20) score += 2;
-      }
-    }
-
-    return Math.min(score, 10);
-  }
-
-  /**
-   * Helper: Calculate novelty score
-   */
-  private async calculateNoveltyScore(gap: ResearchGap): Promise<number> {
-    // Simple novelty based on related papers
-    const relatedPapersCount = gap.relatedPapers.length;
-
-    if (relatedPapersCount === 0) return 10;
-    if (relatedPapersCount < 3) return 8;
-    if (relatedPapersCount < 5) return 6;
-    if (relatedPapersCount < 10) return 4;
-
-    return 2;
   }
 
   /**

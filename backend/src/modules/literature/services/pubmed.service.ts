@@ -472,7 +472,7 @@ export class PubMedService {
       // Content metrics
       wordCount,
       wordCountExcludingRefs,
-      isEligible: isPaperEligible(wordCount),
+      isEligible: isPaperEligible(wordCount, 150),
       abstractWordCount,
 
       // Quality metrics

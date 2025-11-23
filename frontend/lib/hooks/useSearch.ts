@@ -108,7 +108,8 @@ export function useSearch(): UseSearchReturn {
         page: currentPage,
         limit: 20,
         includeCitations: true,
-        minAbstractLength: 100, // Enterprise research-grade default
+        // Phase 10.942: Removed minAbstractLength - quality scoring handles paper ranking
+        // Word/abstract filters are OPTIONAL and user-configurable, not hardcoded defaults
       };
 
       logger.debug('[useSearch] Search params:', searchParams);

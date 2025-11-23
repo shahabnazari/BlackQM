@@ -36,9 +36,66 @@ export class HtmlFullTextService {
   private readonly NCBI_EMAIL = 'research@blackq.app'; // Required by NCBI API terms
   private readonly NCBI_TOOL = 'blackqmethod';
   // Phase 10.6 Day 14.5: REQUEST_TIMEOUT_MS removed - migrated to COMPLEX_API_TIMEOUT constant
-  private readonly MAX_RETRIES = 2;
 
-  constructor(private prisma: PrismaService) {}
+  /**
+   * Enterprise Enhancement (Nov 18, 2025): Content extraction constants
+   * Centralized for maintainability and configuration
+   */
+  private readonly MIN_CONTENT_LENGTH = 100; // Minimum chars for valid extraction
+  private readonly USER_AGENT =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+  /**
+   * Publisher-Specific CSS Selectors (Nov 18, 2025)
+   * Organized by publisher for easy maintenance and updates
+   */
+  private readonly PUBLISHER_SELECTORS = {
+    mdpi: [
+      'section.html-body', // Primary: Article body sections (Introduction, Methods, etc.)
+      '.html-body', // Fallback: Class-based selector
+      '#main-content', // Broad: Main container (includes abstract + body + references)
+      '.content__container', // Fallback: Content wrapper
+      '.article-content', // Legacy: Older MDPI structure
+      'article', // Generic: HTML5 article element
+    ],
+    plos: ['.article-text', '#artText', '.article-content'],
+    frontiers: ['.JournalFullText', 'article', '.main-content'],
+    springerNature: [
+      'article[data-article-body]',
+      '.c-article-body',
+      '.article__body',
+      '#body',
+    ],
+    scienceDirect: ['#body', '.Body', 'article'],
+    jama: [
+      '.article-full-text',
+      '.article-body-section',
+      '#Article',
+      '.article-content',
+      'article',
+    ],
+  };
+
+  /**
+   * Non-Content Selectors to Exclude (Nov 18, 2025)
+   * Elements that should be removed before text extraction
+   */
+  private readonly EXCLUDE_SELECTORS = [
+    'nav',
+    'header',
+    'footer',
+    'aside',
+    '.references',
+    '.bibliography',
+    '.citation',
+    '[class*="nav"]',
+    '[class*="menu"]',
+    '[class*="sidebar"]',
+    '[class*="ad"]',
+    '[id*="ad"]',
+  ];
+
+  constructor(_prisma: PrismaService) {}
 
   /**
    * Waterfall Strategy: Try multiple sources in priority order
@@ -53,7 +110,7 @@ export class HtmlFullTextService {
    * @returns Full-text content or null
    */
   async fetchFullTextWithFallback(
-    paperId: string,
+    _paperId: string,
     pmid?: string,
     url?: string,
   ): Promise<HtmlFetchResult> {
@@ -129,7 +186,7 @@ export class HtmlFullTextService {
         params,
         timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Migrated to centralized config
         headers: {
-          'User-Agent': 'BlackQMethod/1.0 (research@blackq.app)',
+          'User-Agent': this.USER_AGENT,
         },
       });
 
@@ -138,7 +195,7 @@ export class HtmlFullTextService {
       // Step 3: Parse XML and extract text
       const fullText = this.extractTextFromPmcXml(xmlContent);
 
-      if (!fullText || fullText.length < 100) {
+      if (!fullText || fullText.length < this.MIN_CONTENT_LENGTH) {
         return {
           success: false,
           error: 'PMC XML parsing returned insufficient text',
@@ -290,8 +347,7 @@ export class HtmlFullTextService {
       const response = await axios.get(url, {
         timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Migrated to centralized config
         headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+          'User-Agent': this.USER_AGENT,
           Accept:
             'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.9',
@@ -328,7 +384,7 @@ export class HtmlFullTextService {
         extractedText = this.extractGenericContent(document);
       }
 
-      if (!extractedText || extractedText.length < 100) {
+      if (!extractedText || extractedText.length < this.MIN_CONTENT_LENGTH) {
         return {
           success: false,
           error:
@@ -360,37 +416,51 @@ export class HtmlFullTextService {
    */
 
   private extractPlosContent(document: Document): string {
-    const selectors = ['.article-text', '#artText', '.article-content'];
-    return this.extractBySelectors(document, selectors);
+    return this.extractBySelectors(document, this.PUBLISHER_SELECTORS.plos);
   }
 
+  /**
+   * MDPI Full-Text Extraction
+   *
+   * MDPI Structure (verified Nov 18, 2025):
+   * - #main-content: Primary container with all article sections
+   * - section.html-body: Main article body (Introduction, Methods, Results, etc.)
+   * - .html-abstract: Abstract section (separate from body)
+   * - .content__container: Wrapper for content
+   *
+   * Priority: Most specific to most generic
+   * Rationale: MDPI uses semantic HTML5 structure with clear section tags
+   *
+   * @param document - JSDOM document object
+   * @returns Extracted full-text content or empty string if extraction fails
+   */
   private extractMdpiContent(document: Document): string {
-    const selectors = [
-      '.article-content',
-      '.html-body',
-      'article.article-body',
-    ];
-    return this.extractBySelectors(document, selectors);
+    this.logger.debug(
+      `🔍 MDPI Extraction: Trying ${this.PUBLISHER_SELECTORS.mdpi.length} selectors in priority order`,
+    );
+
+    return this.extractBySelectors(document, this.PUBLISHER_SELECTORS.mdpi);
   }
 
   private extractFrontiersContent(document: Document): string {
-    const selectors = ['.JournalFullText', 'article', '.main-content'];
-    return this.extractBySelectors(document, selectors);
+    return this.extractBySelectors(
+      document,
+      this.PUBLISHER_SELECTORS.frontiers,
+    );
   }
 
   private extractSpringerNatureContent(document: Document): string {
-    const selectors = [
-      'article[data-article-body]',
-      '.c-article-body',
-      '.article__body',
-      '#body',
-    ];
-    return this.extractBySelectors(document, selectors);
+    return this.extractBySelectors(
+      document,
+      this.PUBLISHER_SELECTORS.springerNature,
+    );
   }
 
   private extractScienceDirectContent(document: Document): string {
-    const selectors = ['#body', '.Body', 'article'];
-    return this.extractBySelectors(document, selectors);
+    return this.extractBySelectors(
+      document,
+      this.PUBLISHER_SELECTORS.scienceDirect,
+    );
   }
 
   /**
@@ -398,14 +468,7 @@ export class HtmlFullTextService {
    * American Medical Association's publishing platform
    */
   private extractJAMAContent(document: Document): string {
-    const selectors = [
-      '.article-full-text',
-      '.article-body-section',
-      '#Article',
-      '.article-content',
-      'article',
-    ];
-    return this.extractBySelectors(document, selectors);
+    return this.extractBySelectors(document, this.PUBLISHER_SELECTORS.jama);
   }
 
   /**
@@ -430,40 +493,54 @@ export class HtmlFullTextService {
   /**
    * Extract text using CSS selectors with fallback
    * Removes navigation, ads, and non-content sections
+   *
+   * Enterprise Enhancement (Nov 18, 2025):
+   * - Logs which selector succeeded for debugging
+   * - Provides word count metrics
+   * - Filters out non-content elements before extraction
+   * - Uses centralized constants for maintainability
+   *
+   * @param document - JSDOM document object
+   * @param selectors - Array of CSS selectors to try in order
+   * @returns Extracted and cleaned text or empty string if all selectors fail
    */
   private extractBySelectors(document: Document, selectors: string[]): string {
-    for (const selector of selectors) {
+    for (let i = 0; i < selectors.length; i++) {
+      const selector = selectors[i];
       const element = document.querySelector(selector);
-      if (element) {
-        // Remove non-content elements
-        const excludeSelectors = [
-          'nav',
-          'header',
-          'footer',
-          'aside',
-          '.references',
-          '.bibliography',
-          '.citation',
-          '[class*="nav"]',
-          '[class*="menu"]',
-          '[class*="sidebar"]',
-          '[class*="ad"]',
-          '[id*="ad"]',
-        ];
 
-        excludeSelectors.forEach((exclude) => {
+      if (element) {
+        this.logger.debug(
+          `✅ Selector matched: "${selector}" (${i + 1}/${selectors.length})`,
+        );
+
+        // Remove non-content elements using centralized selectors
+        this.EXCLUDE_SELECTORS.forEach((exclude) => {
           element.querySelectorAll(exclude).forEach((el) => el.remove());
         });
 
         const text = element.textContent || '';
         const cleaned = this.cleanScrapedText(text);
 
-        if (cleaned.length > 100) {
+        if (cleaned.length > this.MIN_CONTENT_LENGTH) {
+          const wordCount = this.calculateWordCount(cleaned);
+          this.logger.log(
+            `✅ Text extraction successful: ${cleaned.length} chars, ${wordCount} words (selector: "${selector}")`,
+          );
           return cleaned;
+        } else {
+          this.logger.debug(
+            `⚠️ Selector "${selector}" matched but content too short (${cleaned.length} chars)`,
+          );
         }
+      } else {
+        this.logger.debug(`❌ Selector not found: "${selector}"`);
       }
     }
 
+    this.logger.warn(
+      `❌ All ${selectors.length} selectors failed to extract content`,
+    );
     return '';
   }
 

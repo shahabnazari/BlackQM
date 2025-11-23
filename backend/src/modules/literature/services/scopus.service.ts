@@ -139,7 +139,6 @@ import { ConfigService } from '@nestjs/config';
 import { Paper, LiteratureSource } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
 import {
-  calculateAbstractWordCount,
   calculateComprehensiveWordCount,
   isPaperEligible,
 } from '../utils/word-count.util';
@@ -303,9 +302,6 @@ export class ScopusService {
     const keywords = this.parseKeywords(entry['authkeywords']);
 
     // Word count calculation
-    const abstractWordCount = abstract
-      ? calculateAbstractWordCount(abstract)
-      : 0;
     const wordCount = calculateComprehensiveWordCount(
       abstract,
       title,
@@ -327,8 +323,8 @@ export class ScopusService {
       hIndexJournal: undefined, // Requires Abstract Retrieval API
     });
 
-    // Paper eligibility check (min 100 words, published, has abstract)
-    const isEligible = isPaperEligible(wordCount);
+    // Paper eligibility check (min 150 words for title+abstract)
+    const isEligible = isPaperEligible(wordCount, 150);
 
     // Generate unique ID (use Scopus ID, DOI, or fallback)
     const scopusId = entry['dc:identifier'] || entry['eid'];
@@ -422,29 +418,6 @@ export class ScopusService {
 
     const mapped = typeMap[aggregationType];
     return mapped ? [mapped] : aggregationType ? [aggregationType] : undefined;
-  }
-
-  /**
-   * Parse affiliation data
-   * Returns array of institution names
-   */
-  private parseAffiliations(affiliationField: any): string[] | undefined {
-    if (!affiliationField) return undefined;
-
-    if (Array.isArray(affiliationField)) {
-      return affiliationField
-        .map((aff: any) => aff['affilname'])
-        .filter(Boolean);
-    }
-
-    if (
-      typeof affiliationField === 'object' &&
-      affiliationField['affilname']
-    ) {
-      return [affiliationField['affilname']];
-    }
-
-    return undefined;
   }
 
   /**

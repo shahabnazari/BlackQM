@@ -344,7 +344,7 @@ export class IEEEService {
         fieldsOfStudy: ieeeMetadata.indexTerms || null,
         wordCount,
         wordCountExcludingRefs: wordCount,
-        isEligible: isPaperEligible(wordCount),
+        isEligible: isPaperEligible(wordCount, 150),
         abstractWordCount,
         pdfUrl: pdfUrl || undefined,
         openAccessStatus: article.access_type === 'OPEN_ACCESS' ? 'OPEN_ACCESS' : null,

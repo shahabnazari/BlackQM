@@ -33,46 +33,134 @@
  *   onError: (error) => console.error('Error:', error),
  * });
  * ```
+ *
+ * **Phase 10.94 Strict Audit Fixes:**
+ * - HOOKS-001: Stabilized callback references with useRef pattern
+ * - HOOKS-002: Memoized disconnect function with useCallback
+ * - TYPES-001: Added WebSocketProgressData interface
+ * - BUG-001: Added null checks before spreading data
+ * - SEC-001: Added data validation before use
+ * - DX-001: Added WebSocket event name constants
+ * - PERF-001: Conditional logging based on NODE_ENV
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import io from 'socket.io-client';
 import confetti from 'canvas-confetti';
 // Phase 10.1 Day 6 Audit Fix: Import TransparentProgressMessage from source of truth
 import type { TransparentProgressMessage } from '@/lib/api/services/unified-theme-api.service';
+import { logger } from '@/lib/utils/logger';
 
 type Socket = ReturnType<typeof io>;
 
+// ============================================================================
+// CONSTANTS (DX-001 FIX: Eliminate magic strings)
+// ============================================================================
+
 /**
- * Progress update data from WebSocket
+ * WebSocket event names - centralized for type safety and refactoring
+ * @constant
+ */
+const WS_EVENTS = {
+  CONNECT: 'connect',
+  DISCONNECT: 'disconnect',
+  CONNECT_ERROR: 'connect_error',
+  EXTRACTION_PROGRESS: 'extraction-progress',
+  EXTRACTION_COMPLETE: 'extraction-complete',
+  EXTRACTION_ERROR: 'extraction-error',
+  JOIN: 'join',
+  LEAVE: 'leave',
+} as const;
+
+/**
+ * WebSocket configuration constants
+ * @constant
+ */
+const WS_CONFIG = {
+  RECONNECTION_ATTEMPTS: 5,
+  RECONNECTION_DELAY: 1000,
+  CONNECTION_TIMEOUT: 10000,
+} as const;
+
+/**
+ * Whether to enable debug logging (PERF-001 FIX)
+ * @constant
+ */
+const IS_DEV = process.env.NODE_ENV === 'development';
+
+// ============================================================================
+// TYPE DEFINITIONS (TYPES-001 FIX: Proper typing)
+// ============================================================================
+
+/**
+ * Raw WebSocket progress data structure (TYPES-001 FIX)
+ * @interface WebSocketProgressData
+ */
+interface WebSocketProgressData {
+  stage?: string;
+  percentage?: number;
+  message?: string;
+  details?: TransparentProgressMessage | {
+    transparentMessage?: TransparentProgressMessage;
+    stageNumber?: number;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+/**
+ * Raw WebSocket complete data structure
+ * @interface WebSocketCompleteData
+ */
+interface WebSocketCompleteData {
+  themes?: unknown[];
+  details?: {
+    themesExtracted?: number;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+/**
+ * Raw WebSocket error data structure
+ * @interface WebSocketErrorData
+ */
+interface WebSocketErrorData {
+  message?: string;
+  code?: string;
+  details?: unknown;
+}
+
+/**
+ * Progress update data from WebSocket (exported for consumers)
  */
 export interface ExtractionProgressData {
   stage: string;
   progress: number;
   details?: {
     transparentMessage?: TransparentProgressMessage;
-    [key: string]: any;
-  };
+    [key: string]: unknown;
+  } | undefined;
 }
 
 /**
- * Completion data from WebSocket
+ * Completion data from WebSocket (exported for consumers)
  */
 export interface ExtractionCompleteData {
-  themes: any[];
+  themes: unknown[];
   details?: {
     themesExtracted?: number;
-    [key: string]: any;
-  };
+    [key: string]: unknown;
+  } | undefined;
 }
 
 /**
- * Error data from WebSocket
+ * Error data from WebSocket (exported for consumers)
  */
 export interface ExtractionErrorData {
   message: string;
-  code?: string;
-  details?: any;
+  code?: string | undefined;
+  details?: unknown;
 }
 
 /**
@@ -119,6 +207,105 @@ export interface UseThemeExtractionWebSocketReturn {
   disconnect: () => void;
 }
 
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Type guard to check if data has transparentMessage at root level
+ * (SEC-001 FIX: Validate data structure)
+ */
+function isTransparentMessage(obj: unknown): obj is TransparentProgressMessage {
+  if (!obj || typeof obj !== 'object') return false;
+  const candidate = obj as Record<string, unknown>;
+  return (
+    typeof candidate['stageNumber'] === 'number' &&
+    typeof candidate['stageName'] === 'string'
+  );
+}
+
+/**
+ * Safely extract transparentMessage from WebSocket data
+ * (BUG-001 FIX: Null-safe extraction)
+ *
+ * Handles two formats:
+ * 1. Backend sends transparentMessage directly as "details"
+ * 2. Legacy path where details.transparentMessage exists
+ *
+ * @param data - Raw WebSocket progress data
+ * @returns TransparentProgressMessage or undefined
+ */
+function extractTransparentMessage(
+  data: WebSocketProgressData | null | undefined
+): TransparentProgressMessage | undefined {
+  if (!data || typeof data !== 'object') {
+    return undefined;
+  }
+
+  const details = data.details;
+
+  if (!details || typeof details !== 'object') {
+    return undefined;
+  }
+
+  // Path 1: details IS the transparentMessage (Phase 10.94 format)
+  if (isTransparentMessage(details)) {
+    return details;
+  }
+
+  // Path 2: details.transparentMessage (legacy format)
+  const nested = (details as { transparentMessage?: unknown }).transparentMessage;
+  if (isTransparentMessage(nested)) {
+    return nested;
+  }
+
+  return undefined;
+}
+
+/**
+ * Create enriched progress data with transparentMessage accessible via both paths
+ * (BUG-001 FIX: Safe object creation with null checks)
+ *
+ * @param data - Original WebSocket data
+ * @param transparentMsg - Extracted transparent message
+ * @returns Enriched ExtractionProgressData
+ */
+function createEnrichedProgressData(
+  data: WebSocketProgressData,
+  transparentMsg: TransparentProgressMessage
+): ExtractionProgressData {
+  return {
+    stage: data.stage || String(transparentMsg.stageNumber),
+    progress: data.percentage ?? transparentMsg.percentage ?? 0,
+    details: {
+      // Only spread if details exists and is an object (BUG-001 FIX)
+      ...(data.details && typeof data.details === 'object' ? data.details : {}),
+      transparentMessage: transparentMsg,
+    },
+  };
+}
+
+/**
+ * Conditional logger (PERF-001 FIX: No console in production)
+ * Migrated to enterprise logger with structured context
+ */
+const devLog = {
+  log: (message: string, data?: Record<string, unknown>) => {
+    if (IS_DEV) logger.debug(message, 'useThemeExtractionWebSocket', data);
+  },
+  warn: (message: string, data?: Record<string, unknown>) => {
+    if (IS_DEV) logger.warn(message, 'useThemeExtractionWebSocket', data);
+  },
+  error: (message: string, data?: Record<string, unknown>) => {
+    // Always log errors, even in production
+    logger.error(message, 'useThemeExtractionWebSocket', data);
+  },
+};
+
+// ============================================================================
+// MAIN HOOK
+// ============================================================================
+
 /**
  * Hook for managing theme extraction WebSocket connection
  *
@@ -133,6 +320,12 @@ export interface UseThemeExtractionWebSocketReturn {
  * 2. Hook extracts transparent message
  * 3. Calls `onProgress` callback with data
  * 4. UI updates in real-time
+ *
+ * **Phase 10.94 Strict Audit:**
+ * - Uses refs for callbacks to prevent reconnection on every render (HOOKS-001)
+ * - Validates WebSocket data before use (SEC-001)
+ * - Null-safe spreading (BUG-001)
+ * - Conditional logging (PERF-001)
  *
  * @param {UseThemeExtractionWebSocketConfig} config - Configuration object
  * @returns {UseThemeExtractionWebSocketReturn} Connection state and controls
@@ -160,6 +353,30 @@ export function useThemeExtractionWebSocket(
   const socketRef = useRef<Socket | null>(null);
   const userIdRef = useRef<string | null>(null);
 
+  // HOOKS-001 FIX: Store callbacks in refs to prevent reconnection
+  // when parent passes inline functions
+  const onProgressRef = useRef(onProgress);
+  const onCompleteRef = useRef(onComplete);
+  const onErrorRef = useRef(onError);
+  const enableCelebrationRef = useRef(enableCelebration);
+
+  // Keep refs in sync with latest props (without causing reconnection)
+  useEffect(() => {
+    onProgressRef.current = onProgress;
+  }, [onProgress]);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
+  useEffect(() => {
+    enableCelebrationRef.current = enableCelebration;
+  }, [enableCelebration]);
+
   // ===========================
   // WEBSOCKET LIFECYCLE
   // ===========================
@@ -167,7 +384,7 @@ export function useThemeExtractionWebSocket(
   useEffect(() => {
     // Don't connect if user is not authenticated
     if (!userId) {
-      console.log('⚠️ WebSocket: User not authenticated, skipping connection');
+      devLog.log('User not authenticated, skipping connection');
       setConnectionStatus(ConnectionStatus.DISCONNECTED);
       return;
     }
@@ -179,15 +396,15 @@ export function useThemeExtractionWebSocket(
     // Get API URL from environment
     const apiUrl = process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000';
 
-    console.log(`🔌 Connecting to WebSocket: ${apiUrl}/theme-extraction`);
+    devLog.log('Connecting to WebSocket', { url: `${apiUrl}/theme-extraction` });
 
     // Connect to theme-extraction WebSocket namespace
     const socket = io(`${apiUrl}/theme-extraction`, {
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 10000,
+      reconnectionAttempts: WS_CONFIG.RECONNECTION_ATTEMPTS,
+      reconnectionDelay: WS_CONFIG.RECONNECTION_DELAY,
+      timeout: WS_CONFIG.CONNECTION_TIMEOUT,
     });
 
     socketRef.current = socket;
@@ -196,22 +413,22 @@ export function useThemeExtractionWebSocket(
     // CONNECTION EVENT HANDLERS
     // ===========================
 
-    socket.on('connect', () => {
-      console.log('✅ WebSocket connected to theme-extraction gateway');
+    socket.on(WS_EVENTS.CONNECT, () => {
+      devLog.log('WebSocket connected to theme-extraction gateway');
       setConnectionStatus(ConnectionStatus.CONNECTED);
 
       // Join user-specific room
-      socket.emit('join', userId);
-      console.log(`📡 Joined room for user: ${userId}`);
+      socket.emit(WS_EVENTS.JOIN, userId);
+      devLog.log('Joined room for user', { userId });
     });
 
-    socket.on('disconnect', () => {
-      console.log('❌ WebSocket disconnected from theme-extraction gateway');
+    socket.on(WS_EVENTS.DISCONNECT, () => {
+      devLog.log('WebSocket disconnected from theme-extraction gateway');
       setConnectionStatus(ConnectionStatus.DISCONNECTED);
     });
 
-    socket.on('connect_error', (error: any) => {
-      console.error('❌ WebSocket connection error:', error.message);
+    socket.on(WS_EVENTS.CONNECT_ERROR, (error: Error) => {
+      devLog.error('WebSocket connection error', { error: error.message });
       setConnectionStatus(ConnectionStatus.ERROR);
     });
 
@@ -222,45 +439,66 @@ export function useThemeExtractionWebSocket(
     /**
      * Progress updates during extraction
      * Implements Patent Claim #9: 4-Part Transparent Progress Messaging
+     *
+     * Phase 10.94 FIX: Properly extracts transparentMessage from both:
+     * - Direct format (details IS transparentMessage)
+     * - Nested format (details.transparentMessage)
      */
-    socket.on('extraction-progress', (data: any) => {
-      console.log('🟢 WebSocket progress received:', data);
+    socket.on(WS_EVENTS.EXTRACTION_PROGRESS, (data: WebSocketProgressData) => {
+      devLog.log('WebSocket progress received', { stage: data.stage, percentage: data.percentage });
 
-      // Extract transparent message from details (Patent Claim #9)
-      if (data.details?.transparentMessage) {
-        const transparentMsg = data.details.transparentMessage;
+      // SEC-001 FIX: Validate and extract transparentMessage safely
+      const transparentMsg = extractTransparentMessage(data);
 
-        console.log('🟢 Using REAL WebSocket transparentMessage:', {
+      if (transparentMsg) {
+        devLog.log('Using REAL WebSocket transparentMessage', {
           stage: transparentMsg.stageName,
           stageNumber: transparentMsg.stageNumber,
           percentage: transparentMsg.percentage,
-          liveStats: transparentMsg.liveStats,
+          sourcesAnalyzed: transparentMsg.liveStats?.sourcesAnalyzed,
         });
 
-        // Call user's progress callback
-        onProgress?.(data);
+        // BUG-001 FIX: Safe object creation with null checks
+        const enrichedData = createEnrichedProgressData(data, transparentMsg);
+
+        // Call user's progress callback with enriched data
+        // HOOKS-001 FIX: Use ref to avoid reconnection
+        onProgressRef.current?.(enrichedData);
       } else {
         // Fallback to basic progress update
-        console.warn(
-          '⚠️ WebSocket data missing transparentMessage, using basic update'
-        );
-        onProgress?.(data);
+        devLog.warn('WebSocket data missing transparentMessage, using basic update', { stage: data.stage });
+
+        const fallbackData: ExtractionProgressData = {
+          stage: data.stage || 'unknown',
+          progress: data.percentage ?? 0,
+          details: data.details && typeof data.details === 'object'
+            ? { ...data.details }
+            : undefined,
+        };
+
+        onProgressRef.current?.(fallbackData);
       }
     });
 
     /**
      * Extraction completion event
      */
-    socket.on('extraction-complete', (data: any) => {
-      console.log('✅ WebSocket extraction complete:', data);
+    socket.on(WS_EVENTS.EXTRACTION_COMPLETE, (data: WebSocketCompleteData) => {
+      devLog.log('WebSocket extraction complete', { themesCount: data.themes?.length || 0 });
 
       const themesCount = data.details?.themesExtracted || 0;
 
-      // Call user's completion callback
-      onComplete?.(data);
+      // Create typed completion data
+      const completeData: ExtractionCompleteData = {
+        themes: data.themes || [],
+        details: data.details,
+      };
+
+      // Call user's completion callback (HOOKS-001 FIX: Use ref)
+      onCompleteRef.current?.(completeData);
 
       // Celebration animation (optional)
-      if (enableCelebration && themesCount > 0) {
+      if (enableCelebrationRef.current && themesCount > 0) {
         confetti({
           particleCount: 100,
           spread: 70,
@@ -272,8 +510,8 @@ export function useThemeExtractionWebSocket(
     /**
      * Extraction error event
      */
-    socket.on('extraction-error', (data: any) => {
-      console.error('❌ WebSocket extraction error:', data);
+    socket.on(WS_EVENTS.EXTRACTION_ERROR, (data: WebSocketErrorData) => {
+      devLog.error('WebSocket extraction error', { message: data.message, code: data.code });
 
       const errorData: ExtractionErrorData = {
         message: data.message || 'Theme extraction failed',
@@ -281,8 +519,8 @@ export function useThemeExtractionWebSocket(
         details: data.details,
       };
 
-      // Call user's error callback
-      onError?.(errorData);
+      // Call user's error callback (HOOKS-001 FIX: Use ref)
+      onErrorRef.current?.(errorData);
     });
 
     // ===========================
@@ -291,10 +529,10 @@ export function useThemeExtractionWebSocket(
 
     return () => {
       if (socketRef.current && userIdRef.current) {
-        console.log('🔌 Disconnecting WebSocket on unmount');
+        devLog.log('Disconnecting WebSocket on unmount', { userId: userIdRef.current });
 
         // Leave user room
-        socketRef.current.emit('leave', userIdRef.current);
+        socketRef.current.emit(WS_EVENTS.LEAVE, userIdRef.current);
 
         // Disconnect socket
         socketRef.current.disconnect();
@@ -303,21 +541,23 @@ export function useThemeExtractionWebSocket(
         setConnectionStatus(ConnectionStatus.DISCONNECTED);
       }
     };
-  }, [userId, onProgress, onComplete, onError, enableCelebration]);
+    // HOOKS-001 FIX: Only userId in dependency array
+    // Callbacks are stored in refs and updated separately
+  }, [userId]);
 
   // ===========================
-  // MANUAL DISCONNECT
+  // MANUAL DISCONNECT (HOOKS-002 FIX: Memoized with useCallback)
   // ===========================
 
-  const disconnect = () => {
+  const disconnect = useCallback(() => {
     if (socketRef.current && userIdRef.current) {
-      console.log('🔌 Manual WebSocket disconnect');
-      socketRef.current.emit('leave', userIdRef.current);
+      devLog.log('Manual WebSocket disconnect', { userId: userIdRef.current });
+      socketRef.current.emit(WS_EVENTS.LEAVE, userIdRef.current);
       socketRef.current.disconnect();
       socketRef.current = null;
       setConnectionStatus(ConnectionStatus.DISCONNECTED);
     }
-  };
+  }, []);
 
   // ===========================
   // RETURN INTERFACE

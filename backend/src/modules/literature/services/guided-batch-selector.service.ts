@@ -149,7 +149,6 @@ export class GuidedBatchSelectorService {
 
     // Take top papers with some diversity
     const selected: Paper[] = [];
-    const selectedMethodologies = new Set<string>();
 
     for (const { paper, score } of sortedPapers) {
       if (selected.length >= batchSize) break;
@@ -201,7 +200,6 @@ initial themes that will be tested for robustness in subsequent iterations.`,
 
     // Analyze what methodologies/topics we already have
     const processedMethodologies = this.extractMethodologies(processedPapers);
-    const processedTopics = this.extractTopics(processedPapers);
 
     // Score papers by diversity potential
     const diversityScores = papers.map((paper) => {
@@ -258,7 +256,7 @@ and settings. Methodological diversity strengthens theme robustness.`,
    */
   private selectGapFillingBatch(
     papers: Paper[],
-    processedPapers: Paper[],
+    _processedPapers: Paper[],
     currentThemes: any[],
     qualityScores: Map<string, QualityScore>,
     batchSize: number,

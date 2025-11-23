@@ -22,6 +22,7 @@
 
 import React, { useState } from 'react';
 import type { CorpusInfo } from '@/lib/api/services/incremental-extraction-api.service';
+import { logger } from '@/lib/utils/logger';
 import {
   Plus,
   Edit2,
@@ -73,7 +74,7 @@ export function CorpusManagementPanel({
       await onDeleteCorpus?.(corpusId, corpusName);
     } catch (err) {
       // Error handling done by hook/parent
-      console.error('Error deleting corpus:', err);
+      logger.error('Error deleting corpus', 'CorpusManagementPanel', { error: err });
     } finally {
       setDeletingId(null);
     }

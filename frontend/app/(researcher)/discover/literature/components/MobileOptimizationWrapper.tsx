@@ -193,3 +193,5 @@ export function MobileText({
   return <div className={`${variants[variant]} ${className}`}>{children}</div>;
 }
 
+
+

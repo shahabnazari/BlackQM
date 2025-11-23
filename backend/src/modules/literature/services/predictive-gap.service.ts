@@ -119,7 +119,7 @@ export class PredictiveGapService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-    private readonly knowledgeGraphService: KnowledgeGraphService,
+    _knowledgeGraphService: KnowledgeGraphService,
   ) {
     this.openai = new OpenAI({
       apiKey: this.config.get('OPENAI_API_KEY'),

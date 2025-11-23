@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { logger } from '@/lib/utils/logger';
 import { literatureAPI } from '@/lib/services/literature-api.service';
 
 // ==================== TYPES ====================
@@ -156,7 +157,7 @@ export const YouTubeChannelBrowser: React.FC<YouTubeChannelBrowserProps> = ({
         err.message ||
           'Failed to load channel. Please check the input and try again.'
       );
-      console.error(err);
+      logger.error('YouTube channel loading error', 'YouTubeChannelBrowser', { error: err });
     } finally {
       setIsLoadingChannel(false);
     }
@@ -190,7 +191,7 @@ export const YouTubeChannelBrowser: React.FC<YouTubeChannelBrowserProps> = ({
       setHasMore(more);
     } catch (err: any) {
       setError(err.message || 'Failed to load videos');
-      console.error(err);
+      logger.error('YouTube video loading error', 'YouTubeChannelBrowser', { error: err });
     } finally {
       setIsLoadingVideos(false);
     }

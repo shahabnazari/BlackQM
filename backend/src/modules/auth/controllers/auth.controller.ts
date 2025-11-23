@@ -189,7 +189,7 @@ export class AuthController {
     const user = req.user;
 
     // Generate JWT tokens for this session
-    const tokens = await this.authService.generateOAuthTokens(user.id);
+    const tokens = await this.authService.generateOAuthTokens(user.id, user.email);
 
     // Get frontend URL from config
     const frontendUrl =
