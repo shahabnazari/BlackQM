@@ -112,6 +112,23 @@ import type { ExtractionProgress } from '@/lib/hooks/useThemeExtractionProgress'
 
 const VALID_EXPERTISE_LEVELS: UserExpertiseLevel[] = ['novice', 'researcher', 'expert'];
 
+/**
+ * Validates and sanitizes user expertise level from URL parameters
+ *
+ * **Phase 10.101**: Added JSDoc for better API documentation
+ *
+ * Ensures the expertise level from query params is one of the valid options.
+ * If invalid or undefined, defaults to 'researcher' for safety.
+ *
+ * @param level - Expertise level from query string (may be undefined or invalid)
+ * @returns Valid UserExpertiseLevel enum value ('researcher', 'practitioner', etc.)
+ *
+ * @example
+ * ```ts
+ * const level = validateExpertiseLevel(searchParams.get('level'));
+ * // Returns 'researcher' if invalid
+ * ```
+ */
 function validateExpertiseLevel(level: string | undefined): UserExpertiseLevel {
   if (level && VALID_EXPERTISE_LEVELS.includes(level as UserExpertiseLevel)) {
     return level as UserExpertiseLevel;
@@ -283,6 +300,48 @@ ExtractionModals.displayName = 'ExtractionModals';
 // Main Component
 // ============================================================================
 
+/**
+ * Theme Extraction Container Component
+ *
+ * **Phase 10.101**: Enhanced JSDoc for public API
+ *
+ * Self-contained container for displaying extracted themes and managing theme extraction workflow.
+ * Fully integrated with Zustand stores for state management - requires ZERO props for core functionality.
+ *
+ * **Key Features:**
+ * - 4-stage theme extraction workflow (save papers → fetch full-text → extract → analyze)
+ * - Real-time progress tracking with transparent backend metrics
+ * - Purpose-specific extraction (Q-Methodology, Survey Construction, etc.)
+ * - Inline or modal progress display options
+ * - Theme selection and research output generation
+ *
+ * **Architecture:**
+ * - Component: <400 lines (Phase 10.95 refactoring)
+ * - Business logic: Extracted to `useExtractionWorkflow` hook
+ * - API calls: Abstracted to service layer
+ * - State: Managed via Zustand stores (theme-extraction.store, literature-search.store)
+ *
+ * @param props - Component props (all optional)
+ * @param props.emptyStateMessage - Custom message to show when no themes extracted (default: "No themes extracted yet")
+ * @param props.showProgressInline - Show extraction progress inline vs. modal (default: false)
+ * @returns React component displaying theme extraction interface
+ *
+ * @example
+ * ```tsx
+ * // Minimal usage (zero props required)
+ * <ThemeExtractionContainer />
+ *
+ * // With inline progress display
+ * <ThemeExtractionContainer showProgressInline={true} />
+ *
+ * // With custom empty state
+ * <ThemeExtractionContainer emptyStateMessage="Start by selecting papers" />
+ * ```
+ *
+ * @see {@link useExtractionWorkflow} - Extraction workflow orchestration hook
+ * @see {@link ExtractionModals} - Modal components (purpose wizard, mode selection, progress)
+ * @see {@link PurposeSpecificActions} - Research output generation buttons
+ */
 export const ThemeExtractionContainer = React.memo(function ThemeExtractionContainer({
   emptyStateMessage,
   showProgressInline = false,

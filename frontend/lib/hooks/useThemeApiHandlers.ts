@@ -104,26 +104,74 @@ export interface UseThemeApiHandlersParams {
 // ============================================================================
 
 /**
- * useThemeApiHandlers - Hook for theme-related API operations
+ * Theme API Handlers Hook
  *
- * **Extracted from ThemeExtractionContainer to reduce component size.**
+ * **Phase 10.101**: Enhanced JSDoc for public API documentation
+ * **Phase 10.935**: Extracted from ThemeExtractionContainer (component size reduction)
  *
- * Provides memoized handlers for:
- * - Generating research questions from selected themes
- * - Generating hypotheses from selected themes
- * - Mapping themes to constructs
- * - Generating complete surveys
- * - Generating Q-methodology statements
+ * Provides memoized, enterprise-grade handlers for all theme-based research output generation.
+ * Coordinates API calls to the Enhanced Theme Integration Service with proper error handling,
+ * loading states, and user feedback.
  *
- * @param params - Hook parameters including selected themes, loading states, and purpose
- * @returns Memoized API handlers and loading states
+ * **Supported Research Outputs:**
+ * 1. **Research Questions** - Generate theory-grounded questions from themes
+ * 2. **Hypotheses** - Generate testable hypotheses linking themes
+ * 3. **Construct Mapping** - Map themes to psychological/theoretical constructs
+ * 4. **Survey Generation** - Generate complete surveys with items, scales, validation
+ * 5. **Q-Statements** - Generate Q-methodology statements (n=30-80)
+ *
+ * **Enterprise Features:**
+ * - Input validation (min. 1 theme required for all operations)
+ * - Purpose-specific logic (different outputs per research purpose)
+ * - Memoized handlers (stable references across re-renders)
+ * - Graceful error handling with user-friendly toasts
+ * - Enterprise logging (no console.log)
+ *
+ * **Performance:**
+ * - All handlers memoized with `useCallback`
+ * - Stable dependencies to prevent unnecessary re-creation
+ * - Loading states for UI responsiveness
+ *
+ * @param params - Hook parameters
+ * @param params.selectedThemeIds - Array of selected theme IDs
+ * @param params.mappedSelectedThemes - Full theme objects (mapped from IDs)
+ * @param params.extractionPurpose - Research purpose (affects output generation)
+ * @param params.setLoadingQuestions - Setter for research questions loading state
+ * @param params.setLoadingHypotheses - Setter for hypotheses loading state
+ * @param params.setLoadingConstructs - Setter for constructs loading state
+ * @param params.setLoadingSurvey - Setter for survey loading state
+ * @param params.loadingQuestions - Current research questions loading state
+ * @param params.loadingHypotheses - Current hypotheses loading state
+ * @param params.loadingConstructs - Current constructs loading state
+ * @param params.loadingSurvey - Current survey loading state
+ *
+ * @returns API handler functions and loading states
+ * @returns handleGenerateQuestions - Generate research questions (async)
+ * @returns handleGenerateHypotheses - Generate hypotheses (async)
+ * @returns handleMapConstructs - Map themes to constructs (async)
+ * @returns handleGenerateSurvey - Generate complete survey (async)
+ * @returns handleGenerateStatements - Generate Q-statements (sync, triggers modal)
+ * @returns handleShowSurveyModal - Show survey config modal (sync)
+ * @returns loadingQuestions - Research questions loading state
+ * @returns loadingHypotheses - Hypotheses loading state
+ * @returns loadingConstructs - Constructs loading state
+ * @returns loadingSurvey - Survey loading state
  *
  * @example
  * ```tsx
- * const apiHandlers = useThemeApiHandlers({
- *   selectedThemeIds,
- *   mappedSelectedThemes,
- *   extractionPurpose,
+ * // In a component
+ * const [loadingQuestions, setLoadingQuestions] = useState(false);
+ * const [loadingHypotheses, setLoadingHypotheses] = useState(false);
+ * // ... other loading states
+ *
+ * const {
+ *   handleGenerateQuestions,
+ *   handleGenerateHypotheses,
+ *   loadingQuestions,
+ * } = useThemeApiHandlers({
+ *   selectedThemeIds: ['theme-1', 'theme-2'],
+ *   mappedSelectedThemes: themes.filter(t => selectedIds.has(t.id)),
+ *   extractionPurpose: 'q_methodology',
  *   setLoadingQuestions,
  *   setLoadingHypotheses,
  *   setLoadingConstructs,
@@ -134,9 +182,16 @@ export interface UseThemeApiHandlersParams {
  *   loadingSurvey,
  * });
  *
- * // Use handlers
- * await apiHandlers.handleGenerateQuestions();
+ * // Generate research questions
+ * await handleGenerateQuestions();
+ *
+ * // Show loading state
+ * {loadingQuestions && <Spinner />}
  * ```
+ *
+ * @see {@link UseThemeApiHandlersParams} - Full parameter interface
+ * @see {@link UseThemeApiHandlersReturn} - Return type interface
+ * @see {@link enhancedThemeIntegrationService} - Underlying API service
  */
 export function useThemeApiHandlers(
   params: UseThemeApiHandlersParams

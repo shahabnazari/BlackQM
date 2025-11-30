@@ -4,6 +4,57 @@
  * Phase 10.1 Day 3 - Component Extraction
  */
 
+/**
+ * Paper Metadata
+ * Phase 10.101: Replace Record<string, any> with proper typed interface
+ *
+ * @see {Paper.metadata}
+ */
+export interface PaperMetadata {
+  /** Content type classification for theme extraction */
+  contentType?: 'full_text' | 'abstract' | 'abstract_overflow' | 'video_transcript' | 'podcast_transcript' | 'social_media' | 'none';
+  /** Source of the content (e.g., 'unpaywall', 'pmc', 'manual') */
+  contentSource?: string;
+  /** Content length in characters */
+  contentLength?: number;
+  /** Whether full-text is available */
+  hasFullText?: boolean;
+  /** Full-text fetching status */
+  fullTextStatus?: 'not_fetched' | 'fetching' | 'success' | 'failed';
+  /** Video-specific: YouTube video ID */
+  videoId?: string;
+  /** Video-specific: Video duration in seconds */
+  duration?: number;
+  /** Social media-specific: Platform name */
+  platform?: 'instagram' | 'tiktok' | 'youtube' | 'twitter' | 'reddit';
+  /** Social media-specific: Post ID */
+  postId?: string;
+  /** Quality assessment metadata */
+  qualityAssessment?: {
+    /** Peer review status */
+    peerReviewed?: boolean;
+    /** Retraction status */
+    retracted?: boolean;
+    /** Data availability statement present */
+    hasDataAvailability?: boolean;
+    /** Reproducibility score (0-1) */
+    reproducibilityScore?: number;
+  };
+  /** Altmetric data */
+  altmetrics?: {
+    /** Altmetric attention score */
+    score?: number;
+    /** Number of mentions across all platforms */
+    mentions?: number;
+    /** Number of tweets */
+    tweets?: number;
+    /** Number of news mentions */
+    news?: number;
+  };
+  /** Additional custom metadata fields */
+  [key: string]: unknown;
+}
+
 export interface Paper {
   id: string;
   title: string;
@@ -83,7 +134,8 @@ export interface Paper {
   grants?: Array<{ grantId: string | null; agency: string | null; country: string | null }>;
   // Phase 10.8 Day 9: AI Smart Curation
   qualityTier?: 'gold' | 'silver' | 'bronze' | null;
-  metadata?: Record<string, any>;
+  // Phase 10.101: Proper type safety for metadata
+  metadata?: PaperMetadata;
 }
 
 /**

@@ -126,32 +126,97 @@ export interface UseResearchOutputHandlersParams {
 // ============================================================================
 
 /**
- * useResearchOutputHandlers - Hook for research output interactions
+ * Research Output Handlers Hook
  *
- * **Extracted from ThemeExtractionContainer to reduce component size.**
+ * **Phase 10.101**: Enhanced JSDoc for public API documentation
+ * **Phase 10.935**: Extracted from ThemeExtractionContainer (component size reduction)
  *
- * Provides memoized handlers for:
- * - Selecting and operationalizing research questions
- * - Selecting and testing hypotheses
- * - Interacting with construct mappings
- * - Editing and exporting surveys
+ * Provides memoized, enterprise-grade interaction handlers for generated research outputs.
+ * Coordinates user interactions with research questions, hypotheses, construct mappings, and surveys
+ * with proper navigation, storage, error handling, and user feedback.
  *
- * @param params - Hook parameters including mapped themes, constructs, survey, and purpose
- * @returns Memoized output interaction handlers
+ * **Supported Interaction Types:**
+ * 1. **Research Questions** - Select and operationalize questions (navigates to design page)
+ * 2. **Hypotheses** - Select and test hypotheses (navigates to design page)
+ * 3. **Construct Mappings** - View construct details and relationships (toast notifications)
+ * 4. **Survey Editing** - Save and navigate to Questionnaire Builder
+ * 5. **Survey Export** - Export surveys in JSON, CSV, PDF (coming soon), Word (coming soon)
+ *
+ * **Enterprise Features:**
+ * - Automatic storage persistence (localStorage for surveys, API service for questions/hypotheses)
+ * - Navigation integration (Next.js router with query params)
+ * - Memoized handlers (stable references across re-renders)
+ * - Graceful error handling with user-friendly toasts
+ * - Enterprise logging (no console.log)
+ * - Multi-format export support (JSON, CSV with proper escaping)
+ *
+ * **Navigation Flow:**
+ * - Questions/Hypotheses → `/design?source=themes&step=[question|hypotheses]`
+ * - Survey Edit → `/questionnaire/builder-pro?import=survey&source=themes`
+ * - Construct clicks → Toast notifications (inline feedback)
+ *
+ * **Storage Strategy:**
+ * - Research questions: API service persistence + theme linkage
+ * - Hypotheses: API service persistence + theme linkage
+ * - Surveys: localStorage with metadata (purpose, themes, timestamp)
+ *
+ * **Performance:**
+ * - All handlers memoized with `useCallback`
+ * - Stable dependencies to prevent unnecessary re-creation
+ * - Efficient CSV generation (single-pass iteration)
+ * - Blob URL cleanup to prevent memory leaks
+ *
+ * @param params - Hook parameters
+ * @param params.mappedSelectedThemes - Full theme objects (linked to research outputs)
+ * @param params.constructMappings - Construct mappings with relationships
+ * @param params.generatedSurvey - Complete survey with sections, items, and metadata (null if not generated)
+ * @param params.extractionPurpose - Research purpose context (affects storage metadata)
+ *
+ * @returns Research output interaction handlers
+ * @returns handleSelectQuestion - Save question and navigate to design page (sync)
+ * @returns handleOperationalizeQuestion - Save question and navigate to operationalization panel (sync)
+ * @returns handleSelectHypothesis - Save hypothesis and navigate to design page (sync)
+ * @returns handleTestHypothesis - Save hypothesis and navigate to testing panel (sync)
+ * @returns handleConstructClick - Show construct details in toast (sync)
+ * @returns handleRelationshipClick - Show relationship details in toast (sync)
+ * @returns handleEditSurvey - Save survey to localStorage and navigate to builder (sync)
+ * @returns handleExportSurvey - Export survey in specified format (json, csv, pdf, word) (sync)
  *
  * @example
  * ```tsx
- * const outputHandlers = useResearchOutputHandlers({
- *   mappedSelectedThemes,
- *   constructMappings,
- *   generatedSurvey,
- *   extractionPurpose,
+ * // In a component
+ * const {
+ *   handleSelectQuestion,
+ *   handleExportSurvey,
+ *   handleEditSurvey,
+ * } = useResearchOutputHandlers({
+ *   mappedSelectedThemes: themes.filter(t => selectedIds.has(t.id)),
+ *   constructMappings: constructMappings,
+ *   generatedSurvey: generatedSurvey,
+ *   extractionPurpose: 'q_methodology',
  * });
  *
- * // Use handlers
- * outputHandlers.handleSelectQuestion(question);
- * outputHandlers.handleExportSurvey('json');
+ * // Select a research question (saves + navigates)
+ * <Button onClick={() => handleSelectQuestion(question)}>
+ *   Use This Question
+ * </Button>
+ *
+ * // Export survey as JSON
+ * <Button onClick={() => handleExportSurvey('json')}>
+ *   Download JSON
+ * </Button>
+ *
+ * // Edit survey in builder
+ * <Button onClick={handleEditSurvey}>
+ *   Edit in Builder
+ * </Button>
  * ```
+ *
+ * @see {@link UseResearchOutputHandlersParams} - Full parameter interface
+ * @see {@link UseResearchOutputHandlersReturn} - Return type interface
+ * @see {@link ThemeExtractionContainer} - Parent component
+ * @see {@link saveResearchQuestionsToStorage} - Question persistence service
+ * @see {@link saveHypothesesToStorage} - Hypothesis persistence service
  */
 export function useResearchOutputHandlers(
   params: UseResearchOutputHandlersParams
