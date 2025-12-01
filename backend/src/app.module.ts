@@ -1,12 +1,12 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_FILTER } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './common/prisma.module';
-import { PrismaService } from './common/prisma.service';
+import { LoggerModule } from './common/logger/logger.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RateLimitingModule } from './modules/rate-limiting/rate-limiting.module';
 import { FileUploadModule } from './modules/file-upload/file-upload.module';
@@ -24,8 +24,14 @@ import { NavigationModule } from './modules/navigation/navigation.module';
 import { LiteratureModule } from './modules/literature/literature.module';
 import { ResearchDesignModule } from './modules/research-design/research-design.module';
 import { RepositoryModule } from './modules/repository/repository.module';
+import { LogsModule } from './modules/logs/logs.module'; // Phase 10.943: Unified Logging
 import { SecurityMiddleware } from './common/middleware/security.middleware';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware'; // Phase 10.943
+import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter'; // Phase 10.943
 import { ArchiveService } from './services/archive.service';
+// Phase 8.6-8.8: Enterprise Observability & Distributed Tracing
+import { CommonModule } from './common/common.module'; // Phase 8.90: Shared services module
+import { MetricsController } from './controllers/metrics.controller';
 
 @Module({
   imports: [
@@ -34,6 +40,7 @@ import { ArchiveService } from './services/archive.service';
       envFilePath: ['.env.local', '.env'],
     }),
     PrismaModule, // Global database service
+    LoggerModule, // Global logger service
     // Global rate limiting configuration
     ThrottlerModule.forRoot([
       {
@@ -68,12 +75,24 @@ import { ArchiveService } from './services/archive.service';
     LiteratureModule, // Phase 9: Literature Review & Discovery System
     ResearchDesignModule, // Phase 9.5: Research Design Intelligence
     RepositoryModule, // Phase 10 Days 26-30: Research Repository & Knowledge Management
+    LogsModule, // Phase 10.943: Frontend Log Shipping & Error Analytics
     HealthModule,
   ],
-  controllers: [AppController],
+  controllers: [
+    AppController,
+    MetricsController, // Phase 8.6: Prometheus metrics endpoint
+  ],
   providers: [
     AppService,
     ArchiveService, // Phase 8.5 Day 4: Archive service for version control
+    MetricsService, // Phase 8.6: Prometheus metrics collection
+    DeduplicationService, // Phase 8.7: Request deduplication
+    TelemetryService, // Phase 8.8: Distributed tracing with OpenTelemetry
+    // Phase 10.943: Global exception filter for standardized error handling
+    {
+      provide: APP_FILTER,
+      useClass: GlobalHttpExceptionFilter,
+    },
     // Apply throttler guard globally (disabled in test environment)
     ...(process.env.NODE_ENV !== 'test'
       ? [
@@ -87,6 +106,9 @@ import { ArchiveService } from './services/archive.service';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    // Phase 10.943: Correlation ID middleware for request tracing (must be first)
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+    // Security middleware
     consumer.apply(SecurityMiddleware).forRoutes('*');
   }
 }
