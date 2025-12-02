@@ -273,6 +273,9 @@ export class ThemeDeduplicationService {
   /**
    * Deduplicate themes using FAISS vector similarity (Phase 10.102 Phase 5)
    *
+   * **CRITICAL FIX**: Redesigned to use index-aligned array embeddings instead of Map-based
+   * to eliminate ID mismatch between caller and FAISS service expectations.
+   *
    * **Performance**: 100x faster than brute-force for large datasets
    * **Algorithm**: FAISS IndexFlatL2 with cosine similarity via normalization
    * **Complexity**: O(n log n) vs O(n²) brute-force
@@ -284,27 +287,28 @@ export class ThemeDeduplicationService {
    *
    * **Fallback Strategy**:
    * 1. If FAISS unavailable → falls back to brute-force in FAISS service
-   * 2. If embeddings missing → falls back to keyword-based deduplicateThemes()
+   * 2. If embeddings array length mismatch → falls back to keyword-based deduplicateThemes()
+   * 3. If any embedding is null/undefined → falls back to keyword-based deduplicateThemes()
    *
-   * @param themes - Array of themes with embeddings
-   * @param embeddings - Map of theme ID to embedding vector
+   * @param themes - Array of themes to deduplicate
+   * @param embeddings - Index-aligned array of embedding vectors (embeddings[i] corresponds to themes[i])
    * @returns Deduplicated themes with performance metrics
    *
    * @example
    * const themes = [
-   *   { id: '1', label: 'Climate Change', keywords: [...], weight: 0.8 },
-   *   { id: '2', label: 'Global Warming', keywords: [...], weight: 0.7 },
+   *   { label: 'Climate Change', keywords: ['climate', 'environment'], weight: 0.8 },
+   *   { label: 'Global Warming', keywords: ['warming', 'temperature'], weight: 0.7 },
    * ];
-   * const embeddings = new Map([
-   *   ['1', [0.1, 0.2, ..., 0.5]], // 384-dim Sentence-BERT
-   *   ['2', [0.15, 0.18, ..., 0.48]]
-   * ]);
+   * const embeddings = [
+   *   [0.1, 0.2, ..., 0.5],  // 384-dim Sentence-BERT for themes[0]
+   *   [0.15, 0.18, ..., 0.48] // 384-dim Sentence-BERT for themes[1]
+   * ];
    * const result = await service.deduplicateWithEmbeddings(themes, embeddings);
-   * // Result: { themes: [...], duplicatesRemoved: 1, metrics: { durationMs: 15 } }
+   * // Result: { themes: [themes[0]], duplicatesRemoved: 1, metrics: { durationMs: 15 } }
    */
   async deduplicateWithEmbeddings(
     themes: DeduplicatableTheme[],
-    embeddings: ReadonlyMap<string, number[]>,
+    embeddings: readonly number[][],
   ): Promise<{
     themes: DeduplicatableTheme[];
     duplicatesRemoved: number;
@@ -317,7 +321,13 @@ export class ThemeDeduplicationService {
   }> {
     // Phase 10.102 Phase 5 STRICT MODE: Input validation
     if (!Array.isArray(themes)) {
-      const errorMsg = 'Themes must be an array';
+      const errorMsg = 'Themes parameter must be an array';
+      this.logger.error(`❌ [FAISS Dedupe] ${errorMsg}`);
+      throw new Error(errorMsg);
+    }
+
+    if (!Array.isArray(embeddings)) {
+      const errorMsg = 'Embeddings parameter must be an array';
       this.logger.error(`❌ [FAISS Dedupe] ${errorMsg}`);
       throw new Error(errorMsg);
     }
@@ -330,19 +340,13 @@ export class ThemeDeduplicationService {
       };
     }
 
-    // Phase 10.102 Phase 5: Generate unique IDs for themes (DeduplicatableTheme doesn't have id field)
-    const themeIds = themes.map((_, idx) => `theme-${idx}`);
-    const themeIdMap = new Map<string, number>();
-    themeIds.forEach((id, idx) => themeIdMap.set(id, idx));
-
-    // Phase 10.102 Phase 5: Validate embeddings exist for all themes
-    const missingEmbeddings = themeIds.filter(id => !embeddings.has(id));
-    if (missingEmbeddings.length > 0) {
+    // Phase 10.102 Phase 5 CRITICAL FIX: Validate embeddings array length matches themes
+    if (embeddings.length !== themes.length) {
       this.logger.warn(
-        `[FAISS Dedupe] ${missingEmbeddings.length}/${themes.length} themes missing embeddings, ` +
+        `[FAISS Dedupe] Embeddings array length (${embeddings.length}) ` +
+        `does not match themes length (${themes.length}), ` +
         `falling back to keyword-based deduplication`
       );
-      // Fallback to keyword-based deduplication
       const deduplicated = this.deduplicateThemes(themes);
       return {
         themes: deduplicated,
@@ -350,6 +354,33 @@ export class ThemeDeduplicationService {
         metrics: { durationMs: 0, indexBuildMs: 0, searchMs: 0, mergeMs: 0 },
       };
     }
+
+    // Phase 10.102 Phase 5 CRITICAL FIX: Validate all embeddings are valid arrays
+    const invalidEmbeddings = embeddings.filter(emb =>
+      !Array.isArray(emb) || emb.length === 0 || emb.some(v => typeof v !== 'number')
+    );
+    if (invalidEmbeddings.length > 0) {
+      this.logger.warn(
+        `[FAISS Dedupe] ${invalidEmbeddings.length}/${embeddings.length} invalid embeddings detected, ` +
+        `falling back to keyword-based deduplication`
+      );
+      const deduplicated = this.deduplicateThemes(themes);
+      return {
+        themes: deduplicated,
+        duplicatesRemoved: themes.length - deduplicated.length,
+        metrics: { durationMs: 0, indexBuildMs: 0, searchMs: 0, mergeMs: 0 },
+      };
+    }
+
+    // Phase 10.102 Phase 5 CRITICAL FIX: Generate synthetic IDs and convert array to Map for FAISS
+    const themeIds = themes.map((_, idx) => `theme-${idx}`);
+    const themeIdMap = new Map<string, number>();
+    const embeddingsMap = new Map<string, number[]>();
+
+    themeIds.forEach((id, idx) => {
+      themeIdMap.set(id, idx);
+      embeddingsMap.set(id, embeddings[idx]);
+    });
 
     // Phase 10.102 Phase 5: Convert themes to CandidateTheme format for FAISS
     const candidateThemes: CandidateTheme[] = themes.map((theme, idx) => ({
@@ -365,35 +396,55 @@ export class ThemeDeduplicationService {
 
     this.logger.log(`[FAISS Dedupe] Deduplicating ${themes.length} themes using FAISS...`);
 
-    // Phase 10.102 Phase 5: Call FAISS service
-    const faissResult: DeduplicationResult = await this.faissService.deduplicateThemes(
-      candidateThemes,
-      embeddings,
-    );
+    try {
+      // Phase 10.102 Phase 5 CRITICAL FIX: Call FAISS service with Map converted from array
+      const faissResult: DeduplicationResult = await this.faissService.deduplicateThemes(
+        candidateThemes,
+        embeddingsMap,
+      );
 
-    // Phase 10.102 Phase 5: Convert CandidateTheme back to DeduplicatableTheme
-    const deduplicatedThemes: DeduplicatableTheme[] = faissResult.themes.map(candidate => {
-      // Find original theme by ID to preserve all fields
-      const originalIdx = themeIdMap.get(candidate.id);
-      const original = originalIdx !== undefined ? themes[originalIdx] : themes[0];
+      // Phase 10.102 Phase 5: Convert CandidateTheme back to DeduplicatableTheme
+      const deduplicatedThemes: DeduplicatableTheme[] = faissResult.themes.map(candidate => {
+        // Find original theme by ID to preserve all fields
+        const originalIdx = themeIdMap.get(candidate.id);
+        if (originalIdx === undefined) {
+          throw new Error(`Unable to find original theme for ID: ${candidate.id}`);
+        }
+        const original = themes[originalIdx];
+        return {
+          label: candidate.label,
+          keywords: candidate.keywords,
+          weight: candidate.confidence || original.weight,
+          sourceIndices: original.sourceIndices,
+        };
+      });
+
+      this.logger.log(
+        `✅ [FAISS Dedupe] ${themes.length} → ${deduplicatedThemes.length} themes ` +
+        `(${faissResult.duplicatesRemoved} removed, ${faissResult.metrics.durationMs}ms)`
+      );
+
       return {
-        label: candidate.label,
-        keywords: candidate.keywords,
-        weight: candidate.confidence || original.weight,
-        sourceIndices: original.sourceIndices,
+        themes: deduplicatedThemes,
+        duplicatesRemoved: faissResult.duplicatesRemoved,
+        metrics: faissResult.metrics,
       };
-    });
+    } catch (error: unknown) {
+      // Phase 10.102 Phase 5 STRICT MODE: Enterprise-grade error handling
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `❌ [FAISS Dedupe] FAISS deduplication failed: ${errorMsg}, ` +
+        `falling back to keyword-based deduplication`
+      );
 
-    this.logger.log(
-      `✅ [FAISS Dedupe] ${themes.length} → ${deduplicatedThemes.length} themes ` +
-      `(${faissResult.duplicatesRemoved} removed, ${faissResult.metrics.durationMs}ms)`
-    );
-
-    return {
-      themes: deduplicatedThemes,
-      duplicatesRemoved: faissResult.duplicatesRemoved,
-      metrics: faissResult.metrics,
-    };
+      // Graceful degradation to keyword-based deduplication
+      const deduplicated = this.deduplicateThemes(themes);
+      return {
+        themes: deduplicated,
+        duplicatesRemoved: themes.length - deduplicated.length,
+        metrics: { durationMs: 0, indexBuildMs: 0, searchMs: 0, mergeMs: 0 },
+      };
+    }
   }
 
   /**
