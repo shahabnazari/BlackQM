@@ -60,6 +60,70 @@ import { SearchLoggerService } from './services/search-logger.service';
 import { IdentifierEnrichmentService } from './services/identifier-enrichment.service';
 // Phase 10.94 Day 4-5: GROBID PDF Extraction Service
 import { GrobidExtractionService } from './services/grobid-extraction.service';
+// Phase 10.97: Enterprise-Grade Parallel Extraction Orchestrator
+import { ParallelExtractionOrchestratorService } from './services/parallel-extraction-orchestrator.service';
+// Phase 10.98: FREE Local Embeddings (replaces expensive OpenAI embeddings)
+import { LocalEmbeddingService } from './services/local-embedding.service';
+// Phase 10.101 Task 3 - Phase 2: Embedding Orchestrator (extracted from UnifiedThemeExtractionService)
+import { EmbeddingOrchestratorService } from './services/embedding-orchestrator.service';
+// Phase 10.101 Task 3 - Phase 3: Progress Tracking Service (extracted from UnifiedThemeExtractionService)
+import { ThemeExtractionProgressService } from './services/theme-extraction-progress.service';
+// Phase 10.101 Task 3 - Phase 4: Source Content Fetcher (extracted from UnifiedThemeExtractionService)
+import { SourceContentFetcherService } from './services/source-content-fetcher.service';
+// Phase 10.101 Task 3 - Phase 5: Theme Deduplication (extracted from UnifiedThemeExtractionService)
+import { ThemeDeduplicationService } from './services/theme-deduplication.service';
+// Phase 10.101 Task 3 - Phase 6: Batch Extraction Orchestrator (extracted from UnifiedThemeExtractionService)
+import { BatchExtractionOrchestratorService } from './services/batch-extraction-orchestrator.service';
+// Phase 10.101 Task 3 - Phase 7: Theme Provenance Service (extracted from UnifiedThemeExtractionService)
+import { ThemeProvenanceService } from './services/theme-provenance.service';
+// Phase 10.101 Task 3 - Phase 8: API Rate Limiter Service (extracted from UnifiedThemeExtractionService)
+import { ApiRateLimiterService } from './services/api-rate-limiter.service';
+// Phase 10.101 Task 3 - Phase 8.6: Metrics Service (Prometheus-compatible)
+import { MetricsService } from '../../common/services/metrics.service';
+// Phase 10.98 Day 1-6: Purpose-Specific Theme Extraction Algorithms
+import { MathematicalUtilitiesService } from './services/mathematical-utilities.service';
+import { KMeansClusteringService } from './services/kmeans-clustering.service';
+import { QMethodologyPipelineService } from './services/q-methodology-pipeline.service';
+import { SurveyConstructionPipelineService } from './services/survey-construction-pipeline.service';
+import { QualitativeAnalysisPipelineService } from './services/qualitative-analysis-pipeline.service';
+import { ExcerptEmbeddingCacheService } from './services/excerpt-embedding-cache.service';
+// Phase 10.98 FIX: Local code extraction and theme labeling (NO AI, $0.00 cost)
+import { LocalCodeExtractionService } from './services/local-code-extraction.service';
+import { LocalThemeLabelingService } from './services/local-theme-labeling.service';
+// Phase 8.90 Priority 3: FAISS High-Performance Deduplication (100x faster)
+import { FAISSDeduplicationService } from './services/faiss-deduplication.service';
+// Phase 10.99: Neural Relevance Filtering (SciBERT-powered semantic precision)
+import { NeuralRelevanceService } from './services/neural-relevance.service';
+// Phase 10.99 Week 2: Performance Monitoring Infrastructure (Enterprise-Grade)
+// import { PerformanceMonitorService } from './services/performance-monitor.service'; // Not injectable - removed
+// Phase 10.100 Phase 2: Search Pipeline Orchestration Service (8-stage progressive filtering)
+import { SearchPipelineService } from './services/search-pipeline.service';
+// Phase 10.100 Phase 3: Alternative Sources Service (arxiv, patents, github, stackoverflow, youtube, podcasts)
+import { AlternativeSourcesService } from './services/alternative-sources.service';
+// Phase 10.100 Phase 4: Social Media Intelligence Service (Twitter, Reddit, LinkedIn, Facebook, Instagram, TikTok)
+import { SocialMediaIntelligenceService } from './services/social-media-intelligence.service';
+// Phase 10.100 Phase 5: Citation Export Service (BibTeX, RIS, APA, MLA, Chicago, CSV, JSON)
+import { CitationExportService } from './services/citation-export.service';
+// Phase 10.100 Phase 7: Paper Permissions Service (ownership verification, full-text status management)
+import { PaperPermissionsService } from './services/paper-permissions.service';
+// Phase 10.100 Phase 8: Paper Metadata Service (metadata refresh, semantic scholar mapping, title matching)
+import { PaperMetadataService } from './services/paper-metadata.service';
+// Phase 10.100 Phase 9: Paper Database Service (paper CRUD operations, library management, ownership enforcement)
+import { PaperDatabaseService } from './services/paper-database.service';
+// Phase 10.101 Task 3 - Phase 9: Theme Database Service (theme database mapping, storage, retrieval)
+import { ThemeDatabaseService } from './services/theme-database.service';
+// Phase 10.100 Phase 10: Source Router Service (academic source routing, quota management, error handling)
+import { SourceRouterService } from './services/source-router.service';
+// Phase 10.100 Phase 11: Literature Utilities Service (deduplication, query preprocessing, string algorithms)
+import { LiteratureUtilsService } from './services/literature-utils.service';
+// Phase 10.100 Phase 12: Search Quality and Diversity Service (quality sampling, source diversity, pagination caching)
+import { SearchQualityDiversityService } from './services/search-quality-diversity.service';
+// Phase 10.100 Phase 13: HTTP Client Configuration Service (timeout management, request monitoring)
+import { HttpClientConfigService } from './services/http-client-config.service';
+// Phase 10.100 Phase 14: Search Analytics Service (search logging, access control)
+import { SearchAnalyticsService } from './services/search-analytics.service';
+// Phase 10.102 Day 2 - Phase 2: Source Allocation Service (enterprise-grade with NestJS Logger)
+import { SourceAllocationService } from './services/source-allocation.service';
 import { PDFController } from './controllers/pdf.controller';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
@@ -148,6 +212,70 @@ import { AIModule } from '../ai/ai.module';
     IdentifierEnrichmentService,
     // Phase 10.94 Day 4-5: GROBID PDF Extraction Service
     GrobidExtractionService,
+    // Phase 10.97: Enterprise-Grade Parallel Extraction Orchestrator
+    ParallelExtractionOrchestratorService,
+    // Phase 10.98: FREE Local Embeddings (replaces expensive OpenAI embeddings)
+    LocalEmbeddingService,
+    // Phase 10.101 Task 3 - Phase 2: Embedding Orchestrator (extracted from UnifiedThemeExtractionService)
+    EmbeddingOrchestratorService,
+    // Phase 10.101 Task 3 - Phase 3: Progress Tracking Service (extracted from UnifiedThemeExtractionService)
+    ThemeExtractionProgressService,
+    // Phase 10.101 Task 3 - Phase 4: Source Content Fetcher (extracted from UnifiedThemeExtractionService)
+    SourceContentFetcherService,
+    // Phase 10.101 Task 3 - Phase 5: Theme Deduplication (extracted from UnifiedThemeExtractionService)
+    ThemeDeduplicationService,
+    // Phase 10.101 Task 3 - Phase 6: Batch Extraction Orchestrator (extracted from UnifiedThemeExtractionService)
+    BatchExtractionOrchestratorService,
+    // Phase 10.101 Task 3 - Phase 7: Theme Provenance Service (extracted from UnifiedThemeExtractionService)
+    ThemeProvenanceService,
+    // Phase 10.101 Task 3 - Phase 8: API Rate Limiter Service (extracted from UnifiedThemeExtractionService)
+    ApiRateLimiterService,
+    // Phase 10.101 Task 3 - Phase 8.6: Metrics Service (Prometheus-compatible)
+    MetricsService,
+    // Phase 10.98 Day 1-6: Purpose-Specific Theme Extraction Algorithms
+    MathematicalUtilitiesService,
+    KMeansClusteringService,
+    QMethodologyPipelineService,
+    SurveyConstructionPipelineService,
+    QualitativeAnalysisPipelineService,
+    ExcerptEmbeddingCacheService,
+    // Phase 10.98 FIX: Local code extraction and theme labeling (NO AI, $0.00 cost)
+    LocalCodeExtractionService,
+    LocalThemeLabelingService,
+    // Phase 8.90 Priority 3: FAISS High-Performance Deduplication (100x faster)
+    FAISSDeduplicationService,
+    // Phase 10.99: Neural Relevance Filtering (SciBERT-powered semantic precision)
+    NeuralRelevanceService,
+    // Phase 10.99 Week 2: Performance Monitoring Infrastructure (Enterprise-Grade)
+    // Note: PerformanceMonitorService removed from providers - it's instantiated directly with runtime params
+    // Phase 10.100 Phase 2: Search Pipeline Orchestration Service (8-stage progressive filtering)
+    SearchPipelineService,
+    // Phase 10.100 Phase 3: Alternative Sources Service (arxiv, patents, github, stackoverflow, youtube, podcasts)
+    AlternativeSourcesService,
+    // Phase 10.100 Phase 4: Social Media Intelligence Service (Twitter, Reddit, LinkedIn, Facebook, Instagram, TikTok)
+    SocialMediaIntelligenceService,
+    // Phase 10.100 Phase 5: Citation Export Service (BibTeX, RIS, APA, MLA, Chicago, CSV, JSON)
+    CitationExportService,
+    // Phase 10.100 Phase 7: Paper Permissions Service (ownership verification, full-text status management)
+    PaperPermissionsService,
+    // Phase 10.100 Phase 8: Paper Metadata Service (metadata refresh, semantic scholar mapping, title matching)
+    PaperMetadataService,
+    // Phase 10.100 Phase 9: Paper Database Service (paper CRUD operations, library management, ownership enforcement)
+    PaperDatabaseService,
+    // Phase 10.101 Task 3 - Phase 9: Theme Database Service (theme database mapping, storage, retrieval)
+    ThemeDatabaseService,
+    // Phase 10.100 Phase 10: Source Router Service (academic source routing, quota management, error handling)
+    SourceRouterService,
+    // Phase 10.100 Phase 11: Literature Utilities Service (deduplication, query preprocessing, string algorithms)
+    LiteratureUtilsService,
+    // Phase 10.100 Phase 12: Search Quality and Diversity Service (quality sampling, source diversity, pagination caching)
+    SearchQualityDiversityService,
+    // Phase 10.100 Phase 13: HTTP Client Configuration Service (timeout management, request monitoring)
+    HttpClientConfigService,
+    // Phase 10.100 Phase 14: Search Analytics Service (search logging, access control)
+    SearchAnalyticsService,
+    // Phase 10.102 Day 2 - Phase 2: Source Allocation Service (enterprise-grade with NestJS Logger)
+    SourceAllocationService,
   ],
   exports: [
     LiteratureService,
@@ -203,19 +331,35 @@ import { AIModule } from '../ai/ai.module';
     IdentifierEnrichmentService,
     // Phase 10.94 Day 4-5: GROBID PDF Extraction Service
     GrobidExtractionService,
+    // Phase 10.97: Enterprise-Grade Parallel Extraction Orchestrator
+    ParallelExtractionOrchestratorService,
+    // Phase 10.98: FREE Local Embeddings (replaces expensive OpenAI embeddings)
+    LocalEmbeddingService,
+    // Phase 10.101 Task 3 - Phase 8.5 FIX: Export for health monitoring (shared circuit breaker state)
+    ApiRateLimiterService,
+    // Phase 10.101 Task 3 - Phase 9: Theme Database Service (DX-1 FIX: exported for other modules)
+    ThemeDatabaseService,
   ],
 })
 export class LiteratureModule implements OnModuleInit {
   constructor(
     private readonly unifiedThemeService: UnifiedThemeExtractionService,
     private readonly themeGateway: ThemeExtractionGateway,
+    private readonly rateLimiter: ApiRateLimiterService, // Phase 8.6: Inject for metrics wiring
+    private readonly metricsService: MetricsService, // Phase 8.6: Metrics tracking
   ) {}
 
   /**
    * Phase 10 Day 5.17.3: Wire up WebSocket gateway to service
    * Connects real-time progress updates to theme extraction
+   *
+   * ENHANCED Phase 8.6: Wire up metrics tracking
    */
   onModuleInit() {
+    // Phase 10 Day 5.17.3: WebSocket gateway wiring
     this.unifiedThemeService.setGateway(this.themeGateway);
+
+    // Phase 8.6: Metrics service wiring (enables circuit breaker metrics)
+    this.rateLimiter.setMetricsService(this.metricsService);
   }
 }

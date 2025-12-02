@@ -87,17 +87,19 @@ import { SearchQualityDiversityService, SourceDiversityReport } from './services
 import { HttpClientConfigService } from './services/http-client-config.service';
 // Phase 10.100 Phase 14: Search Analytics Service (search logging, access control)
 import { SearchAnalyticsService } from './services/search-analytics.service';
+// Phase 10.102 Day 2 - Phase 2: Source Allocation Service (enterprise-grade with NestJS Logger)
+import { SourceAllocationService } from './services/source-allocation.service';
 // Phase 10.99 Week 2: MutablePaper type (simplified to Paper in Phase 10.99)
 import { MutablePaper } from './types/performance.types';
 import { calculateQualityScore } from './utils/paper-quality.util';
 // Phase 10.6 Day 14.9: Tiered source allocation
 // Phase 10.100 Phase 12: QUALITY_SAMPLING_STRATA and DIVERSITY_CONSTRAINTS moved to SearchQualityDiversityService
+// Phase 10.102 Day 2 - Phase 2: groupSourcesByPriority moved to SourceAllocationService
 import {
   getSourceAllocation,
   detectQueryComplexity,
   getSourceTierInfo,
   getConfigurationSummary,
-  groupSourcesByPriority,
   COMPLEXITY_TARGETS,
   ABSOLUTE_LIMITS,
 } from './constants/source-allocation.constants';
@@ -148,6 +150,8 @@ export class LiteratureService implements OnModuleInit {
     private readonly httpConfig: HttpClientConfigService,
     // Phase 10.100 Phase 14: Search Analytics Service (search logging, access control)
     private readonly searchAnalytics: SearchAnalyticsService,
+    // Phase 10.102 Day 2 - Phase 2: Source Allocation Service (enterprise-grade with NestJS Logger)
+    private readonly sourceAllocation: SourceAllocationService,
   ) {}
   
   // Phase 10.8 Day 7 Post-Implementation: Real-time progress reporting
@@ -326,9 +330,9 @@ export class LiteratureService implements OnModuleInit {
     // Phase 10.7 Day 5.3: Deprecated sources removed from default list (not filtered, just excluded)
     // Users can still explicitly request them if needed via searchDto.sources parameter
 
-    // Phase 10.102 Day 1 - Phase 1.4: Enterprise-Grade Source Tier Allocation (with unmapped source tracking)
+    // Phase 10.102 Day 2 - Phase 2: Enterprise-Grade Source Tier Allocation (via SourceAllocationService)
     // Group sources by tier for organized searching (no early stopping)
-    const sourceTiers = groupSourcesByPriority(sources as LiteratureSource[]);
+    const sourceTiers = this.sourceAllocation.groupSourcesByPriority(sources as LiteratureSource[]);
 
     // Phase 10.102: Check for unmapped sources (sources that don't match SOURCE_TIER_MAP)
     if (sourceTiers.unmappedSources.length > 0) {

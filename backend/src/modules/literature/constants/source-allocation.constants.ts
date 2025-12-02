@@ -262,6 +262,14 @@ function safeStringify(value: any, maxLength = 200): string {
 /**
  * Phase 10.102 Day 1 - Phase 1.3: Enterprise-Grade Source Tier Allocation
  *
+ * @deprecated Phase 10.102 Day 2 - Phase 2: Use SourceAllocationService instead
+ * This function is kept for backward compatibility only. New code should inject
+ * and use SourceAllocationService which provides:
+ * - NestJS dependency injection
+ * - Proper Logger integration (no console.*)
+ * - Runtime type guards
+ * - Better type safety (unknown instead of any)
+ *
  * Groups sources by quality tier with Netflix-level defensive programming:
  * 1. Premium sources first (highest quality, peer-reviewed)
  * 2. Good sources second (established publishers)
