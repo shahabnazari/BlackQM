@@ -220,9 +220,15 @@ export class LiteratureService implements OnModuleInit {
     metadata?: SearchMetadata;
   }> {
     // Phase 10.102 Phase 3.1 STRICT AUDIT: Defensive input validation for userId
-    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+    // Performance optimization: Check length first to avoid trim() allocation for empty string
+    if (!userId || typeof userId !== 'string' || userId.length === 0) {
       this.logger.error('❌ [Validation] Invalid userId provided to searchLiterature');
       throw new Error('Invalid user identifier: must be non-empty string');
+    }
+    // Check for whitespace-only userId (rare case, requires trim() allocation)
+    if (userId.trim().length === 0) {
+      this.logger.error('❌ [Validation] Invalid userId with only whitespace');
+      throw new Error('Invalid user identifier: must not be only whitespace');
     }
 
     // Phase 10.7 Day 5: PAGINATION CACHE - Generate cache key WITHOUT page/limit
@@ -1257,8 +1263,9 @@ export class LiteratureService implements OnModuleInit {
             });
 
             // Phase 10.102 Phase 3.1 Session 3: Log bulkhead metrics for observability
+            // Performance optimization: Only log every 10th search to reduce overhead (90% reduction)
             const bulkheadMetrics = this.bulkhead.getMetrics(userId, 'search');
-            if (bulkheadMetrics) {
+            if (bulkheadMetrics && bulkheadMetrics.completedTasks % 10 === 0) {
               this.logger.log(
                 `📊 [Bulkhead Metrics] User ${userId}: ` +
                 `${bulkheadMetrics.completedTasks} completed, ` +

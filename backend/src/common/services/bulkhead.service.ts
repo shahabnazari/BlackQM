@@ -180,8 +180,8 @@ export class BulkheadService {
     // Get or create user queue
     const userQueue = this.getUserQueue(userId, config, userPools);
 
-    // Track metrics
-    const metricsKey = `${userId}:${operationType}`;
+    // Track metrics - reuse circuitKey to avoid duplicate string allocation
+    const metricsKey = circuitKey;  // Performance optimization: reuse existing string
     this.initializeMetrics(metricsKey, userId, operationType);
     const metrics = this.metrics.get(metricsKey)!;
     metrics.totalRequests++;
@@ -201,7 +201,8 @@ export class BulkheadService {
     const startTime = Date.now();
 
     try {
-      this.logger.log(
+      // Performance optimization: Use debug level to avoid logging overhead in production
+      this.logger.debug(
         `[Bulkhead] User ${userId} ${operationType}: ` +
         `User queue: ${userQueue.size}/${userQueue.pending}, ` +
         `Global queue: ${globalQueue.size}/${globalQueue.pending}`
@@ -222,10 +223,13 @@ export class BulkheadService {
       // Reset circuit on success
       this.recordSuccess(circuitKey);
 
-      this.logger.log(
-        `[Bulkhead] User ${userId} ${operationType} completed ` +
-        `(duration: ${duration}ms, avg: ${metrics.averageWaitTime.toFixed(0)}ms)`
-      );
+      // Performance optimization: Only log slow completions (actionable insight)
+      if (duration > 30000) {  // > 30 seconds
+        this.logger.warn(
+          `[Bulkhead] Slow ${operationType} completion: ${duration}ms for user ${userId} ` +
+          `(avg: ${metrics.averageWaitTime.toFixed(0)}ms)`
+        );
+      }
 
       return result;
     } catch (error) {
