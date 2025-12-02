@@ -59,6 +59,9 @@ export function isLiteratureSource(value: unknown): value is LiteratureSource {
  *
  * Returns: { valid: LiteratureSource[], invalid: unknown[] }
  * This allows the caller to decide how to handle invalid sources
+ *
+ * STRICT AUDIT FIX: Refactored to eliminate double normalization.
+ * Normalizes once and reuses the normalized value for both validation and result.
  */
 export function validateSourceArray(sources: unknown[]): {
   valid: LiteratureSource[];
@@ -66,11 +69,21 @@ export function validateSourceArray(sources: unknown[]): {
 } {
   const valid: LiteratureSource[] = [];
   const invalid: unknown[] = [];
+  const allSourceValues = Object.values(LiteratureSource);
 
   sources.forEach((source) => {
-    if (isLiteratureSource(source)) {
-      // Normalize to lowercase for consistent mapping
-      valid.push(source.toLowerCase().trim() as LiteratureSource);
+    // Type check first
+    if (typeof source !== 'string') {
+      invalid.push(source);
+      return;
+    }
+
+    // Normalize once
+    const normalized = source.toLowerCase().trim();
+
+    // Check if normalized value is a valid enum value
+    if (allSourceValues.includes(normalized as LiteratureSource)) {
+      valid.push(normalized as LiteratureSource);
     } else {
       invalid.push(source);
     }
@@ -162,12 +175,17 @@ export class SourceAllocationService {
     const tier4Aggregator: LiteratureSource[] = [];
     const unmappedSources: LiteratureSource[] = [];
 
+    // STRICT AUDIT FIX: Track intentionally skipped sources separately
+    // This prevents false positive "critical bug" alerts for valid input validation
+    let skippedCount = 0;
+
     sources.forEach((source, index) => {
       // VALIDATION: Check source is not null/undefined/empty
       if (!source || (typeof source === 'string' && source.trim().length === 0)) {
         this.logger.warn(
           `Skipping invalid source at index ${index}: ${safeStringify(source)}`
         );
+        skippedCount++;
         return;
       }
 
@@ -240,14 +258,20 @@ export class SourceAllocationService {
       (unmappedSources.length > 0
         ? `\n  ⚠️  Unmapped: ${unmappedSources.length} sources - ${unmappedSources.join(', ')}`
         : '') +
+      (skippedCount > 0
+        ? `\n  ⏭️  Skipped: ${skippedCount} invalid sources`
+        : '') +
       `\n  📊 Total allocated: ${totalAllocated}/${sources.length} (${((totalAllocated/sources.length)*100).toFixed(1)}%)`
     );
 
+    // STRICT AUDIT FIX: Only alert if sources were lost unexpectedly (not intentionally skipped)
     // ALERT if sources were lost (should not happen with defensive fallback, but check anyway)
-    if (totalAllocated < sources.length) {
+    const expectedAllocated = sources.length - skippedCount;
+    if (totalAllocated < expectedAllocated) {
       this.logger.error(
         `[CRITICAL] Source allocation mismatch! ` +
-        `Input: ${sources.length}, Allocated: ${totalAllocated}, Lost: ${sources.length - totalAllocated}. ` +
+        `Expected: ${expectedAllocated}, Allocated: ${totalAllocated}, Lost: ${expectedAllocated - totalAllocated}. ` +
+        `(Input: ${sources.length}, Skipped: ${skippedCount}). ` +
         `This indicates a critical bug in the allocation logic.`
       );
     }
