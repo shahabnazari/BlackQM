@@ -31,6 +31,9 @@ import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, Logger, forwardRef, OnModuleInit } from '@nestjs/common';
 // Phase 10.100 Phase 12: createHash moved to SearchQualityDiversityService
 import { CacheService } from '../../common/cache.service';
+// Phase 10.102 Phase 3.1: Error Handling & Multi-Tenant Isolation (TODO: Integrate in follow-up)
+// import { BulkheadService } from '../../common/services/bulkhead.service';
+// import { RetryService } from '../../common/services/retry.service';
 // Phase 10.100 Phase 14: PrismaService removed - all database operations delegated to specialized services
 import { StatementGeneratorService } from '../ai/services/statement-generator.service';
 import {
@@ -41,6 +44,7 @@ import {
   ResearchGap,
   SavePaperDto,
   SearchLiteratureDto,
+  SearchMetadata,
   Theme,
 } from './dto/literature.dto';
 // Phase 10.100 Phase 10: APIQuotaMonitorService and SearchCoalescerService moved to SourceRouterService
@@ -152,6 +156,9 @@ export class LiteratureService implements OnModuleInit {
     private readonly searchAnalytics: SearchAnalyticsService,
     // Phase 10.102 Day 2 - Phase 2: Source Allocation Service (enterprise-grade with NestJS Logger)
     private readonly sourceAllocation: SourceAllocationService,
+    // Phase 10.102 Phase 3.1: Error Handling & Multi-Tenant Isolation (TODO: Integrate in follow-up)
+    // private readonly bulkhead: BulkheadService,
+    // private readonly retry: RetryService,
   ) {}
   
   // Phase 10.8 Day 7 Post-Implementation: Real-time progress reporting
@@ -203,7 +210,8 @@ export class LiteratureService implements OnModuleInit {
     // Phase 10.100 Phase 2: Flexible metadata type for pipeline transparency
     // Contains: stage1, stage2, searchPhases, allocationStrategy, diversityMetrics,
     // qualificationCriteria, biasMetrics, and legacy fields for backward compatibility
-    metadata?: Record<string, any>;
+    // Phase 10.102 Phase 3.1: Replaced Record<string, any> with SearchMetadata for strict mode
+    metadata?: SearchMetadata;
   }> {
     // Phase 10.7 Day 5: PAGINATION CACHE - Generate cache key WITHOUT page/limit
     const searchCacheKey = this.generatePaginationCacheKey(searchDto, userId);
@@ -212,7 +220,7 @@ export class LiteratureService implements OnModuleInit {
     if (searchDto.page && searchDto.page > 1) {
       const cachedFullResults = await this.cacheService.get(searchCacheKey) as {
         papers: Paper[];
-        metadata: any;
+        metadata: SearchMetadata;
       } | null;
       
       if (cachedFullResults) {

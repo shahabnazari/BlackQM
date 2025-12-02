@@ -13,7 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 interface ErrorRecoveryProps {
   error: Error | null;
@@ -54,6 +54,54 @@ export function ErrorRecovery({
   const router = useRouter();
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
+
+  // REACT HOOKS FIX: Define handleRetry before it's referenced in errorTypes config
+  const handleRetry = useCallback(() => {
+    setIsRetrying(true);
+    setRetryCount(prev => prev + 1);
+
+    setTimeout(() => {
+      if (reset) {
+        reset();
+      } else {
+        window.location.reload();
+      }
+      setIsRetrying(false);
+    }, 1000);
+  }, [reset]);
+
+  // REACT HOOKS FIX: Move useEffect hooks before any early returns
+  // Auto-retry for network errors
+  useEffect(() => {
+    if (errorCode === 'NETWORK_ERROR' && retryCount < 3) {
+      const timer = setTimeout(
+        () => {
+          handleRetry();
+        },
+        5000 * (retryCount + 1)
+      ); // Exponential backoff
+
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [errorCode, retryCount, handleRetry]);
+
+  // Log error for monitoring
+  useEffect(() => {
+    if (error) {
+      console.error('Error Recovery:', {
+        code: errorCode,
+        message: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Send to error tracking service (e.g., Sentry)
+      if (typeof window !== 'undefined' && (window as any).Sentry) {
+        (window as any).Sentry.captureException(error);
+      }
+    }
+  }, [error, errorCode]);
 
   // Error type configurations
   const errorTypes: Record<string, ErrorType> = {
@@ -195,52 +243,6 @@ export function ErrorRecovery({
   const currentError = errorTypes[errorCode] || errorTypes['UNKNOWN'];
   if (!currentError) return null; // This should never happen, but satisfies TypeScript
   const ErrorIcon = currentError.icon;
-
-  // Auto-retry for network errors
-  useEffect(() => {
-    if (errorCode === 'NETWORK_ERROR' && retryCount < 3) {
-      const timer = setTimeout(
-        () => {
-          handleRetry();
-        },
-        5000 * (retryCount + 1)
-      ); // Exponential backoff
-
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [errorCode, retryCount]);
-
-  function handleRetry() {
-    setIsRetrying(true);
-    setRetryCount(prev => prev + 1);
-
-    setTimeout(() => {
-      if (reset) {
-        reset();
-      } else {
-        window.location.reload();
-      }
-      setIsRetrying(false);
-    }, 1000);
-  }
-
-  // Log error for monitoring
-  useEffect(() => {
-    if (error) {
-      console.error('Error Recovery:', {
-        code: errorCode,
-        message: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Send to error tracking service (e.g., Sentry)
-      if (typeof window !== 'undefined' && (window as any).Sentry) {
-        (window as any).Sentry.captureException(error);
-      }
-    }
-  }, [error, errorCode]);
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center p-4">

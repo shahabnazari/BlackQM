@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsBoolean,
@@ -179,13 +180,25 @@ export class SavePaperDto {
   @IsString()
   title!: string;
 
-  @ApiProperty({ description: 'Paper authors', type: [String] })
+  @ApiProperty({ description: 'Paper authors', type: [String], maxItems: 100 })
   @IsArray()
+  @ArrayMaxSize(100, { message: 'Authors array cannot exceed 100 items' })
+  @IsString({ each: true })
+  @MaxLength(500, { each: true, message: 'Each author name cannot exceed 500 characters' })
   authors!: string[];
 
-  @ApiProperty({ description: 'Publication year' })
+  @ApiPropertyOptional({ description: 'Publication year' })
   @IsNumber()
-  year!: number;
+  @IsOptional()
+  year?: number;
+
+  @ApiPropertyOptional({
+    description: 'Source database (semantic_scholar, pubmed, crossref, etc.)',
+    enum: LiteratureSource,
+  })
+  @IsEnum(LiteratureSource)
+  @IsOptional()
+  source?: LiteratureSource;
 
   @ApiPropertyOptional({ description: 'Paper abstract' })
   @IsString()
@@ -217,8 +230,27 @@ export class SavePaperDto {
   @IsOptional()
   citationCount?: number;
 
-  @ApiPropertyOptional({ description: 'User tags', type: [String] })
+  @ApiPropertyOptional({
+    description: 'Keywords extracted from paper',
+    type: [String],
+    maxItems: 100,
+  })
   @IsArray()
+  @ArrayMaxSize(100, { message: 'Keywords array cannot exceed 100 items' })
+  @IsString({ each: true })
+  @MaxLength(200, { each: true, message: 'Each keyword cannot exceed 200 characters' })
+  @IsOptional()
+  keywords?: string[];
+
+  @ApiPropertyOptional({
+    description: 'User tags',
+    type: [String],
+    maxItems: 50,
+  })
+  @IsArray()
+  @ArrayMaxSize(50, { message: 'Tags array cannot exceed 50 items' })
+  @IsString({ each: true })
+  @MaxLength(100, { each: true, message: 'Each tag cannot exceed 100 characters' })
   @IsOptional()
   tags?: string[];
 
@@ -228,9 +260,11 @@ export class SavePaperDto {
   collectionId?: string;
 
   // Phase 10.6 Day 2: Enhanced PubMed Metadata
+  // Phase 10.943: Security hardening - array size limits
   @ApiPropertyOptional({
     description: 'MeSH terms (Medical Subject Headings) from PubMed',
     type: 'array',
+    maxItems: 200,
     items: {
       type: 'object',
       properties: {
@@ -239,21 +273,28 @@ export class SavePaperDto {
       }
     }
   })
+  @IsArray()
+  @ArrayMaxSize(200, { message: 'MeSH terms array cannot exceed 200 items' })
   @IsOptional()
   meshTerms?: Array<{ descriptor: string; qualifiers: string[] }>;
 
   @ApiPropertyOptional({
     description: 'Publication types from PubMed',
     type: [String],
+    maxItems: 20,
     example: ['Journal Article', 'Randomized Controlled Trial']
   })
   @IsArray()
+  @ArrayMaxSize(20, { message: 'Publication types cannot exceed 20 items' })
+  @IsString({ each: true })
+  @MaxLength(100, { each: true, message: 'Each publication type cannot exceed 100 characters' })
   @IsOptional()
   publicationType?: string[];
 
   @ApiPropertyOptional({
     description: 'Author affiliations from PubMed',
     type: 'array',
+    maxItems: 100,
     items: {
       type: 'object',
       properties: {
@@ -262,12 +303,15 @@ export class SavePaperDto {
       }
     }
   })
+  @IsArray()
+  @ArrayMaxSize(100, { message: 'Author affiliations cannot exceed 100 items' })
   @IsOptional()
   authorAffiliations?: Array<{ author: string; affiliation: string }>;
 
   @ApiPropertyOptional({
     description: 'Grant information from PubMed',
     type: 'array',
+    maxItems: 50,
     items: {
       type: 'object',
       properties: {
@@ -277,6 +321,8 @@ export class SavePaperDto {
       }
     }
   })
+  @IsArray()
+  @ArrayMaxSize(50, { message: 'Grants array cannot exceed 50 items' })
   @IsOptional()
   grants?: Array<{ grantId: string | null; agency: string | null; country: string | null }>;
 }
@@ -483,6 +529,45 @@ export class Paper {
   publicationType?: string[]; // Publication type classifications
   authorAffiliations?: Array<{ author: string; affiliation: string }>; // Author institutional affiliations
   grants?: Array<{ grantId: string | null; agency: string | null; country: string | null }>; // Funding information
+
+  // Phase 10.99 Week 2: Performance Optimization - Scoring Properties
+  // Added to support in-place mutations during search pipeline
+  relevanceScore?: number; // BM25 relevance score (Robertson & Walker, 1994)
+  neuralRelevanceScore?: number; // SciBERT neural relevance score (0-1)
+  neuralRank?: number; // Neural ranking position (1 = most relevant)
+  neuralExplanation?: string; // Explanation of neural score
+  domain?: string; // Domain classification (e.g., "Biology", "Medicine")
+  domainConfidence?: number; // Domain classification confidence (0-1)
+  rejectionReason?: string; // Rejection reason if filtered out
+}
+
+/**
+ * Phase 10.102 Phase 3.1: Search Metadata Interface
+ *
+ * Replaces Record<string, any> for strict TypeScript compliance.
+ * Contains metadata about search execution, allocation strategy, and quality metrics.
+ *
+ * Note: Uses `unknown` for flexibility to support various metadata types
+ * (SourceDiversityReport, complex objects, etc.) while maintaining strict mode compliance.
+ */
+export interface SearchMetadata {
+  // Search pipeline stages
+  stage1?: unknown;
+  stage2?: unknown;
+  searchPhases?: unknown;
+
+  // Allocation and diversity
+  allocationStrategy?: unknown;
+  diversityMetrics?: unknown;
+  qualificationCriteria?: unknown;
+  biasMetrics?: unknown;
+
+  // Display and caching
+  displayed?: number;
+  fromCache?: boolean;
+
+  // Extensibility for future metadata fields
+  [key: string]: unknown;
 }
 
 export class Theme {
@@ -906,9 +991,9 @@ export class ExtractThemesAcademicDto {
  * Phase 10 Day 5.13 - Patent Claim #2: Purpose-Adaptive Algorithms
  */
 export class ExtractThemesV2Dto extends ExtractThemesAcademicDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description:
-      'Research purpose (determines extraction strategy and parameters)',
+      'Research purpose (determines extraction strategy and parameters). Defaults to qualitative_analysis if not specified.',
     enum: [
       'q_methodology',
       'survey_construction',
@@ -916,8 +1001,10 @@ export class ExtractThemesV2Dto extends ExtractThemesAcademicDto {
       'literature_synthesis',
       'hypothesis_generation',
     ],
-    example: 'q_methodology',
+    example: 'qualitative_analysis',
+    default: 'qualitative_analysis',
   })
+  @IsOptional() // PHASE 10.99 CRITICAL FIX: Must be FIRST to allow undefined
   @IsString()
   @IsIn([
     'q_methodology',
@@ -926,7 +1013,7 @@ export class ExtractThemesV2Dto extends ExtractThemesAcademicDto {
     'literature_synthesis',
     'hypothesis_generation',
   ])
-  purpose!:
+  purpose?:
     | 'q_methodology'
     | 'survey_construction'
     | 'qualitative_analysis'
