@@ -94,6 +94,11 @@ export function FeatureFlagMonitor() {
   }, []);
 
   // Toggle flag override
+  // STRICT AUDIT FIX PERF-001: Empty dependency array is safe because:
+  // - featureFlags is a stable module-level constant
+  // - setFeatureFlagOverride is a stable utility function with no internal state
+  // - toast is a stable external library function
+  // Per React docs, stable functions/constants can be safely omitted from deps
   const handleToggleFlag = useCallback((name: keyof FeatureFlagConfig) => {
     const currentValue = featureFlags[name];
     setFeatureFlagOverride(name, !currentValue);
@@ -104,9 +109,10 @@ export function FeatureFlagMonitor() {
       description: `${String(name)} = ${!currentValue}\n\nPlease reload the page for changes to take effect.`,
       duration: 5000,
     });
-  }, []);
+  }, []); // Empty deps: All external references are stable (see comment above)
 
   // Clear flag override
+  // STRICT AUDIT FIX PERF-001: Empty dependency array is safe (same reasoning as handleToggleFlag)
   const handleClearOverride = useCallback((name: keyof FeatureFlagConfig) => {
     clearFeatureFlagOverride(name);
 
@@ -114,7 +120,7 @@ export function FeatureFlagMonitor() {
       description: `${String(name)}\n\nPlease reload the page for changes to take effect.`,
       duration: 5000,
     });
-  }, []);
+  }, []); // Empty deps: clearFeatureFlagOverride and toast are stable
 
   // Get source color
   // STRICT AUDIT FIX: DX-001 - Added warning for unknown source types

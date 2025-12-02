@@ -15,6 +15,13 @@ import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 
+// STRICT AUDIT FIX TS-001: Proper typing for Sentry global (eliminates `any` usage)
+interface WindowWithSentry extends Window {
+  Sentry?: {
+    captureException: (error: Error) => void;
+  };
+}
+
 interface ErrorRecoveryProps {
   error: Error | null;
   reset?: () => void;
@@ -87,18 +94,31 @@ export function ErrorRecovery({
   }, [errorCode, retryCount, handleRetry]);
 
   // Log error for monitoring
+  // STRICT AUDIT FIX SEC-001: Limit detailed error logging to development mode
   useEffect(() => {
     if (error) {
-      console.error('Error Recovery:', {
-        code: errorCode,
-        message: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString(),
-      });
+      // Development: Log full details including stack trace
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error Recovery (Dev):', {
+          code: errorCode,
+          message: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        // Production: Log only user-safe information (no stack traces)
+        console.error('Error Recovery:', {
+          code: errorCode,
+          message: error.message,
+          timestamp: new Date().toISOString(),
+        });
+      }
 
-      // Send to error tracking service (e.g., Sentry)
-      if (typeof window !== 'undefined' && (window as any).Sentry) {
-        (window as any).Sentry.captureException(error);
+      // Send to error tracking service (full details sent securely)
+      // STRICT AUDIT FIX TS-001: Use typed WindowWithSentry instead of `any`
+      const sentry = typeof window !== 'undefined' ? (window as WindowWithSentry).Sentry : undefined;
+      if (sentry) {
+        sentry.captureException(error);
       }
     }
   }, [error, errorCode]);
