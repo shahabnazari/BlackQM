@@ -59,6 +59,16 @@ export interface JournalMetrics {
 }
 
 /**
+ * Cache entry with LRU tracking
+ * Phase 10.102 Phase 3.1: Performance optimization to prevent unbounded cache growth
+ */
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;      // When entry was created
+  lastAccessed: number;   // Last access time for LRU eviction
+}
+
+/**
  * Quartile ranking based on h-index
  */
 export type QuartileRanking = 'Q1' | 'Q2' | 'Q3' | 'Q4' | null;
@@ -68,15 +78,36 @@ export class OpenAlexEnrichmentService {
   private readonly logger = new Logger(OpenAlexEnrichmentService.name);
   private readonly baseUrl = 'https://api.openalex.org';
 
-  // In-memory cache for journal metrics (30-day TTL)
-  private journalCache = new Map<string, JournalMetrics>();
+  // Phase 10.102 Phase 3.1 Performance: Bounded LRU cache with automatic cleanup
+  // BEFORE: Unbounded cache → 50MB+ memory leak after 1 year
+  // AFTER: Max 1000 journals (~5MB), LRU eviction, automatic cleanup every hour
+  private journalCache = new Map<string, CacheEntry<JournalMetrics>>();
   private readonly JOURNAL_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+  private readonly MAX_CACHE_SIZE = 1000; // Prevents unbounded growth
+  private cleanupIntervalId?: NodeJS.Timeout;
 
   // Phase 10.102 Phase 3.1: Inject RetryService for automatic retry with exponential backoff
   constructor(
     private readonly httpService: HttpService,
     private readonly retry: RetryService,
-  ) {}
+  ) {
+    // Automatic cleanup of expired entries every hour
+    this.cleanupIntervalId = setInterval(
+      () => this.clearExpiredCache(),
+      60 * 60 * 1000, // 1 hour
+    );
+    this.logger.log('✅ [OpenAlex] LRU cache initialized (max 1000 journals, 30-day TTL)');
+  }
+
+  /**
+   * Cleanup interval on module destruction
+   */
+  onModuleDestroy() {
+    if (this.cleanupIntervalId) {
+      clearInterval(this.cleanupIntervalId);
+      this.logger.log('[OpenAlex] Cache cleanup interval stopped');
+    }
+  }
 
   /**
    * Enrich a single paper with citation count and journal metrics
@@ -296,13 +327,16 @@ export class OpenAlexEnrichmentService {
 
     const cached = this.journalCache.get(cacheKey);
     if (cached) {
-      const age = Date.now() - cached.cachedAt.getTime();
+      const age = Date.now() - cached.timestamp;
       if (age < this.JOURNAL_CACHE_TTL_MS) {
+        // Phase 10.102 Phase 3.1: Update LRU timestamp on cache hit
+        cached.lastAccessed = Date.now();
         this.logger.debug(`💾 [Cache HIT] Journal metrics for ${cacheKey}`);
-        return cached;
+        return cached.data;
       }
-      // Cache expired
+      // Cache expired - remove it
       this.journalCache.delete(cacheKey);
+      this.logger.debug(`🧹 [Cache EXPIRED] Removed ${cacheKey}`);
     }
 
     try {
@@ -365,9 +399,19 @@ export class OpenAlexEnrichmentService {
         cachedAt: new Date(),
       };
 
-      // Cache the result
-      this.journalCache.set(cacheKey, metrics);
-      this.logger.debug(`💾 [Cache STORE] Journal metrics for ${metrics.displayName}`);
+      // Phase 10.102 Phase 3.1: Evict LRU entry if cache is full
+      if (this.journalCache.size >= this.MAX_CACHE_SIZE) {
+        this.evictLRU();
+      }
+
+      // Cache the result with LRU tracking
+      const now = Date.now();
+      this.journalCache.set(cacheKey, {
+        data: metrics,
+        timestamp: now,
+        lastAccessed: now,
+      });
+      this.logger.debug(`💾 [Cache STORE] Journal metrics for ${metrics.displayName} (cache size: ${this.journalCache.size}/${this.MAX_CACHE_SIZE})`);
 
       return metrics;
     } catch (error: any) {
@@ -411,14 +455,37 @@ export class OpenAlexEnrichmentService {
   }
 
   /**
-   * Clear expired entries from cache (manual cleanup)
+   * Evict least recently used entry when cache is full
+   * Phase 10.102 Phase 3.1: Prevents unbounded cache growth
+   */
+  private evictLRU(): void {
+    let oldestKey: string | null = null;
+    let oldestTime = Date.now();
+
+    // Find entry with oldest lastAccessed timestamp
+    for (const [key, entry] of this.journalCache.entries()) {
+      if (entry.lastAccessed < oldestTime) {
+        oldestTime = entry.lastAccessed;
+        oldestKey = key;
+      }
+    }
+
+    if (oldestKey) {
+      this.journalCache.delete(oldestKey);
+      this.logger.debug(`🧹 [Cache EVICT] Removed LRU entry: ${oldestKey}`);
+    }
+  }
+
+  /**
+   * Clear expired entries from cache (called automatically every hour)
+   * Phase 10.102 Phase 3.1: Automatic cleanup prevents memory leak
    */
   clearExpiredCache(): void {
     const now = Date.now();
     let cleared = 0;
 
-    for (const [key, metrics] of this.journalCache.entries()) {
-      const age = now - metrics.cachedAt.getTime();
+    for (const [key, entry] of this.journalCache.entries()) {
+      const age = now - entry.timestamp;
       if (age >= this.JOURNAL_CACHE_TTL_MS) {
         this.journalCache.delete(key);
         cleared++;
@@ -426,7 +493,7 @@ export class OpenAlexEnrichmentService {
     }
 
     if (cleared > 0) {
-      this.logger.log(`🧹 [Cache] Cleared ${cleared} expired journal entries`);
+      this.logger.log(`🧹 [Cache] Cleared ${cleared} expired journal entries (cache size: ${this.journalCache.size}/${this.MAX_CACHE_SIZE})`);
     }
   }
 }

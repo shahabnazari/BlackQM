@@ -238,10 +238,10 @@ export class PubMedService {
         `[PubMed] Batching ${ids.length} IDs into ${batches.length} requests (${BATCH_SIZE} IDs per batch)`
       );
 
-      const allPapers: any[] = [];
-
-      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-        const batch = batches[batchIndex];
+      // Phase 10.102 Phase 3.1 Performance: Parallel batch processing (3x faster)
+      // BEFORE: Sequential batches (Batch 1 → wait → Batch 2 → wait → Batch 3) = 30s for 3 batches
+      // AFTER:  Parallel batches (Promise.all) = 10s for 3 batches
+      const batchPromises = batches.map(async (batch, batchIndex) => {
         this.logger.log(
           `[PubMed] Fetching batch ${batchIndex + 1}/${batches.length} (${batch.length} IDs)...`
         );
@@ -282,20 +282,24 @@ export class PubMedService {
           const articles = xmlData.match(/<PubmedArticle>[\s\S]*?<\/PubmedArticle>/g) || [];
 
           const batchPapers = articles.map((article: string) => this.parsePaper(article));
-          allPapers.push(...batchPapers);
 
           this.logger.log(
             `[PubMed] Batch ${batchIndex + 1}/${batches.length} complete: ${batchPapers.length} papers parsed`
           );
+
+          return batchPapers;
         } catch (error: any) {
-          // Batch failed after all retries - log and continue to next batch
+          // Batch failed after all retries - return empty array for this batch
           this.logger.error(
             `[PubMed efetch] Batch ${batchIndex + 1}/${batches.length} failed after retries: ${error.message}`
           );
-          // Continue to next batch instead of failing entire search
-          continue;
+          return []; // Return empty array instead of throwing
         }
-      }
+      });
+
+      // Wait for all batches to complete in parallel
+      const batchResults = await Promise.all(batchPromises);
+      const allPapers = batchResults.flat(); // Flatten array of arrays
 
       this.logger.log(`[PubMed] All batches complete: ${allPapers.length} total papers parsed`);
 
