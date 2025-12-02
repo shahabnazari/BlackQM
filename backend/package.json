@@ -58,7 +58,7 @@
     "@opentelemetry/sdk-trace-node": "^1.25.1",
     "@opentelemetry/semantic-conventions": "^1.25.1",
     "@prisma/client": "^6.15.0",
-    "@qdrant/js-client-rest": "^1.16.1",
+    "@qdrant/js-client-rest": "^1.16.2",
     "@sentry/node": "^10.9.0",
     "@sentry/profiling-node": "^10.9.0",
     "@types/cookie-parser": "^1.4.9",

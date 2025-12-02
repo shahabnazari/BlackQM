@@ -124,6 +124,10 @@ import { HttpClientConfigService } from './services/http-client-config.service';
 import { SearchAnalyticsService } from './services/search-analytics.service';
 // Phase 10.102 Day 2 - Phase 2: Source Allocation Service (enterprise-grade with NestJS Logger)
 import { SourceAllocationService } from './services/source-allocation.service';
+// Phase 10.102 Phase 3.1: Retry Service (exponential backoff, circuit breaker)
+import { RetryService } from '../../common/services/retry.service';
+// Phase 10.102 Phase 3.1: Bulkhead Service (multi-tenant resource isolation)
+import { BulkheadService } from '../../common/services/bulkhead.service';
 import { PDFController } from './controllers/pdf.controller';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
@@ -276,6 +280,10 @@ import { AIModule } from '../ai/ai.module';
     SearchAnalyticsService,
     // Phase 10.102 Day 2 - Phase 2: Source Allocation Service (enterprise-grade with NestJS Logger)
     SourceAllocationService,
+    // Phase 10.102 Phase 3.1: Retry Service (exponential backoff, circuit breaker)
+    RetryService,
+    // Phase 10.102 Phase 3.1: Bulkhead Service (multi-tenant resource isolation)
+    BulkheadService,
   ],
   exports: [
     LiteratureService,

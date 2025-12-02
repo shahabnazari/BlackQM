@@ -30,8 +30,10 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
 import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter'; // Phase 10.943
 import { ArchiveService } from './services/archive.service';
 // Phase 8.6-8.8: Enterprise Observability & Distributed Tracing
-import { CommonModule } from './common/common.module'; // Phase 8.90: Shared services module
+// Phase 10.102 Phase 4: CommonModule ENABLED (SemanticCacheService + BulkheadService + RetryService)
+import { CommonModule } from './common/common.module';
 import { MetricsController } from './controllers/metrics.controller';
+import { MetricsService } from './common/services/metrics.service';
 
 @Module({
   imports: [
@@ -41,6 +43,7 @@ import { MetricsController } from './controllers/metrics.controller';
     }),
     PrismaModule, // Global database service
     LoggerModule, // Global logger service
+    CommonModule, // Phase 10.102 Phase 4: Semantic Caching + Bulkhead + Retry
     // Global rate limiting configuration
     ThrottlerModule.forRoot([
       {
@@ -85,9 +88,11 @@ import { MetricsController } from './controllers/metrics.controller';
   providers: [
     AppService,
     ArchiveService, // Phase 8.5 Day 4: Archive service for version control
+    // Phase 8.90: Monitoring services
     MetricsService, // Phase 8.6: Prometheus metrics collection
-    DeduplicationService, // Phase 8.7: Request deduplication
-    TelemetryService, // Phase 8.8: Distributed tracing with OpenTelemetry
+    // Phase 8.90: Services NOT YET IMPLEMENTED (Phase 10.101 Task 3 - Phase 9 complete, Phase 8.90 pending)
+    // DeduplicationService, // Phase 8.7: Request deduplication
+    // TelemetryService, // Phase 8.8: Distributed tracing with OpenTelemetry
     // Phase 10.943: Global exception filter for standardized error handling
     {
       provide: APP_FILTER,
