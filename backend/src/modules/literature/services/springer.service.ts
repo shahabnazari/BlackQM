@@ -84,7 +84,10 @@
 
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+// Phase 10.102 Phase 3.1: Retry Service Integration - Enterprise-grade resilience
+import { RetryService } from '../../../common/services/retry.service';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
 import {
@@ -123,15 +126,22 @@ export class SpringerService {
   private readonly API_BASE_URL =
     'https://api.springernature.com/meta/v2/json';
 
-  // API Key should be stored in environment variables
-  // Format: process.env.SPRINGER_API_KEY
-  private readonly API_KEY = process.env.SPRINGER_API_KEY || '';
+  // Phase 10.943: Use ConfigService for proper .env loading (was using process.env directly which doesn't work with NestJS)
+  private readonly apiKey: string;
 
-  constructor(private readonly httpService: HttpService) {
+  // Phase 10.102 Phase 3.1: Inject RetryService for automatic retry with exponential backoff
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+    private readonly retry: RetryService,
+  ) {
+    // Get API key via ConfigService (proper NestJS pattern)
+    this.apiKey = this.configService.get<string>('SPRINGER_API_KEY') || '';
+
     this.logger.log('✅ [SpringerLink] Service initialized');
 
     // Log API key status
-    if (this.API_KEY) {
+    if (this.apiKey) {
       this.logger.log('[SpringerLink] API key configured - using authenticated limits (5,000 calls/day)');
     } else {
       this.logger.warn(
@@ -156,7 +166,7 @@ export class SpringerService {
   ): Promise<Paper[]> {
     try {
       // Check for API key
-      if (!this.API_KEY) {
+      if (!this.apiKey) {
         this.logger.warn(
           '[SpringerLink] Skipping search - API key not configured',
         );
@@ -168,27 +178,39 @@ export class SpringerService {
       // Build Springer API query parameters
       const params = this.buildSearchParams(query, options);
 
-      // Make HTTP request to Springer API
-      const response = await firstValueFrom(
-        this.httpService.get(this.API_BASE_URL, {
-          params,
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          timeout: LARGE_RESPONSE_TIMEOUT, // 30s - Phase 10.6 Day 14.5: Migrated to centralized config
-        }),
+      // Phase 10.102 Phase 3.1: Execute HTTP request with automatic retry + exponential backoff
+      // Retry policy: 3 attempts, 1s → 2s → 4s delays, 0-500ms jitter
+      // Retryable errors: Network failures, timeouts, rate limits (429), server errors (500-599)
+      const result = await this.retry.executeWithRetry(
+        async () => firstValueFrom(
+          this.httpService.get(this.API_BASE_URL, {
+            params,
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            timeout: LARGE_RESPONSE_TIMEOUT, // 30s
+          }),
+        ),
+        'Springer.searchPapers',
+        {
+          maxAttempts: 3,
+          initialDelayMs: 1000,
+          maxDelayMs: 16000,
+          backoffMultiplier: 2,
+          jitterMs: 500,
+        },
       );
 
       // Parse Springer API response
-      const data = response.data;
-      const totalRecords = data.result?.[0]?.total || 0;
+      const apiData = result.data.data;
+      const totalRecords = apiData.result?.[0]?.total || 0;
       this.logger.log(
         `[SpringerLink] Found ${totalRecords} results for "${query}"`,
       );
 
       // Extract and parse records
-      const records = data.records || [];
+      const records = apiData.records || [];
       const papers = records
         .map((record: any) => this.parsePaper(record))
         .filter((paper: Paper | null) => paper !== null) as Paper[];
@@ -226,7 +248,7 @@ export class SpringerService {
     options?: SpringerSearchOptions,
   ): Record<string, any> {
     const params: Record<string, any> = {
-      api_key: this.API_KEY,
+      api_key: this.apiKey,
       q: query,
       p: options?.limit || 25,
       s: 1, // Start position

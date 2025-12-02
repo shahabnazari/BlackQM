@@ -26,6 +26,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+// Phase 10.102 Phase 3.1: Retry Service Integration - Enterprise-grade resilience
+import { RetryService } from '../../../common/services/retry.service';
 import { Paper } from '../dto/literature.dto';
 import { ENRICHMENT_TIMEOUT } from '../constants/http-config.constants';
 
@@ -70,7 +72,11 @@ export class OpenAlexEnrichmentService {
   private journalCache = new Map<string, JournalMetrics>();
   private readonly JOURNAL_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-  constructor(private readonly httpService: HttpService) {}
+  // Phase 10.102 Phase 3.1: Inject RetryService for automatic retry with exponential backoff
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly retry: RetryService,
+  ) {}
 
   /**
    * Enrich a single paper with citation count and journal metrics
@@ -89,18 +95,30 @@ export class OpenAlexEnrichmentService {
     }
 
     try {
-      // Fetch paper data from OpenAlex
+      // Phase 10.102 Phase 3.1: Fetch paper data from OpenAlex with retry
+      // Conservative policy: enrichment is optional, don't spam API with retries
       const workUrl = `${this.baseUrl}/works/https://doi.org/${paper.doi}`;
-      const response = await firstValueFrom(
-        this.httpService.get(workUrl, {
-          headers: {
-            'User-Agent': 'BlackQMethod-Research-Platform (mailto:research@blackqmethod.com)',
-          },
-          timeout: ENRICHMENT_TIMEOUT, // 5s - Phase 10.6 Day 14.5: Migrated to centralized config
-        }),
+
+      const result = await this.retry.executeWithRetry(
+        async () => firstValueFrom(
+          this.httpService.get(workUrl, {
+            headers: {
+              'User-Agent': 'BlackQMethod-Research-Platform (mailto:research@blackqmethod.com)',
+            },
+            timeout: ENRICHMENT_TIMEOUT, // 5s
+          }),
+        ),
+        'OpenAlex.enrichPaper',
+        {
+          maxAttempts: 2, // Conservative: enrichment is optional
+          initialDelayMs: 1000,
+          maxDelayMs: 4000,
+          backoffMultiplier: 2,
+          jitterMs: 500,
+        },
       );
 
-      const work = response.data;
+      const work = result.data.data;
 
       // Extract citation count
       const citedByCount = work?.cited_by_count;
@@ -301,19 +319,30 @@ export class OpenAlexEnrichmentService {
         return null;
       }
 
-      const response = await firstValueFrom(
-        this.httpService.get(url, {
-          headers: {
-            'User-Agent': 'BlackQMethod-Research-Platform (mailto:research@blackqmethod.com)',
-          },
-          timeout: ENRICHMENT_TIMEOUT, // 5s - Phase 10.6 Day 14.5: Migrated to centralized config (increased from 3s)
-        }),
+      // Phase 10.102 Phase 3.1: Fetch journal metrics with retry
+      const result = await this.retry.executeWithRetry(
+        async () => firstValueFrom(
+          this.httpService.get(url, {
+            headers: {
+              'User-Agent': 'BlackQMethod-Research-Platform (mailto:research@blackqmethod.com)',
+            },
+            timeout: ENRICHMENT_TIMEOUT, // 5s
+          }),
+        ),
+        'OpenAlex.getJournalMetrics',
+        {
+          maxAttempts: 2, // Conservative: enrichment is optional
+          initialDelayMs: 1000,
+          maxDelayMs: 4000,
+          backoffMultiplier: 2,
+          jitterMs: 500,
+        },
       );
 
       // Handle both direct lookup and search results
       const source = url.includes('/sources/')
-        ? response.data
-        : response.data?.results?.[0];
+        ? result.data.data
+        : result.data.data?.results?.[0];
 
       if (!source) {
         this.logger.warn(`⚠️  [OpenAlex] No journal found for ${cacheKey}`);

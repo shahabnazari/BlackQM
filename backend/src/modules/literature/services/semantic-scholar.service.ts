@@ -87,6 +87,8 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
+// Phase 10.102 Phase 3.1: Retry Service Integration - Enterprise-grade resilience
+import { RetryService } from '../../../common/services/retry.service';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
 import {
@@ -102,24 +104,53 @@ export interface SemanticScholarSearchOptions {
   limit?: number;
 }
 
+/**
+ * Semantic Scholar API request parameters
+ * @see https://api.semanticscholar.org/api-docs/graph#tag/Paper-Data
+ */
+interface SemanticScholarSearchParams {
+  query: string;
+  fields: string;
+  limit: number;
+  year?: string;
+}
+
 @Injectable()
 export class SemanticScholarService {
   private readonly logger = new Logger(SemanticScholarService.name);
   private readonly API_BASE_URL = 'https://api.semanticscholar.org/graph/v1';
 
-  constructor(private readonly httpService: HttpService) {}
+  /**
+   * Semantic Scholar API maximum results per request.
+   * Requesting more than 100 causes HTTP 500 Internal Server Error.
+   * @see https://api.semanticscholar.org/api-docs/graph#tag/Paper-Data/operation/get_graph_get_paper_search
+   */
+  private readonly MAX_RESULTS_PER_REQUEST = 100;
+
+  /** Default limit when none specified */
+  private readonly DEFAULT_LIMIT = 20;
+
+  /** API fields to request - comprehensive metadata for paper analysis */
+  private readonly API_FIELDS =
+    'paperId,title,authors,year,abstract,citationCount,url,venue,fieldsOfStudy,openAccessPdf,isOpenAccess,externalIds';
+
+  // Phase 10.102 Phase 3.1: Inject RetryService for automatic retry with exponential backoff
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly retry: RetryService,
+  ) {}
 
   /**
    * Search Semantic Scholar database
    *
    * ⚠️ MODIFICATION GUIDE:
-   * - To add new API fields: Update 'fields' parameter below (line 133)
-   * - To add filters: Add to params object (line 131-136)
+   * - To add new API fields: Update API_FIELDS class constant
+   * - To add filters: Add to params object in this method
    * - To add caching: Insert cache check before HTTP call
    * - To add rate limiting: Inject APIQuotaMonitorService in constructor
-   * - To change error handling: Modify catch block (line 147-157)
+   * - To change error handling: Modify catch block below
    *
-   * @param query Search query string
+   * @param query Search query string (must be non-empty)
    * @param options Search filters (year range, limit)
    * @returns Array of Paper objects (empty array on error for graceful degradation)
    */
@@ -127,55 +158,77 @@ export class SemanticScholarService {
     query: string,
     options?: SemanticScholarSearchOptions,
   ): Promise<Paper[]> {
-    try {
-      this.logger.log(`[Semantic Scholar] Searching: "${query}"`);
+    // Input validation: empty queries waste API quota
+    const trimmedQuery = query?.trim();
+    if (!trimmedQuery) {
+      this.logger.warn('[Semantic Scholar] Empty query provided, returning empty result');
+      return [];
+    }
 
-      // API endpoint configuration
+    try {
+      // Cap limit at API maximum (100) to prevent HTTP 500 errors
+      // The tier allocation system may request 600 papers, but API only supports 100
+      const requestedLimit = options?.limit ?? this.DEFAULT_LIMIT;
+      const cappedLimit = Math.min(requestedLimit, this.MAX_RESULTS_PER_REQUEST);
+
+      if (requestedLimit > this.MAX_RESULTS_PER_REQUEST) {
+        this.logger.warn(
+          `[Semantic Scholar] Requested ${requestedLimit} papers, capped to ${cappedLimit} (API limit)`,
+        );
+      }
+
+      this.logger.log(`[Semantic Scholar] Searching: "${trimmedQuery}" (limit: ${cappedLimit})`);
+
+      // Build typed request parameters
       const url = `${this.API_BASE_URL}/paper/search`;
-      const params: any = {
-        query,
-        // 📝 TO ADD NEW FIELDS: Update this comma-separated string
-        // Available fields: https://api.semanticscholar.org/api-docs/graph#tag/Paper-Data
-        fields:
-          'paperId,title,authors,year,abstract,citationCount,url,venue,fieldsOfStudy,openAccessPdf,isOpenAccess,externalIds',
-        limit: options?.limit || 20,
+      const params: SemanticScholarSearchParams = {
+        query: trimmedQuery,
+        fields: this.API_FIELDS,
+        limit: cappedLimit,
       };
 
       // Year range filter (format: YYYY-YYYY)
       if (options?.yearFrom || options?.yearTo) {
-        params['year'] =
+        params.year =
           `${options.yearFrom || 1900}-${options.yearTo || new Date().getFullYear()}`;
       }
 
-      // Execute HTTP request
-      const response = await firstValueFrom(
-        this.httpService.get(url, {
-          params,
-          timeout: FAST_API_TIMEOUT, // 10s - Phase 10.6 Day 14.5: Added timeout (was missing)
-        }),
+      // Phase 10.102 Phase 3.1: Execute HTTP request with automatic retry + exponential backoff
+      // Retry policy: 3 attempts, 1s → 2s → 4s delays, 0-500ms jitter
+      // Retryable errors: Network failures, timeouts, rate limits (429), server errors (500-599)
+      const result = await this.retry.executeWithRetry(
+        async () => firstValueFrom(
+          this.httpService.get(url, {
+            params,
+            timeout: FAST_API_TIMEOUT, // 10s timeout
+          }),
+        ),
+        'SemanticScholar.searchPapers',
+        {
+          maxAttempts: 3,
+          initialDelayMs: 1000,
+          maxDelayMs: 16000,
+          backoffMultiplier: 2,
+          jitterMs: 500,
+        },
       );
 
-      // Parse each paper from API response
-      // 📝 TO CHANGE PARSING: Update parsePaper() method below (line 162)
-      const papers = response.data.data.map((paper: any) =>
+      // Parse each paper from successful API response
+      // 📝 TO CHANGE PARSING: Update parsePaper() method below
+      const papers = result.data.data.map((paper: any) =>
         this.parsePaper(paper),
       );
 
-      this.logger.log(`[Semantic Scholar] Found ${papers.length} papers`);
+      this.logger.log(
+        `[Semantic Scholar] Found ${papers.length} papers (attempts: ${result.attempts})`,
+      );
       return papers;
     } catch (error: any) {
-      // Enterprise-grade error handling: Log but don't throw (graceful degradation)
-      // 📝 TO ADD CUSTOM ERROR HANDLING: Add specific error type checks here
-      if (error.response?.status === 429) {
-        this.logger.error(
-          `[Semantic Scholar] ⚠️  RATE LIMITED (429) - Too many requests`,
-        );
-      } else {
-        this.logger.error(
-          `[Semantic Scholar] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
-        );
-      }
-      // Return empty array instead of throwing - allows other sources to succeed
+      // This catch block should rarely execute (retry service handles most errors)
+      // Only catches unexpected errors outside retry logic
+      this.logger.error(
+        `[Semantic Scholar] Unexpected error: ${error.message}`,
+      );
       return [];
     }
   }

@@ -84,6 +84,8 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+// Phase 10.102 Phase 3.1: Retry Service Integration - Enterprise-grade resilience
+import { RetryService } from '../../../common/services/retry.service';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
 import {
@@ -133,9 +135,11 @@ export class PubMedService {
   private readonly OPENALEX_BASE_URL = 'https://api.openalex.org/works';
   private readonly apiKey: string;
 
+  // Phase 10.102 Phase 3.1: Inject RetryService for automatic retry with exponential backoff
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly retry: RetryService,
   ) {
     // Phase 10.7.10: NCBI API key from environment (increases rate limit from 3/sec to 10/sec)
     this.apiKey = this.configService.get<string>('NCBI_API_KEY') || '';
@@ -188,14 +192,27 @@ export class PubMedService {
         searchParams.api_key = this.apiKey;
       }
 
-      const searchResponse = await firstValueFrom(
-        this.httpService.get(this.ESEARCH_URL, {
-          params: searchParams,
-          timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Increased from no timeout
-        }),
+      // Phase 10.102 Phase 3.1: Execute esearch with automatic retry + exponential backoff
+      // Retry policy: 3 attempts, 1s → 2s → 4s delays, 0-500ms jitter
+      // Retryable errors: Network failures, timeouts, rate limits (429), server errors (500-599)
+      const searchResult = await this.retry.executeWithRetry(
+        async () => firstValueFrom(
+          this.httpService.get(this.ESEARCH_URL, {
+            params: searchParams,
+            timeout: COMPLEX_API_TIMEOUT, // 15s
+          }),
+        ),
+        'PubMed.esearch',
+        {
+          maxAttempts: 3,
+          initialDelayMs: 1000,
+          maxDelayMs: 16000,
+          backoffMultiplier: 2,
+          jitterMs: 500,
+        },
       );
 
-      const ids = searchResponse.data.esearchresult.idlist;
+      const ids = searchResult.data.data.esearchresult.idlist;
       if (!ids || ids.length === 0) {
         this.logger.log(`[PubMed] No results found`);
         return [];
@@ -241,23 +258,43 @@ export class PubMedService {
           fetchParams.api_key = this.apiKey;
         }
 
-        const fetchResponse = await firstValueFrom(
-          this.httpService.get(this.EFETCH_URL, {
-            params: fetchParams,
-            timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Increased from no timeout
-          }),
-        );
+        // Phase 10.102 Phase 3.1: Execute efetch with automatic retry + exponential backoff
+        try {
+          const fetchResult = await this.retry.executeWithRetry(
+            async () => firstValueFrom(
+              this.httpService.get(this.EFETCH_URL, {
+                params: fetchParams,
+                timeout: COMPLEX_API_TIMEOUT, // 15s
+              }),
+            ),
+            `PubMed.efetch.batch${batchIndex + 1}`,
+            {
+              maxAttempts: 3,
+              initialDelayMs: 1000,
+              maxDelayMs: 16000,
+              backoffMultiplier: 2,
+              jitterMs: 500,
+            },
+          );
 
-        // Phase 10.7 Day 5: Parse XML response for this batch
-        const xmlData = fetchResponse.data;
-        const articles = xmlData.match(/<PubmedArticle>[\s\S]*?<\/PubmedArticle>/g) || [];
+          // Phase 10.7 Day 5: Parse XML response for this batch
+          const xmlData = fetchResult.data.data;
+          const articles = xmlData.match(/<PubmedArticle>[\s\S]*?<\/PubmedArticle>/g) || [];
 
-        const batchPapers = articles.map((article: string) => this.parsePaper(article));
-        allPapers.push(...batchPapers);
+          const batchPapers = articles.map((article: string) => this.parsePaper(article));
+          allPapers.push(...batchPapers);
 
-        this.logger.log(
-          `[PubMed] Batch ${batchIndex + 1}/${batches.length} complete: ${batchPapers.length} papers parsed`
-        );
+          this.logger.log(
+            `[PubMed] Batch ${batchIndex + 1}/${batches.length} complete: ${batchPapers.length} papers parsed`
+          );
+        } catch (error: any) {
+          // Batch failed after all retries - log and continue to next batch
+          this.logger.error(
+            `[PubMed efetch] Batch ${batchIndex + 1}/${batches.length} failed after retries: ${error.message}`
+          );
+          // Continue to next batch instead of failing entire search
+          continue;
+        }
       }
 
       this.logger.log(`[PubMed] All batches complete: ${allPapers.length} total papers parsed`);
@@ -521,19 +558,32 @@ export class PubMedService {
         }
 
         try {
-          // Query OpenAlex by DOI
+          // Query OpenAlex by DOI with retry logic
           // 📝 TO ADD BATCH PROCESSING: Group papers and use POST /works endpoint
           const url = `${this.OPENALEX_BASE_URL}/https://doi.org/${paper.doi}`;
-          const response = await firstValueFrom(
-            this.httpService.get(url, {
-              headers: {
-                'User-Agent': 'BlackQMethod-Research-Platform',
-              },
-              timeout: ENRICHMENT_TIMEOUT, // 5s - Phase 10.6 Day 14.5: Increased from 3s for reliability
-            }),
+
+          // Phase 10.102 Phase 3.1: Execute OpenAlex enrichment with retry
+          // Conservative policy: enrichment is optional, don't spam API with retries
+          const enrichmentResult = await this.retry.executeWithRetry(
+            async () => firstValueFrom(
+              this.httpService.get(url, {
+                headers: {
+                  'User-Agent': 'BlackQMethod-Research-Platform',
+                },
+                timeout: ENRICHMENT_TIMEOUT, // 5s
+              }),
+            ),
+            'PubMed.OpenAlexEnrichment',
+            {
+              maxAttempts: 2, // Conservative: enrichment is optional
+              initialDelayMs: 1000,
+              maxDelayMs: 4000,
+              backoffMultiplier: 2,
+              jitterMs: 500,
+            },
           );
 
-          const citedByCount = response.data?.cited_by_count;
+          const citedByCount = enrichmentResult.data.data?.cited_by_count;
           if (typeof citedByCount === 'number') {
             this.logger.log(
               `[OpenAlex] Enriched "${paper.title.substring(0, 50)}...": ${citedByCount} citations`,

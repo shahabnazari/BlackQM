@@ -66,7 +66,7 @@
  * Coverage: 1.5M+ education research papers from ERIC database
  * API: Free RESTful JSON API (US Department of Education)
  * Documentation: https://eric.ed.gov/
- * API Endpoint: https://api.eric.ed.gov/search
+ * API Endpoint: https://api.ies.ed.gov/eric/ (Phase 10.943: Fixed from api.eric.ed.gov which doesn't exist)
  * Rate Limits: None specified (reasonable use policy)
  *
  * Features:
@@ -94,6 +94,8 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
+// Phase 10.102 Phase 3.1: Retry Service Integration - Enterprise-grade resilience
+import { RetryService } from '../../../common/services/retry.service';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
 import {
@@ -115,9 +117,14 @@ export interface ERICSearchOptions {
 @Injectable()
 export class ERICService {
   private readonly logger = new Logger(ERICService.name);
-  private readonly API_BASE_URL = 'https://api.eric.ed.gov/search';
+  // Phase 10.943: Fixed API URL - api.eric.ed.gov doesn't exist, correct URL is api.ies.ed.gov
+  private readonly API_BASE_URL = 'https://api.ies.ed.gov/eric/';
 
-  constructor(private readonly httpService: HttpService) {
+  // Phase 10.102 Phase 3.1: Inject RetryService for automatic retry with exponential backoff
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly retry: RetryService,
+  ) {
     this.logger.log('✅ [ERIC] Service initialized');
   }
 
@@ -174,17 +181,29 @@ export class ERICService {
         params['e_pubyearmax'] = options.yearTo;
       }
 
-      // Execute HTTP request
-      const response = await firstValueFrom(
-        this.httpService.get(this.API_BASE_URL, {
-          params,
-          timeout: LARGE_RESPONSE_TIMEOUT, // 30s - Phase 10.6 Day 14.5: Migrated to centralized config
-        }),
+      // Phase 10.102 Phase 3.1: Execute HTTP request with automatic retry + exponential backoff
+      // Retry policy: 3 attempts, 1s → 2s → 4s delays, 0-500ms jitter
+      // Retryable errors: Network failures, timeouts, server errors (500-599)
+      const result = await this.retry.executeWithRetry(
+        async () => firstValueFrom(
+          this.httpService.get(this.API_BASE_URL, {
+            params,
+            timeout: LARGE_RESPONSE_TIMEOUT, // 30s
+          }),
+        ),
+        'ERIC.searchPapers',
+        {
+          maxAttempts: 3,
+          initialDelayMs: 1000,
+          maxDelayMs: 16000,
+          backoffMultiplier: 2,
+          jitterMs: 500,
+        },
       );
 
       // Parse response
       // 📝 TO CHANGE PARSING: Update parsePaper() method below
-      const docs = response.data?.response?.docs || [];
+      const docs = result.data.data?.response?.docs || [];
       const papers = docs.map((doc: any) => this.parsePaper(doc));
 
       this.logger.log(`[ERIC] Found ${papers.length} papers`);
