@@ -219,6 +219,12 @@ export class LiteratureService implements OnModuleInit {
     // Phase 10.102 Phase 3.1: Replaced Record<string, any> with SearchMetadata for strict mode
     metadata?: SearchMetadata;
   }> {
+    // Phase 10.102 Phase 3.1 STRICT AUDIT: Defensive input validation for userId
+    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+      this.logger.error('❌ [Validation] Invalid userId provided to searchLiterature');
+      throw new Error('Invalid user identifier: must be non-empty string');
+    }
+
     // Phase 10.7 Day 5: PAGINATION CACHE - Generate cache key WITHOUT page/limit
     const searchCacheKey = this.generatePaginationCacheKey(searchDto, userId);
     
@@ -1268,7 +1274,8 @@ export class LiteratureService implements OnModuleInit {
       const errorMessage = error.message || String(error);
 
       // Circuit breaker is OPEN - service temporarily unavailable
-      if (errorMessage.includes('Circuit breaker')) {
+      // BulkheadService throws: "Service temporarily unavailable for search. Please try again in a few moments."
+      if (errorMessage.includes('Service temporarily unavailable')) {
         this.logger.error(
           `🔴 [Bulkhead] Circuit breaker OPEN for user ${userId}. ` +
           `Too many consecutive failures. System protecting itself from cascade failure.`
