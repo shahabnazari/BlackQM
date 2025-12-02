@@ -245,11 +245,13 @@ export function withAsyncErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
   fallback?: ReactNode
 ) {
-  return (props: P) => {
+  const WrappedComponent = (props: P) => {
     return (
       <ErrorBoundary fallback={fallback}>
         <Component {...props} />
       </ErrorBoundary>
     );
   };
+  WrappedComponent.displayName = `withAsyncErrorBoundary(${Component.displayName || Component.name || 'Component'})`;
+  return WrappedComponent;
 }
