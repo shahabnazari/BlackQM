@@ -1,0 +1,384 @@
+# Phase 10.102 Phase 9: Security Hardening
+#
+# Security Scanning Workflow
+#
+# Automated security vulnerability detection with:
+# - npm audit (dependency vulnerabilities)
+# - Snyk (comprehensive vulnerability scanning)
+# - CodeQL (static code analysis)
+# - OWASP Dependency-Check (CVE scanning)
+# - Trivy (container security - already in docker-build.yml)
+#
+# Netflix-Grade Security Standards:
+# - Run on every commit
+# - Block PRs with critical/high vulnerabilities
+# - Daily scheduled scans
+# - Auto-create PRs for security updates
+# - Integration with GitHub Security tab
+
+name: Security Scanning
+
+on:
+  push:
+    branches: [main, develop, feature/**, hotfix/**]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Daily security scan at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Manual trigger
+
+# Ensure only one security scan runs at a time per ref
+concurrency:
+  group: security-scan-${{ github.ref }}
+  cancel-in-progress: false # Let scans complete
+
+jobs:
+  # ============================================================================
+  # JOB 1: Dependency Vulnerability Scan (npm audit)
+  # ============================================================================
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      matrix:
+        workspace: [backend, frontend]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.workspace }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.workspace }}
+        run: npm ci
+
+      - name: Run npm audit
+        working-directory: ${{ matrix.workspace }}
+        run: |
+          echo "Running npm audit for ${{ matrix.workspace }}..."
+
+          # Run audit and save results
+          npm audit --json > audit-results.json || true
+
+          # Check for critical/high vulnerabilities
+          CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' audit-results.json)
+          HIGH=$(jq '.metadata.vulnerabilities.high // 0' audit-results.json)
+
+          echo "Critical vulnerabilities: $CRITICAL"
+          echo "High vulnerabilities: $HIGH"
+
+          # Fail if critical or high vulnerabilities found
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+            echo "::error::Found $CRITICAL critical and $HIGH high vulnerabilities in ${{ matrix.workspace }}"
+            npm audit
+            exit 1
+          fi
+
+          echo "✅ No critical/high vulnerabilities found"
+
+      - name: Upload audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-${{ matrix.workspace }}
+          path: ${{ matrix.workspace }}/audit-results.json
+          retention-days: 30
+
+  # ============================================================================
+  # JOB 2: Snyk Security Scan
+  # ============================================================================
+  snyk-scan:
+    name: Snyk Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        workspace: [backend, frontend]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.workspace }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.workspace }}
+        run: npm ci
+
+      - name: Run Snyk test
+        uses: snyk/actions/node@master
+        continue-on-error: false
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: |
+            --severity-threshold=high
+            --file=${{ matrix.workspace }}/package.json
+            --project-name=vqmethod-${{ matrix.workspace }}
+
+      - name: Run Snyk monitor (track dependencies)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: monitor
+          args: |
+            --file=${{ matrix.workspace }}/package.json
+            --project-name=vqmethod-${{ matrix.workspace }}
+
+  # ============================================================================
+  # JOB 3: CodeQL Security Analysis
+  # ============================================================================
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      matrix:
+        language: [typescript, javascript]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: +security-extended,security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}
+
+  # ============================================================================
+  # JOB 4: OWASP Dependency-Check
+  # ============================================================================
+  owasp-dependency-check:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'vqmethod'
+          path: '.'
+          format: 'HTML,JSON,SARIF'
+          args: >
+            --enableRetired
+            --enableExperimental
+            --failOnCVSS 7
+            --suppression dependency-check-suppressions.xml
+            --nvdApiKey ${{ secrets.NVD_API_KEY }}
+
+      - name: Upload Dependency-Check results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: reports/
+          retention-days: 30
+
+      - name: Upload SARIF to GitHub Security
+        if: github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: reports/dependency-check-report.sarif
+        continue-on-error: true
+
+  # ============================================================================
+  # JOB 5: Secret Scanning
+  # ============================================================================
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for better detection
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  # ============================================================================
+  # JOB 6: Security Headers Check
+  # ============================================================================
+  security-headers:
+    name: Security Headers Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Only run on main branch (requires deployed app)
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Check Security Headers (Staging)
+        run: |
+          echo "Checking security headers on staging..."
+
+          # Check for required security headers
+          REQUIRED_HEADERS=(
+            "Strict-Transport-Security"
+            "X-Content-Type-Options"
+            "X-Frame-Options"
+            "Content-Security-Policy"
+            "X-XSS-Protection"
+          )
+
+          URL="https://staging-api.vqmethod.com/api/health"
+
+          MISSING_HEADERS=()
+
+          for HEADER in "${REQUIRED_HEADERS[@]}"; do
+            if ! curl -s -I "$URL" | grep -qi "$HEADER"; then
+              MISSING_HEADERS+=("$HEADER")
+            fi
+          done
+
+          if [ ${#MISSING_HEADERS[@]} -gt 0 ]; then
+            echo "::warning::Missing security headers: ${MISSING_HEADERS[*]}"
+          else
+            echo "✅ All required security headers present"
+          fi
+
+  # ============================================================================
+  # JOB 7: License Compliance Check
+  # ============================================================================
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      matrix:
+        workspace: [backend, frontend]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install license-checker
+        run: npm install -g license-checker
+
+      - name: Check licenses
+        working-directory: ${{ matrix.workspace }}
+        run: |
+          npm ci
+
+          # Check for GPL licenses (copyleft - may require open sourcing our code)
+          if license-checker --summary | grep -i "GPL"; then
+            echo "::warning::Found GPL licensed dependencies in ${{ matrix.workspace }}"
+            license-checker --summary
+          else
+            echo "✅ No GPL licenses found"
+          fi
+
+          # Generate license report
+          license-checker --json > licenses.json
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: licenses-${{ matrix.workspace }}
+          path: ${{ matrix.workspace }}/licenses.json
+          retention-days: 30
+
+  # ============================================================================
+  # JOB 8: Security Scan Status Summary
+  # ============================================================================
+  security-status:
+    name: Security Scan Status
+    runs-on: ubuntu-latest
+    needs:
+      [
+        dependency-scan,
+        snyk-scan,
+        codeql-analysis,
+        owasp-dependency-check,
+        secret-scan,
+        license-check,
+      ]
+    if: always()
+
+    steps:
+      - name: Check all security scans passed
+        run: |
+          echo "Dependency Scan: ${{ needs.dependency-scan.result }}"
+          echo "Snyk Scan: ${{ needs.snyk-scan.result }}"
+          echo "CodeQL Analysis: ${{ needs.codeql-analysis.result }}"
+          echo "OWASP Dependency Check: ${{ needs.owasp-dependency-check.result }}"
+          echo "Secret Scan: ${{ needs.secret-scan.result }}"
+          echo "License Check: ${{ needs.license-check.result }}"
+
+          if [ "${{ needs.dependency-scan.result }}" != "success" ] || \
+             [ "${{ needs.snyk-scan.result }}" != "success" ] || \
+             [ "${{ needs.codeql-analysis.result }}" != "success" ] || \
+             [ "${{ needs.owasp-dependency-check.result }}" != "success" ] || \
+             [ "${{ needs.secret-scan.result }}" != "success" ]; then
+            echo "::error::One or more security scans failed"
+            exit 1
+          fi
+
+          echo "✅ All security scans passed"
+
+      - name: Create security status badge
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Security status: PASS" > security-status.txt
+
+      - name: Post summary
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "### 🛡️ Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scan | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Scan | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Snyk Scan | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL Analysis | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| OWASP Dependency Check | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scan | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| License Check | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**All security scans completed successfully!**" >> $GITHUB_STEP_SUMMARY

@@ -85,6 +85,8 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+// Phase 10.106 Phase 3: Retry Service Integration - Enterprise-grade resilience
+import { RetryService } from '../../../common/services/retry.service';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
 import {
@@ -101,6 +103,41 @@ export interface PMCSearchOptions {
   openAccessOnly?: boolean; // Only return Open Access articles
 }
 
+/**
+ * Phase 10.106 Phase 3: Typed interface for PMC esearch parameters
+ * Netflix-grade: No loose `any` types
+ */
+interface PMCSearchParams {
+  db: string;
+  term: string;
+  retmode: string;
+  retmax: number;
+  api_key?: string;
+}
+
+/**
+ * Phase 10.106 Phase 3: Typed interface for PMC efetch parameters
+ * Netflix-grade: No loose `any` types
+ */
+interface PMCFetchParams {
+  db: string;
+  id: string;
+  retmode: string;
+  rettype: string;
+  api_key?: string;
+}
+
+/**
+ * Phase 10.106 Phase 3: Typed interface for PMC esearch response
+ * Netflix-grade: Full response typing
+ */
+interface PMCESearchResponse {
+  esearchresult?: {
+    idlist?: string[];
+    count?: string;
+  };
+}
+
 @Injectable()
 export class PMCService {
   private readonly logger = new Logger(PMCService.name);
@@ -108,9 +145,11 @@ export class PMCService {
   private readonly EFETCH_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
   private readonly apiKey: string;
 
+  // Phase 10.106 Phase 3: Inject RetryService for enterprise-grade resilience
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly retry: RetryService,
   ) {
     // Phase 10.7.10: NCBI API key from environment (increases rate limit from 3/sec to 10/sec)
     this.apiKey = this.configService.get<string>('NCBI_API_KEY') || '';
@@ -148,34 +187,49 @@ export class PMCService {
       // ========================================================================
       // STEP 1: Search for PMC IDs using esearch
       // ========================================================================
-      // 📝 TO ADD FILTERS: Update searchParams object below
-      const searchParams: any = {
-        db: 'pmc', // PMC database (not pubmed)
-        term: query,
-        retmode: 'json',
-        retmax: options?.limit || 20,
-        // 📝 TO ADD DATE FILTER: Add mindate/maxdate parameters
-        // Example: mindate: '2020/01/01', maxdate: '2023/12/31'
-      };
+      // Phase 10.106 Phase 3: Use typed interface for search params
+      let searchTerm = query;
 
       // Filter to Open Access articles only (recommended for full-text access)
       if (options?.openAccessOnly !== false) {
-        searchParams.term += ' AND open access[filter]';
+        searchTerm += ' AND open access[filter]';
       }
+
+      const searchParams: PMCSearchParams = {
+        db: 'pmc', // PMC database (not pubmed)
+        term: searchTerm,
+        retmode: 'json',
+        retmax: options?.limit || 20,
+      };
 
       // Phase 10.7.10: Add API key if configured (increases rate limit 3→10 req/sec)
       if (this.apiKey) {
         searchParams.api_key = this.apiKey;
       }
 
-      const searchResponse = await firstValueFrom(
-        this.httpService.get(this.ESEARCH_URL, {
-          params: searchParams,
-          timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Added timeout (was missing)
-        }),
+      // Phase 10.106 Phase 3: Execute with RetryService
+      const searchResult = await this.retry.executeWithRetry(
+        async () => firstValueFrom(
+          this.httpService.get(this.ESEARCH_URL, {
+            params: searchParams,
+            timeout: COMPLEX_API_TIMEOUT, // 15s
+          }),
+        ),
+        'PMC.esearch',
+        {
+          maxAttempts: 3,
+          initialDelayMs: 1000,
+          maxDelayMs: 16000,
+          backoffMultiplier: 2,
+          jitterMs: 500,
+        },
       );
 
-      const ids = searchResponse.data.esearchresult.idlist;
+      // Phase 10.106 Phase 3: Handle both direct data and wrapped AxiosResponse cases
+      // Same fix pattern as ERIC service - unwrap if needed
+      const rawData = searchResult.data;
+      const searchData: PMCESearchResponse = (rawData as any)?.data ?? rawData;
+      const ids = searchData?.esearchresult?.idlist;
       if (!ids || ids.length === 0) {
         this.logger.log(`[PMC] No results found`);
         return [];
@@ -201,7 +255,8 @@ export class PMCService {
         `[PMC] Batching ${ids.length} IDs into ${batches.length} requests (${BATCH_SIZE} IDs per batch)`
       );
 
-      const allPapers: any[] = [];
+      // Phase 10.106 Strict Mode: Use typed Paper[] instead of any[]
+      const allPapers: Paper[] = [];
 
       for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         const batch = batches[batchIndex];
@@ -210,7 +265,8 @@ export class PMCService {
         );
 
         try {
-          const fetchParams: any = {
+          // Phase 10.106 Phase 3: Use typed interface for fetch params
+          const fetchParams: PMCFetchParams = {
             db: 'pmc',
             id: batch.join(','),
             retmode: 'xml',
@@ -222,15 +278,28 @@ export class PMCService {
             fetchParams.api_key = this.apiKey;
           }
 
-          const fetchResponse = await firstValueFrom(
-            this.httpService.get(this.EFETCH_URL, {
-              params: fetchParams,
-              timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.7 Day 5: Added timeout (was missing)
-            }),
+          // Phase 10.106 Phase 3: Execute with RetryService
+          const fetchResult = await this.retry.executeWithRetry(
+            async () => firstValueFrom(
+              this.httpService.get(this.EFETCH_URL, {
+                params: fetchParams,
+                timeout: COMPLEX_API_TIMEOUT, // 15s
+              }),
+            ),
+            'PMC.efetch',
+            {
+              maxAttempts: 3,
+              initialDelayMs: 1000,
+              maxDelayMs: 16000,
+              backoffMultiplier: 2,
+              jitterMs: 500,
+            },
           );
 
-          // Phase 10.7 Day 5: Parse XML response for this batch
-          const xmlData = fetchResponse.data;
+          // Phase 10.106 Phase 3: Handle both direct data and wrapped AxiosResponse cases
+          // Same fix pattern as esearch - unwrap if needed
+          const rawXml = fetchResult.data;
+          const xmlData = String((rawXml as any)?.data ?? rawXml);
           const articles = xmlData.match(/<article[\s\S]*?<\/article>/g) || [];
 
           const batchPapers = articles.map((article: string) => this.parsePaper(article));
@@ -239,10 +308,12 @@ export class PMCService {
           this.logger.log(
             `[PMC] Batch ${batchIndex + 1}/${batches.length} complete: ${batchPapers.length} papers parsed`
           );
-        } catch (batchError: any) {
+        } catch (batchError: unknown) {
+          // Phase 10.106 Strict Mode: Use unknown with type narrowing
+          const err = batchError as { message?: string };
           // Phase 10.7.10: Handle batch failures gracefully - return what we got so far
           this.logger.warn(
-            `[PMC] ⚠️  Batch ${batchIndex + 1}/${batches.length} failed: ${batchError.message} - Continuing with ${allPapers.length} papers from successful batches`
+            `[PMC] ⚠️  Batch ${batchIndex + 1}/${batches.length} failed: ${err.message || 'Unknown error'} - Continuing with ${allPapers.length} papers from successful batches`
           );
           // Don't throw - continue to next batch or return what we have
         }
@@ -257,13 +328,15 @@ export class PMCService {
 
       this.logger.log(`[PMC] Returned ${papers.length} papers with full-text`);
       return papers;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Strict Mode: Use unknown with type narrowing
+      const err = error as { response?: { status?: number }; message?: string };
       // Enterprise-grade error handling: Log but don't throw (graceful degradation)
-      if (error.response?.status === 429) {
+      if (err.response?.status === 429) {
         this.logger.error(`[PMC] ⚠️  RATE LIMITED (429) - Too many requests`);
       } else {
         this.logger.error(
-          `[PMC] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
+          `[PMC] Search failed: ${err.message || 'Unknown error'} (Status: ${err.response?.status || 'N/A'})`,
         );
       }
       return [];

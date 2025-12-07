@@ -84,6 +84,7 @@
 
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
@@ -105,6 +106,57 @@ export interface SageSearchOptions {
 }
 
 /**
+ * Phase 10.106: Typed interface for SAGE API search parameters
+ * Netflix-grade: No loose `any` types
+ */
+interface SageSearchParams {
+  q: string;
+  rows: number;
+  start: number;
+  sort: string;
+  fq?: string;
+  'fq.subject'?: string;
+}
+
+/**
+ * Phase 10.106: Typed interface for SAGE API response item
+ * Netflix-grade: Explicit typing for API response parsing
+ */
+interface SageApiItem {
+  doi?: string;
+  DOI?: string;
+  id?: string;
+  title?: string;
+  articleTitle?: string;
+  abstract?: string;
+  abstractText?: string;
+  description?: string;
+  contributors?: Array<{ type?: string; name?: string }>;
+  authors?: Array<{ name?: string; given?: string; family?: string; firstName?: string; lastName?: string } | string>;
+  author?: Array<{ name?: string } | string> | string;
+  publicationYear?: string;
+  publicationDate?: string;
+  year?: string;
+  issued?: { 'date-parts'?: number[][] };
+  journalTitle?: string;
+  publicationTitle?: string;
+  containerTitle?: string;
+  url?: string;
+  link?: string;
+  keywords?: string[];
+  subjects?: string[];
+  categories?: string[];
+  citationCount?: number;
+  citedByCount?: number;
+  type?: string;
+  articleType?: string;
+  openAccess?: boolean;
+  isOpenAccess?: boolean;
+  accessType?: string;
+  license?: string;
+}
+
+/**
  * SAGE Publications Service
  * Implements access to 1000+ journals from SAGE Publishers
  */
@@ -112,16 +164,28 @@ export interface SageSearchOptions {
 export class SageService {
   private readonly logger = new Logger(SageService.name);
   private readonly API_BASE_URL = 'https://journals.sagepub.com/api/search';
-  private readonly API_KEY = process.env.SAGE_API_KEY || '';
+  private readonly apiKey: string;
 
-  constructor(private readonly httpService: HttpService) {}
+  // Phase 10.106: Use ConfigService for proper .env loading (NestJS best practice)
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {
+    this.apiKey = this.configService.get<string>('SAGE_API_KEY') || '';
+
+    if (this.apiKey) {
+      this.logger.log('✅ [SAGE] Service initialized with API key');
+    } else {
+      this.logger.warn('⚠️ [SAGE] API key not configured - set SAGE_API_KEY environment variable');
+    }
+  }
 
   /**
    * Search SAGE Publications
    * Returns standardized Paper[] format
    */
   async search(query: string, options: SageSearchOptions = {}): Promise<Paper[]> {
-    if (!this.API_KEY) {
+    if (!this.apiKey) {
       this.logger.warn(
         '⚠️ [SAGE] SAGE_API_KEY not configured - skipping search',
       );
@@ -138,19 +202,20 @@ export class SageService {
         this.httpService.get(this.API_BASE_URL, {
           params,
           headers: {
-            'X-API-Key': this.API_KEY,
+            'X-API-Key': this.apiKey,
             Accept: 'application/json',
           },
           timeout: PUBLISHER_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Migrated to centralized config
         }),
       );
 
-      const items = response.data?.results || response.data?.items || [];
+      // Phase 10.106: Type the response items as SageApiItem[]
+      const items: SageApiItem[] = response.data?.results || response.data?.items || [];
       this.logger.log(`✅ [SAGE] Found ${items.length} papers`);
 
       const papers = items
-        .map((item: any) => this.parsePaper(item))
-        .filter((paper: Paper | null) => paper !== null) as Paper[];
+        .map((item) => this.parsePaper(item))
+        .filter((paper): paper is Paper => paper !== null);
 
       const eligiblePapers = papers.filter((paper) =>
         isPaperEligible(paper.wordCount || 0, 150),
@@ -160,13 +225,15 @@ export class SageService {
       );
 
       return eligiblePapers;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 4: Use unknown with type narrowing
+      const err = error as { response?: { status?: number }; message?: string };
+      if (err.response?.status === 401) {
         this.logger.error('🔒 [SAGE] Authentication failed - check API key');
-      } else if (error.response?.status === 429) {
+      } else if (err.response?.status === 429) {
         this.logger.warn('⏳ [SAGE] Rate limit exceeded - try again later');
       } else {
-        this.logger.error(`❌ [SAGE] Search error: ${error.message}`);
+        this.logger.error(`❌ [SAGE] Search error: ${err.message || 'Unknown error'}`);
       }
       return [];
     }
@@ -174,12 +241,13 @@ export class SageService {
 
   /**
    * Build SAGE API query parameters
+   * Phase 10.106: Uses typed SageSearchParams interface
    */
   private buildSearchParams(
     query: string,
     options: SageSearchOptions,
-  ): Record<string, any> {
-    const params: Record<string, any> = {
+  ): SageSearchParams {
+    const params: SageSearchParams = {
       q: query,
       rows: options.limit || 25,
       start: 0,
@@ -203,8 +271,9 @@ export class SageService {
 
   /**
    * Parse SAGE API response item into standardized Paper format
+   * Phase 10.106: Uses typed SageApiItem interface
    */
-  private parsePaper(item: any): Paper | null {
+  private parsePaper(item: SageApiItem): Paper | null {
     try {
       // Extract DOI
       const doi = item.doi || item.DOI || undefined;
@@ -295,16 +364,19 @@ export class SageService {
       };
 
       return paper;
-    } catch (error: any) {
-      this.logger.warn(`⚠️ [SAGE] Failed to parse paper: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 4: Use unknown with type narrowing
+      const err = error as { message?: string };
+      this.logger.warn(`⚠️ [SAGE] Failed to parse paper: ${err.message || 'Unknown error'}`);
       return null;
     }
   }
 
   /**
    * Extract authors from SAGE response
+   * Phase 10.106: Uses typed SageApiItem interface
    */
-  private extractAuthors(item: any): string[] {
+  private extractAuthors(item: SageApiItem): string[] {
     const authors: string[] = [];
 
     // Try contributors array
@@ -317,15 +389,17 @@ export class SageService {
     }
 
     // Try authors array
+    // Phase 10.106 Phase 5: Use SageApiItem type for author (Netflix-grade)
+    type SageAuthor = { name?: string; given?: string; family?: string; firstName?: string; lastName?: string } | string;
     if (authors.length === 0 && item.authors) {
       if (Array.isArray(item.authors)) {
         return item.authors
-          .map((author: any) => {
+          .map((author: SageAuthor) => {
             if (typeof author === 'string') return author;
-            if (author.name) return author.name;
-            if (author.given && author.family)
+            if (typeof author === 'object' && author.name) return author.name;
+            if (typeof author === 'object' && author.given && author.family)
               return `${author.given} ${author.family}`;
-            if (author.firstName && author.lastName)
+            if (typeof author === 'object' && author.firstName && author.lastName)
               return `${author.firstName} ${author.lastName}`;
             return null;
           })
@@ -334,12 +408,14 @@ export class SageService {
     }
 
     // Try author field
+    // Phase 10.106 Phase 5: Use typed union instead of any (Netflix-grade)
+    type SimpleAuthor = { name?: string } | string;
     if (authors.length === 0 && item.author) {
       if (Array.isArray(item.author)) {
         return item.author
-          .map((author: any) => {
+          .map((author: SimpleAuthor) => {
             if (typeof author === 'string') return author;
-            if (author.name) return author.name;
+            if (typeof author === 'object' && author.name) return author.name;
             return null;
           })
           .filter((name: string | null): name is string => name !== null);
@@ -353,15 +429,16 @@ export class SageService {
 
   /**
    * Extract publication year
+   * Phase 10.106: Uses typed SageApiItem interface
    */
-  private extractYear(item: any): number | undefined {
+  private extractYear(item: SageApiItem): number | undefined {
     if (item.publicationYear) {
       const year = parseInt(item.publicationYear, 10);
       if (!isNaN(year)) return year;
     }
 
     if (item.publicationDate) {
-      const year = new Date(item.publicDate).getFullYear();
+      const year = new Date(item.publicationDate).getFullYear();
       if (!isNaN(year)) return year;
     }
 
@@ -380,21 +457,23 @@ export class SageService {
 
   /**
    * Extract keywords/subjects
+   * Phase 10.106: Uses typed SageApiItem interface
    */
-  private extractKeywords(item: any): string[] {
+  private extractKeywords(item: SageApiItem): string[] {
     const keywords: string[] = [];
 
+    // Phase 10.106 Phase 5: Use string type instead of any (Netflix-grade)
     if (item.keywords && Array.isArray(item.keywords)) {
-      keywords.push(...item.keywords.filter((k: any) => typeof k === 'string'));
+      keywords.push(...item.keywords.filter((k: string): k is string => typeof k === 'string'));
     }
 
     if (item.subjects && Array.isArray(item.subjects)) {
-      keywords.push(...item.subjects.filter((s: any) => typeof s === 'string'));
+      keywords.push(...item.subjects.filter((s: string): s is string => typeof s === 'string'));
     }
 
     if (item.categories && Array.isArray(item.categories)) {
       keywords.push(
-        ...item.categories.filter((c: any) => typeof c === 'string'),
+        ...item.categories.filter((c: string): c is string => typeof c === 'string'),
       );
     }
 
@@ -403,8 +482,9 @@ export class SageService {
 
   /**
    * Determine publication type
+   * Phase 10.106: Uses typed SageApiItem interface
    */
-  private determinePublicationType(item: any): string[] {
+  private determinePublicationType(item: SageApiItem): string[] {
     const types: string[] = [];
 
     if (item.type) {

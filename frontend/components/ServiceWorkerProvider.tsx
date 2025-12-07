@@ -32,15 +32,56 @@ interface ServiceWorkerProviderProps {
 }
 
 export const ServiceWorkerProvider: React.FC<ServiceWorkerProviderProps> = ({ children }) => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
   const [offlineDataCount, setOfflineDataCount] = useState(0);
 
-  // Register service worker
+  /**
+   * Phase 10.106: PERMANENT DEVELOPMENT FIX
+   * Unregister ALL service workers in development mode
+   * This prevents stale workers from interfering with backend API calls
+   */
+  const unregisterAllServiceWorkers = async () => {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+
+      if (registrations.length > 0) {
+        console.log(`[ServiceWorker] DEV MODE: Unregistering ${registrations.length} stale worker(s)`);
+
+        for (const registration of registrations) {
+          await registration.unregister();
+          console.log('[ServiceWorker] DEV MODE: Unregistered worker with scope:', registration.scope);
+        }
+
+        // Also clear all caches to ensure clean slate
+        const cacheNames = await caches.keys();
+        for (const name of cacheNames) {
+          await caches.delete(name);
+        }
+
+        console.log('[ServiceWorker] DEV MODE: All service workers and caches cleared');
+      }
+    } catch (error) {
+      console.error('[ServiceWorker] DEV MODE: Failed to unregister workers:', error);
+    }
+  };
+
+  // Register service worker (production) or unregister stale ones (development)
   useEffect(() => {
+    // SSR safety check
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      return;
+    }
+
+    // Phase 10.106: PERMANENT FIX - Unregister ALL service workers in development
+    // This prevents stale workers from interfering with API calls
+    if ('serviceWorker' in navigator && process.env.NODE_ENV !== 'production') {
+      unregisterAllServiceWorkers();
+    }
+
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
       registerServiceWorker();
     }

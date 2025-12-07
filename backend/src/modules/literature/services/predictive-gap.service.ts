@@ -29,6 +29,20 @@ import { KnowledgeGraphService } from './knowledge-graph.service';
 // INTERFACES & TYPES
 // ============================================================================
 
+/**
+ * Phase 10.106 Phase 9: Gap input type for analysis methods
+ * Represents a knowledge node used for gap analysis
+ */
+export interface GapInput {
+  id?: string;
+  label?: string;
+  description?: string | null;
+  citationCount?: number | null;
+  trendingScore?: number | null;
+  // Phase 10.106: Accept flexible edge shape from Prisma
+  incomingEdges?: Array<{ id?: string; sourceId?: string; fromNode?: unknown; length?: number }>;
+}
+
 export interface ResearchOpportunity {
   gapId: string;
   topic: string;
@@ -240,7 +254,7 @@ export class PredictiveGapService {
    *
    * Algorithm: Logistic regression trained on historical funding data
    */
-  async predictFundingProbability(gap: any): Promise<number> {
+  async predictFundingProbability(gap: GapInput): Promise<number> {
     try {
       // Use GPT-4 to analyze funding potential
       const prompt = `Analyze funding probability for this research gap:
@@ -342,7 +356,7 @@ Return JSON: { "probability": 0.X, "reasoning": "...", "suggestedGrants": ["NSF 
    *
    * Algorithm: Graph embedding + collaborative filtering
    */
-  async suggestCollaborators(gap: any): Promise<Collaborator[]> {
+  async suggestCollaborators(gap: GapInput): Promise<Collaborator[]> {
     try {
       // Use GPT-4 to suggest expertise needed
       const prompt = `For this research gap, suggest 3-5 types of expertise needed for collaboration:
@@ -404,7 +418,7 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
    *
    * Algorithm: Regression on historical Q-methodology studies
    */
-  async optimizeTimeline(gap: any): Promise<{
+  async optimizeTimeline(gap: GapInput): Promise<{
     phases: Array<{ name: string; duration: number }>;
     totalMonths: number;
   }> {
@@ -489,9 +503,9 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
    *
    * Algorithm: Random forest regression on historical citation data
    */
-  async predictImpact(gap: any): Promise<number> {
+  async predictImpact(gap: GapInput): Promise<number> {
     // Simple model: novelty + trending + feasibility
-    const noveltyFactor = gap.citationCount < 20 ? 0.8 : 0.5;
+    const noveltyFactor = (gap.citationCount || 0) < 20 ? 0.8 : 0.5;
     const trendingFactor = gap.trendingScore || 0.5;
     const feasibilityFactor = 0.7; // Assume Q-methodology is feasible
 
@@ -640,7 +654,7 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
   /**
    * Calculate how well Q-methodology fits this research gap
    */
-  private async calculateQMethodFit(gap: any): Promise<number> {
+  private async calculateQMethodFit(gap: GapInput): Promise<number> {
     const description = (gap.description || '').toLowerCase();
 
     // Q-methodology is ideal for:
@@ -665,7 +679,7 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
   /**
    * Suggest optimal methodology for addressing this gap
    */
-  private async suggestMethodology(gap: any): Promise<string> {
+  private async suggestMethodology(gap: GapInput): Promise<string> {
     const qFit = await this.calculateQMethodFit(gap);
 
     if (qFit > 0.6) {
@@ -681,7 +695,7 @@ Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ..
   // HELPER METHODS
   // ============================================================================
 
-  private async predictFeasibility(gap: any): Promise<number> {
+  private async predictFeasibility(gap: GapInput): Promise<number> {
     // Feasibility based on:
     // - Existence of related studies (easier if similar work exists)
     // - Complexity (fewer citations = less complex?)

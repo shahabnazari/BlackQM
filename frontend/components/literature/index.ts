@@ -52,3 +52,6 @@ export type { TikTokTrendsGridProps } from './TikTokTrendsGrid';
 // Phase 10.8 Day 9: Citation Generator
 export { CitationModal } from './CitationModal';
 export type { CitationModalProps, CitationFormat } from './CitationModal';
+
+// Phase 10.97 Day 2: Theme to Statement modal
+export { ThemeToStatementModal } from './ThemeToStatementModal';

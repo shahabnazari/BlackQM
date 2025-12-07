@@ -84,6 +84,7 @@
 
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
@@ -105,6 +106,70 @@ export interface WileySearchOptions {
 }
 
 /**
+ * Phase 10.106: Typed interface for Wiley API search parameters
+ * Netflix-grade: No loose `any` types
+ */
+interface WileySearchParams {
+  query: string;
+  count: number;
+  offset: number;
+  order: string;
+  contentType?: string;
+  publicationDateFrom?: string;
+  publicationDateTo?: string;
+}
+
+/**
+ * Phase 10.106 Phase 7: Typed interface for Wiley author
+ * Netflix-grade: No loose `any` types
+ */
+interface WileyAuthor {
+  name?: string;
+  given?: string;
+  family?: string;
+  type?: string;
+}
+
+/**
+ * Phase 10.106 Phase 7: Typed interface for Wiley contributor
+ */
+interface WileyContributor {
+  name?: string;
+  type?: string;
+}
+
+/**
+ * Phase 10.106 Phase 7: Typed interface for Wiley API item
+ * Netflix-grade: Explicit typing for API response parsing
+ */
+interface WileyItem {
+  doi?: string;
+  title?: string;
+  abstract?: string;
+  abstractText?: string;
+  summary?: string;
+  contributors?: WileyContributor[];
+  authors?: WileyAuthor[] | string[];
+  creator?: string[];
+  publicationDate?: string;
+  coverDate?: string;
+  year?: string;
+  journalTitle?: string;
+  publicationTitle?: string;
+  bookTitle?: string;
+  url?: string;
+  keywords?: string[];
+  subjects?: string[];
+  citationCount?: number;
+  contentType?: string;
+  type?: string;
+  openAccess?: boolean;
+  accessType?: string;
+  license?: string;
+  id?: string;
+}
+
+/**
  * Wiley Online Library Service
  * Implements access to 6M+ documents from Wiley publishers
  */
@@ -112,9 +177,21 @@ export interface WileySearchOptions {
 export class WileyService {
   private readonly logger = new Logger(WileyService.name);
   private readonly API_BASE_URL = 'https://api.wiley.com/onlinelibrary/tdm/v1/articles';
-  private readonly API_KEY = process.env.WILEY_API_KEY || '';
+  private readonly apiKey: string;
 
-  constructor(private readonly httpService: HttpService) {}
+  // Phase 10.106: Use ConfigService for proper .env loading (NestJS best practice)
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {
+    this.apiKey = this.configService.get<string>('WILEY_API_KEY') || '';
+
+    if (this.apiKey) {
+      this.logger.log('✅ [Wiley] Service initialized with API key');
+    } else {
+      this.logger.warn('⚠️ [Wiley] API key not configured - set WILEY_API_KEY environment variable');
+    }
+  }
 
   /**
    * Search Wiley Online Library
@@ -124,7 +201,7 @@ export class WileyService {
     query: string,
     options: WileySearchOptions = {},
   ): Promise<Paper[]> {
-    if (!this.API_KEY) {
+    if (!this.apiKey) {
       this.logger.warn(
         '⚠️ [Wiley] WILEY_API_KEY not configured - skipping search',
       );
@@ -141,7 +218,7 @@ export class WileyService {
         this.httpService.get(this.API_BASE_URL, {
           params,
           headers: {
-            'Wiley-TDM-Client-Token': this.API_KEY,
+            'Wiley-TDM-Client-Token': this.apiKey,
             Accept: 'application/json',
           },
           timeout: PUBLISHER_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Migrated to centralized config
@@ -152,7 +229,7 @@ export class WileyService {
       this.logger.log(`✅ [Wiley] Found ${items.length} papers`);
 
       const papers = items
-        .map((item: any) => this.parsePaper(item))
+        .map((item: WileyItem) => this.parsePaper(item))
         .filter((paper: Paper | null) => paper !== null) as Paper[];
 
       const eligiblePapers = papers.filter((paper) =>
@@ -163,13 +240,15 @@ export class WileyService {
       );
 
       return eligiblePapers;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 4: Use unknown with type narrowing
+      const err = error as { response?: { status?: number }; message?: string };
+      if (err.response?.status === 401) {
         this.logger.error('🔒 [Wiley] Authentication failed - check API key');
-      } else if (error.response?.status === 429) {
+      } else if (err.response?.status === 429) {
         this.logger.warn('⏳ [Wiley] Rate limit exceeded - try again later');
       } else {
-        this.logger.error(`❌ [Wiley] Search error: ${error.message}`);
+        this.logger.error(`❌ [Wiley] Search error: ${err.message || 'Unknown error'}`);
       }
       return [];
     }
@@ -181,8 +260,8 @@ export class WileyService {
   private buildSearchParams(
     query: string,
     options: WileySearchOptions,
-  ): Record<string, any> {
-    const params: Record<string, any> = {
+  ): WileySearchParams {
+    const params: WileySearchParams = {
       query: query,
       count: options.limit || 25,
       offset: 0,
@@ -208,7 +287,7 @@ export class WileyService {
   /**
    * Parse Wiley API response item into standardized Paper format
    */
-  private parsePaper(item: any): Paper | null {
+  private parsePaper(item: WileyItem): Paper | null {
     try {
       // Extract DOI
       const doi = item.doi || undefined;
@@ -294,9 +373,11 @@ export class WileyService {
       };
 
       return paper;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 4: Use unknown with type narrowing
+      const err = error as { message?: string };
       this.logger.warn(
-        `⚠️ [Wiley] Failed to parse paper: ${error.message}`,
+        `⚠️ [Wiley] Failed to parse paper: ${err.message || 'Unknown error'}`,
       );
       return null;
     }
@@ -305,7 +386,7 @@ export class WileyService {
   /**
    * Extract authors from Wiley response
    */
-  private extractAuthors(item: any): string[] {
+  private extractAuthors(item: WileyItem): string[] {
     const authors: string[] = [];
 
     if (item.contributors) {
@@ -319,7 +400,7 @@ export class WileyService {
     if (authors.length === 0 && item.authors) {
       if (Array.isArray(item.authors)) {
         return item.authors
-          .map((author: any) => {
+          .map((author: WileyAuthor | string) => {
             if (typeof author === 'string') return author;
             if (author.name) return author.name;
             if (author.given && author.family)
@@ -332,7 +413,7 @@ export class WileyService {
 
     if (authors.length === 0 && item.creator) {
       if (Array.isArray(item.creator)) {
-        return item.creator.filter((name: any) => typeof name === 'string');
+        return item.creator.filter((name: unknown) => typeof name === 'string');
       }
     }
 
@@ -342,7 +423,7 @@ export class WileyService {
   /**
    * Extract publication year
    */
-  private extractYear(item: any): number | undefined {
+  private extractYear(item: WileyItem): number | undefined {
     if (item.publicationDate) {
       const year = new Date(item.publicationDate).getFullYear();
       if (!isNaN(year)) return year;
@@ -364,7 +445,7 @@ export class WileyService {
   /**
    * Extract keywords/subjects
    */
-  private extractKeywords(item: any): string[] {
+  private extractKeywords(item: WileyItem): string[] {
     const keywords: string[] = [];
 
     if (item.keywords && Array.isArray(item.keywords)) {
@@ -381,7 +462,7 @@ export class WileyService {
   /**
    * Determine publication type
    */
-  private determinePublicationType(item: any): string[] {
+  private determinePublicationType(item: WileyItem): string[] {
     const types: string[] = [];
 
     if (item.contentType) {

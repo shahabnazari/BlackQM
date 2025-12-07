@@ -111,6 +111,40 @@ export interface SpringerSearchOptions {
 }
 
 /**
+ * Phase 10.106 Phase 6: Typed interface for Springer API creator
+ * Netflix-grade: No loose `any` types
+ */
+interface SpringerCreator {
+  creator?: string;
+  name?: string;
+  givenName?: string;
+  familyName?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+/**
+ * Phase 10.106 Phase 6: Typed interface for Springer API record
+ * Netflix-grade: Explicit typing for API response parsing
+ */
+interface SpringerRecord {
+  title?: string;
+  abstract?: string;
+  creators?: SpringerCreator[];
+  publicationDate?: string;
+  onlineDate?: string;
+  doi?: string;
+  publicationName?: string;
+  journalTitle?: string;
+  bookTitle?: string;
+  contentType?: string;
+  publicationType?: string;
+  subjects?: Array<{ term?: string } | string>;
+  url?: Array<{ value?: string }>;
+  openaccess?: string | boolean;
+}
+
+/**
  * SpringerLink Service
  * Provides search capabilities for Springer Nature publications
  *
@@ -125,6 +159,13 @@ export class SpringerService {
   // Springer Nature Meta API v2 endpoint
   private readonly API_BASE_URL =
     'https://api.springernature.com/meta/v2/json';
+
+  /**
+   * Phase 10.106: Springer free tier limits page size to 25 records per request.
+   * Requesting more causes 403 Forbidden ("premium feature" error).
+   * Premium tier allows up to 100 records per request.
+   */
+  private readonly MAX_RESULTS_PER_REQUEST = 25;
 
   // Phase 10.943: Use ConfigService for proper .env loading (was using process.env directly which doesn't work with NestJS)
   private readonly apiKey: string;
@@ -211,26 +252,29 @@ export class SpringerService {
 
       // Extract and parse records
       const records = apiData.records || [];
+      // Phase 10.106 Phase 6: Use typed SpringerRecord interface (Netflix-grade)
       const papers = records
-        .map((record: any) => this.parsePaper(record))
+        .map((record: SpringerRecord) => this.parsePaper(record))
         .filter((paper: Paper | null) => paper !== null) as Paper[];
 
       this.logger.log(
         `[SpringerLink] Returning ${papers.length} eligible papers`,
       );
       return papers;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 6: Use unknown with type narrowing (Netflix-grade)
+      const err = error as { response?: { status?: number }; message?: string };
       // Graceful error handling - log and return empty array
-      if (error.response?.status === 401) {
+      if (err.response?.status === 401) {
         this.logger.error(
           '[SpringerLink] Authentication failed - check API key',
         );
-      } else if (error.response?.status === 429) {
+      } else if (err.response?.status === 429) {
         this.logger.error(
           '[SpringerLink] Rate limit exceeded - try again later',
         );
       } else {
-        this.logger.error(`[SpringerLink] Search failed: ${error.message}`);
+        this.logger.error(`[SpringerLink] Search failed: ${err.message || 'Unknown error'}`);
       }
       return []; // Graceful degradation
     }
@@ -247,10 +291,20 @@ export class SpringerService {
     query: string,
     options?: SpringerSearchOptions,
   ): Record<string, any> {
+    // Phase 10.106: Cap limit to free tier maximum (25 records per request)
+    const requestedLimit = options?.limit ?? 25;
+    const cappedLimit = Math.min(requestedLimit, this.MAX_RESULTS_PER_REQUEST);
+
+    if (requestedLimit > this.MAX_RESULTS_PER_REQUEST) {
+      this.logger.warn(
+        `[SpringerLink] Requested ${requestedLimit} papers, capped to ${cappedLimit} (free tier limit)`,
+      );
+    }
+
     const params: Record<string, any> = {
       api_key: this.apiKey,
       q: query,
-      p: options?.limit || 25,
+      p: cappedLimit,
       s: 1, // Start position
     };
 
@@ -281,11 +335,12 @@ export class SpringerService {
 
   /**
    * Parse Springer API record to Paper object
+   * Phase 10.106 Phase 6: Use typed SpringerRecord interface (Netflix-grade)
    *
-   * @param record - Raw Springer API record object
+   * @param record - Typed Springer API record object
    * @returns Paper object or null if invalid
    */
-  private parsePaper(record: any): Paper | null {
+  private parsePaper(record: SpringerRecord): Paper | null {
     try {
       // Extract core metadata
       const title = record.title || 'Untitled';
@@ -305,14 +360,16 @@ export class SpringerService {
       );
 
       // Extract DOI (required for Springer papers)
-      const doi = record.doi || null;
+      // Phase 10.106 Phase 6: Use undefined instead of null for Paper interface compatibility
+      const doi = record.doi || undefined;
 
       // Extract venue (journal or book title)
+      // Phase 10.106 Phase 6: Use undefined instead of null for Paper interface compatibility
       const venue =
         record.publicationName ||
         record.journalTitle ||
         record.bookTitle ||
-        null;
+        undefined;
 
       // Extract publication type
       const publicationTypeString = this.determinePublicationType(record);
@@ -344,7 +401,8 @@ export class SpringerService {
       });
 
       // Build Springer URL
-      const springerUrl = record.url?.[0]?.value || (doi ? `https://doi.org/${doi}` : null);
+      // Phase 10.106 Phase 6: Use undefined instead of null for Paper interface compatibility
+      const springerUrl = record.url?.[0]?.value || (doi ? `https://doi.org/${doi}` : undefined);
 
       // Check for open access and PDF availability
       const isOpenAccess = record.openaccess === 'true' || record.openaccess === true;
@@ -381,9 +439,11 @@ export class SpringerService {
         // Springer-specific metadata stored in springerMetadata variable above
         // Can be extended by adding fields to Paper interface if needed
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 6: Use unknown with type narrowing (Netflix-grade)
+      const err = error as { message?: string };
       this.logger.warn(
-        `[SpringerLink] Failed to parse record: ${error.message}`,
+        `[SpringerLink] Failed to parse record: ${err.message || 'Unknown error'}`,
       );
       return null;
     }
@@ -391,18 +451,17 @@ export class SpringerService {
 
   /**
    * Extract and format author names from Springer API response
+   * Phase 10.106 Phase 6: Use typed SpringerCreator[] interface (Netflix-grade)
    */
-  private extractAuthors(creatorsData: any): string[] {
+  private extractAuthors(creatorsData: SpringerCreator[] | undefined): string[] {
     if (!creatorsData) return [];
 
     // Springer API returns creators as array
     const creators = Array.isArray(creatorsData) ? creatorsData : [];
 
+    // Phase 10.106 Phase 6: Use typed SpringerCreator (Netflix-grade)
     return creators
-      .map((creator: any) => {
-        if (typeof creator === 'string') {
-          return creator;
-        }
+      .map((creator: SpringerCreator) => {
         // Springer API format: { creator: "John Doe" }
         return creator.creator || '';
       })
@@ -422,19 +481,21 @@ export class SpringerService {
 
   /**
    * Extract subjects/fields of study from Springer metadata
+   * Phase 10.106 Phase 6: Use typed interface (Netflix-grade)
    */
-  private extractSubjects(subjectsData: any): string[] {
+  private extractSubjects(subjectsData: Array<{ term?: string } | string> | undefined): string[] {
     if (!subjectsData) return [];
 
     const subjects = Array.isArray(subjectsData) ? subjectsData : [];
 
+    // Phase 10.106 Phase 6: Use typed union (Netflix-grade)
     return subjects
-      .map((subject: any) => {
+      .map((subject: { term?: string } | string) => {
         if (typeof subject === 'string') {
           return subject;
         }
-        // Springer API format: { subject: "Computer Science" }
-        return subject.subject || '';
+        // Springer API format: { term: "Computer Science" }
+        return subject.term || '';
       })
       .filter((name: string) => name.length > 0)
       .slice(0, 10); // Limit to top 10 subjects
@@ -442,8 +503,9 @@ export class SpringerService {
 
   /**
    * Determine publication type from Springer metadata
+   * Phase 10.106 Phase 6: Use typed SpringerRecord (Netflix-grade)
    */
-  private determinePublicationType(record: any): string | null {
+  private determinePublicationType(record: SpringerRecord): string | null {
     const contentType = record.contentType?.toLowerCase() || '';
 
     if (contentType.includes('article') || contentType.includes('journal')) {

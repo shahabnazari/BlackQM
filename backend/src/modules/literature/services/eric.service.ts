@@ -114,6 +114,53 @@ export interface ERICSearchOptions {
   educationLevel?: string;
 }
 
+/**
+ * Phase 10.106 Phase 3: Typed interface for ERIC API search parameters
+ * Netflix-grade: No loose `any` types
+ */
+interface ERICSearchParams {
+  search: string;
+  format: string;
+  rows: number;
+  start: number;
+  e_peerreviewed?: string;
+  e_pubtype?: string;
+  e_educationlevel?: string;
+  e_pubyearmin?: number;
+  e_pubyearmax?: number;
+}
+
+/**
+ * Phase 10.106 Phase 3: Typed interface for ERIC API response document
+ * Netflix-grade: Explicit typing for API response parsing
+ */
+interface ERICApiDocument {
+  id?: string;
+  title?: string;
+  description?: string;
+  author?: string[];
+  publicationdateyear?: string;
+  doi?: string;
+  url?: string;
+  source?: string;
+  sponsor?: string;
+  e_pubtype?: string;
+  e_educationlevel?: string[];
+  e_fulltextauth?: string;
+  fulltext?: { url?: string };
+}
+
+/**
+ * Phase 10.106 Phase 3: Typed interface for ERIC API response
+ * Netflix-grade: Full response typing
+ */
+interface ERICApiResponse {
+  response?: {
+    docs?: ERICApiDocument[];
+    numFound?: number;
+  };
+}
+
 @Injectable()
 export class ERICService {
   private readonly logger = new Logger(ERICService.name);
@@ -149,9 +196,8 @@ export class ERICService {
     try {
       this.logger.log(`[ERIC] Searching: "${query}"`);
 
-      // Build query parameters
-      // 📝 TO ADD NEW FILTERS: Add additional parameters here
-      const params: any = {
+      // Phase 10.106 Phase 3: Build typed query parameters
+      const params: ERICSearchParams = {
         search: query,
         format: 'json',
         rows: options?.limit || 20,
@@ -160,25 +206,25 @@ export class ERICService {
 
       // Add peer-reviewed filter if requested
       if (options?.peerReviewed) {
-        params['e_peerreviewed'] = 'true';
+        params.e_peerreviewed = 'true';
       }
 
       // Add publication type filter
       if (options?.publicationType && options.publicationType !== 'All') {
-        params['e_pubtype'] = options.publicationType;
+        params.e_pubtype = options.publicationType;
       }
 
       // Add education level filter
       if (options?.educationLevel) {
-        params['e_educationlevel'] = options.educationLevel;
+        params.e_educationlevel = options.educationLevel;
       }
 
       // Add date range filter
       if (options?.yearFrom) {
-        params['e_pubyearmin'] = options.yearFrom;
+        params.e_pubyearmin = options.yearFrom;
       }
       if (options?.yearTo) {
-        params['e_pubyearmax'] = options.yearTo;
+        params.e_pubyearmax = options.yearTo;
       }
 
       // Phase 10.102 Phase 3.1: Execute HTTP request with automatic retry + exponential backoff
@@ -201,27 +247,32 @@ export class ERICService {
         },
       );
 
-      // Parse response
-      // 📝 TO CHANGE PARSING: Update parsePaper() method below
-      const docs = result.data.data?.response?.docs || [];
-      const papers = docs.map((doc: any) => this.parsePaper(doc));
+      // Phase 10.106 Phase 3: Parse response with typed interface
+      // Netflix-grade fix: Handle both direct data and wrapped AxiosResponse cases
+      // The retry service may return the AxiosResponse directly, so we need to unwrap it
+      const rawData = result.data;
+      const apiData: ERICApiResponse = (rawData as any)?.data ?? rawData;
+      const docs: ERICApiDocument[] = apiData?.response?.docs || [];
+      const papers = docs.map((doc) => this.parsePaper(doc));
 
       this.logger.log(`[ERIC] Found ${papers.length} papers`);
       return papers;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Strict Mode: Use unknown with type narrowing
+      const err = error as { response?: { status?: number }; code?: string; message?: string };
+
       // Enterprise-grade error handling: Log but don't throw (graceful degradation)
-      // 📝 TO ADD CUSTOM ERROR HANDLING: Add specific error type checks here
-      if (error.response?.status === 503) {
+      if (err.response?.status === 503) {
         this.logger.error(
           `[ERIC] ⚠️  SERVICE UNAVAILABLE (503) - ERIC API temporarily down`,
         );
-      } else if (error.code === 'ECONNREFUSED') {
+      } else if (err.code === 'ECONNREFUSED') {
         this.logger.error(
           `[ERIC] ⚠️  CONNECTION REFUSED - Cannot reach ERIC API`,
         );
       } else {
         this.logger.error(
-          `[ERIC] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
+          `[ERIC] Search failed: ${err.message || 'Unknown error'} (Status: ${err.response?.status || 'N/A'})`,
         );
       }
       // Return empty array instead of throwing - allows other sources to succeed
@@ -248,10 +299,10 @@ export class ERICService {
    * 2. Check e_fulltextauth (full-text authorization status)
    * 3. Fallback to URL field if available
    *
-   * @param doc Raw API response object from ERIC
+   * @param doc Raw API response object from ERIC (typed)
    * @returns Normalized Paper object following application schema
    */
-  private parsePaper(doc: any): Paper {
+  private parsePaper(doc: ERICApiDocument): Paper {
     // ============================================================================
     // STEP 1: Extract basic metadata
     // ============================================================================
@@ -322,16 +373,16 @@ export class ERICService {
       abstract,
 
       // External identifiers
-      doi: doc.doi || null,
-      url: doc.url || null,
+      doi: doc.doi || undefined,
+      url: doc.url || undefined,
 
       // Publication metadata
-      venue: doc.source || doc.sponsor || null,
+      venue: doc.source || doc.sponsor || undefined,
       source: LiteratureSource.ERIC,
-      publicationType: doc.e_pubtype || null,
+      publicationType: doc.e_pubtype ? [doc.e_pubtype] : undefined,
 
       // Education-specific metadata (stored in fieldsOfStudy for compatibility)
-      fieldsOfStudy: educationLevel.length > 0 ? educationLevel : null,
+      fieldsOfStudy: educationLevel.length > 0 ? educationLevel : undefined,
 
       // Content metrics (Phase 10 Day 5.13+)
       wordCount,

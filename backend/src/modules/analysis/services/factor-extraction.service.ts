@@ -7,6 +7,8 @@ import {
 } from '../types/extraction.types';
 import { StatisticsService } from './statistics.service';
 import { AnalysisLoggerService } from './analysis-logger.service';
+// Netflix-Grade: Import type-safe array utilities (Phase 10.103)
+import { safeGet, safeGet2D, assertGet } from '../../../common/utils/array-utils';
 
 /**
  * Factor Extraction Service
@@ -39,7 +41,8 @@ export class FactorExtractionService {
     // Check for invalid correlations
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
-        const val = options.correlationMatrix[i][j];
+        // Netflix-Grade: Safe 2D array access
+        const val = safeGet2D(options.correlationMatrix, i, j, 0);
         if (i === j && Math.abs(val - 1) > 0.01) {
           throw new Error(
             'Invalid correlation matrix: diagonal elements must be 1',
@@ -99,7 +102,9 @@ export class FactorExtractionService {
     const cumulativeVariance = variance.reduce(
       (acc: number[], v: number, i: number) => {
         if (i === 0) return [v];
-        return [...acc, acc[i - 1] + v];
+        // Netflix-Grade: Safe array access for cumulative calculation
+        const previousValue = safeGet(acc, i - 1, 0);
+        return [...acc, previousValue + v];
       },
       [] as number[],
     );
@@ -191,7 +196,10 @@ export class FactorExtractionService {
       // Step 1: Replace diagonal with communalities
       const communalities = this.calculateCommunalities(workingMatrix);
       for (let i = 0; i < n; i++) {
-        workingMatrix[i][i] = communalities[i];
+        // Netflix-Grade: Safe 2D array access for diagonal assignment
+        const row = assertGet(workingMatrix, i, 'centroid extraction');
+        const communality = safeGet(communalities, i, 1);
+        row[i] = communality;
       }
 
       // Step 2: Reflect negative columns (Brown's method)
@@ -329,16 +337,18 @@ export class FactorExtractionService {
         ? eigen.values
         : (eigen.values as any).toArray();
       const values = eigenvaluesArray.map((v: any) =>
-        typeof v === 'number' ? v : v.toNumber(),
+        typeof v === 'number' ? v : (v?.toNumber ? v.toNumber() : 0),
       );
       randomEigenvalues.push(values);
     }
 
     // Calculate mean random eigenvalues
+    // Netflix-Grade: Safe access to first random eigenvalue array
+    const firstRandomEigenvalues = safeGet(randomEigenvalues, 0, []);
     const meanRandomEigenvalues =
       randomEigenvalues.length > 0
-        ? randomEigenvalues[0].map((_, i) => {
-            const sum = randomEigenvalues.reduce((acc, sim) => acc + sim[i], 0);
+        ? firstRandomEigenvalues.map((_, i) => {
+            const sum = randomEigenvalues.reduce((acc, sim) => acc + safeGet(sim, i, 0), 0);
             return sum / numSimulations;
           })
         : [];
@@ -360,7 +370,10 @@ export class FactorExtractionService {
         i < Math.min(actualEigenvalues.length, meanRandomEigenvalues.length);
         i++
       ) {
-        if (actualEigenvalues[i] > meanRandomEigenvalues[i]) {
+        // Netflix-Grade: Safe array access for eigenvalue comparison
+        const actualEigenvalue = safeGet(actualEigenvalues, i, 0);
+        const meanRandomEigenvalue = safeGet(meanRandomEigenvalues, i, 0);
+        if (actualEigenvalue > meanRandomEigenvalue) {
           suggestedFactors++;
         } else {
           break;
@@ -436,7 +449,10 @@ export class FactorExtractionService {
       // Update correlation matrix diagonal with communalities
       const workingMatrix = math.clone(correlationMatrix);
       for (let i = 0; i < n; i++) {
-        workingMatrix[i][i] = communalities[i];
+        // Netflix-Grade: Safe 2D array access for diagonal assignment
+        const row = assertGet(workingMatrix, i, 'ML extraction');
+        const communality = safeGet(communalities, i, 0.5);
+        row[i] = communality;
       }
 
       // Extract factors using eigendecomposition
@@ -487,7 +503,9 @@ export class FactorExtractionService {
       let maxCorr = 0;
       for (let j = 0; j < n; j++) {
         if (i !== j) {
-          maxCorr = Math.max(maxCorr, Math.abs(matrix[i][j]));
+          // Netflix-Grade: Safe 2D array access for communality calculation
+          const correlation = safeGet2D(matrix, i, j, 0);
+          maxCorr = Math.max(maxCorr, Math.abs(correlation));
         }
       }
       communalities.push(maxCorr * maxCorr);
@@ -503,12 +521,16 @@ export class FactorExtractionService {
     for (let j = 0; j < n; j++) {
       let columnSum = 0;
       for (let i = 0; i < n; i++) {
-        columnSum += reflected[i][j];
+        // Netflix-Grade: Safe 2D array access for column sum
+        columnSum += safeGet2D(reflected, i, j, 0);
       }
 
       if (columnSum < 0) {
         for (let i = 0; i < n; i++) {
-          reflected[i][j] = -reflected[i][j];
+          // Netflix-Grade: Safe 2D array access for reflection
+          const row = assertGet(reflected, i, 'reflect columns');
+          const value = safeGet(row, j, 0);
+          row[j] = -value;
         }
       }
     }
@@ -525,7 +547,12 @@ export class FactorExtractionService {
 
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
-        residual[i][j] -= factorLoadings[i] * factorLoadings[j];
+        // Netflix-Grade: Safe 2D array access for residual calculation
+        const row = assertGet(residual, i, 'calculate residuals');
+        const loadingI = safeGet(factorLoadings, i, 0);
+        const loadingJ = safeGet(factorLoadings, j, 0);
+        const currentValue = safeGet(row, j, 0);
+        row[j] = currentValue - (loadingI * loadingJ);
       }
     }
 
@@ -535,13 +562,17 @@ export class FactorExtractionService {
   private calculateFinalCommunalities(factors: number[][]): number[] {
     if (factors.length === 0) return [];
 
-    const n = factors[0].length;
+    // Netflix-Grade: Safe access to first factor to get dimension
+    const firstFactor = assertGet(factors, 0, 'calculate communalities');
+    const n = firstFactor.length;
     const communalities: number[] = new Array(n).fill(0);
 
     for (let i = 0; i < n; i++) {
       let sum = 0;
       for (const factor of factors) {
-        sum += factor[i] * factor[i];
+        // Netflix-Grade: Safe array access for factor loading
+        const loading = safeGet(factor, i, 0);
+        sum += loading * loading;
       }
       communalities[i] = sum;
     }
@@ -554,14 +585,17 @@ export class FactorExtractionService {
 
     for (let i = 0; i < size; i++) {
       matrix[i] = [];
+      // Netflix-Grade: Safe access to matrix row
+      const row = assertGet(matrix, i, 'generate random matrix');
       for (let j = 0; j < size; j++) {
         if (i === j) {
-          matrix[i][j] = 1;
+          row[j] = 1;
         } else if (j < i) {
-          matrix[i][j] = matrix[j][i];
+          // Netflix-Grade: Safe 2D array access for symmetric matrix
+          row[j] = safeGet2D(matrix, j, i, 0);
         } else {
           // Generate random correlation between -0.3 and 0.3
-          matrix[i][j] = (Math.random() - 0.5) * 0.6;
+          row[j] = (Math.random() - 0.5) * 0.6;
         }
       }
     }
@@ -574,7 +608,11 @@ export class FactorExtractionService {
     previous: number[],
     tolerance: number,
   ): boolean {
-    return current.every((val, i) => Math.abs(val - previous[i]) < tolerance);
+    // Netflix-Grade: Safe array access for convergence check
+    return current.every((val, i) => {
+      const prevValue = safeGet(previous, i, val);
+      return Math.abs(val - prevValue) < tolerance;
+    });
   }
 
   private calculateMLFit(
@@ -595,7 +633,10 @@ export class FactorExtractionService {
 
     for (let i = 0; i < numVariables; i++) {
       for (let j = i + 1; j < numVariables; j++) {
-        const residual = correlationMatrix[i][j] - reproduced[i][j];
+        // Netflix-Grade: Safe 2D array access for ML fit calculation
+        const original = safeGet2D(correlationMatrix, i, j, 0);
+        const reproducedValue = safeGet2D(reproduced, i, j, 0);
+        const residual = original - reproducedValue;
         residualSum += residual * residual;
       }
     }
@@ -609,17 +650,24 @@ export class FactorExtractionService {
   }
 
   private reproduceCorrelationMatrix(factors: number[][]): number[][] {
-    const n = factors[0].length;
+    // Netflix-Grade: Safe access to first factor to get dimension
+    const firstFactor = assertGet(factors, 0, 'reproduce correlation matrix');
+    const n = firstFactor.length;
     const reproduced: number[][] = [];
 
     for (let i = 0; i < n; i++) {
       reproduced[i] = [];
+      // Netflix-Grade: Safe access to reproduced matrix row
+      const row = assertGet(reproduced, i, 'reproduce correlation matrix');
       for (let j = 0; j < n; j++) {
         let sum = 0;
         for (const factor of factors) {
-          sum += factor[i] * factor[j];
+          // Netflix-Grade: Safe array access for factor loadings
+          const loadingI = safeGet(factor, i, 0);
+          const loadingJ = safeGet(factor, j, 0);
+          sum += loadingI * loadingJ;
         }
-        reproduced[i][j] = sum;
+        row[j] = sum;
       }
     }
 

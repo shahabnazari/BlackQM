@@ -109,10 +109,12 @@ export class GapAnalyzerService {
       this.logger.log(`Identified ${scoredGaps.length} research gaps`);
 
       return scoredGaps;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `Failed to analyze research gaps: ${error.message}`,
-        error.stack,
+        `Failed to analyze research gaps: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
       // Return empty array instead of throwing to prevent 500 errors
       return [];
@@ -178,10 +180,12 @@ export class GapAnalyzerService {
       this.logger.log(`Identified ${scoredGaps.length} research gaps`);
 
       return scoredGaps;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `Failed to analyze research gaps from content: ${error.message}`,
-        error.stack,
+        `Failed to analyze research gaps from content: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
       // Return empty array instead of throwing to prevent 500 errors
       return [];
@@ -512,9 +516,11 @@ IMPORTANT: Use specific terminology from the papers. Do NOT use generic placehol
       });
 
       analysis = this.parseOpportunityAnalysis(response.content);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string };
       this.logger.warn(
-        `Failed to generate AI opportunity analysis for gap "${gap.title}": ${error.message}`,
+        `Failed to generate AI opportunity analysis for gap "${gap.title}": ${err.message || 'Unknown error'}`,
       );
       // Continue with empty analysis - will use fallback values below
     }
@@ -901,8 +907,9 @@ IMPORTANT: Use specific terminology from the papers. Do NOT use generic placehol
 
   /**
    * Helper: Estimate feasibility
+   * Phase 10.106 Phase 10: Typed gap input
    */
-  private estimateFeasibility(gap: any): number {
+  private estimateFeasibility(gap: { description?: string }): number {
     // Simple heuristic - in production, use more sophisticated analysis
     let feasibility = 7;
 

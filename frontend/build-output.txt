@@ -1,0 +1,137 @@
+
+> @vqmethod/frontend@0.1.0 build
+> NODE_OPTIONS='--max-old-space-size=12288' next build
+
+  ▲ Next.js 14.2.32
+  - Environments: .env.local
+  - Experiments (use with caution):
+    · webpackBuildWorker
+
+   Creating an optimized production build ...
+   Using tsconfig file: ./tsconfig.json
+   Using tsconfig file: ./tsconfig.json
+   Using tsconfig file: ./tsconfig.json
+ ✓ Compiled successfully
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/93) ...
+   Generating static pages (23/93) 
+   Generating static pages (46/93) 
+   Generating static pages (69/93) 
+ ✓ Generating static pages (93/93)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                            Size     First Load JS
+┌ ○ /                                  2.41 kB         1.2 MB
+├ ○ /_not-found                        148 B           1.2 MB
+├ ○ /about                             3.67 kB         1.2 MB
+├ ○ /ai-tools                          1.08 kB        1.21 MB
+├ ○ /analysis                          3.08 kB         1.2 MB
+├ ƒ /analysis/hub/[id]                 27.2 kB        1.29 MB
+├ ○ /analysis/q-methodology            11.3 kB        1.21 MB
+├ ○ /analytics                         683 B           1.2 MB
+├ ○ /analyze                           3.45 kB         1.2 MB
+├ ○ /analyze/metrics                   683 B           1.2 MB
+├ ƒ /api/auth/[...nextauth]            0 B                0 B
+├ ƒ /api/logs                          0 B                0 B
+├ ƒ /api/navigation/phase              0 B                0 B
+├ ƒ /api/navigation/state              0 B                0 B
+├ ƒ /api/navigation/track              0 B                0 B
+├ ƒ /api/studies                       0 B                0 B
+├ ƒ /api/studies/[id]/grid             0 B                0 B
+├ ƒ /api/studies/[id]/stimuli          0 B                0 B
+├ ƒ /api/test-js                       0 B                0 B
+├ ƒ /api/upload/image                  0 B                0 B
+├ ƒ /api/upload/logo                   0 B                0 B
+├ ƒ /api/upload/signature              0 B                0 B
+├ ○ /archive                           3.74 kB         1.2 MB
+├ ○ /auth/forgot-password              1.51 kB         1.2 MB
+├ ○ /auth/login                        5.41 kB        1.21 MB
+├ ○ /auth/orcid/success                1.06 kB         1.2 MB
+├ ○ /auth/register                     7 kB           1.21 MB
+├ ○ /auth/reset-password               2.44 kB         1.2 MB
+├ ○ /auth/verify-email                 3.07 kB         1.2 MB
+├ ○ /build                             3.85 kB         1.2 MB
+├ ○ /build/ai-assistant                1.08 kB        1.21 MB
+├ ○ /collect                           3.58 kB         1.2 MB
+├ ○ /contact                           4.78 kB         1.2 MB
+├ ○ /dashboard                         13.7 kB        1.22 MB
+├ ○ /design                            8.06 kB         1.2 MB
+├ ○ /design/hypothesis                 6.99 kB         1.2 MB
+├ ○ /design/methodology                5.27 kB         1.2 MB
+├ ○ /design/protocol                   4.85 kB         1.2 MB
+├ ○ /design/questions                  6.25 kB         1.2 MB
+├ ○ /discover/gaps                     6.67 kB        1.21 MB
+├ ○ /discover/knowledge-map            6.79 kB        1.21 MB
+├ ○ /discover/literature               124 kB         1.33 MB
+├ ○ /discover/references               6.43 kB         1.2 MB
+├ ○ /help                              4.37 kB         1.2 MB
+├ ○ /interpret                         3.91 kB         1.2 MB
+├ ƒ /interpretation/[studyId]          2.2 kB         1.26 MB
+├ ○ /join                              3.03 kB         1.2 MB
+├ ○ /js-test                           945 B           1.2 MB
+├ ○ /minimal-test                      476 B           1.2 MB
+├ ○ /my-studies                        3.66 kB         1.2 MB
+├ ○ /navigation-test                   7.21 kB        1.22 MB
+├ ○ /participants                      2.76 kB         1.2 MB
+├ ○ /performance                       7.11 kB         1.2 MB
+├ ○ /privacy                           4.3 kB          1.2 MB
+├ ○ /questionnaire/builder-pro         7.51 kB         1.2 MB
+├ ○ /recruit                           3.77 kB         1.2 MB
+├ ○ /recruitment                       5.72 kB         1.2 MB
+├ ○ /report                            3.89 kB         1.2 MB
+├ ƒ /reports/[studyId]                 5.71 kB         1.2 MB
+├ ○ /simple-test                       571 B           1.2 MB
+├ ○ /studies                           5.94 kB        1.21 MB
+├ ƒ /studies/[id]                      4.84 kB         1.2 MB
+├ ƒ /studies/[id]/dashboard            4.13 kB        1.21 MB
+├ ○ /studies/create                    36.3 kB        1.26 MB
+├ ƒ /study/[token]                     10.2 kB        1.22 MB
+├ ○ /study/post-survey                 5.4 kB         1.21 MB
+├ ○ /study/pre-screening               1.17 kB        1.21 MB
+├ ○ /terms                             4.36 kB         1.2 MB
+├ ○ /test-accessibility                3.78 kB         1.2 MB
+├ ○ /test-apple-grid                   1.32 kB         1.2 MB
+├ ○ /test-apple-grid-fixed             1.47 kB         1.2 MB
+├ ○ /test-auth                         1.33 kB         1.2 MB
+├ ○ /test-broken                       1.21 kB         1.2 MB
+├ ○ /test-bulk-upload                  7.55 kB         1.2 MB
+├ ○ /test-comprehensive-grid           2.13 kB         1.2 MB
+├ ○ /test-e2e-study                    2.87 kB         1.2 MB
+├ ○ /test-grid-alignment               1.82 kB         1.2 MB
+├ ○ /test-grid-complete                2.52 kB        1.21 MB
+├ ○ /test-grid-distribution            4.35 kB         1.2 MB
+├ ○ /test-grid-enhanced                1.97 kB         1.2 MB
+├ ○ /test-grid-final                   2.62 kB        1.21 MB
+├ ○ /test-grid-improvements            1.32 kB        1.21 MB
+├ ○ /test-grid-messages                1.26 kB         1.2 MB
+├ ○ /test-grid-stimuli                 12.8 kB        1.21 MB
+├ ○ /test-grid-validation              1.86 kB         1.2 MB
+├ ○ /test-hydration                    2.74 kB        1.21 MB
+├ ○ /test-image-upload                 3.36 kB        1.21 MB
+├ ○ /test-js                           607 B           1.2 MB
+├ ○ /test-keyboard-shortcuts           4.57 kB         1.2 MB
+├ ○ /test-navigation                   869 B          1.23 MB
+├ ○ /test-pi-org                       1.44 kB         1.2 MB
+├ ○ /test-routing                      968 B           1.2 MB
+├ ○ /test-scientific-grids             2.07 kB        1.22 MB
+├ ○ /test-tooltips                     3.81 kB         1.2 MB
+├ ○ /test-tooltips-comparison          5.6 kB          1.2 MB
+├ ○ /test-upload                       3.82 kB        1.21 MB
+├ ○ /test-validation                   3.55 kB         1.2 MB
+├ ○ /visualization-demo                1.88 kB        1.21 MB
+├ ○ /visualization-demo/q-methodology  1.85 kB        1.21 MB
+├ ○ /visualize                         1.88 kB        1.21 MB
+└ ○ /visualize/q-methodology           1.85 kB        1.21 MB
++ First Load JS shared by all          1.2 MB
+  ├ chunks/vendor-409116072a1ffff8.js  1.19 MB
+  └ other shared chunks (total)        2.2 kB
+
+
+ƒ Middleware                           26.5 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

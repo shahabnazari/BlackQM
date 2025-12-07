@@ -12,6 +12,8 @@ import {
   FactorCharacteristics,
   FactorInterpretation,
 } from '../types';
+// Netflix-Grade: Import type-safe array utilities (Phase 10.103)
+import { safeGet, safeGet2D, assertGet } from '../../../common/utils/array-utils';
 
 /**
  * Statistical Output Service
@@ -38,7 +40,8 @@ export class StatisticalOutputService {
 
     for (let factorNum = 0; factorNum < numFactors; factorNum++) {
       // Get factor loadings for this factor
-      const factorLoadings = rotatedLoadings.map((row) => row[factorNum]);
+      // Netflix-Grade: Safe array access in map operations
+      const factorLoadings = rotatedLoadings.map((row) => safeGet(row, factorNum, 0));
 
       // Identify defining sorts (significant loadings)
       const definingSorts = this.identifyDefiningSorts(factorLoadings);
@@ -60,13 +63,18 @@ export class StatisticalOutputService {
       // Create factor array
       const factorArray: FactorArray = {
         factorNumber: factorNum + 1,
-        statements: statements.map((stmt, index) => ({
-          id: stmt.id,
-          text: stmt.text,
-          zScore: zScores[index],
-          rank: idealizedSort[index],
-          normalizedScore: this.normalizeZScore(zScores[index]),
-        })),
+        statements: statements.map((stmt, index) => {
+          // Netflix-Grade: Safe array access for statement data
+          const zScore = safeGet(zScores, index, 0);
+          const rank = safeGet(idealizedSort, index, 0);
+          return {
+            id: stmt.id,
+            text: stmt.text,
+            zScore,
+            rank,
+            normalizedScore: this.normalizeZScore(zScore),
+          };
+        }),
         definingSortsCount: definingSorts.length,
         explainedVariance: this.calculateExplainedVariance(factorLoadings),
       };
@@ -86,32 +94,42 @@ export class StatisticalOutputService {
     significanceLevel: number = 0.05,
   ): DistinguishingStatement[] {
     const distinguishingStatements: DistinguishingStatement[] = [];
-    const numStatements = factorArrays[0].statements.length;
+    // Netflix-Grade: Safe access to first factor array
+    const firstFactorArray = assertGet(factorArrays, 0, 'distinguishing statements');
+    const numStatements = firstFactorArray.statements.length;
     const numFactors = factorArrays.length;
 
     for (let stmtIndex = 0; stmtIndex < numStatements; stmtIndex++) {
-      const zScores = factorArrays.map((fa) => fa.statements[stmtIndex].zScore);
+      // Netflix-Grade: Safe array access for z-scores
+      const zScores = factorArrays.map((fa) => safeGet(fa.statements, stmtIndex, { zScore: 0 } as any).zScore);
 
       // Check each factor pair
       for (let i = 0; i < numFactors; i++) {
         for (let j = i + 1; j < numFactors; j++) {
-          const diff = Math.abs(zScores[i] - zScores[j]);
+          // Netflix-Grade: Safe array access for z-score comparison
+          const zScore1 = safeGet(zScores, i, 0);
+          const zScore2 = safeGet(zScores, j, 0);
+          const diff = Math.abs(zScore1 - zScore2);
+
+          const factorArrayI = assertGet(factorArrays, i, 'distinguishing statements');
+          const factorArrayJ = assertGet(factorArrays, j, 'distinguishing statements');
           const stdError = this.calculateStandardError(
-            factorArrays[i].definingSortsCount,
-            factorArrays[j].definingSortsCount,
+            factorArrayI.definingSortsCount,
+            factorArrayJ.definingSortsCount,
           );
 
           const tStatistic = diff / stdError;
           const pValue = this.calculatePValue(tStatistic);
 
           if (pValue < significanceLevel) {
+            const statement = assertGet(firstFactorArray.statements, stmtIndex, 'distinguishing statements');
             distinguishingStatements.push({
-              statementId: factorArrays[0].statements[stmtIndex].id,
-              text: factorArrays[0].statements[stmtIndex].text,
+              statementId: statement.id,
+              text: statement.text,
               factor1: i + 1,
               factor2: j + 1,
-              zScore1: zScores[i],
-              zScore2: zScores[j],
+              zScore1,
+              zScore2,
               difference: diff,
               pValue,
               significance: pValue < 0.01 ? '**' : '*',
@@ -137,11 +155,12 @@ export class StatisticalOutputService {
     consensusThreshold: number = 0.5, // Max allowed z-score difference
   ): ConsensusStatement[] {
     const consensusStatements: ConsensusStatement[] = [];
-    const numStatements = factorArrays[0].statements.length;
+    const firstFactorArray = assertGet(factorArrays, 0, 'consensus statements');
+    const numStatements = firstFactorArray.statements.length;
 
     for (let stmtIndex = 0; stmtIndex < numStatements; stmtIndex++) {
-      const zScores = factorArrays.map((fa) => fa.statements[stmtIndex].zScore);
-      const ranks = factorArrays.map((fa) => fa.statements[stmtIndex].rank);
+      const zScores = factorArrays.map((fa) => safeGet(fa.statements, stmtIndex, { zScore: 0 } as any).zScore);
+      const ranks = factorArrays.map((fa) => safeGet(fa.statements, stmtIndex, { rank: 0 } as any).rank);
 
       // Calculate range and variance
       const minZ = Math.min(...zScores);
@@ -153,16 +172,17 @@ export class StatisticalOutputService {
 
       // Check if statement is consensus
       if (range <= consensusThreshold) {
+        const statement = assertGet(firstFactorArray.statements, stmtIndex, 'consensus statements');
         consensusStatements.push({
-          statementId: factorArrays[0].statements[stmtIndex].id,
-          text: factorArrays[0].statements[stmtIndex].text,
+          statementId: statement.id,
+          text: statement.text,
           meanZScore: meanZ,
           zScoreRange: range,
           variance,
           factorScores: factorArrays.map((fa, i) => ({
             factor: i + 1,
-            zScore: zScores[i],
-            rank: ranks[i],
+            zScore: safeGet(zScores, i, 0),
+            rank: safeGet(ranks, i, 0),
           })),
           isHighConsensus: variance < 0.1,
         });
@@ -283,22 +303,22 @@ export class StatisticalOutputService {
     correlations: number[][];
     interpretation: string[];
   } {
-    const numFactors = patternMatrix[0].length;
+    const firstRow = assertGet(patternMatrix, 0, 'factor correlation matrix');
+    const numFactors = firstRow.length;
     const correlations: number[][] = [];
 
     for (let i = 0; i < numFactors; i++) {
       correlations[i] = [];
       for (let j = 0; j < numFactors; j++) {
         if (i === j) {
-          correlations[i][j] = 1.0;
+          const row = assertGet(correlations, i, 'factor correlation');
+          row[j] = 1.0;
         } else {
           // Calculate correlation between factors
-          const factor1 = patternMatrix.map((row) => row[i]);
-          const factor2 = patternMatrix.map((row) => row[j]);
-          correlations[i][j] = this.calculatePearsonCorrelation(
-            factor1,
-            factor2,
-          );
+          const factor1 = patternMatrix.map((row) => safeGet(row, i, 0));
+          const factor2 = patternMatrix.map((row) => safeGet(row, j, 0));
+          const row = assertGet(correlations, i, 'factor correlation');
+          row[j] = this.calculatePearsonCorrelation(factor1, factor2);
         }
       }
     }
@@ -366,16 +386,19 @@ export class StatisticalOutputService {
     loadings: number[],
     definingSorts: number[],
   ): number[] {
-    const numStatements = qSorts[0].length;
+    const firstQSort = assertGet(qSorts, 0, 'weighted scores');
+    const numStatements = firstQSort.length;
     const weightedScores = new Array(numStatements).fill(0);
     let totalWeight = 0;
 
     for (const sortIndex of definingSorts) {
-      const weight = Math.abs(loadings[sortIndex]);
+      const weight = Math.abs(safeGet(loadings, sortIndex, 0));
       totalWeight += weight;
 
       for (let i = 0; i < numStatements; i++) {
-        weightedScores[i] += qSorts[sortIndex][i] * weight;
+        const sortValue = safeGet2D(qSorts, sortIndex, i, 0);
+        const currentWeightedScore = safeGet(weightedScores, i, 0);
+        weightedScores[i] = currentWeightedScore + (sortValue * weight);
       }
     }
 
@@ -409,7 +432,8 @@ export class StatisticalOutputService {
     let currentCount = 0;
 
     for (const item of sorted) {
-      if (currentCount >= distribution[currentRank]) {
+      const currentDistribution = safeGet(distribution, currentRank, 1);
+      if (currentCount >= currentDistribution) {
         currentRank--;
         currentCount = 0;
       }
@@ -529,11 +553,13 @@ export class StatisticalOutputService {
       lines.push('- Balanced perspective');
     }
 
+    const firstAgree = assertGet(mostAgree, 0, 'narrative summary');
+    const firstDisagree = assertGet(mostDisagree, 0, 'narrative summary');
     lines.push(
-      `- Strong agreement with: "${mostAgree[0].text.substring(0, 50)}..."`,
+      `- Strong agreement with: "${firstAgree.text.substring(0, 50)}..."`,
     );
     lines.push(
-      `- Strong disagreement with: "${mostDisagree[0].text.substring(0, 50)}..."`,
+      `- Strong disagreement with: "${firstDisagree.text.substring(0, 50)}..."`,
     );
 
     if (characteristics.coherence > 0.7) {
@@ -553,7 +579,8 @@ export class StatisticalOutputService {
 
     for (let i = 0; i < n; i++) {
       const randomIndex = Math.floor(Math.random() * n);
-      resampled.push([...data[randomIndex]]);
+      const selectedRow = assertGet(data, randomIndex, 'resample with replacement');
+      resampled.push([...selectedRow]);
     }
 
     return resampled;
@@ -566,7 +593,10 @@ export class StatisticalOutputService {
     for (let i = 0; i < n; i++) {
       matrix[i] = [];
       for (let j = 0; j < n; j++) {
-        matrix[i][j] = this.calculatePearsonCorrelation(qSorts[i], qSorts[j]);
+        const qSortI = assertGet(qSorts, i, 'correlation matrix');
+        const qSortJ = assertGet(qSorts, j, 'correlation matrix');
+        const row = assertGet(matrix, i, 'correlation matrix');
+        row[j] = this.calculatePearsonCorrelation(qSortI, qSortJ);
       }
     }
 
@@ -577,7 +607,7 @@ export class StatisticalOutputService {
     const n = x.length;
     const sumX = x.reduce((a, b) => a + b, 0);
     const sumY = y.reduce((a, b) => a + b, 0);
-    const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+    const sumXY = x.reduce((sum, xi, i) => sum + xi * safeGet(y, i, 0), 0);
     const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
     const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
 
@@ -620,7 +650,7 @@ export class StatisticalOutputService {
 
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
-        const corr = correlations[i][j];
+        const corr = safeGet2D(correlations, i, j, 0);
         let interpretation = `Factors ${i + 1} and ${j + 1}: `;
 
         if (Math.abs(corr) < 0.3) {

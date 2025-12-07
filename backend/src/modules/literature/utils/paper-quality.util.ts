@@ -1,51 +1,31 @@
 /**
  * Paper Quality Scoring Utility
  *
- * Phase 10.6 Day 14.8: Bias-Resistant Quality Scoring v3.0
+ * Phase 10.111: Optimized & Cleaned - December 2025
  *
  * Purpose: Calculate composite quality scores for academic papers based on objective metrics
  *
- * Quality Dimensions (v3.0 - Bias-Resistant):
- * 
  * CORE SCORING (applies to ALL papers, 0-100):
- * 1. Citation Impact (60%) - Field-weighted citations normalized by paper age
- * 2. Journal Prestige (40%) - h-index, quartile, impact factor (OpenAlex)
+ * - Citation Impact (35%): Field-weighted citations normalized by paper age
+ * - Journal Prestige (45%): h-index, quartile, impact factor
+ * - Recency (20%): Exponential decay with 4.6-year half-life
  *
  * OPTIONAL BONUSES (when applicable, +0 to +20):
- * 3. Open Access (+10) - Paper is freely available (encourages accessibility)
- * 4. Reproducibility (+5) - Data/code sharing detected (encourages transparency)
- * 5. Altmetric (+5) - High social/policy impact (recognizes real-world influence)
+ * - Open Access (+10): Paper is freely available
+ * - Reproducibility (+5): Data/code sharing detected
+ * - Altmetric (+5): High social/policy impact
  *
- * Total Score: min(Core Score + Bonuses, 100)
+ * SCORE CAP BY DATA COMPLETENESS:
+ * - 4/4 metrics → max 100 (High confidence)
+ * - 3/4 metrics → max 85 (Good confidence)
+ * - 2/4 metrics → max 65 (Moderate confidence)
+ * - 1/4 metrics → max 45 (Low confidence)
+ * - 0/4 metrics → max 25 (Very Low confidence)
  *
  * Bias Safeguards:
  * - Field-weighted citations: Math papers not disadvantaged vs. Biology
- * - Bonuses are OPTIONAL: Classic papers can still score 100/100 without them
- * - No penalties for missing bonuses: Papers from any era/field score fairly
- * - Transparency: Metadata shows which bonuses were applied and why
- *
- * Removed Components:
- * - Content Depth (Phase 10.6 Day 14.7): Short papers can be more impactful than long ones
- * - Recency Boost (Phase 10.1 Day 11): Unfairly favored recent papers
- * - Venue Quality (Phase 10.1 Day 11): Subjective heuristics
- * - Citation Bonus: Redundant with citation impact
- * - Critical Terms: Spelling variation issues
- *
- * Rationale for Content Depth Removal:
- * - Word count is NOT a reliable indicator of paper quality or insights
- * - Short papers (letters, brief communications) can have major impact
- * - Examples: Watson & Crick's DNA structure (900 words), Shannon's Information Theory
- * - Length bias unfairly penalizes concise, high-impact research
- *
- * Full Methodology Documentation:
- * See: /QUALITY_SCORING_V3_BIAS_ANALYSIS.md for complete bias analysis
- * See: /QUALITY_SCORING_METHODOLOGY.md for complete transparency documentation
- *
- * Academic References:
- * - Hirsch, J. E. (2005). An index to quantify an individual's scientific research output
- * - Garfield, E. (2006). The History and Meaning of the Journal Impact Factor
- * - González-Pereira et al. (2010). A new approach to the metric of journals' scientific prestige: The SJR indicator
- * - Waltman & van Eck (2019). Field normalization of scientometric indicators
+ * - Dynamic weighting: Only available metrics are scored
+ * - Transparency: Metadata completeness shown alongside score
  */
 
 export interface JournalMetrics {
@@ -57,19 +37,74 @@ export interface JournalMetrics {
 }
 
 export interface QualityScoreComponents {
-  citationImpact: number; // 0-100 (field-weighted in v3.0)
-  journalPrestige: number; // 0-100
-  contentDepth: number; // 0-100 (REMOVED in v2.0, kept for compatibility)
-  recencyBoost: number; // 0-100 (REMOVED in v1.0, kept for compatibility)
-  venueQuality: number; // 0-100 (REMOVED in v1.0, kept for compatibility)
-  
-  // Phase 10.6 Day 14.8 (v3.0): Optional bonuses
-  openAccessBonus?: number; // 0-10
+  citationImpact: number;       // 0-100 (field-weighted)
+  journalPrestige: number;      // 0-100
+  recencyBoost: number;         // 0-100 (exponential decay)
+
+  // Optional bonuses
+  openAccessBonus?: number;     // 0-10
   reproducibilityBonus?: number; // 0-5
-  altmetricBonus?: number; // 0-5
-  
-  coreScore: number; // Core score before bonuses (0-100)
-  totalScore: number; // Final score with bonuses (0-100, capped)
+  altmetricBonus?: number;      // 0-5
+
+  coreScore: number;            // Core score before bonuses (0-100)
+  totalScore: number;           // Final score with bonuses (capped by metadata completeness)
+
+  // Transparency: How much data we have for this paper
+  metadataCompleteness?: MetadataCompleteness;
+}
+
+/**
+ * Metadata Availability - tracks what data we actually have for a paper
+ * Shows users exactly how much data we have for each paper.
+ */
+export interface MetadataCompleteness {
+  hasCitations: boolean;        // Do we have citation count data?
+  hasJournalMetrics: boolean;   // Do we have IF/SJR/h-index?
+  hasYear: boolean;             // Do we have publication year?
+  hasAbstract: boolean;         // Do we have abstract for semantic analysis?
+  completenessScore: number;    // 0-100: how complete is the metadata?
+  availableMetrics: number;     // Count of available metrics (0-4)
+  totalMetrics: number;         // Total possible metrics (4)
+}
+
+/**
+ * Calculate metadata completeness for a paper
+ * This is TRANSPARENT - we show users exactly what data we have
+ */
+export function calculateMetadataCompleteness(paper: {
+  citationCount?: number | null;
+  year?: number | null;
+  abstract?: string | null;
+  impactFactor?: number | null;
+  sjrScore?: number | null;
+  hIndexJournal?: number | null;
+  quartile?: string | null;
+}): MetadataCompleteness {
+  const hasCitations = paper.citationCount !== null &&
+                       paper.citationCount !== undefined &&
+                       paper.citationCount >= 0;
+
+  const hasJournalMetrics = !!(paper.impactFactor || paper.sjrScore ||
+                               paper.hIndexJournal || paper.quartile);
+
+  const hasYear = paper.year !== null && paper.year !== undefined && paper.year > 1900;
+
+  const hasAbstract = !!(paper.abstract && paper.abstract.length > 50);
+
+  // Count available metrics
+  const metrics = [hasCitations, hasJournalMetrics, hasYear, hasAbstract];
+  const availableMetrics = metrics.filter(Boolean).length;
+  const totalMetrics = metrics.length;
+
+  return {
+    hasCitations,
+    hasJournalMetrics,
+    hasYear,
+    hasAbstract,
+    completenessScore: Math.round((availableMetrics / totalMetrics) * 100),
+    availableMetrics,
+    totalMetrics,
+  };
 }
 
 /**
@@ -194,43 +229,11 @@ export function calculateJournalPrestigeScore(metrics: JournalMetrics): number {
   // If no metrics available at all, return 0 (not 30)
   // Phase 10.1 Day 12 (Enhanced): Changed baseline from 30 → 0
   // Rationale: Unknown journals should NOT score higher than Q4 journals
-  // Papers without journal data rely on citation impact + content depth
+  // Papers without journal data rely on citation impact
   if (score === 0) return 0;
 
   // Score is already on 0-100 scale (max: 60 + 25 + 15 = 100)
   return Math.min(score, 100);
-}
-
-/**
- * Calculate content depth score (0-100)
- *
- * Phase 10.1 Day 12 (Lenient): More generous word count thresholds
- *
- * Word count as proxy for paper comprehensiveness:
- * - 5000+ words: Extensive (100 points) [was 8000]
- * - 3000 words: Comprehensive (80 points) [was 70]
- * - 1500 words: Standard depth (60 points) [new tier]
- * - 1000 words: Acceptable (50 points) [was 40]
- * - 500 words: Short but valid (30 points) [was ~20]
- *
- * Rationale: Most quality papers are 3000-5000 words, not 8000+.
- * Even 1000-word papers can be valuable (letters, short communications).
- * Previous thresholds penalized standard-length academic papers.
- *
- * @param wordCount - Paper word count
- * @returns Score 0-100
- */
-export function calculateContentDepthScore(
-  wordCount: number | null | undefined,
-): number {
-  if (!wordCount || wordCount <= 0) return 0;
-
-  if (wordCount >= 5000) return 100; // Extensive (was 8000)
-  if (wordCount >= 3000) return 80 + ((wordCount - 3000) / 2000) * 20; // 80-100
-  if (wordCount >= 1500) return 60 + ((wordCount - 1500) / 1500) * 20; // 60-80
-  if (wordCount >= 1000) return 50 + ((wordCount - 1000) / 500) * 10; // 50-60
-  if (wordCount >= 500) return 30 + ((wordCount - 500) / 500) * 20; // 30-50
-  return (wordCount / 500) * 30; // 0-500 words = 0-30 points
 }
 
 /**
@@ -305,68 +308,6 @@ export function calculateRecencyBoost(
   const finalScore = Math.max(20, score);
 
   return Math.round(finalScore);
-}
-
-/**
- * Calculate venue quality score (0-100)
- *
- * Different venue types have different quality standards:
- * - Top-tier journals (Nature, Science, Cell): 100
- * - Peer-reviewed journals: 70-90
- * - Conference proceedings: 50-70
- * - Preprints (arXiv): 30-50 (not peer-reviewed)
- * - Unknown venues: 40 (baseline)
- *
- * @param venue - Venue/journal name
- * @param source - Data source (helps identify venue type)
- * @returns Score 0-100
- */
-export function calculateVenueQualityScore(
-  venue: string | null | undefined,
-  source: string,
-): number {
-  if (!venue) return 40; // Unknown venue baseline
-
-  const venueLower = venue.toLowerCase();
-
-  // Top-tier journals (Nature Publishing Group, Science, Cell Press)
-  const topTier = [
-    'nature',
-    'science',
-    'cell',
-    'lancet',
-    'nejm',
-    'jama',
-    'pnas',
-  ];
-  if (topTier.some((t) => venueLower.includes(t))) return 100;
-
-  // High-quality established journals
-  const highQuality = [
-    'journal',
-    'proceedings',
-    'transactions',
-    'quarterly',
-    'review',
-  ];
-  if (highQuality.some((t) => venueLower.includes(t))) {
-    // Check if it's a conference proceedings (lower score)
-    if (venueLower.includes('conference') || venueLower.includes('workshop')) {
-      return 65; // Conference proceedings
-    }
-    return 80; // Peer-reviewed journal
-  }
-
-  // Preprints (not peer-reviewed)
-  if (
-    source.toLowerCase().includes('arxiv') ||
-    venueLower.includes('preprint')
-  ) {
-    return 40; // Preprint - no peer review yet
-  }
-
-  // Default for unknown venues
-  return 50;
 }
 
 /**
@@ -521,6 +462,7 @@ export function calculateQualityScore(paper: {
   year?: number | null;
   wordCount?: number | null;
   venue?: string | null;
+  abstract?: string | null;
   source: string;
   impactFactor?: number | null;
   sjrScore?: number | null;
@@ -533,19 +475,40 @@ export function calculateQualityScore(paper: {
   altmetricScore?: number | null; // Altmetric attention score
 }): QualityScoreComponents {
   // ============================================
-  // CORE SCORING (applies to ALL papers)
+  // Phase 10.107: HONEST QUALITY SCORING
   // ============================================
-  
-  // Calculate raw citation impact
-  const citationsPerYear = calculateCitationsPerYear(
-    paper.citationCount,
-    paper.year,
-  );
-  let citationImpact = calculateCitationImpactScore(citationsPerYear);
-  
-  // Phase 10.6 Day 14.8 (v3.0): Apply field weighting if available
-  citationImpact = applyFieldWeighting(citationImpact, paper.fwci);
+  //
+  // PRINCIPLES:
+  // 1. Score ONLY what we actually know - no fake/neutral scores
+  // 2. Dynamically weight based on available data
+  // 3. Papers with less data get scored on fewer dimensions
+  // 4. NO artificial boosting OR penalizing for missing data
+  //
+  // WHAT THE SCORE MEANS:
+  // "How impactful is this paper based on the metrics we have?"
+  // - A score of 70 with 4/4 metrics = high confidence, strong paper
+  // - A score of 70 with 1/4 metrics = low confidence, mostly recency
+  // ============================================
 
+  // Calculate what data we actually have
+  const metadata = calculateMetadataCompleteness(paper);
+
+  // ============================================
+  // COMPONENT SCORES (only for available data)
+  // ============================================
+
+  // Citation Impact (only if we have citation data)
+  let citationImpact = 0;
+  if (metadata.hasCitations) {
+    const citationsPerYear = calculateCitationsPerYear(
+      paper.citationCount,
+      paper.year,
+    );
+    citationImpact = calculateCitationImpactScore(citationsPerYear);
+    citationImpact = applyFieldWeighting(citationImpact, paper.fwci);
+  }
+
+  // Journal Prestige (only if we have journal data)
   const journalPrestige = calculateJournalPrestigeScore({
     impactFactor: paper.impactFactor ?? undefined,
     sjrScore: paper.sjrScore ?? undefined,
@@ -553,55 +516,135 @@ export function calculateQualityScore(paper: {
     quartile: paper.quartile ?? undefined,
   });
 
-  // Phase 10.7 Day 20: RE-ENABLED recency bonus
+  // Recency (always available if year exists)
   const recencyBoost = calculateRecencyBoost(paper.year);
 
-  // Calculate core score (0-100)
-  // Phase 10.7 Day 20: REBALANCED weights
-  // Citation Impact: 30% (reduced from 60%)
-  // Journal Prestige: 50% (increased from 40%)
-  // Recency Bonus: 20% (re-enabled from 0%)
-  const coreScore = 
-    citationImpact * 0.30 + 
-    journalPrestige * 0.50 + 
-    recencyBoost * 0.20;
-  
+  // ============================================
+  // DYNAMIC WEIGHTING BASED ON AVAILABLE DATA
+  // ============================================
+  //
+  // Instead of inventing neutral scores, we REDISTRIBUTE weights
+  // to only include components we actually have data for.
+  //
+  // Example: If we have NO citations but HAVE journal metrics:
+  // - Old way: citations = 40 (fake neutral), journal = real
+  // - New way: citations excluded, journal weight increased
+  //
+  // This is HONEST: score reflects only real data
+  // ============================================
+
+  // Define base weights (when all data available)
+  const CITATION_BASE = 35;   // 35% when available
+  const JOURNAL_BASE = 45;    // 45% when available
+  const RECENCY_BASE = 20;    // 20% always (year usually available)
+
+  // Calculate actual weights based on available data
+  let citationWeight = 0;
+  let journalWeight = 0;
+  let recencyWeight = 0;
+
+  // Determine which components are available
+  const hasCitationScore = metadata.hasCitations && citationImpact >= 0;
+  const hasJournalScore = metadata.hasJournalMetrics && journalPrestige > 0;
+  const hasRecencyScore = metadata.hasYear;
+
+  // Calculate total available weight
+  let totalAvailableWeight = 0;
+  if (hasCitationScore) totalAvailableWeight += CITATION_BASE;
+  if (hasJournalScore) totalAvailableWeight += JOURNAL_BASE;
+  if (hasRecencyScore) totalAvailableWeight += RECENCY_BASE;
+
+  // If no quality data at all, give minimum score based on recency only
+  if (totalAvailableWeight === 0) {
+    // No quality metrics available - score is just recency (50 = neutral)
+    const coreScore = hasRecencyScore ? recencyBoost * 0.5 : 25; // 25 = unknown
+    return {
+      citationImpact: 0,
+      journalPrestige: 0,
+      recencyBoost,
+      openAccessBonus: calculateOpenAccessBonus(paper.isOpenAccess),
+      reproducibilityBonus: calculateReproducibilityBonus(paper.hasDataCode),
+      altmetricBonus: calculateAltmetricBonus(paper.altmetricScore),
+      coreScore: Math.round(coreScore * 10) / 10,
+      totalScore: Math.round(Math.min(coreScore + calculateOpenAccessBonus(paper.isOpenAccess), 100) * 10) / 10,
+    };
+  }
+
+  // Redistribute weights proportionally among available components
+  if (hasCitationScore) {
+    citationWeight = CITATION_BASE / totalAvailableWeight;
+  }
+  if (hasJournalScore) {
+    journalWeight = JOURNAL_BASE / totalAvailableWeight;
+  }
+  if (hasRecencyScore) {
+    recencyWeight = RECENCY_BASE / totalAvailableWeight;
+  }
+
+  // Calculate weighted core score (0-100)
+  let coreScore =
+    (hasCitationScore ? citationImpact * citationWeight : 0) +
+    (hasJournalScore ? journalPrestige * journalWeight : 0) +
+    (hasRecencyScore ? recencyBoost * recencyWeight : 0);
+
+  // ============================================
+  // SCORE CAP BASED ON DATA COMPLETENESS
+  // ============================================
+  //
+  // PROBLEM: With dynamic weighting, papers with only recency data
+  // could score 86+ (just because they're recent). This is unfair
+  // because we don't actually know their quality.
+  //
+  // SOLUTION: Cap maximum score based on data completeness.
+  // Less data = less confidence = lower maximum possible score.
+  //
+  // This ensures:
+  // - Papers with full data CAN reach 100
+  // - Papers with partial data are capped at a reasonable level
+  // - Papers with minimal data get modest "unknown" scores
+  //
+  // Score Caps:
+  // - 4/4 metrics: max 100 (full confidence)
+  // - 3/4 metrics: max 85 (high confidence)
+  // - 2/4 metrics: max 65 (moderate confidence)
+  // - 1/4 metrics: max 45 (low confidence - mostly unknown)
+  // - 0/4 metrics: max 25 (no data - truly unknown)
+  // ============================================
+
+  const SCORE_CAPS = [25, 45, 65, 85, 100]; // 0, 1, 2, 3, 4 metrics
+  const maxScore = SCORE_CAPS[metadata.availableMetrics] ?? 100;
+
+  // Apply cap: paper's score cannot exceed its data completeness allows
+  coreScore = Math.min(coreScore, maxScore);
+
   // ============================================
   // OPTIONAL BONUSES (when applicable)
   // ============================================
-  
+
   const openAccessBonus = calculateOpenAccessBonus(paper.isOpenAccess);
   const reproducibilityBonus = calculateReproducibilityBonus(paper.hasDataCode);
   const altmetricBonus = calculateAltmetricBonus(paper.altmetricScore);
-  
+
   // Sum all bonuses (max +20)
   const totalBonus = openAccessBonus + reproducibilityBonus + altmetricBonus;
-  
-  // Final score: core + bonuses, capped at 100
-  const totalScore = Math.min(coreScore + totalBonus, 100);
+
+  // Final score: core + bonuses, but still respect the cap
+  const totalScore = Math.min(coreScore + totalBonus, maxScore + 10); // Bonuses can push slightly above cap
 
   // ============================================
-  // RETURN COMPONENTS (with backward compatibility)
+  // RETURN COMPONENTS
   // ============================================
-  
-  // Phase 10.6 Day 14.7: Content Depth removed (length bias eliminated)
-  const contentDepth = 0; // Disabled - word count doesn't indicate quality
-
-  // Phase 10.1 Day 11: Removed venue quality
-  const venueQuality = 0; // Disabled
 
   return {
-    citationImpact, // Field-weighted if FWCI available
-    journalPrestige,
-    contentDepth, // Returns 0 for backward compatibility
-    recencyBoost, // Phase 10.7 Day 20: RE-ENABLED (was 0)
-    venueQuality, // Returns 0 for backward compatibility
-    // Phase 10.6 Day 14.8 (v3.0): New fields
+    citationImpact: hasCitationScore ? citationImpact : 0,
+    journalPrestige: hasJournalScore ? journalPrestige : 0,
+    recencyBoost,
     openAccessBonus,
     reproducibilityBonus,
     altmetricBonus,
     coreScore: Math.round(coreScore * 10) / 10,
     totalScore: Math.round(totalScore * 10) / 10,
+    metadataCompleteness: metadata,
   };
 }
 

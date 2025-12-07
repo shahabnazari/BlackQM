@@ -78,6 +78,8 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+// Phase 10.106 Phase 3: Retry Service Integration - Enterprise-grade resilience
+import { RetryService } from '../../../common/services/retry.service';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
 import {
@@ -94,15 +96,58 @@ export interface CoreSearchOptions {
   offset?: number;
 }
 
+/**
+ * Phase 10.106 Phase 3: Typed interface for CORE API search parameters
+ * Netflix-grade: No loose `any` types
+ */
+interface CoreSearchParams {
+  q: string;
+  limit: number;
+  offset: number;
+  'yearPublished.gte'?: number;
+  'yearPublished.lte'?: number;
+}
+
+/**
+ * Phase 10.106 Phase 3: Typed interface for CORE API response item
+ * Netflix-grade: Explicit typing for API response parsing
+ */
+interface CoreApiItem {
+  id?: string | number;
+  title?: string;
+  abstract?: string;
+  yearPublished?: number;
+  authors?: Array<{ name?: string }>;
+  doi?: string;
+  sourceFulltextUrls?: string[];
+  downloadUrl?: string;
+  links?: Array<{ type?: string; url?: string }>;
+  publisher?: string;
+  repositoryDocument?: {
+    repositories?: Array<{ name?: string }>;
+  };
+}
+
+/**
+ * Phase 10.106 Phase 3: Typed interface for CORE API response
+ * Netflix-grade: Full response typing
+ */
+interface CoreApiResponse {
+  results?: CoreApiItem[];
+  totalHits?: number;
+}
+
 @Injectable()
 export class CoreService {
   private readonly logger = new Logger(CoreService.name);
   private readonly API_BASE_URL = 'https://api.core.ac.uk/v3';
   private readonly apiKey: string;
 
+  // Phase 10.106 Phase 3: Inject RetryService for enterprise-grade resilience
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly retry: RetryService,
   ) {
     // Phase 10.7.10: CORE API key from environment (10 req/sec)
     this.apiKey = this.configService.get<string>('CORE_API_KEY') || '';
@@ -116,20 +161,8 @@ export class CoreService {
   /**
    * Search CORE database using API v3
    *
-   * ⚠️ MODIFICATION GUIDE:
-   * - To add year filters: Modify query string to include yearPublished
-   * - To add repository filter: Use repositoryId in query
-   * - To change result limit: Modify limit parameter
-   * - To add pagination: Use offset parameter
-   * - To filter by license: Add license filter to query
-   *
-   * 🔍 QUERY SYNTAX EXAMPLES:
-   * - title:"machine learning" → Search in titles
-   * - fullText:quantum → Search full text
-   * - authors.name:"Einstein" → Filter by author
-   * - yearPublished>=2020 → Year filtering
-   * - yearPublished:[2015 TO 2020] → Year range
-   * - subjects:Medicine → Subject filtering
+   * Phase 10.106 Phase 3: Refactored to use centralized RetryService
+   * instead of custom retry logic (DRY principle)
    *
    * @param query Search query string (supports CORE query language)
    * @param options Search filters (year range, limit, pagination)
@@ -144,49 +177,15 @@ export class CoreService {
 
     this.logger.log(`[CORE] Searching: "${query}"`);
 
-    // Phase 10.8: Use retry logic to handle Elasticsearch infrastructure failures
-    return this.searchWithRetry(query, options);
-  }
-
-  /**
-   * Execute CORE search with retry logic for infrastructure failures
-   *
-   * Phase 10.8: CORE's Elasticsearch cluster frequently returns HTTP 500 when shards
-   * are overloaded (es_rejected_execution_exception). Retry with exponential backoff
-   * to improve reliability without changing our code when CORE has capacity issues.
-   *
-   * RETRY STRATEGY:
-   * - Max 3 attempts (initial + 2 retries)
-   * - Exponential backoff: 1s, 2s between retries
-   * - Only retry HTTP 500 (infrastructure errors)
-   * - Don't retry 401 (auth), 429 (rate limit), or other errors
-   *
-   * @param query Search query string
-   * @param options Search filters
-   * @param attempt Current attempt number (for recursion)
-   * @returns Array of Paper objects
-   */
-  private async searchWithRetry(
-    query: string,
-    options?: CoreSearchOptions,
-    attempt: number = 1,
-  ): Promise<Paper[]> {
-    const MAX_ATTEMPTS = 3;
-    const RETRY_DELAYS = [1000, 2000]; // 1s, 2s
-
     try {
-      // ========================================================================
-      // STEP 1: Construct query parameters
-      // ========================================================================
-      // Phase 10.8: Use query parameters for year filtering (not query string syntax)
-      // CORE API requires yearPublished.gte/lte parameters, NOT query string syntax
-      const params: any = {
+      // Construct typed query parameters
+      const params: CoreSearchParams = {
         q: query,
         limit: options?.limit || 20,
         offset: options?.offset || 0,
       };
 
-      // Add year filtering as query parameters (not in query string)
+      // Add year filtering as query parameters
       if (options?.yearFrom) {
         params['yearPublished.gte'] = options.yearFrom;
       }
@@ -194,70 +193,52 @@ export class CoreService {
         params['yearPublished.lte'] = options.yearTo;
       }
 
-      // ========================================================================
-      // STEP 2: Execute API request
-      // ========================================================================
-
-      const response = await firstValueFrom(
-        this.httpService.get(`${this.API_BASE_URL}/search/works/`, {
-          params,
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-          },
-          timeout: FAST_API_TIMEOUT, // 10s timeout
-        }),
+      // Phase 10.106 Phase 3: Execute HTTP request with centralized retry + exponential backoff
+      // Retry policy: 3 attempts, 1s → 2s → 4s delays, 0-500ms jitter
+      // Retryable errors: Network failures, timeouts, server errors (500-599)
+      const result = await this.retry.executeWithRetry(
+        async () => firstValueFrom(
+          this.httpService.get(`${this.API_BASE_URL}/search/works/`, {
+            params,
+            headers: {
+              'Authorization': `Bearer ${this.apiKey}`,
+            },
+            timeout: FAST_API_TIMEOUT, // 10s timeout
+          }),
+        ),
+        'CORE.searchPapers',
+        {
+          maxAttempts: 3,
+          initialDelayMs: 1000,
+          maxDelayMs: 16000,
+          backoffMultiplier: 2,
+          jitterMs: 500,
+        },
       );
 
-      // ========================================================================
-      // STEP 3: Parse response
-      // ========================================================================
-      const results = response.data.results || [];
+      // Phase 10.106 Phase 3: Handle both direct data and wrapped AxiosResponse cases
+      // Same fix pattern as ERIC/PMC services - unwrap if needed
+      const rawData = result.data;
+      const apiData: CoreApiResponse = (rawData as any)?.data ?? rawData;
+      const results: CoreApiItem[] = apiData?.results || [];
       const papers = results
-        .map((item: any) => this.parsePaper(item))
-        .filter((paper: Paper | null) => paper !== null);
+        .map((item) => this.parsePaper(item))
+        .filter((paper): paper is Paper => paper !== null);
 
-      // Log success (especially important if this was a retry)
-      if (attempt > 1) {
-        this.logger.log(`[CORE] ✅ Retry succeeded on attempt ${attempt} - returned ${papers.length} papers`);
-      } else {
-        this.logger.log(`[CORE] Returned ${papers.length} papers`);
-      }
-
+      this.logger.log(`[CORE] Returned ${papers.length} papers`);
       return papers;
-    } catch (error: any) {
-      const status = error.response?.status;
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number }; message?: string };
+      const status = err.response?.status;
 
-      // ========================================================================
-      // RETRY LOGIC: Only retry HTTP 500 (Elasticsearch infrastructure failures)
-      // ========================================================================
-      if (status === 500 && attempt < MAX_ATTEMPTS) {
-        const delay = RETRY_DELAYS[attempt - 1];
-        this.logger.warn(
-          `[CORE] ⚠️  HTTP 500 (Elasticsearch overload) - Retry ${attempt}/${MAX_ATTEMPTS - 1} in ${delay}ms`,
-        );
-
-        // Wait with exponential backoff
-        await new Promise(resolve => setTimeout(resolve, delay));
-
-        // Recursive retry
-        return this.searchWithRetry(query, options, attempt + 1);
-      }
-
-      // ========================================================================
-      // TERMINAL ERRORS: Don't retry these
-      // ========================================================================
       if (status === 401) {
         this.logger.error(`[CORE] ⚠️  UNAUTHORIZED (401) - Invalid API key`);
       } else if (status === 429) {
         this.logger.error(`[CORE] ⚠️  RATE LIMITED (429) - Exceeded 10 req/sec`);
       } else if (status === 500) {
-        this.logger.error(
-          `[CORE] ❌ HTTP 500 failed after ${attempt} attempts - Elasticsearch cluster overloaded`,
-        );
+        this.logger.error(`[CORE] ❌ HTTP 500 - Elasticsearch cluster overloaded`);
       } else {
-        this.logger.error(
-          `[CORE] Search failed: ${error.message} (Status: ${status || 'N/A'})`,
-        );
+        this.logger.error(`[CORE] Search failed: ${err.message || 'Unknown error'} (Status: ${status || 'N/A'})`);
       }
 
       return [];
@@ -266,25 +247,12 @@ export class CoreService {
 
   /**
    * Parse CORE API response into Paper object
+   * Phase 10.106 Phase 3: Uses typed CoreApiItem interface
    *
-   * ⚠️ MODIFICATION GUIDE:
-   * - To extract full-text: Use downloadUrl field
-   * - To get repository info: Parse repositoryDocument object
-   * - To get OAI ID: Parse oai field
-   * - To extract topics: Parse topics array
-   * - To get language: Parse language field
-   *
-   * 📊 PARSING STEPS:
-   * 1. Core metadata (ID, title, abstract, year)
-   * 2. Authors (names and affiliations)
-   * 3. URLs (DOI, PDF download URL)
-   * 4. Repository metadata
-   * 5. Quality scoring and word counts
-   *
-   * @param item CORE API result item
+   * @param item CORE API result item (typed)
    * @returns Paper object or null if invalid
    */
-  private parsePaper(item: any): Paper | null {
+  private parsePaper(item: CoreApiItem): Paper | null {
     try {
       // ========================================================================
       // STEP 1: Extract core metadata
@@ -292,7 +260,7 @@ export class CoreService {
       const id = item.id?.toString() || '';
       const title = item.title || 'Untitled';
       const abstract = item.abstract || '';
-      const year = item.yearPublished || null;
+      const year = item.yearPublished || undefined;
 
       // Skip if no title (invalid paper)
       if (!title || title === 'Untitled') {
@@ -302,9 +270,10 @@ export class CoreService {
       // ========================================================================
       // STEP 2: Extract authors
       // ========================================================================
+      // Phase 10.106 Strict Mode: Use typed interface instead of any
       const authors: string[] = [];
       if (item.authors && Array.isArray(item.authors)) {
-        authors.push(...item.authors.map((author: any) => author.name || 'Unknown Author'));
+        authors.push(...item.authors.map((author) => author.name || 'Unknown Author'));
       }
 
       // ========================================================================
@@ -314,7 +283,8 @@ export class CoreService {
       const url = item.doi ? `https://doi.org/${item.doi}` : item.sourceFulltextUrls?.[0] || '';
 
       // Full-text download URL (CORE's unique feature!)
-      const pdfUrl = item.downloadUrl || item.links?.find((link: any) => link.type === 'download')?.url || '';
+      // Phase 10.106 Strict Mode: Use typed interface instead of any
+      const pdfUrl = item.downloadUrl || item.links?.find((link) => link.type === 'download')?.url || '';
 
       // ========================================================================
       // STEP 4: Extract repository and source info
@@ -365,8 +335,10 @@ export class CoreService {
         qualityScore: qualityComponents.totalScore,
         isHighQuality: qualityComponents.totalScore >= 50,
       };
-    } catch (error: any) {
-      this.logger.error(`[CORE] Failed to parse paper: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Strict Mode: Use unknown with type narrowing
+      const err = error as { message?: string };
+      this.logger.error(`[CORE] Failed to parse paper: ${err.message || 'Unknown error'}`);
       return null;
     }
   }

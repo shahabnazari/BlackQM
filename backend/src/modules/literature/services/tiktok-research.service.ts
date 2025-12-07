@@ -77,6 +77,35 @@ export interface TikTokContentAnalysis {
   relevanceScore: number;
 }
 
+/**
+ * Phase 10.106 Phase 10: TikTok API type definitions
+ * Netflix-grade: Full type safety for external API
+ */
+export interface TikTokVideoMetadata {
+  views?: number;
+  likes?: number;
+  shares?: number;
+  comments?: number;
+  author?: string;
+  title?: string;
+  hashtags?: string[];
+  trends?: string[];
+}
+
+export interface TikTokResearchAPIVideo {
+  id: string;
+  username: string;
+  user_id: string;
+  video_description?: string;
+  create_time: number;
+  duration: number;
+  view_count?: number;
+  like_count?: number;
+  share_count?: number;
+  comment_count?: number;
+  hashtag_names?: string[];
+}
+
 @Injectable()
 export class TikTokResearchService {
   private readonly logger = new Logger(TikTokResearchService.name);
@@ -135,10 +164,12 @@ export class TikTokResearchService {
       } else {
         return await this.searchViaFallback(query, maxResults);
       }
-    } catch (error: any) {
-      this.logger.error(`TikTok search failed: ${error.message}`, error.stack);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
+      this.logger.error(`TikTok search failed: ${err.message || 'Unknown error'}`, err.stack);
       throw new InternalServerErrorException(
-        `Failed to search TikTok: ${error.message}`,
+        `Failed to search TikTok: ${err.message || 'Unknown error'}`,
       );
     }
   }
@@ -179,7 +210,7 @@ export class TikTokResearchService {
       ),
     );
 
-    const videos = response.data.data.videos.map((video: any) =>
+    const videos = response.data.data.videos.map((video: TikTokResearchAPIVideo) =>
       this.parseResearchAPIVideo(video),
     );
 
@@ -236,8 +267,10 @@ export class TikTokResearchService {
       );
 
       return response.data.access_token;
-    } catch (error: any) {
-      this.logger.error(`Failed to get TikTok access token: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string };
+      this.logger.error(`Failed to get TikTok access token: ${err.message || 'Unknown error'}`);
       throw new InternalServerErrorException(
         'Failed to authenticate with TikTok Research API',
       );
@@ -330,13 +363,15 @@ export class TikTokResearchService {
         confidence: saved.confidence,
         cost: transcriptionCost,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `TikTok transcription failed: ${error.message}`,
-        error.stack,
+        `TikTok transcription failed: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
       throw new InternalServerErrorException(
-        `Failed to transcribe TikTok video: ${error.message}`,
+        `Failed to transcribe TikTok video: ${err.message || 'Unknown error'}`,
       );
     }
   }
@@ -385,13 +420,15 @@ export class TikTokResearchService {
         trends: metadata.trends || [],
         relevanceScore: this.calculateRelevanceScore(themes, metadata),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `TikTok analysis failed: ${error.message}`,
-        error.stack,
+        `TikTok analysis failed: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
       throw new InternalServerErrorException(
-        `Failed to analyze TikTok content: ${error.message}`,
+        `Failed to analyze TikTok content: ${err.message || 'Unknown error'}`,
       );
     }
   }
@@ -480,8 +517,10 @@ export class TikTokResearchService {
         hashtags: info.tags || [],
         trends: [],
       };
-    } catch (error: any) {
-      this.logger.warn(`Failed to get TikTok metadata: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string };
+      this.logger.warn(`Failed to get TikTok metadata: ${err.message || 'Unknown error'}`);
       return {
         title: `TikTok Video ${videoId}`,
         author: 'Unknown',
@@ -500,14 +539,15 @@ export class TikTokResearchService {
    * Calculate engagement rate
    * @private
    */
-  private calculateEngagement(metadata: any) {
+  private calculateEngagement(metadata: TikTokVideoMetadata) {
+    const views = metadata.views || 0;
     const totalEngagement =
       (metadata.likes || 0) + (metadata.shares || 0) + (metadata.comments || 0);
     const engagementRate =
-      metadata.views > 0 ? totalEngagement / metadata.views : 0;
+      views > 0 ? totalEngagement / views : 0;
 
     return {
-      views: metadata.views || 0,
+      views,
       likes: metadata.likes || 0,
       shares: metadata.shares || 0,
       comments: metadata.comments || 0,
@@ -521,7 +561,7 @@ export class TikTokResearchService {
    */
   private calculateRelevanceScore(
     themes: ExtractedTheme[],
-    metadata: any,
+    metadata: TikTokVideoMetadata,
   ): number {
     // Average theme relevance (0-1)
     const themeScore =
@@ -544,38 +584,41 @@ export class TikTokResearchService {
   private async storeSocialMediaContent(
     videoId: string,
     transcriptId: string,
-    metadata: any,
+    metadata: TikTokVideoMetadata,
   ) {
     try {
+      const author = metadata.author || 'unknown';
       await this.prisma.socialMediaContent.upsert({
         where: {
-          url: `https://www.tiktok.com/@${metadata.author}/video/${videoId}`,
+          url: `https://www.tiktok.com/@${author}/video/${videoId}`,
         },
         create: {
           platform: 'tiktok',
           platformId: videoId,
-          url: `https://www.tiktok.com/@${metadata.author}/video/${videoId}`,
-          title: metadata.title,
-          author: metadata.author,
+          url: `https://www.tiktok.com/@${author}/video/${videoId}`,
+          title: metadata.title || '',
+          author,
           publishedAt: new Date(),
-          views: metadata.views,
-          likes: metadata.likes,
-          shares: metadata.shares,
-          comments: metadata.comments,
+          views: metadata.views || 0,
+          likes: metadata.likes || 0,
+          shares: metadata.shares || 0,
+          comments: metadata.comments || 0,
           transcriptId,
-          hashtags: metadata.hashtags,
+          hashtags: metadata.hashtags || [],
           trends: metadata.trends || [],
         },
         update: {
-          views: metadata.views,
-          likes: metadata.likes,
-          shares: metadata.shares,
-          comments: metadata.comments,
+          views: metadata.views || 0,
+          likes: metadata.likes || 0,
+          shares: metadata.shares || 0,
+          comments: metadata.comments || 0,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string };
       this.logger.warn(
-        `Failed to store social media content: ${error.message}`,
+        `Failed to store social media content: ${err.message || 'Unknown error'}`,
       );
     }
   }
@@ -584,7 +627,7 @@ export class TikTokResearchService {
    * Parse Research API video response
    * @private
    */
-  private parseResearchAPIVideo(apiVideo: any): TikTokVideo {
+  private parseResearchAPIVideo(apiVideo: TikTokResearchAPIVideo): TikTokVideo {
     return {
       id: apiVideo.id,
       url: `https://www.tiktok.com/@${apiVideo.username}/video/${apiVideo.id}`,
@@ -621,9 +664,11 @@ export class TikTokResearchService {
     for (const filePath of paths) {
       try {
         await fs.unlink(filePath);
-      } catch (error: any) {
+      } catch (error: unknown) {
+        // Phase 10.106 Phase 8: Use unknown with type narrowing
+        const err = error as { message?: string };
         this.logger.warn(
-          `Failed to cleanup file ${filePath}: ${error.message}`,
+          `Failed to cleanup file ${filePath}: ${err.message || 'Unknown error'}`,
         );
       }
     }

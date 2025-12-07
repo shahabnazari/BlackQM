@@ -6,6 +6,38 @@ import { Paper, LiteratureSource } from '../dto/literature.dto';
 import { LARGE_RESPONSE_TIMEOUT, ENRICHMENT_TIMEOUT } from '../constants/http-config.constants';
 
 /**
+ * Phase 10.106 Phase 9: SerpAPI response types
+ * Netflix-grade: Full type safety for external API integration
+ */
+export interface GoogleScholarAuthor {
+  name?: string;
+  link?: string;
+}
+
+export interface GoogleScholarResource {
+  link?: string;
+  file_format?: string;
+  title?: string;
+}
+
+export interface GoogleScholarResult {
+  result_id?: string;
+  title?: string;
+  snippet?: string;
+  link?: string;
+  publication_info?: {
+    summary?: string;
+    authors?: GoogleScholarAuthor[];
+  };
+  inline_links?: {
+    cited_by?: {
+      total?: number;
+    };
+  };
+  resources?: GoogleScholarResource[];
+}
+
+/**
  * Phase 10.6 Day 3: Google Scholar Integration Service
  *
  * Uses SerpAPI (https://serpapi.com/) for legal Google Scholar access.
@@ -98,8 +130,8 @@ export class GoogleScholarService {
         }),
       );
 
-      const results = response.data.organic_results || [];
-      const papers: Paper[] = results.map((result: any) => this.parsePaper(result));
+      const results: GoogleScholarResult[] = response.data.organic_results || [];
+      const papers: Paper[] = results.map((result: GoogleScholarResult) => this.parsePaper(result));
 
       const duration = Date.now() - startTime;
       this.logger.log(
@@ -107,16 +139,18 @@ export class GoogleScholarService {
       );
 
       return papers;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 4: Use unknown with type narrowing
+      const err = error as { response?: { status?: number }; message?: string };
       const duration = Date.now() - startTime;
       this.logger.error(
-        `❌ [GoogleScholar] Search failed after ${duration}ms: ${error.message}`,
+        `❌ [GoogleScholar] Search failed after ${duration}ms: ${err.message || 'Unknown error'}`,
       );
 
       // Handle specific SerpAPI errors
-      if (error.response?.status === 401) {
+      if (err.response?.status === 401) {
         this.logger.error('[GoogleScholar] Invalid API key');
-      } else if (error.response?.status === 429) {
+      } else if (err.response?.status === 429) {
         this.logger.error('[GoogleScholar] Rate limit exceeded');
       }
 
@@ -130,7 +164,7 @@ export class GoogleScholarService {
    * @param result Raw SerpAPI result object
    * @returns Parsed Paper object
    */
-  private parsePaper(result: any): Paper {
+  private parsePaper(result: GoogleScholarResult): Paper {
     // Extract year from publication info (e.g., "Nature, 2023")
     const publicationInfo = result.publication_info?.summary || '';
     const yearMatch = publicationInfo.match(/\b(19|20)\d{2}\b/);
@@ -141,13 +175,13 @@ export class GoogleScholarService {
     const journal = journalMatch ? journalMatch[1].trim() : undefined;
 
     // Extract authors from result
-    const authors = result.publication_info?.authors?.map((author: any) => ({
+    const authors = result.publication_info?.authors?.map((author: GoogleScholarAuthor) => ({
       name: author.name || '',
       link: author.link || undefined,
     })) || [];
 
     // Extract PDF link (from resources if available)
-    const pdfResource = result.resources?.find((r: any) =>
+    const pdfResource = result.resources?.find((r: GoogleScholarResource) =>
       r.file_format === 'PDF' || r.title?.toLowerCase().includes('pdf')
     );
     const pdfUrl = pdfResource?.link || result.link;
@@ -156,7 +190,7 @@ export class GoogleScholarService {
       id: result.result_id || `gs_${Date.now()}_${Math.random()}`,
       title: result.title || 'Untitled',
       abstract: result.snippet || '',
-      authors: authors.map((a: any) => a.name),
+      authors: authors.map((a: { name: string; link?: string }) => a.name),
       year: year || 0,
       venue: journal,
       doi: undefined, // Google Scholar doesn't always provide DOI
@@ -199,8 +233,10 @@ export class GoogleScholarService {
         limit: response.data.plan_searches_per_month || 100,
         remaining: response.data.plan_searches_left || 0,
       };
-    } catch (error: any) {
-      this.logger.error(`Failed to get usage stats: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 4: Use unknown with type narrowing
+      const err = error as { message?: string };
+      this.logger.error(`Failed to get usage stats: ${err.message || 'Unknown error'}`);
       return null;
     }
   }

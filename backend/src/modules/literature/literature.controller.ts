@@ -59,6 +59,7 @@ import { PrismaService } from '../../common/prisma.service'; // Phase 10 Day 18
 import { QueryExpansionService } from '../ai/services/query-expansion.service'; // Phase 9 Day 21
 import { VideoRelevanceService } from '../ai/services/video-relevance.service'; // Phase 9 Day 21
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CustomRateLimit } from '../rate-limiting/decorators/rate-limit.decorator';
 import {
@@ -95,7 +96,7 @@ import {
 import { LiteratureService } from './literature.service';
 import { CrossPlatformSynthesisService } from './services/cross-platform-synthesis.service'; // Phase 9 Day 22
 import { EnhancedThemeIntegrationService } from './services/enhanced-theme-integration.service'; // Phase 10 Day 5.12
-import { GapAnalyzerService } from './services/gap-analyzer.service';
+import { GapAnalyzerService, ResearchGap } from './services/gap-analyzer.service';
 import { GuidedBatchSelectorService } from './services/guided-batch-selector.service'; // Phase 10 Day 19.6
 import { KnowledgeGraphService } from './services/knowledge-graph.service'; // Phase 9 Day 14
 import { LiteratureCacheService } from './services/literature-cache.service'; // Phase 10 Day 18
@@ -143,7 +144,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Search results returned' })
   async searchLiterature(
     @Body() searchDto: SearchLiteratureDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return await this.literatureService.searchLiterature(
       searchDto,
@@ -152,7 +153,9 @@ export class LiteratureController {
   }
 
   // Temporary public endpoint for testing
+  // Phase 10.106: Added @Public() decorator - CRITICAL FIX for CORS/auth bypass to work
   @Post('search/public')
+  @Public() // Skip JWT auth guard - this is a public development endpoint
   @CustomRateLimit(60, 200) // Phase 10.1 Day 11: Allow 200 searches/min for progressive loading (10 batches)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Public search for testing (dev only)' })
@@ -166,7 +169,9 @@ export class LiteratureController {
   }
 
   // Public save paper endpoint for development
+  // Phase 10.106: Added @Public() decorator - CRITICAL FIX for CORS/auth bypass to work
   @Post('save/public')
+  @Public() // Skip JWT auth guard - this is a public development endpoint
   @CustomRateLimit(60, 300) // Phase 10.94.3: Increased to 300 saves/min (parallel batch saving for 100+ papers)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Public save paper for testing (dev only)' })
@@ -178,6 +183,7 @@ export class LiteratureController {
 
   // Public remove paper endpoint for development
   @Delete('library/public/:paperId')
+  @Public() // Phase 10.106: Skip JWT auth guard
   @ApiOperation({ summary: 'Public remove paper for testing (dev only)' })
   @ApiResponse({ status: 200, description: 'Paper removed' })
   async removePaperPublic(@Param('paperId') paperId: string) {
@@ -187,6 +193,7 @@ export class LiteratureController {
 
   // Public get library endpoint for development
   @Get('library/public')
+  @Public() // Phase 10.106: Skip JWT auth guard
   @ApiOperation({ summary: 'Public get library for testing (dev only)' })
   @ApiResponse({ status: 200, description: 'User library returned' })
   async getUserLibraryPublic(
@@ -202,6 +209,7 @@ export class LiteratureController {
 
   // Public theme extraction endpoint for development
   @Post('themes/public')
+  @Public() // Phase 10.106: Skip JWT auth guard
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Public extract themes for testing (dev only)' })
   @ApiResponse({ status: 200, description: 'Themes extracted' })
@@ -224,7 +232,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Gap analysis complete' })
   async analyzeGapsField(
     @Query() _analysisDto: AnalyzeGapsDto,
-    @CurrentUser() _user: any,
+    @CurrentUser() _user: AuthenticatedUser,
   ) {
     // Return helpful error message directing to correct endpoint
     return {
@@ -244,7 +252,7 @@ export class LiteratureController {
   @CustomRateLimit(60, 300) // Phase 10.94.3: Increased to 300 saves/min (parallel batch saving for 100+ papers)
   @ApiOperation({ summary: 'Save paper to user library' })
   @ApiResponse({ status: 201, description: 'Paper saved successfully' })
-  async savePaper(@Body() saveDto: SavePaperDto, @CurrentUser() user: any) {
+  async savePaper(@Body() saveDto: SavePaperDto, @CurrentUser() user: AuthenticatedUser) {
     return await this.literatureService.savePaper(saveDto, user.userId);
   }
 
@@ -256,7 +264,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Citations exported' })
   async exportCitations(
     @Body() exportDto: ExportCitationsDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return await this.literatureService.exportCitations(exportDto, user.userId);
   }
@@ -269,7 +277,7 @@ export class LiteratureController {
   async getUserLibrary(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 20,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     // Ensure page and limit are numbers
     const pageNum = Number(page) || 1;
@@ -319,7 +327,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Paper removed' })
   async removePaper(
     @Param('paperId') paperId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return await this.literatureService.removePaper(paperId, user.userId);
   }
@@ -332,7 +340,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Themes extracted' })
   async extractThemes(
     @Body() themesDto: ExtractThemesDto,
-    @CurrentUser() _user: any,
+    @CurrentUser() _user: AuthenticatedUser,
   ) {
     // Use theme extraction service for real AI extraction
     return await this.themeExtractionService.extractThemes(themesDto.paperIds);
@@ -362,7 +370,7 @@ export class LiteratureController {
         studyId?: string;
       };
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     // Extract themes with AI
     const themes = await this.themeExtractionService.extractThemes(
@@ -395,6 +403,7 @@ export class LiteratureController {
   }
 
   @Post('pipeline/themes-to-statements/public')
+  @Public() // Phase 10.106: Skip JWT auth guard
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Public pipeline for testing (dev only)',
@@ -463,7 +472,7 @@ export class LiteratureController {
       targetStatements?: number;
       academicLevel?: 'basic' | 'intermediate' | 'advanced';
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     // Extract themes
     const themes = await this.themeExtractionService.extractThemes(
@@ -472,7 +481,7 @@ export class LiteratureController {
     );
 
     // Analyze gaps if requested
-    let researchGaps: any[] = [];
+    let researchGaps: ResearchGap[] = [];
     if (dto.includeGapAnalysis) {
       const gaps = await this.gapAnalyzerService.analyzeResearchGaps(
         dto.paperIds,
@@ -514,6 +523,7 @@ export class LiteratureController {
   }
 
   @Post('pipeline/create-study-scaffolding/public')
+  @Public() // Phase 10.106: Skip JWT auth guard
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Public endpoint for study scaffolding (dev only)',
@@ -535,7 +545,7 @@ export class LiteratureController {
     );
 
     // Analyze gaps if requested
-    let researchGaps: any[] = [];
+    let researchGaps: ResearchGap[] = [];
     if (dto.includeGapAnalysis) {
       const gaps = await this.gapAnalyzerService.analyzeResearchGaps(
         dto.paperIds,
@@ -584,7 +594,7 @@ export class LiteratureController {
   async getSocialData(
     @Query('topic') topic: string,
     @Query('platforms') platforms: string[],
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return await this.literatureService.analyzeSocialOpinion(
       topic,
@@ -601,7 +611,7 @@ export class LiteratureController {
   async getAlternativeSources(
     @Query('query') query: string,
     @Query('sources') sources: string | string[],
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     try {
       // Normalize sources to array
@@ -622,10 +632,12 @@ export class LiteratureController {
       );
 
       return results;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 10: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `❌ [Alternative Sources] Error: ${error.message}`,
-        error.stack,
+        `❌ [Alternative Sources] Error: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
       throw error;
     }
@@ -636,6 +648,7 @@ export class LiteratureController {
    * Allows testing YouTube and other alternative sources without authentication
    */
   @Get('alternative/public')
+  @Public() // Phase 10.106: Skip JWT auth guard
   @ApiOperation({ summary: 'PUBLIC: Get alternative sources (dev only)' })
   @ApiResponse({ status: 200, description: 'Alternative sources returned' })
   async getAlternativeSourcesPublic(
@@ -661,10 +674,12 @@ export class LiteratureController {
       );
 
       return results;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 10: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `❌ [Alternative Sources PUBLIC] Error: ${error.message}`,
-        error.stack,
+        `❌ [Alternative Sources PUBLIC] Error: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
       throw error;
     }
@@ -697,7 +712,7 @@ export class LiteratureController {
   async searchSocialMedia(
     @Query('query') query: string,
     @Query('platforms') platforms: string[],
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return await this.literatureService.searchSocialMedia(
       query,
@@ -707,6 +722,7 @@ export class LiteratureController {
   }
 
   @Get('social/search/public')
+  @Public() // Phase 10.106: Skip JWT auth guard
   @ApiOperation({
     summary: 'PUBLIC: Search social media platforms (for development)',
     description:
@@ -757,7 +773,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Recommendations returned' })
   async getRecommendations(
     @Param('studyId') studyId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return await this.literatureService.getStudyRecommendations(
       studyId,
@@ -783,7 +799,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Statements generated' })
   async generateStatements(
     @Body() themesDto: { themes: string[]; studyContext: any },
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return await this.literatureService.generateStatementsFromThemes(
       themesDto.themes,
@@ -842,7 +858,7 @@ export class LiteratureController {
   })
   async refreshPaperMetadata(
     @Body() body: { paperIds: string[] },
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `[${user.userId}] Refreshing metadata for ${body.paperIds.length} papers`,
@@ -859,12 +875,14 @@ export class LiteratureController {
       );
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 10: Use unknown with type narrowing
+      const err = error as { message?: string };
       this.logger.error(
-        `[${user.userId}] Metadata refresh failed: ${error.message}`,
+        `[${user.userId}] Metadata refresh failed: ${err.message || 'Unknown error'}`,
       );
       throw new InternalServerErrorException(
-        `Failed to refresh paper metadata: ${error.message}`,
+        `Failed to refresh paper metadata: ${err.message || 'Unknown error'}`,
       );
     }
   }
@@ -875,6 +893,7 @@ export class LiteratureController {
    * Phase 10 Day 14: Development support for Q-statement generation
    */
   @Post('statements/generate/public')
+  @Public() // Phase 10.106: Skip JWT auth guard
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: '🔓 PUBLIC: Q-Statement Generation (dev/testing only)',
@@ -921,11 +940,13 @@ export class LiteratureController {
       );
 
       return statements;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 10: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error('[PUBLIC] Q-statement generation failed:', error);
       this.logger.error('Error details:', {
-        message: error?.message || 'Unknown error',
-        stack: error?.stack,
+        message: err?.message || 'Unknown error',
+        stack: err?.stack,
         themes: themesDto.themes,
         context: themesDto.studyContext,
       });
@@ -934,9 +955,9 @@ export class LiteratureController {
         success: false,
         error: 'Statement generation failed',
         message:
-          error?.message || 'Failed to generate Q-statements from themes',
+          err?.message || 'Failed to generate Q-statements from themes',
         details:
-          process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+          process.env.NODE_ENV === 'development' ? err?.stack : undefined,
       });
     }
   }
@@ -952,7 +973,7 @@ export class LiteratureController {
   })
   async extractThemesWithAI(
     @Body() body: { paperIds: string[] },
-    @CurrentUser() _user: any,
+    @CurrentUser() _user: AuthenticatedUser,
   ) {
     return await this.themeExtractionService.extractThemes(body.paperIds);
   }
@@ -965,7 +986,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Controversies detected' })
   async detectControversies(
     @Body() body: { paperIds: string[] },
-    @CurrentUser() _user: any,
+    @CurrentUser() _user: AuthenticatedUser,
   ) {
     return await this.themeExtractionService.detectControversies(body.paperIds);
   }
@@ -978,7 +999,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Statements generated from themes' })
   async themeToStatements(
     @Body() body: { themes: any[]; studyContext: any },
-    @CurrentUser() _user: any,
+    @CurrentUser() _user: AuthenticatedUser,
   ) {
     return await this.themeExtractionService.themeToStatements(
       body.themes,
@@ -994,7 +1015,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Statement hints generated' })
   async generateStatementHints(
     @Body() body: { themes: any[] },
-    @CurrentUser() _user: any,
+    @CurrentUser() _user: AuthenticatedUser,
   ) {
     return await this.themeExtractionService.generateStatementHints(
       body.themes,
@@ -1010,7 +1031,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Research gaps analyzed' })
   async analyzeGapsFromPapers(
     @Body() body: { papers: any[] },
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `Analyzing research gaps from ${body.papers?.length || 0} papers (User: ${user.userId})`,
@@ -1033,6 +1054,7 @@ export class LiteratureController {
   }
 
   @Post('gaps/analyze/public')
+  @Public() // Phase 10.106: Skip JWT auth guard
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'PUBLIC: Analyze research gaps for testing (dev only)',
@@ -1074,7 +1096,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Research opportunities generated' })
   async generateOpportunities(
     @Body() body: { gaps: any[] },
-    @CurrentUser() _user: any,
+    @CurrentUser() _user: AuthenticatedUser,
   ) {
     return await this.gapAnalyzerService.generateOpportunities(body.gaps);
   }
@@ -1087,7 +1109,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Keywords analyzed' })
   async analyzeKeywords(
     @Body() body: { paperIds: string[] },
-    @CurrentUser() _user: any,
+    @CurrentUser() _user: AuthenticatedUser,
   ) {
     const papers = await this.gapAnalyzerService['fetchPapersWithMetadata'](
       body.paperIds,
@@ -1103,7 +1125,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Trends detected' })
   async detectTrends(
     @Body() body: { paperIds: string[] },
-    @CurrentUser() _user: any,
+    @CurrentUser() _user: AuthenticatedUser,
   ) {
     const papers = await this.gapAnalyzerService['fetchPapersWithMetadata'](
       body.paperIds,
@@ -1121,7 +1143,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Topics modeled' })
   async modelTopics(
     @Body() body: { paperIds: string[]; numTopics?: number },
-    @CurrentUser() _user: any,
+    @CurrentUser() _user: AuthenticatedUser,
   ) {
     const papers = await this.gapAnalyzerService['fetchPapersWithMetadata'](
       body.paperIds,
@@ -1182,7 +1204,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Zotero sync completed' })
   async syncZotero(
     @Body() body: { apiKey: string; zoteroUserId: string },
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return await this.referenceService.syncWithZotero(body.apiKey, user.userId);
   }
@@ -1219,7 +1241,7 @@ export class LiteratureController {
   })
   async buildKnowledgeGraph(
     @Body() body: { paperIds: string[] },
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `Building knowledge graph for ${body.paperIds.length} papers (User: ${user.userId})`,
@@ -1364,7 +1386,7 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Research opportunities scored' })
   async scoreResearchOpportunities(
     @Body() body: { gapIds: string[] },
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `Scoring ${body.gapIds.length} research opportunities (User: ${user.userId})`,
@@ -1509,7 +1531,7 @@ export class LiteratureController {
       count: videos.length,
       videos,
       transcriptionCost: videos.reduce(
-        (sum, v) => sum + (v.transcript?.cost || 0),
+        (sum, v) => sum + ((v.metadata?.transcript as any)?.cost || 0),
         0,
       ),
     };
@@ -1664,7 +1686,7 @@ export class LiteratureController {
   })
   async extractUnifiedThemes(
     @Body() dto: ExtractUnifiedThemesDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `Extracting unified themes from ${dto.sources.length} sources (User: ${user.userId})`,
@@ -1737,7 +1759,7 @@ export class LiteratureController {
   })
   async extractUnifiedThemesBatch(
     @Body() dto: ExtractUnifiedThemesDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `🚀 BATCH: Extracting unified themes from ${dto.sources.length} sources (User: ${user.userId})`,
@@ -1795,23 +1817,25 @@ export class LiteratureController {
           performanceGain: `${((1 - duration / (dto.sources.length * 40000)) * 100).toFixed(1)}% faster than sequential`,
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 10: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string; name?: string };
       const duration = Date.now() - startTime;
 
       this.logger.error(
         `❌ BATCH: Extraction failed for ${dto.sources.length} sources after ${duration}ms (User: ${user.userId})`,
-        error.stack,
+        err.stack,
       );
 
       // Return structured error response
       throw new InternalServerErrorException({
         message: 'Theme extraction failed',
-        details: error.message,
+        details: err.message || 'Unknown error',
         context: {
           sourcesAttempted: dto.sources.length,
           userId: user.userId,
           failedAfterMs: duration,
-          errorType: error.name,
+          errorType: err.name || 'UnknownError',
         },
       });
     }
@@ -1822,6 +1846,7 @@ export class LiteratureController {
    * Same as authenticated endpoint but without JWT requirement
    */
   @Post('themes/unified-extract-batch/public')
+  @Public() // Phase 10.106: Skip JWT auth guard
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: '⚡ PUBLIC: Batch theme extraction for testing (dev only)',
@@ -1897,22 +1922,24 @@ export class LiteratureController {
         },
         note: 'PUBLIC ENDPOINT: For development/testing only. Use authenticated endpoint in production.',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 10: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string; name?: string };
       const duration = Date.now() - startTime;
 
       this.logger.error(
         `❌ BATCH PUBLIC: Extraction failed for ${dto.sources.length} sources after ${duration}ms`,
-        error.stack,
+        err.stack,
       );
 
       throw new InternalServerErrorException({
         message: 'Theme extraction failed',
-        details: error.message,
+        details: err.message || 'Unknown error',
         context: {
           sourcesAttempted: dto.sources.length,
           userId: 'public-test-user',
           failedAfterMs: duration,
-          errorType: error.name,
+          errorType: err.name || 'UnknownError',
         },
       });
     }
@@ -1935,7 +1962,7 @@ export class LiteratureController {
   })
   async getThemeProvenance(
     @Param('themeId') themeId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `Fetching provenance for theme ${themeId} (User: ${user.userId})`,
@@ -1976,7 +2003,7 @@ export class LiteratureController {
     @Query('studyId') studyId: string,
     @Query('sourceType') sourceType?: string,
     @Query('minInfluence') minInfluence?: string,
-    @CurrentUser() _user?: any,
+    @CurrentUser() _user?: AuthenticatedUser,
   ) {
     this.logger.log(
       `Filtering themes for study ${studyId}, sourceType=${sourceType}, minInfluence=${minInfluence}`,
@@ -2017,7 +2044,7 @@ export class LiteratureController {
   })
   async getCollectionThemes(
     @Param('collectionId') collectionId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `Fetching themes for collection ${collectionId} (User: ${user.userId})`,
@@ -2074,7 +2101,7 @@ export class LiteratureController {
   })
   async compareStudyThemes(
     @Body() dto: CompareStudyThemesDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `Comparing themes across ${dto.studyIds.length} studies (User: ${user.userId})`,
@@ -2112,7 +2139,7 @@ export class LiteratureController {
   })
   async synthesizeMultiPlatform(
     @Body() dto: CrossPlatformSynthesisDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `Multi-platform synthesis: "${dto.query}" (User: ${user.userId})`,
@@ -2159,7 +2186,7 @@ export class LiteratureController {
   async getEmergingTopics(
     @Query('query') query: string,
     @Query('timeWindow') timeWindow?: number,
-    @CurrentUser() _user?: any,
+    @CurrentUser() _user?: AuthenticatedUser,
   ) {
     this.logger.log(`Fetching emerging topics for: "${query}"`);
 
@@ -2204,7 +2231,7 @@ export class LiteratureController {
     @Param('theme') theme: string,
     @Query('query') query: string,
     @Query('timeWindow') timeWindow?: number,
-    @CurrentUser() _user?: any,
+    @CurrentUser() _user?: AuthenticatedUser,
   ) {
     this.logger.log(`Tracking dissemination for theme: "${theme}"`);
 
@@ -2262,7 +2289,7 @@ export class LiteratureController {
   async getPlatformInsights(
     @Query('query') query: string,
     @Query('platforms') platforms?: string,
-    @CurrentUser() _user?: any,
+    @CurrentUser() _user?: AuthenticatedUser,
   ) {
     this.logger.log(`Fetching platform insights for: "${query}"`);
 
@@ -2318,7 +2345,7 @@ export class LiteratureController {
   })
   async scoreVideoRelevance(
     @Body() dto: ScoreVideoRelevanceDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `Scoring video relevance: ${dto.videoId} (User: ${user.userId})`,
@@ -2358,7 +2385,7 @@ export class LiteratureController {
   })
   async batchScoreVideos(
     @Body() dto: BatchScoreVideosDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `Batch scoring ${dto.videos.length} videos (User: ${user.userId})`,
@@ -2407,7 +2434,7 @@ export class LiteratureController {
   })
   async aiSelectVideos(
     @Body() dto: AISelectVideosDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `AI selecting top ${dto.topN || 5} videos from ${dto.videos.length} (User: ${user.userId})`,
@@ -2449,7 +2476,7 @@ export class LiteratureController {
     status: 200,
     description: 'Expanded query with suggestions',
   })
-  async expandQuery(@Body() dto: ExpandQueryDto, @CurrentUser() user: any) {
+  async expandQuery(@Body() dto: ExpandQueryDto, @CurrentUser() user: AuthenticatedUser) {
     this.logger.log(`Expanding query: "${dto.query}" (User: ${user.userId})`);
 
     const result = await this.queryExpansionService.expandQuery(
@@ -2481,7 +2508,7 @@ export class LiteratureController {
   async suggestTerms(
     @Query('query') query: string,
     @Query('field') field?: string,
-    @CurrentUser() _user?: any,
+    @CurrentUser() _user?: AuthenticatedUser,
   ) {
     this.logger.log(`Suggesting terms for: "${query}"`);
 
@@ -2507,7 +2534,7 @@ export class LiteratureController {
     status: 200,
     description: 'Narrowed query suggestions with reasoning',
   })
-  async narrowQuery(@Body() dto: ExpandQueryDto, @CurrentUser() user: any) {
+  async narrowQuery(@Body() dto: ExpandQueryDto, @CurrentUser() user: AuthenticatedUser) {
     this.logger.log(`Narrowing query: "${dto.query}" (User: ${user.userId})`);
 
     const result = await this.queryExpansionService.narrowQuery(dto.query);
@@ -2534,7 +2561,7 @@ export class LiteratureController {
   })
   async getYouTubeChannelInfo(
     @Body() dto: { channelIdentifier: string },
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `Fetching YouTube channel: ${dto.channelIdentifier} (User: ${user.userId})`,
@@ -2572,7 +2599,7 @@ export class LiteratureController {
       publishedBefore?: string;
       order?: 'date' | 'relevance' | 'viewCount';
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     this.logger.log(
       `Fetching videos for channel: ${dto.channelId} (User: ${user.userId})`,
@@ -2696,7 +2723,7 @@ export class LiteratureController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async extractThemesAcademic(
     @Body() dto: ExtractThemesAcademicDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     try {
       this.logger.log(
@@ -2889,7 +2916,7 @@ export class LiteratureController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async extractThemesV2(
     @Body() dto: ExtractThemesV2Dto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     try {
       this.logger.log(
@@ -2924,15 +2951,17 @@ export class LiteratureController {
       };
 
       // REFACTORED: Use centralized validation method (eliminates 70 lines of duplicate code)
-      const validation = this.validateContentRequirements(sources, dto.purpose);
+      // Default to 'qualitative_analysis' if purpose not specified
+      const purpose = dto.purpose || 'qualitative_analysis';
+      const validation = this.validateContentRequirements(sources, purpose);
       this.logger.log(
-        `✅ Content validation passed: ${validation.fullTextCount} full-text papers for ${dto.purpose}`,
+        `✅ Content validation passed: ${validation.fullTextCount} full-text papers for ${purpose}`,
       );
 
       // Call V2 extraction service with purpose-adaptive parameters
       const result = await this.unifiedThemeExtractionService.extractThemesV2(
         sources,
-        purposeMap[dto.purpose],
+        purposeMap[purpose],
         {
           methodology: dto.methodology || 'reflexive_thematic',
           validationLevel: dto.validationLevel || 'rigorous',
@@ -3002,6 +3031,7 @@ export class LiteratureController {
    * Phase 10 Day 5.15: Enterprise-grade testing support
    */
   @Post('/themes/extract-themes-v2/public')
+  @Public() // Phase 10.106: Skip JWT auth guard
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: '🔓 PUBLIC: V2 Purpose-Driven Theme Extraction (dev/testing only)',
@@ -3061,15 +3091,17 @@ export class LiteratureController {
       };
 
       // REFACTORED: Use centralized validation method (eliminates 70 lines of duplicate code)
-      const validation = this.validateContentRequirements(sources, dto.purpose);
+      // Default to 'qualitative_analysis' if purpose not specified
+      const purpose = dto.purpose || 'qualitative_analysis';
+      const validation = this.validateContentRequirements(sources, purpose);
       this.logger.log(
-        `✅ [PUBLIC] Content validation passed: ${validation.fullTextCount} full-text papers for ${dto.purpose}`,
+        `✅ [PUBLIC] Content validation passed: ${validation.fullTextCount} full-text papers for ${purpose}`,
       );
 
       // Call V2 extraction service (no userId for public endpoint)
       const result = await this.unifiedThemeExtractionService.extractThemesV2(
         sources,
-        purposeMap[dto.purpose],
+        purposeMap[purpose],
         {
           methodology: dto.methodology || 'reflexive_thematic',
           validationLevel: dto.validationLevel || 'rigorous',
@@ -3159,7 +3191,7 @@ export class LiteratureController {
       'Incremental extraction complete with merged themes and statistics',
   })
   async extractThemesIncremental(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: any, // IncrementalExtractionDto
   ): Promise<any> {
     const startTime = Date.now();
@@ -3425,7 +3457,7 @@ export class LiteratureController {
     description: 'Batch recommendation with scientific rationale',
   })
   async selectGuidedBatch(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: GuidedBatchSelectionDto,
   ): Promise<any> {
     this.logger.log(`🚀 === GUIDED BATCH SELECT ENDPOINT HIT ===`);
@@ -3623,7 +3655,7 @@ export class LiteratureController {
     description:
       'Retrieve list of all corpuses with metadata for corpus management',
   })
-  async getCorpusList(@CurrentUser() user: any): Promise<any[]> {
+  async getCorpusList(@CurrentUser() user: AuthenticatedUser): Promise<any[]> {
     try {
       return await this.literatureCacheService.getUserCorpuses(user.userId);
     } catch (error) {
@@ -3643,7 +3675,7 @@ export class LiteratureController {
     summary: 'Get corpus statistics and cost savings',
     description: 'Retrieve aggregated statistics across all user corpuses',
   })
-  async getCorpusStats(@CurrentUser() user: any): Promise<any> {
+  async getCorpusStats(@CurrentUser() user: AuthenticatedUser): Promise<any> {
     try {
       return await this.literatureCacheService.getCorpusStats(user.userId);
     } catch (error) {
@@ -3664,7 +3696,7 @@ export class LiteratureController {
     description: 'Initialize a new corpus for iterative theme extraction',
   })
   async createCorpus(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: { name: string; purpose: string; paperIds: string[] },
   ): Promise<any> {
     try {
@@ -3692,7 +3724,7 @@ export class LiteratureController {
     description: 'Retrieve detailed information about a specific corpus',
   })
   async getCorpus(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') corpusId: string,
   ): Promise<any> {
     try {
@@ -3730,7 +3762,7 @@ export class LiteratureController {
     description: 'Update name or purpose of an existing corpus',
   })
   async updateCorpus(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') corpusId: string,
     @Body() updates: { name?: string; purpose?: string },
   ): Promise<any> {
@@ -3779,7 +3811,7 @@ export class LiteratureController {
     description: 'Permanently delete a corpus (cache entries remain for reuse)',
   })
   async deleteCorpus(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') corpusId: string,
   ): Promise<void> {
     try {
@@ -3955,7 +3987,7 @@ export class LiteratureController {
   })
   async generateThemeToSurveyItems(
     @Body() dto: any, // Using any to avoid circular dependency, will be validated by class-validator
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     try {
       this.logger.log(
@@ -4111,7 +4143,7 @@ export class LiteratureController {
   })
   async suggestResearchQuestions(
     @Body() dto: SuggestQuestionsDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     try {
       this.logger.log(
@@ -4136,16 +4168,18 @@ export class LiteratureController {
         questions,
         totalGenerated: questions.length,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 10: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `Failed to generate research questions: ${error.message}`,
-        error.stack,
+        `Failed to generate research questions: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
 
       throw new InternalServerErrorException({
         success: false,
         error: 'Research question generation failed',
-        message: error.message,
+        message: err.message || 'Unknown error',
       });
     }
   }
@@ -4195,7 +4229,7 @@ export class LiteratureController {
   })
   async suggestHypotheses(
     @Body() dto: SuggestHypothesesDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     try {
       this.logger.log(
@@ -4220,16 +4254,18 @@ export class LiteratureController {
         hypotheses,
         totalGenerated: hypotheses.length,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 10: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `Failed to generate hypotheses: ${error.message}`,
-        error.stack,
+        `Failed to generate hypotheses: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
 
       throw new InternalServerErrorException({
         success: false,
         error: 'Hypothesis generation failed',
-        message: error.message,
+        message: err.message || 'Unknown error',
       });
     }
   }
@@ -4266,7 +4302,7 @@ export class LiteratureController {
   })
   async mapThemesToConstructs(
     @Body() dto: MapConstructsDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     try {
       this.logger.log(
@@ -4289,16 +4325,18 @@ export class LiteratureController {
         constructs,
         totalConstructs: constructs.length,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 10: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `Failed to map constructs: ${error.message}`,
-        error.stack,
+        `Failed to map constructs: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
 
       throw new InternalServerErrorException({
         success: false,
         error: 'Construct mapping failed',
-        message: error.message,
+        message: err.message || 'Unknown error',
       });
     }
   }
@@ -4376,7 +4414,7 @@ export class LiteratureController {
   })
   async generateCompleteSurvey(
     @Body() dto: GenerateCompleteSurveyDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     try {
       this.logger.log(
@@ -4402,16 +4440,18 @@ export class LiteratureController {
         success: true,
         ...survey,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 10: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `Failed to generate complete survey: ${error.message}`,
-        error.stack,
+        `Failed to generate complete survey: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
 
       throw new InternalServerErrorException({
         success: false,
         error: 'Complete survey generation failed',
-        message: error.message,
+        message: err.message || 'Unknown error',
       });
     }
   }
@@ -4455,7 +4495,7 @@ export class LiteratureController {
       },
     },
   })
-  async batchProcessFullText(@CurrentUser() user: any) {
+  async batchProcessFullText(@CurrentUser() user: AuthenticatedUser) {
     return this.batchProcessFullTextInternal(user.userId);
   }
 
@@ -4559,7 +4599,8 @@ export class LiteratureController {
         message: `Paper queued for full-text extraction. Job ID: ${jobId}`,
         fullTextStatus: FullTextStatus.FETCHING,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 10: Use unknown with type narrowing
       // Error handling: Let NestJS handle NotFoundException naturally
       // Don't try to update status here - job was never queued
       this.logger.error(
@@ -4575,6 +4616,7 @@ export class LiteratureController {
    * Phase 10 Day 30: PUBLIC Batch Process Papers (Dev/Testing only)
    */
   @Post('batch-process-fulltext/public')
+  @Public() // Phase 10.106: Skip JWT auth guard
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: '📤 PUBLIC: Batch process papers (dev only)',
@@ -4690,16 +4732,18 @@ export class LiteratureController {
         stats,
         message: `Queued ${queued} papers for processing. Rate limit: 10 papers/minute. Expected completion: ~${Math.ceil(papers.length / 10)} minutes.`,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 10: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `❌ Batch processing failed: ${error.message}`,
-        error.stack,
+        `❌ Batch processing failed: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
 
       throw new InternalServerErrorException({
         success: false,
         error: 'Batch processing failed',
-        message: error.message,
+        message: err.message || 'Unknown error',
       });
     }
   }

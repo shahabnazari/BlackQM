@@ -449,26 +449,7 @@ export default function EnhancedCreateStudyPage() {
     return Object.keys(errors).length === 0;
   }, [studyConfig, gridConfig, stimuli, getTextFromHTML, showError]);
 
-  const handleNext = useCallback(async () => {
-    // Auto-save before navigating
-    if (hasUnsavedChanges) {
-      await saveDraft();
-    }
-
-    if (!validateStep(step)) {
-      return;
-    }
-
-    if (step === 4) {
-      // Generate preview before moving to preview step
-      await generatePreview();
-      setStep(5);
-    } else if (step < 5) {
-      setStep(step + 1);
-    } else {
-      handleSubmit();
-    }
-  }, [hasUnsavedChanges, saveDraft, validateStep, step, generatePreview, handleSubmit]);
+  // Phase 10.106: handleNext moved after its dependencies (generatePreview, handleSubmit)
 
   const handleBack = useCallback(async () => {
     // Auto-save before navigating
@@ -484,6 +465,32 @@ export default function EnhancedCreateStudyPage() {
   const handleSaveDraft = () => {
     saveDraft();
   };
+
+  // Phase 10.106: Moved before generatePreview (dependency order fix)
+  const generateGridConfig = useCallback((columns: number, shape: string) => {
+    const config = [];
+    const center = Math.floor(columns / 2);
+
+    for (let i = 0; i < columns; i++) {
+      const position = i - center;
+      let maxItems = 1;
+
+      if (shape === 'quasi-normal') {
+        // Improved bell curve distribution
+        const distance = Math.abs(position);
+        const maxCells = Math.ceil(columns * 0.8);
+        const bellFactor = Math.exp(-(distance * distance) / (columns / 3));
+        maxItems = Math.max(1, Math.round(maxCells * bellFactor));
+      } else {
+        // Flat distribution - equal across all columns
+        maxItems = Math.max(1, Math.floor(columns * 0.6));
+      }
+
+      config.push({ position, maxItems });
+    }
+
+    return config;
+  }, []);
 
   const generatePreview = useCallback(async () => {
     try {
@@ -543,35 +550,12 @@ export default function EnhancedCreateStudyPage() {
       };
 
       setPreviewData(previewData);
-    } catch (error: any) {
-      console.error('Error generating preview:', error);
+    } catch (error: unknown) {
+      // Phase 10.106: Use unknown with type narrowing
+      const err = error as { message?: string };
+      console.error('Error generating preview:', err.message || 'Unknown error');
     }
   }, [studyConfig, generateGridConfig]);
-
-  const generateGridConfig = (columns: number, shape: string) => {
-    const config = [];
-    const center = Math.floor(columns / 2);
-
-    for (let i = 0; i < columns; i++) {
-      const position = i - center;
-      let maxItems = 1;
-
-      if (shape === 'quasi-normal') {
-        // Improved bell curve distribution
-        const distance = Math.abs(position);
-        const maxCells = Math.ceil(columns * 0.8);
-        const bellFactor = Math.exp(-(distance * distance) / (columns / 3));
-        maxItems = Math.max(1, Math.round(maxCells * bellFactor));
-      } else {
-        // Flat distribution - equal across all columns
-        maxItems = Math.max(1, Math.floor(columns * 0.6));
-      }
-
-      config.push({ position, maxItems });
-    }
-
-    return config;
-  };
 
   const handleSubmit = useCallback(async () => {
     setIsSaving(true);
@@ -611,14 +595,38 @@ export default function EnhancedCreateStudyPage() {
       } else {
         throw new Error('Failed to create study');
       }
-    } catch (error: any) {
-      console.error('Error creating study:', error);
+    } catch (error: unknown) {
+      // Phase 10.106: Use unknown with type narrowing
+      const err = error as { message?: string };
+      console.error('Error creating study:', err.message || 'Unknown error');
       showError('Failed to create study. Please try again.');
     } finally {
       setIsSaving(false);
       setIsLoadingAPI(false);
     }
   }, [studyConfig, stimuli, draftId, showSuccess, router, showError]);
+
+  // Phase 10.106: handleNext moved here after its dependencies (generatePreview, handleSubmit)
+  const handleNext = useCallback(async () => {
+    // Auto-save before navigating
+    if (hasUnsavedChanges) {
+      await saveDraft();
+    }
+
+    if (!validateStep(step)) {
+      return;
+    }
+
+    if (step === 4) {
+      // Generate preview before moving to preview step
+      await generatePreview();
+      setStep(5);
+    } else if (step < 5) {
+      setStep(step + 1);
+    } else {
+      handleSubmit();
+    }
+  }, [hasUnsavedChanges, saveDraft, validateStep, step, generatePreview, handleSubmit]);
 
   const updateConfig = useCallback(
     (field: keyof EnhancedStudyConfig, value: any) => {

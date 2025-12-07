@@ -76,6 +76,34 @@ export const OPTIONAL_BONUSES = {
 } as const;
 
 // ============================================================================
+// Phase 10.107: Metadata Completeness / Confidence Level Constants
+// ============================================================================
+
+/**
+ * Confidence level thresholds based on metadata availability
+ * Shows users how much data backs the quality score
+ */
+export const CONFIDENCE_THRESHOLDS = {
+  HIGH: 4,      // 4/4 metrics = High confidence
+  GOOD: 3,      // 3/4 metrics = Good confidence
+  MODERATE: 2,  // 2/4 metrics = Moderate confidence
+  LOW: 1,       // 1/4 metrics = Low confidence
+  // 0/4 = Very Low (no meaningful data)
+} as const;
+
+/**
+ * Score caps based on data completeness
+ * Less data = lower maximum possible score (prevents artificial boosting)
+ */
+export const SCORE_CAPS_BY_METRICS = {
+  0: 25,  // No metrics = max 25
+  1: 45,  // 1 metric = max 45
+  2: 65,  // 2 metrics = max 65
+  3: 85,  // 3 metrics = max 85
+  4: 100, // All metrics = max 100
+} as const;
+
+// ============================================================================
 // Phase 10.942: Relevance Tier Constants
 // ============================================================================
 
@@ -284,4 +312,73 @@ export function getRelevanceColorClasses(score: number): string {
     return 'text-amber-700 bg-amber-50 border-amber-200';
   }
   return 'text-gray-700 bg-gray-50 border-gray-200';
+}
+
+// ============================================================================
+// Phase 10.107: Confidence Level Helper Functions
+// ============================================================================
+
+/**
+ * Get confidence level label based on available metrics
+ * @param availableMetrics - Number of metrics available (0-4)
+ * @returns Human-readable confidence label
+ */
+export function getConfidenceLabel(availableMetrics: number): string {
+  if (availableMetrics >= CONFIDENCE_THRESHOLDS.HIGH) return 'High';
+  if (availableMetrics >= CONFIDENCE_THRESHOLDS.GOOD) return 'Good';
+  if (availableMetrics >= CONFIDENCE_THRESHOLDS.MODERATE) return 'Moderate';
+  if (availableMetrics >= CONFIDENCE_THRESHOLDS.LOW) return 'Low';
+  return 'Very Low';
+}
+
+/**
+ * Get Tailwind CSS classes for confidence badge color
+ * @param availableMetrics - Number of metrics available (0-4)
+ * @returns Tailwind CSS class string
+ */
+export function getConfidenceColorClasses(availableMetrics: number): string {
+  if (availableMetrics >= CONFIDENCE_THRESHOLDS.HIGH) {
+    return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+  }
+  if (availableMetrics >= CONFIDENCE_THRESHOLDS.GOOD) {
+    return 'text-green-600 bg-green-50 border-green-200';
+  }
+  if (availableMetrics >= CONFIDENCE_THRESHOLDS.MODERATE) {
+    return 'text-amber-600 bg-amber-50 border-amber-200';
+  }
+  if (availableMetrics >= CONFIDENCE_THRESHOLDS.LOW) {
+    return 'text-orange-600 bg-orange-50 border-orange-200';
+  }
+  return 'text-gray-500 bg-gray-50 border-gray-200';
+}
+
+/**
+ * Get a short description of what the confidence level means
+ * @param availableMetrics - Number of metrics available (0-4)
+ * @returns Explanation string
+ */
+export function getConfidenceExplanation(availableMetrics: number): string {
+  if (availableMetrics >= 4) {
+    return 'Full data available: citations, journal metrics, year, abstract';
+  }
+  if (availableMetrics >= 3) {
+    return 'Most data available - reliable quality estimate';
+  }
+  if (availableMetrics >= 2) {
+    return 'Partial data - quality score has moderate confidence';
+  }
+  if (availableMetrics >= 1) {
+    return 'Limited data - quality score based on minimal metrics';
+  }
+  return 'No quality metrics available from this source';
+}
+
+/**
+ * Get the score cap for a given number of available metrics
+ * @param availableMetrics - Number of metrics available (0-4)
+ * @returns Maximum possible score
+ */
+export function getScoreCap(availableMetrics: number): number {
+  const caps = SCORE_CAPS_BY_METRICS as Record<number, number>;
+  return caps[availableMetrics] ?? 100;
 }

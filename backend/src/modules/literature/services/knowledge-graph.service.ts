@@ -84,6 +84,43 @@ export interface KnowledgeGraphEdge {
   temporalWeight?: number;
 }
 
+/**
+ * Phase 10.106 Phase 10: Prisma raw node input type
+ */
+interface PrismaNodeInput {
+  id: string;
+  type: string;
+  label: string;
+  description?: string | null;
+  confidence?: number | null;
+  metadata?: unknown;
+  isBridgeConcept?: boolean | null;
+  controversyScore?: number | null;
+  influenceScore?: number | null;
+  citationCount?: number | null;
+  trendingScore?: number | null;
+  keywords?: string[] | unknown;
+  predictedImpact?: number | null;
+  emergingTopic?: boolean | null;
+  fundingPotential?: number | null;
+}
+
+/**
+ * Phase 10.106 Phase 10: Prisma raw edge input type
+ */
+interface PrismaEdgeInput {
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  type: string;
+  strength?: number | null;
+  influenceFlow?: number | null;
+  controversyType?: string | null;
+  isPredicted?: boolean | null;
+  predictionScore?: number | null;
+  temporalWeight?: number | null;
+}
+
 export interface BridgeConcept {
   nodeId: string;
   label: string;
@@ -838,38 +875,38 @@ Return as JSON array: [{ type, label, description, keywords: [] }]`;
     return 'THEORY';
   }
 
-  private mapNodeToDto(node: any): KnowledgeGraphNode {
+  private mapNodeToDto(node: PrismaNodeInput): KnowledgeGraphNode {
     return {
       id: node.id,
-      type: node.type,
+      type: node.type as KnowledgeGraphNode['type'],
       label: node.label,
-      description: node.description,
-      confidence: node.confidence || 0.5,
-      metadata: node.metadata,
-      isBridgeConcept: node.isBridgeConcept,
-      controversyScore: node.controversyScore,
-      influenceScore: node.influenceScore,
-      citationCount: node.citationCount,
-      trendingScore: node.trendingScore,
+      description: node.description ?? undefined,
+      confidence: node.confidence ?? 0.5,
+      metadata: node.metadata as KnowledgeGraphNode['metadata'],
+      isBridgeConcept: node.isBridgeConcept ?? false,
+      controversyScore: node.controversyScore ?? undefined,
+      influenceScore: node.influenceScore ?? undefined,
+      citationCount: node.citationCount ?? 0,
+      trendingScore: node.trendingScore ?? undefined,
       keywords: Array.isArray(node.keywords) ? node.keywords : [],
-      predictedImpact: node.predictedImpact,
-      emergingTopic: node.emergingTopic,
-      fundingPotential: node.fundingPotential,
+      predictedImpact: node.predictedImpact ?? undefined,
+      emergingTopic: node.emergingTopic ?? false,
+      fundingPotential: node.fundingPotential ?? undefined,
     };
   }
 
-  private mapEdgeToDto(edge: any): KnowledgeGraphEdge {
+  private mapEdgeToDto(edge: PrismaEdgeInput): KnowledgeGraphEdge {
     return {
       id: edge.id,
       fromNodeId: edge.fromNodeId,
       toNodeId: edge.toNodeId,
-      type: edge.type,
-      strength: edge.strength,
-      influenceFlow: edge.influenceFlow,
-      controversyType: edge.controversyType,
-      isPredicted: edge.isPredicted,
-      predictionScore: edge.predictionScore,
-      temporalWeight: edge.temporalWeight,
+      type: edge.type as KnowledgeGraphEdge['type'],
+      strength: edge.strength ?? 0.5,
+      influenceFlow: edge.influenceFlow ?? undefined,
+      controversyType: edge.controversyType as KnowledgeGraphEdge['controversyType'],
+      isPredicted: edge.isPredicted ?? false,
+      predictionScore: edge.predictionScore ?? undefined,
+      temporalWeight: edge.temporalWeight ?? undefined,
     };
   }
 

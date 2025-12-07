@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+// Netflix-Grade: Import type-safe array utilities (Phase 10.103 Session 6)
+import { safeGet, safeGet2D, assertGet } from '../../../common/utils/array-utils';
 
 /**
  * Statistical calculations service for Q-methodology analysis
@@ -47,8 +49,8 @@ export class StatisticsService {
     let denominatorY = 0;
 
     for (let i = 0; i < n; i++) {
-      const deviationX = x[i] - meanX;
-      const deviationY = y[i] - meanY;
+      const deviationX = safeGet(x, i, 0) - meanX;
+      const deviationY = safeGet(y, i, 0) - meanY;
       numerator += deviationX * deviationY;
       denominatorX += deviationX * deviationX;
       denominatorY += deviationY * deviationY;
@@ -73,14 +75,16 @@ export class StatisticsService {
       matrix[i] = [];
       for (let j = 0; j < n; j++) {
         if (i === j) {
-          matrix[i][j] = 1;
+          const row = assertGet(matrix, i, 'correlation matrix');
+          row[j] = 1;
         } else if (j < i) {
-          matrix[i][j] = matrix[j][i];
+          const row = assertGet(matrix, i, 'correlation matrix');
+          row[j] = safeGet2D(matrix, j, i, 0);
         } else {
-          matrix[i][j] = this.calculateCorrelation(
-            transposed[i],
-            transposed[j],
-          );
+          const row = assertGet(matrix, i, 'correlation matrix');
+          const transposedI = assertGet(transposed, i, 'correlation matrix');
+          const transposedJ = assertGet(transposed, j, 'correlation matrix');
+          row[j] = this.calculateCorrelation(transposedI, transposedJ);
         }
       }
     }
@@ -212,7 +216,7 @@ export class StatisticsService {
       throw new Error('Arrays must have the same length for paired t-test');
     }
 
-    const differences = before.map((value, i) => after[i] - value);
+    const differences = before.map((value, i) => safeGet(after, i, 0) - value);
     const meanDiff = this.calculateMean(differences);
     const sdDiff = this.calculateStandardDeviation(differences, true);
     const n = differences.length;
@@ -239,7 +243,7 @@ export class StatisticsService {
     }
 
     return observed.reduce((sum, obs, i) => {
-      const exp = expected[i];
+      const exp = safeGet(expected, i, 1);
       if (exp === 0) return sum;
       return sum + Math.pow(obs - exp, 2) / exp;
     }, 0);
@@ -302,7 +306,7 @@ export class StatisticsService {
       throw new Error('Arrays must have the same length');
     }
 
-    return loadings.reduce((sum, loading, i) => sum + loading * zScores[i], 0);
+    return loadings.reduce((sum, loading, i) => sum + loading * safeGet(zScores, i, 0), 0);
   }
 
   /**
@@ -314,13 +318,14 @@ export class StatisticsService {
     threshold: number = 1.96,
   ): number[] {
     const distinguishing: number[] = [];
-    const targetScores = factorScores.map((row) => row[factorIndex]);
+    const targetScores = factorScores.map((row) => safeGet(row, factorIndex, 0));
 
     for (let i = 0; i < factorScores.length; i++) {
-      const otherFactorScores = factorScores[i].filter(
+      const row = assertGet(factorScores, i, 'distinguishing statements');
+      const otherFactorScores = row.filter(
         (_, j) => j !== factorIndex,
       );
-      const targetScore = Math.abs(targetScores[i]);
+      const targetScore = Math.abs(safeGet(targetScores, i, 0));
       const maxOtherScore = Math.max(...otherFactorScores.map(Math.abs));
 
       if (targetScore - maxOtherScore > threshold) {
@@ -341,7 +346,7 @@ export class StatisticsService {
     const consensus: number[] = [];
 
     for (let i = 0; i < factorScores.length; i++) {
-      const scores = factorScores[i];
+      const scores = assertGet(factorScores, i, 'consensus statements');
       const range = Math.max(...scores) - Math.min(...scores);
 
       if (range < threshold) {
@@ -356,11 +361,12 @@ export class StatisticsService {
    * Q-Methodology specific: Calculate factor characteristics
    */
   calculateFactorCharacteristics(factorMatrix: number[][]): any[] {
-    const factors = factorMatrix[0].length;
+    const firstRow = assertGet(factorMatrix, 0, 'factor characteristics');
+    const factors = firstRow.length;
     const characteristics: any[] = [];
 
     for (let f = 0; f < factors; f++) {
-      const loadings = factorMatrix.map((row) => row[f]);
+      const loadings = factorMatrix.map((row) => safeGet(row, f, 0));
       const squaredLoadings = loadings.map((l) => l * l);
       const eigenvalue = squaredLoadings.reduce((sum, l) => sum + l, 0);
       const percentVariance = (eigenvalue / factorMatrix.length) * 100;
@@ -381,7 +387,8 @@ export class StatisticsService {
    */
   transposeMatrix(matrix: number[][]): number[][] {
     if (!matrix || matrix.length === 0) return [];
-    return matrix[0].map((_, colIndex) => matrix.map((row) => row[colIndex]));
+    const firstRow = assertGet(matrix, 0, 'transpose matrix');
+    return firstRow.map((_, colIndex) => matrix.map((row) => safeGet(row, colIndex, 0)));
   }
 
   /**
@@ -389,15 +396,18 @@ export class StatisticsService {
    */
   multiplyMatrices(A: number[][], B: number[][]): number[][] {
     const result: number[][] = [];
+    const firstRowB = assertGet(B, 0, 'multiply matrices');
+    const firstRowA = assertGet(A, 0, 'multiply matrices');
 
     for (let i = 0; i < A.length; i++) {
       result[i] = [];
-      for (let j = 0; j < B[0].length; j++) {
+      for (let j = 0; j < firstRowB.length; j++) {
         let sum = 0;
-        for (let k = 0; k < A[0].length; k++) {
-          sum += A[i][k] * B[k][j];
+        for (let k = 0; k < firstRowA.length; k++) {
+          sum += safeGet2D(A, i, k, 0) * safeGet2D(B, k, j, 0);
         }
-        result[i][j] = sum;
+        const row = assertGet(result, i, 'multiply matrices');
+        row[j] = sum;
       }
     }
 
@@ -409,15 +419,16 @@ export class StatisticsService {
    */
   calculateDeterminant(matrix: number[][]): number {
     if (matrix.length === 2) {
-      return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+      return safeGet2D(matrix, 0, 0, 0) * safeGet2D(matrix, 1, 1, 0) - safeGet2D(matrix, 0, 1, 0) * safeGet2D(matrix, 1, 0, 0);
     }
 
     // For larger matrices, use recursive Laplace expansion
+    const firstRow = assertGet(matrix, 0, 'calculate determinant');
     let det = 0;
-    for (let i = 0; i < matrix[0].length; i++) {
+    for (let i = 0; i < firstRow.length; i++) {
       const subMatrix = this.getSubMatrix(matrix, 0, i);
       const cofactor =
-        Math.pow(-1, i) * matrix[0][i] * this.calculateDeterminant(subMatrix);
+        Math.pow(-1, i) * safeGet(firstRow, i, 0) * this.calculateDeterminant(subMatrix);
       det += cofactor;
     }
 
@@ -436,8 +447,8 @@ export class StatisticsService {
 
     if (matrix.length === 2) {
       return [
-        [matrix[1][1] / det, -matrix[0][1] / det],
-        [-matrix[1][0] / det, matrix[0][0] / det],
+        [safeGet2D(matrix, 1, 1, 0) / det, -safeGet2D(matrix, 0, 1, 0) / det],
+        [-safeGet2D(matrix, 1, 0, 0) / det, safeGet2D(matrix, 0, 0, 0) / det],
       ];
     }
 
@@ -463,9 +474,9 @@ export class StatisticsService {
     const middle = Math.floor(sorted.length / 2);
 
     if (sorted.length % 2 === 0) {
-      return (sorted[middle - 1] + sorted[middle]) / 2;
+      return (safeGet(sorted, middle - 1, 0) + safeGet(sorted, middle, 0)) / 2;
     } else {
-      return sorted[middle];
+      return safeGet(sorted, middle, 0);
     }
   }
 
@@ -588,8 +599,8 @@ export class StatisticsService {
 
     return {
       bootstrapMean: this.calculateMean(bootstrapMeans),
-      lower: bootstrapMeans[lowerIndex],
-      upper: bootstrapMeans[upperIndex],
+      lower: safeGet(bootstrapMeans, lowerIndex, 0),
+      upper: safeGet(bootstrapMeans, upperIndex, 0),
       confidence,
     };
   }
@@ -603,10 +614,14 @@ export class StatisticsService {
     let currentRank = 1;
 
     for (let i = 0; i < indexed.length; i++) {
-      if (i > 0 && indexed[i].value !== indexed[i - 1].value) {
-        currentRank = i + 1;
+      const current = assertGet(indexed, i, 'rank data');
+      if (i > 0) {
+        const previous = assertGet(indexed, i - 1, 'rank data');
+        if (current.value !== previous.value) {
+          currentRank = i + 1;
+        }
       }
-      ranks[indexed[i].index] = currentRank;
+      ranks[current.index] = currentRank;
     }
 
     return ranks;
@@ -628,7 +643,8 @@ export class StatisticsService {
       if (norm === 0) break;
 
       for (let i = 0; i < n; i++) {
-        newVector[i] /= norm;
+        const value = safeGet(newVector, i, 0);
+        newVector[i] = value / norm;
       }
 
       const newEigenvalue = this.dotProduct(vector, newVector);
@@ -655,8 +671,11 @@ export class StatisticsService {
     for (let i = 0; i < n; i++) {
       result[i] = [];
       for (let j = 0; j < n; j++) {
-        result[i][j] =
-          matrix[i][j] - eigenvalue * eigenvector[i] * eigenvector[j];
+        const row = assertGet(result, i, 'deflate matrix');
+        const matrixValue = safeGet2D(matrix, i, j, 0);
+        const eigenI = safeGet(eigenvector, i, 0);
+        const eigenJ = safeGet(eigenvector, j, 0);
+        row[j] = matrixValue - eigenvalue * eigenI * eigenJ;
       }
     }
 
@@ -688,7 +707,7 @@ export class StatisticsService {
   }
 
   private dotProduct(a: number[], b: number[]): number {
-    return a.reduce((sum, val, i) => sum + val * b[i], 0);
+    return a.reduce((sum, val, i) => sum + val * safeGet(b, i, 0), 0);
   }
 
   private getSubMatrix(
@@ -707,9 +726,11 @@ export class StatisticsService {
 
     // Create augmented matrix [A|I]
     for (let i = 0; i < n; i++) {
-      augmented[i] = [...matrix[i]];
+      const row = assertGet(matrix, i, 'gaussian elimination');
+      augmented[i] = [...row];
       for (let j = 0; j < n; j++) {
-        augmented[i].push(i === j ? 1 : 0);
+        const augRow = assertGet(augmented, i, 'gaussian elimination');
+        augRow.push(i === j ? 1 : 0);
       }
     }
 
@@ -718,19 +739,24 @@ export class StatisticsService {
       // Find pivot
       let maxRow = i;
       for (let k = i + 1; k < n; k++) {
-        if (Math.abs(augmented[k][i]) > Math.abs(augmented[maxRow][i])) {
+        if (Math.abs(safeGet2D(augmented, k, i, 0)) > Math.abs(safeGet2D(augmented, maxRow, i, 0))) {
           maxRow = k;
         }
       }
 
       // Swap rows
-      [augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]];
+      const rowI = assertGet(augmented, i, 'gaussian elimination');
+      const rowMaxRow = assertGet(augmented, maxRow, 'gaussian elimination');
+      [augmented[i], augmented[maxRow]] = [rowMaxRow, rowI];
 
       // Make all rows below this one 0 in current column
       for (let k = i + 1; k < n; k++) {
-        const factor = augmented[k][i] / augmented[i][i];
+        const factor = safeGet2D(augmented, k, i, 0) / safeGet2D(augmented, i, i, 1);
         for (let j = i; j < 2 * n; j++) {
-          augmented[k][j] -= factor * augmented[i][j];
+          const rowK = assertGet(augmented, k, 'gaussian elimination');
+          const currentValue = safeGet(rowK, j, 0);
+          const iValue = safeGet2D(augmented, i, j, 0);
+          rowK[j] = currentValue - factor * iValue;
         }
       }
     }
@@ -738,25 +764,31 @@ export class StatisticsService {
     // Back substitution
     for (let i = n - 1; i >= 0; i--) {
       for (let k = i - 1; k >= 0; k--) {
-        const factor = augmented[k][i] / augmented[i][i];
+        const factor = safeGet2D(augmented, k, i, 0) / safeGet2D(augmented, i, i, 1);
         for (let j = i; j < 2 * n; j++) {
-          augmented[k][j] -= factor * augmented[i][j];
+          const rowK = assertGet(augmented, k, 'back substitution');
+          const currentValue = safeGet(rowK, j, 0);
+          const iValue = safeGet2D(augmented, i, j, 0);
+          rowK[j] = currentValue - factor * iValue;
         }
       }
     }
 
     // Normalize diagonal
     for (let i = 0; i < n; i++) {
-      const divisor = augmented[i][i];
+      const divisor = safeGet2D(augmented, i, i, 1);
       for (let j = i; j < 2 * n; j++) {
-        augmented[i][j] /= divisor;
+        const row = assertGet(augmented, i, 'normalize diagonal');
+        const value = safeGet(row, j, 0);
+        row[j] = value / divisor;
       }
     }
 
     // Extract inverse matrix
     const inverse: number[][] = [];
     for (let i = 0; i < n; i++) {
-      inverse[i] = augmented[i].slice(n);
+      const row = assertGet(augmented, i, 'extract inverse');
+      inverse[i] = row.slice(n);
     }
 
     return inverse;
@@ -772,10 +804,10 @@ export class StatisticsService {
     const weight = index % 1;
 
     if (lower === upper) {
-      return sortedData[lower];
+      return safeGet(sortedData, lower, 0);
     }
 
-    return sortedData[lower] * (1 - weight) + sortedData[upper] * weight;
+    return safeGet(sortedData, lower, 0) * (1 - weight) + safeGet(sortedData, upper, 0) * weight;
   }
 
   private getZScore(confidence: number): number {
@@ -795,7 +827,7 @@ export class StatisticsService {
 
     for (let i = 0; i < n; i++) {
       const randomIndex = Math.floor(Math.random() * n);
-      sample.push(data[randomIndex]);
+      sample.push(safeGet(data, randomIndex, 0));
     }
 
     return sample;

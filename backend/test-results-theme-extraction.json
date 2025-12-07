@@ -1,0 +1,71 @@
+{
+  "timestamp": "2025-11-23T00:43:49.006Z",
+  "tests": [
+    {
+      "test": "API Health Check",
+      "status": "FAIL",
+      "details": "API not accessible: Request failed with status code 404",
+      "metrics": {},
+      "timestamp": "2025-11-23T00:43:49.043Z"
+    },
+    {
+      "test": "Theme Extraction API",
+      "status": "WARN",
+      "details": "Requires authentication - perform manual testing",
+      "metrics": {
+        "samplePapers": 3
+      },
+      "timestamp": "2025-11-23T00:43:49.044Z"
+    },
+    {
+      "test": "Excerpt Extraction Algorithm",
+      "status": "PASS",
+      "details": "4/4 test cases passed",
+      "metrics": {
+        "passed": 4,
+        "failed": 0,
+        "total": 4
+      },
+      "timestamp": "2025-11-23T00:43:49.046Z"
+    },
+    {
+      "test": "Regex Escape Function",
+      "status": "PASS",
+      "details": "8/8 test cases passed",
+      "metrics": {
+        "passed": 8,
+        "failed": 0,
+        "total": 8
+      },
+      "timestamp": "2025-11-23T00:43:49.046Z"
+    },
+    {
+      "test": "GPT-4 Prompt Structure",
+      "status": "PASS",
+      "details": "6/6 required elements found",
+      "metrics": {
+        "passed": 6,
+        "failed": 0,
+        "total": 6
+      },
+      "timestamp": "2025-11-23T00:43:49.048Z"
+    },
+    {
+      "test": "Code Quality",
+      "status": "PASS",
+      "details": "5/5 quality checks passed",
+      "metrics": {
+        "passed": 5,
+        "failed": 0,
+        "total": 5
+      },
+      "timestamp": "2025-11-23T00:43:49.049Z"
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "passed": 4,
+    "failed": 1,
+    "warnings": 1
+  }
+}

@@ -134,6 +134,9 @@ interface ThemeExtractionState {
   /** Show/hide guided wizard modal (step-by-step extraction) */
   showGuidedWizard: boolean;
 
+  /** Phase 10.106: Whether navigating to themes page (shows navigation modal) */
+  isNavigatingToThemes: boolean;
+
   // ========================================================================
   // Results State
   // ========================================================================
@@ -197,6 +200,7 @@ interface ThemeExtractionState {
   setShowModeSelectionModal: (show: boolean) => void;
   setShowPurposeWizard: (show: boolean) => void;
   setShowGuidedWizard: (show: boolean) => void;
+  setIsNavigatingToThemes: (navigating: boolean) => void; // Phase 10.106
   closeAllModals: () => void;
 
   // Results Management (from createResultsActions)
@@ -248,6 +252,7 @@ export const useThemeExtractionStore = create<ThemeExtractionState>()(
       showModeSelectionModal: false,
       showPurposeWizard: false,
       showGuidedWizard: false,
+      isNavigatingToThemes: false, // Phase 10.106
 
       researchQuestions: [],
       hypotheses: [],
@@ -301,6 +306,7 @@ export const useThemeExtractionStore = create<ThemeExtractionState>()(
           showModeSelectionModal: false,
           showPurposeWizard: false,
           showGuidedWizard: false,
+          isNavigatingToThemes: false, // Phase 10.106
 
           researchQuestions: [],
           hypotheses: [],

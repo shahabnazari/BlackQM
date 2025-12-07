@@ -152,8 +152,8 @@ class LiteratureAPIService {
       headers: {
         'Content-Type': 'application/json',
       },
-      // CRITICAL FIX: Add timeout to prevent hanging requests
-      timeout: 60000, // 60 seconds - literature search can take time
+      // ✅ FIX (Dec 4 2025): Increased timeout - backend searches can take 180+ seconds
+      timeout: 300000, // 5 minutes - literature search can be VERY slow (3+ min for full search)
       // Configure params serialization for arrays
       // NestJS expects 'sources=youtube' not 'sources[]=youtube'
       paramsSerializer: {

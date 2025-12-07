@@ -27,6 +27,26 @@ export interface ExtractedCitation {
   };
 }
 
+/**
+ * Phase 10.106 Phase 10: Theme source type definitions
+ * Netflix-grade: Full type safety for internal data
+ */
+export interface ThemeSourceTimestamp {
+  start: number;
+  end: number;
+  text?: string;
+}
+
+export interface ThemeSourceQuote {
+  timestamp: number;
+  quote: string;
+}
+
+export interface ThemeSource {
+  timestamps?: ThemeSourceTimestamp[];
+  quotes?: ThemeSourceQuote[];
+}
+
 @Injectable()
 export class MultiMediaAnalysisService {
   private readonly logger = new Logger(MultiMediaAnalysisService.name);
@@ -123,14 +143,14 @@ export class MultiMediaAnalysisService {
    * Extract timestamps from unified theme sources
    */
   private extractTimestampsFromSources(
-    sources: any[],
+    sources: ThemeSource[],
   ): Array<{ start: number; end: number }> {
     const timestamps: Array<{ start: number; end: number }> = [];
 
     for (const source of sources) {
       if (source.timestamps && Array.isArray(source.timestamps)) {
         timestamps.push(
-          ...source.timestamps.map((t: any) => ({
+          ...source.timestamps.map((t: ThemeSourceTimestamp) => ({
             start: t.start,
             end: t.end,
           })),
@@ -145,7 +165,7 @@ export class MultiMediaAnalysisService {
    * Extract quotes from unified theme sources
    */
   private extractQuotesFromSources(
-    sources: any[],
+    sources: ThemeSource[],
   ): Array<{ timestamp: number; quote: string }> {
     const quotes: Array<{ timestamp: number; quote: string }> = [];
 

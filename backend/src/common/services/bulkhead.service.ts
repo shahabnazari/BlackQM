@@ -83,11 +83,11 @@ export class BulkheadService {
   private readonly CIRCUIT_FAILURE_THRESHOLD = 5;
   private readonly CIRCUIT_RESET_TIMEOUT = 30000; // 30 seconds
 
-  // Configuration
+  // Configuration - Phase 10.106 Netflix-Grade: Timeout adjusted for enrichment pipeline
   private readonly searchConfig: BulkheadConfig = {
-    perUserConcurrency: 3,      // Max 3 concurrent searches per user
-    globalConcurrency: 50,      // Max 50 concurrent searches globally
-    timeout: 120000,            // 2 minutes per search
+    perUserConcurrency: 30,     // ✅ 30 concurrent per user for progressive loading
+    globalConcurrency: 100,     // ✅ 100 global for multiple users
+    timeout: 180000,            // ✅ Phase 10.106: Increased to 180s for full pipeline (search + enrichment)
     retryLimit: 2,
   };
 

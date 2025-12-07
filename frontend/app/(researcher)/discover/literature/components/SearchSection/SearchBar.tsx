@@ -33,6 +33,9 @@ import { useLiteratureSearchStore } from '@/lib/stores/literature-search.store';
 import * as QueryExpansionAPI from '@/lib/api/services/query-expansion-api.service';
 import { logger } from '@/lib/utils/logger';
 import { MethodologyModal } from '@/components/literature/MethodologyModal';
+import { SearchHistoryService } from '@/lib/services/search-history.service';
+import { QueryValidator, getQualityIndicator, type QueryValidation } from '@/lib/utils/query-validator';
+import { SearchAnalyticsService } from '@/lib/services/search-analytics.service';
 
 // ============================================================================
 // Constants
@@ -93,10 +96,17 @@ export const SearchBar = memo(function SearchBar({
     setShowSuggestions,
     setLoadingSuggestions,
     setQueryCorrection,
+    papers,
+    totalResults,
+    loading,
   } = useLiteratureSearchStore();
 
   const suggestionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Phase 10.104 Day 2: Track last search for results update
+  const lastSearchQueryRef = useRef<string>('');
+  const lastSearchTimeRef = useRef<number>(0);
 
   // 🔧 FIX: Hydration - Only render dynamic badges after client mount
   const [isMounted, setIsMounted] = React.useState(false);
@@ -110,9 +120,40 @@ export const SearchBar = memo(function SearchBar({
   // AI Suggestions error state
   const [suggestionError, setSuggestionError] = React.useState<string | null>(null);
 
+  // Phase 10.104: Query validation state
+  const [queryValidation, setQueryValidation] = React.useState<QueryValidation | null>(null);
+
+  // Phase 10.104: Search history suggestions
+  const [historySuggestions, setHistorySuggestions] = React.useState<string[]>([]);
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // ============================================================================
+  // Phase 10.104: Real-Time Query Validation Effect
+  // ============================================================================
+
+  useEffect(() => {
+    // Real-time query validation (Netflix-grade: instant feedback)
+    if (query && query.trim().length > 0) {
+      const validation = QueryValidator.validate(query);
+      setQueryValidation(validation);
+
+      // Get history suggestions (autocomplete from previous searches)
+      const history = SearchHistoryService.getAutocomplete(query, 3);
+      setHistorySuggestions(history);
+
+      logger.debug('Query validation complete', 'SearchBar', {
+        score: validation.score,
+        isValid: validation.isValid,
+        historySuggestionsCount: history.length
+      });
+    } else {
+      setQueryValidation(null);
+      setHistorySuggestions([]);
+    }
+  }, [query]);
 
   // ============================================================================
   // AI Suggestions Effect (Debounced)
@@ -187,6 +228,44 @@ export const SearchBar = memo(function SearchBar({
   }, [query, setAISuggestions, setLoadingSuggestions, setShowSuggestions]);
 
   // ============================================================================
+  // Phase 10.104 Day 2: Update Analytics When Search Results Arrive
+  // ============================================================================
+
+  useEffect(() => {
+    // Only update if:
+    // 1. We have papers (search completed)
+    // 2. Not currently loading
+    // 3. This is for the query we last searched
+    if (
+      !loading &&
+      lastSearchQueryRef.current &&
+      lastSearchQueryRef.current === query &&
+      lastSearchTimeRef.current > 0
+    ) {
+      const resultsCount = papers.length;
+      const searchTime = lastSearchTimeRef.current;
+
+      // Update search history with actual results count
+      const history = SearchHistoryService.getHistory();
+      const lastSearch = history[0];
+      if (lastSearch && lastSearch.query === query && lastSearch.timestamp >= searchTime - 1000) {
+        // Update the most recent search entry
+        SearchHistoryService.addSearch(query, resultsCount, true, lastSearch.responseTime);
+      }
+
+      logger.debug('Analytics updated with search results', 'SearchBar', {
+        query,
+        resultsCount,
+        totalResults
+      });
+
+      // Reset tracking
+      lastSearchQueryRef.current = '';
+      lastSearchTimeRef.current = 0;
+    }
+  }, [loading, papers, query, totalResults]);
+
+  // ============================================================================
   // Click Outside Handler (Close Suggestions)
   // ============================================================================
 
@@ -243,11 +322,16 @@ export const SearchBar = memo(function SearchBar({
   );
 
   const handleSuggestionClick = useCallback(
-    (suggestion: string) => {
-      logger.debug('Suggestion selected', 'SearchBar', { suggestion });
+    (suggestion: string, source?: 'history' | 'ai_suggestion') => {
+      logger.debug('Suggestion selected', 'SearchBar', { suggestion, source });
       setQuery(suggestion);
       setShowSuggestions(false);
       setQueryCorrection(null); // Clear any previous query correction
+
+      // Phase 10.104 Day 2: Track suggestion click analytics
+      if (source) {
+        SearchAnalyticsService.trackSuggestionClick(suggestion, source);
+      }
     },
     [setQuery, setShowSuggestions, setQueryCorrection]
   );
@@ -289,10 +373,34 @@ export const SearchBar = memo(function SearchBar({
             maxLength={500}
           />
 
-          {/* AI-Powered Inline Suggestions Dropdown */}
+          {/* Phase 10.104: Query Quality Indicator */}
+          {queryValidation && query.trim().length >= MIN_QUERY_LENGTH && (
+            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+              {(() => {
+                const indicator = getQualityIndicator(queryValidation.score);
+                return (
+                  <Badge
+                    variant="outline"
+                    className={`text-xs font-medium ${
+                      indicator.color === 'green'
+                        ? 'bg-green-50 text-green-700 border-green-300'
+                        : indicator.color === 'yellow'
+                        ? 'bg-yellow-50 text-yellow-700 border-yellow-300'
+                        : 'bg-red-50 text-red-700 border-red-300'
+                    }`}
+                    title={`Query Quality: ${queryValidation.score}/100`}
+                  >
+                    {indicator.emoji} {indicator.label}
+                  </Badge>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* AI-Powered + History Suggestions Dropdown */}
           <AnimatePresence>
             {showSuggestions &&
-              (aiSuggestions.length > 0 || loadingSuggestions || suggestionError) && (
+              (historySuggestions.length > 0 || aiSuggestions.length > 0 || loadingSuggestions || suggestionError) && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -302,7 +410,7 @@ export const SearchBar = memo(function SearchBar({
                   <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-purple-100 flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-purple-600" />
                     <span className="text-sm font-semibold text-purple-900">
-                      AI-Suggested Searches
+                      {historySuggestions.length > 0 ? 'Recent & AI Suggestions' : 'AI-Suggested Searches'}
                     </span>
                     {loadingSuggestions && (
                       <Loader2 className="w-3 h-3 animate-spin text-purple-600 ml-auto" />
@@ -333,6 +441,39 @@ export const SearchBar = memo(function SearchBar({
                     </div>
                   )}
 
+                  {/* Phase 10.104: Search History Suggestions (Priority) */}
+                  {!loadingSuggestions && !suggestionError && historySuggestions.length > 0 && (
+                    <div className="border-b border-gray-200">
+                      <div className="px-3 py-2 bg-blue-50 text-xs font-semibold text-blue-900 uppercase tracking-wide">
+                        Recent Searches
+                      </div>
+                      <div>
+                        {historySuggestions.map((suggestion, index) => (
+                          <button
+                            key={`history-${index}`}
+                            onClick={() => handleSuggestionClick(suggestion, 'history')}
+                            className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0 group"
+                          >
+                            <div className="flex items-start gap-3">
+                              <Badge
+                                variant="outline"
+                                className="mt-0.5 bg-blue-100 text-blue-700 border-blue-300 flex-shrink-0"
+                              >
+                                🕐
+                              </Badge>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-gray-900 group-hover:text-blue-900 font-medium break-words">
+                                  {suggestion}
+                                </p>
+                              </div>
+                              <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 flex-shrink-0 mt-0.5" />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Loading State */}
                   {loadingSuggestions && !suggestionError && (
                     <div className="p-4 text-center text-gray-500 text-sm">
@@ -340,13 +481,18 @@ export const SearchBar = memo(function SearchBar({
                     </div>
                   )}
 
-                  {/* Suggestions List */}
+                  {/* AI Suggestions List */}
                   {!loadingSuggestions && !suggestionError && aiSuggestions.length > 0 && (
                     <div className="max-h-64 overflow-y-auto">
+                      {historySuggestions.length > 0 && (
+                        <div className="px-3 py-2 bg-purple-50 text-xs font-semibold text-purple-900 uppercase tracking-wide">
+                          AI Suggestions
+                        </div>
+                      )}
                       {aiSuggestions.map((suggestion, index) => (
                         <button
-                          key={index}
-                          onClick={() => handleSuggestionClick(suggestion)}
+                          key={`ai-${index}`}
+                          onClick={() => handleSuggestionClick(suggestion, 'ai_suggestion')}
                           className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0 group"
                         >
                           <div className="flex items-start gap-3">
@@ -386,9 +532,47 @@ export const SearchBar = memo(function SearchBar({
 
         {/* Search Button */}
         <Button
-          onClick={() => {
+          onClick={async () => {
             logger.debug('Search button clicked', 'SearchBar');
-            onSearch();
+            const startTime = performance.now();
+
+            // Phase 10.104 Day 2: Track search for results update
+            lastSearchQueryRef.current = query;
+            lastSearchTimeRef.current = Date.now();
+
+            try {
+              await onSearch();
+
+              // Phase 10.104 Day 2: Track analytics (results count will be updated by useEffect)
+              const responseTime = Math.round(performance.now() - startTime);
+              SearchAnalyticsService.trackSearch({
+                query,
+                responseTime,
+                resultsCount: 0, // Will be updated when results arrive (monitored by useEffect)
+                success: true,
+                source: 'manual'
+              });
+
+              logger.debug('Search completed successfully', 'SearchBar', { responseTime });
+            } catch (error) {
+              // Track failed search in history (only track failures immediately)
+              SearchHistoryService.addSearch(query, 0, false);
+
+              // Track analytics for failed search
+              SearchAnalyticsService.trackSearch({
+                query,
+                responseTime: Math.round(performance.now() - startTime),
+                success: false,
+                source: 'manual',
+                errorType: error instanceof Error ? error.message : 'Unknown error'
+              });
+
+              // Reset tracking on error
+              lastSearchQueryRef.current = '';
+              lastSearchTimeRef.current = 0;
+
+              logger.error('Search failed', 'SearchBar', { error });
+            }
           }}
           // PHASE 10.942 DAY 1 AUDIT FIX: Disable when empty or loading
           disabled={isLoading || !query.trim()}
@@ -425,6 +609,58 @@ export const SearchBar = memo(function SearchBar({
           )}
         </Button>
       </div>
+
+      {/* Phase 10.104: Query Validation Warnings/Suggestions */}
+      {queryValidation && query.trim().length >= MIN_QUERY_LENGTH && (
+        <AnimatePresence>
+          {(queryValidation.warnings.length > 0 || queryValidation.score < 60) && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className={`rounded-lg border p-3 ${
+                queryValidation.score >= 60
+                  ? 'bg-yellow-50 border-yellow-200'
+                  : 'bg-orange-50 border-orange-200'
+              }`}
+            >
+              <div className="flex items-start gap-2">
+                <Info className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
+                  queryValidation.score >= 60 ? 'text-yellow-600' : 'text-orange-600'
+                }`} />
+                <div className="flex-1 space-y-2">
+                  {/* Warnings */}
+                  {queryValidation.warnings.length > 0 && (
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 mb-1">
+                        Query Quality Suggestions:
+                      </p>
+                      <ul className="text-sm text-gray-700 space-y-1">
+                        {queryValidation.warnings.slice(0, 2).map((warning, index) => (
+                          <li key={index} className="flex items-start gap-1.5">
+                            <span className="text-gray-400 mt-0.5">•</span>
+                            <span>{warning}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Constructive Suggestions */}
+                  {queryValidation.suggestions.length > 0 && (
+                    <div className="text-xs text-gray-600 border-t pt-2 border-gray-200">
+                      <strong>💡 Tip:</strong> {queryValidation.suggestions[0]}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
 
       {/* Active Sources Indicator */}
       <div className="flex items-center gap-2 text-sm text-gray-600">

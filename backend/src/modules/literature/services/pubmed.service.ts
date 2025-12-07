@@ -288,10 +288,12 @@ export class PubMedService {
           );
 
           return batchPapers;
-        } catch (error: any) {
+        } catch (error: unknown) {
+          // Phase 10.106 Phase 5: Use unknown with type narrowing (Netflix-grade)
+          const err = error as { message?: string };
           // Batch failed after all retries - return empty array for this batch
           this.logger.error(
-            `[PubMed efetch] Batch ${batchIndex + 1}/${batches.length} failed after retries: ${error.message}`
+            `[PubMed efetch] Batch ${batchIndex + 1}/${batches.length} failed after retries: ${err.message || 'Unknown error'}`
           );
           return []; // Return empty array instead of throwing
         }
@@ -324,13 +326,15 @@ export class PubMedService {
       this.logger.log(`[PubMed] Returned ${enrichedPapers.length} papers`);
 
       return enrichedPapers;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 5: Use unknown with type narrowing (Netflix-grade)
+      const err = error as { response?: { status?: number }; message?: string };
       // Enterprise-grade error handling: Log but don't throw (graceful degradation)
-      if (error.response?.status === 429) {
+      if (err.response?.status === 429) {
         this.logger.error(`[PubMed] ⚠️  RATE LIMITED (429) - Too many requests`);
       } else {
         this.logger.error(
-          `[PubMed] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
+          `[PubMed] Search failed: ${err.message || 'Unknown error'} (Status: ${err.response?.status || 'N/A'})`,
         );
       }
       return [];
@@ -618,11 +622,13 @@ export class PubMedService {
               isHighQuality: qualityComponents.totalScore >= 50,
             };
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
+          // Phase 10.106 Phase 5: Use unknown with type narrowing (Netflix-grade)
+          const err = error as { message?: string };
           // Silent failure for enrichment (don't block paper if enrichment fails)
           // 📝 TO LOG ENRICHMENT FAILURES: Change to this.logger.warn()
           this.logger.debug(
-            `[OpenAlex] Failed to enrich "${paper.title.substring(0, 30)}...": ${error.message}`,
+            `[OpenAlex] Failed to enrich "${paper.title.substring(0, 30)}...": ${err.message || 'Unknown error'}`,
           );
         }
 

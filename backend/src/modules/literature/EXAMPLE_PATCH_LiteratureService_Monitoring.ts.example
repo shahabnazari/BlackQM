@@ -1,0 +1,395 @@
+/**
+ * PHASE 10.102 PHASE 6: EXAMPLE INTEGRATION PATCH
+ *
+ * This file demonstrates EXACTLY how to integrate Netflix-Grade monitoring
+ * into LiteratureService.ts
+ *
+ * This is NOT a complete file - it shows the CHANGES needed in literature.service.ts
+ * Apply these patterns to integrate monitoring into the actual service.
+ *
+ * Key Changes:
+ * 1. Inject EnhancedMetricsService and StructuredLoggerService
+ * 2. Replace Logger with StructuredLoggerService
+ * 3. Add metrics recording to all critical operations
+ * 4. Use correlation IDs for request tracing
+ * 5. Record business metrics (search count, paper count, source usage)
+ */
+
+import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
+// ... other existing imports ...
+
+// STEP 1: Add monitoring service imports
+import { EnhancedMetricsService } from '../../common/monitoring/enhanced-metrics.service';
+import { StructuredLoggerService } from '../../common/logger/structured-logger.service';
+
+@Injectable()
+export class LiteratureService implements OnModuleInit {
+  // STEP 2: Replace NestJS Logger with StructuredLoggerService
+  // BEFORE:
+  // private readonly logger = new Logger(LiteratureService.name);
+
+  // AFTER:
+  private readonly logger: StructuredLoggerService;
+
+  // ... existing cache, timeout, and other properties ...
+
+  constructor(
+    // ... existing dependencies ...
+
+    // STEP 3: Inject monitoring services
+    private readonly enhancedMetrics: EnhancedMetricsService,
+    structuredLoggerService: StructuredLoggerService,
+  ) {
+    // STEP 4: Initialize logger with service context
+    this.logger = structuredLoggerService.createChild('LiteratureService');
+  }
+
+  // ============================================================================
+  // EXAMPLE 1: searchLiterature() with Full Monitoring Integration
+  // ============================================================================
+
+  async searchLiterature(dto: SearchLiteratureDto, userId?: string): Promise<SearchResult> {
+    const operationStart = Date.now();
+    let searchSucceeded = false;
+    let cacheHit = false;
+
+    try {
+      // STEP 5: Use structured logging with correlation ID
+      await this.logger.logOperation('searchLiterature', async () => {
+        this.logger.info('Literature search initiated', {
+          query: dto.query,
+          userId,
+          sources: dto.sources,
+          maxResults: dto.maxResults,
+          filters: dto.filters,
+        });
+      });
+
+      // Check cache first
+      const cacheKey = this.searchPipeline.generateCacheKey(dto);
+      const cachedResults = await this.cacheService.get<Paper[]>(cacheKey);
+
+      if (cachedResults) {
+        cacheHit = true;
+        searchSucceeded = true;
+
+        // STEP 6: Record cache hit metrics
+        this.enhancedMetrics.recordCacheHit('literature_search');
+
+        this.logger.info('Cache hit for literature search', {
+          query: dto.query,
+          resultCount: cachedResults.length,
+        });
+
+        // Record metrics for each source (from cache)
+        for (const source of dto.sources || ['all']) {
+          const durationSeconds = (Date.now() - operationStart) / 1000;
+          this.enhancedMetrics.recordLiteratureSearch(
+            source,
+            durationSeconds,
+            true, // success
+            true  // cacheHit
+          );
+        }
+
+        return { papers: cachedResults, metadata: {} };
+      }
+
+      // STEP 7: Record cache miss
+      this.enhancedMetrics.recordCacheMiss('literature_search');
+
+      // Execute search through pipeline
+      const results = await this.searchPipeline.executeSearch(dto, userId);
+
+      searchSucceeded = true;
+
+      // STEP 8: Record search metrics for each source
+      for (const source of dto.sources || ['all']) {
+        const durationSeconds = (Date.now() - operationStart) / 1000;
+        this.enhancedMetrics.recordLiteratureSearch(
+          source,
+          durationSeconds,
+          true, // success
+          false // cacheHit
+        );
+      }
+
+      // STEP 9: Record business metrics
+      this.enhancedMetrics.recordBusinessMetric(
+        'search_conducted',
+        1,
+        { query: dto.query, userId: userId || 'anonymous' }
+      );
+
+      this.enhancedMetrics.recordBusinessMetric(
+        'papers_found',
+        results.papers.length,
+        { query: dto.query, sources: dto.sources?.join(',') || 'all' }
+      );
+
+      // Cache results
+      await this.cacheService.set(cacheKey, results.papers, this.CACHE_TTL);
+
+      // STEP 10: Structured logging for success
+      this.logger.info('Literature search completed successfully', {
+        query: dto.query,
+        resultCount: results.papers.length,
+        sources: dto.sources,
+        durationMs: Date.now() - operationStart,
+        cacheHit: false,
+      });
+
+      return results;
+
+    } catch (error) {
+      // STEP 11: Record error metrics
+      searchSucceeded = false;
+
+      for (const source of dto.sources || ['all']) {
+        const durationSeconds = (Date.now() - operationStart) / 1000;
+        this.enhancedMetrics.recordLiteratureSearch(
+          source,
+          durationSeconds,
+          false, // success = false
+          cacheHit
+        );
+      }
+
+      // STEP 12: Structured error logging with full context
+      this.logger.error('Literature search failed', {
+        error,
+        query: dto.query,
+        userId,
+        sources: dto.sources,
+        durationMs: Date.now() - operationStart,
+      });
+
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // EXAMPLE 2: savePaper() with Monitoring Integration
+  // ============================================================================
+
+  async savePaper(dto: SavePaperDto, userId: string): Promise<PaperSaveResult> {
+    const operationStart = Date.now();
+
+    try {
+      // Structured logging with context
+      this.logger.info('Saving paper to library', {
+        paperId: dto.paperId,
+        userId,
+        title: dto.title,
+      });
+
+      // Delegate to specialized service
+      const result = await this.paperDatabase.savePaper(dto, userId);
+
+      // Record business metric
+      this.enhancedMetrics.recordBusinessMetric(
+        'paper_saved',
+        1,
+        { userId, source: dto.source || 'unknown' }
+      );
+
+      // Log success
+      this.logger.info('Paper saved successfully', {
+        paperId: dto.paperId,
+        userId,
+        durationMs: Date.now() - operationStart,
+      });
+
+      return result;
+
+    } catch (error) {
+      // Error logging with full context
+      this.logger.error('Failed to save paper', {
+        error,
+        paperId: dto.paperId,
+        userId,
+        durationMs: Date.now() - operationStart,
+      });
+
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // EXAMPLE 3: getUserPapers() with Monitoring Integration
+  // ============================================================================
+
+  async getUserPapers(userId: string): Promise<Paper[]> {
+    const operationStart = Date.now();
+
+    try {
+      this.logger.info('Fetching user papers', { userId });
+
+      const libraryResult = await this.paperDatabase.getUserLibrary(userId);
+
+      // Record business metric
+      this.enhancedMetrics.recordBusinessMetric(
+        'library_accessed',
+        1,
+        { userId, paperCount: libraryResult.papers.length }
+      );
+
+      this.logger.info('User papers fetched successfully', {
+        userId,
+        paperCount: libraryResult.papers.length,
+        durationMs: Date.now() - operationStart,
+      });
+
+      return libraryResult.papers;
+
+    } catch (error) {
+      this.logger.error('Failed to fetch user papers', {
+        error,
+        userId,
+        durationMs: Date.now() - operationStart,
+      });
+
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // EXAMPLE 4: External API Call Monitoring (OpenAlex enrichment)
+  // ============================================================================
+
+  async enrichPaperMetadata(paperId: string): Promise<Paper> {
+    const operationStart = Date.now();
+
+    try {
+      this.logger.info('Enriching paper metadata', { paperId });
+
+      // This calls OpenAlex API internally
+      const enrichedPaper = await this.openAlexEnrichment.enrichPaper(paperId);
+
+      // Record external API call metric
+      const durationSeconds = (Date.now() - operationStart) / 1000;
+      this.enhancedMetrics.recordExternalApiCall(
+        'openalex',
+        'enrichPaper',
+        durationSeconds,
+        true, // success
+        200   // httpStatus
+      );
+
+      this.logger.info('Paper enriched successfully', {
+        paperId,
+        durationMs: Date.now() - operationStart,
+      });
+
+      return enrichedPaper;
+
+    } catch (error) {
+      const durationSeconds = (Date.now() - operationStart) / 1000;
+
+      // Record failed API call
+      this.enhancedMetrics.recordExternalApiCall(
+        'openalex',
+        'enrichPaper',
+        durationSeconds,
+        false, // success = false
+        error.response?.status || 500
+      );
+
+      this.logger.error('Failed to enrich paper', {
+        error,
+        paperId,
+        durationMs: Date.now() - operationStart,
+      });
+
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // EXAMPLE 5: Search Analytics with Correlation ID Propagation
+  // ============================================================================
+
+  async trackSearchAnalytics(dto: SearchLiteratureDto, results: Paper[], userId?: string): Promise<void> {
+    try {
+      // Use logOperation to maintain correlation ID across async operations
+      await this.logger.logOperation('trackSearchAnalytics', async () => {
+
+        // Record search event
+        await this.searchAnalytics.logSearch({
+          query: dto.query,
+          userId,
+          resultCount: results.length,
+          filters: dto.filters,
+          sources: dto.sources,
+        });
+
+        // Record source usage analytics
+        const sourceBreakdown = this.groupResultsBySource(results);
+        for (const [source, count] of Object.entries(sourceBreakdown)) {
+          this.enhancedMetrics.recordBusinessMetric(
+            'source_usage',
+            count,
+            { source, query: dto.query }
+          );
+        }
+
+        this.logger.info('Search analytics tracked', {
+          query: dto.query,
+          userId,
+          resultCount: results.length,
+        });
+      });
+
+    } catch (error) {
+      // Non-critical error - log but don't throw
+      this.logger.warn('Failed to track search analytics', {
+        error,
+        query: dto.query,
+      });
+    }
+  }
+
+  // ============================================================================
+  // Helper Methods
+  // ============================================================================
+
+  private groupResultsBySource(results: Paper[]): Record<string, number> {
+    return results.reduce((acc, paper) => {
+      const source = paper.source || 'unknown';
+      acc[source] = (acc[source] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }
+}
+
+/**
+ * INTEGRATION CHECKLIST:
+ *
+ * ✅ Step 1: Add EnhancedMetricsService and StructuredLoggerService imports
+ * ✅ Step 2: Replace Logger with StructuredLoggerService
+ * ✅ Step 3: Inject monitoring services in constructor
+ * ✅ Step 4: Initialize logger with service context (createChild)
+ * ✅ Step 5: Use structured logging (logger.info, logger.error, logger.warn)
+ * ✅ Step 6: Record cache hits/misses
+ * ✅ Step 7: Record operation metrics (search, save, etc.)
+ * ✅ Step 8: Record business metrics (user actions, data volume)
+ * ✅ Step 9: Record external API calls
+ * ✅ Step 10: Use logOperation() for correlation ID propagation
+ * ✅ Step 11: Include rich context in all log messages
+ * ✅ Step 12: Measure operation duration (Date.now() - operationStart)
+ *
+ * METRICS TO RECORD:
+ * - recordLiteratureSearch(source, duration, success, cacheHit)
+ * - recordCacheHit(operationType)
+ * - recordCacheMiss(operationType)
+ * - recordBusinessMetric(metricName, value, labels)
+ * - recordExternalApiCall(provider, operation, duration, success, httpStatus)
+ *
+ * LOGGING BEST PRACTICES:
+ * - Always include userId for user actions
+ * - Include operation duration in milliseconds
+ * - Include query/paperId for all paper operations
+ * - Use logger.logOperation() for async operations to maintain correlation ID
+ * - Include error context in error logs (error object + operation details)
+ * - Log at appropriate levels: info (success), warn (non-critical failure), error (critical failure)
+ */

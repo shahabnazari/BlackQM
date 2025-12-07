@@ -1,0 +1,649 @@
+/**
+ * PHASE 10.102 PHASE 6: EXAMPLE INTEGRATION PATCH
+ *
+ * This file demonstrates EXACTLY how to integrate Netflix-Grade monitoring
+ * into UnifiedThemeExtractionService.ts
+ *
+ * This is NOT a complete file - it shows the CHANGES needed in unified-theme-extraction.service.ts
+ * Apply these patterns to integrate monitoring into the actual service.
+ *
+ * Key Changes:
+ * 1. Inject EnhancedMetricsService and StructuredLoggerService
+ * 2. Replace Logger with StructuredLoggerService
+ * 3. Add metrics for theme extraction operations
+ * 4. Track AI API costs and performance
+ * 5. Monitor extraction stages and progress
+ * 6. Record business metrics (themes extracted, papers processed, extraction time)
+ */
+
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+// ... other existing imports ...
+
+// STEP 1: Add monitoring service imports
+import { EnhancedMetricsService } from '../../../common/monitoring/enhanced-metrics.service';
+import { StructuredLoggerService } from '../../../common/logger/structured-logger.service';
+
+@Injectable()
+export class UnifiedThemeExtractionService implements OnModuleInit {
+  // STEP 2: Replace NestJS Logger with StructuredLoggerService
+  // BEFORE:
+  // private readonly logger = new Logger(UnifiedThemeExtractionService.name);
+
+  // AFTER:
+  private readonly logger: StructuredLoggerService;
+
+  // ... existing cache, config, and other properties ...
+
+  constructor(
+    // ... existing dependencies ...
+
+    // STEP 3: Inject monitoring services
+    private readonly enhancedMetrics: EnhancedMetricsService,
+    structuredLoggerService: StructuredLoggerService,
+  ) {
+    // STEP 4: Initialize logger with service context
+    this.logger = structuredLoggerService.createChild('UnifiedThemeExtractionService');
+  }
+
+  // ============================================================================
+  // EXAMPLE 1: extractThemesFromPapers() - Main Entry Point with Full Monitoring
+  // ============================================================================
+
+  async extractThemesFromPapers(
+    paperIds: number[],
+    options: ExtractionOptions,
+    onProgress?: (message: TransparentProgressMessage) => void,
+    userId?: string
+  ): Promise<UnifiedTheme[]> {
+    const operationStart = Date.now();
+    let extractionSucceeded = false;
+    let themesExtracted = 0;
+
+    try {
+      // STEP 5: Structured logging with rich context
+      this.logger.info('Theme extraction initiated', {
+        paperCount: paperIds.length,
+        purpose: options.purpose,
+        mode: options.mode,
+        userId,
+        targetThemes: options.targetThemes,
+      });
+
+      // STEP 6: Record business metric - extraction initiated
+      this.enhancedMetrics.recordBusinessMetric(
+        'theme_extraction_initiated',
+        1,
+        {
+          userId: userId || 'anonymous',
+          purpose: options.purpose,
+          paperCount: paperIds.length.toString(),
+        }
+      );
+
+      // Execute extraction with progress tracking
+      const themes = await this.executeExtractionPipeline(
+        paperIds,
+        options,
+        onProgress,
+        userId
+      );
+
+      extractionSucceeded = true;
+      themesExtracted = themes.length;
+
+      // STEP 7: Record theme extraction metrics
+      const durationSeconds = (Date.now() - operationStart) / 1000;
+      this.enhancedMetrics.recordThemeExtraction(
+        paperIds.length,
+        options.mode || 'standard',
+        durationSeconds,
+        true // success
+      );
+
+      // STEP 8: Record business metrics - extraction completed
+      this.enhancedMetrics.recordBusinessMetric(
+        'themes_extracted',
+        themes.length,
+        {
+          userId: userId || 'anonymous',
+          purpose: options.purpose,
+          mode: options.mode || 'standard',
+        }
+      );
+
+      this.enhancedMetrics.recordBusinessMetric(
+        'papers_processed',
+        paperIds.length,
+        {
+          purpose: options.purpose,
+          extractionMode: options.mode || 'standard',
+        }
+      );
+
+      // STEP 9: Log success with comprehensive details
+      this.logger.info('Theme extraction completed successfully', {
+        paperCount: paperIds.length,
+        themesExtracted: themes.length,
+        purpose: options.purpose,
+        mode: options.mode,
+        durationMs: Date.now() - operationStart,
+        durationSeconds: durationSeconds.toFixed(2),
+        userId,
+      });
+
+      return themes;
+
+    } catch (error) {
+      extractionSucceeded = false;
+
+      // STEP 10: Record failed extraction metrics
+      const durationSeconds = (Date.now() - operationStart) / 1000;
+      this.enhancedMetrics.recordThemeExtraction(
+        paperIds.length,
+        options.mode || 'standard',
+        durationSeconds,
+        false // success = false
+      );
+
+      // STEP 11: Structured error logging with full context
+      this.logger.error('Theme extraction failed', {
+        error,
+        paperCount: paperIds.length,
+        purpose: options.purpose,
+        mode: options.mode,
+        userId,
+        durationMs: Date.now() - operationStart,
+        partialThemesExtracted: themesExtracted,
+      });
+
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // EXAMPLE 2: Stage 1 - Initial Coding with AI API Monitoring
+  // ============================================================================
+
+  async performInitialCoding(
+    excerpts: string[],
+    purpose: ResearchPurpose,
+    userId?: string
+  ): Promise<InitialCode[]> {
+    const operationStart = Date.now();
+    let aiCallSucceeded = false;
+
+    try {
+      this.logger.info('Stage 1: Initial coding started', {
+        excerptCount: excerpts.length,
+        purpose,
+        userId,
+      });
+
+      // STEP 12: Monitor AI API call (OpenAI GPT-4)
+      const prompt = this.buildInitialCodingPrompt(excerpts, purpose);
+
+      // Call OpenAI API
+      const apiCallStart = Date.now();
+      const response = await this.apiRateLimiter.callOpenAI(
+        'gpt-4',
+        prompt,
+        { temperature: 0.7, max_tokens: 2000 }
+      );
+      const apiCallDuration = (Date.now() - apiCallStart) / 1000;
+
+      aiCallSucceeded = true;
+
+      // STEP 13: Record AI API call metrics with cost
+      const estimatedCost = this.estimateOpenAICost('gpt-4', prompt, response);
+      this.enhancedMetrics.recordAIApiCall(
+        'openai',
+        'initial_coding',
+        'gpt-4',
+        apiCallDuration,
+        true, // success
+        estimatedCost
+      );
+
+      // Parse response into codes
+      const initialCodes = this.parseInitialCodingResponse(response);
+
+      this.logger.info('Stage 1: Initial coding completed', {
+        excerptCount: excerpts.length,
+        codesGenerated: initialCodes.length,
+        aiCallDurationMs: (apiCallDuration * 1000).toFixed(2),
+        estimatedCost: `$${estimatedCost.toFixed(4)}`,
+        userId,
+      });
+
+      return initialCodes;
+
+    } catch (error) {
+      const apiCallDuration = (Date.now() - operationStart) / 1000;
+
+      // Record failed AI API call
+      this.enhancedMetrics.recordAIApiCall(
+        'openai',
+        'initial_coding',
+        'gpt-4',
+        apiCallDuration,
+        false, // success = false
+        0 // cost (no charge on failure)
+      );
+
+      this.logger.error('Stage 1: Initial coding failed', {
+        error,
+        excerptCount: excerpts.length,
+        purpose,
+        userId,
+      });
+
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // EXAMPLE 3: Stage 2 - Candidate Theme Generation with Progress Tracking
+  // ============================================================================
+
+  async generateCandidateThemes(
+    initialCodes: InitialCode[],
+    purpose: ResearchPurpose,
+    onProgress?: (message: TransparentProgressMessage) => void,
+    userId?: string
+  ): Promise<CandidateThemesResult> {
+    const operationStart = Date.now();
+
+    try {
+      this.logger.info('Stage 2: Candidate theme generation started', {
+        initialCodeCount: initialCodes.length,
+        purpose,
+        userId,
+      });
+
+      // STEP 14: Send progress update to frontend
+      if (onProgress) {
+        onProgress({
+          stage: 'candidate_generation',
+          progress: 0,
+          message: `Analyzing ${initialCodes.length} initial codes...`,
+          details: { codeCount: initialCodes.length },
+        });
+      }
+
+      // Cluster codes into candidate themes
+      const clusteringStart = Date.now();
+      const candidateThemes = await this.clusterCodesIntoThemes(
+        initialCodes,
+        purpose,
+        onProgress
+      );
+      const clusteringDuration = Date.now() - clusteringStart;
+
+      // STEP 15: Record clustering performance metric
+      this.enhancedMetrics.recordBusinessMetric(
+        'theme_clustering_duration_ms',
+        clusteringDuration,
+        {
+          purpose,
+          codeCount: initialCodes.length.toString(),
+          themesGenerated: candidateThemes.length.toString(),
+        }
+      );
+
+      if (onProgress) {
+        onProgress({
+          stage: 'candidate_generation',
+          progress: 100,
+          message: `Generated ${candidateThemes.length} candidate themes`,
+          details: { themesGenerated: candidateThemes.length },
+        });
+      }
+
+      this.logger.info('Stage 2: Candidate theme generation completed', {
+        initialCodeCount: initialCodes.length,
+        candidateThemesGenerated: candidateThemes.length,
+        clusteringDurationMs: clusteringDuration,
+        totalDurationMs: Date.now() - operationStart,
+        userId,
+      });
+
+      return {
+        candidateThemes,
+        clusteringMetrics: {
+          duration: clusteringDuration,
+          inputCodes: initialCodes.length,
+          outputThemes: candidateThemes.length,
+        },
+      };
+
+    } catch (error) {
+      this.logger.error('Stage 2: Candidate theme generation failed', {
+        error,
+        initialCodeCount: initialCodes.length,
+        purpose,
+        userId,
+      });
+
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // EXAMPLE 4: Stage 3 - Theme Deduplication with Cache Monitoring
+  // ============================================================================
+
+  async deduplicateThemes(
+    candidateThemes: CandidateTheme[],
+    similarityThreshold: number,
+    userId?: string
+  ): Promise<UnifiedTheme[]> {
+    const operationStart = Date.now();
+
+    try {
+      this.logger.info('Stage 3: Theme deduplication started', {
+        candidateThemeCount: candidateThemes.length,
+        similarityThreshold,
+        userId,
+      });
+
+      // STEP 16: Check deduplication cache
+      const cacheKey = this.generateDeduplicationCacheKey(candidateThemes, similarityThreshold);
+      const cachedResult = await this.cacheService.get<UnifiedTheme[]>(cacheKey);
+
+      if (cachedResult) {
+        // Record cache hit
+        this.enhancedMetrics.recordCacheHit('theme_deduplication');
+
+        this.logger.info('Stage 3: Deduplication cache hit', {
+          candidateThemeCount: candidateThemes.length,
+          deduplicatedThemeCount: cachedResult.length,
+          userId,
+        });
+
+        return cachedResult;
+      }
+
+      // Record cache miss
+      this.enhancedMetrics.recordCacheMiss('theme_deduplication');
+
+      // Perform deduplication
+      const deduplicatedThemes = await this.themeDeduplication.deduplicate(
+        candidateThemes,
+        similarityThreshold
+      );
+
+      // Cache result
+      await this.cacheService.set(cacheKey, deduplicatedThemes, 3600);
+
+      // STEP 17: Record deduplication metrics
+      const duplicatesRemoved = candidateThemes.length - deduplicatedThemes.length;
+      this.enhancedMetrics.recordBusinessMetric(
+        'duplicates_removed',
+        duplicatesRemoved,
+        {
+          originalCount: candidateThemes.length.toString(),
+          finalCount: deduplicatedThemes.length.toString(),
+          userId: userId || 'anonymous',
+        }
+      );
+
+      this.logger.info('Stage 3: Theme deduplication completed', {
+        candidateThemeCount: candidateThemes.length,
+        deduplicatedThemeCount: deduplicatedThemes.length,
+        duplicatesRemoved,
+        durationMs: Date.now() - operationStart,
+        userId,
+      });
+
+      return deduplicatedThemes;
+
+    } catch (error) {
+      this.logger.error('Stage 3: Theme deduplication failed', {
+        error,
+        candidateThemeCount: candidateThemes.length,
+        userId,
+      });
+
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // EXAMPLE 5: Q-Methodology Pipeline with Purpose-Specific Monitoring
+  // ============================================================================
+
+  async executeQMethodologyPipeline(
+    paperIds: number[],
+    options: ExtractionOptions,
+    onProgress?: (message: TransparentProgressMessage) => void,
+    userId?: string
+  ): Promise<UnifiedTheme[]> {
+    const operationStart = Date.now();
+
+    try {
+      // STEP 18: Log purpose-specific pipeline execution
+      this.logger.info('Q-Methodology pipeline initiated', {
+        paperCount: paperIds.length,
+        targetStatements: options.targetThemes,
+        userId,
+      });
+
+      // Record purpose-specific metric
+      this.enhancedMetrics.recordBusinessMetric(
+        'q_methodology_extraction_initiated',
+        1,
+        {
+          userId: userId || 'anonymous',
+          paperCount: paperIds.length.toString(),
+        }
+      );
+
+      // Execute Q-Methodology pipeline
+      const themes = await this.qMethodologyPipeline.execute(
+        paperIds,
+        options,
+        onProgress,
+        userId
+      );
+
+      // Validate Q-Methodology requirements (30-80 statements)
+      const isValid = themes.length >= 30 && themes.length <= 80;
+
+      // STEP 19: Record Q-Methodology specific metrics
+      this.enhancedMetrics.recordBusinessMetric(
+        'q_statements_generated',
+        themes.length,
+        {
+          userId: userId || 'anonymous',
+          paperCount: paperIds.length.toString(),
+          valid: isValid.toString(),
+        }
+      );
+
+      if (!isValid) {
+        this.logger.warn('Q-Methodology statement count outside recommended range', {
+          statementsGenerated: themes.length,
+          recommendedRange: '30-80',
+          userId,
+        });
+      }
+
+      const durationSeconds = (Date.now() - operationStart) / 1000;
+
+      this.logger.info('Q-Methodology pipeline completed', {
+        paperCount: paperIds.length,
+        statementsGenerated: themes.length,
+        validCount: isValid,
+        durationMs: Date.now() - operationStart,
+        durationSeconds: durationSeconds.toFixed(2),
+        userId,
+      });
+
+      return themes;
+
+    } catch (error) {
+      this.logger.error('Q-Methodology pipeline failed', {
+        error,
+        paperCount: paperIds.length,
+        userId,
+      });
+
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // EXAMPLE 6: External API Cost Tracking (OpenAI)
+  // ============================================================================
+
+  private estimateOpenAICost(model: string, prompt: string, response: string): number {
+    // Pricing per 1K tokens (as of 2024)
+    const pricing = {
+      'gpt-4': { input: 0.03, output: 0.06 },
+      'gpt-3.5-turbo': { input: 0.0015, output: 0.002 },
+    };
+
+    const modelPricing = pricing[model] || pricing['gpt-3.5-turbo'];
+
+    // Rough token estimation (1 token ≈ 4 characters)
+    const inputTokens = Math.ceil(prompt.length / 4);
+    const outputTokens = Math.ceil(response.length / 4);
+
+    const inputCost = (inputTokens / 1000) * modelPricing.input;
+    const outputCost = (outputTokens / 1000) * modelPricing.output;
+
+    return inputCost + outputCost;
+  }
+
+  // ============================================================================
+  // EXAMPLE 7: Saturation Analysis Monitoring (Qualitative Analysis)
+  // ============================================================================
+
+  async analyzeSaturation(
+    themes: UnifiedTheme[],
+    paperIds: number[],
+    userId?: string
+  ): Promise<SaturationData> {
+    try {
+      this.logger.info('Saturation analysis started', {
+        themeCount: themes.length,
+        paperCount: paperIds.length,
+        userId,
+      });
+
+      const saturationData = await this.qualitativeAnalysisPipeline.analyzeSaturation(
+        themes,
+        paperIds
+      );
+
+      // STEP 20: Record saturation metrics
+      this.enhancedMetrics.recordBusinessMetric(
+        'saturation_achieved',
+        saturationData.isSaturated ? 1 : 0,
+        {
+          themeCount: themes.length.toString(),
+          paperCount: paperIds.length.toString(),
+          userId: userId || 'anonymous',
+        }
+      );
+
+      this.logger.info('Saturation analysis completed', {
+        isSaturated: saturationData.isSaturated,
+        saturationRate: saturationData.saturationRate,
+        themeCount: themes.length,
+        userId,
+      });
+
+      return saturationData;
+
+    } catch (error) {
+      this.logger.error('Saturation analysis failed', {
+        error,
+        themeCount: themes.length,
+        paperCount: paperIds.length,
+        userId,
+      });
+
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // Helper Methods
+  // ============================================================================
+
+  private buildInitialCodingPrompt(excerpts: string[], purpose: ResearchPurpose): string {
+    // Implementation...
+    return '';
+  }
+
+  private parseInitialCodingResponse(response: string): InitialCode[] {
+    // Implementation...
+    return [];
+  }
+
+  private async clusterCodesIntoThemes(
+    codes: InitialCode[],
+    purpose: ResearchPurpose,
+    onProgress?: (message: TransparentProgressMessage) => void
+  ): Promise<CandidateTheme[]> {
+    // Implementation...
+    return [];
+  }
+
+  private generateDeduplicationCacheKey(themes: CandidateTheme[], threshold: number): string {
+    // Implementation...
+    return '';
+  }
+}
+
+/**
+ * INTEGRATION CHECKLIST FOR THEME EXTRACTION:
+ *
+ * ✅ Step 1: Add EnhancedMetricsService and StructuredLoggerService imports
+ * ✅ Step 2: Replace Logger with StructuredLoggerService
+ * ✅ Step 3: Inject monitoring services in constructor
+ * ✅ Step 4: Initialize logger with createChild('UnifiedThemeExtractionService')
+ * ✅ Step 5: Log extraction initiation with context
+ * ✅ Step 6: Record business metrics (extraction initiated)
+ * ✅ Step 7: Record theme extraction metrics (duration, success, mode)
+ * ✅ Step 8: Record business metrics (themes extracted, papers processed)
+ * ✅ Step 9: Log success with comprehensive details
+ * ✅ Step 10: Record failed extraction metrics
+ * ✅ Step 11: Error logging with full context
+ * ✅ Step 12: Monitor AI API calls (OpenAI GPT-4)
+ * ✅ Step 13: Record AI API metrics with cost tracking
+ * ✅ Step 14: Send progress updates to frontend via WebSocket
+ * ✅ Step 15: Record clustering performance metrics
+ * ✅ Step 16: Monitor cache hits/misses for deduplication
+ * ✅ Step 17: Record deduplication metrics (duplicates removed)
+ * ✅ Step 18: Log purpose-specific pipeline execution
+ * ✅ Step 19: Record purpose-specific metrics (Q-Methodology, Survey, etc.)
+ * ✅ Step 20: Record saturation metrics (for Qualitative Analysis)
+ *
+ * METRICS TO RECORD:
+ * - recordThemeExtraction(paperCount, mode, duration, success)
+ * - recordAIApiCall(provider, operation, model, duration, success, cost)
+ * - recordBusinessMetric(metricName, value, labels)
+ * - recordCacheHit(operationType)
+ * - recordCacheMiss(operationType)
+ *
+ * BUSINESS METRICS TO TRACK:
+ * - theme_extraction_initiated (count)
+ * - themes_extracted (count with labels: purpose, mode, userId)
+ * - papers_processed (count with labels: purpose, mode)
+ * - theme_clustering_duration_ms (duration)
+ * - duplicates_removed (count)
+ * - q_statements_generated (count with validation)
+ * - saturation_achieved (boolean as 0/1)
+ *
+ * LOGGING BEST PRACTICES:
+ * - Always include userId for user actions
+ * - Include operation duration in milliseconds
+ * - Include paperCount, themeCount for all theme operations
+ * - Include purpose and mode for context
+ * - Log each stage of extraction pipeline (Stage 1, 2, 3, etc.)
+ * - Include AI costs in logs for transparency
+ * - Log saturation analysis results (for qualitative analysis)
+ * - Use logger.logOperation() to maintain correlation ID across async operations
+ */

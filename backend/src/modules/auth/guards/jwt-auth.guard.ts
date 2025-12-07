@@ -71,16 +71,42 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     // This enables testing theme extraction without authentication in development
     const devAuthBypass = process.env.DEV_AUTH_BYPASS === 'true';
     const hasDevBypassHeader = headers['x-dev-auth-bypass'] === 'true';
-    if (devAuthBypass && this.isDevelopment && hasDevBypassHeader) {
+
+    // CRITICAL-005 FIX: Triple-check we're truly in development to prevent production bypass
+    const isReallyDevelopment =
+      process.env.NODE_ENV === 'development' &&
+      !process.env.PRODUCTION &&
+      !process.env.VERCEL_ENV &&
+      !process.env.RAILWAY_ENVIRONMENT &&
+      !process.env.RENDER_EXTERNAL_URL;
+
+    // SECURITY: Fail loudly if bypass is attempted in production
+    if (devAuthBypass && hasDevBypassHeader && !isReallyDevelopment) {
+      this.logger.logSecurity(
+        'CRITICAL_SECURITY_VIOLATION',
+        {
+          message: 'DEV_AUTH_BYPASS attempted in non-development environment!',
+          nodeEnv: process.env.NODE_ENV,
+          hasVercel: !!process.env.VERCEL_ENV,
+          hasRailway: !!process.env.RAILWAY_ENVIRONMENT,
+          ip,
+          url,
+        },
+        'critical',
+      );
+      // Do NOT bypass - let the request proceed to normal auth
+    }
+
+    if (devAuthBypass && isReallyDevelopment && hasDevBypassHeader) {
       this.logger.warn(
-        'DEV_AUTH_BYPASS enabled - allowing unauthenticated request',
+        '⚠️  DEV_AUTH_BYPASS enabled - THIS MUST NEVER HAPPEN IN PRODUCTION',
         'JwtAuthGuard',
       );
       // Attach a mock user to the request for downstream use
       (request as Request & { user: ValidatedUser }).user = {
         userId: 'dev-user-bypass',
         email: 'dev@localhost',
-        name: 'Dev User',
+        name: 'Dev User (Auth Bypassed)',
         role: 'researcher',
         emailVerified: true,
         twoFactorEnabled: false,

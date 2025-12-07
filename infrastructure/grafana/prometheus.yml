@@ -1,0 +1,62 @@
+# Prometheus Configuration for VQMethod Backend Monitoring
+# Phase 10.102 Phase 6: Netflix-Grade Observability
+
+global:
+  scrape_interval: 15s      # How often to scrape targets
+  evaluation_interval: 15s  # How often to evaluate rules
+
+  # Attach these labels to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager).
+  external_labels:
+    monitor: 'vqmethod-monitor'
+    environment: 'development'  # Change to 'production' in prod
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - 'alert-rules.yml'
+
+# Scrape configurations
+scrape_configs:
+  # VQMethod Backend - Literature Search Metrics
+  - job_name: 'vqmethod-backend'
+    static_configs:
+      - targets: ['host.docker.internal:3001']  # macOS/Windows Docker
+        # For Linux, replace with your machine's IP address: ['192.168.1.100:3001']
+        labels:
+          service: 'backend'
+          app: 'vqmethod'
+    metrics_path: '/api/metrics/prometheus'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Prometheus Self-Monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+    scrape_interval: 30s
+
+  # Grafana Self-Monitoring (optional)
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+        labels:
+          service: 'grafana'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+# Alertmanager configuration (optional - uncomment to enable)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#             - alertmanager:9093
+
+# Storage configuration
+storage:
+  tsdb:
+    path: /prometheus
+    retention:
+      time: 30d  # Keep metrics for 30 days
+      size: 10GB # Limit storage to 10GB

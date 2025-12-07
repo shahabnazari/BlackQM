@@ -31,6 +31,8 @@ import { QualitativeAnalysisPipelineService } from './qualitative-analysis-pipel
 // Phase 10.98 FIX: Local code extraction and theme labeling services (NO AI, $0.00 cost)
 import { LocalCodeExtractionService } from './local-code-extraction.service';
 import { LocalThemeLabelingService } from './local-theme-labeling.service';
+// Netflix-Grade: Import type-safe array utilities (Phase 10.103)
+import { safeGet, assertGet } from '../../../common/utils/array-utils';
 
 // Phase 10.943: Import type-safe interfaces (eliminates all `any` types)
 // Phase 10.101 Task 3 - Phase 9: PrismaUnifiedThemeWithRelations and PrismaThemeSourceRelation
@@ -593,7 +595,11 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
         if (!acc[source.type]) {
           acc[source.type] = [];
         }
-        acc[source.type].push(source);
+        // Netflix-Grade: Safe access after null check
+        const typeArray = acc[source.type];
+        if (typeArray) {
+          typeArray.push(source);
+        }
         return acc;
       },
       {} as Record<string, SourceContent[]>,
@@ -795,7 +801,7 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
     sources: SourceContent[],
     options: ExtractionOptions = {},
     userId?: string,
-  ): Promise<{ themes: UnifiedTheme[]; stats: BatchExtractionStats }> {
+  ): Promise<{ themes: UnifiedTheme[]; stats: BatchExtractionStats & { themesExtracted: number } }> {
     // Phase 10.101 Task 3 - Phase 6: Delegate batch orchestration to BatchExtractionOrchestratorService
     const batchResult = await this.batchOrchestrator.extractInBatches(
       sources,
@@ -956,11 +962,13 @@ Return JSON format:
         this.logger.log(
           `      • Tokens - Total: ${response.usage?.total_tokens || 'N/A'}`,
         );
+        // Netflix-Grade: Safe access to choices array
+        const firstChoice = assertGet(response.choices, 0, 'AI response');
         this.logger.log(
-          `      • Finish reason: ${response.choices[0].finish_reason}`,
+          `      • Finish reason: ${firstChoice.finish_reason}`,
         );
 
-        const result = JSON.parse(response.choices[0].message.content || '{}');
+        const result = JSON.parse(firstChoice.message.content || '{}');
         const themesExtracted = result.themes?.length || 0;
         this.logger.log(`      • Themes extracted: ${themesExtracted}`);
 
@@ -1193,16 +1201,19 @@ Return JSON format:
     const timestamps: Array<{ start: number; end: number; text: string }> = [];
 
     for (let i = 0; i < segments.length; i++) {
-      const text = segments[i].text.toLowerCase();
+      // Netflix-Grade: Safe array access for segments
+      const segment = safeGet(segments, i, { timestamp: 0, text: '' });
+      const text = segment.text.toLowerCase();
       const hasKeyword = keywords.some((k) => text.includes(k.toLowerCase()));
 
       if (hasKeyword) {
-        const start = segments[i].timestamp;
-        const end = segments[i + 1]?.timestamp || start + 10;
+        const start = segment.timestamp;
+        const nextSegment = safeGet(segments, i + 1, null as any);
+        const end = nextSegment?.timestamp || start + 10;
         timestamps.push({
           start,
           end,
-          text: segments[i].text,
+          text: segment.text,
         });
       }
     }
@@ -2067,18 +2078,22 @@ Return JSON format:
     // Log sample of first source
     if (sources.length > 0) {
       this.logger.log(`\n📄 Sample of first source:`);
+      // Netflix-Grade: Safe access to first source
+      const firstSource = assertGet(sources, 0, 'logContentBreakdown');
+      const titlePreview = firstSource.title.substring(0, 80);
+      const titleSuffix = firstSource.title.length > 80 ? '...' : '';
       this.logger.log(
-        `   • Title: "${sources[0].title.substring(0, 80)}${sources[0].title.length > 80 ? '...' : ''}"`,
+        `   • Title: "${titlePreview}${titleSuffix}"`,
       );
-      this.logger.log(`   • Type: ${sources[0].type}`);
+      this.logger.log(`   • Type: ${firstSource.type}`);
       this.logger.log(
-        `   • Content type: ${sources[0].metadata?.contentType || 'unknown'}`,
+        `   • Content type: ${firstSource.metadata?.contentType || 'unknown'}`,
       );
       this.logger.log(
-        `   • Content length: ${(sources[0].content?.length || 0).toLocaleString()} chars`,
+        `   • Content length: ${(firstSource.content?.length || 0).toLocaleString()} chars`,
       );
       this.logger.log(
-        `   • Has full-text: ${sources[0].metadata?.hasFullText || false}`,
+        `   • Has full-text: ${firstSource.metadata?.hasFullText || false}`,
       );
     }
 
@@ -2301,17 +2316,21 @@ Return JSON format:
       `📊 Saturation Analysis: Sorted ${sortedSources.length} sources by contribution`,
     );
     if (sortedSources.length > 0) {
+      // Netflix-Grade: Safe access to top contributors
+      const topSource = assertGet(sortedSources, 0, 'saturation analysis');
       this.logger.log(
-        `   • Top contributor: "${sortedSources[0].title.substring(0, 60)}..." (${sourceContribution.get(sortedSources[0].id)} themes)`,
+        `   • Top contributor: "${topSource.title.substring(0, 60)}..." (${sourceContribution.get(topSource.id)} themes)`,
       );
       if (sortedSources.length > 1) {
+        const secondSource = assertGet(sortedSources, 1, 'saturation analysis');
         this.logger.log(
-          `   • 2nd contributor: "${sortedSources[1].title.substring(0, 60)}..." (${sourceContribution.get(sortedSources[1].id)} themes)`,
+          `   • 2nd contributor: "${secondSource.title.substring(0, 60)}..." (${sourceContribution.get(secondSource.id)} themes)`,
         );
       }
       if (sortedSources.length > 2) {
+        const thirdSource = assertGet(sortedSources, 2, 'saturation analysis');
         this.logger.log(
-          `   • 3rd contributor: "${sortedSources[2].title.substring(0, 60)}..." (${sourceContribution.get(sortedSources[2].id)} themes)`,
+          `   • 3rd contributor: "${thirdSource.title.substring(0, 60)}..." (${sourceContribution.get(thirdSource.id)} themes)`,
         );
       }
     }
@@ -2321,7 +2340,8 @@ Return JSON format:
     const discoveredThemeIds = new Set<string>();
 
     for (let i = 0; i < sortedSources.length; i++) {
-      const source = sortedSources[i];
+      // Netflix-Grade: Safe array access in loop
+      const source = assertGet(sortedSources, i, 'saturation curve');
 
       // Find themes where this source is the PRIMARY contributor
       const primaryThemesFromSource = themes.filter(
@@ -2642,8 +2662,10 @@ Return JSON format:
             );
 
             // Average all chunk embeddings
-            embedding = chunkEmbeddings[0].map((_, i) => {
-              const sum = chunkEmbeddings.reduce((acc, emb) => acc + emb[i], 0);
+            // Netflix-Grade: Safe access to first chunk embedding
+            const firstEmbedding = assertGet(chunkEmbeddings, 0, 'chunk embedding');
+            embedding = firstEmbedding.map((_, i) => {
+              const sum = chunkEmbeddings.reduce((acc, emb) => acc + safeGet(emb, i, 0), 0);
               return sum / chunkEmbeddings.length;
             });
 
@@ -3244,9 +3266,12 @@ Return JSON format:
       // Find two most similar clusters
       for (let i = 0; i < clusters.length; i++) {
         for (let j = i + 1; j < clusters.length; j++) {
+          // Netflix-Grade: Safe array access for cluster centroids
+          const clusterI = assertGet(clusters, i, 'cluster merge');
+          const clusterJ = assertGet(clusters, j, 'cluster merge');
           const distance = this.embeddingOrchestrator.cosineSimilarity(
-            clusters[i].centroid,
-            clusters[j].centroid,
+            clusterI.centroid,
+            clusterJ.centroid,
           );
 
           if (distance < minDistance) {
@@ -3257,16 +3282,20 @@ Return JSON format:
       }
 
       // Merge the two closest clusters
-      const [i, j] = mergeIndices;
-      const mergedCodes = [...clusters[i].codes, ...clusters[j].codes];
+      // Netflix-Grade: Safe access to merge indices
+      const mergeI = safeGet(mergeIndices, 0, 0);
+      const mergeJ = safeGet(mergeIndices, 1, 1);
+      const clusterI = assertGet(clusters, mergeI, 'cluster merge');
+      const clusterJ = assertGet(clusters, mergeJ, 'cluster merge');
+      const mergedCodes = [...clusterI.codes, ...clusterJ.codes];
       const mergedCentroid = this.embeddingOrchestrator.calculateCentroid([
-        clusters[i].centroid,
-        clusters[j].centroid,
+        clusterI.centroid,
+        clusterJ.centroid,
       ]);
 
       // Remove old clusters and add merged
-      clusters.splice(Math.max(i, j), 1);
-      clusters.splice(Math.min(i, j), 1);
+      clusters.splice(Math.max(mergeI, mergeJ), 1);
+      clusters.splice(Math.min(mergeI, mergeJ), 1);
       clusters.push({ codes: mergedCodes, centroid: mergedCentroid });
     }
 
@@ -3887,7 +3916,8 @@ Return JSON:
       const rejectedThemeDetails: any[] = [];
 
       for (let i = 0; i < themesToLog.length; i++) {
-        const theme = themesToLog[i];
+        // Netflix-Grade: Safe array access for themes to log
+        const theme = assertGet(themesToLog, i, 'theme logging');
 
         // Phase 10 Day 31.3: Reuse stored metrics if available, otherwise calculate (DRY principle)
         let coherence: number;
@@ -4381,11 +4411,14 @@ Return JSON:
 
     // Calculate similarity for all unique code pairs: C(n,2) = n(n-1)/2
     for (let i = 0; i < theme.codes.length; i++) {
-      const embedding1 = codeEmbeddings.get(theme.codes[i].id);
+      // Netflix-Grade: Safe array access for theme codes
+      const code1 = safeGet(theme.codes, i, { id: '' } as any);
+      const embedding1 = codeEmbeddings.get(code1.id);
       if (!embedding1) continue; // Skip codes without embeddings
 
       for (let j = i + 1; j < theme.codes.length; j++) {
-        const embedding2 = codeEmbeddings.get(theme.codes[j].id);
+        const code2 = safeGet(theme.codes, j, { id: '' } as any);
+        const embedding2 = codeEmbeddings.get(code2.id);
         if (!embedding2) continue; // Skip codes without embeddings
 
         try {
@@ -4407,7 +4440,7 @@ Return JSON:
           const errorMessage = error instanceof Error ? error.message : String(error);
           this.logger.error(
             `[Coherence] Failed to calculate similarity between codes ` +
-            `"${theme.codes[i].label}" and "${theme.codes[j].label}": ${errorMessage}. ` +
+            `"${code1.label}" and "${code2.label}": ${errorMessage}. ` +
             `Skipping this pair (${pairCount}/${Math.floor(theme.codes.length * (theme.codes.length - 1) / 2)} total).`,
           );
           // Continue processing remaining pairs (graceful degradation)

@@ -11,6 +11,18 @@ import { ENRICHMENT_TIMEOUT, FULL_TEXT_TIMEOUT } from '../constants/http-config.
 const pdfParse = require('pdf-parse');
 
 /**
+ * Phase 10.106 Phase 10: Unpaywall API type definitions
+ * Netflix-grade: Full type safety for external API
+ */
+interface OALocation {
+  url_for_pdf?: string;
+  url_for_landing_page?: string;
+  is_oa?: boolean;
+  license?: string;
+  repository_institution?: string;
+}
+
+/**
  * Phase 10 Day 5.15+ (Enhanced Nov 18, 2025): Full-Text Parsing Service (PDF + HTML Waterfall)
  *
  * Enterprise-grade full-text fetching with 4-tier waterfall strategy:
@@ -86,7 +98,7 @@ export class PDFParsingService {
       } else if (data.oa_locations && data.oa_locations.length > 0) {
         // Find first location with PDF URL
         const pdfLocation = data.oa_locations.find(
-          (loc: any) => loc.url_for_pdf,
+          (loc: OALocation) => loc.url_for_pdf,
         );
         if (pdfLocation) {
           pdfUrl = pdfLocation.url_for_pdf;
@@ -730,9 +742,11 @@ export class PDFParsingService {
         // DEF-001: Validate URL format before processing
         try {
           new URL(paper.url); // Throws if invalid
-        } catch (urlError: any) {
+        } catch (urlError: unknown) {
+          // Phase 10.106 Phase 10: Use unknown with type narrowing
+          const err = urlError as { message?: string };
           this.logger.warn(
-            `⏭️  Tier 4 SKIPPED: Invalid URL format: ${urlError.message}`,
+            `⏭️  Tier 4 SKIPPED: Invalid URL format: ${err.message || 'Unknown error'}`,
           );
           // Continue to final failure handling
         }
@@ -778,8 +792,8 @@ export class PDFParsingService {
                 );
               }
             }
-          } catch (error: any) {
-            // TYPE-001: Add error type annotation
+          } catch (error: unknown) {
+            // Phase 10.106 Phase 8: Use unknown with type narrowing
             const errorMsg =
               error instanceof Error ? error.message : String(error);
             this.logger.log(

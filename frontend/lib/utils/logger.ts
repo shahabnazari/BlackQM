@@ -1,5 +1,5 @@
 /**
- * Enterprise Logger Utility - Phase 10.1 Day 9, Enhanced Phase 10.92 Day 4
+ * Enterprise Logger Utility - Phase 10.1 Day 9, Enhanced Phase 10.92 Day 4, Netflix-Grade Dec 4 2025
  *
  * Production-grade centralized logging system with:
  * - 5 log levels (DEBUG, INFO, WARN, ERROR, FATAL)
@@ -13,16 +13,22 @@
  * - Graceful fallback when backend endpoint unavailable (Phase 10.92 Day 4)
  * - One-time warning for missing endpoint (Phase 10.92 Day 4)
  * - Runtime enable/disable backend logging (Phase 10.92 Day 4)
+ * - Netflix-Grade: Uses apiClient for authenticated requests (Dec 4 2025)
+ * - Netflix-Grade: Automatic JWT token refresh on expiration (Dec 4 2025)
+ * - Netflix-Grade: Retry logic with exponential backoff (Dec 4 2025)
  * - Global error handlers (catches unhandled errors and promise rejections)
  * - User action tracking for analytics
  * - Statistics dashboard (getStats() method)
  * - Development helper (window.logger in dev mode)
  * - Cleanup on destroy (stops timers, flushes buffer)
  *
- * @version 2.1.0
- * @date November 16, 2025 (Phase 10.92 Day 4)
+ * @version 2.2.0
+ * @date December 4, 2025 (Netflix-Grade Authentication)
  * @enterprise-grade YES
  */
+
+// Netflix-Grade: Import authenticated API client (Dec 4 2025)
+import { apiClient } from '../api/client';
 
 export enum LogLevel {
   DEBUG = 0,
@@ -56,9 +62,9 @@ interface LoggerConfig {
   bufferSize: number;
   batchInterval: number;
   maskSensitiveData: boolean;
-  backendEndpoint?: string;
   enableBackendLogging: boolean; // ✅ Phase 10.92 Day 4: Enable/disable backend logging
   correlationId?: string; // ✅ Phase 10.943: Current request correlation ID
+  // ✅ Netflix-Grade (Dec 4 2025): Removed backendEndpoint - apiClient handles URL configuration
 }
 
 class EnterpriseLogger {
@@ -71,11 +77,7 @@ class EnterpriseLogger {
   private currentCorrelationId: string | null = null; // ✅ Phase 10.943: Current correlation ID
 
   constructor(config?: Partial<LoggerConfig>) {
-    // Determine backend URL based on environment
-    const backendUrl = typeof window !== 'undefined'
-      ? (process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:4000')
-      : '';
-
+    // ✅ Netflix-Grade (Dec 4 2025): Simplified config - apiClient handles URL and authentication
     this.config = {
       minLevel: process.env.NODE_ENV === 'production' ? LogLevel.INFO : LogLevel.DEBUG,
       enableConsole: true,
@@ -83,7 +85,6 @@ class EnterpriseLogger {
       bufferSize: 100,
       batchInterval: 5000,
       maskSensitiveData: true,
-      backendEndpoint: `${backendUrl}/api/logs`, // Phase 10.943: Full backend URL
       enableBackendLogging: true, // ✅ Phase 10.943: Enabled by default (endpoint now implemented)
       ...config,
     };
@@ -369,6 +370,7 @@ class EnterpriseLogger {
    * Safe to call multiple times (no-op if buffer is empty)
    *
    * ✅ Phase 10.92 Day 4: Enhanced with graceful fallback and endpoint availability check
+   * ✅ Netflix-Grade (Dec 4 2025): Uses apiClient for authenticated requests with auto token refresh
    */
   async flushBuffer(): Promise<void> {
     if (this.buffer.length === 0) {
@@ -389,77 +391,74 @@ class EnterpriseLogger {
     const logsToSend = [...this.buffer];
     this.buffer = [];
 
-    // Send to backend if endpoint configured
-    if (this.config.backendEndpoint) {
-      try {
-        const response = await fetch(this.config.backendEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ logs: logsToSend }),
-        });
+    // ✅ Netflix-Grade (Dec 4 2025): Use apiClient instead of fetch for:
+    // - Automatic JWT authentication headers
+    // - Token refresh on 401 (expired tokens)
+    // - Retry logic with exponential backoff
+    // - Standardized error handling
+    // - CSRF protection
+    try {
+      await apiClient.post('/logs', { logs: logsToSend });
 
-        // ✅ Phase 10.92 Day 4: Check if endpoint exists
-        if (response.status === 404) {
-          this.backendAvailable = false;
+      // ✅ Mark endpoint as available
+      this.backendAvailable = true;
 
-          // Show one-time warning in development
-          if (process.env.NODE_ENV === 'development' && !this.backendWarningShown) {
-            console.warn(
-              '⚠️  [Logger] Backend logging endpoint not found. ' +
-              'Logs will be buffered locally only. ' +
-              'To enable backend logging, implement POST /api/logs or set enableBackendLogging: false'
-            );
-            this.backendWarningShown = true;
-          }
+    } catch (error: any) {
+      // ✅ Netflix-Grade: apiClient returns AxiosError with response property
 
-          // Restore logs to buffer for local access
-          this.buffer = [...logsToSend, ...this.buffer];
-          return;
+      // Check if endpoint doesn't exist (404)
+      if (error.response?.status === 404) {
+        this.backendAvailable = false;
+
+        // Show one-time warning in development
+        if (process.env.NODE_ENV === 'development' && !this.backendWarningShown) {
+          console.warn(
+            '⚠️  [Logger] Backend logging endpoint not found. ' +
+            'Logs will be buffered locally only. ' +
+            'To enable backend logging, implement POST /api/logs or set enableBackendLogging: false'
+          );
+          this.backendWarningShown = true;
         }
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        // ✅ Mark endpoint as available
-        this.backendAvailable = true;
-
-      } catch (error: unknown) {
-        // ✅ Phase 10.92 Day 4: Graceful error handling - don't spam console
-
-        // Check if it's a network error (endpoint doesn't exist)
-        const isNetworkError = error instanceof TypeError &&
-          (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'));
-
-        if (isNetworkError) {
-          this.backendAvailable = false;
-
-          // Show one-time warning in development
-          if (process.env.NODE_ENV === 'development' && !this.backendWarningShown) {
-            console.warn(
-              '⚠️  [Logger] Backend logging endpoint unavailable. ' +
-              'Logs will be buffered locally only.'
-            );
-            this.backendWarningShown = true;
-          }
-        } else {
-          // Other errors (temporary network issues, etc.) - log in development only
-          if (process.env.NODE_ENV === 'development') {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.warn(`[Logger] Failed to send logs to backend: ${errorMessage}`);
-          }
-        }
-
-        // Restore logs to buffer
+        // Restore logs to buffer for local access
         this.buffer = [...logsToSend, ...this.buffer];
+        return;
+      }
 
-        // ✅ Prevent buffer from growing indefinitely
-        if (this.buffer.length > this.config.bufferSize * 2) {
-          // Keep only the most recent logs
-          this.buffer = this.buffer.slice(-this.config.bufferSize);
+      // Check if it's a network error (endpoint doesn't exist or server down)
+      const isNetworkError = !error.response && (
+        error.code === 'ERR_NETWORK' ||
+        error.message?.includes('Network Error') ||
+        error.message?.includes('Failed to fetch')
+      );
+
+      if (isNetworkError) {
+        this.backendAvailable = false;
+
+        // Show one-time warning in development
+        if (process.env.NODE_ENV === 'development' && !this.backendWarningShown) {
+          console.warn(
+            '⚠️  [Logger] Backend logging endpoint unavailable. ' +
+            'Logs will be buffered locally only.'
+          );
+          this.backendWarningShown = true;
         }
+      } else {
+        // Other errors (temporary network issues, rate limiting, etc.) - log in development only
+        if (process.env.NODE_ENV === 'development') {
+          const errorMessage = error.response?.data?.message || error.message || String(error);
+          const statusCode = error.response?.status || 'unknown';
+          console.warn(`[Logger] Failed to send logs to backend (${statusCode}): ${errorMessage}`);
+        }
+      }
+
+      // Restore logs to buffer
+      this.buffer = [...logsToSend, ...this.buffer];
+
+      // ✅ Prevent buffer from growing indefinitely
+      if (this.buffer.length > this.config.bufferSize * 2) {
+        // Keep only the most recent logs
+        this.buffer = this.buffer.slice(-this.config.bufferSize);
       }
     }
   }

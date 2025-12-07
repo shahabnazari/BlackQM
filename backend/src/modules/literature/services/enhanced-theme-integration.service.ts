@@ -523,10 +523,12 @@ IMPORTANT: Return a JSON object (not an array) with a "questions" key containing
         squareItScore: q.squareItScore,
         suggestedMethodology: q.suggestedMethodology || 'mixed_methods',
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 5: Use unknown with type narrowing (Netflix-grade)
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `AI question generation failed: ${error.message}`,
-        error.stack,
+        `AI question generation failed: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
       // Fallback to template-based approach
       return this.generateQuestionsWithTemplates(options);
@@ -729,10 +731,12 @@ Return a JSON array with this structure:
         suggestedStatisticalTest: h.suggestedStatisticalTest,
         researchBacking: h.researchBacking,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 5: Use unknown with type narrowing (Netflix-grade)
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `AI hypothesis generation failed: ${error.message}`,
-        error.stack,
+        `AI hypothesis generation failed: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
       // Fallback to template-based approach
       return this.generateHypothesesWithTemplates(options);
@@ -1167,8 +1171,9 @@ Return a JSON array with this structure:
 
   /**
    * Generate cache key for memoization
+   * Phase 10.106 Phase 5: Use generic type constraint instead of any (Netflix-grade)
    */
-  private getCacheKey(type: string, options: any): string {
+  private getCacheKey<T extends object>(type: string, options: T): string {
     return `${type}_${JSON.stringify(options)}`;
   }
 }

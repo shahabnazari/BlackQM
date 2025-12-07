@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Disable source maps in dev for faster compilation
+    "sourceMap": false,
+    // Disable declaration files in dev
+    "declaration": false,
+    // Faster incremental builds
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
+    // Relax some strict checks for faster dev compilation
+    "strict": false,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false
+  }
+}
+
+

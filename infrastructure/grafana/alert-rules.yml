@@ -1,0 +1,171 @@
+# Prometheus Alert Rules
+# Phase 10.102 Phase 6: Netflix-Grade Alerting
+
+groups:
+  - name: literature_search_alerts
+    interval: 30s
+    rules:
+      # ======================================================================
+      # LATENCY ALERTS
+      # ======================================================================
+
+      - alert: HighP95Latency
+        expr: |
+          histogram_quantile(0.95,
+            rate(literature_search_duration_seconds_bucket[5m])
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: literature_search
+        annotations:
+          summary: "High P95 latency detected"
+          description: "P95 latency is {{ $value | humanizeDuration }}, exceeding 2s SLO (Service Level Objective)"
+
+      - alert: CriticalP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            rate(literature_search_duration_seconds_bucket[5m])
+          ) > 5
+        for: 5m
+        labels:
+          severity: critical
+          component: literature_search
+        annotations:
+          summary: "CRITICAL: P99 latency is very high"
+          description: "P99 latency is {{ $value | humanizeDuration }}, users experiencing severe delays"
+
+      # ======================================================================
+      # ERROR RATE ALERTS
+      # ======================================================================
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(literature_search_errors_total[5m])) /
+          sum(rate(literature_search_total[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: literature_search
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }}, exceeding 1% threshold. This impacts user experience."
+
+      - alert: CriticalErrorRate
+        expr: |
+          sum(rate(literature_search_errors_total[5m])) /
+          sum(rate(literature_search_total[5m])) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+          component: literature_search
+        annotations:
+          summary: "CRITICAL: Error rate is dangerously high"
+          description: "Error rate is {{ $value | humanizePercentage }}, exceeding 5% threshold. Immediate attention required!"
+
+      - alert: SourceCompletelyDown
+        expr: |
+          sum(rate(literature_search_total{source=~"pubmed|semantic_scholar|crossref"}[5m])) == 0
+          and
+          sum(increase(literature_search_total[30m])) > 0
+        for: 10m
+        labels:
+          severity: critical
+          component: literature_search
+        annotations:
+          summary: "Major source completely down"
+          description: "Critical source {{ $labels.source }} has received 0 requests for 10+ minutes despite overall traffic. Source may be down!"
+
+      # ======================================================================
+      # CACHE PERFORMANCE ALERTS
+      # ======================================================================
+
+      - alert: LowCacheHitRate
+        expr: |
+          sum(literature_search_total{cached="true"}) /
+          sum(literature_search_total) < 0.8
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}, below 80% threshold. This increases backend load and latency."
+
+      - alert: CriticalCacheHitRate
+        expr: |
+          sum(literature_search_total{cached="true"}) /
+          sum(literature_search_total) < 0.5
+        for: 10m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "CRITICAL: Cache mostly ineffective"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}, below 50%. Cache may be failing or invalidating too frequently."
+
+      # ======================================================================
+      # TRAFFIC / SATURATION ALERTS
+      # ======================================================================
+
+      - alert: UnusuallyHighTraffic
+        expr: |
+          sum(rate(literature_search_total[5m])) > 50
+        for: 5m
+        labels:
+          severity: warning
+          component: literature_search
+        annotations:
+          summary: "Unusually high traffic detected"
+          description: "Request rate is {{ $value | humanize }} req/s, significantly above normal. Monitor for potential abuse or viral traffic."
+
+      - alert: NoTrafficForExtendedPeriod
+        expr: |
+          sum(increase(literature_search_total[1h])) == 0
+        for: 1h
+        labels:
+          severity: warning
+          component: literature_search
+        annotations:
+          summary: "No traffic for 1 hour"
+          description: "No search requests received in the last hour. Service may be down or users cannot access the system."
+
+      # ======================================================================
+      # BUSINESS METRICS ALERTS
+      # ======================================================================
+
+      - alert: SuccessRateBelowSLO
+        expr: |
+          sum(rate(http_requests_total{status=~"2.."}[5m])) /
+          sum(rate(http_requests_total[5m])) < 0.999
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "Success rate below SLO"
+          description: "Success rate is {{ $value | humanizePercentage }}, below 99.9% SLO (Service Level Objective)"
+
+      # ======================================================================
+      # PROMETHEUS SELF-MONITORING
+      # ======================================================================
+
+      - alert: PrometheusConfigReloadFailed
+        expr: prometheus_config_last_reload_successful == 0
+        for: 5m
+        labels:
+          severity: warning
+          component: prometheus
+        annotations:
+          summary: "Prometheus configuration reload failed"
+          description: "Prometheus configuration reload failed. Check prometheus logs for errors."
+
+      - alert: PrometheusTooManyRestarts
+        expr: changes(process_start_time_seconds{job="prometheus"}[15m]) > 2
+        for: 0m
+        labels:
+          severity: warning
+          component: prometheus
+        annotations:
+          summary: "Prometheus restarted multiple times"
+          description: "Prometheus has restarted {{ $value }} times in the last 15 minutes. Check for crashes."

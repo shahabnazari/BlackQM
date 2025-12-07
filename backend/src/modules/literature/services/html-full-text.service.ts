@@ -28,6 +28,15 @@ interface HtmlFetchResult {
   error?: string;
 }
 
+/**
+ * Phase 10.106 Phase 10: NCBI API type definitions
+ * Netflix-grade: Full type safety for external API
+ */
+interface NCBILinksetDb {
+  dbto: string;
+  links?: number[];
+}
+
 @Injectable()
 export class HtmlFullTextService {
   private readonly logger = new Logger(HtmlFullTextService.name);
@@ -247,7 +256,7 @@ export class HtmlFullTextService {
 
       const linksets = response.data?.linksets?.[0];
       const pmcLinks = linksets?.linksetdbs?.find(
-        (db: any) => db.dbto === 'pmc',
+        (db: NCBILinksetDb) => db.dbto === 'pmc',
       );
 
       if (pmcLinks && pmcLinks.links && pmcLinks.links.length > 0) {

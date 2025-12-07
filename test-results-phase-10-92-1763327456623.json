@@ -1,0 +1,71 @@
+{
+  "timestamp": "2025-11-16T21:10:56.623Z",
+  "configuration": {
+    "BACKEND_URL": "http://localhost:3001",
+    "FRONTEND_URL": "http://localhost:3000",
+    "AUTH_TOKEN": "",
+    "VERBOSE": false,
+    "TIMEOUT": 30000
+  },
+  "summary": {
+    "total": 6,
+    "passed": 3,
+    "failed": 3,
+    "warnings": 0,
+    "successRate": "50.00%"
+  },
+  "details": [
+    {
+      "status": "PASS",
+      "message": "Backend is running"
+    },
+    {
+      "status": "INFO",
+      "message": "Backend URL: http://localhost:3001"
+    },
+    {
+      "status": "INFO",
+      "message": "Saving paper..."
+    },
+    {
+      "status": "FAIL",
+      "message": "Authentication required - Please set AUTH_TOKEN environment variable",
+      "stack": null
+    },
+    {
+      "status": "FAIL",
+      "message": "Authentication required",
+      "stack": null
+    },
+    {
+      "status": "FAIL",
+      "message": "Authentication required",
+      "stack": null
+    },
+    {
+      "status": "PASS",
+      "message": "Logging endpoint exists and requires authentication (correct)"
+    },
+    {
+      "status": "PASS",
+      "message": "Logger has graceful fallback for missing endpoint (Day 4 fix)"
+    }
+  ],
+  "errors": [
+    {
+      "message": "Authentication required - Please set AUTH_TOKEN environment variable",
+      "error": null,
+      "stack": null
+    },
+    {
+      "message": "Authentication required",
+      "error": null,
+      "stack": null
+    },
+    {
+      "message": "Authentication required",
+      "error": null,
+      "stack": null
+    }
+  ]
+}

@@ -81,6 +81,7 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
+import { RetryService } from '../../../common/services/retry.service';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
 import {
@@ -94,9 +95,16 @@ export interface ArxivSearchOptions {
   yearFrom?: number;
   yearTo?: number;
   limit?: number;
-  category?: string; // e.g., 'cs.AI', 'physics.atom-ph'
+  category?: string;
   sortBy?: 'relevance' | 'lastUpdatedDate' | 'submittedDate';
   sortOrder?: 'ascending' | 'descending';
+}
+
+interface ArxivSearchParams {
+  search_query: string;
+  max_results: number;
+  sortBy: string;
+  sortOrder: string;
 }
 
 @Injectable()
@@ -104,7 +112,10 @@ export class ArxivService {
   private readonly logger = new Logger(ArxivService.name);
   private readonly API_BASE_URL = 'http://export.arxiv.org/api/query';
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly retry: RetryService,
+  ) {}
 
   /**
    * Search arXiv database using Atom/RSS API
@@ -131,52 +142,55 @@ export class ArxivService {
     try {
       this.logger.log(`[arXiv] Searching: "${query}"`);
 
-      // ========================================================================
-      // STEP 1: Construct API parameters
-      // ========================================================================
-      // 📝 TO ADD FILTERS: Update params object below
-      const params: any = {
-        search_query: `all:${query}`, // Search all fields by default
+      // Build search query with category filter
+      let searchQuery = `all:${query}`;
+      if (options?.category) {
+        searchQuery = `cat:${options.category} AND all:${query}`;
+      }
+
+      const params: ArxivSearchParams = {
+        search_query: searchQuery,
         max_results: options?.limit || 20,
         sortBy: options?.sortBy || 'relevance',
         sortOrder: options?.sortOrder || 'descending',
       };
 
-      // Add category filter if provided
-      // 📝 TO ADD MULTIPLE CATEGORIES: Use OR operator in search_query
-      if (options?.category) {
-        params.search_query = `cat:${options.category} AND all:${query}`;
-      }
-
-      // ========================================================================
-      // STEP 2: Execute API request
-      // ========================================================================
-      const response = await firstValueFrom(
-        this.httpService.get(this.API_BASE_URL, {
-          params,
-          timeout: FAST_API_TIMEOUT, // 10s - Phase 10.6 Day 14.5: Added timeout (was missing)
-        }),
+      // Execute with retry for resilience
+      const result = await this.retry.executeWithRetry(
+        async () => firstValueFrom(
+          this.httpService.get(this.API_BASE_URL, {
+            params,
+            timeout: FAST_API_TIMEOUT,
+          }),
+        ),
+        'arXiv.search',
+        {
+          maxAttempts: 3,
+          initialDelayMs: 1000,
+          maxDelayMs: 8000,
+          backoffMultiplier: 2,
+          jitterMs: 500,
+        },
       );
 
-      // ========================================================================
-      // STEP 3: Parse XML/Atom response
-      // ========================================================================
-      // 📝 TO CHANGE PARSING: Update parsePaper() method below (line 162)
-      const data = response.data;
-      const entries = data.match(/<entry>[\s\S]*?<\/entry>/g) || [];
+      // Parse XML/Atom response
+      const data = result.data?.data;
+      if (!data || typeof data !== 'string') {
+        this.logger.warn(`[arXiv] API returned invalid response`);
+        return [];
+      }
 
+      const entries = data.match(/<entry>[\s\S]*?<\/entry>/g) || [];
       const papers = entries.map((entry: string) => this.parsePaper(entry));
 
-      this.logger.log(`[arXiv] Returned ${papers.length} papers`);
+      this.logger.log(`[arXiv] Found ${papers.length} papers (attempts: ${result.attempts})`);
       return papers;
-    } catch (error: any) {
-      // Enterprise-grade error handling: Log but don't throw (graceful degradation)
-      if (error.response?.status === 429) {
-        this.logger.error(`[arXiv] ⚠️  RATE LIMITED (429) - Too many requests`);
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number }; message?: string };
+      if (err.response?.status === 429) {
+        this.logger.error(`[arXiv] RATE LIMITED (429) - all retries exhausted`);
       } else {
-        this.logger.error(
-          `[arXiv] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
-        );
+        this.logger.error(`[arXiv] Search failed: ${err.message || 'Unknown error'}`);
       }
       return [];
     }

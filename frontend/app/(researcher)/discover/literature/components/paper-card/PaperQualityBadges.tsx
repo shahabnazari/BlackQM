@@ -1,18 +1,24 @@
 /**
  * PaperQualityBadges Component
- * Phase 10.942 Day 3 - Quality Score v4.0 Integration
+ * Phase 10.107 - Honest, Transparent Quality Scoring
  *
- * Displays quality indicators: citations per year, quality score breakdown, and relevance tier
+ * Displays quality indicators with confidence level based on data completeness
  *
- * Quality Weights (v4.0):
- * - 30% Citation Impact (FWCI)
- * - 50% Journal Prestige
- * - 20% Recency Boost
- * - Optional: +10 OA, +5 Data/Code, +5 Altmetric
+ * KEY PRINCIPLE: Score only what we know, show users our confidence level
  *
- * ✅ WCAG 2.1 compliant with proper ARIA relationships
- * ✅ Helper functions moved outside component (no recreation on render)
- * ✅ Magic numbers replaced with constants
+ * Quality Score Components (when available):
+ * - Citation Impact: Citations per year, normalized by field
+ * - Journal Prestige: Impact factor, h-index, quartile
+ * - Open Access Bonus: +10 if freely available
+ *
+ * Confidence Levels:
+ * - High (4/4 metrics): All data available - reliable score
+ * - Good (3/4 metrics): Most data - good estimate
+ * - Moderate (2/4 metrics): Partial data - moderate confidence
+ * - Low (1/4 metrics): Limited data - low confidence
+ * - Very Low (0/4): No metrics available
+ *
+ * WCAG 2.1 compliant with proper ARIA relationships
  *
  * @module PaperQualityBadges
  */
@@ -20,19 +26,24 @@
 'use client';
 
 import React, { useState, useId } from 'react';
-import { TrendingUp, Award, Target } from 'lucide-react';
+import { TrendingUp, Award, Target, Shield, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { MetadataCompleteness } from '@/lib/types/literature.types';
 import {
   getQualityLabel,
   getQualityColorClasses,
   getRelevanceTierLabel,
   getRelevanceColorClasses,
+  getConfidenceLabel,
+  getConfidenceColorClasses,
+  getConfidenceExplanation,
+  getScoreCap,
   QUALITY_WEIGHTS,
   OPTIONAL_BONUSES,
 } from './constants';
 
 // ============================================================================
-// Types - Phase 10.942 v4.0 Quality Scoring
+// Types - Phase 10.107 Honest Quality Scoring
 // ============================================================================
 
 interface QualityScoreBreakdown {
@@ -50,6 +61,8 @@ interface QualityScoreBreakdown {
   altmetricBonus?: number;
   /** Core score before bonuses */
   coreScore?: number;
+  /** Phase 10.107: Metadata completeness for transparency */
+  metadataCompleteness?: MetadataCompleteness;
 }
 
 interface PaperQualityBadgesProps {
@@ -63,6 +76,8 @@ interface PaperQualityBadgesProps {
   citationCount?: number | null | undefined;
   /** Relevance score (0-200+) - Phase 10.942 */
   relevanceScore?: number | null | undefined;
+  /** Phase 10.107: Metadata completeness */
+  metadataCompleteness?: MetadataCompleteness | undefined;
 }
 
 // ============================================================================
@@ -75,11 +90,17 @@ export function PaperQualityBadges({
   qualityScoreBreakdown,
   citationCount,
   relevanceScore,
+  metadataCompleteness,
 }: PaperQualityBadgesProps) {
   const [showQualityTooltip, setShowQualityTooltip] = useState(false);
 
   // Generate unique ID for ARIA relationship (proper accessibility)
   const tooltipId = useId();
+
+  // Get metadata completeness from breakdown or props
+  const metadata = qualityScoreBreakdown?.metadataCompleteness ?? metadataCompleteness;
+  const availableMetrics = metadata?.availableMetrics ?? 0;
+  const totalMetrics = metadata?.totalMetrics ?? 4;
 
   // Don't render if no quality data
   const hasQualityData =
@@ -98,6 +119,9 @@ export function PaperQualityBadges({
     (qualityScoreBreakdown?.openAccessBonus ?? 0) +
     (qualityScoreBreakdown?.reproducibilityBonus ?? 0) +
     (qualityScoreBreakdown?.altmetricBonus ?? 0);
+
+  // Get score cap for current data completeness
+  const scoreCap = getScoreCap(availableMetrics);
 
   return (
     <>
@@ -131,7 +155,7 @@ export function PaperQualityBadges({
           </span>
         )}
 
-      {/* Quality Score Badge with Tooltip */}
+      {/* Quality Score Badge with Confidence - Phase 10.107 */}
       {qualityScore !== null && qualityScore !== undefined && (
         <span className="relative inline-block">
           <button
@@ -145,13 +169,23 @@ export function PaperQualityBadges({
             onMouseLeave={() => setShowQualityTooltip(false)}
             onFocus={() => setShowQualityTooltip(true)}
             onBlur={() => setShowQualityTooltip(false)}
-            aria-label={`Quality score: ${qualityScore} out of 100, rated ${getQualityLabel(qualityScore)}. Press to view detailed breakdown.`}
+            aria-label={`Quality score: ${qualityScore} out of 100, rated ${getQualityLabel(qualityScore)}. Confidence: ${getConfidenceLabel(availableMetrics)} (${availableMetrics}/${totalMetrics} metrics). Press to view detailed breakdown.`}
             aria-describedby={showQualityTooltip ? tooltipId : undefined}
           >
             <Award className="w-3 h-3" aria-hidden="true" />
             <span className="font-semibold">{qualityScore.toFixed(0)}</span>
             <span className="text-xs opacity-75">
               {getQualityLabel(qualityScore)}
+            </span>
+            {/* Confidence indicator inline */}
+            <span
+              className={cn(
+                'text-[10px] px-1 rounded ml-0.5',
+                getConfidenceColorClasses(availableMetrics)
+              )}
+              title={`Confidence: ${getConfidenceLabel(availableMetrics)} - ${getConfidenceExplanation(availableMetrics)}`}
+            >
+              {availableMetrics}/{totalMetrics}
             </span>
             <svg
               className="w-3 h-3 ml-0.5"
@@ -167,22 +201,38 @@ export function PaperQualityBadges({
             </svg>
           </button>
 
-          {/* Detailed Breakdown Tooltip - Phase 10.942 v4.0 */}
+          {/* Detailed Breakdown Tooltip - Phase 10.107 */}
           {showQualityTooltip && (
             <div
               id={tooltipId}
-              className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-[380px]"
+              className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-[400px]"
               role="tooltip"
               aria-live="polite"
             >
               <div className="bg-gray-900 text-white text-xs rounded-lg shadow-2xl p-4 border border-gray-700">
-                <div className="font-bold text-sm text-purple-300 mb-3">
-                  📊 QUALITY SCORE v4.0 BREAKDOWN
+                {/* Header with Confidence Badge */}
+                <div className="flex justify-between items-center mb-3">
+                  <div className="font-bold text-sm text-purple-300">
+                    QUALITY SCORE v4.1
+                  </div>
+                  <div className={cn(
+                    'flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium',
+                    getConfidenceColorClasses(availableMetrics)
+                  )}>
+                    <Shield className="w-3 h-3" />
+                    {getConfidenceLabel(availableMetrics)} Confidence ({availableMetrics}/{totalMetrics})
+                  </div>
                 </div>
 
+                {/* Score and Cap */}
                 <div className="mb-3 pb-3 border-b border-gray-700">
-                  <div className="text-lg font-bold text-white">
-                    🎯 FINAL SCORE: {qualityScore.toFixed(0)}/100
+                  <div className="text-lg font-bold text-white flex items-center gap-2">
+                    SCORE: {qualityScore.toFixed(0)}/100
+                    {availableMetrics < 4 && (
+                      <span className="text-xs text-amber-400 font-normal">
+                        (capped at {scoreCap} with {availableMetrics}/{totalMetrics} metrics)
+                      </span>
+                    )}
                   </div>
                   {qualityScoreBreakdown?.coreScore !== undefined && (
                     <div className="text-gray-400 text-xs mt-1">
@@ -191,11 +241,64 @@ export function PaperQualityBadges({
                   )}
                 </div>
 
+                {/* Data Availability Section - Phase 10.107 */}
+                <div className="mb-3 pb-3 border-b border-gray-700">
+                  <div className="font-semibold text-cyan-300 mb-2 flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    DATA TRANSPARENCY
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 ml-2">
+                    <div className="flex items-center gap-1">
+                      {metadata?.hasCitations ? (
+                        <span className="text-green-400">✓</span>
+                      ) : (
+                        <span className="text-gray-500">✗</span>
+                      )}
+                      <span className={metadata?.hasCitations ? 'text-white' : 'text-gray-500'}>
+                        Citations
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {metadata?.hasJournalMetrics ? (
+                        <span className="text-green-400">✓</span>
+                      ) : (
+                        <span className="text-gray-500">✗</span>
+                      )}
+                      <span className={metadata?.hasJournalMetrics ? 'text-white' : 'text-gray-500'}>
+                        Journal Metrics
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {metadata?.hasYear ? (
+                        <span className="text-green-400">✓</span>
+                      ) : (
+                        <span className="text-gray-500">✗</span>
+                      )}
+                      <span className={metadata?.hasYear ? 'text-white' : 'text-gray-500'}>
+                        Year
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {metadata?.hasAbstract ? (
+                        <span className="text-green-400">✓</span>
+                      ) : (
+                        <span className="text-gray-500">✗</span>
+                      )}
+                      <span className={metadata?.hasAbstract ? 'text-white' : 'text-gray-500'}>
+                        Abstract
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-[10px] text-gray-400 ml-2">
+                    {getConfidenceExplanation(availableMetrics)}
+                  </div>
+                </div>
+
                 {/* Citation Impact - 30% */}
                 {qualityScoreBreakdown?.citationImpact !== undefined && (
                   <div className="mb-2 pb-2 border-b border-gray-700">
                     <div className="font-semibold text-blue-300 mb-1 flex justify-between">
-                      <span>📈 CITATION IMPACT (FWCI)</span>
+                      <span>CITATION IMPACT</span>
                       <span className="text-blue-400">{QUALITY_WEIGHTS.CITATION_IMPACT}%</span>
                     </div>
                     <div className="ml-2 flex justify-between">
@@ -215,7 +318,7 @@ export function PaperQualityBadges({
                 {qualityScoreBreakdown?.journalPrestige !== undefined && (
                   <div className="mb-2 pb-2 border-b border-gray-700">
                     <div className="font-semibold text-green-300 mb-1 flex justify-between">
-                      <span>🏆 JOURNAL PRESTIGE</span>
+                      <span>JOURNAL PRESTIGE</span>
                       <span className="text-green-400">{QUALITY_WEIGHTS.JOURNAL_PRESTIGE}%</span>
                     </div>
                     <div className="ml-2 flex justify-between">
@@ -229,7 +332,7 @@ export function PaperQualityBadges({
                 {qualityScoreBreakdown?.recencyBoost !== undefined && (
                   <div className="mb-2 pb-2 border-b border-gray-700">
                     <div className="font-semibold text-orange-300 mb-1 flex justify-between">
-                      <span>📅 RECENCY BOOST</span>
+                      <span>RECENCY BOOST</span>
                       <span className="text-orange-400">{QUALITY_WEIGHTS.RECENCY_BOOST}%</span>
                     </div>
                     <div className="ml-2 flex justify-between">
@@ -246,7 +349,7 @@ export function PaperQualityBadges({
                 {totalBonuses > 0 && (
                   <div className="mb-2">
                     <div className="font-semibold text-yellow-300 mb-1">
-                      🎁 OPTIONAL BONUSES (+{totalBonuses})
+                      OPTIONAL BONUSES (+{totalBonuses})
                     </div>
                     <div className="ml-2 space-y-1">
                       {qualityScoreBreakdown?.openAccessBonus !== undefined &&
@@ -274,9 +377,22 @@ export function PaperQualityBadges({
                   </div>
                 )}
 
+                {/* Low Confidence Warning */}
+                {availableMetrics < 2 && (
+                  <div className="mt-2 p-2 bg-amber-900/30 border border-amber-700 rounded flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-amber-200 text-[10px]">
+                      <strong>Limited Data:</strong> This source doesn&apos;t provide complete metadata.
+                      The quality score is based on {availableMetrics === 0 ? 'no' : 'minimal'} metrics
+                      and should be interpreted with caution.
+                    </div>
+                  </div>
+                )}
+
                 {/* Algorithm Reference */}
                 <div className="text-[10px] text-gray-500 mt-2 pt-2 border-t border-gray-700">
-                  v4.0 methodology: Waltman & van Eck (2019), Garfield (1980)
+                  v4.1 methodology: Honest scoring - only scores what we know.
+                  Waltman & van Eck (2019), Garfield (1980)
                 </div>
               </div>
             </div>

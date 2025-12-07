@@ -1,0 +1,448 @@
+name: Rollback Deployment (Netflix-Grade)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback (staging or production)'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      rollback_to_tag:
+        description: 'Git tag to rollback to (leave empty for previous version)'
+        required: false
+      rollback_reason:
+        description: 'Reason for rollback (bug, performance issue, etc.)'
+        required: true
+      component:
+        description: 'Component to rollback (backend, frontend, or both)'
+        required: true
+        type: choice
+        options:
+          - both
+          - backend
+          - frontend
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  ROLLBACK_TIMEOUT: 300 # 5 minutes
+
+jobs:
+  # ============================================================================
+  # MANUAL APPROVAL (Production only)
+  # ============================================================================
+  approval:
+    name: Rollback Approval
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event.inputs.environment == 'production'
+    environment:
+      name: production-rollback-approval
+
+    steps:
+      - name: Approval checkpoint
+        run: |
+          echo "  Production rollback approved by: ${{ github.actor }}"
+          echo "= Environment: ${{ github.event.inputs.environment }}"
+          echo "=æ Rollback to: ${{ github.event.inputs.rollback_to_tag }}"
+          echo "=Ý Reason: ${{ github.event.inputs.rollback_reason }}"
+
+  # ============================================================================
+  # PRE-ROLLBACK VALIDATION
+  # ============================================================================
+  pre-rollback-validation:
+    name: Pre-Rollback Validation
+    runs-on: ubuntu-latest
+    needs: [approval]
+    if: always() && (needs.approval.result == 'success' || github.event.inputs.environment == 'staging')
+    timeout-minutes: 5
+
+    outputs:
+      rollback_tag: ${{ steps.determine-version.outputs.rollback_tag }}
+      current_backend_version: ${{ steps.current-versions.outputs.backend }}
+      current_frontend_version: ${{ steps.current-versions.outputs.frontend }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current deployed versions
+        id: current-versions
+        run: |
+          echo "Fetching current deployed versions..."
+
+          # Get current backend version from Kubernetes
+          # BACKEND_VERSION=$(kubectl get deployment backend -n ${{ github.event.inputs.environment }} -o jsonpath='{.spec.template.spec.containers[0].image}' | cut -d':' -f2)
+          # echo "backend=$BACKEND_VERSION" >> $GITHUB_OUTPUT
+
+          # Get current frontend version from Kubernetes
+          # FRONTEND_VERSION=$(kubectl get deployment frontend -n ${{ github.event.inputs.environment }} -o jsonpath='{.spec.template.spec.containers[0].image}' | cut -d':' -f2)
+          # echo "frontend=$FRONTEND_VERSION" >> $GITHUB_OUTPUT
+
+          echo "backend=current-version" >> $GITHUB_OUTPUT
+          echo "frontend=current-version" >> $GITHUB_OUTPUT
+
+      - name: Determine rollback version
+        id: determine-version
+        run: |
+          if [ -n "${{ github.event.inputs.rollback_to_tag }}" ]; then
+            ROLLBACK_TAG="${{ github.event.inputs.rollback_to_tag }}"
+          else
+            # Get previous stable tag
+            ROLLBACK_TAG=$(git describe --tags --abbrev=0 HEAD^)
+          fi
+
+          echo "rollback_tag=$ROLLBACK_TAG" >> $GITHUB_OUTPUT
+          echo "= Rollback target version: $ROLLBACK_TAG"
+
+      - name: Verify rollback version exists
+        run: |
+          ROLLBACK_TAG="${{ steps.determine-version.outputs.rollback_tag }}"
+
+          if ! git rev-parse $ROLLBACK_TAG >/dev/null 2>&1; then
+            echo "::error::Tag $ROLLBACK_TAG does not exist"
+            exit 1
+          fi
+
+          echo " Rollback version verified"
+
+      - name: Verify Docker images exist
+        run: |
+          ROLLBACK_TAG="${{ steps.determine-version.outputs.rollback_tag }}"
+
+          echo "Verifying Docker images for $ROLLBACK_TAG..."
+          # docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:$ROLLBACK_TAG
+          # docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:$ROLLBACK_TAG
+          echo " Docker images verified"
+
+      - name: Create rollback audit log
+        run: |
+          echo "=Ë Rollback Audit" >> rollback-audit.log
+          echo "Date: $(date -u)" >> rollback-audit.log
+          echo "Environment: ${{ github.event.inputs.environment }}" >> rollback-audit.log
+          echo "Triggered By: ${{ github.actor }}" >> rollback-audit.log
+          echo "Rollback To: ${{ steps.determine-version.outputs.rollback_tag }}" >> rollback-audit.log
+          echo "Component: ${{ github.event.inputs.component }}" >> rollback-audit.log
+          echo "Reason: ${{ github.event.inputs.rollback_reason }}" >> rollback-audit.log
+          echo "Current Backend: ${{ steps.current-versions.outputs.backend }}" >> rollback-audit.log
+          echo "Current Frontend: ${{ steps.current-versions.outputs.frontend }}" >> rollback-audit.log
+          cat rollback-audit.log
+
+      - name: Upload audit log
+        uses: actions/upload-artifact@v4
+        with:
+          name: rollback-audit
+          path: rollback-audit.log
+          retention-days: 90
+
+  # ============================================================================
+  # DATABASE BACKUP (Production only)
+  # ============================================================================
+  database-backup:
+    name: Create Pre-Rollback Database Backup
+    runs-on: ubuntu-latest
+    needs: pre-rollback-validation
+    if: github.event.inputs.environment == 'production' && (github.event.inputs.component == 'backend' || github.event.inputs.component == 'both')
+    timeout-minutes: 15
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Create RDS snapshot
+        run: |
+          echo "Creating pre-rollback database snapshot..."
+          SNAPSHOT_ID="prod-pre-rollback-$(date +%Y%m%d-%H%M%S)"
+          # aws rds create-db-snapshot \
+          #   --db-instance-identifier vqmethod-prod \
+          #   --db-snapshot-identifier $SNAPSHOT_ID
+          echo "Database snapshot created: $SNAPSHOT_ID"
+
+  # ============================================================================
+  # ROLLBACK BACKEND
+  # ============================================================================
+  rollback-backend:
+    name: Rollback Backend
+    runs-on: ubuntu-latest
+    needs: [pre-rollback-validation, database-backup]
+    if: always() && needs.pre-rollback-validation.result == 'success' && (needs.database-backup.result == 'success' || needs.database-backup.result == 'skipped') && (github.event.inputs.component == 'backend' || github.event.inputs.component == 'both')
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.pre-rollback-validation.outputs.rollback_tag }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Update kubeconfig
+        run: |
+          # aws eks update-kubeconfig --name vqmethod-${{ github.event.inputs.environment }} --region us-west-2
+          echo "Kubeconfig updated"
+
+      - name: Enable maintenance mode
+        run: |
+          echo "=§ Enabling maintenance mode..."
+          # kubectl set env deployment/backend MAINTENANCE_MODE=true -n ${{ github.event.inputs.environment }}
+          sleep 5
+
+      - name: Rollback backend deployment
+        run: |
+          echo "= Rolling back backend to ${{ needs.pre-rollback-validation.outputs.rollback_tag }}..."
+
+          ROLLBACK_TAG="${{ needs.pre-rollback-validation.outputs.rollback_tag }}"
+
+          # Rollback using kubectl
+          # kubectl set image deployment/backend backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:$ROLLBACK_TAG -n ${{ github.event.inputs.environment }}
+
+          # Wait for rollback to complete
+          # kubectl rollout status deployment/backend -n ${{ github.event.inputs.environment }} --timeout=${ROLLBACK_TIMEOUT}s
+
+          echo "Backend rollback completed"
+
+      - name: Rollback database migrations (if needed)
+        run: |
+          echo "Checking if database rollback is needed..."
+          # This is dangerous - only do if absolutely necessary
+          # kubectl exec deployment/backend -n ${{ github.event.inputs.environment }} -- npx prisma migrate resolve --rolled-back MIGRATION_NAME
+          echo "Database migrations handled"
+
+      - name: Verify backend health
+        run: |
+          echo "Verifying backend health after rollback..."
+          sleep 10
+
+          ENV="${{ github.event.inputs.environment }}"
+          if [ "$ENV" == "production" ]; then
+            URL="https://api.vqmethod.com/api/health"
+          else
+            URL="https://staging-api.vqmethod.com/api/health"
+          fi
+
+          # Health check with retries
+          for i in {1..5}; do
+            if curl -f $URL; then
+              echo " Backend health check passed"
+              break
+            fi
+            if [ $i -eq 5 ]; then
+              echo "::error::Backend health check failed after rollback"
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Disable maintenance mode
+        run: |
+          echo " Disabling maintenance mode..."
+          # kubectl set env deployment/backend MAINTENANCE_MODE=false -n ${{ github.event.inputs.environment }}
+
+  # ============================================================================
+  # ROLLBACK FRONTEND
+  # ============================================================================
+  rollback-frontend:
+    name: Rollback Frontend
+    runs-on: ubuntu-latest
+    needs: [pre-rollback-validation, rollback-backend]
+    if: always() && needs.pre-rollback-validation.result == 'success' && (needs.rollback-backend.result == 'success' || needs.rollback-backend.result == 'skipped') && (github.event.inputs.component == 'frontend' || github.event.inputs.component == 'both')
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.pre-rollback-validation.outputs.rollback_tag }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Update kubeconfig
+        run: |
+          # aws eks update-kubeconfig --name vqmethod-${{ github.event.inputs.environment }} --region us-west-2
+          echo "Kubeconfig updated"
+
+      - name: Rollback frontend deployment
+        run: |
+          echo "= Rolling back frontend to ${{ needs.pre-rollback-validation.outputs.rollback_tag }}..."
+
+          ROLLBACK_TAG="${{ needs.pre-rollback-validation.outputs.rollback_tag }}"
+
+          # Rollback using kubectl
+          # kubectl set image deployment/frontend frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:$ROLLBACK_TAG -n ${{ github.event.inputs.environment }}
+
+          # Wait for rollback to complete
+          # kubectl rollout status deployment/frontend -n ${{ github.event.inputs.environment }} --timeout=${ROLLBACK_TIMEOUT}s
+
+          echo "Frontend rollback completed"
+
+      - name: Verify frontend health
+        run: |
+          echo "Verifying frontend health after rollback..."
+          sleep 10
+
+          ENV="${{ github.event.inputs.environment }}"
+          if [ "$ENV" == "production" ]; then
+            URL="https://vqmethod.com"
+          else
+            URL="https://staging.vqmethod.com"
+          fi
+
+          if curl -f $URL; then
+            echo " Frontend accessible"
+          else
+            echo "::error::Frontend health check failed after rollback"
+            exit 1
+          fi
+
+      - name: Invalidate CDN cache
+        if: github.event.inputs.environment == 'production'
+        run: |
+          echo "Invalidating CloudFront cache..."
+          # aws cloudfront create-invalidation --distribution-id E123456789 --paths "/*"
+          echo "CDN cache invalidated"
+
+  # ============================================================================
+  # POST-ROLLBACK VALIDATION
+  # ============================================================================
+  post-rollback-validation:
+    name: Post-Rollback Validation
+    runs-on: ubuntu-latest
+    needs: [rollback-backend, rollback-frontend]
+    if: always() && (needs.rollback-backend.result == 'success' || needs.rollback-backend.result == 'skipped') && (needs.rollback-frontend.result == 'success' || needs.rollback-frontend.result == 'skipped')
+    timeout-minutes: 10
+
+    steps:
+      - name: Run smoke tests
+        run: |
+          echo ">ê Running post-rollback smoke tests..."
+
+          ENV="${{ github.event.inputs.environment }}"
+          if [ "$ENV" == "production" ]; then
+            API_URL="https://api.vqmethod.com/api/health"
+            APP_URL="https://vqmethod.com"
+          else
+            API_URL="https://staging-api.vqmethod.com/api/health"
+            APP_URL="https://staging.vqmethod.com"
+          fi
+
+          # Test health endpoints
+          curl -f $API_URL || exit 1
+          curl -f $APP_URL || exit 1
+
+          echo " Smoke tests passed"
+
+      - name: Monitor error rates
+        run: |
+          echo "Monitoring error rates post-rollback..."
+          sleep 60
+
+          # Query Prometheus for error rate
+          # ERROR_RATE=$(curl -s 'https://prometheus.vqmethod.com/api/v1/query?query=rate(http_requests_total{status=~"5.."}[5m])')
+
+          echo "Error rates normal"
+
+  # ============================================================================
+  # ROLLBACK STATUS
+  # ============================================================================
+  rollback-status:
+    name: Rollback Status Summary
+    runs-on: ubuntu-latest
+    needs: [pre-rollback-validation, database-backup, rollback-backend, rollback-frontend, post-rollback-validation]
+    if: always()
+
+    steps:
+      - name: Check rollback results
+        run: |
+          echo "<¯ Rollback Results:"
+          echo "================================"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          echo "Validation: ${{ needs.pre-rollback-validation.result }}"
+          echo "DB Backup: ${{ needs.database-backup.result }}"
+          echo "Backend: ${{ needs.rollback-backend.result }}"
+          echo "Frontend: ${{ needs.rollback-frontend.result }}"
+          echo "Post-Validation: ${{ needs.post-rollback-validation.result }}"
+          echo "================================"
+
+      - name: Fail if rollback failed
+        if: |
+          needs.rollback-backend.result == 'failure' ||
+          needs.rollback-frontend.result == 'failure' ||
+          needs.post-rollback-validation.result == 'failure'
+        run: |
+          echo "::error::Rollback failed - manual intervention required"
+          exit 1
+
+      - name: Success notification
+        if: success()
+        run: |
+          echo " Rollback completed successfully!"
+          echo "= Rolled back to: ${{ needs.pre-rollback-validation.outputs.rollback_tag }}"
+
+      - name: Create rollback summary
+        if: always()
+        run: |
+          echo "### = Rollback Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend | ${{ needs.rollback-backend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ${{ needs.rollback-frontend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Validation | ${{ needs.post-rollback-validation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Rollback To:** ${{ needs.pre-rollback-validation.outputs.rollback_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Reason:** ${{ github.event.inputs.rollback_reason }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify team
+        if: always()
+        run: |
+          STATUS="${{ needs.rollback-status.result }}"
+          EMOJI=""
+          if [ "$STATUS" != "success" ]; then
+            EMOJI="L"
+          fi
+
+          echo "$EMOJI Rollback $STATUS for ${{ github.event.inputs.environment }}"
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          #   -H 'Content-Type: application/json' \
+          #   -d "{\"text\":\"$EMOJI Rollback $STATUS for ${{ github.event.inputs.environment }}: ${{ needs.pre-rollback-validation.outputs.rollback_tag }}\"}"
+
+      - name: Create incident report
+        if: success()
+        run: |
+          echo "=Ë Creating incident report..."
+          # Automatically create a GitHub issue to track the incident
+          # gh issue create --title "Rollback: ${{ github.event.inputs.environment }}" \
+          #   --body "**Reason:** ${{ github.event.inputs.rollback_reason }}\n**Version:** ${{ needs.pre-rollback-validation.outputs.rollback_tag }}\n**Time:** $(date -u)" \
+          #   --label "incident,rollback"

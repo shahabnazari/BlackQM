@@ -42,7 +42,7 @@ class UltimateDevManagerV3Enhanced {
     // Track last successful health checks
     this.lastFrontendCheck = Date.now();
     this.lastBackendCheck = Date.now();
-    this.stallTimeout = 60000; // 60 seconds for stability
+    this.stallTimeout = 180000; // 180 seconds (3 minutes) for stability - increased to avoid false positives
 
     // Track process states
     this.frontendState = 'stopped';
@@ -96,12 +96,31 @@ class UltimateDevManagerV3Enhanced {
     const logMessage = `[${timestamp}] ${message}`;
     console.log(logMessage, ...args);
 
-    // Also write to log file
+    // Also write to log file with rotation
     try {
       if (!fs.existsSync(path.dirname(this.logFile))) {
         fs.mkdirSync(path.dirname(this.logFile), { recursive: true });
       }
-      fs.appendFileSync(this.logFile, `${logMessage} ${args.join(' ')}\n`);
+
+      // Log rotation: if file exceeds 10MB, rotate it
+      const maxLogSize = 10 * 1024 * 1024; // 10MB
+      if (fs.existsSync(this.logFile)) {
+        const stats = fs.statSync(this.logFile);
+        if (stats.size > maxLogSize) {
+          const oldLogFile = this.logFile + '.old';
+          // Remove old backup if exists
+          if (fs.existsSync(oldLogFile)) {
+            fs.unlinkSync(oldLogFile);
+          }
+          // Rotate current log to .old
+          fs.renameSync(this.logFile, oldLogFile);
+        }
+      }
+
+      fs.appendFileSync(
+        this.logFile,
+        `${logMessage} ${args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ')}\n`
+      );
     } catch (err) {
       // Ignore log file errors
     }

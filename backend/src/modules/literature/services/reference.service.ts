@@ -1,6 +1,95 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
 
+/**
+ * Phase 10.106 Phase 9: Typed interface for paper input
+ * Netflix-grade: No loose `any` types for paper formatting
+ */
+export interface ReferencePaperInput {
+  title?: string;
+  authors?: string[] | string;
+  year?: number | string;
+  journal?: string;
+  venue?: string;
+  volume?: string;
+  number?: string;
+  pages?: string;
+  doi?: string;
+  url?: string;
+  publisher?: string;
+  abstract?: string;
+  type?: string;
+  booktitle?: string;
+  conference?: string;
+  isbn?: string;
+  issn?: string;
+  keywords?: string[];
+}
+
+/**
+ * Phase 10.106 Phase 9: Zotero API types
+ * Netflix-grade: Full type safety for external API integration
+ */
+export interface ZoteroCreator {
+  creatorType?: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+}
+
+export interface ZoteroTag {
+  tag: string;
+  type?: number;
+}
+
+export interface ZoteroItemData {
+  key?: string;
+  version?: number;
+  itemType?: string;
+  title?: string;
+  creators?: ZoteroCreator[];
+  date?: string;
+  publicationTitle?: string;
+  volume?: string;
+  issue?: string;
+  pages?: string;
+  DOI?: string;
+  url?: string;
+  abstractNote?: string;
+  tags?: ZoteroTag[];
+}
+
+export interface ZoteroItem {
+  key: string;
+  version: number;
+  library?: {
+    type: string;
+    id: number;
+    name: string;
+  };
+  data: ZoteroItemData;
+}
+
+export interface ConvertedPaper {
+  title?: string;
+  authors?: string[];
+  year?: number | null;
+  journal?: string;
+  volume?: string;
+  number?: string;
+  pages?: string;
+  doi?: string;
+  url?: string;
+  abstract?: string;
+  type?: string;
+  tags?: string[];
+}
+
+export interface ZoteroSyncResult {
+  synced: number;
+  papers: ConvertedPaper[];
+}
+
 // BibTeX entry types
 export enum BibTeXType {
   ARTICLE = 'article',
@@ -71,7 +160,7 @@ export class ReferenceService {
   /**
    * Generate BibTeX format string from paper data
    */
-  generateBibTeX(paper: any): string {
+  generateBibTeX(paper: ReferencePaperInput): string {
     const citationKey = this.generateCitationKey(paper);
     const type = this.determineBibTeXType(paper);
 
@@ -138,7 +227,7 @@ export class ReferenceService {
   /**
    * Generate RIS format string from paper data
    */
-  generateRIS(paper: any): string {
+  generateRIS(paper: ReferencePaperInput): string {
     let ris = '';
 
     // Type
@@ -190,7 +279,7 @@ export class ReferenceService {
   /**
    * Format citation according to specified style
    */
-  formatCitation(paper: any, style: CitationStyle): string {
+  formatCitation(paper: ReferencePaperInput, style: CitationStyle): string {
     switch (style) {
       case CitationStyle.APA:
         return this.formatAPA(paper);
@@ -212,7 +301,7 @@ export class ReferenceService {
   /**
    * APA Citation Style
    */
-  private formatAPA(paper: any): string {
+  private formatAPA(paper: ReferencePaperInput): string {
     const authors = this.formatAuthorsAPA(paper.authors);
     const year = paper.year || 'n.d.';
     const title = paper.title || 'Untitled';
@@ -228,7 +317,7 @@ export class ReferenceService {
   /**
    * MLA Citation Style
    */
-  private formatMLA(paper: any): string {
+  private formatMLA(paper: ReferencePaperInput): string {
     const authors = this.formatAuthorsMLA(paper.authors);
     const title = `"${paper.title || 'Untitled'}"`;
     const journal = paper.journal ? ` ${paper.journal}` : '';
@@ -243,7 +332,7 @@ export class ReferenceService {
   /**
    * Chicago Citation Style
    */
-  private formatChicago(paper: any): string {
+  private formatChicago(paper: ReferencePaperInput): string {
     const authors = this.formatAuthorsChicago(paper.authors);
     const title = `"${paper.title || 'Untitled'}"`;
     const journal = paper.journal || '';
@@ -258,7 +347,7 @@ export class ReferenceService {
   /**
    * Harvard Citation Style
    */
-  private formatHarvard(paper: any): string {
+  private formatHarvard(paper: ReferencePaperInput): string {
     const authors = this.formatAuthorsHarvard(paper.authors);
     const year = paper.year || 'n.d.';
     const title = `'${paper.title || 'Untitled'}'`;
@@ -273,7 +362,7 @@ export class ReferenceService {
   /**
    * IEEE Citation Style
    */
-  private formatIEEE(paper: any): string {
+  private formatIEEE(paper: ReferencePaperInput): string {
     const authors = this.formatAuthorsIEEE(paper.authors);
     const title = `"${paper.title || 'Untitled'},"`;
     const journal = paper.journal ? ` ${paper.journal},` : '';
@@ -288,7 +377,7 @@ export class ReferenceService {
   /**
    * Vancouver Citation Style
    */
-  private formatVancouver(paper: any): string {
+  private formatVancouver(paper: ReferencePaperInput): string {
     const authors = this.formatAuthorsVancouver(paper.authors);
     const title = paper.title || 'Untitled';
     const journal = paper.journal ? ` ${paper.journal}` : '';
@@ -301,7 +390,7 @@ export class ReferenceService {
   }
 
   // Helper methods for author formatting
-  private formatAuthorsAPA(authors: any): string {
+  private formatAuthorsAPA(authors: string[] | string | undefined): string {
     if (!authors) return 'Unknown';
     const authList = Array.isArray(authors) ? authors : [authors];
     if (authList.length === 1) return authList[0];
@@ -309,7 +398,7 @@ export class ReferenceService {
     return `${authList[0]} et al.`;
   }
 
-  private formatAuthorsMLA(authors: any): string {
+  private formatAuthorsMLA(authors: string[] | string | undefined): string {
     if (!authors) return 'Unknown';
     const authList = Array.isArray(authors) ? authors : [authors];
     if (authList.length === 1) return authList[0];
@@ -317,15 +406,15 @@ export class ReferenceService {
     return `${authList[0]}, et al`;
   }
 
-  private formatAuthorsChicago(authors: any): string {
+  private formatAuthorsChicago(authors: string[] | string | undefined): string {
     return this.formatAuthorsMLA(authors);
   }
 
-  private formatAuthorsHarvard(authors: any): string {
+  private formatAuthorsHarvard(authors: string[] | string | undefined): string {
     return this.formatAuthorsAPA(authors);
   }
 
-  private formatAuthorsIEEE(authors: any): string {
+  private formatAuthorsIEEE(authors: string[] | string | undefined): string {
     if (!authors) return 'Unknown';
     const authList = Array.isArray(authors) ? authors : [authors];
     const formatted = authList.map((author: string) => {
@@ -355,7 +444,7 @@ export class ReferenceService {
     return `${formatted[0]} et al.`;
   }
 
-  private formatAuthorsVancouver(authors: any): string {
+  private formatAuthorsVancouver(authors: string[] | string | undefined): string {
     if (!authors) return 'Unknown';
     const authList = Array.isArray(authors) ? authors : [authors];
     const formatted = authList.slice(0, 6).map((author: string) => {
@@ -385,7 +474,7 @@ export class ReferenceService {
   }
 
   // Helper methods for type determination
-  private determineBibTeXType(paper: any): BibTeXType {
+  private determineBibTeXType(paper: ReferencePaperInput): BibTeXType {
     if (paper.type) {
       const type = paper.type.toLowerCase();
       if (type.includes('book')) return BibTeXType.BOOK;
@@ -404,7 +493,7 @@ export class ReferenceService {
     return BibTeXType.MISC;
   }
 
-  private determineRISType(paper: any): string {
+  private determineRISType(paper: ReferencePaperInput): string {
     if (paper.type) {
       const type = paper.type.toLowerCase();
       if (type.includes('journal')) return 'JOUR';
@@ -420,7 +509,7 @@ export class ReferenceService {
     return 'GEN';
   }
 
-  private generateCitationKey(paper: any): string {
+  private generateCitationKey(paper: ReferencePaperInput): string {
     const year = paper.year || 'XXXX';
     const authors = Array.isArray(paper.authors)
       ? paper.authors
@@ -443,8 +532,9 @@ export class ReferenceService {
 
   /**
    * Zotero integration methods
+   * Phase 10.106 Phase 9: Fully typed Zotero API integration
    */
-  async syncWithZotero(apiKey: string, userId: string): Promise<any> {
+  async syncWithZotero(apiKey: string, userId: string): Promise<ZoteroSyncResult> {
     try {
       // Zotero API endpoint
       const baseUrl = `https://api.zotero.org/users/${userId}`;
@@ -455,10 +545,10 @@ export class ReferenceService {
 
       // Fetch library items
       const response = await fetch(`${baseUrl}/items?limit=100`, { headers });
-      const items = await response.json();
+      const items = (await response.json()) as ZoteroItem[];
 
       // Convert Zotero items to our paper format and save
-      const papers = items.map((item: any) => this.convertZoteroItem(item));
+      const papers = items.map((item: ZoteroItem) => this.convertZoteroItem(item));
 
       // Save to database
       for (const paper of papers) {
@@ -466,17 +556,21 @@ export class ReferenceService {
       }
 
       return { synced: papers.length, papers };
-    } catch (error: any) {
-      this.logger.error(`Zotero sync failed: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string };
+      this.logger.error(`Zotero sync failed: ${err.message || 'Unknown error'}`);
       throw error;
     }
   }
 
-  private convertZoteroItem(item: any): any {
+  private convertZoteroItem(item: ZoteroItem): ConvertedPaper {
     const data = item.data;
     return {
       title: data.title,
-      authors: data.creators?.map((c: any) => `${c.firstName} ${c.lastName}`),
+      authors: data.creators?.map((c: ZoteroCreator) =>
+        c.name || `${c.firstName || ''} ${c.lastName || ''}`.trim()
+      ),
       year: data.date ? new Date(data.date).getFullYear() : null,
       journal: data.publicationTitle,
       volume: data.volume,
@@ -486,16 +580,16 @@ export class ReferenceService {
       url: data.url,
       abstract: data.abstractNote,
       type: data.itemType,
-      tags: data.tags?.map((t: any) => t.tag),
+      tags: data.tags?.map((t: ZoteroTag) => t.tag),
     };
   }
 
-  private async savePaperToLibrary(paper: any, userId: string): Promise<void> {
+  private async savePaperToLibrary(paper: ConvertedPaper, userId: string): Promise<void> {
     await this.prisma.paper.create({
       data: {
-        title: paper.title,
-        authors: paper.authors,
-        year: paper.year,
+        title: paper.title || 'Untitled',
+        authors: paper.authors || [],
+        year: paper.year ?? 0,
         journal: paper.journal,
         volume: paper.volume,
         issue: paper.number,

@@ -127,6 +127,80 @@ export interface WebOfScienceSearchOptions {
   subjectCategory?: string;
 }
 
+/**
+ * Phase 10.106 Phase 7: Typed interface for WoS search parameters
+ */
+interface WosSearchParams {
+  databaseId: string;
+  usrQuery: string;
+  count: number;
+  firstRecord: number;
+}
+
+/**
+ * Phase 10.106 Phase 7: Typed interface for WoS title
+ */
+interface WosTitle {
+  '@type'?: string;
+  '#text'?: string;
+}
+
+/**
+ * Phase 10.106 Phase 7: Typed interface for WoS name/author
+ */
+interface WosName {
+  '@role'?: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+/**
+ * Phase 10.106 Phase 7: Typed interface for WoS identifier
+ */
+interface WosIdentifier {
+  '@type'?: string;
+  '@value'?: string;
+}
+
+/**
+ * Phase 10.106 Phase 7: Typed interface for WoS category/subject
+ */
+interface WosSubject {
+  '#text'?: string;
+}
+
+/**
+ * Phase 10.106 Phase 7: Typed interface for WoS record
+ * Netflix-grade: Explicit typing for API response parsing
+ */
+interface WosRecord {
+  UID?: string;
+  static_data?: {
+    summary?: {
+      titles?: { title?: WosTitle[] };
+      pub_info?: { pubyear?: string };
+      names?: { name?: WosName[] };
+      source_title?: string;
+      doctypes?: { doctype?: string | string[] };
+    };
+    fullrecord_metadata?: {
+      abstracts?: { abstract?: { abstract_text?: { p?: string } } };
+      identifiers?: { identifier?: WosIdentifier[] };
+      category_info?: { subjects?: { subject?: WosSubject[] } };
+    };
+  };
+  dynamic_data?: {
+    citation_related?: { tc_list?: { silo_tc?: { local_count?: string } } };
+    cluster_related?: {
+      identifiers?: {
+        impact_factor?: string;
+        quartile?: string;
+        oa?: { oa_status?: string; oa_loc_url?: string };
+      };
+    };
+  };
+}
+
 @Injectable()
 export class WebOfScienceService {
   private readonly logger = new Logger(WebOfScienceService.name);
@@ -209,7 +283,7 @@ export class WebOfScienceService {
       }
 
       // Build request parameters
-      const params: any = {
+      const params: WosSearchParams = {
         databaseId: 'WOS',
         usrQuery: queryString,
         count: options?.limit || 20,
@@ -230,7 +304,7 @@ export class WebOfScienceService {
       // Parse results
       const records = response.data?.Data?.Records?.records?.REC || [];
       const papers = Array.isArray(records)
-        ? records.map((record: any) => this.parsePaper(record))
+        ? records.map((record: WosRecord) => this.parsePaper(record))
         : [];
 
       this.logger.log(
@@ -238,17 +312,19 @@ export class WebOfScienceService {
       );
 
       return papers;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 4: Use unknown with type narrowing
+      const err = error as { response?: { status?: number }; message?: string };
       // Graceful degradation - log error but don't crash
-      if (error.response?.status === 401) {
+      if (err.response?.status === 401) {
         this.logger.error(
           `[Web of Science] Authentication failed - check API key`,
         );
-      } else if (error.response?.status === 429) {
+      } else if (err.response?.status === 429) {
         this.logger.error(`[Web of Science] Rate limit exceeded`);
       } else {
         this.logger.error(
-          `[Web of Science] Search failed: ${error.message}`,
+          `[Web of Science] Search failed: ${err.message || 'Unknown error'}`,
         );
       }
       return [];
@@ -267,7 +343,7 @@ export class WebOfScienceService {
    * @param record Raw Web of Science record
    * @returns Paper object with normalized metadata
    */
-  private parsePaper(record: any): Paper {
+  private parsePaper(record: WosRecord): Paper {
     // Extract static data
     const static_data = record.static_data || {};
     const summary = static_data.summary || {};
@@ -282,7 +358,7 @@ export class WebOfScienceService {
 
     // Extract basic metadata
     const title =
-      titles.find((t: any) => t['@type'] === 'item')?.['#text'] ||
+      titles.find((t: WosTitle) => t['@type'] === 'item')?.['#text'] ||
       titles[0]?.['#text'] ||
       'Untitled';
     const abstract =
@@ -292,9 +368,9 @@ export class WebOfScienceService {
 
     // Extract authors
     const authors = names
-      .filter((n: any) => n['@role'] === 'author')
+      .filter((n: WosName) => n['@role'] === 'author')
       .map(
-        (author: any) =>
+        (author: WosName) =>
           `${author.first_name || ''} ${author.last_name || ''}`.trim(),
       );
 
@@ -307,7 +383,7 @@ export class WebOfScienceService {
     const identifiers =
       static_data.fullrecord_metadata?.identifiers?.identifier || [];
     const doi =
-      identifiers.find((id: any) => id['@type'] === 'doi')?.['@value'] ||
+      identifiers.find((id: WosIdentifier) => id['@type'] === 'doi')?.['@value'] ||
       undefined;
 
     // Extract citation count
@@ -325,7 +401,7 @@ export class WebOfScienceService {
     const categories =
       static_data.fullrecord_metadata?.category_info?.subjects
         ?.subject || [];
-    const fieldsOfStudy = categories.map((cat: any) => cat['#text']);
+    const fieldsOfStudy = categories.map((cat: WosSubject) => cat['#text']);
 
     // Calculate word counts for content depth analysis
     const abstractWordCount = calculateAbstractWordCount(abstract);
@@ -337,7 +413,11 @@ export class WebOfScienceService {
     const impactFactor = journal_info.impact_factor
       ? parseFloat(journal_info.impact_factor)
       : undefined;
-    const quartile = journal_info.quartile || undefined;
+    // Phase 10.106 Phase 7: Validate quartile is a valid QuartileType
+    const rawQuartile = journal_info.quartile;
+    const quartile: 'Q1' | 'Q2' | 'Q3' | 'Q4' | undefined =
+      rawQuartile === 'Q1' || rawQuartile === 'Q2' ||
+      rawQuartile === 'Q3' || rawQuartile === 'Q4' ? rawQuartile : undefined;
 
     // Calculate quality score (0-100 scale)
     const qualityComponents = calculateQualityScore({
@@ -376,12 +456,15 @@ export class WebOfScienceService {
       // Publication metadata
       venue,
       source: LiteratureSource.WEB_OF_SCIENCE,
+      // Phase 10.106 Phase 7: Ensure publicationType is string[] | undefined
       publicationType: Array.isArray(publicationType)
-        ? publicationType[0]
-        : publicationType,
+        ? publicationType
+        : publicationType ? [publicationType] : undefined,
 
-      // Subject classification
-      fieldsOfStudy: fieldsOfStudy.length > 0 ? fieldsOfStudy : null,
+      // Subject classification - Phase 10.106 Phase 7: Filter out undefined values
+      fieldsOfStudy: fieldsOfStudy.filter((f): f is string => f !== undefined).length > 0
+        ? fieldsOfStudy.filter((f): f is string => f !== undefined)
+        : undefined,
 
       // Content metrics (Phase 10 Day 5.13+)
       wordCount,

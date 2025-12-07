@@ -84,6 +84,7 @@
 
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
@@ -105,6 +106,82 @@ export interface TaylorFrancisSearchOptions {
 }
 
 /**
+ * Phase 10.106: Typed interface for Taylor & Francis API search parameters
+ * Netflix-grade: No loose `any` types
+ */
+interface TaylorFrancisSearchParams {
+  AllField: string;
+  pageSize: number;
+  startPage: number;
+  sortBy: string;
+  subjectTitle?: string;
+  AfterYear?: number;
+  BeforeYear?: number;
+  SubjectGroup?: string;
+}
+
+/**
+ * Phase 10.106 Phase 7: Typed interface for Taylor & Francis author
+ * Netflix-grade: No loose `any` types
+ */
+interface TaylorFrancisAuthor {
+  name?: string;
+  given?: string;
+  family?: string;
+  firstName?: string;
+  lastName?: string;
+  type?: string;
+}
+
+/**
+ * Phase 10.106 Phase 7: Typed interface for Taylor & Francis API item
+ * Netflix-grade: Explicit typing for API response parsing
+ */
+interface TaylorFrancisItem {
+  doi?: string;
+  DOI?: string;
+  Title?: string;
+  title?: string;
+  articleTitle?: string;
+  Abstract?: string;
+  abstract?: string;
+  abstractText?: string;
+  description?: string;
+  Authors?: TaylorFrancisAuthor[] | string[];
+  authors?: TaylorFrancisAuthor[] | string[];
+  contributors?: TaylorFrancisAuthor[];
+  author?: string;
+  PubYear?: string;
+  publicationYear?: string;
+  publicationDate?: string;
+  year?: string;
+  issued?: { 'date-parts'?: number[][] };
+  PublicationTitle?: string;
+  journalTitle?: string;
+  publicationTitle?: string;
+  containerTitle?: string;
+  URL?: string;
+  url?: string;
+  link?: string;
+  Keywords?: string[];
+  keywords?: string[];
+  subjects?: string[];
+  SubjectGroup?: string[];
+  Type?: string;
+  type?: string;
+  articleType?: string;
+  citationCount?: number;
+  citedByCount?: number;
+  openAccess?: boolean;
+  isOpenAccess?: boolean;
+  accessType?: string;
+  license?: string;
+  id?: string;
+  articleId?: string;
+  bookTitle?: string;
+}
+
+/**
  * Taylor & Francis Service
  * Implements access to 2,700+ journals from Taylor & Francis Group
  */
@@ -112,9 +189,21 @@ export interface TaylorFrancisSearchOptions {
 export class TaylorFrancisService {
   private readonly logger = new Logger(TaylorFrancisService.name);
   private readonly API_BASE_URL = 'https://www.tandfonline.com/action/doSearch';
-  private readonly API_KEY = process.env.TAYLOR_FRANCIS_API_KEY || '';
+  private readonly apiKey: string;
 
-  constructor(private readonly httpService: HttpService) {}
+  // Phase 10.106: Use ConfigService for proper .env loading (NestJS best practice)
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {
+    this.apiKey = this.configService.get<string>('TAYLOR_FRANCIS_API_KEY') || '';
+
+    if (this.apiKey) {
+      this.logger.log('✅ [Taylor & Francis] Service initialized with API key');
+    } else {
+      this.logger.warn('⚠️ [Taylor & Francis] API key not configured - set TAYLOR_FRANCIS_API_KEY environment variable');
+    }
+  }
 
   /**
    * Search Taylor & Francis
@@ -124,7 +213,7 @@ export class TaylorFrancisService {
     query: string,
     options: TaylorFrancisSearchOptions = {},
   ): Promise<Paper[]> {
-    if (!this.API_KEY) {
+    if (!this.apiKey) {
       this.logger.warn(
         '⚠️ [Taylor & Francis] TAYLOR_FRANCIS_API_KEY not configured - skipping search',
       );
@@ -141,7 +230,7 @@ export class TaylorFrancisService {
         this.httpService.get(this.API_BASE_URL, {
           params,
           headers: {
-            'X-API-Key': this.API_KEY,
+            'X-API-Key': this.apiKey,
             Accept: 'application/json',
           },
           timeout: PUBLISHER_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Migrated to centralized config
@@ -153,7 +242,7 @@ export class TaylorFrancisService {
       this.logger.log(`✅ [Taylor & Francis] Found ${items.length} papers`);
 
       const papers = items
-        .map((item: any) => this.parsePaper(item))
+        .map((item: TaylorFrancisItem) => this.parsePaper(item))
         .filter((paper: Paper | null) => paper !== null) as Paper[];
 
       const eligiblePapers = papers.filter((paper) =>
@@ -164,18 +253,20 @@ export class TaylorFrancisService {
       );
 
       return eligiblePapers;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 4: Use unknown with type narrowing
+      const err = error as { response?: { status?: number }; message?: string };
+      if (err.response?.status === 401) {
         this.logger.error(
           '🔒 [Taylor & Francis] Authentication failed - check API key',
         );
-      } else if (error.response?.status === 429) {
+      } else if (err.response?.status === 429) {
         this.logger.warn(
           '⏳ [Taylor & Francis] Rate limit exceeded - try again later',
         );
       } else {
         this.logger.error(
-          `❌ [Taylor & Francis] Search error: ${error.message}`,
+          `❌ [Taylor & Francis] Search error: ${err.message || 'Unknown error'}`,
         );
       }
       return [];
@@ -188,8 +279,8 @@ export class TaylorFrancisService {
   private buildSearchParams(
     query: string,
     options: TaylorFrancisSearchOptions,
-  ): Record<string, any> {
-    const params: Record<string, any> = {
+  ): TaylorFrancisSearchParams {
+    const params: TaylorFrancisSearchParams = {
       AllField: query,
       pageSize: options.limit || 25,
       startPage: 0,
@@ -215,7 +306,7 @@ export class TaylorFrancisService {
   /**
    * Parse Taylor & Francis API response item into standardized Paper format
    */
-  private parsePaper(item: any): Paper | null {
+  private parsePaper(item: TaylorFrancisItem): Paper | null {
     try {
       // Extract DOI
       const doi = item.doi || item.DOI || undefined;
@@ -313,9 +404,11 @@ export class TaylorFrancisService {
       };
 
       return paper;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 4: Use unknown with type narrowing
+      const err = error as { message?: string };
       this.logger.warn(
-        `⚠️ [Taylor & Francis] Failed to parse paper: ${error.message}`,
+        `⚠️ [Taylor & Francis] Failed to parse paper: ${err.message || 'Unknown error'}`,
       );
       return null;
     }
@@ -324,12 +417,12 @@ export class TaylorFrancisService {
   /**
    * Extract authors from Taylor & Francis response
    */
-  private extractAuthors(item: any): string[] {
+  private extractAuthors(item: TaylorFrancisItem): string[] {
     const authors: string[] = [];
 
     // Try Authors array
     if (item.Authors && Array.isArray(item.Authors)) {
-      return item.Authors.map((author: any) => {
+      return item.Authors.map((author: TaylorFrancisAuthor | string) => {
         if (typeof author === 'string') return author;
         if (author.name) return author.name;
         if (author.given && author.family)
@@ -353,7 +446,7 @@ export class TaylorFrancisService {
     if (authors.length === 0 && item.authors) {
       if (Array.isArray(item.authors)) {
         return item.authors
-          .map((author: any) => {
+          .map((author: TaylorFrancisAuthor | string) => {
             if (typeof author === 'string') return author;
             if (author.name) return author.name;
             if (author.given && author.family)
@@ -379,7 +472,7 @@ export class TaylorFrancisService {
   /**
    * Extract publication year
    */
-  private extractYear(item: any): number | undefined {
+  private extractYear(item: TaylorFrancisItem): number | undefined {
     if (item.PubYear) {
       const year = parseInt(item.PubYear, 10);
       if (!isNaN(year)) return year;
@@ -411,26 +504,26 @@ export class TaylorFrancisService {
   /**
    * Extract keywords/subjects
    */
-  private extractKeywords(item: any): string[] {
+  private extractKeywords(item: TaylorFrancisItem): string[] {
     const keywords: string[] = [];
 
     if (item.Keywords && Array.isArray(item.Keywords)) {
       keywords.push(
-        ...item.Keywords.filter((k: any) => typeof k === 'string'),
+        ...item.Keywords.filter((k: unknown) => typeof k === 'string'),
       );
     }
 
     if (item.keywords && Array.isArray(item.keywords)) {
-      keywords.push(...item.keywords.filter((k: any) => typeof k === 'string'));
+      keywords.push(...item.keywords.filter((k: unknown) => typeof k === 'string'));
     }
 
     if (item.subjects && Array.isArray(item.subjects)) {
-      keywords.push(...item.subjects.filter((s: any) => typeof s === 'string'));
+      keywords.push(...item.subjects.filter((s: unknown) => typeof s === 'string'));
     }
 
     if (item.SubjectGroup && Array.isArray(item.SubjectGroup)) {
       keywords.push(
-        ...item.SubjectGroup.filter((s: any) => typeof s === 'string'),
+        ...item.SubjectGroup.filter((s: unknown) => typeof s === 'string'),
       );
     }
 
@@ -440,7 +533,7 @@ export class TaylorFrancisService {
   /**
    * Determine publication type
    */
-  private determinePublicationType(item: any): string[] {
+  private determinePublicationType(item: TaylorFrancisItem): string[] {
     const types: string[] = [];
 
     if (item.Type) {

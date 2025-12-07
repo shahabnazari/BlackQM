@@ -1,0 +1,16 @@
+# Grafana Dashboard Provisioning
+# Phase 10.102 Phase 6: Automatic Dashboard Import
+
+apiVersion: 1
+
+providers:
+  - name: 'VQMethod Dashboards'
+    orgId: 1
+    folder: 'Netflix-Grade Monitoring'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/dashboards
+      foldersFromFilesStructure: false

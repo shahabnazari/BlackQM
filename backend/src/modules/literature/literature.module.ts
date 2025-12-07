@@ -38,6 +38,8 @@ import { PMCService } from './services/pmc.service';
 import { ERICService } from './services/eric.service';
 // Phase 10.7.10: CORE - Open access aggregator
 import { CoreService } from './services/core.service';
+// Phase 10.106 Phase 1: OpenAlex - Comprehensive open database (250M+ works)
+import { OpenAlexService } from './services/openalex.service';
 // Phase 10.6 Day 6: Web of Science - Premium academic database
 import { WebOfScienceService } from './services/web-of-science.service';
 // Phase 10.6 Day 7: Scopus - Premium Elsevier database
@@ -128,6 +130,8 @@ import { SourceAllocationService } from './services/source-allocation.service';
 import { RetryService } from '../../common/services/retry.service';
 // Phase 10.102 Phase 3.1: Bulkhead Service (multi-tenant resource isolation)
 import { BulkheadService } from '../../common/services/bulkhead.service';
+// Phase 10.108: Universal Citation Enrichment Service (Netflix-grade batch enrichment for ALL papers)
+import { UniversalCitationEnrichmentService } from './services/universal-citation-enrichment.service';
 import { PDFController } from './controllers/pdf.controller';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
@@ -194,6 +198,8 @@ import { AIModule } from '../ai/ai.module';
     ERICService,
     // Phase 10.7.10: CORE - Open access aggregator
     CoreService,
+    // Phase 10.106 Phase 1: OpenAlex - Comprehensive open database
+    OpenAlexService,
     // Phase 10.6 Day 6: Web of Science - Premium academic database
     WebOfScienceService,
     // Phase 10.6 Day 7: Scopus - Premium Elsevier database
@@ -284,6 +290,8 @@ import { AIModule } from '../ai/ai.module';
     RetryService,
     // Phase 10.102 Phase 3.1: Bulkhead Service (multi-tenant resource isolation)
     BulkheadService,
+    // Phase 10.108: Universal Citation Enrichment Service (Netflix-grade batch enrichment for ALL papers)
+    UniversalCitationEnrichmentService,
   ],
   exports: [
     LiteratureService,
@@ -319,6 +327,8 @@ import { AIModule } from '../ai/ai.module';
     ERICService,
     // Phase 10.7.10: CORE - Open access aggregator
     CoreService,
+    // Phase 10.106 Phase 1: OpenAlex - Comprehensive open database
+    OpenAlexService,
     // Phase 10.6 Day 6: Web of Science - Premium academic database
     WebOfScienceService,
     // Phase 10.6 Day 7: Scopus - Premium Elsevier database

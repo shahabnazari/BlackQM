@@ -1,7 +1,8 @@
 // Service Worker for VQMethod - Offline Support & Caching
-const CACHE_NAME = 'vqmethod-v1.0.0';
-const DYNAMIC_CACHE = 'vqmethod-dynamic-v1.0.0';
-const API_CACHE = 'vqmethod-api-v1.0.0';
+// Phase 10.106: Updated cache version to force refresh
+const CACHE_NAME = 'vqmethod-v2.0.0';
+const DYNAMIC_CACHE = 'vqmethod-dynamic-v2.0.0';
+const API_CACHE = 'vqmethod-api-v2.0.0';
 
 // Files to cache on install
 const STATIC_ASSETS = [
@@ -68,12 +69,19 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Phase 10.106: CRITICAL - Skip ALL requests to backend (different port)
+  // Backend runs on port 4000, frontend on port 3000
+  // Service worker should NEVER intercept cross-origin backend requests
+  if (url.port === '4000' || url.hostname !== self.location.hostname) {
+    return; // Let browser handle directly
+  }
+
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;
   }
 
-  // Handle API requests
+  // Handle API requests (same-origin only, e.g., Next.js API routes)
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(handleApiRequest(request));
     return;

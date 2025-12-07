@@ -83,7 +83,9 @@
 
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+import { RetryService } from '../../../common/services/retry.service';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
 import {
@@ -93,46 +95,75 @@ import {
 } from '../utils/word-count.util';
 import { LARGE_RESPONSE_TIMEOUT } from '../constants/http-config.constants';
 
-/**
- * Search options specific to IEEE Xplore API
- */
 export interface IEEESearchOptions {
   yearFrom?: number;
   yearTo?: number;
   limit?: number;
-  // IEEE-specific filters
   publicationType?: 'journal' | 'conference' | 'standard' | 'ebook' | 'all';
-  technicalField?: string; // CS, EE, Telecom, etc.
+  technicalField?: string;
 }
 
 /**
- * IEEE Xplore Service
- * Provides search capabilities for IEEE digital library
- *
- * Note: IEEE Xplore API requires registration and API key
- * Free tier: 200 calls/day
- * Premium tier: 10,000 calls/day
+ * Phase 10.106 Phase 10: IEEE API type definitions
+ * Netflix-grade: Full type safety for external API
  */
+interface IEEEAuthor {
+  full_name?: string;
+  authorUrl?: string;
+}
+
+interface IEEEAuthorsData {
+  authors?: (IEEEAuthor | string)[];
+}
+
+interface IEEEArticle {
+  content_type?: string;
+  article_number?: string;
+  title?: string;
+  abstract?: string;
+  publication_title?: string;
+  publication_year?: string;
+  doi?: string;
+  pdf_url?: string;
+  html_url?: string;
+  citing_paper_count?: number;
+  authors?: IEEEAuthorsData;
+  index_terms?: {
+    author_terms?: { terms?: string[] };
+    ieee_terms?: { terms?: string[] };
+  };
+  conference_location?: string;
+  isbn?: string;
+  issn?: string;
+  access_type?: string;
+}
+
+interface IEEESearchParams {
+  apikey: string;
+  querytext: string;
+  format: string;
+  max_records: number;
+  start_year?: number;
+  end_year?: number;
+  content_type?: string;
+}
+
 @Injectable()
 export class IEEEService {
   private readonly logger = new Logger(IEEEService.name);
+  private readonly API_BASE_URL = 'https://ieeexploreapi.ieee.org/api/v1/search/articles';
+  private readonly apiKey: string;
 
-  // IEEE Xplore REST API v3 endpoint
-  private readonly API_BASE_URL =
-    'https://ieeexploreapi.ieee.org/api/v1/search/articles';
-
-  // API Key should be stored in environment variables
-  // Format: process.env.IEEE_API_KEY
-  private readonly API_KEY = process.env.IEEE_API_KEY || '';
-
-  constructor(private readonly httpService: HttpService) {
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+    private readonly retry: RetryService,
+  ) {
+    this.apiKey = this.configService.get<string>('IEEE_API_KEY') || '';
     this.logger.log('✅ [IEEE Xplore] Service initialized');
 
-    // Warn if API key is not configured
-    if (!this.API_KEY) {
-      this.logger.warn(
-        '⚠️ [IEEE Xplore] API key not configured - set IEEE_API_KEY environment variable',
-      );
+    if (!this.apiKey) {
+      this.logger.warn('⚠️ [IEEE Xplore] API key not configured - set IEEE_API_KEY');
     }
   }
 
@@ -151,80 +182,76 @@ export class IEEEService {
     options?: IEEESearchOptions,
   ): Promise<Paper[]> {
     try {
-      // Check for API key
-      if (!this.API_KEY) {
-        this.logger.warn(
-          '[IEEE Xplore] Skipping search - API key not configured',
-        );
+      if (!this.apiKey) {
+        this.logger.warn('[IEEE Xplore] Skipping search - API key not configured');
         return [];
       }
 
       this.logger.log(`[IEEE Xplore] Searching: "${query}"`);
 
-      // Build IEEE API query parameters
       const params = this.buildSearchParams(query, options);
 
-      // Make HTTP request to IEEE API
-      const response = await firstValueFrom(
-        this.httpService.get(this.API_BASE_URL, {
-          params,
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          timeout: LARGE_RESPONSE_TIMEOUT, // 30s - Phase 10.6 Day 14.5: Migrated to centralized config
-        }),
+      const result = await this.retry.executeWithRetry(
+        async () => firstValueFrom(
+          this.httpService.get(this.API_BASE_URL, {
+            params,
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            timeout: LARGE_RESPONSE_TIMEOUT,
+          }),
+        ),
+        'IEEE.search',
+        {
+          maxAttempts: 3,
+          initialDelayMs: 1000,
+          maxDelayMs: 16000,
+          backoffMultiplier: 2,
+          jitterMs: 500,
+        },
       );
 
-      // Parse IEEE API response
-      const data = response.data;
-      const totalRecords = data.total_records || 0;
-      this.logger.log(
-        `[IEEE Xplore] Found ${totalRecords} results for "${query}"`,
-      );
-
-      // Extract and parse articles
-      const articles = data.articles || [];
-      const papers = articles
-        .map((article: any) => this.parsePaper(article))
-        .filter((paper: Paper | null) => paper !== null) as Paper[];
-
-      this.logger.log(
-        `[IEEE Xplore] Returning ${papers.length} eligible papers`,
-      );
-      return papers;
-    } catch (error: any) {
-      // Graceful error handling - log and return empty array
-      if (error.response?.status === 401) {
-        this.logger.error('[IEEE Xplore] Authentication failed - check API key');
-      } else if (error.response?.status === 429) {
-        this.logger.error('[IEEE Xplore] Rate limit exceeded - try again later');
-      } else {
-        this.logger.error(`[IEEE Xplore] Search failed: ${error.message}`);
+      const data = result.data?.data;
+      if (!data) {
+        this.logger.warn('[IEEE Xplore] API returned invalid response');
+        return [];
       }
-      return []; // Graceful degradation
+
+      const totalRecords = data.total_records || 0;
+      this.logger.log(`[IEEE Xplore] Found ${totalRecords} results (attempts: ${result.attempts})`);
+
+      const articles: IEEEArticle[] = data.articles || [];
+      const papers = articles
+        .map((article) => this.parsePaper(article))
+        .filter((paper): paper is Paper => paper !== null);
+
+      this.logger.log(`[IEEE Xplore] Returning ${papers.length} eligible papers`);
+      return papers;
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number }; message?: string };
+      if (err.response?.status === 401) {
+        this.logger.error('[IEEE Xplore] Authentication failed - check API key');
+      } else if (err.response?.status === 429) {
+        this.logger.error('[IEEE Xplore] Rate limit exceeded');
+      } else {
+        this.logger.error(`[IEEE Xplore] Search failed: ${err.message || 'Unknown error'}`);
+      }
+      return [];
     }
   }
 
-  /**
-   * Build IEEE API query parameters
-   *
-   * @param query - User search query
-   * @param options - Optional filters
-   * @returns Query parameters object
-   */
   private buildSearchParams(
     query: string,
     options?: IEEESearchOptions,
-  ): Record<string, any> {
-    const params: Record<string, any> = {
-      apikey: this.API_KEY,
+  ): IEEESearchParams {
+    const params: IEEESearchParams = {
+      apikey: this.apiKey,
       querytext: query,
       format: 'json',
       max_records: options?.limit || 25,
     };
 
-    // Add year range filters
     if (options?.yearFrom) {
       params.start_year = options.yearFrom;
     }
@@ -233,11 +260,8 @@ export class IEEEService {
       params.end_year = options.yearTo;
     }
 
-    // Add publication type filter
     if (options?.publicationType && options.publicationType !== 'all') {
-      params.content_type = this.mapPublicationType(
-        options.publicationType,
-      );
+      params.content_type = this.mapPublicationType(options.publicationType);
     }
 
     return params;
@@ -256,13 +280,7 @@ export class IEEEService {
     return mapping[type] || 'Journals';
   }
 
-  /**
-   * Parse IEEE API article response to Paper object
-   *
-   * @param article - Raw IEEE API article object
-   * @returns Paper object or null if invalid
-   */
-  private parsePaper(article: any): Paper | null {
+  private parsePaper(article: IEEEArticle): Paper | null {
     try {
       // Extract core metadata
       const title = article.title || 'Untitled';
@@ -282,13 +300,13 @@ export class IEEEService {
         : undefined;
 
       // Extract DOI
-      const doi = article.doi || null;
+      const doi = article.doi || undefined;
 
       // Extract venue (journal or conference)
       const venue =
         article.publication_title ||
         article.conference_location ||
-        null;
+        undefined;
 
       // Extract publication type (convert to array as per Paper interface)
       const publicationTypeString = this.determinePublicationType(article);
@@ -300,7 +318,7 @@ export class IEEEService {
         isbn: article.isbn || null,
         issn: article.issn || null,
         contentType: article.content_type || null,
-        indexTerms: article.index_terms?.ieee_terms || [],
+        indexTerms: article.index_terms?.ieee_terms?.terms || [],
       };
 
       // Calculate word counts
@@ -324,7 +342,7 @@ export class IEEEService {
       // Build IEEE Xplore URL
       const ieeeUrl = article.doi
         ? `https://doi.org/${article.doi}`
-        : article.html_url || null;
+        : article.html_url || undefined;
 
       // Check for PDF access
       const pdfUrl = article.pdf_url || null;
@@ -358,9 +376,11 @@ export class IEEEService {
         // IEEE-specific metadata stored in ieeeMetadata variable above
         // Can be extended by adding fields to Paper interface if needed
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 4: Use unknown with type narrowing
+      const err = error as { message?: string };
       this.logger.warn(
-        `[IEEE Xplore] Failed to parse article: ${error.message}`,
+        `[IEEE Xplore] Failed to parse article: ${err.message || 'Unknown error'}`,
       );
       return null;
     }
@@ -368,15 +388,16 @@ export class IEEEService {
 
   /**
    * Extract and format author names from IEEE API response
+   * Phase 10.106 Phase 10: Fully typed
    */
-  private extractAuthors(authorsData: any): string[] {
+  private extractAuthors(authorsData: IEEEAuthorsData | undefined): string[] {
     if (!authorsData) return [];
 
     // IEEE API returns authors as an object with authors array
     const authors = authorsData.authors || [];
 
     return authors
-      .map((author: any) => {
+      .map((author: IEEEAuthor | string) => {
         if (typeof author === 'string') {
           return author;
         }
@@ -388,8 +409,9 @@ export class IEEEService {
 
   /**
    * Determine publication type from IEEE metadata
+   * Phase 10.106 Phase 10: Fully typed
    */
-  private determinePublicationType(article: any): string | null {
+  private determinePublicationType(article: IEEEArticle): string | null {
     const contentType = article.content_type?.toLowerCase() || '';
 
     if (contentType.includes('journals')) {

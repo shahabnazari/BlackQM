@@ -84,7 +84,10 @@
 
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+// Phase 10.106 Phase 3: Retry Service Integration - Enterprise-grade resilience
+import { RetryService } from '../../../common/services/retry.service';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
 import {
@@ -107,6 +110,35 @@ export interface NatureSearchOptions {
 }
 
 /**
+ * Phase 10.106 Phase 3: Typed interface for Nature API search parameters
+ * Netflix-grade: No loose `any` types
+ */
+interface NatureSearchParams {
+  api_key: string;
+  q: string;
+  p: number;
+  s: number;
+}
+
+/**
+ * Phase 10.106 Phase 3: Typed interface for Springer Nature API record
+ * Netflix-grade: Explicit typing for API response parsing
+ */
+interface NatureApiRecord {
+  title?: string;
+  abstract?: string;
+  creators?: Array<{ creator?: string } | string>;
+  publicationDate?: string;
+  onlineDate?: string;
+  doi?: string;
+  publicationName?: string;
+  journalTitle?: string;
+  subjects?: Array<{ subject?: string } | string>;
+  url?: Array<{ value?: string }>;
+  openaccess?: string | boolean;
+}
+
+/**
  * Nature Service
  * Provides search capabilities for Nature Publishing Group journals
  *
@@ -121,16 +153,33 @@ export class NatureService {
   private readonly API_BASE_URL =
     'https://api.springernature.com/meta/v2/json';
 
-  // Uses same API key as Springer
-  private readonly API_KEY = process.env.SPRINGER_API_KEY || '';
+  /**
+   * Phase 10.106 Phase 3: Springer free tier limits page size to 25 records per request.
+   * Requesting more causes 403 Forbidden ("premium feature" error).
+   * Same limit as Springer service.
+   */
+  private readonly MAX_RESULTS_PER_REQUEST = 25;
+
+  // Phase 10.106: Use ConfigService for proper .env loading (was using process.env directly which doesn't work with NestJS)
+  private readonly apiKey: string;
 
   // Nature impact factor (approximate, for quality scoring)
   private readonly NATURE_IMPACT_FACTOR = 69.0;
 
-  constructor(private readonly httpService: HttpService) {
+  // Phase 10.106 Phase 3: Inject ConfigService and RetryService for enterprise-grade resilience
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+    private readonly retry: RetryService,
+  ) {
+    // Get API key via ConfigService (proper NestJS pattern)
+    this.apiKey = this.configService.get<string>('SPRINGER_API_KEY') || '';
+
     this.logger.log('✅ [Nature] Service initialized');
 
-    if (!this.API_KEY) {
+    if (this.apiKey) {
+      this.logger.log('[Nature] API key configured - using authenticated limits (5,000 calls/day)');
+    } else {
       this.logger.warn(
         '⚠️ [Nature] API key not configured - set SPRINGER_API_KEY environment variable',
       );
@@ -151,7 +200,7 @@ export class NatureService {
     options?: NatureSearchOptions,
   ): Promise<Paper[]> {
     try {
-      if (!this.API_KEY) {
+      if (!this.apiKey) {
         this.logger.warn('[Nature] Skipping search - API key not configured');
         return [];
       }
@@ -161,37 +210,51 @@ export class NatureService {
       // Build API query parameters (filter to Nature journals)
       const params = this.buildSearchParams(query, options);
 
-      // Make HTTP request to Springer Nature API
-      const response = await firstValueFrom(
-        this.httpService.get(this.API_BASE_URL, {
-          params,
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          timeout: LARGE_RESPONSE_TIMEOUT, // 30s - Phase 10.6 Day 14.5: Migrated to centralized config
-        }),
+      // Phase 10.106 Phase 3: Execute HTTP request with automatic retry + exponential backoff
+      // Retry policy: 3 attempts, 1s → 2s → 4s delays, 0-500ms jitter
+      // Retryable errors: Network failures, timeouts, rate limits (429), server errors (500-599)
+      const result = await this.retry.executeWithRetry(
+        async () => firstValueFrom(
+          this.httpService.get(this.API_BASE_URL, {
+            params,
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            timeout: LARGE_RESPONSE_TIMEOUT, // 30s
+          }),
+        ),
+        'Nature.searchPapers',
+        {
+          maxAttempts: 3,
+          initialDelayMs: 1000,
+          maxDelayMs: 16000,
+          backoffMultiplier: 2,
+          jitterMs: 500,
+        },
       );
 
-      const data = response.data;
-      const totalRecords = data.result?.[0]?.total || 0;
+      // Phase 10.106 Phase 3: Handle both direct data and wrapped AxiosResponse cases
+      const apiData = result.data?.data || result.data;
+      const totalRecords = apiData?.result?.[0]?.total || 0;
       this.logger.log(`[Nature] Found ${totalRecords} results for "${query}"`);
 
-      // Extract and parse records
-      const records = data.records || [];
+      // Extract and parse records with typed interface
+      const records: NatureApiRecord[] = apiData?.records || [];
       const papers = records
-        .map((record: any) => this.parsePaper(record))
-        .filter((paper: Paper | null) => paper !== null) as Paper[];
+        .map((record) => this.parsePaper(record))
+        .filter((paper): paper is Paper => paper !== null);
 
       this.logger.log(`[Nature] Returning ${papers.length} eligible papers`);
       return papers;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number }; message?: string };
+      if (err.response?.status === 401) {
         this.logger.error('[Nature] Authentication failed - check API key');
-      } else if (error.response?.status === 429) {
+      } else if (err.response?.status === 429) {
         this.logger.error('[Nature] Rate limit exceeded - try again later');
       } else {
-        this.logger.error(`[Nature] Search failed: ${error.message}`);
+        this.logger.error(`[Nature] Search failed: ${err.message || 'Unknown error'}`);
       }
       return [];
     }
@@ -204,12 +267,22 @@ export class NatureService {
   private buildSearchParams(
     query: string,
     options?: NatureSearchOptions,
-  ): Record<string, any> {
-    const params: Record<string, any> = {
-      api_key: this.API_KEY,
+  ): NatureSearchParams {
+    // Phase 10.106: Cap limit to free tier maximum (25 records per request)
+    const requestedLimit = options?.limit ?? 25;
+    const cappedLimit = Math.min(requestedLimit, this.MAX_RESULTS_PER_REQUEST);
+
+    if (requestedLimit > this.MAX_RESULTS_PER_REQUEST) {
+      this.logger.warn(
+        `[Nature] Requested ${requestedLimit} papers, capped to ${cappedLimit} (free tier limit)`,
+      );
+    }
+
+    const params: NatureSearchParams = {
+      api_key: this.apiKey,
       // Filter to Nature journals only
       q: `${query} journal:Nature`,
-      p: options?.limit || 25,
+      p: cappedLimit,
       s: 1,
     };
 
@@ -235,8 +308,9 @@ export class NatureService {
 
   /**
    * Parse Nature API record to Paper object
+   * Phase 10.106 Phase 3: Uses typed NatureApiRecord interface
    */
-  private parsePaper(record: any): Paper | null {
+  private parsePaper(record: NatureApiRecord): Paper | null {
     try {
       const title = record.title || 'Untitled';
       const abstract = record.abstract || '';
@@ -254,10 +328,10 @@ export class NatureService {
       );
 
       // Extract DOI (required for Nature papers)
-      const doi = record.doi || null;
+      const doi = record.doi || undefined;
 
       // Extract venue (Nature journal name)
-      const venue = record.publicationName || record.journalTitle || null;
+      const venue = record.publicationName || record.journalTitle || undefined;
 
       // Publication type (Nature is always journal articles)
       const publicationType = ['journal-article'];
@@ -284,7 +358,7 @@ export class NatureService {
       });
 
       // Build Nature URL
-      const natureUrl = record.url?.[0]?.value || (doi ? `https://doi.org/${doi}` : null);
+      const natureUrl = record.url?.[0]?.value || (doi ? `https://doi.org/${doi}` : undefined);
 
       // Check for open access
       const isOpenAccess = record.openaccess === 'true' || record.openaccess === true;
@@ -320,28 +394,33 @@ export class NatureService {
         impactFactor: this.NATURE_IMPACT_FACTOR,
         quartile: 'Q1',
       };
-    } catch (error: any) {
-      this.logger.warn(`[Nature] Failed to parse record: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Strict Mode: Use unknown with type narrowing
+      const err = error as { message?: string };
+      this.logger.warn(`[Nature] Failed to parse record: ${err.message || 'Unknown error'}`);
       return null;
     }
   }
 
   /**
    * Extract and format author names
+   * Phase 10.106 Strict Mode: Use typed parameter from NatureApiRecord interface
    */
-  private extractAuthors(creatorsData: any): string[] {
+  private extractAuthors(
+    creatorsData: NatureApiRecord['creators'],
+  ): string[] {
     if (!creatorsData) return [];
 
     const creators = Array.isArray(creatorsData) ? creatorsData : [];
 
     return creators
-      .map((creator: any) => {
+      .map((creator) => {
         if (typeof creator === 'string') {
           return creator;
         }
         return creator.creator || '';
       })
-      .filter((name: string) => name.length > 0);
+      .filter((name): name is string => name.length > 0);
   }
 
   /**
@@ -356,20 +435,23 @@ export class NatureService {
 
   /**
    * Extract subjects/fields of study
+   * Phase 10.106 Strict Mode: Use typed parameter from NatureApiRecord interface
    */
-  private extractSubjects(subjectsData: any): string[] {
+  private extractSubjects(
+    subjectsData: NatureApiRecord['subjects'],
+  ): string[] {
     if (!subjectsData) return [];
 
     const subjects = Array.isArray(subjectsData) ? subjectsData : [];
 
     return subjects
-      .map((subject: any) => {
+      .map((subject) => {
         if (typeof subject === 'string') {
           return subject;
         }
         return subject.subject || '';
       })
-      .filter((name: string) => name.length > 0)
+      .filter((name): name is string => name.length > 0)
       .slice(0, 10);
   }
 

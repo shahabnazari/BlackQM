@@ -83,11 +83,51 @@ import {
   isPaperEligible,
 } from '../utils/word-count.util';
 import { FAST_API_TIMEOUT } from '../constants/http-config.constants';
+// Phase 10.106 Netflix-Grade: Import RetryService for resilient API calls
+import { RetryService } from '../../../common/services/retry.service';
 
 export interface CrossRefSearchOptions {
   yearFrom?: number;
   yearTo?: number;
   limit?: number;
+}
+
+interface CrossRefSearchParams {
+  query: string;
+  rows: number;
+  filter?: string;
+}
+
+/**
+ * Phase 10.106 Phase 5: Typed interface for CrossRef API author
+ * Netflix-grade: No loose `any` types
+ */
+interface CrossRefAuthor {
+  given?: string;
+  family?: string;
+  ORCID?: string;
+  affiliation?: Array<{ name: string }>;
+}
+
+/**
+ * Phase 10.106 Phase 5: Typed interface for CrossRef API item
+ * Netflix-grade: Explicit typing for API response parsing
+ */
+interface CrossRefItem {
+  DOI: string;
+  title?: string[];
+  author?: CrossRefAuthor[];
+  published?: {
+    'date-parts'?: number[][];
+  };
+  abstract?: string;
+  URL?: string;
+  'container-title'?: string[];
+  'is-referenced-by-count'?: number;
+  type?: string;
+  publisher?: string;
+  ISSN?: string[];
+  subject?: string[];
 }
 
 @Injectable()
@@ -99,6 +139,7 @@ export class CrossRefService {
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly retry: RetryService,
   ) {
     // Phase 10.7.10: CrossRef Polite Pool - Add mailto to User-Agent for better service
     // https://github.com/CrossRef/rest-api-doc#good-manners--more-reliable-service
@@ -120,38 +161,60 @@ export class CrossRefService {
     try {
       this.logger.log(`[CrossRef] Searching: "${query}"`);
 
-      const params: any = {
+      const params: CrossRefSearchParams = {
         query,
         rows: options?.limit || 20,
       };
 
       // Add year filter if provided
       if (options?.yearFrom) {
-        params['filter'] = `from-pub-date:${options.yearFrom}`;
+        params.filter = `from-pub-date:${options.yearFrom}`;
       }
 
-      const response = await firstValueFrom(
-        this.httpService.get(this.API_BASE_URL, {
-          params,
-          headers: {
-            'User-Agent': this.userAgent, // Phase 10.7.10: Polite pool for better service
-          },
-          timeout: FAST_API_TIMEOUT, // 10s - Phase 10.6 Day 14.5: Added timeout (was missing)
-        }),
+      // Phase 10.106 Netflix-Grade: Execute HTTP request with automatic retry + exponential backoff
+      // Retry policy: 3 attempts, 1s → 2s → 4s delays, 0-500ms jitter
+      // Retryable errors: Network failures, timeouts, rate limits (429), server errors (500-599)
+      const result = await this.retry.executeWithRetry(
+        async () => firstValueFrom(
+          this.httpService.get(this.API_BASE_URL, {
+            params,
+            headers: {
+              'User-Agent': this.userAgent, // Phase 10.7.10: Polite pool for better service
+            },
+            timeout: FAST_API_TIMEOUT, // 10s timeout
+          }),
+        ),
+        'CrossRef.search',
+        {
+          maxAttempts: 3,
+          initialDelayMs: 1000,
+          maxDelayMs: 16000,
+          backoffMultiplier: 2,
+          jitterMs: 500,
+        },
       );
 
-      const papers = response.data.message.items.map((item: any) =>
-        this.parsePaper(item),
-      );
+      // RetryResult structure: { data: AxiosResponse, attempts: number }
+      const items = result.data?.data?.message?.items;
+      if (!items || !Array.isArray(items)) {
+        this.logger.warn(`[CrossRef] API returned invalid response structure`);
+        return [];
+      }
 
-      this.logger.log(`[CrossRef] Found ${papers.length} papers`);
+      // Phase 10.106 Phase 5: Use typed interface instead of any
+      const papers = items.map((item: CrossRefItem) => this.parsePaper(item));
+
+      this.logger.log(`[CrossRef] Found ${papers.length} papers (attempts: ${result.attempts})`);
       return papers;
-    } catch (error: any) {
-      if (error.response?.status === 429) {
-        this.logger.error(`[CrossRef] ⚠️  RATE LIMITED (429)`);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 5: Use unknown with type narrowing (Netflix-grade)
+      const err = error as { response?: { status?: number }; message?: string };
+      // This catch block should rarely execute (retry service handles most errors)
+      if (err.response?.status === 429) {
+        this.logger.error(`[CrossRef] ⚠️  RATE LIMITED (429) - all retries exhausted`);
       } else {
         this.logger.error(
-          `[CrossRef] Search failed: ${error.message} (Status: ${error.response?.status || 'N/A'})`,
+          `[CrossRef] Search failed after retries: ${err.message || 'Unknown error'} (Status: ${err.response?.status || 'N/A'})`,
         );
       }
       return [];
@@ -161,8 +224,9 @@ export class CrossRefService {
   /**
    * Parse CrossRef API response into Paper object
    * Includes quality scoring and word count metrics
+   * Phase 10.106 Phase 5: Use typed CrossRefItem interface (Netflix-grade)
    */
-  private parsePaper(item: any): Paper {
+  private parsePaper(item: CrossRefItem): Paper {
     // Calculate word counts
     const abstractWordCount = calculateAbstractWordCount(item.abstract);
     const wordCount = calculateComprehensiveWordCount(
@@ -188,12 +252,17 @@ export class CrossRefService {
       hIndexJournal: null,
     });
 
+    // Phase 10.106: Sanitize abstract to remove XML/HTML tags that break JSON serialization
+    // JATS XML like <jats:p xml:lang="en"> contains unescaped quotes that corrupt JSON
+    const sanitizedAbstract = this.sanitizeAbstract(item.abstract);
+
     return {
       id: item.DOI,
       title: item.title?.[0] || '',
-      authors: item.author?.map((a: any) => `${a.given} ${a.family}`) || [],
+      // Phase 10.106 Phase 5: Use typed CrossRefAuthor interface (Netflix-grade)
+      authors: item.author?.map((a: CrossRefAuthor) => `${a.given || ''} ${a.family || ''}`.trim()) || [],
       year,
-      abstract: item.abstract,
+      abstract: sanitizedAbstract,
       doi: item.DOI,
       url: item.URL,
       venue: item['container-title']?.[0],
@@ -209,6 +278,27 @@ export class CrossRefService {
       qualityScore: qualityComponents.totalScore,
       isHighQuality: qualityComponents.totalScore >= 50,
     };
+  }
+
+  /**
+   * Phase 10.106: Sanitize abstract to remove XML/HTML tags
+   * CrossRef returns abstracts in JATS XML format with tags like:
+   * <jats:p xml:lang="en">...</jats:p>
+   * These contain unescaped quotes that break JSON serialization
+   */
+  private sanitizeAbstract(abstract: string | undefined): string | undefined {
+    if (!abstract) return undefined;
+
+    // Remove all XML/HTML tags (including JATS namespace tags)
+    return abstract
+      .replace(/<[^>]*>/g, '') // Remove all tags
+      .replace(/&lt;/g, '<')   // Decode HTML entities
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')    // Normalize whitespace
+      .trim();
   }
 
   /**

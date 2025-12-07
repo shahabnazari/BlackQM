@@ -52,6 +52,37 @@ export interface StatementHint {
   };
 }
 
+/**
+ * Phase 10.106 Phase 9: TF-IDF analysis result type
+ */
+export interface TfidfResult {
+  topTerms: string[];
+  scores?: Map<string, number>;
+}
+
+/**
+ * Phase 10.106 Phase 9: Term cluster type
+ */
+export interface TermCluster {
+  centroid: string;
+  terms: string[];
+  weight: number;
+}
+
+/**
+ * Phase 10.106 Phase 9: AI viewpoint response type
+ */
+export interface AIViewpointResponse {
+  description: string;
+  paperIndices: number[];
+  rationale?: string;
+}
+
+/**
+ * Phase 10.106 Phase 9: Theme extraction cache data type
+ */
+export type ThemeCacheData = ExtractedTheme[] | Controversy[] | StatementHint[];
+
 // Enterprise configuration constants
 const ENTERPRISE_CONFIG = {
   MAX_PAPERS_PER_REQUEST: 100,
@@ -72,7 +103,7 @@ export class ThemeExtractionService {
   private readonly logger = new Logger(ThemeExtractionService.name);
   private readonly themeCache = new Map<
     string,
-    { data: any; timestamp: number }
+    { data: ThemeCacheData; timestamp: number }
   >();
   private readonly requestCount = new Map<
     string,
@@ -122,8 +153,10 @@ export class ThemeExtractionService {
           collection: true,
         },
       });
-    } catch (error: any) {
-      this.logger.error(`Database error fetching papers: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string };
+      this.logger.error(`Database error fetching papers: ${err.message || 'Unknown error'}`);
       throw new BadRequestException('Failed to fetch papers from database');
     }
 
@@ -246,7 +279,7 @@ export class ThemeExtractionService {
       abstract: this.sanitizeForPrompt(p.abstract, 300),
       keywords: (p.keywords || [])
         .slice(0, 10)
-        .map((k: any) => this.sanitizeForPrompt(k, 50))
+        .map((k: string) => this.sanitizeForPrompt(k, 50))
         .join(', '),
     }));
 
@@ -295,14 +328,15 @@ export class ThemeExtractionService {
       let aiThemes;
       try {
         aiThemes = JSON.parse(response.content);
-      } catch (parseError: any) {
-        this.logger.error(`Failed to parse AI response: ${parseError.message}`);
+      } catch (parseError: unknown) {
+        const err = parseError as { message?: string };
+        this.logger.error(`Failed to parse AI response: ${err.message || 'Unknown error'}`);
         // Try to extract JSON from response
         const jsonMatch = response.content.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           try {
             aiThemes = JSON.parse(jsonMatch[0]);
-          } catch (secondParseError: any) {
+          } catch (_secondParseError: unknown) {
             throw new Error('Invalid JSON response from AI');
           }
         } else {
@@ -333,7 +367,7 @@ export class ThemeExtractionService {
 
         const relevantPapers = aiTheme.paperIndices
           .filter(
-            (idx: any) =>
+            (idx: unknown) =>
               typeof idx === 'number' && idx > 0 && idx <= papers.length,
           )
           .map((idx: number) => papers[idx - 1])
@@ -347,10 +381,10 @@ export class ThemeExtractionService {
           id: `theme-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
           label: this.sanitizeForPrompt(aiTheme.label, 100),
           keywords: (aiTheme.keywords || [])
-            .filter((k: any) => typeof k === 'string')
+            .filter((k: unknown) => typeof k === 'string')
             .slice(0, 20)
             .map((k: string) => this.sanitizeForPrompt(k, 50)),
-          papers: relevantPapers.map((p: any) => p.id),
+          papers: relevantPapers.map((p: { id: string }) => p.id),
           weight: Math.min(1, Math.max(0, aiTheme.strength || 0.5)),
           description: aiTheme.description
             ? this.sanitizeForPrompt(aiTheme.description, 500)
@@ -364,8 +398,10 @@ export class ThemeExtractionService {
       }
 
       return themes;
-    } catch (error: any) {
-      this.logger.error(`AI theme extraction failed: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string };
+      this.logger.error(`AI theme extraction failed: ${err.message || 'Unknown error'}`);
       // Fallback to simple keyword extraction
       return this.extractThemesFallback(papers);
     }
@@ -705,9 +741,9 @@ export class ThemeExtractionService {
   /**
    * Cluster related terms using similarity metrics
    */
-  private async clusterTerms(tfidfResults: any): Promise<any[]> {
+  private async clusterTerms(tfidfResults: TfidfResult): Promise<TermCluster[]> {
     const { topTerms } = tfidfResults;
-    const clusters: any[] = [];
+    const clusters: TermCluster[] = [];
     const visited = new Set<string>();
 
     for (const term of topTerms) {
@@ -971,9 +1007,11 @@ export class ThemeExtractionService {
         confidence: 0.85,
         sourceEvidence: theme.papers,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string };
       this.logger.error(
-        `Failed to generate balanced statement: ${error.message}`,
+        `Failed to generate balanced statement: ${err.message || 'Unknown error'}`,
       );
       // Fallback statement
       return {
@@ -1205,7 +1243,7 @@ export class ThemeExtractionService {
   /**
    * Store result in cache
    */
-  private setCachedResult(cacheKey: string, data: any): void {
+  private setCachedResult(cacheKey: string, data: ThemeCacheData): void {
     this.themeCache.set(cacheKey, {
       data,
       timestamp: Date.now(),
@@ -1273,10 +1311,12 @@ export class ThemeExtractionService {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         return await operation();
-      } catch (error: any) {
-        lastError = error;
+      } catch (error: unknown) {
+        // Phase 10.106 Phase 8: Use unknown with type narrowing
+        const err = error as Error;
+        lastError = err;
         this.logger.warn(
-          `Operation failed (attempt ${attempt}/${retries}): ${error.message}`,
+          `Operation failed (attempt ${attempt}/${retries}): ${err.message || 'Unknown error'}`,
         );
 
         if (attempt < retries) {
@@ -1409,7 +1449,7 @@ export class ThemeExtractionService {
       const analysis = JSON.parse(response.content);
 
       // Map paper indices back to paper IDs and authors
-      const viewpoints = analysis.viewpoints.map((vp: any) => ({
+      const viewpoints = analysis.viewpoints.map((vp: AIViewpointResponse) => ({
         description: vp.description,
         papers: vp.paperIndices
           .map((idx: number) => abstractsData[idx - 1]?.id)

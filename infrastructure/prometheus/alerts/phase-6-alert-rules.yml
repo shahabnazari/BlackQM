@@ -1,0 +1,383 @@
+# PHASE 10.102 PHASE 6: PROMETHEUS ALERT RULES
+# Netflix-Grade Alerting based on Golden Signals
+#
+# Alert Severity Levels:
+# - critical: Immediate action required (page on-call)
+# - warning: Investigation needed (notify team)
+# - info: FYI notification
+
+groups:
+  # ========== GOLDEN SIGNAL 1: LATENCY ALERTS ==========
+  - name: latency_alerts
+    interval: 30s
+    rules:
+      - alert: HighP95Latency
+        expr: histogram_quantile(0.95, sum(rate(blackqmethod_http_request_duration_seconds_bucket[5m])) by (le)) > 2
+        for: 5m
+        labels:
+          severity: warning
+          golden_signal: latency
+          team: backend
+        annotations:
+          summary: "High P95 latency detected"
+          description: "P95 latency is {{ $value | humanizeDuration }} (threshold: 2s). This may impact user experience."
+          runbook_url: "https://docs.blackqmethod.com/runbooks/high-latency"
+          dashboard_url: "http://grafana:3000/d/blackqmethod-golden-signals"
+
+      - alert: CriticalP99Latency
+        expr: histogram_quantile(0.99, sum(rate(blackqmethod_http_request_duration_seconds_bucket[5m])) by (le)) > 5
+        for: 2m
+        labels:
+          severity: critical
+          golden_signal: latency
+          team: backend
+          page: "true"
+        annotations:
+          summary: "CRITICAL: P99 latency above 5 seconds"
+          description: "P99 latency is {{ $value | humanizeDuration }}. Immediate investigation required."
+          runbook_url: "https://docs.blackqmethod.com/runbooks/critical-latency"
+
+      - alert: SlowLiteratureSearch
+        expr: histogram_quantile(0.95, sum(rate(blackqmethod_literature_search_duration_seconds_bucket[5m])) by (le, source)) > 30
+        for: 3m
+        labels:
+          severity: warning
+          golden_signal: latency
+          component: literature_search
+        annotations:
+          summary: "Slow literature search on {{ $labels.source }}"
+          description: "P95 search latency on {{ $labels.source }} is {{ $value | humanizeDuration }} (threshold: 30s)"
+
+      - alert: ThemeExtractionTimeout
+        expr: histogram_quantile(0.95, sum(rate(blackqmethod_theme_extraction_duration_seconds_bucket[5m])) by (le)) > 600
+        for: 5m
+        labels:
+          severity: warning
+          golden_signal: latency
+          component: theme_extraction
+        annotations:
+          summary: "Theme extraction taking too long"
+          description: "P95 theme extraction duration is {{ $value | humanizeDuration }} (threshold: 10 minutes)"
+
+  # ========== GOLDEN SIGNAL 2: TRAFFIC ALERTS ==========
+  - name: traffic_alerts
+    interval: 30s
+    rules:
+      - alert: HighTrafficSpike
+        expr: sum(rate(blackqmethod_http_requests_total[1m])) > 1000
+        for: 2m
+        labels:
+          severity: warning
+          golden_signal: traffic
+          team: backend
+        annotations:
+          summary: "Unusual traffic spike detected"
+          description: "Request rate is {{ $value | humanize }} req/s (typical: <100 req/s). Possible DDoS or viral usage."
+
+      - alert: NoTraffic
+        expr: sum(rate(blackqmethod_http_requests_total[5m])) == 0
+        for: 5m
+        labels:
+          severity: critical
+          golden_signal: traffic
+          team: backend
+          page: "true"
+        annotations:
+          summary: "CRITICAL: No traffic detected"
+          description: "Zero requests in last 5 minutes. Service may be down or unreachable."
+
+      - alert: LowSearchVolume
+        expr: sum(rate(blackqmethod_literature_searches_total[1h])) * 3600 < 10
+        for: 1h
+        labels:
+          severity: info
+          golden_signal: traffic
+          component: literature_search
+        annotations:
+          summary: "Low search volume"
+          description: "Only {{ $value | humanize }} searches in the last hour. Check if users are experiencing issues."
+
+  # ========== GOLDEN SIGNAL 3: ERROR ALERTS ==========
+  - name: error_alerts
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: (sum(rate(blackqmethod_http_errors_total[5m])) / sum(rate(blackqmethod_http_requests_total[5m]))) * 100 > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          golden_signal: errors
+          team: backend
+          page: "true"
+        annotations:
+          summary: "CRITICAL: Error rate above SLO"
+          description: "Error rate is {{ $value | humanize }}% (SLO: <0.1%). Immediate investigation required."
+          runbook_url: "https://docs.blackqmethod.com/runbooks/high-error-rate"
+
+      - alert: ServerErrorsIncreasing
+        expr: rate(blackqmethod_http_errors_total{error_type="server_error"}[5m]) > 0
+        for: 3m
+        labels:
+          severity: warning
+          golden_signal: errors
+          team: backend
+        annotations:
+          summary: "Server errors detected"
+          description: "{{ $value | humanize }} server errors per second. Check application logs."
+
+      - alert: LiteratureSearchFailures
+        expr: sum(rate(blackqmethod_literature_search_errors_total[5m])) by (source) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+          golden_signal: errors
+          component: literature_search
+        annotations:
+          summary: "Literature search failures on {{ $labels.source }}"
+          description: "{{ $value | humanize }} failures/sec on {{ $labels.source }}. Check API status."
+
+      - alert: ThemeExtractionFailures
+        expr: rate(blackqmethod_theme_extraction_errors_total[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+          golden_signal: errors
+          component: theme_extraction
+        annotations:
+          summary: "Theme extraction failures detected"
+          description: "{{ $value | humanize }} theme extraction failures per second"
+
+      - alert: DatabaseErrors
+        expr: rate(blackqmethod_db_errors_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          golden_signal: errors
+          component: database
+          page: "true"
+        annotations:
+          summary: "CRITICAL: Database errors detected"
+          description: "{{ $value | humanize }} database errors per second. Check database health immediately."
+
+      - alert: AIAPIFailures
+        expr: sum(rate(blackqmethod_ai_api_errors_total[5m])) by (provider) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+          golden_signal: errors
+          component: ai_api
+        annotations:
+          summary: "AI API failures on {{ $labels.provider }}"
+          description: "{{ $value | humanize }} failures/sec on {{ $labels.provider }}. Check API keys and rate limits."
+
+  # ========== GOLDEN SIGNAL 4: SATURATION ALERTS ==========
+  - name: saturation_alerts
+    interval: 30s
+    rules:
+      - alert: HighMemoryUsage
+        expr: blackqmethod_memory_usage_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+          golden_signal: saturation
+          team: backend
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanize }}% (warning threshold: 85%)"
+
+      - alert: CriticalMemoryUsage
+        expr: blackqmethod_memory_usage_percent > 95
+        for: 1m
+        labels:
+          severity: critical
+          golden_signal: saturation
+          team: backend
+          page: "true"
+        annotations:
+          summary: "CRITICAL: Memory exhaustion imminent"
+          description: "Memory usage is {{ $value | humanize }}% (critical threshold: 95%). Service may OOM soon."
+          runbook_url: "https://docs.blackqmethod.com/runbooks/memory-exhaustion"
+
+      - alert: HighCPUUsage
+        expr: blackqmethod_cpu_usage_percent > 80
+        for: 10m
+        labels:
+          severity: warning
+          golden_signal: saturation
+          team: backend
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value | humanize }}% for 10 minutes"
+
+      - alert: EventLoopLag
+        expr: blackqmethod_event_loop_lag_seconds > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          golden_signal: saturation
+          team: backend
+        annotations:
+          summary: "Event loop lag detected"
+          description: "Event loop lag is {{ $value | humanizeDuration }} (threshold: 100ms). Service may be overloaded."
+
+      - alert: HighConcurrentSearches
+        expr: blackqmethod_active_concurrent_searches > 50
+        for: 5m
+        labels:
+          severity: warning
+          golden_signal: saturation
+          component: literature_search
+        annotations:
+          summary: "High concurrent search load"
+          description: "{{ $value | humanize }} concurrent searches active. Consider scaling."
+
+      - alert: DatabaseConnectionPoolSaturated
+        expr: blackqmethod_db_connections_active{status="waiting"} > 0
+        for: 3m
+        labels:
+          severity: warning
+          golden_signal: saturation
+          component: database
+        annotations:
+          summary: "Database connection pool saturated"
+          description: "{{ $value | humanize }} connections waiting. Increase pool size or investigate slow queries."
+
+  # ========== BUSINESS METRICS ALERTS ==========
+  - name: business_alerts
+    interval: 1m
+    rules:
+      - alert: LowCacheHitRate
+        expr: blackqmethod_cache_hit_rate < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          metric_type: business
+          component: cache
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} (target: >90%). Cache may be too small or TTL too short."
+
+      - alert: LowSearchSuccessRate
+        expr: blackqmethod_search_success_rate < 0.95
+        for: 5m
+        labels:
+          severity: warning
+          metric_type: business
+          component: literature_search
+        annotations:
+          summary: "Low search success rate"
+          description: "Search success rate is {{ $value | humanizePercentage }} (target: >99%). Check API sources."
+
+      - alert: SourceUnavailable
+        expr: blackqmethod_source_availability < 0.8
+        for: 5m
+        labels:
+          severity: warning
+          metric_type: business
+          component: literature_search
+        annotations:
+          summary: "Literature source {{ $labels.source }} degraded"
+          description: "Source {{ $labels.source }} availability is {{ $value | humanizePercentage }}. Check API status."
+
+  # ========== SLO/SLA ALERTS ==========
+  - name: slo_alerts
+    interval: 1m
+    rules:
+      - alert: SLOAvailabilityViolation
+        expr: blackqmethod_slo_availability < 0.999
+        for: 5m
+        labels:
+          severity: critical
+          metric_type: slo
+          team: backend
+          page: "true"
+        annotations:
+          summary: "SLO VIOLATION: Availability below 99.9%"
+          description: "System availability is {{ $value | humanizePercentage }} (SLO: 99.9%). Error budget consumed."
+
+      - alert: SLOLatencyViolation
+        expr: blackqmethod_slo_latency_p95_seconds > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          metric_type: slo
+          team: backend
+        annotations:
+          summary: "SLO WARNING: P95 latency above target"
+          description: "P95 latency is {{ $value | humanizeDuration }} (SLO: 2.0s)"
+
+      - alert: SLOErrorRateViolation
+        expr: blackqmethod_slo_error_rate > 0.001
+        for: 5m
+        labels:
+          severity: critical
+          metric_type: slo
+          team: backend
+          page: "true"
+        annotations:
+          summary: "SLO VIOLATION: Error rate above 0.1%"
+          description: "Error rate is {{ $value | humanizePercentage }} (SLO: <0.1%)"
+
+  # ========== COST ALERTS ==========
+  - name: cost_alerts
+    interval: 1h
+    rules:
+      - alert: HighAICosts
+        expr: sum(rate(blackqmethod_ai_api_cost_dollars[1h])) * 24 * 30 > 1000
+        for: 1h
+        labels:
+          severity: warning
+          metric_type: cost
+          team: backend
+        annotations:
+          summary: "High AI API costs projected"
+          description: "Projected monthly AI API cost: ${{ $value | humanize }}. Consider optimization."
+
+  # ========== INFRASTRUCTURE ALERTS ==========
+  - name: infrastructure_alerts
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up{job="blackqmethod"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+          page: "true"
+        annotations:
+          summary: "CRITICAL: Service is down"
+          description: "BlackQMethod service is not responding to health checks"
+
+      - alert: DatabaseDown
+        expr: blackqmethod_db_connections_active{status="active"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+          team: backend
+          page: "true"
+        annotations:
+          summary: "CRITICAL: Database is down"
+          description: "No active database connections. Database may be unreachable."
+
+      - alert: CacheDown
+        expr: rate(blackqmethod_cache_errors_total[5m]) > 1
+        for: 3m
+        labels:
+          severity: warning
+          component: cache
+          team: backend
+        annotations:
+          summary: "Cache errors detected"
+          description: "{{ $value | humanize }} cache errors per second. Cache service may be degraded."
+
+      - alert: WebSocketDisconnections
+        expr: rate(blackqmethod_websocket_connections_total{event_type="error"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: websocket
+          team: backend
+        annotations:
+          summary: "High WebSocket error rate"
+          description: "{{ $value | humanize }} WebSocket errors per second"

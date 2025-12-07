@@ -284,13 +284,15 @@ export class InstagramManualService {
         },
         relevanceScore,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `Failed to process Instagram video: ${error.message}`,
-        error.stack,
+        `Failed to process Instagram video: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
       throw new InternalServerErrorException(
-        `Failed to process Instagram video: ${error.message}`,
+        `Failed to process Instagram video: ${err.message || 'Unknown error'}`,
       );
     }
   }
@@ -351,7 +353,8 @@ export class InstagramManualService {
     // Verify file exists
     try {
       await fs.access(upload.filePath);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
       throw new BadRequestException(
         'Uploaded file not found or not accessible',
       );
@@ -432,13 +435,15 @@ export class InstagramManualService {
         confidence: saved.confidence,
         cost: transcriptionCost,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string; stack?: string };
       this.logger.error(
-        `Instagram transcription failed: ${error.message}`,
-        error.stack,
+        `Instagram transcription failed: ${err.message || 'Unknown error'}`,
+        err.stack,
       );
       throw new InternalServerErrorException(
-        `Failed to transcribe Instagram video: ${error.message}`,
+        `Failed to transcribe Instagram video: ${err.message || 'Unknown error'}`,
       );
     }
   }
@@ -503,9 +508,11 @@ export class InstagramManualService {
           transcriptId,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string };
       this.logger.warn(
-        `Failed to store social media content: ${error.message}`,
+        `Failed to store social media content: ${err.message || 'Unknown error'}`,
       );
     }
   }
@@ -517,8 +524,10 @@ export class InstagramManualService {
   private async cleanupFile(filePath: string) {
     try {
       await fs.unlink(filePath);
-    } catch (error: any) {
-      this.logger.warn(`Failed to cleanup file ${filePath}: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
+      const err = error as { message?: string };
+      this.logger.warn(`Failed to cleanup file ${filePath}: ${err.message || 'Unknown error'}`);
     }
   }
 

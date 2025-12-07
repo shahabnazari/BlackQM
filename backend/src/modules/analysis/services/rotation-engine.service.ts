@@ -7,6 +7,8 @@ import {
 } from '../types/rotation.types';
 import { StatisticsService } from './statistics.service';
 import { AnalysisLoggerService } from './analysis-logger.service';
+// Netflix-Grade: Import type-safe array utilities (Phase 10.103)
+import { safeGet, safeGet2D, assertGet } from '../../../common/utils/array-utils';
 
 /**
  * Rotation Engine Service
@@ -81,7 +83,9 @@ export class RotationEngineService {
     rationale: string;
   }> {
     // AI-driven optimization using simulated annealing
-    const numFactors = loadingMatrix[0].length;
+    // Netflix-Grade: Type-safe array access with context
+    const firstRow = assertGet(loadingMatrix, 0, 'suggestOptimalRotation');
+    const numFactors = firstRow.length;
     let bestAngles = { theta: 0, phi: 0, psi: 0 };
     let bestQuality = 0;
     let temperature = 100;
@@ -149,7 +153,9 @@ export class RotationEngineService {
     psi: number;
   } {
     // Pattern-based initial angle estimation using ML heuristics
-    const numFactors = loadingMatrix[0].length;
+    // Netflix-Grade: Type-safe array access
+    const firstRow = assertGet(loadingMatrix, 0, 'analyzeLoadingPatterns');
+    const numFactors = firstRow.length;
 
     // Calculate factor dominance patterns
     const dominanceScores = this.calculateFactorDominance(loadingMatrix);
@@ -158,10 +164,16 @@ export class RotationEngineService {
     const crossLoadingPattern = this.analyzeCrossLoadings(loadingMatrix);
 
     // Use neural network-inspired weighting
+    // Netflix-Grade: Type-safe array access with default values
+    const dominance0 = safeGet(dominanceScores, 0, 0);
+    const dominance1 = safeGet(dominanceScores, 1, 0);
+    const dominance2 = safeGet(dominanceScores, 2, 0);
+    const dominance3 = safeGet(dominanceScores, 3, 0);
+
     const theta =
       Math.atan2(
         crossLoadingPattern.primary,
-        dominanceScores[0] - dominanceScores[1],
+        dominance0 - dominance1,
       ) *
       (180 / Math.PI);
 
@@ -169,7 +181,7 @@ export class RotationEngineService {
       numFactors > 2
         ? Math.atan2(
             crossLoadingPattern.secondary,
-            dominanceScores[1] - dominanceScores[2] || 1,
+            dominance1 - dominance2 || 1,
           ) *
           (180 / Math.PI)
         : 0;
@@ -178,7 +190,7 @@ export class RotationEngineService {
       numFactors > 3
         ? Math.atan2(
             crossLoadingPattern.tertiary,
-            dominanceScores[2] - dominanceScores[3] || 1,
+            dominance2 - dominance3 || 1,
           ) *
           (180 / Math.PI)
         : 0;
@@ -187,14 +199,18 @@ export class RotationEngineService {
   }
 
   private calculateFactorDominance(loadingMatrix: number[][]): number[] {
-    const numFactors = loadingMatrix[0].length;
+    // Netflix-Grade: Type-safe array access
+    const firstRow = assertGet(loadingMatrix, 0, 'calculateFactorDominance');
+    const numFactors = firstRow.length;
     const dominance: number[] = [];
 
     for (let factor = 0; factor < numFactors; factor++) {
       let score = 0;
       for (const row of loadingMatrix) {
+        // Netflix-Grade: Safe array access with default value
         // Weight high loadings more heavily
-        score += Math.pow(Math.abs(row[factor]), 3);
+        const loading = safeGet(row, factor, 0);
+        score += Math.pow(Math.abs(loading), 3);
       }
       dominance.push(score);
     }
@@ -214,9 +230,16 @@ export class RotationEngineService {
     for (const row of loadingMatrix) {
       const sorted = [...row].map(Math.abs).sort((a, b) => b - a);
 
-      if (sorted[1] > 0.3) primary += sorted[1];
-      if (sorted[2] > 0.3) secondary += sorted[2];
-      if (sorted[3] > 0.3) tertiary += sorted[3];
+      // Netflix-Grade: Type-safe array access with default values
+      // DRY Principle: Extract threshold constant for maintainability
+      const CROSS_LOADING_THRESHOLD = 0.3;
+      const sorted1 = safeGet(sorted, 1, 0);
+      const sorted2 = safeGet(sorted, 2, 0);
+      const sorted3 = safeGet(sorted, 3, 0);
+
+      if (sorted1 > CROSS_LOADING_THRESHOLD) primary += sorted1;
+      if (sorted2 > CROSS_LOADING_THRESHOLD) secondary += sorted2;
+      if (sorted3 > CROSS_LOADING_THRESHOLD) tertiary += sorted3;
     }
 
     return { primary, secondary, tertiary };
@@ -537,8 +560,10 @@ export class RotationEngineService {
     const matrix: number[][] = [];
     for (let i = 0; i < size; i++) {
       matrix[i] = [];
+      // Netflix-Grade: Safe access to matrix row
+      const row = assertGet(matrix, i, 'createIdentityMatrix');
       for (let j = 0; j < size; j++) {
-        matrix[i][j] = i === j ? 1 : 0;
+        row[j] = i === j ? 1 : 0;
       }
     }
     return matrix;
@@ -591,7 +616,9 @@ export class RotationEngineService {
     converged: boolean;
   }> {
     const numVariables = loadings.length;
-    const numFactors = loadings[0].length;
+    // Netflix-Grade: Safe access to first row
+    const firstRow = assertGet(loadings, 0, 'rotateVarimax');
+    const numFactors = firstRow.length;
 
     // Step 1: Kaiser normalization (optional)
     let workingLoadings = math.clone(loadings);
@@ -617,8 +644,9 @@ export class RotationEngineService {
       for (let i = 0; i < numFactors - 1; i++) {
         for (let j = i + 1; j < numFactors; j++) {
           // Extract columns for factors i and j
-          const x = workingLoadings.map((row) => row[i]);
-          const y = workingLoadings.map((row) => row[j]);
+          // Netflix-Grade: Safe array access in map operations
+          const x = workingLoadings.map((row) => safeGet(row, i, 0));
+          const y = workingLoadings.map((row) => safeGet(row, j, 0));
 
           // Calculate rotation angle
           const angle = this.calculateVarimaxAngle(x, y);
@@ -680,7 +708,9 @@ export class RotationEngineService {
     iterations: number;
     converged: boolean;
   }> {
-    const numFactors = loadings[0].length;
+    // Netflix-Grade: Safe access to first row
+    const firstRow = assertGet(loadings, 0, 'rotateQuartimax');
+    const numFactors = firstRow.length;
     let workingLoadings = math.clone(loadings);
     let rotationMatrix = (
       math.identity(numFactors) as any
@@ -693,8 +723,9 @@ export class RotationEngineService {
     while (iteration < maxIterations && !converged) {
       for (let i = 0; i < numFactors - 1; i++) {
         for (let j = i + 1; j < numFactors; j++) {
-          const x = workingLoadings.map((row) => row[i]);
-          const y = workingLoadings.map((row) => row[j]);
+          // Netflix-Grade: Safe array access in map operations
+          const x = workingLoadings.map((row) => safeGet(row, i, 0));
+          const y = workingLoadings.map((row) => safeGet(row, j, 0));
 
           const angle = this.calculateQuartimaxAngle(x, y);
           const pairRotation = this.createRotationMatrix(
@@ -788,7 +819,9 @@ export class RotationEngineService {
     converged: boolean;
   }> {
     const numVariables = loadings.length;
-    const numFactors = loadings[0].length;
+    // Netflix-Grade: Safe access to first row
+    const firstRow = assertGet(loadings, 0, 'rotateOblimin');
+    const numFactors = firstRow.length;
 
     let patternMatrix = math.clone(loadings);
     let previousCriterion = 0;
@@ -841,7 +874,9 @@ export class RotationEngineService {
     rotatedLoadings: number[][];
     rotationMatrix: number[][];
   }> {
-    const numFactors = loadings[0].length;
+    // Netflix-Grade: Safe access to first row
+    const firstRow = assertGet(loadings, 0, 'rotateManual');
+    const numFactors = firstRow.length;
     const angleRadians = (angleDegrees * Math.PI) / 180;
 
     // Create rotation matrix for specified factors
@@ -876,7 +911,9 @@ export class RotationEngineService {
     cumulativeRotationMatrix: number[][];
     factorArrays: number[][];
   }> {
-    const numFactors = loadings[0].length;
+    // Netflix-Grade: Safe access to first row
+    const firstRow = assertGet(loadings, 0, 'rotateInteractive');
+    const numFactors = firstRow.length;
     let workingLoadings = math.clone(loadings);
     let cumulativeRotationMatrix = (
       math.identity(numFactors) as any
@@ -916,9 +953,12 @@ export class RotationEngineService {
       c = 0,
       d = 0;
 
+    // Netflix-Grade: Type-safe array access in calculations
     for (let i = 0; i < n; i++) {
-      const u = x[i] * x[i] - y[i] * y[i];
-      const v = 2 * x[i] * y[i];
+      const xi = safeGet(x, i, 0);
+      const yi = safeGet(y, i, 0);
+      const u = xi * xi - yi * yi;
+      const v = 2 * xi * yi;
       a += u;
       b += v;
       c += u * u - v * v;
@@ -936,10 +976,13 @@ export class RotationEngineService {
     let num = 0,
       den = 0;
 
+    // Netflix-Grade: Type-safe array access in quartimax calculations
     for (let i = 0; i < n; i++) {
-      const x2 = x[i] * x[i];
-      const y2 = y[i] * y[i];
-      const xy = x[i] * y[i];
+      const xi = safeGet(x, i, 0);
+      const yi = safeGet(y, i, 0);
+      const x2 = xi * xi;
+      const y2 = yi * yi;
+      const xy = xi * yi;
 
       num += 4 * xy * (x2 - y2);
       den += (x2 - y2) * (x2 - y2) - 4 * xy * xy;
@@ -955,8 +998,9 @@ export class RotationEngineService {
     delta: number,
   ): number {
     // Simplified oblimin angle calculation
-    const x = loadings.map((row) => row[factor1]);
-    const y = loadings.map((row) => row[factor2]);
+    // Netflix-Grade: Safe array access in map operations
+    const x = loadings.map((row) => safeGet(row, factor1, 0));
+    const y = loadings.map((row) => safeGet(row, factor2, 0));
 
     // Apply delta parameter
     const adjustedAngle = this.calculateVarimaxAngle(x, y);
@@ -973,17 +1017,23 @@ export class RotationEngineService {
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
 
-    matrix[i][i] = cos;
-    matrix[i][j] = -sin;
-    matrix[j][i] = sin;
-    matrix[j][j] = cos;
+    // Netflix-Grade: Safe access to matrix rows
+    const rowI = assertGet(matrix, i, 'createRotationMatrix');
+    const rowJ = assertGet(matrix, j, 'createRotationMatrix');
+
+    rowI[i] = cos;
+    rowI[j] = -sin;
+    rowJ[i] = sin;
+    rowJ[j] = cos;
 
     return matrix;
   }
 
   private calculateVarimaxCriterion(loadings: number[][]): number {
     const numVariables = loadings.length;
-    const numFactors = loadings[0].length;
+    // Netflix-Grade: Safe access to first row
+    const firstRow = assertGet(loadings, 0, 'calculateVarimaxCriterion');
+    const numFactors = firstRow.length;
     let variance = 0;
 
     for (let j = 0; j < numFactors; j++) {
@@ -991,7 +1041,9 @@ export class RotationEngineService {
         sum4 = 0;
 
       for (let i = 0; i < numVariables; i++) {
-        const loading2 = loadings[i][j] * loadings[i][j];
+        // Netflix-Grade: Safe 2D array access
+        const loading = safeGet2D(loadings, i, j, 0);
+        const loading2 = loading * loading;
         sum2 += loading2;
         sum4 += loading2 * loading2;
       }
@@ -1018,7 +1070,9 @@ export class RotationEngineService {
     loadings: number[][],
     delta: number,
   ): number {
-    const numFactors = loadings[0].length;
+    // Netflix-Grade: Safe access to first row
+    const firstRow = assertGet(loadings, 0, 'calculateObliminCriterion');
+    const numFactors = firstRow.length;
     let criterion = 0;
 
     for (let i = 0; i < numFactors; i++) {
@@ -1026,7 +1080,10 @@ export class RotationEngineService {
         if (i !== j) {
           let covariance = 0;
           for (const row of loadings) {
-            covariance += row[i] * row[i] * row[j] * row[j];
+            // Netflix-Grade: Safe array access for factor loadings
+            const loadingI = safeGet(row, i, 0);
+            const loadingJ = safeGet(row, j, 0);
+            covariance += loadingI * loadingI * loadingJ * loadingJ;
           }
           criterion += covariance - delta * Math.abs(covariance);
         }
@@ -1046,18 +1103,22 @@ export class RotationEngineService {
     loadings: number[][],
     communalities: number[],
   ): number[][] {
-    return loadings.map((row, i) =>
-      row.map((loading) => loading / Math.sqrt(communalities[i])),
-    );
+    return loadings.map((row, i) => {
+      // Netflix-Grade: Safe access to communalities array
+      const communality = safeGet(communalities, i, 1);
+      return row.map((loading) => loading / Math.sqrt(communality));
+    });
   }
 
   private denormalizeLoadings(
     loadings: number[][],
     communalities: number[],
   ): number[][] {
-    return loadings.map((row, i) =>
-      row.map((loading) => loading * Math.sqrt(communalities[i])),
-    );
+    return loadings.map((row, i) => {
+      // Netflix-Grade: Safe access to communalities array
+      const communality = safeGet(communalities, i, 1);
+      return row.map((loading) => loading * Math.sqrt(communality));
+    });
   }
 
   private procrustesRotation(
@@ -1106,19 +1167,24 @@ export class RotationEngineService {
   }
 
   private calculateFactorCorrelations(patternMatrix: number[][]): number[][] {
-    const numFactors = patternMatrix[0].length;
+    // Netflix-Grade: Safe access to first row
+    const firstRow = assertGet(patternMatrix, 0, 'calculateFactorCorrelations');
+    const numFactors = firstRow.length;
     const correlations: number[][] = [];
 
     for (let i = 0; i < numFactors; i++) {
       correlations[i] = [];
+      // Netflix-Grade: Safe access to correlation row
+      const correlationRow = assertGet(correlations, i, 'calculateFactorCorrelations');
       for (let j = 0; j < numFactors; j++) {
         if (i === j) {
-          correlations[i][j] = 1;
+          correlationRow[j] = 1;
         } else {
           // Calculate correlation between factors
-          const factor1 = patternMatrix.map((row) => row[i]);
-          const factor2 = patternMatrix.map((row) => row[j]);
-          correlations[i][j] = this.pearsonCorrelation(factor1, factor2);
+          // Netflix-Grade: Safe array access in map operations
+          const factor1 = patternMatrix.map((row) => safeGet(row, i, 0));
+          const factor2 = patternMatrix.map((row) => safeGet(row, j, 0));
+          correlationRow[j] = this.pearsonCorrelation(factor1, factor2);
         }
       }
     }
@@ -1130,7 +1196,8 @@ export class RotationEngineService {
     const n = x.length;
     const sumX = x.reduce((a, b) => a + b, 0);
     const sumY = y.reduce((a, b) => a + b, 0);
-    const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+    // Netflix-Grade: Safe array access in reduce
+    const sumXY = x.reduce((sum, xi, i) => sum + xi * safeGet(y, i, 0), 0);
     const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
     const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
 
@@ -1153,11 +1220,14 @@ export class RotationEngineService {
     const sin = Math.sin(angle);
 
     for (let i = 0; i < matrix.length; i++) {
-      const f1 = matrix[i][factor1];
-      const f2 = matrix[i][factor2];
+      // Netflix-Grade: Safe 2D array access
+      const matrixRow = assertGet(matrix, i, 'applyObliqueRotation');
+      const resultRow = assertGet(result, i, 'applyObliqueRotation');
+      const f1 = safeGet(matrixRow, factor1, 0);
+      const f2 = safeGet(matrixRow, factor2, 0);
 
-      result[i][factor1] = f1 * cos - f2 * sin;
-      result[i][factor2] = f1 * sin + f2 * cos;
+      resultRow[factor1] = f1 * cos - f2 * sin;
+      resultRow[factor2] = f1 * sin + f2 * cos;
     }
 
     return result;
@@ -1165,11 +1235,14 @@ export class RotationEngineService {
 
   private calculateFactorArrays(loadings: number[][]): number[][] {
     // Convert loadings to factor arrays (z-scores)
-    const numFactors = loadings[0].length;
+    // Netflix-Grade: Safe access to first row
+    const firstRow = assertGet(loadings, 0, 'calculateFactorArrays');
+    const numFactors = firstRow.length;
     const factorArrays: number[][] = [];
 
     for (let factor = 0; factor < numFactors; factor++) {
-      const factorLoadings = loadings.map((row) => row[factor]);
+      // Netflix-Grade: Safe array access in map operations
+      const factorLoadings = loadings.map((row) => safeGet(row, factor, 0));
       const zScores = this.standardize(factorLoadings);
       factorArrays.push(zScores);
     }

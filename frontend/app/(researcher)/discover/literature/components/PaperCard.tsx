@@ -157,13 +157,14 @@ export const PaperCard = memo(function PaperCard({
               fullTextSource={paper.fullTextSource}
             />
 
-            {/* Quality Indicators - Phase 10.942 v4.0 */}
+            {/* Quality Indicators - Phase 10.107 with Confidence */}
             <PaperQualityBadges
               citationsPerYear={paper.citationsPerYear}
               qualityScore={paper.qualityScore}
               qualityScoreBreakdown={paper.qualityScoreBreakdown}
               citationCount={paper.citationCount}
               relevanceScore={paper.relevanceScore}
+              metadataCompleteness={paper.metadataCompleteness}
             />
           </div>
 

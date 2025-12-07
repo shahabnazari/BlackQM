@@ -2,7 +2,29 @@
  * Literature Types
  * TypeScript type definitions for literature search and management
  * Phase 10.1 Day 3 - Component Extraction
+ * Phase 10.107: Added MetadataCompleteness for transparent quality scoring
  */
+
+/**
+ * Phase 10.107: Metadata Completeness
+ * Tracks what data we actually have for a paper to provide transparent quality scoring
+ */
+export interface MetadataCompleteness {
+  /** Do we have citation count data? */
+  hasCitations: boolean;
+  /** Do we have journal metrics (IF/SJR/h-index)? */
+  hasJournalMetrics: boolean;
+  /** Do we have publication year? */
+  hasYear: boolean;
+  /** Do we have abstract for semantic analysis? */
+  hasAbstract: boolean;
+  /** 0-100: how complete is the metadata? */
+  completenessScore: number;
+  /** Count of available metrics (0-4) */
+  availableMetrics: number;
+  /** Total possible metrics (4) */
+  totalMetrics: number;
+}
 
 /**
  * Paper Metadata
@@ -82,6 +104,9 @@ export interface Paper {
   hIndexJournal?: number;
   qualityScore?: number;
   isHighQuality?: boolean;
+  /** Phase 10.107: Metadata Completeness - tracks what data we have */
+  metadataCompleteness?: MetadataCompleteness;
+
   /** Phase 10.942: v4.0 Quality Score Breakdown */
   qualityScoreBreakdown?: {
     /** Citation impact score (0-100), 30% weight */
@@ -98,6 +123,8 @@ export interface Paper {
     altmetricBonus?: number;
     /** Core score before bonuses */
     coreScore?: number;
+    /** Phase 10.107: Metadata completeness for transparency */
+    metadataCompleteness?: MetadataCompleteness;
     /** @deprecated Use recencyBoost instead */
     contentDepth?: number;
   };

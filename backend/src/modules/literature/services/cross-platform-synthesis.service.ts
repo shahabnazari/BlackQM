@@ -8,6 +8,8 @@ import {
   MultiMediaAnalysisService,
   ExtractedTheme,
 } from './multimedia-analysis.service';
+// Netflix-Grade: Import type-safe array utilities (Phase 10.103)
+import { safeGet } from '../../../common/utils/array-utils';
 
 /**
  * Cross-Platform Knowledge Synthesis Service
@@ -226,8 +228,20 @@ export class CrossPlatformSynthesisService {
       }));
 
       // Calculate dissemination metrics
-      const firstMention = sortedSources[0].publishedAt;
-      const latestMention = sortedSources[sortedSources.length - 1].publishedAt;
+      // Netflix-Grade: Type-safe array access with defensive programming
+      // Maintainability: Constants for readability
+      const FIRST_INDEX = 0;
+      const lastIndex = sortedSources.length - 1;
+
+      const firstSource = safeGet(sortedSources, FIRST_INDEX, {
+        publishedAt: new Date(),
+        title: '',
+        type: '' as any
+      } as any);
+      const lastSource = safeGet(sortedSources, lastIndex, firstSource);
+
+      const firstMention = firstSource.publishedAt;
+      const latestMention = lastSource.publishedAt;
       const velocityDays = Math.floor(
         (latestMention.getTime() - firstMention.getTime()) /
           (1000 * 60 * 60 * 24),
@@ -434,17 +448,24 @@ export class CrossPlatformSynthesisService {
     const edges = [];
 
     // Connect sources with shared themes
+    // Netflix-Grade: Maintainability - extract threshold constant
+    const THEME_SIMILARITY_THRESHOLD = 0.3;
+
     for (let i = 0; i < sources.length; i++) {
       for (let j = i + 1; j < sources.length; j++) {
+        // Netflix-Grade: Type-safe array access
+        const sourceI = safeGet(sources, i, { id: '', themes: [] } as any);
+        const sourceJ = safeGet(sources, j, { id: '', themes: [] } as any);
+
         const similarity = this.calculateThemeSimilarity(
-          sources[i].themes,
-          sources[j].themes,
+          sourceI.themes,
+          sourceJ.themes,
         );
 
-        if (similarity > 0.3) {
+        if (similarity > THEME_SIMILARITY_THRESHOLD) {
           edges.push({
-            source: sources[i].id,
-            target: sources[j].id,
+            source: sourceI.id,
+            target: sourceJ.id,
             weight: similarity,
             relationshipType: 'shares_themes',
           });
@@ -487,8 +508,10 @@ export class CrossPlatformSynthesisService {
           citations: paper.citationCount || 0,
         },
       }));
-    } catch (error: any) {
-      this.logger.error(`Failed to search academic papers: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 5: Use unknown with type narrowing (Netflix-grade)
+      const err = error as { message?: string };
+      this.logger.error(`Failed to search academic papers: ${err.message || 'Unknown error'}`);
       return [];
     }
   }
@@ -511,18 +534,20 @@ export class CrossPlatformSynthesisService {
         type: 'youtube' as const,
         id: video.id,
         title: video.title,
-        author: video.channelTitle,
-        publishedAt: new Date(video.publishedAt),
+        author: (video.metadata?.channelTitle as string) || 'Unknown',
+        publishedAt: video.metadata?.publishedAt ? new Date(video.metadata.publishedAt as string) : new Date(),
         url: `https://www.youtube.com/watch?v=${video.id}`,
         themes: [],
         relevanceScore: 0.7,
         engagement: {
-          views: video.statistics?.viewCount,
-          likes: video.statistics?.likeCount,
+          views: (video.metadata?.statistics as any)?.viewCount,
+          likes: (video.metadata?.statistics as any)?.likeCount,
         },
       }));
-    } catch (error: any) {
-      this.logger.error(`Failed to search YouTube: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 5: Use unknown with type narrowing (Netflix-grade)
+      const err = error as { message?: string };
+      this.logger.error(`Failed to search YouTube: ${err.message || 'Unknown error'}`);
       return [];
     }
   }
@@ -555,8 +580,10 @@ export class CrossPlatformSynthesisService {
           shares: video.shares,
         },
       }));
-    } catch (error: any) {
-      this.logger.error(`Failed to search TikTok: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 5: Use unknown with type narrowing (Netflix-grade)
+      const err = error as { message?: string };
+      this.logger.error(`Failed to search TikTok: ${err.message || 'Unknown error'}`);
       return [];
     }
   }
@@ -657,7 +684,9 @@ export class CrossPlatformSynthesisService {
   ): 'academic-first' | 'viral-first' | 'parallel' {
     if (timeline.length < 2) return 'parallel';
 
-    const firstType = timeline[0].type;
+    // Netflix-Grade: Type-safe array access
+    const firstItem = safeGet(timeline, 0, { type: '', platform: '' });
+    const firstType = firstItem.type;
     const hasAcademicFirst = firstType === 'academic';
     const hasViralFirst = firstType === 'popular';
 

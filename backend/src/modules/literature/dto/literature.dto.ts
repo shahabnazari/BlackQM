@@ -15,6 +15,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
+import type { MetadataCompleteness } from '../utils/paper-quality.util';
 
 export enum ExportFormat {
   BIBTEX = 'bibtex',
@@ -40,6 +41,8 @@ export enum LiteratureSource {
   ERIC = 'eric',
   // Phase 10.7.10: CORE - Open access aggregator (250M+ papers)
   CORE = 'core',
+  // Phase 10.106 Phase 1: OpenAlex - Comprehensive open database (250M+ works, 100% free)
+  OPENALEX = 'openalex',
   // Phase 10.6 Day 6: Web of Science - Premium academic database
   WEB_OF_SCIENCE = 'web_of_science',
   // Phase 10.6 Day 7: Scopus - Premium Elsevier database
@@ -505,16 +508,14 @@ export class Paper {
   qualityScore?: number; // Composite quality score (0-100)
   isHighQuality?: boolean; // Meets enterprise quality standards
 
-  // Phase 10.1 Day 12: Quality Score Transparency
-  // Phase 10.6 Day 14.8 (v3.0): Updated to bias-resistant scoring
+  // Phase 10.111: Clean quality score breakdown
   qualityScoreBreakdown?: {
-    citationImpact: number; // 0-100 (60% weight, field-weighted)
-    journalPrestige: number; // 0-100 (40% weight)
-    contentDepth: number; // 0-100 (REMOVED in v2.0, kept for compatibility)
-    // v3.0 bonuses (optional, +0 to +20 total)
+    citationImpact: number;   // 0-100 (35% weight, field-weighted)
+    journalPrestige: number;  // 0-100 (45% weight)
+    recencyBoost: number;     // 0-100 (20% weight, exponential decay)
     openAccessBonus?: number; // 0-10 (if paper is OA)
     reproducibilityBonus?: number; // 0-5 (if data/code available)
-    altmetricBonus?: number; // 0-5 (if high social impact)
+    altmetricBonus?: number;  // 0-5 (if high social impact)
   };
 
   // Phase 10.6 Day 14.8 (v3.0): Field normalization and bonus metrics
@@ -539,6 +540,10 @@ export class Paper {
   domain?: string; // Domain classification (e.g., "Biology", "Medicine")
   domainConfidence?: number; // Domain classification confidence (0-1)
   rejectionReason?: string; // Rejection reason if filtered out
+
+  // Phase 10.107+10.108: Honest Scoring with Metadata Transparency
+  // Shows users exactly what data we have and confidence level
+  metadataCompleteness?: MetadataCompleteness;
 }
 
 /**

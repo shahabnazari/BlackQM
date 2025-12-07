@@ -1,4 +1,36 @@
 /**
+ * Phase 10.106 Phase 9: Scopus API response types
+ * Netflix-grade: Full type safety for external API integration
+ */
+export interface ScopusLink {
+  '@ref': string;
+  '@href': string;
+}
+
+export interface ScopusAuthor {
+  name?: string;
+  '@auid'?: string;
+}
+
+export interface ScopusEntry {
+  error?: string;
+  'dc:title'?: string;
+  'dc:creator'?: string | ScopusAuthor[];
+  'dc:description'?: string;
+  'dc:identifier'?: string;
+  'prism:doi'?: string;
+  'prism:publicationName'?: string;
+  'prism:coverDate'?: string;
+  'citedby-count'?: string;
+  openaccess?: string | boolean;
+  'prism:aggregationType'?: string;
+  subtype?: string;
+  authkeywords?: string;
+  eid?: string;
+  link?: ScopusLink[];
+}
+
+/**
  * ═══════════════════════════════════════════════════════════════════════════
  * SCOPUS SERVICE
  * Phase 10.6 Day 7: Premium Elsevier Scopus database integration
@@ -243,25 +275,27 @@ export class ScopusService {
 
       // Filter out error entries (Scopus returns errors as entries)
       const validEntries = entries.filter(
-        (entry: any) => entry.error === undefined && entry['dc:title'],
+        (entry: ScopusEntry) => entry.error === undefined && entry['dc:title'],
       );
 
-      return validEntries.map((entry: any) => this.parsePaper(entry));
-    } catch (error: any) {
-      if (error.response?.status === 401) {
+      return validEntries.map((entry: ScopusEntry) => this.parsePaper(entry));
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 4: Use unknown with type narrowing
+      const err = error as { response?: { status?: number; data?: { 'service-error'?: { status?: { statusText?: string } } } }; message?: string };
+      if (err.response?.status === 401) {
         this.logger.error(
           `[Scopus] Authentication failed - check API key configuration`,
         );
-      } else if (error.response?.status === 429) {
+      } else if (err.response?.status === 429) {
         this.logger.error(
           `[Scopus] Rate limit exceeded - consider upgrading subscription`,
         );
-      } else if (error.response?.status === 400) {
+      } else if (err.response?.status === 400) {
         this.logger.error(
-          `[Scopus] Invalid query syntax: ${error.response?.data?.['service-error']?.status?.statusText}`,
+          `[Scopus] Invalid query syntax: ${err.response?.data?.['service-error']?.status?.statusText || 'Unknown'}`,
         );
       } else {
-        this.logger.error(`[Scopus] Search failed: ${error.message}`);
+        this.logger.error(`[Scopus] Search failed: ${err.message || 'Unknown error'}`);
       }
       return [];
     }
@@ -271,7 +305,7 @@ export class ScopusService {
    * Parse Scopus API entry to Paper DTO
    * Extracts premium metadata: SJR, H-index, citations, etc.
    */
-  private parsePaper(entry: any): Paper {
+  private parsePaper(entry: ScopusEntry): Paper {
     // Basic metadata
     const title = entry['dc:title'] || 'Untitled';
     const authors = this.parseAuthors(entry['dc:creator']);
@@ -362,7 +396,7 @@ export class ScopusService {
    * Parse author names from Scopus API response
    * Handles both string and array formats
    */
-  private parseAuthors(creatorField: any): string[] {
+  private parseAuthors(creatorField: string | ScopusAuthor[] | undefined): string[] {
     if (!creatorField) return [];
 
     if (typeof creatorField === 'string') {
@@ -370,7 +404,7 @@ export class ScopusService {
     }
 
     if (Array.isArray(creatorField)) {
-      return creatorField.map((author: any) =>
+      return creatorField.map((author: ScopusAuthor | string) =>
         typeof author === 'string' ? author : author.name || 'Unknown Author',
       );
     }
@@ -442,13 +476,13 @@ export class ScopusService {
    */
   private constructPdfUrl(
     doi: string | undefined,
-    entry: any,
+    entry: ScopusEntry,
   ): string | undefined {
     // Check for full-text link in entry
-    const links = entry['link'];
+    const links = entry.link;
     if (Array.isArray(links)) {
       const fullTextLink = links.find(
-        (link: any) => link['@ref'] === 'full-text' || link['@ref'] === 'scopus-pdf',
+        (link: ScopusLink) => link['@ref'] === 'full-text' || link['@ref'] === 'scopus-pdf',
       );
       if (fullTextLink?.['@href']) {
         return fullTextLink['@href'];

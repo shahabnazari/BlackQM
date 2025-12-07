@@ -90,9 +90,11 @@ export class PDFQueueService {
       this.logger.log(
         `Adding job for paper "${paper.title?.substring(0, 50)}..." using: ${availableIdentifiers}`,
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 5: Use unknown with type narrowing (Netflix-grade)
+      const err = error as { message?: string };
       this.logger.error(
-        `❌ Failed to validate paper ${paperId}: ${error.message}`,
+        `❌ Failed to validate paper ${paperId}: ${err.message || 'Unknown error'}`,
       );
       throw error; // Re-throw to prevent queuing invalid jobs
     }
@@ -123,9 +125,11 @@ export class PDFQueueService {
         data: { fullTextStatus: 'fetching' },
       });
       this.logger.log(`✅ Updated paper ${paperId} status to 'fetching'`);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 5: Use unknown with type narrowing (Netflix-grade)
+      const err = error as { message?: string };
       this.logger.warn(
-        `Failed to update paper ${paperId} status: ${error.message}`,
+        `Failed to update paper ${paperId} status: ${err.message || 'Unknown error'}`,
       );
       // Non-critical: job will still process
     }

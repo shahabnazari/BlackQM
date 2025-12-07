@@ -24,6 +24,24 @@ export interface TranscriptWithTimestamps {
   cost: number;
 }
 
+/**
+ * Phase 10.106 Phase 10: OpenAI Whisper API type definitions
+ * Netflix-grade: Full type safety for external API
+ */
+export interface WhisperSegment {
+  start: number;
+  end: number;
+  text: string;
+  confidence?: number;
+}
+
+export interface WhisperVerboseResponse {
+  text: string;
+  segments?: WhisperSegment[];
+  language?: string;
+  duration?: number;
+}
+
 @Injectable()
 export class TranscriptionService {
   private readonly logger = new Logger(TranscriptionService.name);
@@ -154,7 +172,8 @@ export class TranscriptionService {
         confidence: stored.confidence || undefined,
         cost: stored.transcriptionCost || 0,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
       this.logger.error(
         `Failed to transcribe YouTube video ${videoId}:`,
         error,
@@ -178,7 +197,8 @@ export class TranscriptionService {
       });
 
       return outputPath;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
       this.logger.error(
         `Failed to extract audio from YouTube video ${videoId}:`,
         error,
@@ -274,26 +294,30 @@ export class TranscriptionService {
         timestamp_granularities: ['segment'], // Word-level timestamps
       });
 
+      // Phase 10.106 Phase 10: Cast to typed response for verbose_json format
+      const verboseResponse = transcription as unknown as WhisperVerboseResponse;
+
       // Process segments with timestamps
       const segments =
-        (transcription as any).segments?.map((seg: any) => ({
+        verboseResponse.segments?.map((seg: WhisperSegment) => ({
           timestamp: Math.floor(seg.start),
           text: seg.text.trim(),
         })) || [];
 
       // Calculate average confidence (if available)
-      const avgConfidence =
-        (transcription as any).segments?.reduce(
-          (sum: number, seg: any) => sum + (seg.confidence || 0.9),
-          0,
-        ) / ((transcription as any).segments?.length || 1);
+      const segmentSum = verboseResponse.segments?.reduce(
+        (sum: number, seg: WhisperSegment) => sum + (seg.confidence || 0.9),
+        0,
+      ) || 0;
+      const avgConfidence = segmentSum / (verboseResponse.segments?.length || 1);
 
       return {
         text: transcription.text,
         segments,
         confidence: avgConfidence,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 8: Use unknown with type narrowing
       this.logger.error('Whisper transcription failed:', error);
       throw new Error('Failed to transcribe audio with Whisper API');
     }

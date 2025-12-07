@@ -1,19 +1,58 @@
 # Quality Scoring Methodology
 
-**Version:** 1.1 (Phase 10.1 Day 12 - Lenient)
-**Last Updated:** November 9, 2025
+**Version:** 4.1 (Phase 10.107 - Honest Quality Scoring with Confidence)
+**Last Updated:** December 7, 2025
 **Status:** Active
-**Change:** More lenient thresholds for broader paper inclusion
+**Change:** Transparent confidence levels, score caps, and honest scoring
 
 ## Overview
 
-The BlackQ Method platform uses a transparent, multi-dimensional quality scoring system to assess academic papers. This methodology helps researchers identify high-quality, impactful literature for their studies.
+The BlackQ Method platform uses a **transparent, bias-resistant quality scoring system** that:
+1. **Scores only what we know** - Never invents or assumes data
+2. **Shows confidence levels** - Users see how much data backs each score
+3. **Prevents artificial boosting** - Score caps based on data completeness
+4. **Maintains fairness** - No bias towards sources with more metadata
 
-**Quality Score Range:** 0-100
-- **≥70:** Excellent (top-tier research)
-- **≥50:** Good (recommended quality threshold)
-- **≥30:** Acceptable
-- **<30:** Limited quality indicators
+**Quality Score Range:** 0-100 with Confidence Level (0-4)
+- **≥70 (High Confidence):** Excellent - Full data, reliable estimate
+- **≥50 (Good Confidence):** Good - Most data available
+- **≥30 (Moderate Confidence):** Acceptable - Partial data
+- **<30 (Low Confidence):** Limited - Score should be interpreted with caution
+
+---
+
+## Phase 10.107 Innovation: Honest Scoring
+
+### The Problem We Solved
+
+**Metadata Bias**: Some sources (Semantic Scholar, CrossRef) provide rich metadata (citations, IF, h-index). Others (arXiv, PubMed) don't report this data—papers may have citations but they're not exposed via API.
+
+**Failed Attempt**: Giving papers with missing data a "neutral" score (e.g., 40/100) artificially BOOSTED them above papers with real 0 citations.
+
+### The Solution: Confidence Levels
+
+We now track **4 key metrics** for each paper:
+
+| Metric | Description | Typical Availability |
+|--------|-------------|---------------------|
+| `hasCitations` | Citation count available? | Semantic Scholar: ✅, arXiv: ❌ |
+| `hasJournalMetrics` | IF/SJR/h-index available? | CrossRef: ✅, arXiv: ❌ |
+| `hasYear` | Publication year? | All sources: ✅ |
+| `hasAbstract` | Abstract text? | Most sources: ✅ |
+
+### Score Caps by Data Completeness
+
+| Available Metrics | Max Possible Score | Confidence Level |
+|-------------------|-------------------|------------------|
+| 0/4 | 25 | Very Low |
+| 1/4 | 45 | Low |
+| 2/4 | 65 | Moderate |
+| 3/4 | 85 | Good |
+| 4/4 | 100 | High |
+
+**Example:**
+- arXiv paper (year + abstract = 2/4) → Max score: 65
+- Same paper enriched with citations + journal (4/4) → Max score: 100
 
 ---
 
@@ -287,14 +326,27 @@ All papers are enriched with:
 
 ## Version History
 
-### v1.0 (November 9, 2025) - Phase 10.1 Day 12
+### v4.1 (December 7, 2025) - Phase 10.107: Honest Quality Scoring
+- ✅ **Confidence Levels**: Show users how much data backs each score (0-4 metrics)
+- ✅ **Score Caps**: Limit max score based on data completeness (prevents artificial boosting)
+- ✅ **MetadataCompleteness Interface**: Track hasCitations, hasJournalMetrics, hasYear, hasAbstract
+- ✅ **UI Transparency**: Paper cards show quality badge with inline confidence indicator
+- ✅ **Detailed Tooltips**: DATA TRANSPARENCY section shows which metrics are available
+- ✅ **Low Confidence Warning**: Papers with <2 metrics show caution message
+
+### v4.0 (November 20, 2025) - Phase 10.100
+- New 30/50/20 weight distribution (Citation/Journal/Recency)
+- Dynamic weight redistribution when data is missing
+- Exponential decay for recency (λ=0.15, half-life 4.6 years)
+
+### v1.1 (November 9, 2025) - Phase 10.1 Day 12 (Lenient)
 - ✅ Implemented OpenAlex enrichment for journal metrics
 - ✅ Simplified to 3-component scoring (40/35/25 weights)
 - ✅ Removed recency boost, venue quality heuristics, critical terms penalty
 - ✅ Added comprehensive tooltips in UI
 - ✅ Created transparency documentation
 
-### v0.9 (November 8, 2025) - Phase 10.1 Day 11
+### v1.0 (November 8, 2025) - Phase 10.1 Day 11
 - Removed problematic scoring components
 - Redistributed weights after removal
 

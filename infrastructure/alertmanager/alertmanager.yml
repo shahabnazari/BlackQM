@@ -1,0 +1,132 @@
+# PHASE 10.102 PHASE 6: ALERTMANAGER CONFIGURATION
+# Alert routing and notification configuration
+
+global:
+  resolve_timeout: 5m
+
+# Templates for custom notifications
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Alert routing
+route:
+  # Default receiver
+  receiver: 'default-receiver'
+
+  # Group alerts by these labels
+  group_by: ['alertname', 'cluster', 'service']
+
+  # Wait time before sending initial notification
+  group_wait: 10s
+
+  # Wait time before sending notification about new alerts in group
+  group_interval: 10s
+
+  # Wait time before resending notification
+  repeat_interval: 12h
+
+  # Child routes for specific alert types
+  routes:
+    # Critical alerts - page on-call engineer
+    - match:
+        severity: critical
+      receiver: 'pagerduty-critical'
+      continue: true
+      group_wait: 0s
+      group_interval: 5m
+      repeat_interval: 4h
+
+    # Warning alerts - notify team channel
+    - match:
+        severity: warning
+      receiver: 'slack-warnings'
+      continue: false
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+
+    # Info alerts - send to monitoring channel
+    - match:
+        severity: info
+      receiver: 'slack-monitoring'
+      continue: false
+      group_wait: 5m
+      group_interval: 30m
+      repeat_interval: 24h
+
+# Inhibition rules (suppress certain alerts when others are firing)
+inhibit_rules:
+  # Suppress warnings if critical alert is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']
+
+  # Suppress specific alerts during maintenance
+  - source_match:
+      alertname: 'MaintenanceMode'
+    target_match_re:
+      alertname: '.*'
+
+# Receivers (notification channels)
+receivers:
+  # Default receiver (logs only)
+  - name: 'default-receiver'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook'
+        send_resolved: true
+
+  # PagerDuty for critical alerts
+  - name: 'pagerduty-critical'
+    # Uncomment and configure for production
+    # pagerduty_configs:
+    #   - service_key: '<YOUR_PAGERDUTY_SERVICE_KEY>'
+    #     description: '{{ .CommonAnnotations.summary }}'
+    #     details:
+    #       firing: '{{ .Alerts.Firing | len }}'
+    #       resolved: '{{ .Alerts.Resolved | len }}'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook/critical'
+        send_resolved: true
+
+  # Slack for warnings
+  - name: 'slack-warnings'
+    # Uncomment and configure for production
+    # slack_configs:
+    #   - api_url: '<YOUR_SLACK_WEBHOOK_URL>'
+    #     channel: '#alerts-warnings'
+    #     title: 'Warning Alert'
+    #     text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+    #     send_resolved: true
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook/warnings'
+        send_resolved: true
+
+  # Slack for monitoring
+  - name: 'slack-monitoring'
+    # Uncomment and configure for production
+    # slack_configs:
+    #   - api_url: '<YOUR_SLACK_WEBHOOK_URL>'
+    #     channel: '#monitoring'
+    #     title: 'Info Alert'
+    #     text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+    #     send_resolved: true
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook/monitoring'
+        send_resolved: true
+
+  # Email receiver (optional)
+  - name: 'email-alerts'
+    # Uncomment and configure for production
+    # email_configs:
+    #   - to: 'ops-team@example.com'
+    #     from: 'alertmanager@example.com'
+    #     smarthost: 'smtp.example.com:587'
+    #     auth_username: 'alertmanager@example.com'
+    #     auth_password: '<YOUR_SMTP_PASSWORD>'
+    #     headers:
+    #       Subject: 'Alert: {{ .GroupLabels.alertname }}'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook/email'
+        send_resolved: true

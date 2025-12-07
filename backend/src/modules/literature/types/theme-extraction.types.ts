@@ -12,7 +12,7 @@
  * 4. Cache types explicitly defined
  */
 
-import type { ThemeProvenance, UnifiedTheme, SourceContent } from '../services/unified-theme-extraction.service';
+import type { ThemeProvenance, UnifiedTheme, SourceContent } from './unified-theme-extraction.types';
 import type { JsonValue } from '@prisma/client/runtime/library';
 
 // ============================================================================
@@ -356,3 +356,28 @@ export function isSuccessfulExtraction(
  * Provenance map for extraction results
  */
 export type ProvenanceMap = Record<string, ThemeProvenance>;
+
+// ============================================================================
+// Batch Extraction Statistics
+// ============================================================================
+
+/**
+ * Statistics for batch theme extraction operations
+ * Used by BatchExtractionOrchestratorService and UnifiedThemeExtractionService
+ */
+export interface BatchExtractionStats {
+  /** Total number of sources to process */
+  totalSources: number;
+  /** Number of sources successfully processed */
+  successfulSources: number;
+  /** Number of sources that failed processing */
+  failedSources: number;
+  /** Number of cache hits during processing */
+  cacheHits: number;
+  /** Number of cache misses during processing */
+  cacheMisses: number;
+  /** Array of processing times for each source in milliseconds */
+  processingTimes: number[];
+  /** Array of errors encountered during processing */
+  errors: Array<{ sourceTitle: string; error: string }>;
+}

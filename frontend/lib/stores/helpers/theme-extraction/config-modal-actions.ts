@@ -40,6 +40,7 @@ export function createConfigModalActions<T extends {
   showModeSelectionModal: boolean;
   showPurposeWizard: boolean;
   showGuidedWizard: boolean;
+  isNavigatingToThemes: boolean; // Phase 10.106
 }>(
   set: (partial: Partial<T>) => void
 ) {
@@ -135,6 +136,20 @@ export function createConfigModalActions<T extends {
     },
 
     /**
+     * Phase 10.106: Show/hide navigating to themes modal
+     * @param navigating Boolean to show/hide modal
+     */
+    setIsNavigatingToThemes: (navigating: boolean): void => {
+      // Input validation
+      if (typeof navigating !== 'boolean') {
+        logger.warn('setIsNavigatingToThemes: Invalid boolean', 'ThemeStore', { navigating });
+        return;
+      }
+
+      set({ isNavigatingToThemes: navigating } as Partial<T>);
+    },
+
+    /**
      * Close all modals at once
      */
     closeAllModals: (): void => {
@@ -143,6 +158,7 @@ export function createConfigModalActions<T extends {
         showModeSelectionModal: false,
         showPurposeWizard: false,
         showGuidedWizard: false,
+        isNavigatingToThemes: false, // Phase 10.106
       } as Partial<T>);
     },
   };

@@ -98,6 +98,40 @@ import {
 } from '../utils/word-count.util';
 import { FAST_API_TIMEOUT } from '../constants/http-config.constants';
 
+/**
+ * Phase 10.106 Phase 6: Typed interface for Semantic Scholar author
+ * Netflix-grade: No loose `any` types
+ */
+interface SemanticScholarAuthor {
+  authorId?: string;
+  name: string;
+}
+
+/**
+ * Phase 10.106 Phase 6: Typed interface for Semantic Scholar API paper
+ * Netflix-grade: Explicit typing for API response parsing
+ */
+interface SemanticScholarPaper {
+  paperId: string;
+  title: string;
+  abstract?: string;
+  authors?: SemanticScholarAuthor[];
+  year?: number;
+  venue?: string;
+  citationCount?: number;
+  fieldsOfStudy?: string[];
+  url?: string;
+  externalIds?: {
+    DOI?: string;
+    PubMed?: string;
+    PubMedCentral?: string;
+    ArXiv?: string;
+  };
+  openAccessPdf?: {
+    url?: string;
+  };
+}
+
 export interface SemanticScholarSearchOptions {
   yearFrom?: number;
   yearTo?: number;
@@ -131,8 +165,12 @@ export class SemanticScholarService {
   private readonly DEFAULT_LIMIT = 20;
 
   /** API fields to request - comprehensive metadata for paper analysis */
+  // Phase 10.105 Day 5: API field compatibility fixes
+  // - Removed 'openAccessPdf' - causes API to return 0 results
+  // - Removed 'isOpenAccess' - combination with externalIds breaks API
+  // PDF URLs and open access status now derived from externalIds (PMC IDs)
   private readonly API_FIELDS =
-    'paperId,title,authors,year,abstract,citationCount,url,venue,fieldsOfStudy,openAccessPdf,isOpenAccess,externalIds';
+    'paperId,title,authors,year,abstract,citationCount,url,venue,fieldsOfStudy,externalIds';
 
   // Phase 10.102 Phase 3.1: Inject RetryService for automatic retry with exponential backoff
   constructor(
@@ -196,6 +234,7 @@ export class SemanticScholarService {
       // Phase 10.102 Phase 3.1: Execute HTTP request with automatic retry + exponential backoff
       // Retry policy: 3 attempts, 1s → 2s → 4s delays, 0-500ms jitter
       // Retryable errors: Network failures, timeouts, rate limits (429), server errors (500-599)
+      // Phase 10.105: Production-ready with full RetryService integration
       const result = await this.retry.executeWithRetry(
         async () => firstValueFrom(
           this.httpService.get(url, {
@@ -215,7 +254,24 @@ export class SemanticScholarService {
 
       // Parse each paper from successful API response
       // 📝 TO CHANGE PARSING: Update parsePaper() method below
-      const papers = result.data.data.map((paper: any) =>
+      // Phase 10.105: Production-ready with correct RetryResult unwrapping
+
+      // RetryResult structure: { data: AxiosResponse, attempts: number }
+      // AxiosResponse structure: { data: SemanticScholarResponse, status, ... }
+      // SemanticScholarResponse: { data: Paper[], total: number }
+
+      const apiResponse = result.data.data; // Unwrap: RetryResult -> AxiosResponse -> API JSON
+
+      if (!apiResponse || !apiResponse.data || !Array.isArray(apiResponse.data)) {
+        this.logger.warn(
+          `[Semantic Scholar] API returned invalid response structure. ` +
+          `Expected data array, got: ${apiResponse && apiResponse.data ? typeof apiResponse.data : 'undefined'}`
+        );
+        return [];
+      }
+
+      // Phase 10.106 Phase 6: Use typed SemanticScholarPaper interface (Netflix-grade)
+      const papers = apiResponse.data.map((paper: SemanticScholarPaper) =>
         this.parsePaper(paper),
       );
 
@@ -223,11 +279,13 @@ export class SemanticScholarService {
         `[Semantic Scholar] Found ${papers.length} papers (attempts: ${result.attempts})`,
       );
       return papers;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 6: Use unknown with type narrowing (Netflix-grade)
+      const err = error as { message?: string };
       // This catch block should rarely execute (retry service handles most errors)
       // Only catches unexpected errors outside retry logic
       this.logger.error(
-        `[Semantic Scholar] Unexpected error: ${error.message}`,
+        `[Semantic Scholar] Unexpected error: ${err.message || 'Unknown error'}`,
       );
       return [];
     }
@@ -253,10 +311,11 @@ export class SemanticScholarService {
    * 2. Fallback: Construct PMC URL if PubMedCentral ID present
    * 3. Future: Could add Unpaywall API fallback for DOIs
    *
-   * @param paper Raw API response object from Semantic Scholar
+   * @param paper Typed API response object from Semantic Scholar
    * @returns Normalized Paper object following application schema
+   * Phase 10.106 Phase 6: Use typed SemanticScholarPaper interface (Netflix-grade)
    */
-  private parsePaper(paper: any): Paper {
+  private parsePaper(paper: SemanticScholarPaper): Paper {
     // ============================================================================
     // STEP 1: Calculate word counts for content depth analysis
     // ============================================================================
@@ -288,36 +347,42 @@ export class SemanticScholarService {
     // ============================================================================
     // STEP 3: PDF detection with intelligent fallback strategy
     // ============================================================================
-    let pdfUrl = paper.openAccessPdf?.url || null;
-    let hasPdf = !!pdfUrl && pdfUrl.trim().length > 0;
+    // Phase 10.105 Day 5: openAccessPdf field removed from API (causes 0 results)
+    // Now using PMC ID fallback as primary PDF source
+    let pdfUrl: string | null = null;
+    let hasPdf = false;
 
-    // FALLBACK STRATEGY: If no direct PDF but paper is in PubMed Central
-    // 📝 TO ADD MORE FALLBACKS: Add additional checks here (e.g., Unpaywall API)
-    if (!hasPdf && paper.externalIds?.PubMedCentral) {
+    // PRIMARY STRATEGY: Check if paper is in PubMed Central (reliable PDF source)
+    if (paper.externalIds?.PubMedCentral) {
       const pmcId = paper.externalIds.PubMedCentral;
       pdfUrl = `https://www.ncbi.nlm.nih.gov/pmc/articles/PMC${pmcId}/pdf/`;
       hasPdf = true;
-      this.logger.log(
-        `[Semantic Scholar] PMC fallback for paper ${paper.paperId}: ${pdfUrl}`,
-      );
     }
+
+    // FUTURE: Could add Unpaywall API lookup for DOIs
+    // FUTURE: Could add ArXiv PDF URL for ArXiv papers
 
     // ============================================================================
     // STEP 4: Construct normalized Paper object
     // ============================================================================
     // 📝 TO ADD NEW FIELDS: Add them here matching Paper interface definition
+    // Phase 10.106: Sanitize abstract to remove XML/HTML tags that break JSON serialization
+    const sanitizedAbstract = this.sanitizeAbstract(paper.abstract);
+
     // See: backend/src/modules/literature/dto/literature.dto.ts
     return {
       // Core identification
       id: paper.paperId,
       title: paper.title,
-      authors: paper.authors?.map((a: any) => a.name) || [], // ✅ Fixed Day 3: Returns string[]
+      // Phase 10.106 Phase 6: Use typed SemanticScholarAuthor (Netflix-grade)
+      authors: paper.authors?.map((a: SemanticScholarAuthor) => a.name) || [],
       year: paper.year,
-      abstract: paper.abstract,
+      abstract: sanitizedAbstract,
 
       // External identifiers (critical for cross-referencing)
-      doi: paper.externalIds?.DOI || null,
-      pmid: paper.externalIds?.PubMed || null, // For PMC full-text lookup
+      // Phase 10.106 Phase 6: Use undefined instead of null for Paper interface compatibility
+      doi: paper.externalIds?.DOI || undefined,
+      pmid: paper.externalIds?.PubMed || undefined, // For PMC full-text lookup
       url: paper.url,
 
       // Publication metadata
@@ -333,8 +398,9 @@ export class SemanticScholarService {
       abstractWordCount,
 
       // PDF and full-text availability (Phase 10 Day 5.17+)
+      // Phase 10.105 Day 5: isOpenAccess removed from API fields - derive from hasPdf instead
       pdfUrl,
-      openAccessStatus: paper.isOpenAccess || hasPdf ? 'OPEN_ACCESS' : null,
+      openAccessStatus: hasPdf ? 'OPEN_ACCESS' : null,
       hasPdf,
       hasFullText: hasPdf,
       fullTextStatus: hasPdf ? 'available' : 'not_fetched',
@@ -357,6 +423,25 @@ export class SemanticScholarService {
       qualityScore: qualityComponents.totalScore,
       isHighQuality: qualityComponents.totalScore >= 50,
     };
+  }
+
+  /**
+   * Phase 10.106: Sanitize abstract to remove XML/HTML tags
+   * Some sources return abstracts with markup that breaks JSON serialization
+   */
+  private sanitizeAbstract(abstract: string | undefined | null): string | undefined {
+    if (!abstract) return undefined;
+
+    // Remove all XML/HTML tags and normalize whitespace
+    return abstract
+      .replace(/<[^>]*>/g, '') // Remove all tags
+      .replace(/&lt;/g, '<')   // Decode HTML entities
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')    // Normalize whitespace
+      .trim();
   }
 
   /**

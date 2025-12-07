@@ -50,7 +50,7 @@ export function AccessibilityAuditPanel() {
   }, []);
 
   // Auto-run on mount and when autoRun changes
-  useEffect(() => {
+  useEffect((): void | (() => void) => {
     if (autoRun) {
       const cleanup = runAudit();
       const interval = setInterval(runAudit, 30000); // Every 30 seconds
@@ -59,6 +59,7 @@ export function AccessibilityAuditPanel() {
         cleanup?.(); // Cleanup any pending timeout
       };
     }
+    // Phase 10.106: No cleanup needed when autoRun is false
   }, [autoRun, runAudit]);
 
   // Export report (memoized)

@@ -10,6 +10,7 @@
 
 /**
  * Test results interface
+ * Phase 10.106: Added explicit undefined for exactOptionalPropertyTypes compatibility
  */
 export interface AccessibilityTestResult {
   passed: boolean;
@@ -17,8 +18,8 @@ export interface AccessibilityTestResult {
   criterion: string;
   wcagLevel: 'A' | 'AA' | 'AAA';
   description: string;
-  issues?: string[];
-  recommendations?: string[];
+  issues?: string[] | undefined;
+  recommendations?: string[] | undefined;
 }
 
 /**
@@ -90,10 +91,9 @@ export function testKeyboardNavigation(): AccessibilityTestResult {
   }
 
   // Test 3: Focus indicators present
-  const focusableElements = document.querySelectorAll(
-    'button:focus-visible, a:focus-visible, input:focus-visible'
-  );
-  
+  // Phase 10.106: Focus indicator testing would query focus-visible elements
+  // (Implementation deferred - requires active focus state simulation)
+
   return {
     passed: issues.length === 0,
     category: 'Keyboard Navigation',
@@ -272,9 +272,12 @@ export function testSemanticHTML(): AccessibilityTestResult {
   const headingLevels = headings.map(h => parseInt(h.tagName.substring(1)));
   
   // Check for skipped levels
+  // Phase 10.106: Type guard for array access within bounds
   for (let i = 1; i < headingLevels.length; i++) {
-    if (headingLevels[i] - headingLevels[i - 1] > 1) {
-      issues.push(`Heading hierarchy skips level: h${headingLevels[i - 1]} to h${headingLevels[i]}`);
+    const currentLevel = headingLevels[i];
+    const previousLevel = headingLevels[i - 1];
+    if (currentLevel !== undefined && previousLevel !== undefined && currentLevel - previousLevel > 1) {
+      issues.push(`Heading hierarchy skips level: h${previousLevel} to h${currentLevel}`);
       recommendations.push('Maintain logical heading hierarchy (h1 → h2 → h3, no skipping)');
       break;
     }

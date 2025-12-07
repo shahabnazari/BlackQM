@@ -123,11 +123,18 @@ async function bootstrap() {
   };
 
   // Enable CORS
+  // Phase 10.106: Added X-Dev-Auth-Bypass header for development auth bypass
   app.enableCors({
     origin: corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Correlation-ID'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'X-Correlation-ID',
+      'X-Dev-Auth-Bypass', // Phase 10.106: Allow dev auth bypass header (development only)
+    ],
     exposedHeaders: ['X-Correlation-ID'], // Phase 10.943: Expose correlation ID to frontend
   });
 

@@ -36,16 +36,18 @@
  * Standard timeout for fast metadata-only APIs
  * Used by: ArXiv, CrossRef, Semantic Scholar, OpenAlex
  * Rationale: Simple REST APIs returning JSON metadata, typically respond <2s
+ * Phase 10.106: Increased from 10s to 15s for Netflix-grade reliability
  */
-export const FAST_API_TIMEOUT = 10000; // 10 seconds
+export const FAST_API_TIMEOUT = 15000; // 15 seconds (Phase 10.106: increased for reliability)
 
 /**
  * Timeout for complex multi-step APIs
  * Used by: PubMed (esearch + efetch), PMC (esearch + efetch)
  * Rationale: Two-step workflow (search → fetch), needs extra time
  * Phase 10.7 Day 5.2: Increased to 20s for PMC (XML parsing can be slow)
+ * Phase 10.106: Increased to 25s for Netflix-grade reliability with NCBI
  */
-export const COMPLEX_API_TIMEOUT = 20000; // 20 seconds
+export const COMPLEX_API_TIMEOUT = 25000; // 25 seconds (Phase 10.106: increased for NCBI reliability)
 
 /**
  * Timeout for large response APIs

@@ -103,9 +103,11 @@ export class SSRNService {
       this.logger.log(`✅ [SSRN] Found ${papers.length} papers in ${duration}ms (mock data)`);
 
       return papers;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 4: Use unknown with type narrowing
+      const err = error as { message?: string };
       const duration = Date.now() - startTime;
-      this.logger.error(`❌ [SSRN] Search failed after ${duration}ms: ${error.message}`);
+      this.logger.error(`❌ [SSRN] Search failed after ${duration}ms: ${err.message || 'Unknown error'}`);
       return [];
     }
   }
@@ -176,8 +178,10 @@ export class SSRNService {
       this.logger.warn('[SSRN] getPaperById not fully implemented. Use Elsevier API.');
 
       return null;
-    } catch (error: any) {
-      this.logger.error(`[SSRN] Failed to fetch paper ${ssrnId}: ${error.message}`);
+    } catch (error: unknown) {
+      // Phase 10.106 Phase 4: Use unknown with type narrowing
+      const err = error as { message?: string };
+      this.logger.error(`[SSRN] Failed to fetch paper ${ssrnId}: ${err.message || 'Unknown error'}`);
       return null;
     }
   }
