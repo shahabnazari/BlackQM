@@ -292,20 +292,23 @@ References:
 
           {/* Author Filter */}
           <div>
-            <label className="text-sm font-medium">Author</label>
+            <label htmlFor="filter-author" className="text-sm font-medium">Author</label>
             <Input
+              id="filter-author"
+              name="filter-author"
               type="text"
               placeholder="e.g., Smith"
               value={filters.author}
               onChange={e => handleAuthorChange(e.target.value)}
               className="mt-1"
-              aria-label="Author name"
             />
+            <label htmlFor="filter-author-mode" className="sr-only">Author search mode</label>
             <select
+              id="filter-author-mode"
+              name="filter-author-mode"
               value={filters.authorSearchMode}
               onChange={e => handleAuthorSearchModeChange(e.target.value)}
               className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              aria-label="Author search mode"
             >
               <option value="contains">Contains (partial match)</option>
               <option value="fuzzy">Fuzzy (typo-tolerant)</option>
@@ -315,25 +318,27 @@ References:
 
           {/* Min Citations */}
           <div>
-            <label className="text-sm font-medium">Min Citations</label>
+            <label htmlFor="filter-min-citations" className="text-sm font-medium">Min Citations</label>
             <Input
+              id="filter-min-citations"
+              name="filter-min-citations"
               type="number"
               placeholder="e.g., 10"
               value={filters.minCitations ?? ''}
               onChange={e => handleMinCitationsChange(e.target.value)}
               className="mt-1"
-              aria-label="Minimum citations"
             />
           </div>
 
           {/* Publication Type */}
           <div>
-            <label className="text-sm font-medium">Publication Type</label>
+            <label htmlFor="filter-publication-type" className="text-sm font-medium">Publication Type</label>
             <select
+              id="filter-publication-type"
+              name="filter-publication-type"
               value={filters.publicationType}
               onChange={e => handlePublicationTypeChange(e.target.value)}
               className="mt-1 w-full h-10 px-3 border rounded-md"
-              aria-label="Publication type"
             >
               <option value="all">All Types</option>
               <option value="journal">Journal Articles</option>
@@ -344,12 +349,13 @@ References:
 
           {/* Sort By */}
           <div>
-            <label className="text-sm font-medium">Sort By</label>
+            <label htmlFor="filter-sort-by" className="text-sm font-medium">Sort By</label>
             <select
+              id="filter-sort-by"
+              name="filter-sort-by"
               value={filters.sortBy}
               onChange={e => handleSortByChange(e.target.value)}
               className="mt-1 w-full h-10 px-3 border rounded-md"
-              aria-label="Sort by"
             >
               <option value="relevance">Relevance</option>
               <option value="citations">Citations (Total)</option>

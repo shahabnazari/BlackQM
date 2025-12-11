@@ -3,16 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "description": "VQMethod - Advanced Q Methodology Research Platform with Apple Design Excellence",
-  "_comment": "⚠️ IMPORTANT: This is the workspace root. DO NOT add app code here! All Next.js code goes in /frontend/, all NestJS code goes in /backend/",
   "workspaces": [
     "frontend",
     "backend"
   ],
-  "_workspaceInfo": {
-    "frontend": "Next.js app - All UI/React code here. Access at http://localhost:3000",
-    "backend": "NestJS API - All server code here. Access at http://localhost:4000",
-    "CRITICAL": "NEVER create /app, /components, or /pages in root - they go in /frontend/!"
-  },
   "scripts": {
     "dev": "node scripts/dev-netflix-v2.js",
     "dev:v2": "node scripts/dev-netflix-v2.js",
@@ -73,7 +67,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/vqmethod.git"
+    "url": "git+https://github.com/yourusername/vqmethod.git"
   },
   "dependencies": {
     "@react-three/drei": "^9.88.17",
@@ -85,7 +79,16 @@
     "react-chartjs-2": "^5.3.0",
     "react-dropzone": "^14.3.8",
     "react-rnd": "^10.5.2",
+    "socket.io-client": "^4.8.1",
     "three": "^0.180.0",
     "zustand": "^5.0.8"
-  }
+  },
+  "main": "check-errors.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/vqmethod/issues"
+  },
+  "homepage": "https://github.com/yourusername/vqmethod#readme"
 }

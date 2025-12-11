@@ -119,17 +119,20 @@ export class OpenAlexEnrichmentService {
   //   - Predictable, linear performance
   // ============================================
   private readonly rateLimiter = new Bottleneck({
-    // Reservoir pattern: 10 requests per second (OpenAlex limit)
-    reservoir: 10,                    // Start with 10 requests
-    reservoirRefreshAmount: 10,       // Refill to 10 requests
+    // Reservoir pattern: 8 requests per second (conservative for OpenAlex 10 req/sec limit)
+    reservoir: 8,                     // Start with 8 requests (leave headroom)
+    reservoirRefreshAmount: 8,        // Refill to 8 requests
     reservoirRefreshInterval: 1000,   // Every 1 second (1000ms)
 
-    // Phase 10.106 FIX: Reduce concurrency to 5 (each paper = 2 API calls)
-    // This ensures we stay under 10 req/sec even with paper + journal calls
-    maxConcurrent: 5,
+    // Phase 10.112 Week 4 FIX: Reduce concurrency to 3 to prevent 429 errors
+    // Each paper can make 2 API calls (paper lookup + journal lookup)
+    // With 3 concurrent: max 6 in-flight requests at any time
+    // Combined with search service, total stays under 10 req/sec
+    maxConcurrent: 3,
 
     // Queue: Unlimited (we want to process all papers)
-    minTime: 100, // 100ms minimum between requests for safety
+    // Phase 10.112 Week 4 FIX: Increase minTime from 100ms to 150ms for safety
+    minTime: 150, // 150ms minimum between requests (~6.6 req/sec max burst)
   });
 
   private requestCount = 0;           // Track requests for metrics
@@ -274,8 +277,11 @@ export class OpenAlexEnrichmentService {
           },
         );
 
-        // Phase 10.110 BUGFIX: OpenAlex returns data directly at result.data, NOT result.data.data
-        work = result.data;
+        // Phase 10.113 CRITICAL BUGFIX: RetryResult wraps AxiosResponse
+        // result = RetryResult<AxiosResponse>
+        // result.data = AxiosResponse
+        // result.data.data = actual API response (work object)
+        work = result.data.data;
         lookupStrategy = 'DOI';
       }
 
@@ -304,8 +310,8 @@ export class OpenAlexEnrichmentService {
             },
           );
 
-          // Phase 10.110 BUGFIX: OpenAlex returns data directly at result.data
-          work = result.data;
+          // Phase 10.113 CRITICAL BUGFIX: RetryResult wraps AxiosResponse
+          work = result.data.data;
           lookupStrategy = 'PMID';
 
           this.logger.log(
@@ -349,9 +355,9 @@ export class OpenAlexEnrichmentService {
             },
           );
 
-          // Phase 10.110 BUGFIX: OpenAlex returns {results: [...]} at result.data, NOT result.data.data
-          // Cast to any for OpenAlex search response type
-          const searchResponse = result.data as { results?: unknown[] };
+          // Phase 10.113 CRITICAL BUGFIX: RetryResult wraps AxiosResponse
+          // result.data = AxiosResponse, result.data.data = {results: [...]}
+          const searchResponse = result.data.data as { results?: unknown[] };
           const results = searchResponse?.results || [];
           if (results.length > 0) {
             // Take first match (best match by OpenAlex relevance ranking)
@@ -502,9 +508,10 @@ export class OpenAlexEnrichmentService {
    * @param papers - Papers to enrich
    * @returns Enriched papers
    */
-  async enrichBatch(papers: Paper[]): Promise<Paper[]> {
+  async enrichBatch(papers: Paper[], signal?: AbortSignal): Promise<Paper[]> {
     // ============================================
     // Phase 10.105 Day 6: NETFLIX-GRADE ENRICHMENT (Production-Ready)
+    // Phase 10.112 Week 4: Added request cancellation support
     // ============================================
     //
     // PREVIOUS ISSUE: p-limit(10) = concurrency limiting, NOT rate limiting
@@ -517,6 +524,7 @@ export class OpenAlexEnrichmentService {
     // ✅ Circuit breaker: Auto-disable after 10 failures, auto-recover after 60s
     // ✅ Observability: Queue depth, success/failure tracking
     // ✅ Graceful degradation: Return original paper on failure
+    // ✅ Request cancellation: Stop enrichment when client disconnects
     //
     // PERFORMANCE:
     // - 1,400 papers: ~140 seconds (linear, predictable)
@@ -528,10 +536,17 @@ export class OpenAlexEnrichmentService {
     // - Self-healing (circuit breaker recovery)
     // - Observable (event emitters for metrics)
     // - Resilient (graceful degradation)
+    // - Cancellable (stops on client disconnect)
     // ============================================
 
     if (!papers || papers.length === 0) {
       return papers;
+    }
+
+    // Phase 10.112 Week 4: Check for cancellation at start
+    if (signal?.aborted) {
+      this.logger.warn('⚠️  [OpenAlex] Request cancelled before enrichment');
+      return papers; // Return original papers without enrichment
     }
 
     // Circuit breaker: Skip enrichment if circuit is open
@@ -547,26 +562,49 @@ export class OpenAlexEnrichmentService {
     );
 
     const startTime = Date.now();
+    const enrichedPapers: Paper[] = [];
+    let cancelledIndex = papers.length; // Track where we stopped if cancelled
 
-    // Phase 10.105 Day 6: Netflix-grade time-based rate limiting with bottleneck
-    // Uses schedule() method to queue tasks with proper 10 req/sec throttling
-    const enrichedPapers = await Promise.all(
-      papers.map(paper =>
-        this.rateLimiter.schedule(async () => {
-          try {
-            this.requestCount++; // Track for metrics
-            return await this.enrichPaper(paper);
-          } catch (error) {
-            this.failureCount++; // Track failures
-            // Graceful degradation: Return original paper if enrichment fails
-            this.logger.debug(
-              `[OpenAlex] Enrichment failed for "${paper.title.substring(0, 50)}...", using original data`,
-            );
-            return paper;
+    // Phase 10.112 Week 4: Process papers with cancellation checks
+    // Using a custom loop instead of Promise.all to allow early termination
+    for (let i = 0; i < papers.length; i++) {
+      // Check for cancellation every 10 papers (balance between responsiveness and overhead)
+      if (i % 10 === 0 && signal?.aborted) {
+        this.logger.warn(`⚠️  [OpenAlex] Request cancelled after ${i}/${papers.length} papers`);
+        cancelledIndex = i;
+        break;
+      }
+
+      const paper = papers[i];
+      try {
+        const enriched = await this.rateLimiter.schedule(async () => {
+          // Check signal inside scheduled task for better responsiveness
+          if (signal?.aborted) {
+            throw new Error('Request cancelled');
           }
-        })
-      )
-    );
+          this.requestCount++;
+          return await this.enrichPaper(paper);
+        });
+        enrichedPapers.push(enriched);
+      } catch (error) {
+        if (signal?.aborted) {
+          cancelledIndex = i;
+          break;
+        }
+        this.failureCount++;
+        this.logger.debug(
+          `[OpenAlex] Enrichment failed for "${paper.title.substring(0, 50)}...", using original data`,
+        );
+        enrichedPapers.push(paper);
+      }
+    }
+
+    // Add remaining original papers if cancelled early
+    if (cancelledIndex < papers.length) {
+      for (let i = cancelledIndex; i < papers.length; i++) {
+        enrichedPapers.push(papers[i]);
+      }
+    }
 
     const duration = Date.now() - startTime;
     const enrichedCount = enrichedPapers.filter(
@@ -656,12 +694,15 @@ export class OpenAlexEnrichmentService {
         },
       );
 
-      // Phase 10.110 BUGFIX: OpenAlex returns data directly at result.data, NOT result.data.data
+      // Phase 10.113 CRITICAL BUGFIX: RetryResult wraps AxiosResponse
+      // result = RetryResult<AxiosResponse>
+      // result.data = AxiosResponse
+      // result.data.data = actual API response
       // Handle both direct lookup and search results:
-      // - Direct lookup (/sources/{id}): Returns source object directly at result.data
-      // - Search (/sources?filter=...): Returns {results: [...]} at result.data
+      // - Direct lookup (/sources/{id}): Returns source object
+      // - Search (/sources?filter=...): Returns {results: [...]}
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const responseData = result.data as any;
+      const responseData = result.data.data as any;
       const source = url.includes('/sources/')
         ? responseData
         : responseData?.results?.[0];

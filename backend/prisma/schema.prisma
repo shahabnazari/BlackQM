@@ -1892,3 +1892,128 @@ model InsightAccess {
   @@index([role])
   @@map("insight_access")
 }
+
+// =============================================================================
+// PHASE 10.113 WEEK 6: THEMATIZATION CREDITS & BILLING
+// =============================================================================
+
+/// Subscription tier for thematization
+enum ThematizationSubscriptionTier {
+  FREE
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+/// Thematization Usage - Track credit usage for thematization jobs
+/// Replaces in-memory cache in ThematizationPricingService
+model ThematizationUsage {
+  id                  String                      @id @default(uuid())
+  userId              String                      @unique @map("user_id")
+
+  // Subscription info
+  subscription        ThematizationSubscriptionTier @default(FREE)
+  subscriptionStartAt DateTime?                   @map("subscription_start_at")
+  subscriptionEndAt   DateTime?                   @map("subscription_end_at")
+
+  // Credit tracking
+  monthlyCredits      Int                         @default(30) @map("monthly_credits") // Credits allocated per month
+  creditsUsed         Int                         @default(0) @map("credits_used")
+  creditsRemaining    Int                         @default(30) @map("credits_remaining")
+
+  // Job tracking
+  jobsThisMonth       Int                         @default(0) @map("jobs_this_month")
+  totalJobsAllTime    Int                         @default(0) @map("total_jobs_all_time")
+  lastJobAt           DateTime?                   @map("last_job_at")
+
+  // Billing cycle
+  billingCycleStart   DateTime                    @default(now()) @map("billing_cycle_start")
+  billingCycleEnd     DateTime?                   @map("billing_cycle_end")
+
+  // Timestamps
+  createdAt           DateTime                    @default(now()) @map("created_at")
+  updatedAt           DateTime                    @updatedAt @map("updated_at")
+
+  // Relations
+  transactions        ThematizationTransaction[]
+
+  @@index([subscription])
+  @@index([billingCycleStart])
+  @@map("thematization_usage")
+}
+
+/// Thematization Transaction - Audit log for credit deductions
+model ThematizationTransaction {
+  id                  String                      @id @default(uuid())
+  usageId             String                      @map("usage_id")
+  usage               ThematizationUsage          @relation(fields: [usageId], references: [id], onDelete: Cascade)
+
+  // Transaction details
+  type                String                      // 'debit' | 'credit' | 'refund' | 'subscription_renewal'
+  amount              Int                         // Credits (positive for additions, negative for deductions)
+  balanceBefore       Int                         @map("balance_before")
+  balanceAfter        Int                         @map("balance_after")
+
+  // Job reference
+  requestId           String?                     @map("request_id") // Thematization job request ID
+  tier                Int?                        // Tier used (50, 100, 150, 200, 250, 300)
+  topic               String?                     // Topic analyzed
+
+  // Discount tracking
+  promoCodeId         String?                     @map("promo_code_id")
+  promoCode           ThematizationPromoCode?     @relation(fields: [promoCodeId], references: [id])
+  discountApplied     Int                         @default(0) @map("discount_applied")
+
+  // Metadata
+  description         String?
+  metadata            Json?                       // Additional transaction metadata
+
+  // Timestamps
+  createdAt           DateTime                    @default(now()) @map("created_at")
+
+  @@index([usageId])
+  @@index([type])
+  @@index([requestId])
+  @@index([createdAt])
+  @@map("thematization_transactions")
+}
+
+/// Thematization Promo Code - Discount codes for thematization
+model ThematizationPromoCode {
+  id                  String                      @id @default(uuid())
+  code                String                      @unique // Uppercase code (e.g., 'WELCOME20')
+
+  // Discount configuration
+  discountType        String                      // 'percentage' | 'fixed_credits'
+  discountValue       Int                         // Percentage (e.g., 20 for 20%) or fixed credits
+
+  // Validity constraints
+  maxUses             Int?                        @map("max_uses") // Total uses allowed (null = unlimited)
+  maxUsesPerUser      Int                         @default(1) @map("max_uses_per_user")
+  currentUses         Int                         @default(0) @map("current_uses")
+
+  // Time constraints
+  validFrom           DateTime                    @default(now()) @map("valid_from")
+  validUntil          DateTime?                   @map("valid_until")
+  isActive            Boolean                     @default(true) @map("is_active")
+
+  // Target constraints
+  minTier             Int?                        @map("min_tier") // Minimum tier required (50, 100, etc.)
+  targetSubscriptions Json?                       @map("target_subscriptions") // Array of allowed subscription tiers
+
+  // Metadata
+  description         String?
+  createdBy           String?                     @map("created_by")
+
+  // Timestamps
+  createdAt           DateTime                    @default(now()) @map("created_at")
+  updatedAt           DateTime                    @updatedAt @map("updated_at")
+
+  // Relations
+  transactions        ThematizationTransaction[]
+
+  @@index([code])
+  @@index([isActive])
+  @@index([validFrom, validUntil])
+  @@map("thematization_promo_codes")
+}

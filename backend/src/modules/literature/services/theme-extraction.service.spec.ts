@@ -3,6 +3,8 @@ import { ThemeExtractionService } from './theme-extraction.service';
 import { PrismaService } from '../../../common/prisma.service';
 import { OpenAIService } from '../../ai/services/openai.service';
 import { StatementGeneratorService } from '../../ai/services/statement-generator.service';
+import { CitationControversyService } from './citation-controversy.service';
+import { DEFAULT_CITATION_CONTROVERSY_CONFIG } from '../types/citation-controversy.types';
 
 describe('ThemeExtractionService', () => {
   let service: ThemeExtractionService;
@@ -31,6 +33,35 @@ describe('ThemeExtractionService', () => {
     refineStatement: jest.fn(),
   };
 
+  // Phase 10.113 Week 4: Mock CitationControversyService
+  const mockCitationControversyService = {
+    analyzeCitationControversy: jest.fn().mockResolvedValue({
+      topic: 'Test Topic',
+      description: 'Test controversy analysis',
+      camps: [
+        { id: 'camp1', label: 'Camp A', description: 'Camp A description', paperIds: ['p1', 'p2'], keyPaperIds: [], avgCitationCount: 10, internalCohesion: 0.7, keywords: [], stanceIndicators: [] },
+        { id: 'camp2', label: 'Camp B', description: 'Camp B description', paperIds: ['p3', 'p4'], keyPaperIds: [], avgCitationCount: 8, internalCohesion: 0.6, keywords: [], stanceIndicators: [] },
+      ],
+      debatePapers: [],
+      paperCCIs: [],
+      topicControversyScore: 0.6,
+      qualityMetrics: {
+        papersAnalyzed: 4,
+        campsIdentified: 2,
+        debatePapersFound: 0,
+        avgCampCohesion: 0.65,
+        campSeparation: 0.7,
+        coverage: 1.0,
+      },
+      metadata: {
+        timestamp: new Date(),
+        processingTimeMs: 100,
+        config: DEFAULT_CITATION_CONTROVERSY_CONFIG,
+        warnings: [],
+      },
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -40,6 +71,10 @@ describe('ThemeExtractionService', () => {
         {
           provide: StatementGeneratorService,
           useValue: mockStatementGeneratorService,
+        },
+        {
+          provide: CitationControversyService,
+          useValue: mockCitationControversyService,
         },
       ],
     }).compile();

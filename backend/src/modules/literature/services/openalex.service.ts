@@ -97,12 +97,14 @@ export class OpenAlexService {
   // Netflix-Grade Rate Limiting
   // ============================================
   // OpenAlex limit: 10 req/sec (polite pool)
-  // Same pattern as openalex-enrichment.service.ts for consistency
+  // Phase 10.112 Week 4 FIX: Conservative limits to share with enrichment service
+  // Search: 2 req/sec max (leaves 8 for enrichment)
   private readonly rateLimiter = new Bottleneck({
-    reservoir: 10,                    // 10 requests
-    reservoirRefreshAmount: 10,       // Refill to 10
+    reservoir: 2,                     // 2 requests for search
+    reservoirRefreshAmount: 2,        // Refill to 2
     reservoirRefreshInterval: 1000,   // Every 1 second
-    maxConcurrent: 10,
+    maxConcurrent: 2,                 // Only 2 concurrent search requests
+    minTime: 200,                     // 200ms min between requests
   });
 
   private requestCount = 0;

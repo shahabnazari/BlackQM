@@ -253,7 +253,15 @@ export class ArxivService {
     const pdfUrl = arxivId ? `https://arxiv.org/pdf/${arxivId}.pdf` : null;
 
     // ==========================================================================
-    // STEP 4: Extract subject categories
+    // STEP 4: Extract DOI (Phase 10.113: Enable citation enrichment for arXiv)
+    // ==========================================================================
+    // arXiv papers that have been published include DOI in <arxiv:doi> tag
+    // This enables Semantic Scholar/OpenAlex citation enrichment
+    const doiMatch = entry.match(/<arxiv:doi[^>]*>(.*?)<\/arxiv:doi>/);
+    const doi = doiMatch?.[1]?.trim() || undefined;
+
+    // ==========================================================================
+    // STEP 5: Extract subject categories
     // ==========================================================================
     // 📝 TO PARSE ALL CATEGORIES: Extract all <category term="..."/> attributes
     const categories =
@@ -262,7 +270,7 @@ export class ArxivService {
         ?.map((cat: string) => cat.match(/term="([^"]+)"/)?.[1] || '') || [];
 
     // ==========================================================================
-    // STEP 5: Calculate word counts for content depth analysis
+    // STEP 6: Calculate word counts for content depth analysis
     // ==========================================================================
     // 📝 TO CHANGE WORD COUNTING: Modify word-count.util.ts functions
     const abstractWordCount = calculateAbstractWordCount(summary);
@@ -271,7 +279,7 @@ export class ArxivService {
     const year = published ? new Date(published).getFullYear() : undefined;
 
     // ==========================================================================
-    // STEP 6: Calculate quality score (0-100 scale)
+    // STEP 7: Calculate quality score (0-100 scale)
     // ==========================================================================
     // 📝 TO CHANGE QUALITY ALGORITHM: Modify paper-quality.util.ts
     // Note: citationCount is null (arXiv preprints, not widely cited yet)
@@ -288,7 +296,7 @@ export class ArxivService {
     });
 
     // ==========================================================================
-    // STEP 7: Construct normalized Paper object
+    // STEP 8: Construct normalized Paper object
     // ==========================================================================
     // 📝 TO ADD NEW FIELDS: Add them here matching Paper interface definition
     return {
@@ -300,7 +308,8 @@ export class ArxivService {
       abstract: summary.trim(),
 
       // External identifiers
-      // doi: undefined when not available (📝 TO EXTRACT DOI: Parse <arxiv:doi> tag)
+      // Phase 10.113: Extract DOI from <arxiv:doi> tag for citation enrichment
+      doi,
       url: id, // Full arXiv URL (https://arxiv.org/abs/...)
       venue: 'arXiv',
 

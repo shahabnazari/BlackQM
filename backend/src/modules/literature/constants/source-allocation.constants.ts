@@ -39,20 +39,29 @@ export enum SourceTier {
  * Paper allocation per source tier
  * Configurable via environment variables with sensible defaults
  *
- * Phase 10.99 Week 2: Scientific Progressive Filtering Funnel
- * STRATEGY: Cast wide net → Apply strict filters → 300 exceptional papers
+ * Phase 10.114: Quality-First Search Strategy
  *
- * Collection Target: 11,400 papers (7 TIER 1 × 1,400 = 9,800 + 2 TIER 4 × 800 = 1,600)
- * After progressive filtering: 11,400 → 10,500 → 5,000 → 1,200 → 984 → 886 → 300
+ * STRATEGY: Fetch MORE papers initially to increase chance of finding high-quality papers.
+ * After collection, filter to 80%+ quality only, return top 300.
  *
- * Competitive Edge: 10-20x more initial collection than competitors, but with
- * enterprise-grade strict filtering to ensure ONLY exceptional papers reach users
+ * For literature review, gap analysis, and Q-method statement generation:
+ * - Need diverse, high-quality papers from ALL sources
+ * - Better to fetch 500/source and filter to 300 excellent papers
+ * - Than fetch 100/source and get 50 mediocre papers
+ *
+ * RATE LIMIT MITIGATION:
+ * - Bottleneck rate limiter: 10 req/sec for OpenAlex
+ * - Retry with exponential backoff for transient failures
+ * - Circuit breaker auto-disables after 10 failures
+ *
+ * New target: 500 × 7 (Tier 1) + 400 × 4 (Tier 2) + 300 × 2 (Tier 3) + 300 × 5 (Tier 4)
+ *           = 3500 + 1600 + 600 + 1500 = 7200 papers max → filter to 300 at 80%+
  */
 export const TIER_ALLOCATIONS = {
-  [SourceTier.TIER_1_PREMIUM]: parseInt(process.env.PAPERS_PER_SOURCE_TIER1 || '1400', 10),    // +133% increase (600 → 1,400)
-  [SourceTier.TIER_2_GOOD]: parseInt(process.env.PAPERS_PER_SOURCE_TIER2 || '1000', 10),       // +122% increase (450 → 1,000)
-  [SourceTier.TIER_3_PREPRINT]: parseInt(process.env.PAPERS_PER_SOURCE_TIER3 || '800', 10),    // +129% increase (350 → 800)
-  [SourceTier.TIER_4_AGGREGATOR]: parseInt(process.env.PAPERS_PER_SOURCE_TIER4 || '800', 10),  // +100% increase (400 → 800)
+  [SourceTier.TIER_1_PREMIUM]: parseInt(process.env.PAPERS_PER_SOURCE_TIER1 || '500', 10),     // Increased: premium sources likely have best papers
+  [SourceTier.TIER_2_GOOD]: parseInt(process.env.PAPERS_PER_SOURCE_TIER2 || '400', 10),        // Increased: good sources still valuable
+  [SourceTier.TIER_3_PREPRINT]: parseInt(process.env.PAPERS_PER_SOURCE_TIER3 || '300', 10),    // Increased: preprints can have cutting-edge research
+  [SourceTier.TIER_4_AGGREGATOR]: parseInt(process.env.PAPERS_PER_SOURCE_TIER4 || '300', 10),  // Increased: aggregators provide diverse coverage
 };
 
 /**
@@ -143,15 +152,26 @@ export const COMPLEXITY_TARGETS = {
 /**
  * Absolute system-wide limits (safety caps)
  *
- * Phase 10.99 Week 2: Scientific Progressive Filtering Funnel
- * Increased to support wide-net collection with strict filtering strategy
+ * Phase 10.114: Quality-First Search Strategy
+ *
+ * STRATEGY: Fetch many, filter to excellent
+ * - Fetch up to 8000 papers from all sources
+ * - Enrich all with citations/journal metrics
+ * - Filter to 80%+ quality score
+ * - Return top 300 highest quality papers
+ *
+ * For literature review, gap analysis, Q-method:
+ * - 300 excellent papers > 500 mediocre papers
+ * - Comprehensive coverage from all sources
+ * - Willing to wait 30-45s for quality results
  */
 export const ABSOLUTE_LIMITS = {
-  MAX_PAPERS_PER_SOURCE: 1400,      // Hard cap per source (+133% from 600)
-  MAX_TOTAL_PAPERS_FETCHED: 14000,  // Hard cap total fetched (+133% from 6,000)
-  MAX_FINAL_PAPERS: 1500,           // Hard cap after all filtering
+  MAX_PAPERS_PER_SOURCE: 500,       // Increased: more papers = better chance of finding gems
+  MAX_TOTAL_PAPERS_FETCHED: 8000,   // Increased: 500 × ~16 sources max
+  MAX_FINAL_PAPERS: 300,            // Quality over quantity: top 300 at 80%+
   MIN_PAPERS_FOR_ANALYSIS: 20,      // Minimum for meaningful analysis
-  MIN_ACCEPTABLE_PAPERS: 300,       // Target for exceptional quality papers (changed from 350)
+  MIN_ACCEPTABLE_PAPERS: 50,        // Lower threshold: quality filter handles rest
+  QUALITY_THRESHOLD: 80,            // Phase 10.114: Minimum quality score for final results
 };
 
 /**
@@ -201,9 +221,12 @@ export function detectQueryComplexity(query: string): QueryComplexity {
   ).length;
 
   // Decision logic
-  if (wordCount >= 5 || hasBooleanOperators || hasQuotedPhrases || technicalTermCount >= 2) {
+  // Phase 10.112 Week 4 FIX: Lowered threshold from 5 to 4 words for COMPREHENSIVE
+  // Q-methodology research queries are typically 4-5 words and need all sources queried.
+  // Example: "indigenous knowledge in forest management" = 4 words after stop-word removal
+  if (wordCount >= 4 || hasBooleanOperators || hasQuotedPhrases || technicalTermCount >= 2) {
     return QueryComplexity.COMPREHENSIVE;
-  } else if (wordCount >= 3 || technicalTermCount >= 1) {
+  } else if (wordCount >= 2 || technicalTermCount >= 1) {
     return QueryComplexity.SPECIFIC;
   } else {
     return QueryComplexity.BROAD;

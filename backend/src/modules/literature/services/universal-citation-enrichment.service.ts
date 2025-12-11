@@ -108,12 +108,17 @@ interface SemanticScholarBatchPaper {
 
 /**
  * Cache entry for citation data
+ * Phase 10.114: Added journal metrics fields for quality-first search
  */
 interface CitationCacheEntry {
   citationCount: number;
   influentialCitationCount?: number;
   venue?: string;
   fieldsOfStudy?: string[];
+  // Phase 10.114: Journal metrics for quality scoring
+  impactFactor?: number;
+  hIndexJournal?: number;
+  quartile?: 'Q1' | 'Q2' | 'Q3' | 'Q4';
   cachedAt: number;
   lastAccessed: number;
 }
@@ -262,13 +267,25 @@ export class UniversalCitationEnrichmentService {
    * @param papers - Papers to enrich (any source)
    * @returns Enriched papers with citation counts
    */
-  async enrichAllPapers(papers: Paper[]): Promise<{ papers: Paper[]; stats: EnrichmentStats }> {
+  async enrichAllPapers(
+    papers: Paper[],
+    signal?: AbortSignal,
+  ): Promise<{ papers: Paper[]; stats: EnrichmentStats }> {
     const startTime = Date.now();
 
     if (!papers || papers.length === 0) {
       return {
         papers: [],
         stats: this.createEmptyStats(0),
+      };
+    }
+
+    // Phase 10.112 Week 4: Check for cancellation at start
+    if (signal?.aborted) {
+      this.logger.warn('⚠️  [UniversalCitationEnrichment] Request cancelled before enrichment');
+      return {
+        papers: papers, // Return original papers without enrichment
+        stats: this.createEmptyStats(Date.now() - startTime),
       };
     }
 
@@ -293,6 +310,10 @@ export class UniversalCitationEnrichmentService {
     const enrichedPapers: (Paper | null)[] = new Array(papers.length).fill(null);
     const papersNeedingEnrichment: { paper: Paper; index: number }[] = [];
 
+    // Phase 10.114: Track cached papers that need journal metrics
+    // Papers may be cached with citations but WITHOUT journal metrics (from old cache)
+    const cachedPapersNeedingJournalMetrics: { paper: Paper; index: number; cacheKey: string }[] = [];
+
     // STEP 1: Check cache for already-enriched papers
     for (let i = 0; i < papers.length; i++) {
       const paper = papers[i];
@@ -305,6 +326,16 @@ export class UniversalCitationEnrichmentService {
         enrichedPapers[i] = this.applyEnrichment(paper, cached);
         enrichedFromCache++;
         this.cacheHits++;
+
+        // Phase 10.114: Check if cached paper needs journal metrics
+        // Cache might have citations but no journal metrics (from before 10.114)
+        if (cached.citationCount !== undefined && !cached.impactFactor) {
+          cachedPapersNeedingJournalMetrics.push({
+            paper: enrichedPapers[i]!,
+            index: i,
+            cacheKey
+          });
+        }
       } else {
         // Cache miss - need to fetch, track original index
         papersNeedingEnrichment.push({ paper, index: i });
@@ -319,10 +350,32 @@ export class UniversalCitationEnrichmentService {
     // ========================================================================
     // STEP 2: Batch fetch from Semantic Scholar
     // ========================================================================
+    // Phase 10.112 Week 4: Check for cancellation before expensive batch API
+    if (signal?.aborted) {
+      this.logger.warn('⚠️  [UniversalCitationEnrichment] Request cancelled before Semantic Scholar batch');
+      // Return cached papers + original papers for non-cached
+      for (const { index } of papersNeedingEnrichment) {
+        enrichedPapers[index] = papers[index];
+      }
+      const finalPapers = enrichedPapers.filter((p): p is Paper => p !== null);
+      return {
+        papers: finalPapers,
+        stats: {
+          totalPapers: papers.length,
+          enrichedFromCache,
+          enrichedFromSemanticScholar: 0,
+          enrichedFromOpenAlex: 0,
+          failedEnrichment: papersNeedingEnrichment.length,
+          durationMs: Date.now() - startTime,
+          cacheHitRate: enrichedFromCache / papers.length,
+        },
+      };
+    }
+
     if (papersNeedingEnrichment.length > 0 && !this.isCircuitBreakerOpen) {
       // Phase 10.110 BUGFIX: Extract papers for batch API (preserve indices separately)
       const papersForS2 = papersNeedingEnrichment.map(p => p.paper);
-      const s2Results = await this.batchFetchFromSemanticScholar(papersForS2);
+      const s2Results = await this.batchFetchFromSemanticScholar(papersForS2, signal);
 
       // Process results, track which papers still need OpenAlex fallback
       const stillNeedingEnrichment: { paper: Paper; index: number }[] = [];
@@ -350,9 +403,16 @@ export class UniversalCitationEnrichmentService {
       // ======================================================================
       // STEP 3: OpenAlex fallback for remaining papers
       // ======================================================================
-      if (stillNeedingEnrichment.length > 0) {
+      // Phase 10.112 Week 4: Check for cancellation before OpenAlex fallback
+      if (signal?.aborted) {
+        this.logger.warn('⚠️  [UniversalCitationEnrichment] Request cancelled before OpenAlex fallback');
+        // Fill remaining papers with originals
+        for (const { index } of stillNeedingEnrichment) {
+          enrichedPapers[index] = papers[index];
+        }
+      } else if (stillNeedingEnrichment.length > 0) {
         const papersForOA = stillNeedingEnrichment.map(p => p.paper);
-        const oaEnrichedPapers = await this.openAlexEnrichment.enrichBatch(papersForOA);
+        const oaEnrichedPapers = await this.openAlexEnrichment.enrichBatch(papersForOA, signal);
 
         for (let i = 0; i < stillNeedingEnrichment.length; i++) {
           const { paper: original, index: originalIndex } = stillNeedingEnrichment[i];
@@ -361,10 +421,14 @@ export class UniversalCitationEnrichmentService {
           if (enriched.citationCount !== original.citationCount ||
               enriched.impactFactor !== original.impactFactor) {
             // OpenAlex provided new data - place at original index
+            // Phase 10.114: Include journal metrics in cache entry
             const cacheEntry: CitationCacheEntry = {
               citationCount: enriched.citationCount ?? 0,
               venue: enriched.venue,
               fieldsOfStudy: enriched.fieldsOfStudy,
+              impactFactor: enriched.impactFactor,
+              hIndexJournal: enriched.hIndexJournal,
+              quartile: enriched.quartile,
               cachedAt: Date.now(),
               lastAccessed: Date.now(),
             };
@@ -387,14 +451,133 @@ export class UniversalCitationEnrichmentService {
       this.logger.warn(
         `⚠️ [Circuit Breaker] OPEN - skipping Semantic Scholar, using OpenAlex only`,
       );
-      // Use OpenAlex as primary when circuit breaker is open
-      const papersForOA = papersNeedingEnrichment.map(p => p.paper);
-      const oaEnrichedPapers = await this.openAlexEnrichment.enrichBatch(papersForOA);
-      // Phase 10.110 BUGFIX: Place at original indices
-      for (let i = 0; i < papersNeedingEnrichment.length; i++) {
-        enrichedPapers[papersNeedingEnrichment[i].index] = oaEnrichedPapers[i];
+      // Phase 10.112 Week 4: Check for cancellation before circuit breaker fallback
+      if (signal?.aborted) {
+        this.logger.warn('⚠️  [UniversalCitationEnrichment] Request cancelled before circuit breaker OpenAlex fallback');
+        for (const { index } of papersNeedingEnrichment) {
+          enrichedPapers[index] = papers[index];
+        }
+      } else {
+        // Use OpenAlex as primary when circuit breaker is open
+        const papersForOA = papersNeedingEnrichment.map(p => p.paper);
+        // Phase 10.112 Week 4 FIX: Pass signal to enrichBatch
+        const oaEnrichedPapers = await this.openAlexEnrichment.enrichBatch(papersForOA, signal);
+        // Phase 10.110 BUGFIX: Place at original indices
+        for (let i = 0; i < papersNeedingEnrichment.length; i++) {
+          enrichedPapers[papersNeedingEnrichment[i].index] = oaEnrichedPapers[i];
+        }
+        enrichedFromOA = papersNeedingEnrichment.length;
       }
-      enrichedFromOA = papersNeedingEnrichment.length;
+    }
+
+    // ========================================================================
+    // STEP 3.5: Phase 10.114 - Get journal metrics from OpenAlex for ALL papers
+    // ========================================================================
+    // This step runs AFTER all main enrichment is complete.
+    // It handles papers that:
+    // 1. Have citation data (from S2, OA, or cache)
+    // 2. But still lack journal metrics (no impactFactor)
+    // This includes:
+    // - Cached papers from before Phase 10.114 journal metrics support
+    // - S2-enriched papers (S2 doesn't provide journal metrics)
+    // - Papers from OpenAlex that might not have journal info
+    // ========================================================================
+    this.logger.log(
+      `🔍 [STEP 3.5 DEBUG] signal?.aborted=${signal?.aborted}, ` +
+      `enrichedPapers.length=${enrichedPapers.length}, ` +
+      `cachedPapersNeedingJournalMetrics.length=${cachedPapersNeedingJournalMetrics.length}`,
+    );
+
+    // Phase 10.114 FIX: ALWAYS run STEP 3.5 regardless of signal abort
+    // Reasoning: We've already invested ~170s in S2 + OA enrichment.
+    // Journal metrics is a quick additional step (~5-10s) that significantly
+    // improves quality scores. For quality-first search, it's worth completing.
+    // The signal abort is typically from the search timeout, but since we're
+    // already past the expensive work, we should finish the job.
+    {
+      // Collect ALL papers that need journal metrics
+      const allPapersNeedingJournalMetrics: { paper: Paper; index: number; cacheKey: string }[] = [
+        ...cachedPapersNeedingJournalMetrics  // Cached papers needing journal metrics
+      ];
+
+      // Also check freshly enriched papers
+      let debugChecked = 0;
+      let debugWithCitations = 0;
+      let debugWithoutImpactFactor = 0;
+      for (let i = 0; i < enrichedPapers.length; i++) {
+        const paper = enrichedPapers[i];
+        // Skip if already in the cached list
+        const isAlreadyTracked = cachedPapersNeedingJournalMetrics.some(p => p.index === i);
+        if (paper) {
+          debugChecked++;
+          if (paper.citationCount !== undefined) debugWithCitations++;
+          if (!paper.impactFactor) debugWithoutImpactFactor++;
+        }
+        if (!isAlreadyTracked && paper && paper.citationCount !== undefined && !paper.impactFactor) {
+          allPapersNeedingJournalMetrics.push({
+            paper,
+            index: i,
+            cacheKey: this.getCacheKey(papers[i])
+          });
+        }
+      }
+      this.logger.log(
+        `🔍 [STEP 3.5 DEBUG] Checked ${debugChecked} papers: ${debugWithCitations} with citations, ${debugWithoutImpactFactor} without impactFactor, ` +
+        `${allPapersNeedingJournalMetrics.length} need journal metrics`,
+      );
+
+      if (allPapersNeedingJournalMetrics.length > 0) {
+        const fromCache = cachedPapersNeedingJournalMetrics.length;
+        const fromFreshEnrichment = allPapersNeedingJournalMetrics.length - fromCache;
+        this.logger.log(
+          `📚 [Journal Metrics] Fetching for ${allPapersNeedingJournalMetrics.length} papers ` +
+          `(${fromCache} cached, ${fromFreshEnrichment} freshly enriched)`,
+        );
+
+        const papersForJournalMetrics = allPapersNeedingJournalMetrics.map(p => p.paper);
+        const oaJournalResults = await this.openAlexEnrichment.enrichBatch(papersForJournalMetrics, signal);
+
+        let journalMetricsEnriched = 0;
+        for (let i = 0; i < allPapersNeedingJournalMetrics.length; i++) {
+          const { index: originalIndex, cacheKey } = allPapersNeedingJournalMetrics[i];
+          const oaResult = oaJournalResults[i];
+          const existingPaper = enrichedPapers[originalIndex];
+
+          if (existingPaper && oaResult && (oaResult.impactFactor || oaResult.hIndexJournal || oaResult.quartile)) {
+            // Merge journal metrics into the paper (keep existing citation data)
+            enrichedPapers[originalIndex] = {
+              ...existingPaper,
+              impactFactor: oaResult.impactFactor ?? existingPaper.impactFactor,
+              hIndexJournal: oaResult.hIndexJournal ?? existingPaper.hIndexJournal,
+              quartile: oaResult.quartile ?? existingPaper.quartile,
+              // Recalculate metadata completeness with new journal metrics
+              metadataCompleteness: calculateMetadataCompleteness({
+                citationCount: existingPaper.citationCount,
+                year: existingPaper.year,
+                abstract: existingPaper.abstract,
+                impactFactor: oaResult.impactFactor ?? existingPaper.impactFactor,
+                sjrScore: null,
+                hIndexJournal: oaResult.hIndexJournal ?? existingPaper.hIndexJournal,
+                quartile: oaResult.quartile ?? existingPaper.quartile,
+              }),
+            };
+
+            // Update cache with journal metrics for future requests
+            const existingCache = this.citationCache.get(cacheKey);
+            if (existingCache) {
+              existingCache.impactFactor = oaResult.impactFactor;
+              existingCache.hIndexJournal = oaResult.hIndexJournal;
+              existingCache.quartile = oaResult.quartile;
+            }
+
+            journalMetricsEnriched++;
+          }
+        }
+
+        this.logger.log(
+          `📚 [Journal Metrics] ${journalMetricsEnriched}/${allPapersNeedingJournalMetrics.length} papers enriched with journal metrics`,
+        );
+      }
     }
 
     // ========================================================================
@@ -613,8 +796,15 @@ export class UniversalCitationEnrichmentService {
    */
   private async batchFetchFromSemanticScholar(
     papers: Paper[],
+    signal?: AbortSignal,
   ): Promise<Map<string, CitationCacheEntry>> {
     const results = new Map<string, CitationCacheEntry>();
+
+    // Phase 10.112 Week 4: Check for cancellation at start
+    if (signal?.aborted) {
+      this.logger.debug('[Semantic Scholar] Batch fetch skipped - request cancelled');
+      return results;
+    }
 
     // Build list of identifiers (prefer DOI, fallback to title)
     const paperIdentifiers: { paper: Paper; identifier: string }[] = [];
@@ -643,6 +833,12 @@ export class UniversalCitationEnrichmentService {
     );
 
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      // Phase 10.112 Week 4: Check for cancellation between batches
+      if (signal?.aborted) {
+        this.logger.warn(`⚠️  [Semantic Scholar] Request cancelled after batch ${batchIndex}/${batches.length}`);
+        break;
+      }
+
       const batch = batches[batchIndex];
 
       try {
@@ -672,8 +868,12 @@ export class UniversalCitationEnrichmentService {
               jitterMs: 500,
             },
           );
-          // S2 batch API returns array directly at result.data, NOT result.data.data
-          return Array.isArray(result.data) ? result.data : [];
+          // Phase 10.113 CRITICAL BUGFIX: RetryResult wraps AxiosResponse
+          // result = RetryResult<AxiosResponse>
+          // result.data = AxiosResponse
+          // result.data.data = actual API response (array of papers)
+          const apiResponse = result.data.data;
+          return Array.isArray(apiResponse) ? apiResponse : [];
         });
 
         for (let i = 0; i < batch.length; i++) {
@@ -727,9 +927,13 @@ export class UniversalCitationEnrichmentService {
   /**
    * Apply enrichment data to a paper
    * Phase 10.108: Also calculates metadataCompleteness for transparency
+   * Phase 10.114: Now applies journal metrics (impactFactor, hIndexJournal, quartile)
    */
   private applyEnrichment(paper: Paper, enrichment: CitationCacheEntry): Paper {
-    const enrichedPaper = {
+    // Phase 10.114: Determine quartile with proper typing
+    const quartile: 'Q1' | 'Q2' | 'Q3' | 'Q4' | undefined = enrichment.quartile ?? paper.quartile;
+
+    const enrichedPaper: Paper = {
       ...paper,
       citationCount: enrichment.citationCount,
       venue: enrichment.venue || paper.venue,
@@ -739,6 +943,10 @@ export class UniversalCitationEnrichmentService {
         enrichment.citationCount,
         paper.year,
       ),
+      // Phase 10.114: Apply journal metrics from cache
+      impactFactor: enrichment.impactFactor ?? paper.impactFactor,
+      hIndexJournal: enrichment.hIndexJournal ?? paper.hIndexJournal,
+      quartile,
     };
 
     // Phase 10.108: Calculate metadata completeness for transparency

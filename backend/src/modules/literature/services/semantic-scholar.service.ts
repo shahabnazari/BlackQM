@@ -161,8 +161,8 @@ export class SemanticScholarService {
    */
   private readonly MAX_RESULTS_PER_REQUEST = 100;
 
-  /** Default limit when none specified */
-  private readonly DEFAULT_LIMIT = 20;
+  /** Default limit when none specified - Phase 10.115: Increased to API max */
+  private readonly DEFAULT_LIMIT = 100;
 
   /** API fields to request - comprehensive metadata for paper analysis */
   // Phase 10.105 Day 5: API field compatibility fixes

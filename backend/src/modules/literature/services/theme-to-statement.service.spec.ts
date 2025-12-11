@@ -29,6 +29,9 @@ import {
   ExtractedTheme,
 } from './theme-extraction.service';
 import { StatementGeneratorService } from '../../ai/services/statement-generator.service';
+// Phase 10.113 Week 5: Claim Extraction Service mock
+import { ClaimExtractionService } from './claim-extraction.service';
+import { DEFAULT_CLAIM_EXTRACTION_CONFIG } from '../types/claim-extraction.types';
 
 describe('ThemeToStatementService', () => {
   let service: ThemeToStatementService;
@@ -86,6 +89,34 @@ describe('ThemeToStatementService', () => {
       generateStatements: jest.fn(),
     };
 
+    // Phase 10.113 Week 5: Mock ClaimExtractionService
+    const mockClaimExtractionService = {
+      extractClaims: jest.fn().mockResolvedValue({
+        theme: { id: 'theme-1', label: 'Test Theme', keywords: [] },
+        claims: [],
+        claimsBySubTheme: new Map(),
+        claimsByPerspective: new Map(),
+        qualityMetrics: {
+          papersProcessed: 0,
+          claimsExtracted: 0,
+          claimsAfterDedup: 0,
+          avgConfidence: 0,
+          avgStatementPotential: 0,
+          perspectiveDistribution: new Map(),
+          subThemeCoverage: 0,
+          avgClaimsPerPaper: 0,
+          highQualityClaims: 0,
+        },
+        metadata: {
+          startTime: new Date(),
+          endTime: new Date(),
+          processingTimeMs: 0,
+          config: DEFAULT_CLAIM_EXTRACTION_CONFIG,
+          warnings: [],
+        },
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ThemeToStatementService,
@@ -100,6 +131,10 @@ describe('ThemeToStatementService', () => {
         {
           provide: StatementGeneratorService,
           useValue: mockStatementGenerator,
+        },
+        {
+          provide: ClaimExtractionService,
+          useValue: mockClaimExtractionService,
         },
       ],
     }).compile();

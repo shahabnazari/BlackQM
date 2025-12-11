@@ -708,7 +708,13 @@ class DevServer {
 
     this.process.stdout.on('data', (data) => {
       const lines = data.toString().split('\n').filter(Boolean);
-      lines.forEach((line) => console.log(`${prefix} ${line}`));
+      lines.forEach((line) => {
+        // Filter out noisy Next.js GET / health check spam
+        if (line.includes('GET / 200') || line.includes('GET /_next/')) {
+          return; // Skip HMR polling logs
+        }
+        console.log(`${prefix} ${line}`);
+      });
     });
 
     this.process.stderr.on('data', (data) => {

@@ -149,6 +149,8 @@ export function useLiteratureSearch(
   const appliedFilters = useLiteratureSearchStore((state) => state.appliedFilters);
   const academicDatabases = useLiteratureSearchStore((state) => state.academicDatabases);
   const setAcademicDatabases = useLiteratureSearchStore((state) => state.setAcademicDatabases);
+  // Phase 10.115: Clear selection on new search to prevent stale selection counts
+  const clearSelection = useLiteratureSearchStore((state) => state.clearSelection);
 
   // Prevent duplicate search requests
   const isSearchingRef = useRef(false);
@@ -198,6 +200,9 @@ export function useLiteratureSearch(
     }
 
     isSearchingRef.current = true;
+
+    // Phase 10.115: Clear selection on new search to prevent stale selection counts
+    clearSelection();
 
     try {
       logger.group('SEARCH START (Progressive Loading)');
@@ -249,6 +254,7 @@ export function useLiteratureSearch(
     progressiveSearching,
     onSearchSuccess,
     onSearchError,
+    clearSelection,
   ]);
 
   /**

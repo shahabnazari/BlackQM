@@ -36,6 +36,7 @@
  */
 
 import { Logger } from '@nestjs/common';
+import * as os from 'os';
 import type {
   MemorySnapshot,
   StageMetrics,
@@ -48,6 +49,29 @@ import {
   formatBytes,
   formatDuration,
 } from '../types/performance.types';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Phase 10.112: CPU TRACKING TYPES
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Phase 10.112: CPU sample captured at a point in time
+ */
+interface CpuSample {
+  timestamp: number;
+  cpuUsage: NodeJS.CpuUsage;
+  loadAverage: number[];
+}
+
+/**
+ * Phase 10.112: CPU metrics for a stage
+ */
+interface StageCpuMetrics {
+  stageName: string;
+  cpuUsagePercent: number;
+  userMicroseconds: number;
+  systemMicroseconds: number;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PERFORMANCE MONITOR SERVICE IMPLEMENTATION
@@ -80,7 +104,13 @@ export class PerformanceMonitorService implements IPerformanceMonitor {
     startTime: number;
     inputCount: number;
     memoryBefore: MemorySnapshot;
+    cpuBefore: CpuSample; // Phase 10.112: CPU tracking
   } | null = null;
+
+  // Phase 10.112: CPU tracking state
+  private readonly cpuCount: number;
+  private readonly pipelineCpuStart: CpuSample;
+  private stageCpuMetrics: StageCpuMetrics[] = [];
 
   // Optimization metadata tracking
   // BUG FIX (Phase 10.99 Week 2 Code Review):
@@ -92,7 +122,7 @@ export class PerformanceMonitorService implements IPerformanceMonitor {
     arrayCopiesCreated: 0,
     sortOperations: 0,
     monitoringEnabled: true,
-    optimizationVersion: 'v2.0.0-week2',
+    optimizationVersion: 'v2.1.0-phase10.112', // Phase 10.112: Updated version
   };
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -108,8 +138,12 @@ export class PerformanceMonitorService implements IPerformanceMonitor {
     this.queryComplexity = queryComplexity;
     this.pipelineStartTime = Date.now();
 
+    // Phase 10.112: Initialize CPU tracking
+    this.cpuCount = os.cpus().length;
+    this.pipelineCpuStart = this.captureCpuSample();
+
     this.logger.debug(
-      `Performance monitor initialized: ${this.pipelineId} (${queryComplexity} query)`
+      `Performance monitor initialized: ${this.pipelineId} (${queryComplexity} query, ${this.cpuCount} CPUs)`
     );
   }
 
@@ -150,6 +184,45 @@ export class PerformanceMonitorService implements IPerformanceMonitor {
       arrayBuffers: mem.arrayBuffers,
       rss: mem.rss,
     });
+  }
+
+  /**
+   * Phase 10.112: Capture current CPU sample
+   * Netflix-grade CPU tracking implementation
+   */
+  private captureCpuSample(): CpuSample {
+    return {
+      timestamp: Date.now(),
+      cpuUsage: process.cpuUsage(),
+      loadAverage: os.loadavg(),
+    };
+  }
+
+  /**
+   * Phase 10.112: Calculate CPU usage percentage between two samples
+   * Uses delta calculation for accurate CPU percentage
+   *
+   * @param before - CPU sample before operation
+   * @param after - CPU sample after operation
+   * @returns CPU usage percentage (0-100)
+   */
+  private calculateCpuUsagePercent(before: CpuSample, after: CpuSample): number {
+    const elapsedMs = after.timestamp - before.timestamp;
+    if (elapsedMs <= 0) return 0;
+
+    // Get CPU time delta using process.cpuUsage(previousValue)
+    const cpuDelta = process.cpuUsage(before.cpuUsage);
+    const totalCpuMicros = cpuDelta.user + cpuDelta.system;
+    const elapsedMicros = elapsedMs * 1000; // Convert ms to microseconds
+
+    // CPU percentage = (CPU time used / available CPU time) * 100
+    // Available CPU time = elapsed time * number of CPUs
+    if (elapsedMicros > 0 && this.cpuCount > 0) {
+      const usagePercent = (totalCpuMicros / (elapsedMicros * this.cpuCount)) * 100;
+      return Math.min(100, Math.round(usagePercent * 100) / 100); // Cap at 100%, 2 decimal places
+    }
+
+    return 0;
   }
 
   /**
@@ -223,12 +296,13 @@ export class PerformanceMonitorService implements IPerformanceMonitor {
       );
     }
 
-    // Capture initial state
+    // Capture initial state (Phase 10.112: Added CPU tracking)
     this.currentStage = {
       name: stageName,
       startTime: Date.now(),
       inputCount: validatedInputCount,
       memoryBefore: this.captureMemorySnapshot(),
+      cpuBefore: this.captureCpuSample(), // Phase 10.112: CPU tracking
     };
 
     this.logger.debug(
@@ -289,6 +363,22 @@ export class PerformanceMonitorService implements IPerformanceMonitor {
     );
     const passRate = calculatePassRate(validatedOutputCount, this.currentStage.inputCount);
 
+    // Phase 10.112: Calculate CPU usage for this stage
+    const cpuAfter = this.captureCpuSample();
+    const cpuUsagePercent = this.calculateCpuUsagePercent(
+      this.currentStage.cpuBefore,
+      cpuAfter
+    );
+
+    // Phase 10.112: Store stage CPU metrics
+    const cpuDelta = process.cpuUsage(this.currentStage.cpuBefore.cpuUsage);
+    this.stageCpuMetrics.push({
+      stageName: this.currentStage.name,
+      cpuUsagePercent,
+      userMicroseconds: cpuDelta.user,
+      systemMicroseconds: cpuDelta.system,
+    });
+
     // Build metrics object
     const metrics: StageMetrics = this.freeze<StageMetrics>({
       stageName: this.currentStage.name,
@@ -315,11 +405,12 @@ export class PerformanceMonitorService implements IPerformanceMonitor {
     this.stages.push(metrics);
     this.currentStage = null;
 
-    // Log stage completion
+    // Log stage completion (Phase 10.112: Added CPU usage)
     this.logger.debug(
       `Stage completed: "${metrics.stageName}" in ${formatDuration(duration)}, ` +
       `${metrics.inputCount} → ${metrics.outputCount} papers (${passRate.toFixed(1)}% pass), ` +
-      `Memory: ${memoryDelta > 0 ? '+' : ''}${formatBytes(memoryDelta)}`
+      `Memory: ${memoryDelta > 0 ? '+' : ''}${formatBytes(memoryDelta)}, ` +
+      `CPU: ${cpuUsagePercent.toFixed(1)}%`
     );
 
     return metrics;
@@ -360,6 +451,10 @@ export class PerformanceMonitorService implements IPerformanceMonitor {
     // Calculate overall pass rate
     const overallPassRate = calculatePassRate(finalPaperCount, this.initialPaperCount);
 
+    // Phase 10.112: Calculate average CPU usage across all stages
+    // Uses weighted average based on stage duration (longer stages have more weight)
+    const averageCpuUsage = this.calculateAverageCpuUsage();
+
     // Build report object
     return this.freeze<PipelinePerformanceReport>({
       pipelineId: this.pipelineId,
@@ -372,12 +467,38 @@ export class PerformanceMonitorService implements IPerformanceMonitor {
       peakMemory,
       totalMemoryAllocated,
       totalMemoryFreed,
-      averageCpuUsage: 0, // TODO: Implement CPU tracking in future iteration
+      averageCpuUsage, // Phase 10.112: Actual CPU tracking implemented
       success: this.currentStage === null, // Success if no stage is hanging
       finalPaperCount,
       initialPaperCount: this.initialPaperCount,
       overallPassRate,
     });
+  }
+
+  /**
+   * Phase 10.112: Calculate average CPU usage across all stages
+   * Uses weighted average based on stage duration
+   */
+  private calculateAverageCpuUsage(): number {
+    if (this.stageCpuMetrics.length === 0) {
+      // Fallback: calculate from pipeline start to now
+      const cpuNow = this.captureCpuSample();
+      return this.calculateCpuUsagePercent(this.pipelineCpuStart, cpuNow);
+    }
+
+    // Calculate weighted average (weight by duration)
+    let totalWeightedCpu = 0;
+    let totalDuration = 0;
+
+    for (let i = 0; i < this.stageCpuMetrics.length && i < this.stages.length; i++) {
+      const stageDuration = this.stages[i].duration;
+      const stageCpu = this.stageCpuMetrics[i].cpuUsagePercent;
+      totalWeightedCpu += stageCpu * stageDuration;
+      totalDuration += stageDuration;
+    }
+
+    if (totalDuration === 0) return 0;
+    return Math.round((totalWeightedCpu / totalDuration) * 100) / 100;
   }
 
   /**
@@ -388,6 +509,7 @@ export class PerformanceMonitorService implements IPerformanceMonitor {
     this.stages = [];
     this.currentStage = null;
     this.initialPaperCount = 0;
+    this.stageCpuMetrics = []; // Phase 10.112: Reset CPU metrics
     this.optimizationMetadata = {
       ...this.optimizationMetadata,
       arrayCopiesCreated: 0,

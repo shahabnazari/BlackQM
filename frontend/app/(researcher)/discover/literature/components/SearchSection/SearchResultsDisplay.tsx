@@ -3,16 +3,19 @@
  * Extracted from literature page (Week 1 Day 1-2)
  * Handles search results layout, query display, quality legend, and paper list
  * Phase 10 Day 31 - Enterprise Refactoring
+ * Phase 10.115 - Added Search Intelligence Report integration
  */
 
 'use client';
 
-import React, { memo, ReactNode } from 'react';
-import { Search, Loader2, BookOpen, Award, TrendingUp } from 'lucide-react';
+import React, { memo, ReactNode, useState } from 'react';
+import { Search, Loader2, BookOpen, Award, TrendingUp, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLiteratureSearchStore } from '@/lib/stores/literature-search.store';
 import { logger } from '@/lib/utils/logger';
+import { SearchIntelligenceReport } from './SearchIntelligenceReport';
 import type { Paper } from '@/lib/types/literature.types';
 
 // ============================================================================
@@ -95,6 +98,7 @@ interface QueryDisplayBannerProps {
   totalResults: number;
   appliedSortBy: string;
   onSortChange: (sortBy: string) => void;
+  onShowIntelligenceReport: () => void;
 }
 
 const QueryDisplayBanner = memo(function QueryDisplayBanner({
@@ -103,6 +107,7 @@ const QueryDisplayBanner = memo(function QueryDisplayBanner({
   totalResults,
   appliedSortBy,
   onSortChange,
+  onShowIntelligenceReport,
 }: QueryDisplayBannerProps) {
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -125,13 +130,26 @@ const QueryDisplayBanner = memo(function QueryDisplayBanner({
           )}
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Search Intelligence Report Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onShowIntelligenceReport}
+            className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 hover:border-purple-300 hover:from-purple-100 hover:to-indigo-100 text-purple-700"
+            title="See how we found your papers"
+          >
+            <Sparkles className="w-4 h-4 mr-1.5" />
+            How We Found These
+          </Button>
           <Badge variant="outline" className="bg-white">
             {totalResults} {totalResults === 1 ? 'result' : 'results'}
           </Badge>
           {/* Sort Dropdown */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Sort:</span>
+            <label htmlFor="search-results-sort" className="text-sm text-gray-600">Sort:</label>
             <select
+              id="search-results-sort"
+              name="search-results-sort"
               value={appliedSortBy}
               onChange={e => {
                 logger.debug('[QueryDisplayBanner] Sort changed', {
@@ -140,7 +158,6 @@ const QueryDisplayBanner = memo(function QueryDisplayBanner({
                 onSortChange(e.target.value);
               }}
               className="text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white hover:border-blue-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              aria-label="Sort results"
             >
               <option value="relevance">Relevance</option>
               <option value="quality_score">Quality Score</option>
@@ -202,6 +219,12 @@ export const SearchResultsDisplay = memo(function SearchResultsDisplay({
   onSortChange,
 }: SearchResultsDisplayProps) {
   // ============================================================================
+  // Local State
+  // ============================================================================
+
+  const [showIntelligenceReport, setShowIntelligenceReport] = useState(false);
+
+  // ============================================================================
   // State from Zustand Store
   // ============================================================================
 
@@ -211,6 +234,7 @@ export const SearchResultsDisplay = memo(function SearchResultsDisplay({
     appliedFilters,
     setQuery,
     setQueryCorrection,
+    searchMetadata,
   } = useLiteratureSearchStore();
 
   // ============================================================================
@@ -283,6 +307,7 @@ export const SearchResultsDisplay = memo(function SearchResultsDisplay({
         totalResults={totalResults}
         appliedSortBy={appliedFilters.sortBy || 'relevance'}
         onSortChange={onSortChange}
+        onShowIntelligenceReport={() => setShowIntelligenceReport(true)}
       />
 
       {/* Quality Score Legend */}
@@ -294,6 +319,16 @@ export const SearchResultsDisplay = memo(function SearchResultsDisplay({
           <React.Fragment key={paper.id}>{renderPaper(paper)}</React.Fragment>
         ))}
       </div>
+
+      {/* Search Intelligence Report Dialog */}
+      <SearchIntelligenceReport
+        open={showIntelligenceReport}
+        onClose={() => setShowIntelligenceReport(false)}
+        metadata={searchMetadata}
+        displayedPapers={papers.length}
+        query={query}
+        searchDuration={searchMetadata?.searchDuration}
+      />
     </div>
   );
 });

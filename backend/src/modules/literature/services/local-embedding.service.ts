@@ -87,14 +87,33 @@ export class LocalEmbeddingService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Initialize the embedding model on module startup
-   * Uses lazy loading with singleton pattern for efficiency
+   * Phase 10.112 Week 4 FIX: Pre-warm model on startup to prevent first-search timeout
+   *
+   * Previous behavior: Model loaded lazily on first request, causing 50MB download
+   * during search which could timeout (180s bulkhead limit).
+   *
+   * New behavior: Model downloads and loads during server startup, ensuring
+   * first search is fast (~30-50ms per embedding, not minutes for download).
    */
   async onModuleInit(): Promise<void> {
-    this.logger.log('LocalEmbeddingService registered - model will load on first use');
+    this.logger.log('LocalEmbeddingService initializing...');
     this.logger.log(`Primary model: ${LocalEmbeddingService.PRIMARY_MODEL}`);
     this.logger.log(`Embedding dimensions: ${LocalEmbeddingService.EMBEDDING_DIMENSIONS}`);
     this.logger.log(`Optimal batch size: ${LocalEmbeddingService.OPTIMAL_BATCH_SIZE}`);
     this.logger.log('Cost: $0.00 (100% FREE local inference)');
+
+    // Phase 10.112 Week 4 FIX: Pre-warm model on startup
+    // This downloads and loads the model during server initialization,
+    // preventing the first search from timing out due to model download.
+    try {
+      this.logger.log('🔄 Pre-warming embedding model (this may take a moment on first run)...');
+      await this.warmup();
+      this.logger.log('✅ Embedding model pre-warmed and ready for instant inference');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`⚠️  Model pre-warming failed: ${errorMessage}. Model will load on first use.`);
+      // Don't throw - allow the service to continue with lazy loading as fallback
+    }
   }
 
   /**
@@ -245,13 +264,17 @@ export class LocalEmbeddingService implements OnModuleInit, OnModuleDestroy {
    *
    * Performance improvement: 5-10x faster than sequential processing
    *
+   * Phase 10.112: Added AbortSignal support for request cancellation
+   *
    * @param texts - Array of texts to embed
    * @param onProgress - Optional callback for progress updates
+   * @param signal - Optional AbortSignal for cancellation support
    * @returns Array of 384-dimensional embedding vectors
    */
   async generateEmbeddingsBatch(
     texts: string[],
     onProgress?: (processed: number, total: number) => void,
+    signal?: AbortSignal,
   ): Promise<number[][]> {
     if (texts.length === 0) return [];
 
@@ -267,6 +290,12 @@ export class LocalEmbeddingService implements OnModuleInit, OnModuleDestroy {
     let successfulBatchTimeMs = 0;
 
     for (let i = 0; i < texts.length; i += batchSize) {
+      // Phase 10.112: Check for cancellation before processing each batch
+      if (signal?.aborted) {
+        this.logger.warn(`⚠️  Embedding generation cancelled at batch ${Math.floor(i / batchSize) + 1} (${i}/${texts.length} texts processed)`);
+        throw new Error('Request cancelled during embedding generation');
+      }
+
       const batchTexts = texts.slice(i, i + batchSize);
 
       // Phase 10.98.2 FIX: Filter and validate batch texts

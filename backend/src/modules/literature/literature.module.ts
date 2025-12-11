@@ -132,6 +132,51 @@ import { RetryService } from '../../common/services/retry.service';
 import { BulkheadService } from '../../common/services/bulkhead.service';
 // Phase 10.108: Universal Citation Enrichment Service (Netflix-grade batch enrichment for ALL papers)
 import { UniversalCitationEnrichmentService } from './services/universal-citation-enrichment.service';
+// Phase 10.112 Week 2: Netflix-Grade Search Optimization
+import { SourceCapabilityService } from './services/source-capability.service';
+import { EarlyStopService } from './services/early-stop.service';
+import { RequestContextService } from './services/request-context.service';
+import { RequestCancellationInterceptor } from './interceptors/request-cancellation.interceptor';
+// Phase 10.112 Week 3: Netflix-Grade Full Integration
+import { CursorBasedCacheService } from './services/cursor-based-cache.service';
+import { NeuralBudgetService } from './services/neural-budget.service';
+// Phase 10.112 Week 4: Netflix-Grade Advanced Patterns
+import { AdaptiveTimeoutService } from './services/adaptive-timeout.service';
+import { RequestHedgingService } from './services/request-hedging.service';
+import { GracefulDegradationService } from './services/graceful-degradation.service';
+// Phase 10.113 Week 2: Theme-Fit Relevance Scoring
+import { ThemeFitScoringService } from './services/theme-fit-scoring.service';
+// Phase 10.113 Week 3: Hierarchical Theme Extraction (Meta-themes + Sub-themes)
+import { MetaThemeDiscoveryService } from './services/meta-theme-discovery.service';
+// Phase 10.113 Week 4: Citation-Based Controversy Analysis
+import { CitationControversyService } from './services/citation-controversy.service';
+// Phase 10.113 Week 5: Claim Extraction for Q-Methodology
+import { ClaimExtractionService } from './services/claim-extraction.service';
+// Phase 10.113 Week 6: Unified Thematization Orchestrator & Pricing
+import { UnifiedThematizationService } from './services/unified-thematization.service';
+import { ThematizationPricingService } from './services/thematization-pricing.service';
+// Phase 10.113 Week 7: Database-Backed Billing Service
+import { ThematizationBillingService } from './services/thematization-billing.service';
+// Phase 10.113 Week 7: Thematization Controller
+import { ThematizationController } from './controllers/thematization.controller';
+// Phase 10.113 Week 7: Thematization WebSocket Gateway & Progress Service
+import { ThematizationGateway } from './gateways/thematization.gateway';
+import { ThematizationProgressService } from './services/thematization-progress.service';
+// Phase 10.113 Week 7: AI Query Optimization for Thematization
+import { ThematizationQueryService } from './services/thematization-query.service';
+// Phase 10.113 Week 8: Monitoring, Analytics & Caching
+import { ThematizationMetricsService } from './services/thematization-metrics.service';
+import { ThematizationAdminService } from './services/thematization-admin.service';
+import { ThematizationCacheService } from './services/thematization-cache.service';
+// Phase 10.113 Week 9: Scientific Query Optimization
+import { ScientificQueryOptimizerService } from './services/scientific-query-optimizer.service';
+// Phase 10.113 Week 10: Progressive Search Streaming
+import { SearchStreamService } from './services/search-stream.service';
+import { LazyEnrichmentService } from './services/lazy-enrichment.service';
+// Phase 10.113 Week 11: Progressive Semantic Scoring
+import { ProgressiveSemanticService } from './services/progressive-semantic.service';
+import { EmbeddingCacheService } from './services/embedding-cache.service';
+import { EmbeddingPoolService } from './services/embedding-pool.service';
 import { PDFController } from './controllers/pdf.controller';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
@@ -155,11 +200,13 @@ import { AIModule } from '../ai/ai.module';
       max: 1000, // Maximum items in cache
     }),
   ],
-  controllers: [LiteratureController, PDFController],
+  controllers: [LiteratureController, PDFController, ThematizationController],
   providers: [
     LiteratureService,
     LiteratureGateway,
     ThemeExtractionGateway, // Phase 9 Day 28
+    ThematizationGateway, // Phase 10.113 Week 7: Thematization WebSocket
+    ThematizationProgressService, // Phase 10.113 Week 7: Progress tracking
     ReferenceService,
     ThemeExtractionService,
     GapAnalyzerService,
@@ -292,6 +339,46 @@ import { AIModule } from '../ai/ai.module';
     BulkheadService,
     // Phase 10.108: Universal Citation Enrichment Service (Netflix-grade batch enrichment for ALL papers)
     UniversalCitationEnrichmentService,
+    // Phase 10.112 Week 2: Netflix-Grade Search Optimization
+    SourceCapabilityService,
+    EarlyStopService,
+    RequestContextService,
+    RequestCancellationInterceptor,
+    // Phase 10.112 Week 3: Netflix-Grade Full Integration
+    CursorBasedCacheService,
+    NeuralBudgetService,
+    // Phase 10.112 Week 4: Netflix-Grade Advanced Patterns
+    AdaptiveTimeoutService,
+    RequestHedgingService,
+    GracefulDegradationService,
+    // Phase 10.113 Week 2: Theme-Fit Relevance Scoring
+    ThemeFitScoringService,
+    // Phase 10.113 Week 3: Hierarchical Theme Extraction (Meta-themes + Sub-themes)
+    MetaThemeDiscoveryService,
+    // Phase 10.113 Week 4: Citation-Based Controversy Analysis
+    CitationControversyService,
+    // Phase 10.113 Week 5: Claim Extraction for Q-Methodology
+    ClaimExtractionService,
+    // Phase 10.113 Week 6: Unified Thematization Orchestrator & Pricing
+    UnifiedThematizationService,
+    ThematizationPricingService,
+    // Phase 10.113 Week 7: Database-Backed Billing Service
+    ThematizationBillingService,
+    // Phase 10.113 Week 7: AI Query Optimization for Thematization
+    ThematizationQueryService,
+    // Phase 10.113 Week 8: Monitoring, Analytics & Caching
+    ThematizationMetricsService,
+    ThematizationAdminService,
+    ThematizationCacheService,
+    // Phase 10.113 Week 9: Scientific Query Optimization
+    ScientificQueryOptimizerService,
+    // Phase 10.113 Week 10: Progressive Search Streaming
+    SearchStreamService,
+    LazyEnrichmentService,
+    // Phase 10.113 Week 11: Progressive Semantic Scoring
+    ProgressiveSemanticService,
+    EmbeddingCacheService,
+    EmbeddingPoolService,
   ],
   exports: [
     LiteratureService,
@@ -357,6 +444,44 @@ import { AIModule } from '../ai/ai.module';
     ApiRateLimiterService,
     // Phase 10.101 Task 3 - Phase 9: Theme Database Service (DX-1 FIX: exported for other modules)
     ThemeDatabaseService,
+    // Phase 10.112 Week 2: Export for health monitoring
+    SourceCapabilityService,
+    EarlyStopService,
+    // Phase 10.112 Week 3: Export for health monitoring and cross-module access
+    CursorBasedCacheService,
+    NeuralBudgetService,
+    // Phase 10.112 Week 4: Export for health monitoring and cross-module access
+    AdaptiveTimeoutService,
+    RequestHedgingService,
+    GracefulDegradationService,
+    // Phase 10.113 Week 2: Theme-Fit Relevance Scoring
+    ThemeFitScoringService,
+    // Phase 10.113 Week 3: Hierarchical Theme Extraction (Meta-themes + Sub-themes)
+    MetaThemeDiscoveryService,
+    // Phase 10.113 Week 4: Citation-Based Controversy Analysis
+    CitationControversyService,
+    // Phase 10.113 Week 5: Claim Extraction for Q-Methodology
+    ClaimExtractionService,
+    // Phase 10.113 Week 6: Unified Thematization Orchestrator & Pricing
+    UnifiedThematizationService,
+    ThematizationPricingService,
+    // Phase 10.113 Week 7: Database-Backed Billing Service
+    ThematizationBillingService,
+    // Phase 10.113 Week 7: AI Query Optimization
+    ThematizationQueryService,
+    // Phase 10.113 Week 8: Monitoring, Analytics & Caching
+    ThematizationMetricsService,
+    ThematizationAdminService,
+    ThematizationCacheService,
+    // Phase 10.113 Week 9: Scientific Query Optimization
+    ScientificQueryOptimizerService,
+    // Phase 10.113 Week 10: Progressive Search Streaming
+    SearchStreamService,
+    LazyEnrichmentService,
+    // Phase 10.113 Week 11: Progressive Semantic Scoring
+    ProgressiveSemanticService,
+    EmbeddingCacheService,
+    EmbeddingPoolService,
   ],
 })
 export class LiteratureModule implements OnModuleInit {
@@ -365,6 +490,9 @@ export class LiteratureModule implements OnModuleInit {
     private readonly themeGateway: ThemeExtractionGateway,
     private readonly rateLimiter: ApiRateLimiterService, // Phase 8.6: Inject for metrics wiring
     private readonly metricsService: MetricsService, // Phase 8.6: Metrics tracking
+    // Phase 10.113 Week 7: Thematization WebSocket wiring
+    private readonly thematizationGateway: ThematizationGateway,
+    private readonly thematizationProgressService: ThematizationProgressService,
   ) {}
 
   /**
@@ -372,6 +500,7 @@ export class LiteratureModule implements OnModuleInit {
    * Connects real-time progress updates to theme extraction
    *
    * ENHANCED Phase 8.6: Wire up metrics tracking
+   * ENHANCED Phase 10.113 Week 7: Wire up thematization WebSocket
    */
   onModuleInit() {
     // Phase 10 Day 5.17.3: WebSocket gateway wiring
@@ -379,5 +508,8 @@ export class LiteratureModule implements OnModuleInit {
 
     // Phase 8.6: Metrics service wiring (enables circuit breaker metrics)
     this.rateLimiter.setMetricsService(this.metricsService);
+
+    // Phase 10.113 Week 7: Thematization WebSocket gateway wiring
+    this.thematizationProgressService.setGateway(this.thematizationGateway);
   }
 }

@@ -23,6 +23,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SearchCoalescerService } from './search-coalescer.service';
 import { APIQuotaMonitorService } from './api-quota-monitor.service';
+// Phase 10.112 Week 4: Netflix-Grade Resilience Services
+import { AdaptiveTimeoutService } from './adaptive-timeout.service';
+import { RequestHedgingService } from './request-hedging.service';
 // Source services
 import { SemanticScholarService } from './semantic-scholar.service';
 import { CrossRefService } from './crossref.service';
@@ -45,6 +48,8 @@ import { SageService } from './sage.service';
 import { TaylorFrancisService } from './taylor-francis.service';
 // DTOs and types
 import { LiteratureSource, Paper, SearchLiteratureDto } from '../dto/literature.dto';
+// Phase 10.115: Import tier-based allocation for source-specific limits
+import { getSourceAllocation } from '../constants/source-allocation.constants';
 
 // ============================================================================
 // CONSTANTS (Enterprise-Grade - No Magic Numbers)
@@ -58,9 +63,10 @@ const MAX_GLOBAL_TIMEOUT = 30000; // 30 seconds
 
 /**
  * Default limit for search results when not specified
- * Used as fallback if DTO validation doesn't apply default
+ * Phase 10.115: Increased from 20 to 300 to match tier allocations
+ * Individual sources will use tier-based allocation (300-500) from getSourceAllocation()
  */
-const DEFAULT_SEARCH_LIMIT = 20;
+const DEFAULT_SEARCH_LIMIT = 300;
 
 // ============================================================================
 // SERVICE IMPLEMENTATION
@@ -73,6 +79,9 @@ export class SourceRouterService {
   constructor(
     private readonly searchCoalescer: SearchCoalescerService,
     private readonly quotaMonitor: APIQuotaMonitorService,
+    // Phase 10.112 Week 4: Netflix-Grade Resilience Services
+    private readonly adaptiveTimeout: AdaptiveTimeoutService,
+    private readonly requestHedging: RequestHedgingService,
     // Academic source services
     private readonly semanticScholarService: SemanticScholarService,
     private readonly crossRefService: CrossRefService,
@@ -147,9 +156,16 @@ export class SourceRouterService {
   async searchBySource(
     source: LiteratureSource,
     searchDto: SearchLiteratureDto,
+    signal?: AbortSignal,
   ): Promise<Paper[]> {
     // SEC-1: Input validation
     this.validateSearchInput(source, searchDto);
+
+    // Phase 10.115: Use tier-based allocation for source-specific limits
+    // Premium sources (Tier 1): 500 papers, Good (Tier 2): 400, Preprint (Tier 3): 300, Aggregator (Tier 4): 300
+    const tierAllocation = getSourceAllocation(source);
+    const effectiveLimit = searchDto.limit ?? tierAllocation;
+    this.logger.debug(`[${source}] Using limit ${effectiveLimit} (tier allocation: ${tierAllocation}, dto: ${searchDto.limit ?? 'undefined'})`);
 
     switch (source) {
       case LiteratureSource.SEMANTIC_SCHOLAR:
@@ -157,8 +173,9 @@ export class SourceRouterService {
           this.semanticScholarService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.CROSSREF:
@@ -166,8 +183,9 @@ export class SourceRouterService {
           this.crossRefService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.PUBMED:
@@ -175,8 +193,9 @@ export class SourceRouterService {
           this.pubMedService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.ARXIV:
@@ -184,10 +203,11 @@ export class SourceRouterService {
           this.arxivService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
             sortBy: 'relevance',
             sortOrder: 'descending',
           }),
+          signal,
         );
 
       case LiteratureSource.GOOGLE_SCHOLAR:
@@ -195,8 +215,9 @@ export class SourceRouterService {
           this.googleScholarService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.SSRN:
@@ -204,8 +225,9 @@ export class SourceRouterService {
           this.ssrnService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.PMC:
@@ -213,8 +235,9 @@ export class SourceRouterService {
           this.pmcService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.ERIC:
@@ -222,8 +245,9 @@ export class SourceRouterService {
           this.ericService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.CORE:
@@ -231,8 +255,9 @@ export class SourceRouterService {
           this.coreService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       // Phase 10.106 Phase 1: OpenAlex search (Netflix-grade fix: pass options object)
@@ -241,8 +266,9 @@ export class SourceRouterService {
           this.openAlexService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.WEB_OF_SCIENCE:
@@ -250,8 +276,9 @@ export class SourceRouterService {
           this.webOfScienceService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.SCOPUS:
@@ -259,8 +286,9 @@ export class SourceRouterService {
           this.scopusService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.IEEE_XPLORE:
@@ -268,8 +296,9 @@ export class SourceRouterService {
           this.ieeeService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.SPRINGER:
@@ -277,8 +306,9 @@ export class SourceRouterService {
           this.springerService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.NATURE:
@@ -286,8 +316,9 @@ export class SourceRouterService {
           this.natureService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.WILEY:
@@ -295,8 +326,9 @@ export class SourceRouterService {
           this.wileyService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.SAGE:
@@ -304,8 +336,9 @@ export class SourceRouterService {
           this.sageService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       case LiteratureSource.TAYLOR_FRANCIS:
@@ -313,8 +346,9 @@ export class SourceRouterService {
           this.taylorFrancisService.search(searchDto.query, {
             yearFrom: searchDto.yearFrom,
             yearTo: searchDto.yearTo,
-            limit: searchDto.limit,
+            limit: effectiveLimit,
           }),
+          signal,
         );
 
       default:
@@ -363,7 +397,14 @@ export class SourceRouterService {
     sourceName: string,
     searchDto: SearchLiteratureDto,
     serviceCall: () => Promise<Paper[]>,
+    signal?: AbortSignal,
   ): Promise<Paper[]> {
+    // Phase 10.112 Week 2: Early abort check before any work
+    if (signal?.aborted) {
+      this.logger.debug(`[${sourceName}] Skipped: request already cancelled`);
+      return [];
+    }
+
     // Safe JSON.stringify with fallback (prevents crashes from circular references)
     let coalescerKey: string;
     try {
@@ -385,13 +426,43 @@ export class SourceRouterService {
         return [];
       }
 
+      // Phase 10.112 Week 4: Get adaptive timeout for this operation
+      const operationKey = `search:${sourceName}`;
+      const adaptiveTimeoutMs = this.adaptiveTimeout.getTimeout(operationKey);
+
+      // Phase 10.112 Week 4: Track start time for latency recording
+      const startTime = Date.now();
+
       try {
-        const startTime = Date.now();
+        // Phase 10.112 Week 4: Use request hedging for search operations
+        // Hedging sends a backup request if primary is slow, uses first response
+        // Phase 10.112 Week 4 Fix: Now passing adaptive timeout to prevent hanging
+        const hedgeResult = await this.requestHedging.executeHedged(
+          operationKey,
+          async (hedgeSignal?: AbortSignal) => {
+            // Combine user signal with hedge signal
+            const effectiveSignal = signal ?? hedgeSignal;
+            if (effectiveSignal) {
+              return this.raceWithAbort(serviceCall(), effectiveSignal, sourceName);
+            }
+            return serviceCall();
+          },
+          // Hedge function: same call but may complete faster on retry
+          async (hedgeSignal?: AbortSignal) => {
+            if (hedgeSignal) {
+              return this.raceWithAbort(serviceCall(), hedgeSignal, sourceName);
+            }
+            return serviceCall();
+          },
+          coalescerKey, // Request ID for deduplication
+          adaptiveTimeoutMs, // Critical: pass timeout to prevent infinite hangs
+        );
 
-        // Call the actual service method
-        const papers = await serviceCall();
-
+        const papers = hedgeResult.result;
         const duration = Date.now() - startTime;
+
+        // Phase 10.112 Week 4: Record latency for adaptive timeout adjustment
+        this.adaptiveTimeout.recordLatency(operationKey, duration, papers.length > 0);
 
         // Enhanced logging for debugging
         if (papers.length === 0) {
@@ -399,8 +470,9 @@ export class SourceRouterService {
             `⚠️  [${sourceName}] Query "${searchDto.query}" returned 0 papers (${duration}ms) - Possible timeout or no matches`,
           );
         } else {
+          const hedgeInfo = hedgeResult.wasHedged ? ` [hedged:${hedgeResult.winner}]` : '';
           this.logger.log(
-            `✓ [${sourceName}] Found ${papers.length} papers (${duration}ms)`,
+            `✓ [${sourceName}] Found ${papers.length} papers (${duration}ms, timeout=${adaptiveTimeoutMs}ms)${hedgeInfo}`,
           );
         }
 
@@ -408,6 +480,16 @@ export class SourceRouterService {
         this.quotaMonitor.recordRequest(sourceName);
         return papers;
       } catch (error: unknown) {
+        // Phase 10.112 Week 2: Check for abort errors first
+        if (error instanceof Error && error.name === 'AbortError') {
+          this.logger.debug(`[${sourceName}] Request cancelled by client`);
+          return [];
+        }
+
+        // Phase 10.112 Week 4: Record failed request for adaptive timeout
+        const failedDuration = Date.now() - startTime;
+        this.adaptiveTimeout.recordLatency(operationKey, failedDuration, false);
+
         // Phase 10.100 Phases 8-11 Audit Fix: Enterprise-grade error handling
         const errorMessage =
           error instanceof Error ? error.message : String(error);
@@ -425,8 +507,10 @@ export class SourceRouterService {
           errorCode === 'ECONNABORTED' ||
           (typeof errorMessage === 'string' && errorMessage.includes('timeout'))
         ) {
+          // Phase 10.112 Week 4: Record timeout for adaptive adjustment
+          this.adaptiveTimeout.recordTimeout(operationKey);
           this.logger.error(
-            `⏱️  [${sourceName}] Timeout after ${MAX_GLOBAL_TIMEOUT}ms - Query: "${searchDto.query}"`,
+            `⏱️  [${sourceName}] Timeout after ${adaptiveTimeoutMs}ms - Query: "${searchDto.query}"`,
           );
         }
         // Check for rate limiting
@@ -443,6 +527,45 @@ export class SourceRouterService {
         }
         return [];
       }
+    });
+  }
+
+  /**
+   * Phase 10.112 Week 2: Race operation against abort signal
+   * Returns empty array if aborted, otherwise returns operation result
+   */
+  private raceWithAbort(
+    operation: Promise<Paper[]>,
+    signal: AbortSignal,
+    sourceName: string,
+  ): Promise<Paper[]> {
+    return new Promise((resolve, reject) => {
+      // Check if already aborted
+      if (signal.aborted) {
+        this.logger.debug(`[${sourceName}] Aborted before start`);
+        resolve([]);
+        return;
+      }
+
+      // Create abort handler
+      const abortHandler = () => {
+        this.logger.debug(`[${sourceName}] Aborted during execution`);
+        resolve([]);
+      };
+
+      // Listen for abort
+      signal.addEventListener('abort', abortHandler, { once: true });
+
+      // Execute operation
+      operation
+        .then((result) => {
+          signal.removeEventListener('abort', abortHandler);
+          resolve(result);
+        })
+        .catch((error) => {
+          signal.removeEventListener('abort', abortHandler);
+          reject(error);
+        });
     });
   }
 

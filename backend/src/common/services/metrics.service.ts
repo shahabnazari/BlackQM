@@ -1,6 +1,7 @@
 /**
  * Metrics Service
  * Phase 8.6: Prometheus-Compatible Metrics Export
+ * Phase 10.112: Netflix-Grade CPU & Memory Monitoring
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * ENTERPRISE-GRADE OBSERVABILITY - PROMETHEUS METRICS
@@ -10,6 +11,7 @@
  * - Business metrics (theme extractions, papers processed, AI costs)
  * - Technical metrics (circuit breaker state, API latency, cache hit rates)
  * - Performance metrics (stage durations, memory usage, GC time)
+ * - Phase 10.112: CPU metrics (user time, system time, load average)
  *
  * Innovation Level: ⭐⭐⭐⭐⭐ (Revolutionary for research tools)
  * - NO other Q methodology tool has production-grade metrics
@@ -22,6 +24,7 @@
  * metricsService.incrementCounter('theme_extractions_total', { purpose: 'q_methodology' });
  * metricsService.recordGauge('circuit_breaker_state', 1, { provider: 'openai' });
  * metricsService.recordHistogram('api_duration_seconds', 1.23, { provider: 'pubmed' });
+ * const cpuUsage = metricsService.getCpuUsage(); // Phase 10.112
  * ```
  *
  * Prometheus Scrape:
@@ -37,6 +40,53 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import * as os from 'os';
+
+/**
+ * Phase 10.112: CPU usage metrics structure
+ */
+export interface CpuUsageMetrics {
+  /** CPU usage percentage (0-100) across all cores */
+  usagePercent: number;
+  /** User mode CPU time in microseconds */
+  userMicroseconds: number;
+  /** System mode CPU time in microseconds */
+  systemMicroseconds: number;
+  /** Total CPU time (user + system) in microseconds */
+  totalMicroseconds: number;
+  /** Number of CPU cores */
+  cpuCount: number;
+  /** 1-minute load average (Unix only, 0 on Windows) */
+  loadAverage1m: number;
+  /** 5-minute load average (Unix only, 0 on Windows) */
+  loadAverage5m: number;
+  /** 15-minute load average (Unix only, 0 on Windows) */
+  loadAverage15m: number;
+}
+
+/**
+ * Phase 10.112: Memory usage metrics structure
+ */
+export interface MemoryUsageMetrics {
+  /** Heap memory used in bytes */
+  heapUsedBytes: number;
+  /** Total heap memory in bytes */
+  heapTotalBytes: number;
+  /** Resident Set Size in bytes */
+  rssBytes: number;
+  /** External memory (C++ objects) in bytes */
+  externalBytes: number;
+  /** ArrayBuffer memory in bytes */
+  arrayBuffersBytes: number;
+  /** Heap usage as percentage (0-100) */
+  heapUsagePercent: number;
+  /** Total system memory in bytes */
+  totalSystemMemory: number;
+  /** Free system memory in bytes */
+  freeSystemMemory: number;
+  /** System memory usage percentage (0-100) */
+  systemMemoryUsagePercent: number;
+}
 
 /**
  * Metric types supported by Prometheus
@@ -66,6 +116,7 @@ interface HistogramMetric {
 
 /**
  * Enterprise-grade metrics service with Prometheus text format export
+ * Phase 10.112: Enhanced with Netflix-grade CPU & memory monitoring
  */
 @Injectable()
 export class MetricsService {
@@ -89,10 +140,18 @@ export class MetricsService {
   private static readonly MAX_LABEL_COMBINATIONS_PER_METRIC = 1000;
   private cardinalityWarningsIssued: Set<string> = new Set();
 
+  // Phase 10.112: CPU tracking state for delta calculations
+  private lastCpuUsage: NodeJS.CpuUsage | null = null;
+  private lastCpuUsageTime: number = 0;
+  private static readonly CPU_SAMPLE_INTERVAL_MS = 1000; // Minimum interval between samples
+
   constructor() {
     // Initialize standard metrics
     this.initializeStandardMetrics();
-    this.logger.log('✅ Metrics service initialized (Prometheus-compatible)');
+    // Phase 10.112: Initialize CPU baseline
+    this.lastCpuUsage = process.cpuUsage();
+    this.lastCpuUsageTime = Date.now();
+    this.logger.log('✅ Metrics service initialized (Prometheus-compatible, CPU monitoring enabled)');
   }
 
   /**
@@ -127,6 +186,23 @@ export class MetricsService {
     // Database metrics
     this.registerMetric('db_connection_pool_active', MetricType.GAUGE, 'Active database connections');
     this.registerMetric('db_connection_pool_idle', MetricType.GAUGE, 'Idle database connections');
+
+    // Phase 10.112: Netflix-grade CPU metrics
+    this.registerMetric('cpu_usage_percent', MetricType.GAUGE, 'CPU usage percentage across all cores');
+    this.registerMetric('cpu_user_microseconds', MetricType.COUNTER, 'CPU time spent in user mode (microseconds)');
+    this.registerMetric('cpu_system_microseconds', MetricType.COUNTER, 'CPU time spent in system mode (microseconds)');
+    this.registerMetric('cpu_load_average_1m', MetricType.GAUGE, '1-minute CPU load average');
+    this.registerMetric('cpu_load_average_5m', MetricType.GAUGE, '5-minute CPU load average');
+    this.registerMetric('cpu_load_average_15m', MetricType.GAUGE, '15-minute CPU load average');
+
+    // Phase 10.112: Enhanced memory metrics
+    this.registerMetric('memory_rss_bytes', MetricType.GAUGE, 'Resident Set Size in bytes');
+    this.registerMetric('memory_external_bytes', MetricType.GAUGE, 'External C++ memory in bytes');
+    this.registerMetric('memory_array_buffers_bytes', MetricType.GAUGE, 'ArrayBuffer memory in bytes');
+    this.registerMetric('memory_heap_usage_percent', MetricType.GAUGE, 'Heap memory usage percentage');
+    this.registerMetric('memory_system_total_bytes', MetricType.GAUGE, 'Total system memory in bytes');
+    this.registerMetric('memory_system_free_bytes', MetricType.GAUGE, 'Free system memory in bytes');
+    this.registerMetric('memory_system_usage_percent', MetricType.GAUGE, 'System memory usage percentage');
   }
 
   /**
@@ -373,16 +449,185 @@ export class MetricsService {
   // ============================================================================
 
   /**
-   * Update system metrics (memory, circuit breaker, etc.)
+   * Update system metrics (memory, CPU, etc.)
+   * Phase 10.112: Enhanced with Netflix-grade CPU & memory monitoring
    * Call this periodically or on-demand
    * @public
    */
   public updateSystemMetrics(): void {
-    // Memory metrics
+    // Memory metrics (original)
     const memory = process.memoryUsage();
     this.recordGauge('memory_heap_used_bytes', memory.heapUsed);
     this.recordGauge('memory_heap_total_bytes', memory.heapTotal);
+
+    // Phase 10.112: Enhanced memory metrics
+    const memMetrics = this.getMemoryUsage();
+    this.recordGauge('memory_rss_bytes', memMetrics.rssBytes);
+    this.recordGauge('memory_external_bytes', memMetrics.externalBytes);
+    this.recordGauge('memory_array_buffers_bytes', memMetrics.arrayBuffersBytes);
+    this.recordGauge('memory_heap_usage_percent', memMetrics.heapUsagePercent);
+    this.recordGauge('memory_system_total_bytes', memMetrics.totalSystemMemory);
+    this.recordGauge('memory_system_free_bytes', memMetrics.freeSystemMemory);
+    this.recordGauge('memory_system_usage_percent', memMetrics.systemMemoryUsagePercent);
+
+    // Phase 10.112: CPU metrics
+    const cpuMetrics = this.getCpuUsage();
+    this.recordGauge('cpu_usage_percent', cpuMetrics.usagePercent);
+    this.incrementCounter('cpu_user_microseconds', undefined, cpuMetrics.userMicroseconds);
+    this.incrementCounter('cpu_system_microseconds', undefined, cpuMetrics.systemMicroseconds);
+    this.recordGauge('cpu_load_average_1m', cpuMetrics.loadAverage1m);
+    this.recordGauge('cpu_load_average_5m', cpuMetrics.loadAverage5m);
+    this.recordGauge('cpu_load_average_15m', cpuMetrics.loadAverage15m);
   }
+
+  // ============================================================================
+  // Phase 10.112: NETFLIX-GRADE CPU MONITORING
+  // ============================================================================
+
+  /**
+   * Get current CPU usage metrics
+   * Phase 10.112: Netflix-grade CPU monitoring implementation
+   *
+   * Uses process.cpuUsage() delta calculation for accurate CPU percentage.
+   * Falls back to OS-level metrics for load averages.
+   *
+   * @returns CpuUsageMetrics - Comprehensive CPU metrics
+   * @public
+   */
+  public getCpuUsage(): CpuUsageMetrics {
+    const now = Date.now();
+    const currentCpuUsage = process.cpuUsage(this.lastCpuUsage ?? undefined);
+    const elapsedMs = now - this.lastCpuUsageTime;
+
+    // Calculate CPU percentage based on time delta
+    // CPU time is in microseconds, elapsed is in milliseconds
+    const totalCpuMicros = currentCpuUsage.user + currentCpuUsage.system;
+    const elapsedMicros = elapsedMs * 1000; // Convert ms to microseconds
+    const cpuCount = os.cpus().length;
+
+    // CPU percentage = (CPU time used / available CPU time) * 100
+    // Available CPU time = elapsed time * number of CPUs
+    let usagePercent = 0;
+    if (elapsedMicros > 0 && cpuCount > 0) {
+      usagePercent = Math.min(100, (totalCpuMicros / (elapsedMicros * cpuCount)) * 100);
+    }
+
+    // Get load averages (Unix only, returns [0,0,0] on Windows)
+    const loadAverages = os.loadavg();
+
+    // Update baseline for next calculation (only if enough time has passed)
+    if (elapsedMs >= MetricsService.CPU_SAMPLE_INTERVAL_MS) {
+      this.lastCpuUsage = process.cpuUsage();
+      this.lastCpuUsageTime = now;
+    }
+
+    return {
+      usagePercent: Math.round(usagePercent * 100) / 100, // 2 decimal places
+      userMicroseconds: currentCpuUsage.user,
+      systemMicroseconds: currentCpuUsage.system,
+      totalMicroseconds: totalCpuMicros,
+      cpuCount,
+      loadAverage1m: Math.round(loadAverages[0] * 100) / 100,
+      loadAverage5m: Math.round(loadAverages[1] * 100) / 100,
+      loadAverage15m: Math.round(loadAverages[2] * 100) / 100,
+    };
+  }
+
+  /**
+   * Get simple CPU usage percentage (convenience method)
+   * Phase 10.112: For quick CPU checks in neural budget calculations
+   *
+   * @returns number - CPU usage percentage (0-100)
+   * @public
+   */
+  public getCpuUsagePercent(): number {
+    return this.getCpuUsage().usagePercent;
+  }
+
+  // ============================================================================
+  // Phase 10.112: NETFLIX-GRADE MEMORY MONITORING
+  // ============================================================================
+
+  /**
+   * Get comprehensive memory usage metrics
+   * Phase 10.112: Netflix-grade memory monitoring implementation
+   *
+   * Combines Node.js process memory with OS-level system memory.
+   *
+   * @returns MemoryUsageMetrics - Comprehensive memory metrics
+   * @public
+   */
+  public getMemoryUsage(): MemoryUsageMetrics {
+    const processMemory = process.memoryUsage();
+    const totalSystemMemory = os.totalmem();
+    const freeSystemMemory = os.freemem();
+
+    const heapUsagePercent = processMemory.heapTotal > 0
+      ? (processMemory.heapUsed / processMemory.heapTotal) * 100
+      : 0;
+
+    const systemMemoryUsagePercent = totalSystemMemory > 0
+      ? ((totalSystemMemory - freeSystemMemory) / totalSystemMemory) * 100
+      : 0;
+
+    return {
+      heapUsedBytes: processMemory.heapUsed,
+      heapTotalBytes: processMemory.heapTotal,
+      rssBytes: processMemory.rss,
+      externalBytes: processMemory.external,
+      arrayBuffersBytes: processMemory.arrayBuffers,
+      heapUsagePercent: Math.round(heapUsagePercent * 100) / 100,
+      totalSystemMemory,
+      freeSystemMemory,
+      systemMemoryUsagePercent: Math.round(systemMemoryUsagePercent * 100) / 100,
+    };
+  }
+
+  /**
+   * Get heap usage in megabytes (convenience method)
+   * Phase 10.112: For quick memory checks
+   *
+   * @returns { heapUsed: number, heapTotal: number, rss: number } - Memory in MB
+   * @public
+   */
+  public getMemoryUsageMB(): { heapUsed: number; heapTotal: number; rss: number } {
+    const mem = process.memoryUsage();
+    return {
+      heapUsed: Math.round(mem.heapUsed / (1024 * 1024)),
+      heapTotal: Math.round(mem.heapTotal / (1024 * 1024)),
+      rss: Math.round(mem.rss / (1024 * 1024)),
+    };
+  }
+
+  /**
+   * Check if system is under memory pressure
+   * Phase 10.112: For adaptive behavior under load
+   *
+   * @param thresholdPercent - Memory usage threshold (default 80%)
+   * @returns boolean - True if memory usage exceeds threshold
+   * @public
+   */
+  public isMemoryPressure(thresholdPercent: number = 80): boolean {
+    const metrics = this.getMemoryUsage();
+    return metrics.heapUsagePercent > thresholdPercent ||
+           metrics.systemMemoryUsagePercent > thresholdPercent;
+  }
+
+  /**
+   * Check if system is under CPU pressure
+   * Phase 10.112: For adaptive behavior under load
+   *
+   * @param thresholdPercent - CPU usage threshold (default 80%)
+   * @returns boolean - True if CPU usage exceeds threshold
+   * @public
+   */
+  public isCpuPressure(thresholdPercent: number = 80): boolean {
+    return this.getCpuUsagePercent() > thresholdPercent;
+  }
+
+  // ============================================================================
+  // EXISTING CONVENIENCE METHODS
+  // ============================================================================
 
   /**
    * Update circuit breaker metrics
@@ -432,6 +677,9 @@ export class MetricsService {
     this.gauges.clear();
     this.histograms.clear();
     this.initializeStandardMetrics();
+    // Phase 10.112: Reset CPU baseline
+    this.lastCpuUsage = process.cpuUsage();
+    this.lastCpuUsageTime = Date.now();
     this.logger.warn('⚠️  All metrics reset');
   }
 }

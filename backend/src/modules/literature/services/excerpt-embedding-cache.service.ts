@@ -1,6 +1,7 @@
 /**
  * Excerpt Embedding Cache Service
  * Phase 10.98 Performance Optimization: P0
+ * Phase 10.112: Netflix-Grade Collision Detection Enhancement
  *
  * Enterprise-grade caching for excerpt embeddings to reduce API costs by 90%
  *
@@ -14,23 +15,38 @@
  * - In-memory cache with optional Redis backend
  * - Key format: sha256(excerpt text)
  * - Automatic cleanup of stale entries
+ *
+ * Phase 10.112 Enhancements:
+ * - Collision detection via original text verification
+ * - Collision metrics tracking
+ * - Detailed logging for debugging
  */
 
 import { Injectable, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 
+/**
+ * Phase 10.112: Enhanced cache entry with collision detection
+ */
 interface CacheEntry {
   embedding: number[];
   timestamp: number;
   accessCount: number;
+  originalText: string; // Phase 10.112: Store original for collision detection
+  textLength: number;   // Phase 10.112: Quick validation before full comparison
 }
 
+/**
+ * Phase 10.112: Enhanced cache stats with collision metrics
+ */
 interface CacheStats {
   hits: number;
   misses: number;
   size: number;
   hitRate: number;
   totalAccesses: number;
+  collisions: number;           // Phase 10.112: Total collision count
+  collisionRate: number;        // Phase 10.112: Collision rate percentage
 }
 
 @Injectable()
@@ -46,17 +62,21 @@ export class ExcerptEmbeddingCacheService {
   // Statistics
   private hits = 0;
   private misses = 0;
+  private collisions = 0; // Phase 10.112: Track hash collisions
 
   constructor() {
-    this.logger.log('[ExcerptCache] Initialized (max size: 10k, TTL: 1h)');
+    this.logger.log('[ExcerptCache] Initialized (max size: 10k, TTL: 1h, collision detection: enabled)');
 
     // Periodic cleanup of stale entries
-    setInterval(() => this.cleanupStaleEntries(), 300000); // Every 5 minutes
+    // Phase 10.112: Use unref() to allow process to exit gracefully during tests
+    const cleanupInterval = setInterval(() => this.cleanupStaleEntries(), 300000); // Every 5 minutes
+    cleanupInterval.unref();
   }
 
   /**
    * Get embedding from cache
-   * Returns null if not found or expired
+   * Phase 10.112: Enhanced with collision detection
+   * Returns null if not found, expired, or collision detected
    */
   get(excerptText: string): number[] | null {
     const key = this.generateKey(excerptText);
@@ -74,6 +94,34 @@ export class ExcerptEmbeddingCacheService {
       return null;
     }
 
+    // Phase 10.112: Collision detection via original text verification
+    // First, quick length check (fast path for non-collisions)
+    const trimmedText = excerptText.trim();
+    if (entry.textLength !== trimmedText.length) {
+      this.collisions++;
+      this.logger.warn(
+        `[ExcerptCache] Collision detected (length mismatch)! ` +
+        `Key: ${key.substring(0, 16)}... ` +
+        `Expected length: ${entry.textLength}, Got: ${trimmedText.length}`
+      );
+      this.cache.delete(key);
+      this.misses++;
+      return null;
+    }
+
+    // Full text comparison (only if lengths match)
+    if (entry.originalText !== trimmedText) {
+      this.collisions++;
+      this.logger.warn(
+        `[ExcerptCache] Collision detected (text mismatch)! ` +
+        `Key: ${key.substring(0, 16)}... ` +
+        `(total collisions: ${this.collisions})`
+      );
+      this.cache.delete(key);
+      this.misses++;
+      return null;
+    }
+
     // Update access stats
     entry.accessCount++;
     this.hits++;
@@ -83,6 +131,7 @@ export class ExcerptEmbeddingCacheService {
 
   /**
    * Store embedding in cache with validation
+   * Phase 10.112: Enhanced with original text storage for collision detection
    */
   set(excerptText: string, embedding: number[]): void {
     // Validate embedding before caching
@@ -109,10 +158,15 @@ export class ExcerptEmbeddingCacheService {
     }
 
     const key = this.generateKey(excerptText);
+    const trimmedText = excerptText.trim();
+
+    // Phase 10.112: Store original text for collision detection
     this.cache.set(key, {
       embedding,
       timestamp: Date.now(),
       accessCount: 1,
+      originalText: trimmedText,
+      textLength: trimmedText.length,
     });
   }
 
@@ -144,10 +198,12 @@ export class ExcerptEmbeddingCacheService {
 
   /**
    * Get cache statistics
+   * Phase 10.112: Enhanced with collision metrics
    */
   getStats(): CacheStats {
     const totalAccesses = this.hits + this.misses;
     const hitRate = totalAccesses > 0 ? (this.hits / totalAccesses) * 100 : 0;
+    const collisionRate = totalAccesses > 0 ? (this.collisions / totalAccesses) * 100 : 0;
 
     return {
       hits: this.hits,
@@ -155,15 +211,26 @@ export class ExcerptEmbeddingCacheService {
       size: this.cache.size,
       hitRate,
       totalAccesses,
+      collisions: this.collisions,
+      collisionRate,
     };
   }
 
   /**
    * Reset statistics (useful for testing)
+   * Phase 10.112: Also resets collision counter
    */
   resetStats(): void {
     this.hits = 0;
     this.misses = 0;
+    this.collisions = 0;
+  }
+
+  /**
+   * Phase 10.112: Get collision count
+   */
+  getCollisionCount(): number {
+    return this.collisions;
   }
 
   /**
@@ -246,6 +313,7 @@ export class ExcerptEmbeddingCacheService {
 
   /**
    * Log cache statistics (for debugging)
+   * Phase 10.112: Enhanced with collision statistics
    */
   logStats(): void {
     const stats = this.getStats();
@@ -254,7 +322,8 @@ export class ExcerptEmbeddingCacheService {
     this.logger.log(
       `[ExcerptCache] Stats: ${stats.hits} hits / ${stats.misses} misses ` +
       `(${stats.hitRate.toFixed(1)}% hit rate), ` +
-      `${stats.size} entries (~${sizeMB.toFixed(1)}MB)`
+      `${stats.size} entries (~${sizeMB.toFixed(1)}MB), ` +
+      `${stats.collisions} collisions (${stats.collisionRate.toFixed(4)}%)`
     );
   }
 }

@@ -67,7 +67,7 @@
 
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -77,6 +77,8 @@ import {
   ActiveFiltersChips,
 } from '../components/SearchSection';
 import { ProgressiveLoadingIndicator } from '@/components/literature/ProgressiveLoadingIndicator';
+// Phase 10.113 Week 10: WebSocket streaming section
+import { StreamingSearchSection, type StreamingSearchSectionHandle } from './StreamingSearchSection';
 import { AcademicResourcesPanel } from '../components/AcademicResourcesPanel';
 import { AlternativeSourcesPanel } from '../components/AlternativeSourcesPanel';
 import { SocialMediaPanel } from '../components/SocialMediaPanel';
@@ -221,6 +223,16 @@ export const LiteratureSearchContainer = React.memo(
     const { handleSearch } = useLiteratureSearch();
 
     // ==========================================================================
+    // REFS
+    // ==========================================================================
+
+    /**
+     * Ref to StreamingSearchSection for WebSocket-first search
+     * Phase 10.113 Week 10: WebSocket streaming integration
+     */
+    const streamingRef = useRef<StreamingSearchSectionHandle>(null);
+
+    // ==========================================================================
     // MEMOIZED HANDLERS
     // ==========================================================================
 
@@ -238,6 +250,25 @@ export const LiteratureSearchContainer = React.memo(
       );
       cancelProgressiveSearch();
     }, [cancelProgressiveSearch]);
+
+    /**
+     * Handle search with WebSocket-first strategy
+     * Phase 10.113 Week 10: Try WebSocket streaming first, fall back to HTTP
+     *
+     * @callback
+     * @memoized
+     */
+    const handleSearchWithStreaming = useCallback(async (): Promise<void> => {
+      // Try WebSocket streaming first if available
+      if (streamingRef.current?.isConnected) {
+        logger.info('Triggering WebSocket streaming search', 'LiteratureSearchContainer');
+        await streamingRef.current.triggerSearch();
+      } else {
+        // Fall back to HTTP search
+        logger.info('WebSocket not available, using HTTP search', 'LiteratureSearchContainer');
+        await handleSearch();
+      }
+    }, [handleSearch]);
 
     // ==========================================================================
     // COMPUTED VALUES
@@ -346,7 +377,7 @@ export const LiteratureSearchContainer = React.memo(
 
             {/* Search Bar Component */}
             <SearchBar
-              onSearch={handleSearch}
+              onSearch={handleSearchWithStreaming}
               isLoading={isLoading}
               appliedFilterCount={appliedFilterCount}
               showFilters={showFilters}
@@ -358,6 +389,11 @@ export const LiteratureSearchContainer = React.memo(
 
             {/* Active Filters Chips */}
             <ActiveFiltersChips />
+
+            {/* Phase 10.113 Week 10: WebSocket Streaming Section */}
+            <div className="mt-4">
+              <StreamingSearchSection ref={streamingRef} onHttpSearch={handleSearch} />
+            </div>
 
             {/* Filter Panel */}
             <FilterPanel isVisible={showFilters} />

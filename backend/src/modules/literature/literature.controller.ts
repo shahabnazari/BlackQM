@@ -43,9 +43,13 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UnauthorizedException,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+// Phase 10.112 Week 2: Request cancellation on client disconnect
+import { RequestCancellationInterceptor, RequestWithAbortSignal } from './interceptors/request-cancellation.interceptor';
 import { ConfigService } from '@nestjs/config';
 import {
   ApiBearerAuth,
@@ -70,6 +74,9 @@ import {
   CrossPlatformSynthesisDto,
   ExpandQueryDto,
   ExportCitationsDto,
+  ExtractHierarchicalThemesDto, // Phase 10.113 Week 3
+  AnalyzeCitationControversyDto, // Phase 10.113 Week 4
+  ExtractClaimsDto, // Phase 10.113 Week 5
   ExtractThemesAcademicDto,
   ExtractThemesDto,
   ExtractThemesV2Dto,
@@ -108,9 +115,33 @@ import { ThemeExtractionService } from './services/theme-extraction.service';
 import { ThemeToStatementService } from './services/theme-to-statement.service';
 import { TranscriptionService } from './services/transcription.service'; // Phase 9 Day 18
 import { UnifiedThemeExtractionService } from './services/unified-theme-extraction.service'; // Phase 9 Day 20
+// Phase 10.113 Week 3: Hierarchical Theme Extraction
+import { MetaThemeDiscoveryService } from './services/meta-theme-discovery.service';
+import type { HierarchicalExtractionResult } from './types/hierarchical-theme.types';
+import {
+  HierarchicalExtractionStage,
+  DEFAULT_HIERARCHICAL_CONFIG,
+  HIERARCHICAL_PAPER_LIMITS,
+} from './types/hierarchical-theme.types';
+// Phase 10.113 Week 4: Citation-Based Controversy Analysis
+import { CitationControversyService } from './services/citation-controversy.service';
+import type { CitationControversyAnalysis } from './types/citation-controversy.types';
+import { ControversyAnalysisStage } from './types/citation-controversy.types';
+// Phase 10.113 Week 5: Claim Extraction for Q-Methodology
+import { ClaimExtractionService } from './services/claim-extraction.service';
+// Phase 10.113 Week 9: Scientific Query Optimization
+import {
+  ScientificQueryOptimizerService,
+  QueryExpansionMode,
+} from './services/scientific-query-optimizer.service';
+import type { ClaimExtractionResult } from './types/claim-extraction.types';
+import { ClaimExtractionStage } from './types/claim-extraction.types';
+// Phase 10.113 Week 10: Query Intelligence Constants (DRY principle)
+import { QUERY_INTELLIGENCE_CONFIG } from './dto/search-stream.dto';
 
 @ApiTags('literature')
 @Controller('literature')
+@UseInterceptors(RequestCancellationInterceptor)
 export class LiteratureController {
   private readonly logger = new Logger(LiteratureController.name);
 
@@ -134,6 +165,10 @@ export class LiteratureController {
     private readonly prisma: PrismaService, // Phase 10 Day 18 - Needed for corpus CRUD
     private readonly guidedBatchSelector: GuidedBatchSelectorService, // Phase 10 Day 19.6
     private readonly pdfQueueService: PDFQueueService, // Phase 10 Day 30 - Background full-text processing
+    private readonly metaThemeDiscoveryService: MetaThemeDiscoveryService, // Phase 10.113 Week 3 - Hierarchical Theme Extraction
+    private readonly citationControversyService: CitationControversyService, // Phase 10.113 Week 4 - Citation Controversy Analysis
+    private readonly claimExtractionService: ClaimExtractionService, // Phase 10.113 Week 5 - Claim Extraction
+    private readonly queryOptimizerService: ScientificQueryOptimizerService, // Phase 10.113 Week 9 - Scientific Query Optimization
   ) {}
 
   @Post('search')
@@ -145,10 +180,12 @@ export class LiteratureController {
   async searchLiterature(
     @Body() searchDto: SearchLiteratureDto,
     @CurrentUser() user: AuthenticatedUser,
+    @Req() request: RequestWithAbortSignal,
   ) {
     return await this.literatureService.searchLiterature(
       searchDto,
       user.userId,
+      request.abortSignal,
     );
   }
 
@@ -160,12 +197,246 @@ export class LiteratureController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Public search for testing (dev only)' })
   @ApiResponse({ status: 200, description: 'Search results returned' })
-  async searchLiteraturePublic(@Body() searchDto: SearchLiteratureDto) {
+  async searchLiteraturePublic(
+    @Body() searchDto: SearchLiteratureDto,
+    @Req() request: RequestWithAbortSignal,
+  ) {
     // Use a default user ID for public searches
     return await this.literatureService.searchLiterature(
       searchDto,
       'public-user',
+      request.abortSignal,
     );
+  }
+
+  // ==========================================================================
+  // Phase 10.113 Week 10: Query Intelligence Endpoint
+  // ==========================================================================
+
+  /**
+   * Analyze query before search - returns intelligence data for UI
+   *
+   * This endpoint provides real-time feedback about the search query:
+   * - Spell corrections
+   * - Methodology detection
+   * - Controversy scoring (for Q-methodology)
+   * - Query quality assessment
+   * - Suggested refinements
+   *
+   * Use this to show the user what's happening with their query BEFORE searching.
+   */
+  @Post('search/analyze')
+  @Public() // Public endpoint for instant feedback
+  @CustomRateLimit(60, 300) // Allow 300 analyses/min (fast, lightweight operation)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Analyze query intelligence',
+    description: 'Returns query analysis including spell corrections, methodology detection, controversy scoring, and suggestions',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query to analyze' },
+      },
+      required: ['query'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Query intelligence returned',
+    schema: {
+      type: 'object',
+      properties: {
+        originalQuery: { type: 'string' },
+        correctedQuery: { type: 'string' },
+        corrections: {
+          type: 'object',
+          nullable: true,
+          properties: {
+            original: { type: 'string' },
+            corrected: { type: 'string' },
+            confidence: { type: 'number' },
+          },
+        },
+        quality: {
+          type: 'object',
+          properties: {
+            score: { type: 'number' },
+            issues: { type: 'array', items: { type: 'string' } },
+            suggestions: { type: 'array', items: { type: 'string' } },
+          },
+        },
+        methodology: {
+          type: 'object',
+          properties: {
+            detected: { type: 'string', nullable: true },
+            confidence: { type: 'number' },
+            relatedTerms: { type: 'array', items: { type: 'string' } },
+          },
+        },
+        controversy: {
+          type: 'object',
+          properties: {
+            score: { type: 'number' },
+            terms: { type: 'array', items: { type: 'string' } },
+            explanation: { type: 'string' },
+          },
+        },
+        broadness: {
+          type: 'object',
+          properties: {
+            isTooBroad: { type: 'boolean' },
+            score: { type: 'number' },
+            suggestions: { type: 'array', items: { type: 'string' } },
+          },
+        },
+        suggestions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              query: { type: 'string' },
+              reason: { type: 'string' },
+              expectedImprovement: { type: 'string' },
+            },
+          },
+        },
+        analysisTimeMs: { type: 'number' },
+      },
+    },
+  })
+  async analyzeQuery(@Body() body: { query: string }) {
+    const startTime = Date.now();
+
+    if (!body.query || typeof body.query !== 'string' || body.query.trim().length === 0) {
+      throw new BadRequestException('Query is required');
+    }
+
+    const query = body.query.trim();
+
+    try {
+      // Use ScientificQueryOptimizerService to analyze the query
+      const result = await this.queryOptimizerService.optimizeQuery(query, 'local');
+
+      // Calculate broadness from quality metrics (using centralized constants)
+      const isTooBroad = result.quality.metrics.isSingleWord ||
+        result.quality.metrics.wordCount < QUERY_INTELLIGENCE_CONFIG.MIN_WORDS_FOR_FOCUSED;
+
+      const hasMethodology = result.expansions.methodologyTermsAdded.length > 0;
+      const hasControversy = result.expansions.controversyTermsAdded.length > 0;
+
+      // Build response from optimization result (using centralized constants for DRY)
+      const response = {
+        originalQuery: query,
+        correctedQuery: result.optimizedQuery,
+        corrections: result.optimizedQuery !== query
+          ? {
+              original: query,
+              corrected: result.optimizedQuery,
+              confidence: QUERY_INTELLIGENCE_CONFIG.CORRECTION_CONFIDENCE,
+            }
+          : null,
+        quality: {
+          score: result.quality.qualityScore,
+          issues: [...result.quality.issues],
+          suggestions: [...result.quality.suggestions],
+        },
+        methodology: {
+          detected: hasMethodology ? result.expansions.methodologyTermsAdded[0] : null,
+          confidence: hasMethodology
+            ? QUERY_INTELLIGENCE_CONFIG.METHODOLOGY_DETECTED_CONFIDENCE
+            : QUERY_INTELLIGENCE_CONFIG.METHODOLOGY_NOT_DETECTED_CONFIDENCE,
+          relatedTerms: [...result.expansions.methodologyTermsAdded],
+        },
+        controversy: {
+          score: hasControversy
+            ? QUERY_INTELLIGENCE_CONFIG.CONTROVERSY_HAS_TERMS_SCORE
+            : QUERY_INTELLIGENCE_CONFIG.CONTROVERSY_NEUTRAL_SCORE,
+          terms: [...result.expansions.controversyTermsAdded],
+          explanation: hasControversy
+            ? 'Query contains terms that may indicate debated topics - good for Q-methodology'
+            : 'Query appears neutral - consider adding controversy terms for Q-methodology',
+        },
+        broadness: {
+          isTooBroad,
+          score: Math.min(1, QUERY_INTELLIGENCE_CONFIG.MIN_WORDS_FOR_FOCUSED / query.split(/\s+/).length),
+          suggestions: isTooBroad ? ['Consider adding more specific terms'] : [],
+        },
+        estimate: {
+          min: QUERY_INTELLIGENCE_CONFIG.ESTIMATE_MIN,
+          max: QUERY_INTELLIGENCE_CONFIG.ESTIMATE_MAX,
+          confidence: QUERY_INTELLIGENCE_CONFIG.ESTIMATE_CONFIDENCE,
+        },
+        suggestions: this.generateQuerySuggestions(query, {
+          methodologyTerms: [...result.expansions.methodologyTermsAdded],
+          controversyTerms: [...result.expansions.controversyTermsAdded],
+        }),
+        analysisTimeMs: Date.now() - startTime,
+      };
+
+      this.logger.log(
+        `📊 [Query Analyze] "${query}" → corrections=${response.corrections ? 'yes' : 'no'}, ` +
+        `methodology=${response.methodology.detected || 'none'}, ` +
+        `quality=${response.quality.score} (${response.analysisTimeMs}ms)`,
+      );
+
+      return response;
+
+    } catch (error) {
+      this.logger.error(`Failed to analyze query: ${(error as Error).message}`);
+      throw new InternalServerErrorException('Failed to analyze query');
+    }
+  }
+
+  // Helper methods for query analysis
+  private calculateQueryQuality(query: string): number {
+    let score = 100;
+    if (query.length < 10) score -= 20;
+    if (query.length < 5) score -= 30;
+    const words = query.split(/\s+/);
+    if (words.length === 1) score -= 15;
+    if (query.includes('"')) score += 10;
+    if (query.includes('AND') || query.includes('OR')) score += 5;
+    return Math.max(0, Math.min(100, score));
+  }
+
+  private identifyQueryIssues(query: string): string[] {
+    const issues: string[] = [];
+    if (query.length < 5) issues.push('Query is very short');
+    if (query.split(/\s+/).length === 1) issues.push('Single-word queries may return broad results');
+    return issues;
+  }
+
+  private generateQuerySuggestions(
+    query: string,
+    expansions: { methodologyTerms: string[]; controversyTerms: string[] },
+  ): Array<{ query: string; reason: string; expectedImprovement: string }> {
+    const suggestions: Array<{ query: string; reason: string; expectedImprovement: string }> = [];
+
+    if (expansions.methodologyTerms.length > 0) {
+      suggestions.push({
+        query: `"${expansions.methodologyTerms[0]}" ${query}`,
+        reason: 'Add explicit methodology focus',
+        expectedImprovement: 'More relevant results for your methodology',
+      });
+    }
+
+    if (query.toLowerCase().includes('q-method') || query.toLowerCase().includes('qmethod')) {
+      suggestions.push({
+        query: `${query} debate OR controversy`,
+        reason: 'Q-methodology benefits from controversial topics',
+        expectedImprovement: 'Better themes for Q-sort statements',
+      });
+    }
+
+    suggestions.push({
+      query: `${query} 2020..2025`,
+      reason: 'Focus on recent research',
+      expectedImprovement: 'More up-to-date findings',
+    });
+
+    return suggestions.slice(0, 3);
   }
 
   // Public save paper endpoint for development
@@ -214,8 +485,17 @@ export class LiteratureController {
   @ApiOperation({ summary: 'Public extract themes for testing (dev only)' })
   @ApiResponse({ status: 200, description: 'Themes extracted' })
   async extractThemesPublic(@Body() themesDto: ExtractThemesDto) {
-    // Use theme extraction service for real AI extraction
-    return await this.themeExtractionService.extractThemes(themesDto.paperIds);
+    // Phase 10.113: Pass tier options to service
+    return await this.themeExtractionService.extractThemes(
+      themesDto.paperIds,
+      undefined,  // No user ID for public endpoint
+      {
+        tier: themesDto.tier,
+        maxThemes: themesDto.numThemes,
+        includeControversies: themesDto.includeControversies,
+        generateStatements: themesDto.generateStatements,
+      },
+    );
   }
 
   /**
@@ -340,10 +620,19 @@ export class LiteratureController {
   @ApiResponse({ status: 200, description: 'Themes extracted' })
   async extractThemes(
     @Body() themesDto: ExtractThemesDto,
-    @CurrentUser() _user: AuthenticatedUser,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    // Use theme extraction service for real AI extraction
-    return await this.themeExtractionService.extractThemes(themesDto.paperIds);
+    // Phase 10.113: Pass tier options to service with user ID for rate limiting
+    return await this.themeExtractionService.extractThemes(
+      themesDto.paperIds,
+      user.userId,
+      {
+        tier: themesDto.tier,
+        maxThemes: themesDto.numThemes,
+        includeControversies: themesDto.includeControversies,
+        generateStatements: themesDto.generateStatements,
+      },
+    );
   }
 
   @Post('pipeline/themes-to-statements')
@@ -976,6 +1265,594 @@ export class LiteratureController {
     @CurrentUser() _user: AuthenticatedUser,
   ) {
     return await this.themeExtractionService.extractThemes(body.paperIds);
+  }
+
+  /**
+   * Phase 10.113 Week 3: Hierarchical Theme Extraction
+   *
+   * Netflix-grade hierarchical clustering that discovers:
+   * - Level 1: Meta-Themes (5-8 broad research areas)
+   * - Level 2: Sub-Themes (3-5 per meta-theme)
+   *
+   * Uses k-means++ clustering with cosine similarity for optimal theme discovery.
+   * Supports 10-300 papers per the THEMATIZATION_TIERS configuration.
+   */
+  @Post('themes/extract-hierarchical')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @CustomRateLimit(10, 60) // 10 requests per minute (expensive operation)
+  @ApiOperation({
+    summary: 'Extract hierarchical themes (Meta-Themes → Sub-Themes) using k-means++ clustering',
+    description: 'Phase 10.113 Week 3: Netflix-grade hierarchical theme extraction with MetaTheme/SubTheme structure. Requires 10-300 papers with embeddings.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Hierarchical themes extracted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            metaThemes: {
+              type: 'array',
+              description: 'Level 1: Broad research areas (5-8 themes)',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  label: { type: 'string' },
+                  description: { type: 'string' },
+                  paperIds: { type: 'array', items: { type: 'string' } },
+                  subThemes: { type: 'array', description: 'Level 2: Specific topics (3-5 per meta-theme)' },
+                  coherenceScore: { type: 'number' },
+                  weight: { type: 'number' },
+                },
+              },
+            },
+            qualityMetrics: {
+              type: 'object',
+              properties: {
+                overallCoherence: { type: 'number' },
+                diversity: { type: 'number' },
+                coverage: { type: 'number' },
+              },
+            },
+            orphanedPaperIds: { type: 'array', items: { type: 'string' } },
+          },
+        },
+        processingTimeMs: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input (missing papers, embeddings, or paper count out of range)',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error during theme extraction',
+  })
+  @ApiBody({ type: ExtractHierarchicalThemesDto })
+  async extractHierarchicalThemes(
+    @Body() dto: ExtractHierarchicalThemesDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @Req() req: RequestWithAbortSignal,
+  ): Promise<{
+    success: boolean;
+    data?: HierarchicalExtractionResult;
+    error?: string;
+    processingTimeMs: number;
+  }> {
+    const startTime = Date.now();
+    const abortSignal = req.abortSignal;
+
+    this.logger.log(
+      `[Phase 10.113] Hierarchical theme extraction started for ${dto.papers.length} papers (User: ${user.userId})`,
+    );
+
+    try {
+      // Validate paper count within HIERARCHICAL_PAPER_LIMITS range
+      const { MIN_PAPERS, MAX_PAPERS } = HIERARCHICAL_PAPER_LIMITS;
+      if (dto.papers.length < MIN_PAPERS) {
+        throw new BadRequestException(
+          `Minimum ${MIN_PAPERS} papers required for hierarchical extraction, got ${dto.papers.length}`,
+        );
+      }
+      if (dto.papers.length > MAX_PAPERS) {
+        throw new BadRequestException(
+          `Maximum ${MAX_PAPERS} papers allowed for hierarchical extraction, got ${dto.papers.length}`,
+        );
+      }
+
+      // Convert DTO papers to service format with embeddings
+      // Note: For production, papers should have pre-computed embeddings
+      // This endpoint expects papers with embeddings from the search pipeline
+      // OPTIMIZED: Single-pass filter+map (reduces O(2n) to O(n))
+      const papersWithEmbeddings: Array<{
+        id: string;
+        title: string;
+        abstract: string;
+        year?: number;
+        citationCount: number;
+        embedding: number[];
+        themeFitScore?: number;
+        keywords: string[];
+      }> = [];
+      for (const p of dto.papers) {
+        if (p.embedding && p.embedding.length > 0) {
+          papersWithEmbeddings.push({
+            id: p.id,
+            title: p.title,
+            abstract: p.abstract || '',
+            year: p.year,
+            citationCount: p.citationCount || 0,
+            embedding: p.embedding,
+            themeFitScore: p.themeFitScore,
+            keywords: p.keywords || [],
+          });
+        }
+      }
+
+      if (papersWithEmbeddings.length < MIN_PAPERS) {
+        throw new BadRequestException(
+          `At least ${MIN_PAPERS} papers with embeddings required, only ${papersWithEmbeddings.length} have embeddings`,
+        );
+      }
+
+      // Build extraction config from DTO, falling back to DEFAULT_HIERARCHICAL_CONFIG
+      const config = {
+        minMetaThemes: dto.config?.minMetaThemes ?? DEFAULT_HIERARCHICAL_CONFIG.minMetaThemes,
+        maxMetaThemes: dto.config?.maxMetaThemes ?? DEFAULT_HIERARCHICAL_CONFIG.maxMetaThemes,
+        minSubThemesPerMeta: dto.config?.minSubThemesPerMeta ?? DEFAULT_HIERARCHICAL_CONFIG.minSubThemesPerMeta,
+        maxSubThemesPerMeta: dto.config?.maxSubThemesPerMeta ?? DEFAULT_HIERARCHICAL_CONFIG.maxSubThemesPerMeta,
+        minPapersPerCluster: dto.config?.minPapersPerCluster ?? DEFAULT_HIERARCHICAL_CONFIG.minPapersPerCluster,
+        coherenceThreshold: dto.config?.coherenceThreshold ?? DEFAULT_HIERARCHICAL_CONFIG.coherenceThreshold,
+        useAILabeling: dto.config?.useAILabeling ?? DEFAULT_HIERARCHICAL_CONFIG.useAILabeling,
+        detectControversies: dto.config?.detectControversies ?? DEFAULT_HIERARCHICAL_CONFIG.detectControversies,
+      };
+
+      // Progress callback for logging (WebSocket integration can be added later)
+      const onProgress = (
+        stage: HierarchicalExtractionStage,
+        percent: number,
+        message: string,
+      ): void => {
+        this.logger.debug(
+          `[Phase 10.113] Progress: ${stage} - ${percent}% - ${message}`,
+        );
+      };
+
+      // Execute hierarchical extraction with cancellation support
+      const result = await this.metaThemeDiscoveryService.extractHierarchicalThemes(
+        papersWithEmbeddings,
+        config,
+        onProgress,
+        abortSignal,
+      );
+
+      const processingTimeMs = Date.now() - startTime;
+      const subThemeCount = result.metaThemes.reduce(
+        (sum: number, mt: { subThemes: readonly unknown[] }) => sum + mt.subThemes.length,
+        0,
+      );
+
+      this.logger.log(
+        `[Phase 10.113] Hierarchical extraction completed: ${result.metaThemes.length} meta-themes, ` +
+        `${subThemeCount} sub-themes, ${processingTimeMs}ms (User: ${user.userId})`,
+      );
+
+      return {
+        success: true,
+        data: result,
+        processingTimeMs,
+      };
+    } catch (error) {
+      const processingTimeMs = Date.now() - startTime;
+      const err = error as Error;
+
+      // Handle cancellation
+      if (err.name === 'AbortError' || abortSignal?.aborted) {
+        this.logger.warn(
+          `[Phase 10.113] Hierarchical extraction cancelled after ${processingTimeMs}ms (User: ${user.userId})`,
+        );
+        return {
+          success: false,
+          error: 'Request cancelled by client',
+          processingTimeMs,
+        };
+      }
+
+      // Re-throw known HTTP exceptions
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      this.logger.error(
+        `[Phase 10.113] Hierarchical extraction failed after ${processingTimeMs}ms: ${err.message}`,
+        err.stack,
+      );
+
+      throw new InternalServerErrorException({
+        success: false,
+        error: 'Hierarchical theme extraction failed',
+        message: err.message || 'Unknown error during hierarchical extraction',
+        details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+        processingTimeMs,
+      });
+    }
+  }
+
+  /**
+   * Phase 10.113 Week 4: Citation-Based Controversy Analysis
+   *
+   * Netflix-grade analysis of citation patterns to identify:
+   * - Citation camps (groups with similar citation behavior)
+   * - Debate papers (cited by multiple opposing camps)
+   * - Citation Controversy Index (CCI) for each paper
+   *
+   * Integrates with Theme-Fit scoring for enhanced thematization.
+   */
+  @Post('controversies/analyze-citations')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @CustomRateLimit(10, 60) // 10 requests per minute (expensive operation)
+  @ApiOperation({
+    summary: 'Analyze citation-based controversy patterns',
+    description: 'Phase 10.113 Week 4: Identifies citation camps, debate papers, and calculates Citation Controversy Index (CCI) for papers.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Citation controversy analysis completed',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            topic: { type: 'string' },
+            description: { type: 'string' },
+            camps: {
+              type: 'array',
+              description: 'Identified citation camps',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  label: { type: 'string' },
+                  paperIds: { type: 'array', items: { type: 'string' } },
+                  internalCohesion: { type: 'number' },
+                },
+              },
+            },
+            debatePapers: {
+              type: 'array',
+              description: 'Papers cited by multiple camps',
+              items: {
+                type: 'object',
+                properties: {
+                  paperId: { type: 'string' },
+                  title: { type: 'string' },
+                  debateScore: { type: 'number' },
+                  debateRole: { type: 'string' },
+                },
+              },
+            },
+            topicControversyScore: { type: 'number', description: '0-1 controversy score' },
+          },
+        },
+        processingTimeMs: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input (insufficient papers or missing required fields)',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error during analysis',
+  })
+  @ApiBody({ type: AnalyzeCitationControversyDto })
+  async analyzeCitationControversy(
+    @Body() dto: AnalyzeCitationControversyDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @Req() req: RequestWithAbortSignal,
+  ): Promise<{
+    success: boolean;
+    data?: CitationControversyAnalysis;
+    error?: string;
+    processingTimeMs: number;
+  }> {
+    const startTime = Date.now();
+    const abortSignal = req.abortSignal;
+
+    this.logger.log(
+      `[Phase 10.113 Week 4] Citation controversy analysis started for "${dto.topic}" with ${dto.papers.length} papers (User: ${user.userId})`,
+    );
+
+    try {
+      // Validate paper count
+      if (dto.papers.length < 5) {
+        throw new BadRequestException(
+          `Minimum 5 papers required for citation controversy analysis, got ${dto.papers.length}`,
+        );
+      }
+
+      // Convert DTO papers to service format
+      const papers = dto.papers.map((p) => ({
+        id: p.id,
+        title: p.title,
+        abstract: p.abstract,
+        year: p.year,
+        citationCount: p.citationCount,
+        references: p.references,
+        citedBy: p.citedBy,
+        keywords: p.keywords,
+        embedding: p.embedding,
+        themeFitScore: p.themeFitScore,
+      }));
+
+      // Progress callback for logging
+      const onProgress = (
+        stage: ControversyAnalysisStage,
+        percent: number,
+        message: string,
+      ): void => {
+        this.logger.debug(
+          `[Phase 10.113 Week 4] Progress: ${stage} - ${percent}% - ${message}`,
+        );
+      };
+
+      // Execute analysis with cancellation support
+      const result = await this.citationControversyService.analyzeCitationControversy(
+        papers,
+        dto.topic,
+        dto.config || {},
+        onProgress,
+        abortSignal,
+      );
+
+      const processingTimeMs = Date.now() - startTime;
+
+      this.logger.log(
+        `[Phase 10.113 Week 4] Citation controversy analysis completed:\n` +
+        `   Topic: ${dto.topic}\n` +
+        `   Camps: ${result.camps.length}\n` +
+        `   Debate papers: ${result.debatePapers.length}\n` +
+        `   Topic score: ${result.topicControversyScore.toFixed(3)}\n` +
+        `   Processing time: ${processingTimeMs}ms (User: ${user.userId})`,
+      );
+
+      return {
+        success: true,
+        data: result,
+        processingTimeMs,
+      };
+    } catch (error) {
+      const processingTimeMs = Date.now() - startTime;
+      const err = error as Error;
+
+      // Handle cancellation
+      if (err.name === 'AbortError' || abortSignal?.aborted) {
+        this.logger.warn(
+          `[Phase 10.113 Week 4] Citation analysis cancelled after ${processingTimeMs}ms (User: ${user.userId})`,
+        );
+        return {
+          success: false,
+          error: 'Request cancelled by client',
+          processingTimeMs,
+        };
+      }
+
+      // Re-throw known HTTP exceptions
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      this.logger.error(
+        `[Phase 10.113 Week 4] Citation analysis failed after ${processingTimeMs}ms: ${err.message}`,
+        err.stack,
+      );
+
+      throw new InternalServerErrorException({
+        success: false,
+        error: 'Citation controversy analysis failed',
+        message: err.message || 'Unknown error during citation analysis',
+        details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+        processingTimeMs,
+      });
+    }
+  }
+
+  // ============================================================================
+  // Phase 10.113 Week 5: Claim Extraction Endpoint
+  // ============================================================================
+
+  @Post('claims/extract')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @CustomRateLimit(60, 10) // 10 requests per minute (expensive AI operation)
+  @ApiOperation({
+    summary: 'Extract claims from papers for Q-methodology',
+    description: `Phase 10.113 Week 5: Extract key claims from paper abstracts
+    and score their potential as Q-sort statements. Features:
+    - AI-powered claim extraction from abstracts
+    - Statement potential scoring (sortability, clarity, neutrality)
+    - Perspective classification (supportive, critical, neutral)
+    - Semantic deduplication of similar claims
+    - Full provenance tracking
+    - Cancellation support via AbortSignal`,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Claims extracted successfully',
+    schema: {
+      properties: {
+        success: { type: 'boolean' },
+        data: {
+          properties: {
+            theme: { type: 'object', description: 'Theme context' },
+            claims: {
+              type: 'array',
+              items: {
+                properties: {
+                  id: { type: 'string' },
+                  originalText: { type: 'string' },
+                  normalizedClaim: { type: 'string' },
+                  perspective: { type: 'string', enum: ['supportive', 'critical', 'neutral'] },
+                  statementPotential: { type: 'number', description: '0-1 score' },
+                  confidence: { type: 'number' },
+                },
+              },
+            },
+            qualityMetrics: {
+              properties: {
+                papersProcessed: { type: 'number' },
+                claimsExtracted: { type: 'number' },
+                avgStatementPotential: { type: 'number' },
+                highQualityClaims: { type: 'number' },
+              },
+            },
+          },
+        },
+        processingTimeMs: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input (insufficient papers or missing required fields)',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error during extraction',
+  })
+  @ApiBody({ type: ExtractClaimsDto })
+  async extractClaims(
+    @Body() dto: ExtractClaimsDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @Req() req: RequestWithAbortSignal,
+  ): Promise<{
+    success: boolean;
+    data?: ClaimExtractionResult;
+    error?: string;
+    processingTimeMs: number;
+  }> {
+    const startTime = Date.now();
+    const abortSignal = req.abortSignal;
+
+    this.logger.log(
+      `[Phase 10.113 Week 5] Claim extraction started for theme "${dto.theme.label}" ` +
+      `with ${dto.papers.length} papers (User: ${user.userId})`,
+    );
+
+    try {
+      // Convert DTO to service format
+      const theme = {
+        id: dto.theme.id,
+        label: dto.theme.label,
+        description: dto.theme.description,
+        keywords: dto.theme.keywords,
+        subThemes: dto.theme.subThemes?.map(st => ({
+          id: st.id,
+          label: st.label,
+          description: st.description,
+          keywords: st.keywords,
+        })),
+        isControversial: dto.theme.isControversial,
+        embedding: dto.theme.embedding,
+      };
+
+      const papers = dto.papers.map(p => ({
+        id: p.id,
+        title: p.title,
+        abstract: p.abstract,
+        fullText: p.fullText,
+        year: p.year,
+        authors: p.authors,
+        keywords: p.keywords,
+        themeId: p.themeId,
+        subThemeId: p.subThemeId,
+        embedding: p.embedding,
+      }));
+
+      // Progress callback for logging
+      const onProgress = (
+        stage: ClaimExtractionStage,
+        percent: number,
+        message: string,
+      ): void => {
+        this.logger.debug(
+          `[Phase 10.113 Week 5] Progress: ${stage} - ${percent}% - ${message}`,
+        );
+      };
+
+      // Execute extraction with cancellation support
+      const result = await this.claimExtractionService.extractClaims(
+        papers,
+        theme,
+        dto.config || {},
+        onProgress,
+        abortSignal,
+      );
+
+      const processingTimeMs = Date.now() - startTime;
+
+      this.logger.log(
+        `[Phase 10.113 Week 5] Claim extraction completed:\n` +
+        `   Theme: ${dto.theme.label}\n` +
+        `   Claims extracted: ${result.qualityMetrics.claimsExtracted}\n` +
+        `   After dedup: ${result.qualityMetrics.claimsAfterDedup}\n` +
+        `   Avg potential: ${(result.qualityMetrics.avgStatementPotential * 100).toFixed(1)}%\n` +
+        `   High-quality: ${result.qualityMetrics.highQualityClaims}\n` +
+        `   Processing time: ${processingTimeMs}ms (User: ${user.userId})`,
+      );
+
+      return {
+        success: true,
+        data: result,
+        processingTimeMs,
+      };
+    } catch (error) {
+      const processingTimeMs = Date.now() - startTime;
+      const err = error as Error;
+
+      // Handle cancellation
+      if (err.name === 'AbortError' || abortSignal?.aborted) {
+        this.logger.warn(
+          `[Phase 10.113 Week 5] Claim extraction cancelled after ${processingTimeMs}ms (User: ${user.userId})`,
+        );
+        return {
+          success: false,
+          error: 'Request cancelled by client',
+          processingTimeMs,
+        };
+      }
+
+      // Re-throw known HTTP exceptions
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      this.logger.error(
+        `[Phase 10.113 Week 5] Claim extraction failed after ${processingTimeMs}ms: ${err.message}`,
+        err.stack,
+      );
+
+      throw new InternalServerErrorException({
+        success: false,
+        error: 'Claim extraction failed',
+        message: err.message || 'Unknown error during claim extraction',
+        details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+        processingTimeMs,
+      });
+    }
   }
 
   @Post('controversies/detect')
@@ -4746,5 +5623,207 @@ export class LiteratureController {
         message: err.message || 'Unknown error',
       });
     }
+  }
+
+  // ==========================================================================
+  // PHASE 10.113 WEEK 9: SCIENTIFIC QUERY OPTIMIZATION ENDPOINTS
+  // ==========================================================================
+
+  /**
+   * Validate search query quality
+   * Returns quality assessment with issues and suggestions
+   */
+  @Post('query/validate')
+  @Public() // Phase 10.113 Week 9: Public for real-time typing feedback
+  @CustomRateLimit(60, 300) // Allow 300 validations/min (fast, lightweight operation)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Validate search query quality',
+    description: 'Assess query quality before searching. Returns issues, suggestions, and quality score.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query to validate' },
+      },
+      required: ['query'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Query quality assessment',
+    schema: {
+      type: 'object',
+      properties: {
+        isValid: { type: 'boolean' },
+        qualityScore: { type: 'number' },
+        issues: { type: 'array', items: { type: 'string' } },
+        suggestions: { type: 'array', items: { type: 'string' } },
+        metrics: {
+          type: 'object',
+          properties: {
+            wordCount: { type: 'number' },
+            meaningfulWordCount: { type: 'number' },
+            characterCount: { type: 'number' },
+            academicTermCount: { type: 'number' },
+          },
+        },
+      },
+    },
+  })
+  async validateQuery(
+    @Body() body: { query: string },
+  ): Promise<{
+    isValid: boolean;
+    qualityScore: number;
+    issues: readonly string[];
+    suggestions: readonly string[];
+    metrics: {
+      wordCount: number;
+      meaningfulWordCount: number;
+      characterCount: number;
+      academicTermCount: number;
+    };
+  }> {
+    if (!body.query || body.query.trim().length === 0) {
+      throw new BadRequestException('Query is required');
+    }
+
+    const assessment = this.queryOptimizerService.validateQuery(body.query);
+
+    return {
+      isValid: assessment.isValid,
+      qualityScore: assessment.qualityScore,
+      issues: assessment.issues,
+      suggestions: assessment.suggestions,
+      metrics: {
+        wordCount: assessment.metrics.wordCount,
+        meaningfulWordCount: assessment.metrics.meaningfulWordCount,
+        characterCount: assessment.metrics.characterCount,
+        academicTermCount: assessment.metrics.academicTermCount,
+      },
+    };
+  }
+
+  /**
+   * Optimize search query with configurable mode
+   * Scientific A/B testable query optimization
+   */
+  @Post('query/optimize')
+  @Public() // Phase 10.113 Week 9: Public for query optimization panel
+  @CustomRateLimit(60, 100) // Allow 100 optimizations/min (more intensive operation)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Optimize search query',
+    description: 'Optimize query with configurable mode: none, local (spell-check), enhanced (methodology terms), ai (full AI expansion)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query to optimize' },
+        mode: {
+          type: 'string',
+          enum: ['none', 'local', 'enhanced', 'ai'],
+          description: 'Optimization mode',
+          default: 'local',
+        },
+      },
+      required: ['query'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Optimized query result',
+  })
+  async optimizeQuery(
+    @Body() body: { query: string; mode?: QueryExpansionMode },
+  ): Promise<{
+    originalQuery: string;
+    optimizedQuery: string;
+    mode: QueryExpansionMode;
+    quality: {
+      isValid: boolean;
+      qualityScore: number;
+      issues: readonly string[];
+      suggestions: readonly string[];
+    };
+    shouldProceed: boolean;
+    warningMessage?: string;
+    processingTimeMs: number;
+  }> {
+    if (!body.query || body.query.trim().length === 0) {
+      throw new BadRequestException('Query is required');
+    }
+
+    const mode: QueryExpansionMode = body.mode ?? 'local';
+    const result = await this.queryOptimizerService.optimizeQuery(body.query, mode);
+
+    return {
+      originalQuery: result.originalQuery,
+      optimizedQuery: result.optimizedQuery,
+      mode: result.expansionMode,
+      quality: {
+        isValid: result.quality.isValid,
+        qualityScore: result.quality.qualityScore,
+        issues: result.quality.issues,
+        suggestions: result.quality.suggestions,
+      },
+      shouldProceed: result.shouldProceed,
+      warningMessage: result.warningMessage,
+      processingTimeMs: result.processingTimeMs,
+    };
+  }
+
+  /**
+   * Get query optimization effectiveness comparison
+   * For A/B testing and mode selection
+   */
+  @Get('query/effectiveness')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get query optimization effectiveness comparison',
+    description: 'Compare effectiveness of different optimization modes for A/B testing',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Effectiveness comparison by mode',
+  })
+  async getQueryEffectiveness(): Promise<{
+    byMode: Record<QueryExpansionMode, {
+      count: number;
+      avgPapers: number;
+      avgSemanticScore: number;
+      avgQualityScore: number;
+      avgProcessingTimeMs: number;
+    }>;
+    modeUsage: Record<QueryExpansionMode, number>;
+    recommendation: QueryExpansionMode;
+    confidence: number;
+  }> {
+    return this.queryOptimizerService.getEffectivenessComparison();
+  }
+
+  /**
+   * Get query optimizer statistics
+   */
+  @Get('query/stats')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get query optimizer statistics',
+    description: 'Get current statistics for the scientific query optimizer',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Optimizer statistics',
+  })
+  async getQueryOptimizerStats(): Promise<{
+    effectivenessCacheSize: number;
+    modeUsage: Record<QueryExpansionMode, number>;
+  }> {
+    return this.queryOptimizerService.getStatistics();
   }
 }

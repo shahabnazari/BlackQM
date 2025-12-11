@@ -359,6 +359,29 @@ export class ExtractThemesDto {
   @IsBoolean()
   @IsOptional()
   includeKeywords?: boolean;
+
+  /**
+   * Phase 10.113: Thematization tier selection
+   * Controls how many papers to analyze (50-300)
+   * Higher tiers provide deeper analysis but cost more
+   */
+  @ApiPropertyOptional({
+    description: 'Thematization tier: 50 (Quick), 100 (Standard), 150 (Deep), 200 (Comprehensive), 250 (Expert), 300 (Full)',
+    enum: [50, 100, 150, 200, 250, 300],
+  })
+  @IsNumber()
+  @IsOptional()
+  tier?: 50 | 100 | 150 | 200 | 250 | 300;
+
+  @ApiPropertyOptional({ description: 'Include controversy detection' })
+  @IsBoolean()
+  @IsOptional()
+  includeControversies?: boolean;
+
+  @ApiPropertyOptional({ description: 'Generate Q-sort statements from themes' })
+  @IsBoolean()
+  @IsOptional()
+  generateStatements?: boolean;
 }
 
 export class AnalyzeGapsDto {
@@ -544,6 +567,25 @@ export class Paper {
   // Phase 10.107+10.108: Honest Scoring with Metadata Transparency
   // Shows users exactly what data we have and confidence level
   metadataCompleteness?: MetadataCompleteness;
+
+  // Phase 10.113 Week 2: Theme-Fit Relevance Scoring
+  // Optimized for Q-methodology thematization potential
+  themeFitScore?: {
+    /** 0-1: Does abstract contain opposing views? */
+    controversyPotential: number;
+    /** 0-1: Clear positions that can become statements */
+    statementClarity: number;
+    /** 0-1: Multiple viewpoints represented */
+    perspectiveDiversity: number;
+    /** 0-1: Polarized citation patterns */
+    citationControversy: number;
+    /** Weighted combination of all scores */
+    overallThemeFit: number;
+    /** Explanation of the score for debugging */
+    explanation: string;
+  };
+  /** Indicates if paper is suitable for thematization (score >= 0.5) */
+  isGoodForThematization?: boolean;
 }
 
 /**
@@ -1507,4 +1549,585 @@ export class GuidedBatchSelectionDto {
   @IsString()
   @IsOptional()
   researchContext?: string;
+}
+
+// ============================================================================
+// Phase 10.113 Week 3: Hierarchical Theme Extraction DTO
+// ============================================================================
+
+/**
+ * Paper input for hierarchical theme extraction
+ */
+export class HierarchicalPaperInputDto {
+  @ApiProperty({ description: 'Unique paper ID' })
+  @IsString()
+  id!: string;
+
+  @ApiProperty({ description: 'Paper title' })
+  @IsString()
+  title!: string;
+
+  @ApiPropertyOptional({ description: 'Paper abstract' })
+  @IsString()
+  @IsOptional()
+  abstract?: string;
+
+  @ApiPropertyOptional({ description: 'Publication year' })
+  @IsNumber()
+  @IsOptional()
+  year?: number;
+
+  @ApiPropertyOptional({ description: 'Citation count' })
+  @IsNumber()
+  @IsOptional()
+  citationCount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Pre-computed embedding vector (required for clustering)',
+    type: [Number],
+    example: [0.1, 0.2, 0.3],
+  })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @IsOptional()
+  embedding?: number[];
+
+  @ApiPropertyOptional({ description: 'Theme-Fit score (0-1)' })
+  @IsNumber()
+  @IsOptional()
+  themeFitScore?: number;
+
+  @ApiPropertyOptional({ description: 'Paper keywords', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  keywords?: string[];
+}
+
+/**
+ * Configuration options for hierarchical extraction
+ */
+export class HierarchicalExtractionConfigDto {
+  @ApiPropertyOptional({
+    description: 'Minimum number of meta-themes to extract',
+    default: 5,
+    minimum: 2,
+    maximum: 10,
+  })
+  @IsNumber()
+  @IsOptional()
+  minMetaThemes?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum number of meta-themes to extract',
+    default: 8,
+    minimum: 3,
+    maximum: 15,
+  })
+  @IsNumber()
+  @IsOptional()
+  maxMetaThemes?: number;
+
+  @ApiPropertyOptional({
+    description: 'Minimum sub-themes per meta-theme',
+    default: 3,
+    minimum: 1,
+    maximum: 10,
+  })
+  @IsNumber()
+  @IsOptional()
+  minSubThemesPerMeta?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum sub-themes per meta-theme',
+    default: 5,
+    minimum: 2,
+    maximum: 15,
+  })
+  @IsNumber()
+  @IsOptional()
+  maxSubThemesPerMeta?: number;
+
+  @ApiPropertyOptional({
+    description: 'Minimum papers required per cluster',
+    default: 2,
+    minimum: 1,
+  })
+  @IsNumber()
+  @IsOptional()
+  minPapersPerCluster?: number;
+
+  @ApiPropertyOptional({
+    description: 'Coherence threshold for accepting clusters (0-1)',
+    default: 0.3,
+    minimum: 0,
+    maximum: 1,
+  })
+  @IsNumber()
+  @IsOptional()
+  coherenceThreshold?: number;
+
+  @ApiPropertyOptional({
+    description: 'Use AI for label generation',
+    default: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  useAILabeling?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Include controversy detection',
+    default: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  detectControversies?: boolean;
+}
+
+/**
+ * Phase 10.113 Week 3: Hierarchical Theme Extraction Request DTO
+ * Extracts multi-level themes (meta-themes → sub-themes) from papers
+ *
+ * NOTE: Paper count limits (10-300) must match HIERARCHICAL_PAPER_LIMITS
+ * from hierarchical-theme.types.ts. Decorator values are compile-time constants.
+ */
+export class ExtractHierarchicalThemesDto {
+  @ApiProperty({
+    description: 'Papers to analyze for hierarchical theme extraction',
+    type: [HierarchicalPaperInputDto],
+    minItems: 10,  // Must match HIERARCHICAL_PAPER_LIMITS.MIN_PAPERS
+    maxItems: 300, // Must match HIERARCHICAL_PAPER_LIMITS.MAX_PAPERS
+  })
+  @IsArray()
+  @ArrayMinSize(10, { message: 'Minimum 10 papers required for hierarchical extraction' }) // HIERARCHICAL_PAPER_LIMITS.MIN_PAPERS
+  @ArrayMaxSize(300, { message: 'Maximum 300 papers allowed' }) // HIERARCHICAL_PAPER_LIMITS.MAX_PAPERS
+  @ValidateNested({ each: true })
+  @Type(() => HierarchicalPaperInputDto)
+  papers!: HierarchicalPaperInputDto[];
+
+  @ApiPropertyOptional({
+    description: 'Extraction configuration options',
+    type: HierarchicalExtractionConfigDto,
+  })
+  @ValidateNested()
+  @Type(() => HierarchicalExtractionConfigDto)
+  @IsOptional()
+  config?: HierarchicalExtractionConfigDto;
+}
+
+// ============================================================================
+// Phase 10.113 Week 4: Citation-Based Controversy Analysis DTOs
+// ============================================================================
+
+/**
+ * Paper input for citation controversy analysis
+ */
+export class CitationAnalysisPaperInputDto {
+  @ApiProperty({ description: 'Unique paper ID' })
+  @IsString()
+  id!: string;
+
+  @ApiProperty({ description: 'Paper title' })
+  @IsString()
+  title!: string;
+
+  @ApiPropertyOptional({ description: 'Paper abstract' })
+  @IsString()
+  @IsOptional()
+  abstract?: string;
+
+  @ApiProperty({ description: 'Publication year' })
+  @IsNumber()
+  year!: number;
+
+  @ApiProperty({ description: 'Total citation count' })
+  @IsNumber()
+  citationCount!: number;
+
+  @ApiPropertyOptional({
+    description: 'IDs of papers this paper cites',
+    type: [String],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  references?: string[];
+
+  @ApiPropertyOptional({
+    description: 'IDs of papers that cite this paper',
+    type: [String],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  citedBy?: string[];
+
+  @ApiPropertyOptional({ description: 'Paper keywords', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  keywords?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Pre-computed embedding vector',
+    type: [Number],
+  })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @IsOptional()
+  embedding?: number[];
+
+  @ApiPropertyOptional({ description: 'Theme-Fit score from Week 2' })
+  @IsNumber()
+  @IsOptional()
+  themeFitScore?: number;
+}
+
+/**
+ * Configuration for citation controversy analysis
+ */
+export class CitationControversyConfigDto {
+  @ApiPropertyOptional({
+    description: 'Minimum citations to consider for analysis',
+    default: 5,
+  })
+  @IsNumber()
+  @IsOptional()
+  minCitationsForAnalysis?: number;
+
+  @ApiPropertyOptional({
+    description: 'High velocity threshold (citations per year)',
+    default: 10,
+  })
+  @IsNumber()
+  @IsOptional()
+  highVelocityThreshold?: number;
+
+  @ApiPropertyOptional({
+    description: 'Minimum papers per camp',
+    default: 3,
+  })
+  @IsNumber()
+  @IsOptional()
+  minPapersPerCamp?: number;
+
+  @ApiPropertyOptional({
+    description: 'Controversy threshold (0-1)',
+    default: 0.6,
+  })
+  @IsNumber()
+  @IsOptional()
+  controversyThreshold?: number;
+
+  @ApiPropertyOptional({
+    description: 'Weight for cross-camp citations',
+    default: 0.6,
+  })
+  @IsNumber()
+  @IsOptional()
+  crossCampWeight?: number;
+
+  @ApiPropertyOptional({
+    description: 'Weight for citation velocity',
+    default: 0.4,
+  })
+  @IsNumber()
+  @IsOptional()
+  velocityWeight?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum paper age to include (years)',
+    default: 20,
+  })
+  @IsNumber()
+  @IsOptional()
+  maxPaperAge?: number;
+}
+
+/**
+ * Phase 10.113 Week 4: Citation Controversy Analysis Request DTO
+ *
+ * NOTE: Minimum 5 papers required for meaningful analysis.
+ */
+export class AnalyzeCitationControversyDto {
+  @ApiProperty({ description: 'Topic or theme being analyzed' })
+  @IsString()
+  topic!: string;
+
+  @ApiProperty({
+    description: 'Papers to analyze for citation controversy',
+    type: [CitationAnalysisPaperInputDto],
+    minItems: 5,
+  })
+  @IsArray()
+  @ArrayMinSize(5, { message: 'Minimum 5 papers required for citation controversy analysis' })
+  @ValidateNested({ each: true })
+  @Type(() => CitationAnalysisPaperInputDto)
+  papers!: CitationAnalysisPaperInputDto[];
+
+  @ApiPropertyOptional({
+    description: 'Analysis configuration options',
+    type: CitationControversyConfigDto,
+  })
+  @ValidateNested()
+  @Type(() => CitationControversyConfigDto)
+  @IsOptional()
+  config?: CitationControversyConfigDto;
+}
+
+// ============================================================================
+// Phase 10.113 Week 5: Claim Extraction DTOs
+// ============================================================================
+
+/**
+ * Sub-theme context for claim extraction
+ */
+export class ClaimExtractionSubThemeDto {
+  @ApiProperty({ description: 'Sub-theme unique identifier' })
+  @IsString()
+  id!: string;
+
+  @ApiProperty({ description: 'Sub-theme label/name' })
+  @IsString()
+  label!: string;
+
+  @ApiPropertyOptional({ description: 'Sub-theme description' })
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @ApiProperty({ description: 'Sub-theme keywords', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  keywords!: string[];
+}
+
+/**
+ * Theme context for claim extraction
+ */
+export class ClaimExtractionThemeContextDto {
+  @ApiProperty({ description: 'Theme unique identifier' })
+  @IsString()
+  id!: string;
+
+  @ApiProperty({ description: 'Theme label/name' })
+  @IsString()
+  label!: string;
+
+  @ApiPropertyOptional({ description: 'Theme description' })
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @ApiProperty({ description: 'Theme keywords for relevance scoring', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  keywords!: string[];
+
+  @ApiPropertyOptional({
+    description: 'Sub-themes within this theme',
+    type: [ClaimExtractionSubThemeDto],
+  })
+  @ValidateNested({ each: true })
+  @Type(() => ClaimExtractionSubThemeDto)
+  @IsOptional()
+  subThemes?: ClaimExtractionSubThemeDto[];
+
+  @ApiPropertyOptional({ description: 'Whether this theme is controversial' })
+  @IsBoolean()
+  @IsOptional()
+  isControversial?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Pre-computed embedding for similarity calculations',
+    type: [Number],
+  })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @IsOptional()
+  embedding?: number[];
+}
+
+/**
+ * Paper input for claim extraction
+ */
+export class ClaimExtractionPaperInputDto {
+  @ApiProperty({ description: 'Unique paper identifier' })
+  @IsString()
+  id!: string;
+
+  @ApiProperty({ description: 'Paper title' })
+  @IsString()
+  title!: string;
+
+  @ApiProperty({ description: 'Paper abstract (primary source for claims)', minLength: 100 })
+  @IsString()
+  @MinLength(100, { message: 'Abstract must be at least 100 characters for meaningful extraction' })
+  abstract!: string;
+
+  @ApiPropertyOptional({ description: 'Full text if available' })
+  @IsString()
+  @IsOptional()
+  fullText?: string;
+
+  @ApiPropertyOptional({ description: 'Publication year' })
+  @IsNumber()
+  @IsOptional()
+  year?: number;
+
+  @ApiPropertyOptional({ description: 'Author names', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  authors?: string[];
+
+  @ApiPropertyOptional({ description: 'Paper keywords', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  keywords?: string[];
+
+  @ApiPropertyOptional({ description: 'Theme ID this paper belongs to' })
+  @IsString()
+  @IsOptional()
+  themeId?: string;
+
+  @ApiPropertyOptional({ description: 'Sub-theme ID this paper belongs to' })
+  @IsString()
+  @IsOptional()
+  subThemeId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Pre-computed embedding for similarity calculations',
+    type: [Number],
+  })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @IsOptional()
+  embedding?: number[];
+}
+
+/**
+ * Configuration for claim extraction process
+ */
+export class ClaimExtractionConfigDto {
+  @ApiPropertyOptional({
+    description: 'Minimum confidence score to accept a claim (0-1)',
+    minimum: 0,
+    maximum: 1,
+    default: 0.5,
+  })
+  @IsNumber()
+  @IsOptional()
+  minConfidence?: number;
+
+  @ApiPropertyOptional({
+    description: 'Minimum statement potential to include in output (0-1)',
+    minimum: 0,
+    maximum: 1,
+    default: 0.4,
+  })
+  @IsNumber()
+  @IsOptional()
+  minStatementPotential?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum claims to extract per paper',
+    minimum: 1,
+    maximum: 20,
+    default: 5,
+  })
+  @IsNumber()
+  @IsOptional()
+  maxClaimsPerPaper?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum total claims across all papers',
+    minimum: 1,
+    maximum: 500,
+    default: 200,
+  })
+  @IsNumber()
+  @IsOptional()
+  maxTotalClaims?: number;
+
+  @ApiPropertyOptional({
+    description: 'Minimum word count for a claim to be valid',
+    minimum: 1,
+    default: 5,
+  })
+  @IsNumber()
+  @IsOptional()
+  minClaimWords?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum word count for a claim (sortability constraint)',
+    minimum: 5,
+    default: 30,
+  })
+  @IsNumber()
+  @IsOptional()
+  maxClaimWords?: number;
+
+  @ApiPropertyOptional({
+    description: 'Whether to normalize claims (clean up language)',
+    default: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  normalizeClaimText?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Whether to deduplicate similar claims',
+    default: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  deduplicateClaims?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Similarity threshold for deduplication (0-1, higher = more strict)',
+    minimum: 0,
+    maximum: 1,
+    default: 0.85,
+  })
+  @IsNumber()
+  @IsOptional()
+  deduplicationThreshold?: number;
+}
+
+/**
+ * Main DTO for claim extraction endpoint
+ * Phase 10.113 Week 5: Extract claims from paper abstracts for Q-methodology
+ *
+ * NOTE: Minimum 1 paper required, abstract must be at least 100 characters.
+ */
+export class ExtractClaimsDto {
+  @ApiProperty({
+    description: 'Theme context for claim extraction',
+    type: ClaimExtractionThemeContextDto,
+  })
+  @ValidateNested()
+  @Type(() => ClaimExtractionThemeContextDto)
+  theme!: ClaimExtractionThemeContextDto;
+
+  @ApiProperty({
+    description: 'Papers to extract claims from',
+    type: [ClaimExtractionPaperInputDto],
+    minItems: 1,
+  })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'At least 1 paper required for claim extraction' })
+  @ValidateNested({ each: true })
+  @Type(() => ClaimExtractionPaperInputDto)
+  papers!: ClaimExtractionPaperInputDto[];
+
+  @ApiPropertyOptional({
+    description: 'Extraction configuration options',
+    type: ClaimExtractionConfigDto,
+  })
+  @ValidateNested()
+  @Type(() => ClaimExtractionConfigDto)
+  @IsOptional()
+  config?: ClaimExtractionConfigDto;
 }

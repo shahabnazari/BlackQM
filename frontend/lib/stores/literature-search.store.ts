@@ -46,16 +46,33 @@ const defaultFilters: SearchFilters = {
   includeAIMode: true,
 };
 
+/**
+ * Phase 10.115: Netflix-Grade Default Sources
+ *
+ * Ordered by tier (premium first) for optimal search coverage:
+ * - Tier 1 (Premium): OpenAlex (250M+ papers), Semantic Scholar (220M+ papers)
+ * - Tier 2 (Good): PubMed, CrossRef, Springer
+ * - Tier 3 (Preprint): arXiv, SSRN, PMC
+ * - Tier 4 (Supplementary): ERIC, CORE
+ *
+ * Sources requiring ORCID auth (Scopus, Web of Science, IEEE, Wiley, SAGE, T&F)
+ * are NOT included by default - they're added when user authenticates.
+ */
 const DEFAULT_ACADEMIC_DATABASES = [
-  'pubmed',
-  'pmc',
-  'arxiv',
-  'semantic_scholar',
-  'ssrn',
-  'crossref',
-  'eric',
-  'core',
-  'springer',
+  // Tier 1: Premium free sources (500 paper allocation)
+  'openalex',         // 250M+ works, comprehensive metadata, 100% free
+  'semantic_scholar', // 220M+ papers, citation context, AI-powered
+  // Tier 2: High-quality databases (400 paper allocation)
+  'pubmed',           // 36M+ biomedical papers
+  'crossref',         // 150M+ DOIs, comprehensive metadata
+  'springer',         // 13M+ STM articles
+  // Tier 3: Preprint/specialized (300 paper allocation)
+  'arxiv',            // 2.4M+ preprints (physics, CS, math)
+  'ssrn',             // 1M+ social science preprints
+  'pmc',              // 8M+ full-text biomedical
+  // Tier 4: Supplementary (300 paper allocation)
+  'eric',             // 1.8M+ education research
+  'core',             // 250M+ open access aggregator
 ];
 
 const INITIAL_PROGRESSIVE_STATE: ProgressiveLoadingState = {
@@ -160,7 +177,15 @@ export const useLiteratureSearchStore = create<SearchState>()(
             persistedState.academicDatabases = DEFAULT_ACADEMIC_DATABASES;
           } else {
             // Whitelist validation: only allow known database names
-            const ALLOWED_DATABASES = new Set(DEFAULT_ACADEMIC_DATABASES);
+            // Phase 10.115: Include ALL possible sources (including ORCID-gated ones)
+            // so users who authenticated previously keep their selections
+            const ALLOWED_DATABASES = new Set([
+              ...DEFAULT_ACADEMIC_DATABASES,
+              // ORCID-gated sources (user may have authenticated)
+              'scopus', 'web_of_science', 'ieee_xplore', 'wiley', 'sage', 'taylor_francis',
+              // Other valid sources
+              'nature', 'google_scholar',
+            ]);
             const validDatabases = persistedState.academicDatabases.filter(
               (db: string) => ALLOWED_DATABASES.has(db)
             );

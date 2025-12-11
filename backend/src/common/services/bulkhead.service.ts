@@ -83,11 +83,11 @@ export class BulkheadService {
   private readonly CIRCUIT_FAILURE_THRESHOLD = 5;
   private readonly CIRCUIT_RESET_TIMEOUT = 30000; // 30 seconds
 
-  // Configuration - Phase 10.106 Netflix-Grade: Timeout adjusted for enrichment pipeline
+  // Configuration - Phase 10.115 Netflix-Grade: Timeout adjusted for Quality-First Search
   private readonly searchConfig: BulkheadConfig = {
     perUserConcurrency: 30,     // ✅ 30 concurrent per user for progressive loading
     globalConcurrency: 100,     // ✅ 100 global for multiple users
-    timeout: 180000,            // ✅ Phase 10.106: Increased to 180s for full pipeline (search + enrichment)
+    timeout: 720000,            // ✅ Phase 10.115: Increased to 720s (12 min) for Quality-First comprehensive enrichment + STEP 3.5
     retryLimit: 2,
   };
 
@@ -233,12 +233,26 @@ export class BulkheadService {
 
       return result;
     } catch (error) {
-      // Record failure for circuit breaker
-      this.recordFailure(circuitKey);
+      // Phase 10.112 Week 4 Fix: Don't count user cancellations as failures
+      // These are not service failures - they're user-initiated or hedging-initiated aborts
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isUserCancellation =
+        errorMessage.includes('Request cancelled') ||
+        errorMessage.includes('aborted') ||
+        (error instanceof Error && error.name === 'AbortError');
 
-      this.logger.error(
-        `[Bulkhead] User ${userId} ${operationType} failed: ${error instanceof Error ? error.message : String(error)}`
-      );
+      if (!isUserCancellation) {
+        // Only record actual service failures for circuit breaker
+        this.recordFailure(circuitKey);
+        this.logger.error(
+          `[Bulkhead] User ${userId} ${operationType} failed: ${errorMessage}`
+        );
+      } else {
+        // Log but don't count as failure
+        this.logger.debug(
+          `[Bulkhead] User ${userId} ${operationType} cancelled (not counted as failure)`
+        );
+      }
 
       throw error;
     }

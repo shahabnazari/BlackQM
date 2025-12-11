@@ -5,6 +5,35 @@ import {
   ExtractedTheme,
 } from './theme-extraction.service';
 import { StatementGeneratorService } from '../../ai/services/statement-generator.service';
+// Phase 10.113 Week 5: Claim-based statement generation
+import { ClaimExtractionService } from './claim-extraction.service';
+import type {
+  ExtractedClaim,
+  ClaimExtractionPaperInput,
+  ClaimExtractionThemeContext,
+} from '../types/claim-extraction.types';
+
+// ============================================================================
+// Phase 10.113 Week 5: Configuration Constants (No Magic Numbers)
+// ============================================================================
+
+/** Maximum claims to use for statement generation per theme */
+const MAX_CLAIMS_FOR_STATEMENTS = 20;
+
+/** Minimum statement potential to convert claim to statement */
+const MIN_CLAIM_POTENTIAL_FOR_STATEMENT = 0.5;
+
+/** Weight for claim-based statements vs theme-based */
+const CLAIM_STATEMENT_CONFIDENCE_BOOST = 0.15;
+
+/** Default target statements if not specified */
+const DEFAULT_TARGET_STATEMENTS = 40;
+
+/** Minimum statements per theme */
+const MIN_STATEMENTS_PER_THEME = 3;
+
+/** Maximum statements per theme */
+const MAX_STATEMENTS_PER_THEME = 10;
 
 export interface ThemeStatementMapping {
   themeId: string;
@@ -22,6 +51,7 @@ export interface StatementWithProvenance {
     | 'theme-based'
     | 'ai-augmented'
     | 'controversy-pair'
+    | 'claim-based'  // Phase 10.113 Week 5: Claim-to-statement conversion
     | 'manual';
   confidence: number;
   provenance: {
@@ -56,6 +86,8 @@ export class ThemeToStatementService {
     private prisma: PrismaService,
     _themeExtractionService: ThemeExtractionService,
     private statementGeneratorService: StatementGeneratorService,
+    // Phase 10.113 Week 5: Claim-based statement generation
+    private claimExtractionService: ClaimExtractionService,
   ) {}
 
   /**
@@ -494,5 +526,268 @@ export class ThemeToStatementService {
         tokensUsed: 0, // Would be calculated in real implementation
       },
     };
+  }
+
+  // ============================================================================
+  // Phase 10.113 Week 5: Claim-Based Statement Generation
+  // ============================================================================
+
+  /**
+   * Generate statements from extracted claims (Week 5)
+   * Uses ClaimExtractionService to extract claims, then converts to statements
+   * with full provenance chain: Paper → Claim → Theme → Statement
+   *
+   * @param themes - Extracted themes
+   * @param papers - Source papers (need abstracts for claim extraction)
+   * @param studyContext - Study configuration
+   * @returns Theme-statement mappings with claim-based provenance
+   */
+  async mapThemesToStatementsWithClaims(
+    themes: ExtractedTheme[],
+    papers: Array<{
+      id: string;
+      title: string;
+      abstract?: string;
+      year?: number;
+      authors?: string[];
+      keywords?: string[];
+    }>,
+    studyContext?: {
+      targetStatements?: number;
+      academicLevel?: 'basic' | 'intermediate' | 'advanced';
+      includeControversyPairs?: boolean;
+    },
+  ): Promise<ThemeStatementMapping[]> {
+    this.logger.log(
+      `[Phase 10.113 Week 5] Mapping ${themes.length} themes to statements using claim extraction`,
+    );
+
+    const mappings: ThemeStatementMapping[] = [];
+    const targetPerTheme = Math.ceil(
+      (studyContext?.targetStatements || DEFAULT_TARGET_STATEMENTS) / themes.length,
+    );
+    let statementOrder = 0;
+
+    for (const theme of themes) {
+      // Find papers belonging to this theme
+      const themePapers = papers.filter(p => theme.papers.includes(p.id));
+
+      // Convert to ClaimExtractionPaperInput format
+      const claimPapers: ClaimExtractionPaperInput[] = themePapers
+        .filter(p => p.abstract && p.abstract.length >= 100)
+        .map(p => ({
+          id: p.id,
+          title: p.title,
+          abstract: p.abstract!,
+          year: p.year,
+          authors: p.authors,
+          keywords: p.keywords,
+          themeId: theme.id,
+        }));
+
+      const statements: StatementWithProvenance[] = [];
+
+      // Phase 10.113 Week 5: Extract claims and convert to statements
+      if (claimPapers.length > 0) {
+        try {
+          const claimStatements = await this.generateStatementsFromClaims(
+            claimPapers,
+            theme,
+            targetPerTheme,
+            studyContext?.academicLevel || 'intermediate',
+          );
+
+          for (const stmt of claimStatements) {
+            statements.push({
+              ...stmt,
+              order: ++statementOrder,
+            });
+          }
+        } catch (error: unknown) {
+          const err = error as { message?: string };
+          this.logger.warn(
+            `[Phase 10.113 Week 5] Claim extraction failed for theme "${theme.label}": ` +
+            `${err.message || 'Unknown error'}. Falling back to theme-based generation.`,
+          );
+        }
+      }
+
+      // Fallback: Generate theme-based statements if not enough claims
+      const remaining = Math.max(
+        MIN_STATEMENTS_PER_THEME - statements.length,
+        0,
+      );
+
+      if (remaining > 0) {
+        const fallbackStatements = await this.generateFallbackStatements(
+          theme,
+          remaining,
+          studyContext?.academicLevel || 'intermediate',
+        );
+
+        for (const stmt of fallbackStatements) {
+          statements.push({
+            ...stmt,
+            order: ++statementOrder,
+          });
+        }
+      }
+
+      // Generate controversy pairs if theme is controversial
+      if (
+        theme.controversial &&
+        theme.opposingViews &&
+        studyContext?.includeControversyPairs !== false
+      ) {
+        const controversyPairs = await this.generateControversyPairs(theme);
+        for (const pair of controversyPairs) {
+          statements.push({
+            ...pair,
+            order: ++statementOrder,
+          });
+        }
+      }
+
+      mappings.push({
+        themeId: theme.id,
+        themeLabel: theme.label,
+        statements: statements.slice(0, MAX_STATEMENTS_PER_THEME),
+      });
+    }
+
+    this.logger.log(
+      `[Phase 10.113 Week 5] Generated ${mappings.reduce((sum, m) => sum + m.statements.length, 0)} ` +
+      `statements from ${themes.length} themes`,
+    );
+
+    return mappings;
+  }
+
+  /**
+   * Generate statements from extracted claims
+   * Phase 10.113 Week 5: Core claim-to-statement conversion
+   */
+  private async generateStatementsFromClaims(
+    papers: ClaimExtractionPaperInput[],
+    theme: ExtractedTheme,
+    targetCount: number,
+    academicLevel: 'basic' | 'intermediate' | 'advanced',
+  ): Promise<StatementWithProvenance[]> {
+    // Build theme context for claim extraction
+    const themeContext: ClaimExtractionThemeContext = {
+      id: theme.id,
+      label: theme.label,
+      description: theme.description || '',
+      keywords: theme.keywords,
+      isControversial: theme.controversial,
+    };
+
+    // Extract claims
+    const extractionResult = await this.claimExtractionService.extractClaims(
+      papers,
+      themeContext,
+      {
+        maxTotalClaims: MAX_CLAIMS_FOR_STATEMENTS,
+        minStatementPotential: MIN_CLAIM_POTENTIAL_FOR_STATEMENT,
+      },
+    );
+
+    // Sort by statement potential (highest first)
+    const sortedClaims = [...extractionResult.claims].sort(
+      (a, b) => b.statementPotential - a.statementPotential,
+    );
+
+    // Convert top claims to statements
+    const statements: StatementWithProvenance[] = [];
+    const timestamp = new Date();
+
+    for (const claim of sortedClaims.slice(0, targetCount)) {
+      const statement = this.convertClaimToStatement(
+        claim,
+        theme,
+        timestamp,
+        academicLevel,
+      );
+      statements.push(statement);
+    }
+
+    return statements;
+  }
+
+  /**
+   * Convert a single claim to a statement with full provenance
+   */
+  private convertClaimToStatement(
+    claim: ExtractedClaim,
+    theme: ExtractedTheme,
+    timestamp: Date,
+    _academicLevel: 'basic' | 'intermediate' | 'advanced',
+  ): StatementWithProvenance {
+    // Map claim perspective to statement perspective
+    const perspective = claim.perspective === 'neutral' ? 'neutral'
+      : claim.perspective === 'supportive' ? 'supportive'
+      : claim.perspective === 'critical' ? 'critical'
+      : 'balanced';
+
+    // Boost confidence for claim-based statements (higher provenance)
+    const confidence = Math.min(
+      1,
+      claim.confidence * claim.statementPotential + CLAIM_STATEMENT_CONFIDENCE_BOOST,
+    );
+
+    return {
+      text: claim.normalizedClaim,
+      order: 0, // Will be set by caller
+      sourcePaperId: claim.sourcePapers[0],
+      sourceThemeId: theme.id,
+      perspective,
+      generationMethod: 'claim-based' as const, // Week 5: new method type
+      confidence,
+      provenance: {
+        sourceDocuments: [...claim.sourcePapers],
+        extractedThemes: [theme.id],
+        citationChain: [],
+        generationTimestamp: timestamp,
+        aiModel: 'claim-extraction',
+        // Phase 10.113 Week 5: Extended provenance
+        claimId: claim.id,
+        originalClaimText: claim.originalText,
+        claimPerspective: claim.perspective,
+        statementPotential: claim.statementPotential,
+      } as StatementWithProvenance['provenance'] & {
+        claimId: string;
+        originalClaimText: string;
+        claimPerspective: string;
+        statementPotential: number;
+      },
+    };
+  }
+
+  /**
+   * Generate fallback statements using traditional theme-based approach
+   */
+  private async generateFallbackStatements(
+    theme: ExtractedTheme,
+    count: number,
+    academicLevel: 'basic' | 'intermediate' | 'advanced',
+  ): Promise<StatementWithProvenance[]> {
+    const statements: StatementWithProvenance[] = [];
+    const perspectives: Array<'supportive' | 'critical' | 'neutral' | 'balanced'> = [
+      'neutral',
+      'supportive',
+      'critical',
+    ];
+
+    for (let i = 0; i < count; i++) {
+      const perspective = perspectives[i % perspectives.length]!;
+      const statement = await this.generatePerspectiveStatement(
+        theme,
+        perspective,
+        academicLevel,
+      );
+      statements.push(statement);
+    }
+
+    return statements;
   }
 }

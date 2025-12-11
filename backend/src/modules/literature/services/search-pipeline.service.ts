@@ -41,6 +41,19 @@ import {
 } from './neural-relevance.service';
 import { PerformanceMonitorService } from './performance-monitor.service';
 import { LocalEmbeddingService } from './local-embedding.service';
+// Phase 10.112 Week 3: Netflix-Grade Neural Budget
+import { NeuralBudgetService, BudgetAllocation, RequestPriority } from './neural-budget.service';
+// Phase 10.112 Week 4: Netflix-Grade Advanced Patterns
+import { AdaptiveTimeoutService } from './adaptive-timeout.service';
+import { GracefulDegradationService } from './graceful-degradation.service';
+// Phase 10.113 Week 2: Theme-Fit Relevance Scoring
+import { ThemeFitScoringService } from './theme-fit-scoring.service';
+// Phase 10.113 Week 11: Progressive Semantic Scoring
+import {
+  ProgressiveSemanticService,
+  SemanticTierResult,
+  PaperWithSemanticScore,
+} from './progressive-semantic.service';
 import type { MutablePaper } from '../types/performance.types';
 import {
   calculateBM25RelevanceScore,
@@ -53,6 +66,12 @@ import {
 } from '../constants/source-allocation.constants';
 
 /**
+ * Query domain for domain-aware processing
+ * Phase 10.114: Fixes STEM bias for humanities queries
+ */
+type QueryDomainType = 'humanities' | 'stem' | 'methodology' | 'general';
+
+/**
  * Pipeline configuration interface (strict typing)
  */
 interface PipelineConfig {
@@ -61,6 +80,8 @@ interface PipelineConfig {
   targetPaperCount: number;
   sortOption?: string;
   emitProgress: (message: string, progress: number) => void;
+  signal?: AbortSignal; // Phase 10.112: Request cancellation support
+  queryDomain?: QueryDomainType; // Phase 10.114: Domain-aware processing
 }
 
 /**
@@ -82,6 +103,38 @@ interface ScoreBins {
   excellent: number;
 }
 
+// ============================================================================
+// Phase 10.115: REMOVED HUMANITIES DOMAIN DETECTION (Dead Code Cleanup)
+// ============================================================================
+// Previously: HUMANITIES_KEYWORDS and detectHumanitiesDomain were used to detect
+// humanities queries and give them high priority for semantic scoring.
+//
+// Phase 10.115 Change: Now ALL queries get high priority and semantic-first
+// scoring (0.55 weight) works universally for any domain. Domain-specific
+// detection is no longer needed.
+//
+// The query expansion logic is now in ScientificQueryOptimizerService which
+// adds domain-specific terms (music, culture, etc.) to the actual API queries.
+// ============================================================================
+
+// ============================================================================
+// Phase 10.112 Week 4: SEMANTIC SCORING CONSTANTS (No Magic Numbers)
+// ============================================================================
+/** Maximum text length for full quality embedding generation */
+const FULL_QUALITY_TEXT_LENGTH = 800;
+/** Maximum text length for reduced quality embedding generation */
+const REDUCED_QUALITY_TEXT_LENGTH = 400;
+/** Maximum papers to process in reduced quality mode */
+const REDUCED_QUALITY_PAPER_LIMIT = 200;
+/** Neutral score used when embeddings are unavailable */
+const NEUTRAL_SEMANTIC_SCORE = 0.5;
+/** Progress percentage at start of semantic scoring stage */
+const SEMANTIC_PROGRESS_START = 78;
+/** Progress percentage range for semantic scoring stage */
+const SEMANTIC_PROGRESS_RANGE = 7;
+/** Fixed progress percentage for reduced quality mode */
+const REDUCED_QUALITY_PROGRESS = 80;
+
 @Injectable()
 export class SearchPipelineService {
   private readonly logger = new Logger(SearchPipelineService.name);
@@ -89,53 +142,124 @@ export class SearchPipelineService {
   // PerformanceMonitorService instance (created per pipeline execution)
   private perfMonitor!: PerformanceMonitorService;
 
+  // Phase 10.112 Week 3: Current budget allocation (per-request)
+  private currentBudget: BudgetAllocation | null = null;
+
   constructor(
     private readonly neuralRelevance: NeuralRelevanceService,
     private readonly localEmbedding: LocalEmbeddingService,
-  ) {}
+    // Phase 10.112 Week 3: Netflix-Grade Neural Budget Service
+    private readonly neuralBudget: NeuralBudgetService,
+    // Phase 10.112 Week 4: Netflix-Grade Advanced Patterns
+    private readonly adaptiveTimeout: AdaptiveTimeoutService,
+    private readonly gracefulDegradation: GracefulDegradationService,
+    // Phase 10.113 Week 2: Theme-Fit Relevance Scoring
+    private readonly themeFitScoring: ThemeFitScoringService,
+    // Phase 10.113 Week 11: Progressive Semantic Scoring
+    private readonly progressiveSemantic: ProgressiveSemanticService,
+  ) {
+    this.logger.log('✅ [Phase 10.112 Week 3] NeuralBudgetService integrated - dynamic load-based limits');
+    this.logger.log('✅ [Phase 10.112 Week 4] AdaptiveTimeoutService integrated - P95/P99 dynamic timeouts');
+    this.logger.log('✅ [Phase 10.112 Week 4] GracefulDegradationService integrated - multi-level fallback cascade');
+    this.logger.log('✅ [Phase 10.113 Week 2] ThemeFitScoringService integrated - thematization-optimized scoring');
+    this.logger.log('✅ [Phase 10.113 Week 11] ProgressiveSemanticService integrated - tiered streaming');
+  }
 
   /**
-   * PHASE 10.108: Enhanced Pipeline with SEMANTIC SIMILARITY
+   * PHASE 10.115: NETFLIX-GRADE Universal Search Pipeline
    *
-   * Addresses the user's concern: BM25 only matches exact words, but research
-   * papers often use different terminology for the same concepts.
+   * SEMANTIC-FIRST ranking that works for ANY domain without pre-defined term lists.
    *
    * Examples where semantic matching helps:
-   * - "heart attack" vs "myocardial infarction"
-   * - "machine learning" vs "deep learning" vs "neural networks"
-   * - "COVID-19" vs "SARS-CoV-2" vs "coronavirus"
+   * - "memphis soul" → finds "southern rhythm and blues", "stax records"
+   * - "heart attack" → finds "myocardial infarction", "cardiovascular"
+   * - "machine learning" → finds "neural networks", "deep learning"
    *
    * ARCHITECTURE:
-   * 1. BM25 Scoring - Fast lexical (keyword) matching
-   * 2. Semantic Scoring - Embedding-based conceptual similarity
-   * 3. Quality Scoring - Citation count, journal prestige
+   * 1. BM25 Scoring - Fast lexical (keyword) matching (tiebreaker)
+   * 2. Semantic Scoring - Embedding-based conceptual similarity (PRIMARY)
+   * 3. ThemeFit Scoring - Q-methodology relevance (controversy, clarity)
    *
-   * COMBINED SCORE FORMULA:
-   * combined = 0.3 × BM25 + 0.5 × Semantic + 0.2 × Quality
+   * COMBINED SCORE FORMULA (Phase 10.115):
+   * combined = 0.15×BM25 + 0.55×Semantic + 0.30×ThemeFit
    *
-   * Why Semantic has highest weight (0.5):
-   * - Captures conceptual relevance even with different words
-   * - Embeddings trained on scientific text (BGE-small-en-v1.5)
-   * - Addresses the exact issue user raised about derivatives/synonyms
+   * Why Semantic is PRIMARY (0.55):
+   * - BM25 only matches EXACT keywords - fails for conceptual queries
+   * - Semantic captures synonyms, related concepts, and domain knowledge
+   * - Works for ANY domain (music, medicine, CS, humanities) without term lists
+   * - Embeddings (BGE-small-en-v1.5) trained on diverse text
    *
-   * PERFORMANCE:
-   * - 5-stage pipeline
-   * - ~35-40s total (embedding batch ~3-4s for 500 papers)
-   * - Still faster than broken 8-stage with SciBERT
+   * Why BM25 is MINIMAL (0.15):
+   * - Still rewards exact keyword matches as a tiebreaker
+   * - Prevents gaming by keyword stuffing
+   *
+   * CRITICAL: Semantic scoring ALWAYS runs (NEVER skipped under load)
+   * - Previous bug: Budget system could skip embeddings → destroyed relevance
+   * - Now: skipEmbeddings is ALWAYS overridden to false
    *
    * @param papers Input papers from source collection
    * @param config Pipeline configuration
-   * @returns Top 300 papers by combined BM25 + Semantic + Quality score
+   * @returns Top 300 papers by combined BM25 + Semantic + ThemeFit score
    */
   async executeOptimizedPipeline(
     papers: Paper[],
     config: PipelineConfig,
   ): Promise<Paper[]> {
+    // Phase 10.112: Check for cancellation at pipeline start
+    if (config.signal?.aborted) {
+      this.logger.warn('⚠️  Request cancelled before pipeline execution');
+      throw new Error('Request cancelled');
+    }
+
     // Defensive input validation
     if (!papers || !Array.isArray(papers) || papers.length === 0) {
       this.logger.warn('⚠️  No papers provided to optimized pipeline');
       return [];
     }
+
+    // Phase 10.112 Week 3: Netflix-Grade Budget Allocation
+    // ============================================================================
+    // REQUEST BUDGET:
+    // - Dynamically allocates resources based on current system load
+    // - Adjusts batch sizes and decides whether to skip expensive operations
+    // - Graceful degradation under high load
+    // ============================================================================
+    this.neuralBudget.startRequest();
+
+    // Phase 10.115: UNIVERSAL HIGH PRIORITY for all queries
+    // ============================================================================
+    // Previous approach: Detect specific domains (humanities, music, etc.) and
+    // give them high priority. This was a band-aid fix.
+    //
+    // Netflix-grade approach: ALL queries get high priority for semantic scoring
+    // because semantic similarity is ESSENTIAL for finding relevant papers in
+    // ANY domain. The embedding model (BGE-small-en-v1.5) was trained on
+    // diverse text and works for all domains.
+    //
+    // No domain detection needed - semantic-first works universally.
+    // ============================================================================
+    const budgetPriority: RequestPriority = 'high'; // ALWAYS high for search quality
+
+    this.currentBudget = this.neuralBudget.requestBudget({
+      priority: budgetPriority,
+      estimatedPapers: papers.length,
+      requiresNeuralReranking: true,
+      requiresEmbeddings: true,
+    });
+
+    // Phase 10.115: NEVER skip embeddings - semantic scoring is ESSENTIAL for ALL queries
+    // This override is now redundant because we always run semantic scoring,
+    // but we keep it as a safety net in case budget system changes.
+    if (this.currentBudget.skipEmbeddings) {
+      this.logger.log('🎯 [Phase 10.115] Budget override - semantic scoring is REQUIRED for search quality');
+      this.currentBudget = { ...this.currentBudget, skipEmbeddings: false };
+    }
+
+    this.logger.log(
+      `📊 [NeuralBudget] Allocation: Quality=${this.currentBudget.qualityLevel}, ` +
+      `Batch=${this.currentBudget.batchSize}, Timeout=${this.currentBudget.timeoutMs}ms, ` +
+      `SkipEmbeddings=${this.currentBudget.skipEmbeddings} | ${this.currentBudget.reason}`
+    );
 
     // Initialize performance monitor
     this.perfMonitor = new PerformanceMonitorService(
@@ -146,10 +270,12 @@ export class SearchPipelineService {
     const startTime = Date.now();
     this.logger.log(
       `\n${'═'.repeat(80)}` +
-      `\n🚀 ENHANCED PIPELINE WITH SEMANTIC SIMILARITY (Phase 10.108)` +
+      `\n🚀 NETFLIX-GRADE UNIVERSAL SEARCH PIPELINE (Phase 10.115)` +
       `\n   Input: ${papers.length} papers` +
       `\n   Target: ${config.targetPaperCount} papers` +
-      `\n   Strategy: BM25 (0.3) + Semantic (0.5) + Quality (0.2)` +
+      `\n   Strategy: SEMANTIC-FIRST (0.15×BM25 + 0.55×Semantic + 0.30×ThemeFit)` +
+      `\n   Budget: ${this.currentBudget.qualityLevel} quality, batch=${this.currentBudget.batchSize}` +
+      `\n   Semantic: ALWAYS ENABLED (Netflix-grade quality)` +
       `\n${'═'.repeat(80)}\n`
     );
 
@@ -158,10 +284,49 @@ export class SearchPipelineService {
     config.emitProgress('Stage 1: Calculating keyword relevance scores...', 70);
 
     const compiledQuery: CompiledQuery = compileQueryPatterns(config.query);
-    const scoredPapers: MutablePaper[] = papers.map((paper: Paper): MutablePaper => ({
-      ...paper,
-      relevanceScore: calculateBM25RelevanceScore(paper, compiledQuery),
-    }));
+
+    // Phase 10.117: NCBI Source Base Relevance Boost
+    // ============================================================================
+    // PROBLEM: NCBI (PMC, PubMed) does semantic search on their end, returning
+    // papers that are semantically related to the query but may not contain
+    // exact keyword matches. Our BM25 scoring then gives them 0 or low scores,
+    // and they get filtered out in the pre-filter stage.
+    //
+    // SOLUTION: Give papers from NCBI sources a base relevance boost of 50.
+    // This ensures they pass the BM25 pre-filter and get to semantic scoring,
+    // where they can be properly ranked by our SciBERT model.
+    //
+    // Why 50? The BM25 pre-filter sorts by score and takes top N papers.
+    // A boost of 50 ensures NCBI papers are competitive with other sources
+    // that score 20-80 on BM25, while still allowing BM25 matches to rank higher.
+    // ============================================================================
+    const NCBI_SOURCES = ['pmc', 'pubmed'];
+    const NCBI_BASE_RELEVANCE_BOOST = 50;
+
+    const scoredPapers: MutablePaper[] = papers.map((paper: Paper): MutablePaper => {
+      const bm25Score = calculateBM25RelevanceScore(paper, compiledQuery);
+      const isNCBISource = NCBI_SOURCES.includes(paper.source?.toLowerCase() ?? '');
+
+      // Add base boost for NCBI sources that have low BM25 scores
+      // This ensures they're not filtered out before semantic scoring
+      const finalScore = isNCBISource && bm25Score < NCBI_BASE_RELEVANCE_BOOST
+        ? NCBI_BASE_RELEVANCE_BOOST + bm25Score
+        : bm25Score;
+
+      return {
+        ...paper,
+        relevanceScore: finalScore,
+      };
+    });
+
+    // Log NCBI boost stats
+    const ncbiPapers = scoredPapers.filter(p => NCBI_SOURCES.includes(p.source?.toLowerCase() ?? ''));
+    if (ncbiPapers.length > 0) {
+      this.logger.log(
+        `🔬 [Phase 10.117] NCBI boost applied: ${ncbiPapers.length} papers from PMC/PubMed ` +
+        `received base relevance boost of ${NCBI_BASE_RELEVANCE_BOOST} (trusting NCBI's semantic search)`
+      );
+    }
 
     this.perfMonitor.endStage('BM25 Scoring', scoredPapers.length);
 
@@ -184,57 +349,179 @@ export class SearchPipelineService {
     this.perfMonitor.startStage('Semantic Scoring', papersForSemantic.length);
     config.emitProgress('Stage 2: Computing semantic similarity (conceptual matching)...', 78);
 
+    // Phase 10.112: Check for cancellation before starting expensive embedding generation
+    if (config.signal?.aborted) {
+      this.neuralBudget.endRequest();
+      this.logger.warn('⚠️  Request cancelled before semantic scoring');
+      throw new Error('Request cancelled');
+    }
+
     // Generate query embedding (once)
     let queryEmbedding: number[] = [];
     let semanticScores: number[] = [];
     let semanticEnabled = true;
 
-    try {
-      queryEmbedding = await this.localEmbedding.generateEmbedding(config.query);
-      this.logger.log(`✅ Query embedding generated (${queryEmbedding.length} dimensions)`);
-
-      // Generate paper embeddings in batch (title + abstract for each paper)
-      // Use shorter text (800 chars) for faster processing
-      const paperTexts = papersForSemantic.map((p: MutablePaper) => {
-        const title = p.title ?? '';
-        const abstract = p.abstract ?? '';
-        // Combine title + abstract, truncate for speed
-        return `${title}. ${abstract}`.substring(0, 800);
-      });
-
-      const paperEmbeddings = await this.localEmbedding.generateEmbeddingsBatch(
-        paperTexts,
-        (processed: number, total: number) => {
-          const progress = 78 + Math.floor((processed / total) * 7); // 78-85%
-          config.emitProgress(`Stage 2: Generating embeddings (${processed}/${total})...`, progress);
-        }
-      );
-
-      // Calculate cosine similarity for each paper
-      semanticScores = paperEmbeddings.map((embedding: number[]) =>
-        this.cosineSimilarity(queryEmbedding, embedding)
-      );
-
-      const avgSemantic = semanticScores.reduce((a, b) => a + b, 0) / semanticScores.length;
+    // Phase 10.115: NETFLIX-GRADE - Semantic scoring ALWAYS runs
+    // ============================================================================
+    // CRITICAL: Semantic scoring is the ONLY way to find conceptually related papers
+    // BM25 only matches exact keywords which FAILS for:
+    // - "memphis soul" → "southern rhythm and blues"
+    // - "heart attack" → "myocardial infarction"
+    // - "machine learning" → "neural networks"
+    //
+    // Skipping semantic scoring destroys search quality - we NEVER skip it.
+    // The budget system's skipEmbeddings flag is IGNORED for search quality.
+    // ============================================================================
+    if (this.currentBudget?.skipEmbeddings) {
       this.logger.log(
-        `✅ Semantic scores computed: avg=${(avgSemantic * 100).toFixed(1)}%, ` +
-        `min=${(Math.min(...semanticScores) * 100).toFixed(1)}%, ` +
-        `max=${(Math.max(...semanticScores) * 100).toFixed(1)}%`
+        `🎯 [Phase 10.115] Budget suggests skipEmbeddings, but OVERRIDING - ` +
+        `semantic scoring is ESSENTIAL for search quality`
       );
-    } catch (error: unknown) {
-      // Fallback: if embedding fails, use BM25 + Quality only
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.warn(`⚠️  Semantic scoring failed, falling back to BM25+Quality: ${errorMessage}`);
-      semanticEnabled = false;
-      semanticScores = papersForSemantic.map(() => 0.5); // Neutral score
+      // DON'T skip - continue to embedding generation below
     }
 
-    this.perfMonitor.endStage('Semantic Scoring', papersForSemantic.length);
+    {
+      // Phase 10.112 Week 4: Use GracefulDegradationService for embedding generation
+      // Fallback cascade: full embeddings → reduced quality → neutral scores
+      const embeddingResult = await this.gracefulDegradation.executeWithReduced<{
+        queryEmbedding: number[];
+        paperEmbeddings: number[][];
+        latencyMs: number;
+      }>(
+        'semantic:embeddings',
+        // Full quality: generate all embeddings
+        async () => {
+          const qEmb = await this.localEmbedding.generateEmbedding(config.query);
 
-    // STAGE 3: Calculate Combined Score (BM25 + Semantic + Quality)
+          // Check for cancellation after query embedding
+          if (config.signal?.aborted) {
+            throw new Error('Request cancelled');
+          }
+
+          const paperTexts = papersForSemantic.map((p: MutablePaper) => {
+            const title = p.title ?? '';
+            const abstract = p.abstract ?? '';
+            return `${title}. ${abstract}`.substring(0, FULL_QUALITY_TEXT_LENGTH);
+          });
+
+          const embeddingStartTime = Date.now();
+          const pEmbs = await this.localEmbedding.generateEmbeddingsBatch(
+            paperTexts,
+            (processed: number, total: number) => {
+              const progress = SEMANTIC_PROGRESS_START + Math.floor((processed / total) * SEMANTIC_PROGRESS_RANGE);
+              config.emitProgress(`Stage 2: Generating embeddings (${processed}/${total})...`, progress);
+            },
+            config.signal,
+          );
+
+          return {
+            queryEmbedding: qEmb,
+            paperEmbeddings: pEmbs,
+            latencyMs: Date.now() - embeddingStartTime,
+          };
+        },
+        // Reduced quality: generate fewer embeddings (top papers by BM25)
+        async () => {
+          const qEmb = await this.localEmbedding.generateEmbedding(config.query);
+
+          if (config.signal?.aborted) {
+            throw new Error('Request cancelled');
+          }
+
+          // Only embed top papers for reduced quality
+          const reducedPapers = papersForSemantic.slice(0, REDUCED_QUALITY_PAPER_LIMIT);
+          const paperTexts = reducedPapers.map((p: MutablePaper) => {
+            const title = p.title ?? '';
+            const abstract = p.abstract ?? '';
+            return `${title}. ${abstract}`.substring(0, REDUCED_QUALITY_TEXT_LENGTH);
+          });
+
+          const embeddingStartTime = Date.now();
+          const pEmbs = await this.localEmbedding.generateEmbeddingsBatch(
+            paperTexts,
+            (processed: number, total: number) => {
+              config.emitProgress(`Stage 2: Reduced embeddings (${processed}/${total})...`, REDUCED_QUALITY_PROGRESS);
+            },
+            config.signal,
+          );
+
+          // Pad with empty arrays for remaining papers (will get neutral score)
+          const paddedEmbeddings = [
+            ...pEmbs,
+            ...Array(papersForSemantic.length - pEmbs.length).fill([]),
+          ];
+
+          return {
+            queryEmbedding: qEmb,
+            paperEmbeddings: paddedEmbeddings,
+            latencyMs: Date.now() - embeddingStartTime,
+          };
+        },
+        config.signal,
+      );
+
+      // Process embedding result based on degradation level
+      if (embeddingResult.isFullQuality) {
+        queryEmbedding = embeddingResult.data.queryEmbedding;
+        const paperEmbeddings = embeddingResult.data.paperEmbeddings;
+
+        // Record latency for adaptive timeout
+        this.adaptiveTimeout.recordLatency('embedding:batch', embeddingResult.data.latencyMs, true);
+
+        // Calculate cosine similarity for each paper (DRY: use helper method)
+        semanticScores = this.calculateSemanticScores(queryEmbedding, paperEmbeddings);
+
+        const avgSemantic = semanticScores.reduce((a, b) => a + b, 0) / semanticScores.length;
+        this.logger.log(
+          `✅ Semantic scores computed: avg=${(avgSemantic * 100).toFixed(1)}%, ` +
+          `min=${(Math.min(...semanticScores) * 100).toFixed(1)}%, ` +
+          `max=${(Math.max(...semanticScores) * 100).toFixed(1)}% ` +
+          `(embedding: ${embeddingResult.data.latencyMs}ms) [${embeddingResult.level}]`
+        );
+      } else if (embeddingResult.level === 'reduced') {
+        // Reduced quality mode
+        queryEmbedding = embeddingResult.data.queryEmbedding;
+        const paperEmbeddings = embeddingResult.data.paperEmbeddings;
+
+        // Calculate cosine similarity for each paper (DRY: use helper method)
+        semanticScores = this.calculateSemanticScores(queryEmbedding, paperEmbeddings);
+
+        this.logger.warn(
+          `⚠️  Semantic scoring in REDUCED mode: ${embeddingResult.message}`
+        );
+      } else {
+        // Fallback: no embeddings available
+        semanticEnabled = false;
+        semanticScores = papersForSemantic.map(() => NEUTRAL_SEMANTIC_SCORE);
+        this.logger.warn(`⚠️  Semantic scoring unavailable: ${embeddingResult.message}`);
+      }
+
+      this.perfMonitor.endStage('Semantic Scoring', papersForSemantic.length);
+    } // End of else block (budget allows embeddings)
+
+    // STAGE 3: Calculate Combined Score (BM25 + Semantic + ThemeFit)
+    // Phase 10.113 Week 2: Updated formula for thematization-optimized scoring
     // Only scoring the pre-filtered papers (papersForSemantic)
     this.perfMonitor.startStage('Combined Scoring', papersForSemantic.length);
-    config.emitProgress('Stage 3: Computing combined scores...', 87);
+    config.emitProgress('Stage 3: Computing combined scores with Theme-Fit...', 87);
+
+    // Phase 10.113 Week 2: Calculate Theme-Fit scores for all papers
+    const themeFitStartTime = Date.now();
+    const themeFitScores: number[] = papersForSemantic.map((paper: MutablePaper) => {
+      const themeFitResult = this.themeFitScoring.calculateThemeFitScore(paper as Paper);
+      // Store Theme-Fit score on paper for downstream use
+      (paper as Paper).themeFitScore = themeFitResult;
+      (paper as Paper).isGoodForThematization = themeFitResult.overallThemeFit >= 0.5;
+      return themeFitResult.overallThemeFit;
+    });
+    const themeFitDuration = Date.now() - themeFitStartTime;
+
+    const avgThemeFit = themeFitScores.reduce((a, b) => a + b, 0) / themeFitScores.length;
+    this.logger.log(
+      `✅ [Phase 10.113] Theme-Fit scores computed: avg=${(avgThemeFit * 100).toFixed(1)}%, ` +
+      `goodForThematization=${papersForSemantic.filter((p: MutablePaper) => (p as Paper).isGoodForThematization).length}/${papersForSemantic.length} ` +
+      `(${themeFitDuration}ms)`
+    );
 
     // Normalize BM25 scores (0-1 range) using papersForSemantic
     const bm25Scores = papersForSemantic.map((p: MutablePaper) => p.relevanceScore ?? 0);
@@ -242,32 +529,55 @@ export class SearchPipelineService {
     const minBM25 = Math.min(...bm25Scores);
     const bm25Range = maxBM25 - minBM25 || 1;
 
-    // Normalize quality scores (0-1 range) - quality is already 0-100
-    const maxQuality = 100;
-
-    // Weight configuration
-    // Semantic gets highest weight because it captures conceptual similarity
-    const BM25_WEIGHT = semanticEnabled ? 0.3 : 0.6;
-    const SEMANTIC_WEIGHT = semanticEnabled ? 0.5 : 0.0;
-    const QUALITY_WEIGHT = semanticEnabled ? 0.2 : 0.4;
+    // Phase 10.115: NETFLIX-GRADE Universal Relevance Formula
+    // ============================================================================
+    // NEW FORMULA: 0.15×BM25 + 0.55×Semantic + 0.30×ThemeFit
+    //
+    // CRITICAL INSIGHT (from "memphis soul" failure):
+    // - BM25 only matches EXACT keywords → fails for conceptual queries
+    // - Semantic captures synonyms, related concepts, and domain knowledge
+    // - ThemeFit is important but secondary to basic relevance
+    //
+    // Why Semantic is PRIMARY (0.55):
+    // - "memphis soul" finds "southern rhythm and blues" papers
+    // - "heart attack" finds "myocardial infarction" papers
+    // - "machine learning" finds "neural network" papers
+    // - Works for ANY domain without pre-defined term lists
+    //
+    // Why BM25 is MINIMAL (0.15):
+    // - Still rewards exact keyword matches as a tiebreaker
+    // - Prevents gaming by keyword stuffing
+    // - Helps when semantic model doesn't know domain-specific terms
+    //
+    // Why ThemeFit is SECONDARY (0.30):
+    // - Important for Q-methodology (controversy, clarity)
+    // - But relevance must come FIRST before thematization
+    // - Reduced from 0.4 because semantic now handles quality signal
+    //
+    // If semantic unavailable (fallback): 0.40×BM25 + 0.60×ThemeFit
+    // This should NEVER happen since we always run semantic scoring now
+    // ============================================================================
+    const BM25_WEIGHT = semanticEnabled ? 0.15 : 0.40;
+    const SEMANTIC_WEIGHT = semanticEnabled ? 0.55 : 0.0;
+    const THEMEFIT_WEIGHT = semanticEnabled ? 0.30 : 0.60;
 
     papersForSemantic.forEach((paper: MutablePaper, idx: number) => {
       const normalizedBM25 = ((paper.relevanceScore ?? 0) - minBM25) / bm25Range;
       const normalizedSemantic = semanticScores[idx] ?? 0.5;
-      const normalizedQuality = (paper.qualityScore ?? 0) / maxQuality;
+      const themeFitScore = themeFitScores[idx] ?? 0.5;
 
       // Combined score on 0-100 scale
       const combinedScore = (
         BM25_WEIGHT * normalizedBM25 +
         SEMANTIC_WEIGHT * normalizedSemantic +
-        QUALITY_WEIGHT * normalizedQuality
+        THEMEFIT_WEIGHT * themeFitScore
       ) * 100;
 
       // Store combined score
       paper.neuralRelevanceScore = combinedScore;
       paper.neuralExplanation = semanticEnabled
-        ? `BM25=${(normalizedBM25 * 100).toFixed(0)}, Sem=${(normalizedSemantic * 100).toFixed(0)}, Q=${(normalizedQuality * 100).toFixed(0)}`
-        : `BM25=${(normalizedBM25 * 100).toFixed(0)}, Q=${(normalizedQuality * 100).toFixed(0)} (semantic disabled)`;
+        ? `BM25=${(normalizedBM25 * 100).toFixed(0)}, Sem=${(normalizedSemantic * 100).toFixed(0)}, ThemeFit=${(themeFitScore * 100).toFixed(0)}`
+        : `BM25=${(normalizedBM25 * 100).toFixed(0)}, ThemeFit=${(themeFitScore * 100).toFixed(0)} (semantic disabled)`;
     });
 
     this.perfMonitor.endStage('Combined Scoring', papersForSemantic.length);
@@ -327,6 +637,9 @@ export class SearchPipelineService {
       `\n${'═'.repeat(80)}\n`
     );
 
+    // Phase 10.112: Release budget on successful completion
+    this.neuralBudget.endRequest();
+
     return finalPapers.slice() as Paper[];
   }
 
@@ -360,6 +673,25 @@ export class SearchPipelineService {
     // Cosine similarity is in range [-1, 1], normalize to [0, 1]
     const cosineSim = dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
     return (cosineSim + 1) / 2;
+  }
+
+  /**
+   * Phase 10.112 Week 4: Calculate semantic scores for all papers (DRY helper)
+   * Returns neutral score for empty embeddings
+   *
+   * @param queryEmbedding Query embedding vector
+   * @param paperEmbeddings Array of paper embedding vectors
+   * @returns Array of semantic similarity scores
+   */
+  private calculateSemanticScores(
+    queryEmbedding: number[],
+    paperEmbeddings: number[][],
+  ): number[] {
+    return paperEmbeddings.map((embedding: number[]) =>
+      embedding.length > 0
+        ? this.cosineSimilarity(queryEmbedding, embedding)
+        : NEUTRAL_SEMANTIC_SCORE
+    );
   }
 
   /**
@@ -733,12 +1065,28 @@ export class SearchPipelineService {
         ),
       );
 
+      // Phase 10.117: NCBI Source Preservation in Neural Reranking
+      // ============================================================================
+      // PROBLEM: NCBI (PMC, PubMed) papers may not pass the neural threshold (0.45)
+      // because they use different medical terminology or are semantically related
+      // in ways our SciBERT model doesn't capture as well as NCBI's own search.
+      //
+      // SOLUTION: Preserve NCBI papers even if they don't pass neural threshold.
+      // NCBI's E-utilities already does relevance ranking - we trust their judgment.
+      // Papers that fail our neural filter but come from NCBI get assigned a
+      // base neural score of 0.55 (just above threshold) to pass through.
+      // ============================================================================
+      const NCBI_SOURCES = ['pmc', 'pubmed'];
+      const NCBI_BASE_NEURAL_SCORE = 0.55; // Ensures NCBI papers pass threshold
+
       // Apply neural scores and filter in-place
       let writeIdx = 0;
+      let ncbiPreservedCount = 0;
       for (let i = 0; i < papers.length; i++) {
         // Phase 10.100 Strict Audit Fix: Add fallback index to prevent duplicate keys
         const key: string = papers[i].id || papers[i].doi || papers[i].title || `__fallback_${i}`;
         const neuralPaper: PaperWithNeuralScore | undefined = neuralScoreMap.get(key);
+        const isNCBISource = NCBI_SOURCES.includes(papers[i].source?.toLowerCase() ?? '');
 
         if (neuralPaper) {
           // Mutate in-place with neural scores
@@ -751,7 +1099,27 @@ export class SearchPipelineService {
             papers[writeIdx] = papers[i];
           }
           writeIdx++;
+        } else if (isNCBISource) {
+          // Phase 10.117: Preserve NCBI papers that failed neural threshold
+          // NCBI's semantic search already validated relevance
+          papers[i].neuralRelevanceScore = NCBI_BASE_NEURAL_SCORE;
+          papers[i].neuralRank = 9999; // Low rank (neural didn't confirm), but kept
+          papers[i].neuralExplanation = 'NCBI-validated: Passed NCBI semantic search but not SciBERT threshold';
+
+          // Keep this paper
+          if (writeIdx !== i) {
+            papers[writeIdx] = papers[i];
+          }
+          writeIdx++;
+          ncbiPreservedCount++;
         }
+      }
+
+      if (ncbiPreservedCount > 0) {
+        this.logger.log(
+          `🔬 [Phase 10.117] NCBI preservation: ${ncbiPreservedCount} PMC/PubMed papers preserved ` +
+          `(trusted NCBI semantic search despite not passing SciBERT threshold)`
+        );
       }
 
       const beforeLength: number = papers.length;
@@ -922,12 +1290,21 @@ export class SearchPipelineService {
         ),
       );
 
+      // Phase 10.117: NCBI Source Preservation in Domain Classification
+      // PMC and PubMed papers already passed NCBI's semantic search validation
+      // Preserve them even if domain classification fails (different classifier paradigm)
+      const NCBI_SOURCES_DOMAIN = ['pmc', 'pubmed'];
+      const NCBI_DEFAULT_DOMAIN = 'Medicine'; // Most NCBI papers are medical/life sciences
+      const NCBI_DEFAULT_DOMAIN_CONFIDENCE = 0.80;
+
       // Apply domain data and filter in-place
       let writeIdx = 0;
+      let ncbiDomainPreservedCount = 0;
       for (let i = 0; i < papers.length; i++) {
         // Phase 10.100 Strict Audit Fix: Add fallback index to prevent duplicate keys
         const key: string = papers[i].id || papers[i].doi || papers[i].title || `__fallback_${i}`;
         const domainPaper = domainMap.get(key);
+        const isNCBISource = NCBI_SOURCES_DOMAIN.includes(papers[i].source?.toLowerCase() ?? '');
 
         if (domainPaper) {
           // Mutate in-place with domain data
@@ -939,7 +1316,25 @@ export class SearchPipelineService {
             papers[writeIdx] = papers[i];
           }
           writeIdx++;
+        } else if (isNCBISource) {
+          // Phase 10.117: Preserve NCBI papers with default domain
+          papers[i].domain = NCBI_DEFAULT_DOMAIN;
+          papers[i].domainConfidence = NCBI_DEFAULT_DOMAIN_CONFIDENCE;
+
+          // Keep this paper
+          if (writeIdx !== i) {
+            papers[writeIdx] = papers[i];
+          }
+          writeIdx++;
+          ncbiDomainPreservedCount++;
         }
+      }
+
+      if (ncbiDomainPreservedCount > 0) {
+        this.logger.log(
+          `🔬 [Phase 10.117] NCBI domain preservation: ${ncbiDomainPreservedCount} PMC/PubMed papers preserved ` +
+          `(assigned default domain: ${NCBI_DEFAULT_DOMAIN})`
+        );
       }
 
       const beforeLength: number = papers.length;
@@ -1017,12 +1412,24 @@ export class SearchPipelineService {
         ),
       );
 
+      // Phase 10.117: NCBI Source Preservation in Aspect Filtering
+      // PMC and PubMed papers already passed NCBI's semantic search validation
+      // Preserve them even if aspect filtering fails (different paradigm)
+      const NCBI_SOURCES_ASPECT = ['pmc', 'pubmed'];
+      const NCBI_DEFAULT_ASPECTS = {
+        subjectType: 'research' as const,
+        methodType: 'experimental' as const,
+        confidence: 0.75,
+      };
+
       // Apply aspect data and filter in-place
       let writeIdx = 0;
+      let ncbiAspectPreservedCount = 0;
       for (let i = 0; i < papers.length; i++) {
         // Phase 10.100 Strict Audit Fix: Add fallback index to prevent duplicate keys
         const key: string = papers[i].id || papers[i].doi || papers[i].title || `__fallback_${i}`;
         const aspectPaper = aspectMap.get(key);
+        const isNCBISource = NCBI_SOURCES_ASPECT.includes(papers[i].source?.toLowerCase() ?? '');
 
         if (aspectPaper) {
           // Phase 10.100 Strict Audit Fix: Type-safe property assignment
@@ -1035,7 +1442,24 @@ export class SearchPipelineService {
             papers[writeIdx] = papers[i];
           }
           writeIdx++;
+        } else if (isNCBISource) {
+          // Phase 10.117: Preserve NCBI papers with default aspects
+          Object.assign(papers[i], { aspects: NCBI_DEFAULT_ASPECTS });
+
+          // Keep this paper
+          if (writeIdx !== i) {
+            papers[writeIdx] = papers[i];
+          }
+          writeIdx++;
+          ncbiAspectPreservedCount++;
         }
+      }
+
+      if (ncbiAspectPreservedCount > 0) {
+        this.logger.log(
+          `🔬 [Phase 10.117] NCBI aspect preservation: ${ncbiAspectPreservedCount} PMC/PubMed papers preserved ` +
+          `(assigned default aspects: research/experimental)`
+        );
       }
 
       const beforeLength: number = papers.length;
@@ -1227,17 +1651,43 @@ export class SearchPipelineService {
     const qualityThreshold: number = 25;
     const beforeQualityFilter: number = papers.length;
 
+    // Phase 10.117: NCBI Source Preservation in Quality Threshold
+    // PMC and PubMed papers already passed NCBI's rigorous peer review
+    // Preserve them even if quality score is low (incomplete metadata doesn't mean low quality research)
+    const NCBI_SOURCES_QUALITY = ['pmc', 'pubmed'];
+    const NCBI_MIN_QUALITY_SCORE = 40; // Assign minimum quality score to NCBI papers
+
     let writeIdx = 0;
+    let ncbiQualityPreservedCount = 0;
     for (let i = 0; i < papers.length; i++) {
       const qualityScore: number = papers[i].qualityScore ?? 0;
+      const isNCBISource = NCBI_SOURCES_QUALITY.includes(papers[i].source?.toLowerCase() ?? '');
 
       if (qualityScore >= qualityThreshold) {
+        // Keep this paper - meets quality threshold
+        if (writeIdx !== i) {
+          papers[writeIdx] = papers[i];
+        }
+        writeIdx++;
+      } else if (isNCBISource) {
+        // Phase 10.117: Preserve NCBI papers with boosted quality score
+        // NCBI peer-reviewed papers have inherent quality even with incomplete metadata
+        papers[i].qualityScore = Math.max(qualityScore, NCBI_MIN_QUALITY_SCORE);
+
         // Keep this paper
         if (writeIdx !== i) {
           papers[writeIdx] = papers[i];
         }
         writeIdx++;
+        ncbiQualityPreservedCount++;
       }
+    }
+
+    if (ncbiQualityPreservedCount > 0) {
+      this.logger.log(
+        `🔬 [Phase 10.117] NCBI quality preservation: ${ncbiQualityPreservedCount} PMC/PubMed papers preserved ` +
+        `(boosted to minimum quality score: ${NCBI_MIN_QUALITY_SCORE})`
+      );
     }
 
     papers.length = writeIdx; // Truncate array
@@ -1313,5 +1763,111 @@ export class SearchPipelineService {
         `\n   Version: ${metadata.optimizationVersion}` +
         `\n${'='.repeat(80)}\n`,
     );
+  }
+
+  // ===========================================================================
+  // PHASE 10.113 WEEK 11: PROGRESSIVE SEMANTIC STREAMING
+  // ===========================================================================
+
+  /**
+   * Phase 10.113 Week 11: Stream progressive semantic tier results
+   *
+   * Netflix-grade tiered streaming:
+   * - Tier 1 (immediate): Top 50 papers → <500ms
+   * - Tier 2 (refined): Next 150 papers → <2s
+   * - Tier 3 (complete): Remaining 400 papers → background
+   *
+   * @param papers - Papers to score (pre-sorted by BM25)
+   * @param query - Search query for embedding generation
+   * @param signal - AbortSignal for cancellation support
+   * @yields SemanticTierResult for each completed tier
+   *
+   * @example
+   * ```typescript
+   * for await (const tierResult of pipeline.streamProgressiveSemanticScores(papers, query, signal)) {
+   *   socket.emit('search:semantic-tier', {
+   *     ...tierResult,
+   *     searchId,
+   *     timestamp: Date.now(),
+   *   });
+   * }
+   * ```
+   */
+  async *streamProgressiveSemanticScores(
+    papers: Paper[],
+    query: string,
+    signal?: AbortSignal,
+  ): AsyncGenerator<SemanticTierResult> {
+    if (papers.length === 0) {
+      this.logger.warn('[ProgressiveSemantic] No papers to score');
+      return;
+    }
+
+    this.logger.log(
+      `\n${'═'.repeat(80)}` +
+      `\n🚀 [Phase 10.113 Week 11] PROGRESSIVE SEMANTIC STREAMING` +
+      `\n   Papers: ${papers.length}` +
+      `\n   Query: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"` +
+      `\n   Tiers: immediate (50), refined (150), complete (400)` +
+      `\n${'═'.repeat(80)}\n`
+    );
+
+    // Generate query embedding once
+    const queryEmbedding = await this.progressiveSemantic.generateQueryEmbedding(query);
+
+    // Stream tier results
+    yield* this.progressiveSemantic.streamSemanticScores(papers, queryEmbedding, signal);
+  }
+
+  /**
+   * Phase 10.113 Week 11: Get combined scores (BM25 + Semantic + ThemeFit)
+   *
+   * Combines tier results with existing BM25 and ThemeFit scores.
+   *
+   * @param papers - Papers with semantic scores from tier
+   * @param bm25Weight - Weight for BM25 (default: 0.15)
+   * @param semanticWeight - Weight for semantic (default: 0.55)
+   * @param themeFitWeight - Weight for ThemeFit (default: 0.30)
+   * @returns Papers with combined scores
+   */
+  calculateCombinedScores(
+    papers: PaperWithSemanticScore[],
+    bm25Weight: number = 0.15,
+    semanticWeight: number = 0.55,
+    themeFitWeight: number = 0.30,
+  ): PaperWithSemanticScore[] {
+    // Normalize BM25 scores
+    const bm25Scores = papers.map(p => p.relevanceScore ?? 0);
+    const maxBM25 = Math.max(...bm25Scores, 1);
+    const minBM25 = Math.min(...bm25Scores);
+    const bm25Range = maxBM25 - minBM25 || 1;
+
+    return papers.map(paper => {
+      const normalizedBM25 = ((paper.relevanceScore ?? 0) - minBM25) / bm25Range;
+      const semanticScore = paper.semanticScore ?? 0.5;
+
+      // Calculate ThemeFit if not already present
+      let themeFitScore = 0.5;
+      if (paper.themeFitScore) {
+        themeFitScore = paper.themeFitScore.overallThemeFit ?? 0.5;
+      } else {
+        const themeFitResult = this.themeFitScoring.calculateThemeFitScore(paper);
+        themeFitScore = themeFitResult.overallThemeFit;
+      }
+
+      // Combined score on 0-100 scale
+      const combinedScore = (
+        bm25Weight * normalizedBM25 +
+        semanticWeight * semanticScore +
+        themeFitWeight * themeFitScore
+      ) * 100;
+
+      return {
+        ...paper,
+        combinedScore,
+        neuralRelevanceScore: combinedScore, // For compatibility
+        neuralExplanation: `BM25=${(normalizedBM25 * 100).toFixed(0)}, Sem=${(semanticScore * 100).toFixed(0)}, ThemeFit=${(themeFitScore * 100).toFixed(0)}`,
+      };
+    });
   }
 }

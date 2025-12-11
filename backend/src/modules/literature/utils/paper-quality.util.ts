@@ -611,7 +611,14 @@ export function calculateQualityScore(paper: {
   // - 0/4 metrics: max 25 (no data - truly unknown)
   // ============================================
 
-  const SCORE_CAPS = [25, 45, 65, 85, 100]; // 0, 1, 2, 3, 4 metrics
+  // Phase 10.114: Raised score caps to allow papers with partial metadata to reach 80%+
+  // Previous caps were too restrictive:
+  // - 2/4 metrics → max 65 (impossible to reach 80% threshold)
+  // - 3/4 metrics → max 85 (barely reaches 80%)
+  // New caps enable quality-first search strategy:
+  // - 2/4 metrics → max 80 (can now reach quality threshold)
+  // - 3/4 metrics → max 92 (comfortable headroom for excellent papers)
+  const SCORE_CAPS = [30, 55, 80, 92, 100]; // 0, 1, 2, 3, 4 metrics
   const maxScore = SCORE_CAPS[metadata.availableMetrics] ?? 100;
 
   // Apply cap: paper's score cannot exceed its data completeness allows
@@ -628,8 +635,9 @@ export function calculateQualityScore(paper: {
   // Sum all bonuses (max +20)
   const totalBonus = openAccessBonus + reproducibilityBonus + altmetricBonus;
 
-  // Final score: core + bonuses, but still respect the cap
-  const totalScore = Math.min(coreScore + totalBonus, maxScore + 10); // Bonuses can push slightly above cap
+  // Final score: core + bonuses, hard cap at 100
+  // Phase 10.115: Fixed bug where scores could exceed 100
+  const totalScore = Math.min(coreScore + totalBonus, 100);
 
   // ============================================
   // RETURN COMPONENTS

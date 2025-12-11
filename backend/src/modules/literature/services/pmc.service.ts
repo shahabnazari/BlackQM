@@ -238,13 +238,20 @@ export class PMCService {
       this.logger.log(`[PMC] Found ${ids.length} article IDs, fetching full-text...`);
 
       // ========================================================================
-      // STEP 2: Fetch full XML using efetch (WITH BATCHING)
+      // STEP 2: Fetch full XML using efetch (WITH PARALLEL BATCHING)
       // ========================================================================
       // Phase 10.7 Day 5: FIX HTTP 414 - Batch IDs to avoid URL length limit
       // NCBI eUtils has ~2000 character URL limit. With 600 IDs, URL becomes too long.
       // Solution: Batch IDs in chunks of 200 per request (enterprise-grade pattern)
+      //
+      // Phase 10.115: PARALLEL BATCH PROCESSING
+      // - Sequential processing: 40-50s for 300 papers (2 batches × 25s each)
+      // - Parallel processing: 20-25s for 300 papers (both batches simultaneously)
+      // - NCBI rate limit: 3 req/sec without API key, 10 req/sec with API key
+      // - We limit to 3 concurrent batches to respect rate limits
 
       const BATCH_SIZE = 200; // Optimal: balances request count vs URL length
+      const MAX_CONCURRENT_BATCHES = 3; // NCBI rate limit safety
       const batches: string[][] = [];
 
       for (let i = 0; i < ids.length; i += BATCH_SIZE) {
@@ -252,14 +259,11 @@ export class PMCService {
       }
 
       this.logger.log(
-        `[PMC] Batching ${ids.length} IDs into ${batches.length} requests (${BATCH_SIZE} IDs per batch)`
+        `[PMC] Batching ${ids.length} IDs into ${batches.length} requests (${BATCH_SIZE} IDs per batch, max ${MAX_CONCURRENT_BATCHES} concurrent)`
       );
 
-      // Phase 10.106 Strict Mode: Use typed Paper[] instead of any[]
-      const allPapers: Paper[] = [];
-
-      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-        const batch = batches[batchIndex];
+      // Phase 10.115: Parallel batch fetching with concurrency limit
+      const fetchBatch = async (batch: string[], batchIndex: number): Promise<Paper[]> => {
         this.logger.log(
           `[PMC] Fetching batch ${batchIndex + 1}/${batches.length} (${batch.length} IDs)...`
         );
@@ -297,25 +301,41 @@ export class PMCService {
           );
 
           // Phase 10.106 Phase 3: Handle both direct data and wrapped AxiosResponse cases
-          // Same fix pattern as esearch - unwrap if needed
           const rawXml = fetchResult.data;
           const xmlData = String((rawXml as any)?.data ?? rawXml);
           const articles = xmlData.match(/<article[\s\S]*?<\/article>/g) || [];
 
           const batchPapers = articles.map((article: string) => this.parsePaper(article));
-          allPapers.push(...batchPapers);
 
           this.logger.log(
             `[PMC] Batch ${batchIndex + 1}/${batches.length} complete: ${batchPapers.length} papers parsed`
           );
+          return batchPapers;
         } catch (batchError: unknown) {
-          // Phase 10.106 Strict Mode: Use unknown with type narrowing
           const err = batchError as { message?: string };
-          // Phase 10.7.10: Handle batch failures gracefully - return what we got so far
           this.logger.warn(
-            `[PMC] ⚠️  Batch ${batchIndex + 1}/${batches.length} failed: ${err.message || 'Unknown error'} - Continuing with ${allPapers.length} papers from successful batches`
+            `[PMC] ⚠️  Batch ${batchIndex + 1}/${batches.length} failed: ${err.message || 'Unknown error'}`
           );
-          // Don't throw - continue to next batch or return what we have
+          return []; // Return empty array for failed batch, don't block others
+        }
+      };
+
+      // Phase 10.115: Execute batches in parallel with concurrency control
+      const allPapers: Paper[] = [];
+
+      // Process in chunks of MAX_CONCURRENT_BATCHES to respect rate limits
+      for (let i = 0; i < batches.length; i += MAX_CONCURRENT_BATCHES) {
+        const concurrentBatches = batches.slice(i, i + MAX_CONCURRENT_BATCHES);
+        const batchPromises = concurrentBatches.map((batch, idx) =>
+          fetchBatch(batch, i + idx)
+        );
+
+        const results = await Promise.allSettled(batchPromises);
+
+        for (const result of results) {
+          if (result.status === 'fulfilled') {
+            allPapers.push(...result.value);
+          }
         }
       }
 
