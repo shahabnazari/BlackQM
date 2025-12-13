@@ -373,6 +373,8 @@ export class IEEEService {
         qualityScore: qualityComponents.totalScore,
         isHighQuality: qualityComponents.totalScore >= 50,
         citationCount,
+        // Phase 10.120: Add metadataCompleteness for honest scoring transparency
+        metadataCompleteness: qualityComponents.metadataCompleteness,
         // IEEE-specific metadata stored in ieeeMetadata variable above
         // Can be extended by adding fields to Paper interface if needed
       };

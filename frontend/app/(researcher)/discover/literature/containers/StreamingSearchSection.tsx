@@ -1,5 +1,5 @@
 /**
- * Phase 10.113 Week 10: Streaming Search Section
+ * Phase 10.126: Streaming Search Section
  *
  * Enhanced search section that integrates WebSocket streaming for
  * <2s Time to First Result. This component wraps the existing search
@@ -8,12 +8,13 @@
  * Features:
  * - WebSocket progressive search streaming
  * - Query intelligence panel
- * - Live search progress with source-by-source status
+ * - Netflix-grade pipeline visualization (Phase 10.126)
  * - Lazy enrichment on viewport
  * - Automatic fallback to HTTP on WebSocket failure
  *
  * @module LiteratureSearch
  * @since Phase 10.113 Week 10
+ * @updated Phase 10.126 - Netflix-grade pipeline visualization
  */
 
 'use client';
@@ -27,7 +28,8 @@ import { Switch } from '@/components/ui/switch';
 import { useLiteratureSearchStore } from '@/lib/stores/literature-search.store';
 import { useSearchWebSocket } from '@/lib/hooks/useSearchWebSocket';
 import { QueryIntelligencePanel } from '../components/SearchSection/QueryIntelligencePanel';
-import { LiveSearchProgress } from '../components/SearchSection/LiveSearchProgress';
+// Phase 10.126: Netflix-grade pipeline visualization (replaces LiveSearchProgress)
+import { SearchPipelineOrchestra } from '../components/PipelineOrchestra';
 import type { QuerySuggestion } from '@/lib/types/search-stream.types';
 import { logger } from '@/lib/utils/logger';
 
@@ -382,21 +384,33 @@ export const StreamingSearchSection = memo(forwardRef<StreamingSearchSectionHand
         />
       )}
 
-      {/* Live Search Progress */}
-      {FEATURE_FLAGS.SHOW_LIVE_PROGRESS && (isSearching || wsState.sourceStats.size > 0) && (
-        <LiveSearchProgress
-          isSearching={isSearching}
-          stage={wsState.stage}
-          percent={wsState.percent}
-          message={wsState.message}
-          sourceStats={wsState.sourceStats}
-          sourcesComplete={wsState.sourcesComplete}
-          sourcesTotal={wsState.sourcesTotal}
-          papersFound={wsState.papersFound}
-          elapsedMs={wsState.elapsedMs}
-          onCancel={handleCancelSearch}
-        />
-      )}
+      {/* Phase 10.126: Netflix-Grade Pipeline Visualization */}
+      <AnimatePresence>
+        {FEATURE_FLAGS.SHOW_LIVE_PROGRESS && (isSearching || wsState.sourceStats.size > 0) && (
+          <SearchPipelineOrchestra
+            isSearching={isSearching}
+            stage={wsState.stage}
+            percent={wsState.percent}
+            message={wsState.message}
+            sourceStats={wsState.sourceStats}
+            sourcesComplete={wsState.sourcesComplete}
+            sourcesTotal={wsState.sourcesTotal}
+            papersFound={wsState.papersFound}
+            elapsedMs={wsState.elapsedMs}
+            // Phase 10.113 Week 11: Semantic tier progress
+            semanticTier={wsState.semanticTier}
+            semanticVersion={wsState.semanticVersion}
+            // Phase 10.113 Week 12: Semantic tier stats for detailed display
+            semanticTierStats={wsState.semanticTierStats}
+            // Phase 10.126: Callbacks
+            onCancel={handleCancelSearch}
+            // Optional: Enable/disable features
+            showParticles={true}
+            showSemanticBrain={true}
+            compactMode={false}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Error Display */}
       {wsState.error && (

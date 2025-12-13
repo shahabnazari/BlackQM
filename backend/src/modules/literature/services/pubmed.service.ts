@@ -524,6 +524,8 @@ export class PubMedService {
       citationsPerYear: 0, // Will be recalculated after OpenAlex enrichment
       qualityScore: qualityComponents.totalScore,
       isHighQuality: qualityComponents.totalScore >= 50,
+      // Phase 10.120: Add metadataCompleteness for honest scoring transparency
+      metadataCompleteness: qualityComponents.metadataCompleteness,
 
       // PubMed-specific rich metadata
       meshTerms: meshTerms.length > 0 ? meshTerms : undefined,
@@ -620,6 +622,8 @@ export class PubMedService {
               citationsPerYear,
               qualityScore: qualityComponents.totalScore,
               isHighQuality: qualityComponents.totalScore >= 50,
+              // Phase 10.120: Add metadataCompleteness for honest scoring transparency
+              metadataCompleteness: qualityComponents.metadataCompleteness,
             };
           }
         } catch (error: unknown) {

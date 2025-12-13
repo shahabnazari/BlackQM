@@ -1,12 +1,16 @@
 /**
  * PaperCard Component (Refactored)
- * Phase 10.91 Day 10 - Component Refactoring
+ * Phase 10.123 - Netflix-Grade PaperCard Redesign
  *
  * **Refactored:** Reduced from 961 lines to < 400 lines using composition
  * **Pattern:** Component composition with focused sub-components
- * ✅ FIXED: Performance - useMemo for SourceIcon computation
- * ✅ FIXED: Magic numbers replaced with constants
- * ✅ FIXED: Pass onToggleSelection to PaperHeader for checkbox functionality
+ *
+ * PHASE 10.123 INTEGRATION:
+ * ✅ Phase 1: Core sub-components (PaperHeader, PaperMetadata, etc.)
+ * ✅ Phase 2: MatchScoreBadge with touch/keyboard/hover support
+ * ✅ Phase 3: CollapsibleMetadata with progressive disclosure
+ * ✅ Phase 4: Memoized PaperCard with custom comparison
+ * ✅ Phase 5: Analytics integration (tooltip + metadata tracking)
  *
  * Displays individual paper with rich metadata, quality indicators, and actions
  *
@@ -15,9 +19,8 @@
 
 'use client';
 
-import React, { memo, useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { Paper } from '@/lib/types/literature.types';
 import {
@@ -27,11 +30,14 @@ import {
   PaperQualityBadges,
   PaperStatusBadges,
   PaperActions,
-  MAX_DISPLAYED_PUBLICATION_TYPES,
-  MAX_DISPLAYED_MESH_TERMS,
-  MAX_DISPLAYED_GRANTS,
-  MAX_AFFILIATION_LENGTH,
-  MAX_GRANT_AGENCY_LENGTH,
+  CollapsibleMetadata,
+  PaperCardErrorBoundary,
+  MatchScoreBadge,
+  // Phase 10.123 Phase 5: Analytics integration
+  trackTooltipOpened,
+  trackTooltipClosed,
+  trackMetadataExpanded,
+  trackMetadataCollapsed,
 } from './paper-card';
 
 // ============================================================================
@@ -61,7 +67,7 @@ export interface PaperCardProps {
 // Component
 // ============================================================================
 
-export const PaperCard = memo(function PaperCard({
+function PaperCardComponent({
   paper,
   isSelected,
   isSaved,
@@ -97,6 +103,41 @@ export const PaperCard = memo(function PaperCard({
     [paper.id, onToggleSelection]
   );
 
+  // ============================================================================
+  // Phase 10.123 Phase 5: Analytics Callbacks
+  // ============================================================================
+
+  /** Track when MatchScoreBadge tooltip is opened */
+  const handleTooltipOpen = useCallback(() => {
+    trackTooltipOpened(
+      paper.id,
+      paper.neuralRelevanceScore ?? null,
+      paper.qualityTier ?? null,
+      paper.neuralRank ?? null
+    );
+  }, [paper.id, paper.neuralRelevanceScore, paper.qualityTier, paper.neuralRank]);
+
+  /** Track when MatchScoreBadge tooltip is closed */
+  const handleTooltipClose = useCallback(() => {
+    trackTooltipClosed(paper.id);
+  }, [paper.id]);
+
+  /** Track when CollapsibleMetadata is expanded */
+  const handleMetadataExpand = useCallback(() => {
+    trackMetadataExpanded(
+      paper.id,
+      paper.meshTerms?.length ?? 0,
+      paper.grants?.length ?? 0,
+      paper.authorAffiliations?.length ?? 0,
+      paper.publicationType?.length ?? 0
+    );
+  }, [paper.id, paper.meshTerms?.length, paper.grants?.length, paper.authorAffiliations?.length, paper.publicationType?.length]);
+
+  /** Track when CollapsibleMetadata is collapsed */
+  const handleMetadataCollapse = useCallback(() => {
+    trackMetadataCollapsed(paper.id);
+  }, [paper.id]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -105,10 +146,11 @@ export const PaperCard = memo(function PaperCard({
       transition={{ layout: { duration: 0.2 } }}
       className={cn(
         'border rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer relative',
-        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-        isSelected && 'border-blue-500 bg-blue-50/50',
-        isExtracted && 'border-green-200 bg-green-50/30',
-        isExtracting && 'border-amber-300 bg-amber-50/30'
+        'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700',
+        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900',
+        isSelected && 'border-blue-500 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-950/50',
+        isExtracted && 'border-green-200 dark:border-green-700 bg-green-50/30 dark:bg-green-950/30',
+        isExtracting && 'border-amber-300 dark:border-amber-600 bg-amber-50/30 dark:bg-amber-950/30'
       )}
       onClick={handleToggleSelection}
       role="article"
@@ -147,7 +189,20 @@ export const PaperCard = memo(function PaperCard({
           />
 
           {/* Access and Quality Badges */}
-          <div className="flex gap-4 mt-2 flex-wrap">
+          <div className="flex gap-4 mt-2 flex-wrap items-center">
+            {/* Phase 10.123 Phase 2: Netflix-Grade Match Score Badge */}
+            <MatchScoreBadge
+              neuralRelevanceScore={paper.neuralRelevanceScore}
+              neuralRank={paper.neuralRank}
+              neuralExplanation={paper.neuralExplanation}
+              qualityScore={paper.qualityScore}
+              citationCount={paper.citationCount}
+              citationsPerYear={paper.citationsPerYear}
+              venue={paper.venue}
+              onTooltipOpen={handleTooltipOpen}
+              onTooltipClose={handleTooltipClose}
+            />
+
             {/* Access Status Badges */}
             <PaperAccessBadges
               url={paper.url}
@@ -157,7 +212,7 @@ export const PaperCard = memo(function PaperCard({
               fullTextSource={paper.fullTextSource}
             />
 
-            {/* Quality Indicators - Phase 10.107 with Confidence */}
+            {/* Quality Indicators (citations/year, quality score) */}
             <PaperQualityBadges
               citationsPerYear={paper.citationsPerYear}
               qualityScore={paper.qualityScore}
@@ -168,141 +223,12 @@ export const PaperCard = memo(function PaperCard({
             />
           </div>
 
-          {/* Extended Metadata Section */}
-          {(paper.publicationType ||
-            paper.meshTerms ||
-            paper.authorAffiliations ||
-            paper.grants) && (
-            <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-              {/* Publication Types */}
-              {paper.publicationType && paper.publicationType.length > 0 && (
-                <div className="flex items-start gap-2">
-                  <span className="text-xs font-medium text-gray-500 shrink-0 mt-0.5">
-                    Type:
-                  </span>
-                  <div className="flex gap-1 flex-wrap">
-                    {paper.publicationType
-                      .slice(0, MAX_DISPLAYED_PUBLICATION_TYPES)
-                      .map((type, idx) => (
-                        <Badge
-                          key={idx}
-                          variant="outline"
-                          className="text-xs bg-blue-50 text-blue-700 border-blue-200"
-                          title="Publication type from PubMed"
-                        >
-                          {type}
-                        </Badge>
-                      ))}
-                    {paper.publicationType.length >
-                      MAX_DISPLAYED_PUBLICATION_TYPES && (
-                      <span className="text-xs text-gray-400 self-center">
-                        +
-                        {paper.publicationType.length -
-                          MAX_DISPLAYED_PUBLICATION_TYPES}{' '}
-                        more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* MeSH Terms */}
-              {paper.meshTerms && paper.meshTerms.length > 0 && (
-                <div className="flex items-start gap-2">
-                  <span className="text-xs font-medium text-gray-500 shrink-0 mt-0.5">
-                    MeSH:
-                  </span>
-                  <div className="flex gap-1 flex-wrap">
-                    {paper.meshTerms
-                      .slice(0, MAX_DISPLAYED_MESH_TERMS)
-                      .map((term, idx) => (
-                        <Badge
-                          key={idx}
-                          variant="outline"
-                          className="text-xs bg-green-50 text-green-700 border-green-200"
-                          title={`MeSH: ${term.descriptor}${
-                            term.qualifiers.length > 0
-                              ? ' [' + term.qualifiers.join(', ') + ']'
-                              : ''
-                          }`}
-                        >
-                          {term.descriptor}
-                        </Badge>
-                      ))}
-                    {paper.meshTerms.length > MAX_DISPLAYED_MESH_TERMS && (
-                      <span className="text-xs text-gray-400 self-center">
-                        +{paper.meshTerms.length - MAX_DISPLAYED_MESH_TERMS} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Author Affiliations */}
-              {paper.authorAffiliations &&
-                paper.authorAffiliations.length > 0 &&
-                paper.authorAffiliations[0] && (
-                  <div className="flex items-start gap-2">
-                    <span className="text-xs font-medium text-gray-500 shrink-0 mt-0.5">
-                      Institution:
-                    </span>
-                    <span
-                      className="text-xs text-gray-600"
-                      title={`${paper.authorAffiliations[0].author}: ${paper.authorAffiliations[0].affiliation}`}
-                    >
-                      {paper.authorAffiliations[0].affiliation.substring(
-                        0,
-                        MAX_AFFILIATION_LENGTH
-                      )}
-                      {paper.authorAffiliations[0].affiliation.length >
-                      MAX_AFFILIATION_LENGTH
-                        ? '...'
-                        : ''}
-                      {paper.authorAffiliations.length > 1 && (
-                        <span className="text-gray-400 ml-1">
-                          (+{paper.authorAffiliations.length - 1} more)
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                )}
-
-              {/* Grants */}
-              {paper.grants && paper.grants.length > 0 && (
-                <div className="flex items-start gap-2">
-                  <span className="text-xs font-medium text-gray-500 shrink-0 mt-0.5">
-                    Funding:
-                  </span>
-                  <div className="flex gap-1 flex-wrap">
-                    {paper.grants
-                      .slice(0, MAX_DISPLAYED_GRANTS)
-                      .map((grant, idx) => (
-                        <Badge
-                          key={idx}
-                          variant="outline"
-                          className="text-xs bg-purple-50 text-purple-700 border-purple-200"
-                          title={`${grant.agency || 'Unknown agency'}${
-                            grant.grantId ? ' - ' + grant.grantId : ''
-                          }`}
-                        >
-                          {grant.agency?.substring(0, MAX_GRANT_AGENCY_LENGTH) ||
-                            'Grant'}
-                          {grant.agency &&
-                          grant.agency.length > MAX_GRANT_AGENCY_LENGTH
-                            ? '...'
-                            : ''}
-                        </Badge>
-                      ))}
-                    {paper.grants.length > MAX_DISPLAYED_GRANTS && (
-                      <span className="text-xs text-gray-400 self-center">
-                        +{paper.grants.length - MAX_DISPLAYED_GRANTS} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Phase 10.123 Phase 3: Collapsible Extended Metadata (Netflix-Grade) */}
+          <CollapsibleMetadata
+            paper={paper}
+            onExpand={handleMetadataExpand}
+            onCollapse={handleMetadataCollapse}
+          />
 
           {/* Action Buttons */}
           <PaperActions
@@ -314,4 +240,63 @@ export const PaperCard = memo(function PaperCard({
       </div>
     </motion.div>
   );
+}
+
+// ============================================================================
+// Phase 10.123: Memoized Export with Custom Comparison
+// ============================================================================
+
+/**
+ * Memoized PaperCard with custom comparison for optimal performance
+ * Only re-renders when relevant props change
+ */
+export const PaperCard = React.memo(PaperCardComponent, (prev, next) => {
+  // Fast comparison for primitive props
+  if (
+    prev.isSelected !== next.isSelected ||
+    prev.isSaved !== next.isSaved ||
+    prev.isExtracting !== next.isExtracting ||
+    prev.isExtracted !== next.isExtracted
+  ) {
+    return false; // Props changed, should re-render
+  }
+
+  // Paper ID changed = definitely re-render
+  if (prev.paper.id !== next.paper.id) {
+    return false;
+  }
+
+  // Check key paper properties that affect display
+  if (
+    prev.paper.neuralRelevanceScore !== next.paper.neuralRelevanceScore ||
+    prev.paper.neuralRank !== next.paper.neuralRank ||
+    prev.paper.qualityScore !== next.paper.qualityScore ||
+    prev.paper.citationCount !== next.paper.citationCount
+  ) {
+    return false;
+  }
+
+  // All checks passed - props are equal, skip re-render
+  return true;
 });
+
+PaperCard.displayName = 'PaperCard';
+
+// ============================================================================
+// Phase 10.123: Error Boundary Wrapped Export
+// ============================================================================
+
+/**
+ * PaperCard wrapped with ErrorBoundary for cascade failure prevention
+ * Use this in lists to prevent one broken card from crashing the entire list
+ */
+export function PaperCardWithErrorBoundary(props: PaperCardProps) {
+  return (
+    <PaperCardErrorBoundary
+      paperId={props.paper.id}
+      paperTitle={props.paper.title}
+    >
+      <PaperCard {...props} />
+    </PaperCardErrorBoundary>
+  );
+}

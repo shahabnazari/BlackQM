@@ -97,6 +97,9 @@ export class SemanticCacheService implements OnModuleInit {
     sets: 0,
   };
 
+  // Phase 10.126: Graceful degradation when Qdrant unavailable
+  private isAvailable = false;
+
   constructor() {
     // Phase 8.90: Initialize Qdrant client
     this.qdrant = new QdrantClient({
@@ -112,19 +115,30 @@ export class SemanticCacheService implements OnModuleInit {
   /**
    * Initialize Qdrant collection on module startup
    * Phase 8.90: Enterprise-grade error handling
+   * Phase 10.126: Graceful degradation - don't crash if Qdrant unavailable
    */
   async onModuleInit(): Promise<void> {
     try {
       await this.initializeCollection();
+      this.isAvailable = true;
       this.logger.log(`[SemanticCache] ✅ Collection '${this.collectionName}' ready`);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `[SemanticCache] ❌ Failed to initialize collection: ${errorMessage}`,
-        error instanceof Error ? error.stack : undefined
+      this.isAvailable = false;
+      this.logger.warn(
+        `[SemanticCache] ⚠️ Qdrant unavailable - semantic caching disabled. Start Docker/Qdrant for full functionality.`
       );
-      throw error;
+      this.logger.debug(`[SemanticCache] Connection error: ${errorMessage}`);
+      // Phase 10.126: Don't throw - allow backend to start without Qdrant
     }
+  }
+
+  /**
+   * Check if semantic cache is available
+   * Phase 10.126: Public accessor for health checks
+   */
+  isReady(): boolean {
+    return this.isAvailable;
   }
 
   /**
@@ -176,6 +190,12 @@ export class SemanticCacheService implements OnModuleInit {
    * // Will match "social behavior in primates" with 98%+ similarity
    */
   async get<T>(key: string, embedding: number[]): Promise<T | null> {
+    // Phase 10.126: Graceful degradation when Qdrant unavailable
+    if (!this.isAvailable) {
+      this.stats.misses++;
+      return null;
+    }
+
     try {
       // Phase 8.90 STRICT AUDIT: Input validation (VALIDATION-001)
       if (!key || key.trim().length === 0) {
@@ -280,6 +300,11 @@ export class SemanticCacheService implements OnModuleInit {
    * await cache.set("primate social behavior", embedding, embeddingVector);
    */
   async set<T>(key: string, embedding: number[], value: T): Promise<void> {
+    // Phase 10.126: Graceful degradation when Qdrant unavailable
+    if (!this.isAvailable) {
+      return; // Silently skip caching
+    }
+
     try {
       // Phase 8.90 STRICT AUDIT: Input validation (VALIDATION-002)
       if (!key || key.trim().length === 0) {

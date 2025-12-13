@@ -291,12 +291,12 @@ describe('Badge Component', () => {
   describe('Performance', () => {
     it('does not re-render unnecessarily', () => {
       const renderSpy = vi.fn();
-      
-      const TestBadge = React.memo(({ children, ...props }: any) => {
+
+      const TestBadge = React.memo(function TestBadge({ children, ...props }: any) {
         renderSpy();
         return <Badge {...props}>{children}</Badge>;
       });
-      
+
       const { rerender } = render(<TestBadge>Test</TestBadge>);
       expect(renderSpy).toHaveBeenCalledTimes(1);
       
@@ -320,7 +320,7 @@ describe('Badge Component', () => {
     });
 
     it('handles special characters', () => {
-      render(<Badge>™ © & < > "</Badge>);
+      render(<Badge>{'™ © & < > "'}</Badge>);
       const badge = screen.getByText('™ © & < > "');
       expect(badge).toBeInTheDocument();
     });

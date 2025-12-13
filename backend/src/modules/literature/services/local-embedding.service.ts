@@ -64,7 +64,9 @@ export class LocalEmbeddingService implements OnModuleInit, OnModuleDestroy {
 
   // Phase 10.98.1: Optimal batch size for GPU/CPU inference
   // Too small = underutilization, too large = memory pressure
-  private static readonly OPTIMAL_BATCH_SIZE = 32;
+  // Phase 10.125: Increased from 32 to 64 for systems with 64GB RAM
+  // With 6 workers, each processing 64-text batches = better CPU utilization
+  private static readonly OPTIMAL_BATCH_SIZE = 64;
 
   // Phase 10.98.2: Minimum text length for meaningful embedding
   private static readonly MIN_TEXT_LENGTH = 1;

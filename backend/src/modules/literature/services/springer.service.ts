@@ -436,6 +436,8 @@ export class SpringerService {
         qualityScore: qualityComponents.totalScore,
         isHighQuality: qualityComponents.totalScore >= 50,
         citationCount,
+        // Phase 10.120: Add metadataCompleteness for honest scoring transparency
+        metadataCompleteness: qualityComponents.metadataCompleteness,
         // Springer-specific metadata stored in springerMetadata variable above
         // Can be extended by adding fields to Paper interface if needed
       };

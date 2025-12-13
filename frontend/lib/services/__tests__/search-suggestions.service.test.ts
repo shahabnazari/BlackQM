@@ -219,6 +219,7 @@ describe('SearchSuggestionsService', () => {
 
       // Use search1 multiple times
       for (let i = 0; i < 15; i++) {
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- useSearch is a service method, not a React hook
         SavedSearchesService.useSearch(search1.id);
       }
 
@@ -415,6 +416,7 @@ describe('SearchSuggestionsService', () => {
       });
 
       for (let i = 0; i < 20; i++) {
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- useSearch is a service method, not a React hook
         SavedSearchesService.useSearch(saved.id);
       }
 

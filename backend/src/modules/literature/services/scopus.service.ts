@@ -380,6 +380,8 @@ export class ScopusService {
       wordCount,
       qualityScore: qualityComponents.totalScore,
       isHighQuality: qualityComponents.totalScore >= 50,
+      // Phase 10.120: Add metadataCompleteness for honest scoring transparency
+      metadataCompleteness: qualityComponents.metadataCompleteness,
       isEligible,
       keywords,
       pdfUrl: isOpenAccess ? this.constructPdfUrl(doi, entry) : undefined,

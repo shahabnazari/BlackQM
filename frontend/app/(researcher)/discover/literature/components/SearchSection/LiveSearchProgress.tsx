@@ -26,6 +26,9 @@ import {
   Timer,
   AlertTriangle,
   SkipForward,
+  HardDrive,
+  Cpu,
+  TrendingUp,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -36,6 +39,7 @@ import type {
   LiteratureSource,
   SearchStage,
   SemanticTierName,
+  SemanticTierStats,
 } from '@/lib/types/search-stream.types';
 import { SEMANTIC_TIER_CONFIG } from '@/lib/types/search-stream.types';
 
@@ -109,6 +113,9 @@ interface LiveSearchProgressProps {
   semanticTier?: SemanticTierName | null;
   /** Semantic tier version for ordering */
   semanticVersion?: number;
+  // Phase 10.113 Week 12: Semantic tier stats for detailed display
+  /** Stats for each semantic tier */
+  semanticTierStats?: Map<SemanticTierName, SemanticTierStats>;
 }
 
 // ============================================================================
@@ -293,99 +300,214 @@ const StageIndicator = memo(function StageIndicator({
 
 /**
  * Phase 10.113 Week 11: Semantic Tier Indicator
- * Shows progressive semantic ranking progress
+ * Phase 10.113 Week 12: Enhanced with detailed stats display
+ * Shows progressive semantic ranking progress with latency, cache hits, and papers processed
  */
 const SemanticTierIndicator = memo(function SemanticTierIndicator({
   currentTier,
   version,
+  tierStats,
 }: {
   currentTier: SemanticTierName | null;
   version: number;
+  tierStats?: Map<SemanticTierName, SemanticTierStats> | undefined;
 }) {
   const tiers: SemanticTierName[] = ['immediate', 'refined', 'complete'];
-
-  if (!currentTier && version === 0) return null;
-
   const currentIndex = currentTier ? tiers.indexOf(currentTier) : -1;
+
+  // Calculate total stats for summary - moved before early return (React hooks rules)
+  const totalStats = useMemo(() => {
+    if (!tierStats || tierStats.size === 0) return null;
+
+    let totalPapers = 0;
+    let totalCacheHits = 0;
+    let totalLatency = 0;
+    let completedTiers = 0;
+
+    tierStats.forEach((stats) => {
+      if (stats.isComplete) {
+        totalPapers += stats.papersProcessed;
+        totalCacheHits += stats.cacheHits;
+        totalLatency = Math.max(totalLatency, stats.latencyMs);
+        completedTiers++;
+      }
+    });
+
+    const cacheRate = totalPapers > 0 ? (totalCacheHits / totalPapers) * 100 : 0;
+
+    return { totalPapers, totalCacheHits, totalLatency, cacheRate, completedTiers };
+  }, [tierStats]);
+
+  // Early return after hooks (React hooks rules compliant)
+  if (!currentTier && version === 0) return null;
 
   return (
     <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-3">
-      <div className="flex items-center justify-between mb-2">
+      {/* Header with stats summary */}
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-purple-600" />
           <span className="text-xs font-semibold text-purple-800 uppercase tracking-wide">
             Semantic Ranking
           </span>
         </div>
-        {version > 0 && (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-white border-purple-200 text-purple-600">
-            v{version}
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Summary stats badges */}
+          {totalStats && totalStats.completedTiers > 0 && (
+            <>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-white border-green-200 text-green-600 flex items-center gap-1">
+                <HardDrive className="w-2.5 h-2.5" />
+                {totalStats.cacheRate.toFixed(0)}%
+              </Badge>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-white border-blue-200 text-blue-600 flex items-center gap-1">
+                <Timer className="w-2.5 h-2.5" />
+                {(totalStats.totalLatency / 1000).toFixed(1)}s
+              </Badge>
+            </>
+          )}
+          {version > 0 && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-white border-purple-200 text-purple-600">
+              v{version}
+            </Badge>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      {/* Tier cards */}
+      <div className="flex items-stretch gap-2">
         {tiers.map((tier, index) => {
           const config = SEMANTIC_TIER_CONFIG[tier];
-          const isActive = tier === currentTier;
-          const isComplete = index < currentIndex;
+          const stats = tierStats?.get(tier);
+          const isActive = tier === currentTier && (!stats || !stats.isComplete);
+          const isComplete = stats?.isComplete || index < currentIndex;
+          const hasProgress = stats && !stats.isComplete && stats.progressPercent > 0;
 
           return (
             <React.Fragment key={tier}>
               <div className="flex-1">
                 <div
-                  className={`p-2 rounded-lg border-2 transition-all ${
+                  className={`p-2 rounded-lg border-2 transition-all h-full ${
                     isComplete
-                      ? 'bg-green-100 border-green-400'
+                      ? 'bg-green-50 border-green-400'
                       : isActive
                       ? 'bg-purple-100 border-purple-500 shadow-sm'
-                      : 'bg-gray-100 border-gray-300'
+                      : 'bg-gray-50 border-gray-300'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5">
-                    {isComplete ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                    ) : isActive ? (
-                      <Loader2 className="w-3.5 h-3.5 text-purple-600 animate-spin" />
-                    ) : (
-                      <Clock className="w-3.5 h-3.5 text-gray-400" />
+                  {/* Tier name and status */}
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5">
+                      {isComplete ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                      ) : isActive ? (
+                        <Loader2 className="w-3.5 h-3.5 text-purple-600 animate-spin" />
+                      ) : (
+                        <Clock className="w-3.5 h-3.5 text-gray-400" />
+                      )}
+                      <span
+                        className={`text-xs font-medium ${
+                          isComplete
+                            ? 'text-green-700'
+                            : isActive
+                            ? 'text-purple-700'
+                            : 'text-gray-500'
+                        }`}
+                      >
+                        {config.displayName}
+                      </span>
+                    </div>
+                    {/* Latency badge for completed tiers */}
+                    {isComplete && stats?.latencyMs && (
+                      <span className="text-[9px] text-green-600 font-medium">
+                        {(stats.latencyMs / 1000).toFixed(1)}s
+                      </span>
                     )}
-                    <span
-                      className={`text-xs font-medium ${
-                        isComplete
-                          ? 'text-green-700'
-                          : isActive
-                          ? 'text-purple-700'
-                          : 'text-gray-500'
-                      }`}
-                    >
-                      {config.displayName}
-                    </span>
                   </div>
+
+                  {/* Paper range */}
                   <div className="mt-1 text-[10px] text-gray-500">
                     {config.paperRange} papers
                   </div>
+
+                  {/* Progress bar for active tier */}
+                  {(isActive || hasProgress) && !isComplete && (
+                    <div className="mt-2">
+                      <div className="h-1 bg-purple-200 rounded-full overflow-hidden">
+                        <motion.div
+                          className="h-full bg-purple-500 rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${stats?.progressPercent ?? 0}%` }}
+                          transition={{ duration: 0.3 }}
+                        />
+                      </div>
+                      {stats?.papersProcessed !== undefined && (
+                        <div className="mt-1 text-[9px] text-purple-600">
+                          {stats.papersProcessed} processed
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Stats for completed tiers */}
+                  {isComplete && stats && (
+                    <div className="mt-2 flex items-center gap-2 text-[9px] text-gray-500">
+                      <div className="flex items-center gap-0.5" title="Papers processed">
+                        <FileText className="w-2.5 h-2.5" />
+                        <span>{stats.papersProcessed}</span>
+                      </div>
+                      {stats.cacheHits > 0 && (
+                        <div className="flex items-center gap-0.5 text-green-600" title="Cache hits">
+                          <HardDrive className="w-2.5 h-2.5" />
+                          <span>{stats.cacheHits}</span>
+                        </div>
+                      )}
+                      {stats.usedWorkerPool && (
+                        <div className="flex items-center gap-0.5 text-blue-600" title="Worker pool used">
+                          <Cpu className="w-2.5 h-2.5" />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               {index < tiers.length - 1 && (
-                <div
-                  className={`w-4 h-0.5 ${
-                    index < currentIndex ? 'bg-green-400' : 'bg-gray-300'
-                  }`}
-                />
+                <div className="flex items-center">
+                  <TrendingUp
+                    className={`w-4 h-4 ${
+                      index < currentIndex ? 'text-green-400' : 'text-gray-300'
+                    }`}
+                  />
+                </div>
               )}
             </React.Fragment>
           );
         })}
       </div>
 
-      {currentTier && (
-        <div className="mt-2 text-xs text-purple-600">
-          {currentTier === 'immediate' && 'Quick preview ready - papers re-ranking in progress...'}
-          {currentTier === 'refined' && 'Extended analysis complete - finalizing full ranking...'}
-          {currentTier === 'complete' && 'Full semantic analysis complete - highest quality ranking'}
-        </div>
-      )}
+      {/* Status message */}
+      <div className="mt-3 text-xs">
+        {currentTier === 'immediate' && !tierStats?.get('immediate')?.isComplete && (
+          <span className="text-purple-600">Quick preview ready - papers re-ranking in progress...</span>
+        )}
+        {currentTier === 'refined' && !tierStats?.get('refined')?.isComplete && (
+          <span className="text-purple-600">Refining analysis with extended paper set...</span>
+        )}
+        {tierStats?.get('complete')?.isComplete && (
+          <div className="flex items-center justify-between">
+            <span className="text-green-600 font-medium">
+              Full semantic analysis complete - highest quality ranking
+            </span>
+            {totalStats && (
+              <span className="text-gray-500">
+                {totalStats.totalPapers} papers ranked
+              </span>
+            )}
+          </div>
+        )}
+        {currentTier === 'complete' && !tierStats?.get('complete')?.isComplete && (
+          <span className="text-purple-600">Completing final deep analysis...</span>
+        )}
+      </div>
     </div>
   );
 });
@@ -407,6 +529,7 @@ export const LiveSearchProgress = memo(function LiveSearchProgress({
   onCancel,
   semanticTier,
   semanticVersion = 0,
+  semanticTierStats,
 }: LiveSearchProgressProps) {
   // Group sources by tier
   const sourcesByTier = useMemo(() => {
@@ -505,10 +628,11 @@ export const LiveSearchProgress = memo(function LiveSearchProgress({
           {/* Stage Indicator */}
           <StageIndicator currentStage={stage} />
 
-          {/* Phase 10.113 Week 11: Semantic Tier Indicator */}
+          {/* Phase 10.113 Week 11/12: Semantic Tier Indicator with stats */}
           <SemanticTierIndicator
             currentTier={semanticTier ?? null}
             version={semanticVersion}
+            tierStats={semanticTierStats}
           />
 
           {/* Source Grid */}

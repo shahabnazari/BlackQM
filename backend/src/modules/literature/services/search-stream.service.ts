@@ -763,6 +763,9 @@ export class SearchStreamService {
       this.emitRankingHeartbeat(state, progressPercent, `Ranking ${collectedCount} papers → top ${limit}... (${elapsedSec}s)`);
     }, 3000);
 
+    // Phase 10.121: Track if progressive semantic was used (papers already sent via search:semantic-tier)
+    let usedProgressiveSemantic = false;
+
     try {
       // Phase 10.113 Week 11: Use progressive semantic streaming if enabled
       if (SearchStreamService.ENABLE_PROGRESSIVE_SEMANTIC && papers.length >= 20) {
@@ -773,6 +776,7 @@ export class SearchStreamService {
           startTime,
           rankingController.signal,
         );
+        usedProgressiveSemantic = true; // Papers already sent via search:semantic-tier
       } else {
         // Fallback to standard pipeline for small paper counts
         rankedPapers = await this.executeStandardRanking(
@@ -818,11 +822,15 @@ export class SearchStreamService {
     // Phase 10.118: Emit 99% progress with accurate final count before batch
     this.emitRankingHeartbeat(state, 99, `Ranked ${collectedCount} → ${rankedPapers.length} top papers`);
 
-    // Emit final ranked batch
-    this.emitPapersBatch(state, rankedPapers, undefined, true);
+    // Phase 10.121: Skip emitPapersBatch when progressive semantic was used
+    // Papers were already sent via search:semantic-tier events - emitting here would cause duplicates
+    if (!usedProgressiveSemantic) {
+      // Emit final ranked batch only for standard ranking (non-progressive)
+      this.emitPapersBatch(state, rankedPapers, undefined, true);
+    }
 
     this.logger.log(
-      `📊 [SearchStream] Final ranked results: ${rankedPapers.length} papers (from ${collectedCount} collected)`,
+      `📊 [SearchStream] Final ranked results: ${rankedPapers.length} papers (from ${collectedCount} collected)${usedProgressiveSemantic ? ' [via semantic-tier events]' : ''}`,
     );
   }
 
@@ -861,12 +869,13 @@ export class SearchStreamService {
         state.correctedQuery,
         signal,
       )) {
-        // Emit semantic tier event to frontend
+        // Emit semantic tier event to frontend (sliced to limit)
+        const emittedPapers = tierResult.papers.slice(0, limit);
         this.emitSemanticTier(state, {
           searchId: state.searchId,
           tier: tierResult.tier,
           version: tierResult.version,
-          papers: tierResult.papers.slice(0, limit),
+          papers: emittedPapers,
           latencyMs: Date.now() - startTime,
           isComplete: tierResult.isComplete,
           metadata: tierResult.metadata,
@@ -877,7 +886,7 @@ export class SearchStreamService {
         finalPapers = this.searchPipeline.calculateCombinedScores(tierResult.papers);
 
         this.logger.log(
-          `✨ [Semantic Tier ${tierResult.tier}] Emitted ${tierResult.papers.length} papers (v${tierResult.version})`,
+          `✨ [Semantic Tier ${tierResult.tier}] Emitted ${emittedPapers.length} papers (v${tierResult.version})`,
         );
 
         // Emit semantic progress for UI feedback
@@ -957,11 +966,76 @@ export class SearchStreamService {
 
   /**
    * Phase 10.113 Week 11: Emit semantic tier event
+   * Phase 10.122: Map combinedScore → neuralRelevanceScore for frontend transparency
+   * Phase 10.124: Debug logging to verify pipeline deduplication
    */
   private emitSemanticTier(state: SearchState, event: SemanticTierEvent): void {
+    // Phase 10.124: Debug - verify no duplicates from pipeline (should be 0)
+    const idCounts = new Map<string, number>();
+    for (const paper of event.papers) {
+      const id = paper.id || 'no-id';
+      idCounts.set(id, (idCounts.get(id) || 0) + 1);
+    }
+    const duplicateIds = Array.from(idCounts.entries()).filter(([, count]) => count > 1);
+
+    // Log paper count for debugging
+    this.logger.log(
+      `📤 [SemanticTier ${event.tier}] Emitting ${event.papers.length} papers (unique IDs: ${idCounts.size})`,
+    );
+
+    if (duplicateIds.length > 0) {
+      // This should NOT happen if pipeline deduplication is working
+      this.logger.error(
+        `🚨 [SemanticTier ${event.tier}] BUG: Found ${duplicateIds.length} duplicate IDs - pipeline dedup failed!`,
+        { duplicates: duplicateIds.slice(0, 5).map(([id, count]) => `${id.substring(0, 30)}...(${count}x)`) },
+      );
+    }
+
+    // Phase 10.122: Transform papers to include neuralRelevanceScore for frontend
+    // This is the ACTUAL SORTING SCORE that should be displayed to users
+    // Note: event.papers are already deduplicated by search pipeline
+
+    // Calculate max BM25 for normalization (0-100 scale for display consistency)
+    const maxBM25 = Math.max(
+      ...event.papers.map(p => p.relevanceScore ?? 0),
+      1, // Prevent division by zero
+    );
+
+    // Use event.papers directly (already deduplicated by pipeline)
+    const transformedPapers = event.papers.map((paper, index) => {
+      // Cast to access semantic scoring fields (they exist but aren't in Paper type)
+      const scoredPaper = paper as Paper & {
+        combinedScore?: number;
+        semanticScore?: number;
+        themeFitScore?: { overallThemeFit?: number };
+      };
+
+      // Normalize BM25 to 0-100 scale for display consistency
+      const normalizedBM25 = Math.round(((paper.relevanceScore ?? 0) / maxBM25) * 100);
+      const semanticPct = Math.round((scoredPaper.semanticScore ?? 0) * 100);
+      const themeFitPct = Math.round((scoredPaper.themeFitScore?.overallThemeFit ?? 0) * 100);
+
+      return {
+        ...paper,
+        // Map combinedScore to neuralRelevanceScore for frontend display
+        neuralRelevanceScore: scoredPaper.combinedScore ?? paper.relevanceScore ?? 0,
+        // Add ranking position (1-indexed)
+        neuralRank: index + 1,
+        // Add explanation with normalized component breakdown (all 0-100 scale)
+        neuralExplanation: scoredPaper.combinedScore !== undefined
+          ? `BM25=${normalizedBM25}, Sem=${semanticPct}, ThemeFit=${themeFitPct}`
+          : undefined,
+        // Also include raw semantic score for frontend
+        semanticScore: scoredPaper.semanticScore,
+      };
+    });
+
     state.emit({
       type: 'search:semantic-tier',
-      data: event,
+      data: {
+        ...event,
+        papers: transformedPapers,
+      },
     });
   }
 

@@ -301,6 +301,23 @@ export class OpenAlexService {
     // Calculate initial quality score
     const qualityScore = this.calculateInitialQualityScore(work);
 
+    // Phase 10.120: Calculate metadataCompleteness for honest scoring transparency
+    // OpenAlex uses custom scoring, so we calculate completeness manually
+    const hasCitations = citationCount > 0;
+    const hasJournalMetrics = !!(impactFactor || hIndexJournal);
+    const hasYear = year !== undefined;
+    const hasAbstract = abstract.length > 0;
+    const availableMetrics = [hasCitations, hasJournalMetrics, hasYear, hasAbstract].filter(Boolean).length;
+    const metadataCompleteness = {
+      hasCitations,
+      hasJournalMetrics,
+      hasYear,
+      hasAbstract,
+      completenessScore: (availableMetrics / 4) * 100,
+      availableMetrics,
+      totalMetrics: 4,
+    };
+
     // Construct Paper DTO
     const paper: Paper = {
       id: openAlexId,
@@ -314,6 +331,8 @@ export class OpenAlexService {
       citationCount,
       qualityScore,
       isHighQuality: qualityScore >= 50,
+      // Phase 10.120: Add metadataCompleteness for honest scoring transparency
+      metadataCompleteness,
       // Venue and journal metrics (if available)
       venue,
       hIndexJournal,

@@ -402,6 +402,8 @@ export class ERICService {
       qualityScore: qualityComponents.totalScore,
       isHighQuality: qualityComponents.totalScore >= 50,
       citationCount: 0, // ERIC doesn't provide citation counts
+      // Phase 10.120: Add metadataCompleteness for honest scoring transparency
+      metadataCompleteness: qualityComponents.metadataCompleteness,
     };
   }
 

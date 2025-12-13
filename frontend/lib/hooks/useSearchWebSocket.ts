@@ -38,6 +38,8 @@ import {
   // Phase 10.113 Week 11: Semantic tier types
   SemanticTierEvent,
   SemanticProgressEvent,
+  // Phase 10.113 Week 12: Semantic tier stats
+  SemanticTierStats,
   // Phase 10.113 Week 11 Bug 10: Rerank types
   PaperWithSemanticScore,
   RerankOptions,
@@ -425,8 +427,9 @@ export function useSearchWebSocket(
     });
 
     // Phase 10.113 Week 11: Semantic tier events with Bug 10 fix
+    // Phase 10.113 Week 12: Enhanced with tier stats tracking
     socket.on(WS_EVENTS.SEMANTIC_TIER, (event: SemanticTierEvent) => {
-      console.log(`[SearchWebSocket] Semantic tier ${event.tier} complete: ${event.papers.length} papers, ${event.latencyMs}ms`);
+      console.log(`[SearchWebSocket] Semantic tier ${event.tier} complete: ${event.papers.length} papers, ${event.latencyMs}ms, cache: ${event.metadata?.cacheHits ?? 0}`);
 
       // Store previous papers for position change calculation
       let previousPapers: Paper[] = [];
@@ -451,10 +454,26 @@ export function useSearchWebSocket(
           };
         });
 
+        // Phase 10.113 Week 12: Create tier stats from event metadata
+        const newTierStats = new Map(prev.semanticTierStats);
+        const tierStats: SemanticTierStats = {
+          tier: event.tier,
+          isComplete: true,
+          latencyMs: event.latencyMs,
+          papersProcessed: event.metadata?.papersProcessed ?? event.papers.length,
+          cacheHits: event.metadata?.cacheHits ?? 0,
+          embedGenerated: event.metadata?.embedGenerated ?? 0,
+          usedWorkerPool: event.metadata?.usedWorkerPool ?? false,
+          progressPercent: 100,
+          progressMessage: `Completed in ${(event.latencyMs / 1000).toFixed(1)}s`,
+        };
+        newTierStats.set(event.tier, tierStats);
+
         return {
           ...prev,
           semanticTier: event.tier,
           semanticVersion: event.version,
+          semanticTierStats: newTierStats,
           // Bug 10 FIX: Use merged papers that preserve user notes
           papers: mergedPapers,
           // Bug 10 FIX: Preserve all user interaction state
@@ -482,8 +501,31 @@ export function useSearchWebSocket(
       callbacksRef.current.onSemanticTier?.(event);
     });
 
+    // Phase 10.113 Week 12: Track semantic progress with stats
     socket.on(WS_EVENTS.SEMANTIC_PROGRESS, (event: SemanticProgressEvent) => {
-      console.log(`[SearchWebSocket] Semantic progress: ${event.tier} - ${event.percent}%`);
+      console.log(`[SearchWebSocket] Semantic progress: ${event.tier} - ${event.percent}% (${event.papersProcessed}/${event.papersTotal})`);
+
+      // Update tier stats with progress
+      setState(prev => {
+        const newTierStats = new Map(prev.semanticTierStats);
+        const existing = newTierStats.get(event.tier);
+
+        const updatedStats: SemanticTierStats = {
+          tier: event.tier,
+          isComplete: false,
+          latencyMs: existing?.latencyMs ?? 0,
+          papersProcessed: event.papersProcessed,
+          cacheHits: existing?.cacheHits ?? 0,
+          embedGenerated: existing?.embedGenerated ?? 0,
+          usedWorkerPool: existing?.usedWorkerPool ?? false,
+          progressPercent: event.percent,
+          progressMessage: event.message,
+        };
+        newTierStats.set(event.tier, updatedStats);
+
+        return { ...prev, semanticTierStats: newTierStats };
+      });
+
       callbacksRef.current.onSemanticProgress?.(event);
     });
 

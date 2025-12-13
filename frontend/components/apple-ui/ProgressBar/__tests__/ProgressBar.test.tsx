@@ -313,12 +313,12 @@ describe('ProgressBar Component', () => {
   describe('Performance', () => {
     it('does not re-render unnecessarily', () => {
       const renderSpy = vi.fn();
-      
-      const TestProgress = React.memo(({ value, ...props }: any) => {
+
+      const TestProgress = React.memo(function TestProgress({ value, ...props }: any) {
         renderSpy();
         return <ProgressBar value={value} {...props} />;
       });
-      
+
       const { rerender } = render(<TestProgress value={50} />);
       expect(renderSpy).toHaveBeenCalledTimes(1);
       

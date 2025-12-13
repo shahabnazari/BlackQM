@@ -130,6 +130,34 @@ export interface Paper {
   };
   /** Phase 10.942: BM25 relevance score (0-200+) */
   relevanceScore?: number;
+
+  // ============================================================================
+  // Phase 10.122: Combined Ranking Score (NETFLIX-GRADE TRANSPARENCY)
+  // ============================================================================
+  // These fields determine the ACTUAL SORT ORDER when sorted by "Relevance"
+  // Formula: 15%×BM25 + 55%×Semantic + 30%×ThemeFit = Combined Score (0-100)
+  // ============================================================================
+
+  /** Combined relevance score (0-100) - THIS IS THE ACTUAL RANKING SCORE */
+  neuralRelevanceScore?: number;
+  /** Neural ranking position (1 = most relevant) */
+  neuralRank?: number;
+  /** Explanation: "BM25=45, Sem=72, ThemeFit=58" */
+  neuralExplanation?: string;
+  /** Semantic similarity score (0-1) from embedding comparison */
+  semanticScore?: number;
+  /** Theme-fit score for Q-methodology (0-1) */
+  themeFitScore?: {
+    controversyPotential: number;
+    statementClarity: number;
+    perspectiveDiversity: number;
+    citationControversy: number;
+    overallThemeFit: number;
+    explanation: string;
+  };
+  /** Is this paper good for thematization? */
+  isGoodForThematization?: boolean;
+
   fullText?: string;
   hasFullText?: boolean;
   fullTextStatus?:
@@ -253,4 +281,62 @@ export interface SaturationData {
   saturationReached: boolean;
   saturationPoint?: number;
   recommendation: string;
+}
+
+// ============================================================================
+// Phase 10.123: Extended Metadata Summary (Netflix-Grade)
+// ============================================================================
+// Type-safe interface for extended metadata summary
+// Used by CollapsibleMetadata component for progressive disclosure
+// ============================================================================
+
+/**
+ * Summary of extended metadata counts for collapse button display
+ * @see CollapsibleMetadata component
+ */
+export interface ExtendedMetadataSummary {
+  /** Number of MeSH terms available */
+  meshTermCount: number;
+  /** Number of grants/funding sources */
+  grantCount: number;
+  /** Number of author affiliations */
+  affiliationCount: number;
+  /** Number of publication types */
+  publicationTypeCount: number;
+  /** Whether any extended metadata exists */
+  hasAnyMetadata: boolean;
+  /** Human-readable summary text (e.g., "4 MeSH, 2 grants") */
+  summaryText: string;
+}
+
+/**
+ * Calculate extended metadata summary for a paper
+ * Used to determine if collapse button should be shown and what text to display
+ * @param paper - Paper object to analyze
+ * @returns ExtendedMetadataSummary object
+ */
+export function getExtendedMetadataSummary(paper: Paper): ExtendedMetadataSummary {
+  const meshTermCount = paper.meshTerms?.length ?? 0;
+  const grantCount = paper.grants?.length ?? 0;
+  const affiliationCount = paper.authorAffiliations?.length ?? 0;
+  const publicationTypeCount = paper.publicationType?.length ?? 0;
+
+  const hasAnyMetadata =
+    meshTermCount > 0 || grantCount > 0 || affiliationCount > 0 || publicationTypeCount > 0;
+
+  // Build human-readable summary
+  const parts: string[] = [];
+  if (meshTermCount > 0) parts.push(`${meshTermCount} MeSH`);
+  if (grantCount > 0) parts.push(`${grantCount} grant${grantCount > 1 ? 's' : ''}`);
+  if (affiliationCount > 0) parts.push(`${affiliationCount} affiliation${affiliationCount > 1 ? 's' : ''}`);
+  if (publicationTypeCount > 0) parts.push(`${publicationTypeCount} type${publicationTypeCount > 1 ? 's' : ''}`);
+
+  return {
+    meshTermCount,
+    grantCount,
+    affiliationCount,
+    publicationTypeCount,
+    hasAnyMetadata,
+    summaryText: parts.join(', ') || 'No extended metadata',
+  };
 }

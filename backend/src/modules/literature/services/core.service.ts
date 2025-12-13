@@ -334,6 +334,8 @@ export class CoreService {
         isEligible: isPaperEligible(wordCount, 150),
         qualityScore: qualityComponents.totalScore,
         isHighQuality: qualityComponents.totalScore >= 50,
+        // Phase 10.120: Add metadataCompleteness for honest scoring transparency
+        metadataCompleteness: qualityComponents.metadataCompleteness,
       };
     } catch (error: unknown) {
       // Phase 10.106 Strict Mode: Use unknown with type narrowing

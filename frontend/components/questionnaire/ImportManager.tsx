@@ -36,12 +36,7 @@ export const ImportManager: React.FC<ImportManagerProps> = ({
     'selector'
   );
 
-  if (!isOpen) return null;
-
-  const handleSelectSource = (source: ImportSource) => {
-    setCurrentModal(source);
-  };
-
+  // Hooks must be called unconditionally (React hooks rules)
   const handleBackToSelector = useCallback(() => {
     setCurrentModal('selector');
   }, []);
@@ -64,6 +59,13 @@ export const ImportManager: React.FC<ImportManagerProps> = ({
     },
     [onImport, onClose]
   );
+
+  // Early return after hooks (React hooks rules compliant)
+  if (!isOpen) return null;
+
+  const handleSelectSource = (source: ImportSource) => {
+    setCurrentModal(source);
+  };
 
   // Render source selector
   if (currentModal === 'selector') {

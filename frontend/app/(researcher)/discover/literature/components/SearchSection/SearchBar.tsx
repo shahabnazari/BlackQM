@@ -100,6 +100,7 @@ export const SearchBar = memo(function SearchBar({
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const lastSearchQueryRef = useRef<string>('');
   const lastSearchTimeRef = useRef<number>(0);
+  const isSearchActiveRef = useRef<boolean>(false); // Phase 10.130: Prevent suggestions during search
 
   // Local state
   const [isMounted, setIsMounted] = React.useState(false);
@@ -160,15 +161,28 @@ export const SearchBar = memo(function SearchBar({
   useEffect(() => {
     if (suggestionTimerRef.current) clearTimeout(suggestionTimerRef.current);
 
+    // Phase 10.130: Don't fetch suggestions if search is active
+    if (isSearchActiveRef.current) {
+      return;
+    }
+
     if (query && query.trim().length >= MIN_QUERY_LENGTH) {
       setLoadingSuggestions(true);
       setSuggestionError(null);
 
       suggestionTimerRef.current = setTimeout(async () => {
+        // Double-check search isn't active before showing suggestions
+        if (isSearchActiveRef.current) {
+          setLoadingSuggestions(false);
+          return;
+        }
         try {
           const result = await QueryExpansionAPI.expandQuery(query, 'general');
           setAISuggestions([result.expanded, ...result.suggestions.slice(0, MAX_AI_SUGGESTIONS)]);
-          setShowSuggestions(true);
+          // Phase 10.130: Only show suggestions if search is not active
+          if (!isSearchActiveRef.current) {
+            setShowSuggestions(true);
+          }
         } catch (error: unknown) {
           const msg = error instanceof Error ? error.message : 'Unknown error';
           setSuggestionError(msg.includes('API key') ? 'AI not configured' : 'AI unavailable');
@@ -218,6 +232,8 @@ export const SearchBar = memo(function SearchBar({
 
   // Handlers
   const handleQueryChange = useCallback((value: string) => {
+    // Phase 10.130: Reset search active flag when user starts typing (new search intent)
+    isSearchActiveRef.current = false;
     setQuery(value);
     setShowSuggestions(true);
     if (queryCorrectionMessage) setQueryCorrection(null);
@@ -225,6 +241,8 @@ export const SearchBar = memo(function SearchBar({
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && query.trim()) {
+      // Phase 10.130: Mark search as active to prevent dropdown from reopening
+      isSearchActiveRef.current = true;
       setShowSuggestions(false);
       // Call onSearch directly to avoid circular dependency
       onSearch();
@@ -246,6 +264,12 @@ export const SearchBar = memo(function SearchBar({
    * When Smart Search is OFF: uses exact query (no modifications)
    */
   const handleSearch = useCallback(async () => {
+    // Phase 10.130: Mark search as active to prevent dropdown from reopening
+    isSearchActiveRef.current = true;
+
+    // Close dropdown immediately when search starts
+    setShowSuggestions(false);
+
     const startTime = performance.now();
     lastSearchQueryRef.current = query;
     lastSearchTimeRef.current = Date.now();
@@ -297,7 +321,7 @@ export const SearchBar = memo(function SearchBar({
       lastSearchQueryRef.current = '';
       lastSearchTimeRef.current = 0;
     }
-  }, [query, onSearch, smartSearch, setQuery]);
+  }, [query, onSearch, smartSearch, setQuery, setShowSuggestions]);
 
   // Derived
   const totalSources = academicDatabasesCount + alternativeSourcesCount + socialPlatformsCount;
@@ -316,7 +340,12 @@ export const SearchBar = memo(function SearchBar({
                 value={query}
                 onChange={e => handleQueryChange(e.target.value)}
                 onKeyDown={handleKeyDown}
-                onFocus={() => aiSuggestions.length > 0 && setShowSuggestions(true)}
+                onFocus={() => {
+                  // Phase 10.130: Only show suggestions on focus if search is not active
+                  if (!isSearchActiveRef.current && aiSuggestions.length > 0) {
+                    setShowSuggestions(true);
+                  }
+                }}
                 className="pl-12 pr-24 h-12 text-base border-2 focus:border-purple-500 rounded-xl"
                 maxLength={500}
               />

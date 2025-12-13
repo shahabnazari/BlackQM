@@ -390,6 +390,8 @@ export class NatureService {
         qualityScore: qualityComponents.totalScore,
         isHighQuality: qualityComponents.totalScore >= 50, // Nature papers are always high quality
         citationCount,
+        // Phase 10.120: Add metadataCompleteness for honest scoring transparency
+        metadataCompleteness: qualityComponents.metadataCompleteness,
         // Nature-specific: High impact factor benefit
         impactFactor: this.NATURE_IMPACT_FACTOR,
         quartile: 'Q1',

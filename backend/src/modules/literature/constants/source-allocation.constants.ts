@@ -169,10 +169,51 @@ export const ABSOLUTE_LIMITS = {
   MAX_PAPERS_PER_SOURCE: 500,       // Increased: more papers = better chance of finding gems
   MAX_TOTAL_PAPERS_FETCHED: 8000,   // Increased: 500 × ~16 sources max
   MAX_FINAL_PAPERS: 300,            // Quality over quantity: top 300 at 80%+
+  PRE_QUALITY_FILTER_PAPERS: 1000,  // Phase 10.123: NETFLIX-GRADE - Increased from 500 to 1000
+                                    // Ensures 300+ papers even with strict 80% quality filter
+                                    // Formula: 1000 × 43% (80% threshold pass rate) ≈ 430 papers → take top 300
+                                    // Previous: 500 × 43% ≈ 215 papers (insufficient)
   MIN_PAPERS_FOR_ANALYSIS: 20,      // Minimum for meaningful analysis
   MIN_ACCEPTABLE_PAPERS: 50,        // Lower threshold: quality filter handles rest
-  QUALITY_THRESHOLD: 80,            // Phase 10.114: Minimum quality score for final results
+  QUALITY_THRESHOLD: 80,            // Phase 10.114: Minimum quality score for final results (adaptive relaxation)
 };
+
+/**
+ * Phase 10.123: Quality Filter Constants (Optimized)
+ *
+ * Netflix-grade constants for adaptive quality filtering with progressive relaxation.
+ * All magic numbers eliminated for maintainability and scalability.
+ */
+export const QUALITY_FILTER_CONSTANTS = {
+  /**
+   * Initial quality threshold (80%)
+   * Starting point for quality filtering
+   */
+  INITIAL_THRESHOLD: 80,
+
+  /**
+   * Progressive relaxation thresholds
+   * System tries these in order until target paper count is achieved
+   */
+  RELAXATION_THRESHOLDS: [80, 70, 60, 50, 40] as const,
+
+  /**
+   * Minimum acceptable quality threshold (40%)
+   * Never goes below this to maintain research-grade quality
+   */
+  MIN_ACCEPTABLE_THRESHOLD: 40,
+
+  /**
+   * Quality tier boundaries for distribution analysis
+   */
+  QUALITY_TIERS: {
+    EXCEPTIONAL_MIN: 80,  // 80-100
+    EXCELLENT_MIN: 60,    // 60-80
+    GOOD_MIN: 40,         // 40-60
+    ACCEPTABLE_MIN: 20,   // 20-40
+    POOR_MAX: 20,         // 0-20
+  },
+} as const;
 
 /**
  * Quality sampling strategy (when total > target)

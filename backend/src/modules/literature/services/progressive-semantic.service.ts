@@ -24,6 +24,9 @@ import { Paper } from '../dto/literature.dto';
 import { LocalEmbeddingService } from './local-embedding.service';
 import { EmbeddingCacheService, CachedEmbedding, UncachedPaper } from './embedding-cache.service';
 import { EmbeddingPoolService } from './embedding-pool.service';
+// Phase 10.113 Week 12: Production Monitoring & Error Recovery
+import { SemanticMetricsService } from './semantic-metrics.service';
+import { SemanticCircuitBreakerService } from './semantic-circuit-breaker.service';
 
 // ============================================================================
 // TYPE DEFINITIONS (Netflix-Grade Strict Typing)
@@ -167,10 +170,14 @@ export class ProgressiveSemanticService {
     private readonly embeddingCache: EmbeddingCacheService,
     private readonly embeddingPool: EmbeddingPoolService,
     private readonly localEmbedding: LocalEmbeddingService,
+    // Phase 10.113 Week 12: Production Monitoring & Error Recovery
+    private readonly metrics: SemanticMetricsService,
+    private readonly circuitBreaker: SemanticCircuitBreakerService,
   ) {
-    this.logger.log('✅ [Phase 10.113 Week 11] ProgressiveSemanticService initialized');
+    this.logger.log('✅ [Phase 10.113 Week 11+12] ProgressiveSemanticService initialized');
     this.logger.log(`   Tiers: immediate(${SEMANTIC_TIERS[0].paperCount}), refined(${SEMANTIC_TIERS[1].paperCount}), complete(${SEMANTIC_TIERS[2].paperCount})`);
     this.logger.log(`   Query embedding cache: ${ProgressiveSemanticService.QUERY_CACHE_MAX_SIZE} entries, ${ProgressiveSemanticService.QUERY_CACHE_TTL_MS / 1000}s TTL`);
+    this.logger.log(`   Week 12: Metrics & CircuitBreaker integration enabled`);
   }
 
   /**
@@ -278,6 +285,9 @@ export class ProgressiveSemanticService {
 
         const tierLatencyMs = Date.now() - tierStartTime;
 
+        // Phase 10.113 Week 12: Record tier latency for production monitoring
+        this.metrics.recordTierLatency(tier.name, tierLatencyMs);
+
         this.logger.log(
           `[ProgressiveSemantic] ${tier.name} tier complete: ${tierPapers.length} papers, ` +
           `${embedResult.cacheHits} cache hits, ${embedResult.generated} generated, ` +
@@ -340,6 +350,15 @@ export class ProgressiveSemanticService {
 
     const totalLatencyMs = Date.now() - startTime;
     this.logger.log(`[ProgressiveSemantic] All tiers complete in ${totalLatencyMs}ms`);
+
+    // Phase 10.113 Week 12: Record search attempt based on outcome
+    // Success = at least some papers were scored, Failure = no papers scored at all
+    if (allScored.length > 0) {
+      this.metrics.recordSearchAttempt(true);
+    } else {
+      this.logger.warn(`[ProgressiveSemantic] No papers scored - recording as failed search`);
+      this.metrics.recordSearchAttempt(false);
+    }
   }
 
   /**
@@ -462,22 +481,25 @@ export class ProgressiveSemanticService {
     papers: Paper[],
     signal?: AbortSignal,
   ): Promise<EmbeddingResult> {
-    // Step 1: Check cache
-    let cached: CachedEmbedding[] = [];
-    let uncached: UncachedPaper[] = [];
-
-    try {
-      const cacheResult = await this.embeddingCache.getCachedEmbeddings(papers);
-      cached = cacheResult.cached;
-      uncached = cacheResult.uncached;
-
-      this.logger.debug(`[ProgressiveSemantic] Cache: ${cached.length} hits, ${uncached.length} misses`);
-    } catch (error) {
-      // Cache unavailable - treat all as uncached
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.warn(`[ProgressiveSemantic] Cache unavailable: ${errorMessage}`);
-      uncached = papers.map((paper, index) => ({ paper, index }));
-    }
+    // Step 1: Check cache with circuit breaker
+    // Phase 10.113 Week 12: Use circuit breaker wrapper for Redis cache
+    const cacheResult = await this.circuitBreaker.withRedis(
+      async () => {
+        const result = await this.embeddingCache.getCachedEmbeddings(papers);
+        this.logger.debug(`[ProgressiveSemantic] Cache: ${result.cached.length} hits, ${result.uncached.length} misses`);
+        return result;
+      },
+      () => {
+        // Fallback: Treat all as uncached (LRU or no cache)
+        this.logger.debug(`[ProgressiveSemantic] Cache circuit open, treating all as uncached`);
+        return {
+          cached: [] as CachedEmbedding[],
+          uncached: papers.map((paper, index) => ({ paper, index })),
+        };
+      },
+    );
+    const cached = cacheResult.cached;
+    const uncached = cacheResult.uncached;
 
     // All cached - return immediately
     if (uncached.length === 0) {
@@ -498,48 +520,69 @@ export class ProgressiveSemanticService {
       return `${title}. ${abstract}`.substring(0, MAX_TEXT_LENGTH);
     });
 
-    try {
-      // Try worker pool first (parallel CPU)
-      if (this.embeddingPool.isPoolReady()) {
-        newEmbeddings = await this.embeddingPool.embedWithTimeout(
+    // Phase 10.113 Week 12: Use circuit breaker wrapper for worker pool
+    newEmbeddings = await this.circuitBreaker.withWorkerPool(
+      async () => {
+        // Primary: Worker pool (parallel CPU)
+        if (!this.embeddingPool.isPoolReady()) {
+          throw new Error('Worker pool not ready');
+        }
+        const embeddings = await this.embeddingPool.embedWithTimeout(
           uncachedTexts,
           30000, // 30s timeout
           signal,
         );
-        this.logger.debug(`[ProgressiveSemantic] Worker pool generated ${newEmbeddings.length} embeddings`);
-      } else {
-        throw new Error('Worker pool not ready');
-      }
-    } catch (error) {
-      // Fallback to synchronous embedding
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.warn(`[ProgressiveSemantic] Worker pool failed (${errorMessage}), using sync fallback`);
+        this.logger.debug(`[ProgressiveSemantic] Worker pool generated ${embeddings.length} embeddings`);
+        return embeddings;
+      },
+      async () => {
+        // Fallback: Synchronous embedding
+        this.logger.debug(`[ProgressiveSemantic] Using sync fallback for ${uncachedTexts.length} texts`);
+        return this.localEmbedding.generateEmbeddingsBatch(
+          uncachedTexts,
+          undefined,
+          signal,
+        );
+      },
+    );
 
-      newEmbeddings = await this.localEmbedding.generateEmbeddingsBatch(
-        uncachedTexts,
-        undefined,
-        signal,
+    // Phase 10.113 Week 12: Validate embedding array length match
+    if (newEmbeddings.length !== uncached.length) {
+      this.logger.warn(
+        `[ProgressiveSemantic] Embedding count mismatch: expected ${uncached.length}, got ${newEmbeddings.length}`,
       );
     }
 
-    // Step 3: Cache new embeddings (async, non-blocking)
-    this.embeddingCache.cacheEmbeddings(
-      uncached.map(({ paper }, i) => ({ paper, embedding: newEmbeddings[i] }))
-    ).catch(err => {
-      this.logger.warn(`[ProgressiveSemantic] Failed to cache embeddings: ${err.message}`);
-    });
+    // Step 3: Cache new embeddings (async, non-blocking) - only valid embeddings
+    const validEmbeddings = uncached
+      .map(({ paper }, i) => ({ paper, embedding: newEmbeddings[i] }))
+      .filter((item): item is { paper: Paper; embedding: number[] } =>
+        Array.isArray(item.embedding) && item.embedding.length > 0
+      );
 
-    // Step 4: Rebuild embeddings in original paper order
-    const embeddings = this.rebuildEmbeddingsInOrder(papers, cached, uncached.map((u, i) => ({
-      paper: u.paper,
-      index: u.index,
-      embedding: newEmbeddings[i],
-    })));
+    if (validEmbeddings.length > 0) {
+      this.embeddingCache.cacheEmbeddings(validEmbeddings).catch(err => {
+        this.logger.warn(`[ProgressiveSemantic] Failed to cache embeddings: ${err.message}`);
+      });
+    }
+
+    // Step 4: Rebuild embeddings in original paper order - only valid ones
+    const generatedWithEmbeddings = uncached
+      .map((u, i) => ({
+        paper: u.paper,
+        index: u.index,
+        embedding: newEmbeddings[i],
+      }))
+      .filter((item): item is { paper: Paper; index: number; embedding: number[] } =>
+        Array.isArray(item.embedding) && item.embedding.length > 0
+      );
+
+    const embeddings = this.rebuildEmbeddingsInOrder(papers, cached, generatedWithEmbeddings);
 
     return {
       embeddings,
       cacheHits: cached.length,
-      generated: newEmbeddings.length,
+      generated: generatedWithEmbeddings.length, // Only count valid embeddings
     };
   }
 
@@ -599,45 +642,66 @@ export class ProgressiveSemanticService {
   }
 
   /**
-   * Calculate semantic similarity scores
+   * Calculate semantic similarity scores - optimized with pre-computed query norm
    *
    * @param queryEmbedding - Query embedding vector
    * @param paperEmbeddings - Paper embedding vectors
    * @returns Similarity scores (0-1)
    */
   private calculateScores(queryEmbedding: number[], paperEmbeddings: number[][]): number[] {
-    return paperEmbeddings.map(emb => this.cosineSimilarity(queryEmbedding, emb));
+    // Pre-compute query norm once (reused for all papers)
+    const queryNorm = this.computeNorm(queryEmbedding);
+    if (queryNorm === 0) {
+      return paperEmbeddings.map(() => 0);
+    }
+
+    // Calculate scores with pre-computed query norm
+    const scores = new Array<number>(paperEmbeddings.length);
+    for (let i = 0; i < paperEmbeddings.length; i++) {
+      scores[i] = this.cosineSimilarityOptimized(queryEmbedding, queryNorm, paperEmbeddings[i]);
+    }
+    return scores;
   }
 
   /**
-   * Calculate cosine similarity between two vectors
+   * Compute vector norm (magnitude)
+   */
+  private computeNorm(vec: number[]): number {
+    let sum = 0;
+    for (let i = 0; i < vec.length; i++) {
+      sum += vec[i] * vec[i];
+    }
+    return Math.sqrt(sum);
+  }
+
+  /**
+   * Optimized cosine similarity with pre-computed query norm
    *
-   * @param a - First vector
-   * @param b - Second vector
+   * @param query - Query vector
+   * @param queryNorm - Pre-computed query norm
+   * @param paper - Paper vector
    * @returns Cosine similarity (0-1 normalized)
    */
-  private cosineSimilarity(a: number[], b: number[]): number {
-    if (a.length !== b.length || a.length === 0) {
+  private cosineSimilarityOptimized(query: number[], queryNorm: number, paper: number[]): number {
+    if (query.length !== paper.length || query.length === 0) {
       return 0;
     }
 
     let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
+    let paperNormSq = 0;
 
-    for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
+    for (let i = 0; i < query.length; i++) {
+      dotProduct += query[i] * paper[i];
+      paperNormSq += paper[i] * paper[i];
     }
 
-    const denominator = Math.sqrt(normA) * Math.sqrt(normB);
-    if (denominator === 0) {
+    const paperNorm = Math.sqrt(paperNormSq);
+    if (paperNorm === 0) {
       return 0;
     }
 
     // Normalize from [-1, 1] to [0, 1]
-    const cosineSim = dotProduct / denominator;
+    const cosineSim = dotProduct / (queryNorm * paperNorm);
     return (cosineSim + 1) / 2;
   }
 

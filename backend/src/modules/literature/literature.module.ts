@@ -177,6 +177,10 @@ import { LazyEnrichmentService } from './services/lazy-enrichment.service';
 import { ProgressiveSemanticService } from './services/progressive-semantic.service';
 import { EmbeddingCacheService } from './services/embedding-cache.service';
 import { EmbeddingPoolService } from './services/embedding-pool.service';
+// Phase 10.113 Week 12: Production Monitoring & Error Recovery
+import { SemanticMetricsService } from './services/semantic-metrics.service';
+import { SemanticCircuitBreakerService } from './services/semantic-circuit-breaker.service';
+import { SemanticHealthController } from './controllers/semantic-health.controller';
 import { PDFController } from './controllers/pdf.controller';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
@@ -200,7 +204,7 @@ import { AIModule } from '../ai/ai.module';
       max: 1000, // Maximum items in cache
     }),
   ],
-  controllers: [LiteratureController, PDFController, ThematizationController],
+  controllers: [LiteratureController, PDFController, ThematizationController, SemanticHealthController],
   providers: [
     LiteratureService,
     LiteratureGateway,
@@ -379,6 +383,9 @@ import { AIModule } from '../ai/ai.module';
     ProgressiveSemanticService,
     EmbeddingCacheService,
     EmbeddingPoolService,
+    // Phase 10.113 Week 12: Production Monitoring & Error Recovery
+    SemanticMetricsService,
+    SemanticCircuitBreakerService,
   ],
   exports: [
     LiteratureService,
@@ -482,6 +489,9 @@ import { AIModule } from '../ai/ai.module';
     ProgressiveSemanticService,
     EmbeddingCacheService,
     EmbeddingPoolService,
+    // Phase 10.113 Week 12: Production Monitoring & Error Recovery
+    SemanticMetricsService,
+    SemanticCircuitBreakerService,
   ],
 })
 export class LiteratureModule implements OnModuleInit {

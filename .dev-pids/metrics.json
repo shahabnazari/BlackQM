@@ -1,6 +1,6 @@
 {
-  "startTime": 1765434595139,
-  "processesKilled": 2,
+  "startTime": 1765649854127,
+  "processesKilled": 0,
   "cachesCleared": 4,
   "serverRestarts": {
     "frontend": 0,
@@ -11,10 +11,10 @@
     "backend": 1
   },
   "memoryPeaks": {
-    "frontend": 0,
-    "backend": 0
+    "frontend": 45.41796875,
+    "backend": 44.6015625
   },
   "errors": [],
-  "uptime": 56528,
-  "savedAt": "2025-12-11T06:30:51.667Z"
+  "uptime": 363630,
+  "savedAt": "2025-12-13T18:23:37.757Z"
 }

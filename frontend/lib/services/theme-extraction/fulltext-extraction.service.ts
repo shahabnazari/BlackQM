@@ -703,7 +703,6 @@ export class FullTextExtractionService {
    * @private
    */
   // @ts-expect-error - Method reserved for future API polling support
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async pollExtractionStatus(
     paperId: string,
     signal?: CancellationSignal,

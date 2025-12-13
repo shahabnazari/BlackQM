@@ -369,6 +369,8 @@ export class WileyService {
         openAccessStatus: isOpenAccess ? 'OPEN_ACCESS' : null,
         qualityScore: qualityComponents.totalScore,
         isHighQuality: qualityComponents.totalScore >= 50,
+        // Phase 10.120: Add metadataCompleteness for honest scoring transparency
+        metadataCompleteness: qualityComponents.metadataCompleteness,
         fullTextSource: 'wiley',
       };
 

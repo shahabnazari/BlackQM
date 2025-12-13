@@ -61,6 +61,16 @@ if (process.env.NODE_ENV === 'development') {
   );
 }
 
+/**
+ * Select implementation at module level to avoid conditional hook calls
+ * STRICT AUDIT FIX: HOOKS-002 - React hooks must be called unconditionally
+ * By selecting the implementation function at module level, we ensure ESLint
+ * sees only a single hook call path in the wrapper function.
+ */
+const selectedImplementation = USE_NEW_IMPLEMENTATION
+  ? useNewImplementation
+  : useOldImplementation;
+
 // ============================================================================
 // WRAPPER HOOK
 // ============================================================================
@@ -73,6 +83,7 @@ if (process.env.NODE_ENV === 'development') {
  * **Type Safety:** Both implementations must conform to the same interface
  * **Performance:** Feature flag evaluated once at module load time
  * **Logging:** Implementation selection logged once at module load (no render spam)
+ * **Hooks Compliance:** Implementation selected at module level, not conditionally in hook
  *
  * @param config - Hook configuration
  * @returns Theme extraction workflow interface
@@ -80,23 +91,9 @@ if (process.env.NODE_ENV === 'development') {
 export function useThemeExtractionWorkflowFeatureFlagged(
   config: UseThemeExtractionWorkflowConfig
 ) {
-  // STRICT AUDIT FIX: HOOKS-001
-  // Feature flag is now a module-level constant, not re-evaluated on every render
-  // This is safe because Next.js requires server restart for env var changes
-
-  // STRICT AUDIT FIX: NEW-BUG-001
-  // Removed console.log from component body to prevent spam on every render
-  // Logging now happens once at module load time (line 55-59)
-
-  // Select implementation based on feature flag
-  // STRICT AUDIT FIX: BUG-002 - No @ts-ignore, proper type inference
-  if (USE_NEW_IMPLEMENTATION) {
-    // Use new service-based implementation (Phase 10.93)
-    return useNewImplementation(config);
-  } else {
-    // Use old monolithic implementation (Phase 10.1)
-    return useOldImplementation(config);
-  }
+  // STRICT AUDIT FIX: HOOKS-002 - Use module-level selected implementation
+  // This ensures the same hook is always called, satisfying React hooks rules
+  return selectedImplementation(config);
 }
 
 // ============================================================================

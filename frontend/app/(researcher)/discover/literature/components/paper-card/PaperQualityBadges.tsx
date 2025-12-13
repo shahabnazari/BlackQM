@@ -1,22 +1,13 @@
 /**
  * PaperQualityBadges Component
- * Phase 10.107 - Honest, Transparent Quality Scoring
+ * Phase 10.123 - Quality Score Display (Ranking moved to MatchScoreBadge)
  *
- * Displays quality indicators with confidence level based on data completeness
- *
- * KEY PRINCIPLE: Score only what we know, show users our confidence level
- *
- * Quality Score Components (when available):
+ * QUALITY SCORE (measures paper quality, NOT used for sorting):
  * - Citation Impact: Citations per year, normalized by field
  * - Journal Prestige: Impact factor, h-index, quartile
- * - Open Access Bonus: +10 if freely available
+ * - Recency: Exponential decay (4.6yr half-life)
  *
- * Confidence Levels:
- * - High (4/4 metrics): All data available - reliable score
- * - Good (3/4 metrics): Most data - good estimate
- * - Moderate (2/4 metrics): Partial data - moderate confidence
- * - Low (1/4 metrics): Limited data - low confidence
- * - Very Low (0/4): No metrics available
+ * NOTE: Ranking score display moved to MatchScoreBadge in Phase 10.123 Phase 2
  *
  * WCAG 2.1 compliant with proper ARIA relationships
  *
@@ -25,7 +16,7 @@
 
 'use client';
 
-import React, { useState, useId } from 'react';
+import React, { useState, useId, useCallback, memo } from 'react';
 import { TrendingUp, Award, Target, Shield, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MetadataCompleteness } from '@/lib/types/literature.types';
@@ -74,7 +65,7 @@ interface PaperQualityBadgesProps {
   qualityScoreBreakdown?: QualityScoreBreakdown | undefined;
   /** Citation count */
   citationCount?: number | null | undefined;
-  /** Relevance score (0-200+) - Phase 10.942 */
+  /** BM25 relevance score (0-200+) - Phase 10.942 (fallback when no neural score) */
   relevanceScore?: number | null | undefined;
   /** Phase 10.107: Metadata completeness */
   metadataCompleteness?: MetadataCompleteness | undefined;
@@ -84,7 +75,7 @@ interface PaperQualityBadgesProps {
 // Component
 // ============================================================================
 
-export function PaperQualityBadges({
+function PaperQualityBadgesComponent({
   citationsPerYear,
   qualityScore,
   qualityScoreBreakdown,
@@ -94,8 +85,12 @@ export function PaperQualityBadges({
 }: PaperQualityBadgesProps) {
   const [showQualityTooltip, setShowQualityTooltip] = useState(false);
 
-  // Generate unique ID for ARIA relationship (proper accessibility)
-  const tooltipId = useId();
+  // Memoized tooltip handlers to prevent unnecessary re-renders
+  const handleShowTooltip = useCallback(() => setShowQualityTooltip(true), []);
+  const handleHideTooltip = useCallback(() => setShowQualityTooltip(false), []);
+
+  // Generate unique IDs for ARIA relationships (proper accessibility)
+  const qualityTooltipId = useId();
 
   // Get metadata completeness from breakdown or props
   const metadata = qualityScoreBreakdown?.metadataCompleteness ?? metadataCompleteness;
@@ -125,15 +120,15 @@ export function PaperQualityBadges({
 
   return (
     <>
-      {/* Relevance Tier Badge - Phase 10.942 */}
+      {/* BM25 Relevance Tier Badge - Phase 10.942 (fallback when MatchScoreBadge not available) */}
       {relevanceScore !== null && relevanceScore !== undefined && (
         <span
           className={cn(
             'flex items-center gap-1 font-medium px-2 py-0.5 rounded-md border',
             getRelevanceColorClasses(relevanceScore)
           )}
-          title={`Relevance score: ${relevanceScore}. BM25 algorithm (Robertson & Walker 1994) with position weighting.`}
-          aria-label={`${getRelevanceTierLabel(relevanceScore)} - score ${relevanceScore}`}
+          title={`BM25 relevance score: ${relevanceScore}. Keyword matching score.`}
+          aria-label={`${getRelevanceTierLabel(relevanceScore)} - BM25 score ${relevanceScore}`}
         >
           <Target className="w-3 h-3" aria-hidden="true" />
           <span className="text-xs">{getRelevanceTierLabel(relevanceScore)}</span>
@@ -165,12 +160,12 @@ export function PaperQualityBadges({
               'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
               getQualityColorClasses(qualityScore)
             )}
-            onMouseEnter={() => setShowQualityTooltip(true)}
-            onMouseLeave={() => setShowQualityTooltip(false)}
-            onFocus={() => setShowQualityTooltip(true)}
-            onBlur={() => setShowQualityTooltip(false)}
+            onMouseEnter={handleShowTooltip}
+            onMouseLeave={handleHideTooltip}
+            onFocus={handleShowTooltip}
+            onBlur={handleHideTooltip}
             aria-label={`Quality score: ${qualityScore} out of 100, rated ${getQualityLabel(qualityScore)}. Confidence: ${getConfidenceLabel(availableMetrics)} (${availableMetrics}/${totalMetrics} metrics). Press to view detailed breakdown.`}
-            aria-describedby={showQualityTooltip ? tooltipId : undefined}
+            aria-describedby={showQualityTooltip ? qualityTooltipId : undefined}
           >
             <Award className="w-3 h-3" aria-hidden="true" />
             <span className="font-semibold">{qualityScore.toFixed(0)}</span>
@@ -204,7 +199,7 @@ export function PaperQualityBadges({
           {/* Detailed Breakdown Tooltip - Phase 10.107 */}
           {showQualityTooltip && (
             <div
-              id={tooltipId}
+              id={qualityTooltipId}
               className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-[400px]"
               role="tooltip"
               aria-live="polite"
@@ -402,3 +397,23 @@ export function PaperQualityBadges({
     </>
   );
 }
+
+// ============================================================================
+// Memoized Export with Custom Comparison
+// ============================================================================
+
+export const PaperQualityBadges = memo(
+  PaperQualityBadgesComponent,
+  (prev, next) => {
+    return (
+      prev.citationsPerYear === next.citationsPerYear &&
+      prev.qualityScore === next.qualityScore &&
+      prev.citationCount === next.citationCount &&
+      prev.relevanceScore === next.relevanceScore &&
+      prev.qualityScoreBreakdown === next.qualityScoreBreakdown &&
+      prev.metadataCompleteness === next.metadataCompleteness
+    );
+  }
+);
+
+PaperQualityBadges.displayName = 'PaperQualityBadges';

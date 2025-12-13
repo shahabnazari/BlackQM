@@ -31,23 +31,40 @@ vi.mock('lottie-react', () => ({
 // Mock framer-motion
 vi.mock('framer-motion', () => {
   const React = require('react');
+
+  // Create components with displayName to satisfy ESLint react/display-name rule
+  const MotionDiv = React.forwardRef(({ children, initial, animate, exit, transition, variants, ...props }: any, ref: any) =>
+    React.createElement('div', { 'data-animate': JSON.stringify(animate), ref, ...props }, children)
+  );
+  MotionDiv.displayName = 'MotionDiv';
+
+  const MotionSvg = React.forwardRef(({ children, ...props }: any, ref: any) =>
+    React.createElement('svg', { ref, ...props }, children)
+  );
+  MotionSvg.displayName = 'MotionSvg';
+
+  const MotionPath = React.forwardRef((props: any, ref: any) =>
+    React.createElement('path', { ref, ...props })
+  );
+  MotionPath.displayName = 'MotionPath';
+
+  const MotionCircle = React.forwardRef((props: any, ref: any) =>
+    React.createElement('circle', { ref, ...props })
+  );
+  MotionCircle.displayName = 'MotionCircle';
+
+  const MotionText = React.forwardRef(({ children, ...props }: any, ref: any) =>
+    React.createElement('text', { ref, ...props }, children)
+  );
+  MotionText.displayName = 'MotionText';
+
   return {
     motion: {
-      div: React.forwardRef(({ children, initial, animate, exit, transition, variants, ...props }: any, ref: any) => 
-        React.createElement('div', { 'data-animate': JSON.stringify(animate), ref, ...props }, children)
-      ),
-      svg: React.forwardRef(({ children, ...props }: any, ref: any) => 
-        React.createElement('svg', { ref, ...props }, children)
-      ),
-      path: React.forwardRef((props: any, ref: any) => 
-        React.createElement('path', { ref, ...props })
-      ),
-      circle: React.forwardRef((props: any, ref: any) => 
-        React.createElement('circle', { ref, ...props })
-      ),
-      text: React.forwardRef(({ children, ...props }: any, ref: any) => 
-        React.createElement('text', { ref, ...props }, children)
-      ),
+      div: MotionDiv,
+      svg: MotionSvg,
+      path: MotionPath,
+      circle: MotionCircle,
+      text: MotionText,
     },
     AnimatePresence: ({ children }: any) => React.createElement(React.Fragment, null, children),
     useAnimation: () => ({

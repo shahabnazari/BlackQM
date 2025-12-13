@@ -535,6 +535,8 @@ export class PaperMetadataService {
           : 0,
       qualityScore: qualityComponents.totalScore,
       isHighQuality: qualityComponents.totalScore >= 50,
+      // Phase 10.120: Add metadataCompleteness for honest scoring transparency
+      metadataCompleteness: qualityComponents.metadataCompleteness,
     };
   }
 

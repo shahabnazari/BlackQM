@@ -398,6 +398,10 @@ export interface SearchStreamState {
   semanticTier: 'immediate' | 'refined' | 'complete' | null;
   semanticVersion: number;
 
+  // Phase 10.113 Week 12: Semantic tier stats for detailed UI display
+  /** Stats for each completed semantic tier */
+  semanticTierStats: Map<SemanticTierName, SemanticTierStats>;
+
   // Phase 10.113 Week 11 Bug 10: User interaction state preservation
   /** IDs of papers user has selected */
   selectedPaperIds: Set<string>;
@@ -405,6 +409,30 @@ export interface SearchStreamState {
   expandedPaperIds: Set<string>;
   /** Scroll position to preserve during re-ranking */
   scrollPosition: number;
+}
+
+/**
+ * Phase 10.113 Week 12: Semantic tier stats for UI display
+ */
+export interface SemanticTierStats {
+  /** Tier name */
+  tier: SemanticTierName;
+  /** Whether this tier has completed */
+  isComplete: boolean;
+  /** Latency in ms from search start */
+  latencyMs: number;
+  /** Papers processed */
+  papersProcessed: number;
+  /** Cache hits */
+  cacheHits: number;
+  /** Embeddings generated */
+  embedGenerated: number;
+  /** Whether worker pool was used */
+  usedWorkerPool: boolean;
+  /** Progress percentage (0-100) */
+  progressPercent: number;
+  /** Progress message */
+  progressMessage: string;
 }
 
 /**
@@ -432,6 +460,8 @@ export const INITIAL_SEARCH_STREAM_STATE: SearchStreamState = {
   // Phase 10.113 Week 11: Semantic tier state
   semanticTier: null,
   semanticVersion: 0,
+  // Phase 10.113 Week 12: Semantic tier stats
+  semanticTierStats: new Map(),
   // Phase 10.113 Week 11 Bug 10: User interaction state
   selectedPaperIds: new Set(),
   expandedPaperIds: new Set(),

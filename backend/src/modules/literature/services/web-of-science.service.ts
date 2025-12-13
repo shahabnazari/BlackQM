@@ -484,6 +484,8 @@ export class WebOfScienceService {
       qualityScore: qualityComponents.totalScore,
       isHighQuality: qualityComponents.totalScore >= 50,
       citationCount,
+      // Phase 10.120: Add metadataCompleteness for honest scoring transparency
+      metadataCompleteness: qualityComponents.metadataCompleteness,
 
       // Journal metrics (premium data from Web of Science)
       impactFactor,

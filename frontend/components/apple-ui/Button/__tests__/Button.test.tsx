@@ -244,12 +244,12 @@ describe('Button Component', () => {
   describe('Performance', () => {
     it('does not re-render unnecessarily', () => {
       const renderSpy = vi.fn();
-      
-      const TestButton = React.memo(({ children, ...props }: any) => {
+
+      const TestButton = React.memo(function TestButton({ children, ...props }: any) {
         renderSpy();
         return <Button {...props}>{children}</Button>;
       });
-      
+
       const { rerender } = render(<TestButton>Test</TestButton>);
       expect(renderSpy).toHaveBeenCalledTimes(1);
       

@@ -336,6 +336,8 @@ export class ArxivService {
       citationsPerYear: 0, // No citation data available from arXiv
       qualityScore: qualityComponents.totalScore,
       isHighQuality: qualityComponents.totalScore >= 50,
+      // Phase 10.120: Add metadataCompleteness for honest scoring transparency
+      metadataCompleteness: qualityComponents.metadataCompleteness,
 
       // arXiv-specific metadata
       // 📝 TO ADD: primaryCategory, version, comment, journal_ref fields

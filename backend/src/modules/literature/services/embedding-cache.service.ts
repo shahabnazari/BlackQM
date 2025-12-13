@@ -27,6 +27,8 @@ import * as zlib from 'zlib';
 import { promisify } from 'util';
 import { Paper } from '../dto/literature.dto';
 import { CacheService } from '../../../common/cache.service';
+// Phase 10.113 Week 12: Production Monitoring
+import { SemanticMetricsService } from './semantic-metrics.service';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -118,6 +120,8 @@ export class EmbeddingCacheService implements OnModuleInit {
 
   constructor(
     private readonly cacheService: CacheService,
+    // Phase 10.113 Week 12: Production Monitoring
+    private readonly semanticMetrics: SemanticMetricsService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -230,6 +234,7 @@ export class EmbeddingCacheService implements OnModuleInit {
           if (lruEntry) {
             cached.push({ paper, embedding: lruEntry.embedding });
             this.stats.hits++;
+            this.semanticMetrics.recordCacheHit(); // Phase 10.113 Week 12
             continue;
           }
 
@@ -244,21 +249,25 @@ export class EmbeddingCacheService implements OnModuleInit {
               // Update LRU
               this.updateLRU(key, embedding);
               this.stats.hits++;
+              this.semanticMetrics.recordCacheHit(); // Phase 10.113 Week 12
             } catch (decompressError) {
               const errorMsg = decompressError instanceof Error ? decompressError.message : String(decompressError);
               this.logger.debug(`[EmbeddingCache] Decompress failed for ${key}: ${errorMsg}`);
               uncached.push({ paper, index });
               this.stats.misses++;
+              this.semanticMetrics.recordCacheMiss(); // Phase 10.113 Week 12
             }
           } else {
             uncached.push({ paper, index });
             this.stats.misses++;
+            this.semanticMetrics.recordCacheMiss(); // Phase 10.113 Week 12
           }
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : String(error);
           this.logger.debug(`[EmbeddingCache] Cache error for ${key}: ${errorMsg}`);
           uncached.push({ paper, index });
           this.stats.errors++;
+          this.semanticMetrics.recordCacheMiss(); // Phase 10.113 Week 12: Errors count as misses
         }
       }
 
@@ -392,29 +401,31 @@ export class EmbeddingCacheService implements OnModuleInit {
   }
 
   /**
-   * Update LRU cache with eviction
+   * Update LRU cache with eviction - O(1) using Map insertion order
+   *
+   * JavaScript Map maintains insertion order. To update "recently used":
+   * - Delete and re-insert to move to end (newest)
+   * - For eviction, get first key (oldest)
    *
    * @param key - Cache key
    * @param embedding - Embedding vector
    */
   private updateLRU(key: string, embedding: number[]): void {
-    // Evict oldest if at capacity
+    // If key exists, delete first to update position (move to end)
+    if (this.lruCache.has(key)) {
+      this.lruCache.delete(key);
+    }
+
+    // Evict oldest (first entry in Map) if at capacity
     if (this.lruCache.size >= LRU_CACHE_SIZE) {
-      let oldestKey: string | null = null;
-      let oldestTime = Infinity;
-
-      for (const [k, v] of this.lruCache) {
-        if (v.timestamp < oldestTime) {
-          oldestTime = v.timestamp;
-          oldestKey = k;
-        }
-      }
-
-      if (oldestKey) {
+      // Map.keys().next() gives first (oldest) key - O(1)
+      const oldestKey = this.lruCache.keys().next().value;
+      if (oldestKey !== undefined) {
         this.lruCache.delete(oldestKey);
       }
     }
 
+    // Insert at end (newest)
     this.lruCache.set(key, { embedding, timestamp: Date.now() });
   }
 

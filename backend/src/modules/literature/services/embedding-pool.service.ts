@@ -28,6 +28,8 @@ import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/commo
 import { Worker } from 'worker_threads';
 import { join } from 'path';
 import { AbortError } from './progressive-semantic.service';
+// Phase 10.113 Week 12: Production Monitoring
+import { SemanticMetricsService } from './semantic-metrics.service';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -118,8 +120,9 @@ export interface PoolHealth {
 
 /**
  * Number of worker threads to spawn
+ * Phase 10.125: Increased from 4 to 6 for 8-core i9 (leaves 2 cores for main thread + services)
  */
-const POOL_SIZE = 4;
+const POOL_SIZE = 6;
 
 /**
  * Default timeout for embedding operations (30s)
@@ -181,6 +184,9 @@ export class EmbeddingPoolService implements OnModuleInit, OnModuleDestroy {
 
   // Pool Issue 2 FIX: Health check interval
   private healthCheckInterval: NodeJS.Timeout | null = null;
+
+  // Phase 10.113 Week 12: Production Monitoring
+  constructor(private readonly semanticMetrics: SemanticMetricsService) {}
 
   async onModuleInit(): Promise<void> {
     this.logger.log('✅ [Phase 10.113 Week 11] EmbeddingPoolService initializing...');
@@ -320,41 +326,65 @@ export class EmbeddingPoolService implements OnModuleInit, OnModuleDestroy {
     const batches = this.chunkArray(texts, batchSize);
     const results: (number[][] | null)[] = new Array(batches.length);
 
-    this.logger.debug(`[EmbeddingPool] Processing ${texts.length} texts in ${batches.length} batches (size: ${batchSize})`);
+    // Phase 10.125: Limit concurrent batches to prevent event loop starvation
+    // Process in groups of POOL_SIZE batches, yield between groups
+    const CONCURRENT_BATCHES = Math.min(POOL_SIZE, batches.length);
 
-    await Promise.allSettled(
-      batches.map(async (batch, batchIndex) => {
-        // Check abort before starting
-        if (signal?.aborted) {
-          throw new AbortError('Request cancelled');
-        }
+    this.logger.debug(`[EmbeddingPool] Processing ${texts.length} texts in ${batches.length} batches (size: ${batchSize}, concurrent: ${CONCURRENT_BATCHES})`);
 
-        let lastError: Error | null = null;
+    // Process batches in chunks with event loop yielding
+    for (let groupStart = 0; groupStart < batches.length; groupStart += CONCURRENT_BATCHES) {
+      // Check abort before starting each group
+      if (signal?.aborted) {
+        throw new AbortError('Request cancelled');
+      }
 
-        // Bug 4 FIX: Retry logic
-        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-          try {
-            results[batchIndex] = await this.submitBatchWithTimeout(
-              batch,
-              `batch-${batchIndex}-${Date.now()}`,
-              timeoutMs,
-            );
-            return; // Success
-          } catch (error) {
-            lastError = error instanceof Error ? error : new Error(String(error));
+      const groupEnd = Math.min(groupStart + CONCURRENT_BATCHES, batches.length);
+      const groupBatches = batches.slice(groupStart, groupEnd);
 
-            if (attempt < MAX_RETRIES) {
-              this.logger.warn(`[EmbeddingPool] Batch ${batchIndex} attempt ${attempt + 1} failed, retrying...`);
-              await this.delay(100 * (attempt + 1)); // Exponential backoff
+      // Process this group of batches in parallel
+      await Promise.allSettled(
+        groupBatches.map(async (batch, localIndex) => {
+          const batchIndex = groupStart + localIndex;
+
+          // Check abort before starting
+          if (signal?.aborted) {
+            throw new AbortError('Request cancelled');
+          }
+
+          let lastError: Error | null = null;
+
+          // Bug 4 FIX: Retry logic
+          for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            try {
+              results[batchIndex] = await this.submitBatchWithTimeout(
+                batch,
+                `batch-${batchIndex}-${Date.now()}`,
+                timeoutMs,
+              );
+              return; // Success
+            } catch (error) {
+              lastError = error instanceof Error ? error : new Error(String(error));
+
+              if (attempt < MAX_RETRIES) {
+                this.logger.warn(`[EmbeddingPool] Batch ${batchIndex} attempt ${attempt + 1} failed, retrying...`);
+                await this.delay(100 * (attempt + 1)); // Exponential backoff
+              }
             }
           }
-        }
 
-        // All retries failed
-        this.logger.error(`[EmbeddingPool] Batch ${batchIndex} failed after ${MAX_RETRIES + 1} attempts: ${lastError?.message}`);
-        results[batchIndex] = null;
-      })
-    );
+          // All retries failed
+          this.logger.error(`[EmbeddingPool] Batch ${batchIndex} failed after ${MAX_RETRIES + 1} attempts: ${lastError?.message}`);
+          results[batchIndex] = null;
+        })
+      );
+
+      // Phase 10.125: Yield to event loop between batch groups
+      // This allows Socket.IO ping/pong handling and prevents WebSocket timeout
+      if (groupEnd < batches.length) {
+        await this.yieldToEventLoop();
+      }
+    }
 
     // Filter out failed batches and flatten
     const successful = results.filter((r): r is number[][] => r !== null);
@@ -368,6 +398,14 @@ export class EmbeddingPoolService implements OnModuleInit, OnModuleDestroy {
     }
 
     return successful.flat();
+  }
+
+  /**
+   * Phase 10.125: Yield to event loop to prevent blocking
+   * Allows Socket.IO ping/pong handling during long-running embedding operations
+   */
+  private yieldToEventLoop(): Promise<void> {
+    return new Promise(resolve => setImmediate(resolve));
   }
 
   /**
@@ -453,6 +491,7 @@ export class EmbeddingPoolService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Issue 14 FIX: Dynamic batch sizing based on memory
+   * Phase 10.125: Aligned with local-embedding.service.ts OPTIMAL_BATCH_SIZE
    *
    * @returns Optimal batch size
    */
@@ -461,9 +500,11 @@ export class EmbeddingPoolService implements OnModuleInit, OnModuleDestroy {
     const availableHeap = memUsage.heapTotal - memUsage.heapUsed;
 
     // Each embedding ~2KB, estimate batch memory usage
-    if (availableHeap > 500 * 1024 * 1024) return 32; // >500MB free
-    if (availableHeap > 200 * 1024 * 1024) return 16; // >200MB free
-    return 8; // Low memory
+    // Phase 10.125: Increased thresholds for 64GB RAM systems
+    if (availableHeap > 1024 * 1024 * 1024) return 64; // >1GB free (64GB systems)
+    if (availableHeap > 500 * 1024 * 1024) return 48;  // >500MB free
+    if (availableHeap > 200 * 1024 * 1024) return 32;  // >200MB free
+    return 16; // Low memory
   }
 
   /**
@@ -490,6 +531,8 @@ export class EmbeddingPoolService implements OnModuleInit, OnModuleDestroy {
 
       const timeout = setTimeout(() => {
         this.pendingTasks.delete(batchId);
+        // Phase 10.113 Week 12: Record timeout as worker task failure
+        this.semanticMetrics.recordWorkerTask(workerIndex, false);
         reject(new Error(`Worker timeout after ${timeoutMs}ms`));
       }, timeoutMs);
 
@@ -540,8 +583,10 @@ export class EmbeddingPoolService implements OnModuleInit, OnModuleDestroy {
           // Reshape flat array to 2D
           const embeddings = this.reshapeEmbeddings(resultMsg.embeddings);
           task.resolve(embeddings);
+          this.semanticMetrics.recordWorkerTask(workerIndex, true); // Phase 10.113 Week 12
         } else {
           task.reject(new Error(resultMsg.error ?? 'Unknown worker error'));
+          this.semanticMetrics.recordWorkerTask(workerIndex, false); // Phase 10.113 Week 12
         }
       }
 
@@ -784,7 +829,7 @@ export class EmbeddingPoolService implements OnModuleInit, OnModuleDestroy {
       };
 
       worker.on('message', handler);
-      worker.postMessage({ type: 'health-check' });
+      worker.postMessage({ type: 'health' });
     });
   }
 
