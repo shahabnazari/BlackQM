@@ -210,12 +210,13 @@ export class AdaptiveQualityThresholdService {
       const matches: string[] = [];
 
       for (const keyword of keywords) {
+        // Keywords are already lowercase in FIELD_KEYWORDS constant
         // Check for substring match in query
-        if (queryLower.includes(keyword.toLowerCase())) {
+        if (queryLower.includes(keyword)) {
           matches.push(keyword);
         }
         // Also check word-level match for short keywords
-        else if (keyword.length <= 4 && queryWords.includes(keyword.toLowerCase())) {
+        else if (keyword.length <= 4 && queryWords.includes(keyword)) {
           matches.push(keyword);
         }
       }
