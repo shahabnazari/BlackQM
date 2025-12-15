@@ -103,10 +103,25 @@ const MIN_THRESHOLD = 30;
 
 /**
  * Confidence threshold for field detection
- * Lowered from 0.6 to 0.35 to accept single strong keyword matches
- * (e.g., "quantum" → physics, "covid" → biomedical)
+ *
+ * Enterprise-Grade Decision Matrix:
+ * - 0.35: Single keyword (1 match = 0.4 confidence) triggers field
+ * - 0.45: Requires 1.5+ keywords (safer, fewer false positives)
+ * - 0.55: Requires 2+ keywords (conservative, more interdisciplinary fallback)
+ *
+ * Set to 0.45 for enterprise balance: strong single keywords like "covid"
+ * or "blockchain" still trigger field detection, but marginal matches
+ * fall back to interdisciplinary (safer threshold).
  */
-const FIELD_CONFIDENCE_THRESHOLD = 0.35;
+const FIELD_CONFIDENCE_THRESHOLD = 0.45;
+
+/**
+ * Confidence calculation constants (extracted from formula)
+ * Formula: BASE + log(matches+1)/log(keywords+1) * MULTIPLIER
+ */
+const CONFIDENCE_BASE = 0.4;
+const CONFIDENCE_MULTIPLIER = 0.55;
+const CONFIDENCE_MAX = 0.95;
 
 /**
  * Field detection keywords organized by academic discipline
@@ -193,8 +208,19 @@ export class AdaptiveQualityThresholdService {
    * @returns Field detection result with confidence
    */
   detectField(query: string): FieldDetectionResult {
-    const queryLower = query.toLowerCase();
-    const queryWords = queryLower.split(/\s+/);
+    // Enterprise-Grade: Input validation
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      this.logger.debug('Empty or invalid query, using interdisciplinary fallback');
+      return {
+        field: 'interdisciplinary',
+        confidence: 0.5,
+        matchedKeywords: [],
+        totalKeywordsChecked: 0,
+      };
+    }
+
+    const queryLower = query.toLowerCase().trim();
+    const queryWords = queryLower.split(/\s+/).filter(w => w.length > 0);
 
     let bestMatch: FieldDetectionResult = {
       field: 'interdisciplinary',
@@ -226,9 +252,13 @@ export class AdaptiveQualityThresholdService {
       const matchCount = matches.length;
       const keywordCount = keywords.length;
 
-      // Use a logarithmic scale: 1 match = 0.4, 2 = 0.6, 3 = 0.75, 4+ = 0.85+
+      // Use a logarithmic scale with extracted constants:
+      // 1 match = 0.4 (BASE), 2 = 0.55-0.60, 3 = 0.65-0.75, 4+ = 0.80-0.85
       const confidence = matchCount > 0
-        ? Math.min(0.95, 0.4 + (Math.log(matchCount + 1) / Math.log(keywordCount + 1)) * 0.55)
+        ? Math.min(
+            CONFIDENCE_MAX,
+            CONFIDENCE_BASE + (Math.log(matchCount + 1) / Math.log(keywordCount + 1)) * CONFIDENCE_MULTIPLIER
+          )
         : 0;
 
       if (confidence > bestMatch.confidence) {

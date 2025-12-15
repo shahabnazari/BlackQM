@@ -148,6 +148,11 @@ export interface IterationState {
   field: AcademicField;
   /** Start timestamp */
   startTime: number;
+  // Enterprise-Grade: Memory management
+  /** Maximum papers to keep in memory (default: 8000) */
+  maxPapersInMemory: number;
+  /** Count of papers evicted due to memory limits */
+  papersEvicted: number;
 }
 
 /**
@@ -199,6 +204,20 @@ const DEFAULT_CONFIG: IterativeFetchConfig = {
  */
 const FETCH_MULTIPLIERS = [1, 1.5, 2.25, 3.33] as const;
 
+/**
+ * Enterprise-Grade: Memory management limits
+ *
+ * MAX_PAPERS_IN_MEMORY: Maximum papers to keep in state
+ * - Prevents memory exhaustion with large iterations
+ * - Set to 8000 (4 iterations × 2000 max fetch = 8000 theoretical max)
+ *
+ * CLEANUP_KEEP_TOP_N: When cleanup triggers, keep top N by overallScore
+ * - Keeps 6000 highest quality papers
+ * - Evicts 2000 lowest quality papers
+ */
+const MAX_PAPERS_IN_MEMORY = 8000;
+const CLEANUP_KEEP_TOP_N = 6000;
+
 // ============================================================================
 // SERVICE
 // ============================================================================
@@ -238,6 +257,9 @@ export class IterativeFetchService {
       cancelled: false,
       field: detection.field,
       startTime: Date.now(),
+      // Enterprise-Grade: Memory management
+      maxPapersInMemory: MAX_PAPERS_IN_MEMORY,
+      papersEvicted: 0,
     };
   }
 
@@ -382,6 +404,11 @@ export class IterativeFetchService {
         state.allPapers.set(key, paper);
         newUniquePapers++;
       }
+    }
+
+    // Enterprise-Grade: Memory management - cleanup if needed
+    if (this.needsMemoryCleanup(state)) {
+      this.cleanupOldPapers(state);
     }
 
     // Track exhausted sources
@@ -556,8 +583,60 @@ export class IterativeFetchService {
       `  Target: ${config.targetPaperCount}`,
       `  Achievement: ${((filtered.length / config.targetPaperCount) * 100).toFixed(1)}%`,
       `  Exhausted sources: ${state.exhaustedSources.size}`,
+      `  Papers evicted (memory mgmt): ${state.papersEvicted}`,
       `  Elapsed time: ${elapsed}s`,
       `${'═'.repeat(60)}\n`,
     ].join('\n');
+  }
+
+  // ==========================================================================
+  // ENTERPRISE-GRADE: MEMORY MANAGEMENT
+  // ==========================================================================
+
+  /**
+   * Cleanup old papers when memory limit is exceeded
+   *
+   * Enterprise-Grade: Prevents memory exhaustion by evicting
+   * lowest-scoring papers when the map grows too large.
+   *
+   * @param state - Iteration state to clean
+   * @param keepTopN - Number of top papers to keep (default: CLEANUP_KEEP_TOP_N)
+   */
+  cleanupOldPapers(state: IterationState, keepTopN: number = CLEANUP_KEEP_TOP_N): void {
+    if (state.allPapers.size <= state.maxPapersInMemory) {
+      return; // No cleanup needed
+    }
+
+    const beforeCount = state.allPapers.size;
+
+    // Sort papers by overallScore (descending) and keep top N
+    const sorted = [...state.allPapers.values()]
+      .sort((a, b) => b.overallScore - a.overallScore)
+      .slice(0, keepTopN);
+
+    // Rebuild map with only top papers
+    state.allPapers.clear();
+    for (const paper of sorted) {
+      const key = this.generatePaperKey(paper);
+      state.allPapers.set(key, paper);
+    }
+
+    const evicted = beforeCount - state.allPapers.size;
+    state.papersEvicted += evicted;
+
+    this.logger.log(
+      `🧹 [Memory Cleanup] Evicted ${evicted} low-scoring papers ` +
+      `(${beforeCount} → ${state.allPapers.size}). Total evicted: ${state.papersEvicted}`,
+    );
+  }
+
+  /**
+   * Check if memory cleanup is needed
+   *
+   * @param state - Iteration state
+   * @returns true if cleanup is needed
+   */
+  needsMemoryCleanup(state: IterationState): boolean {
+    return state.allPapers.size > state.maxPapersInMemory;
   }
 }
