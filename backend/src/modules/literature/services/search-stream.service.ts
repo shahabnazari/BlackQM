@@ -766,6 +766,29 @@ export class SearchStreamService {
       `🧠 [SearchStream] Starting Netflix-grade semantic ranking for ${papers.length} papers (limit: ${limit})...`,
     );
 
+    // Phase 10.155: Emit iteration start event
+    if (state.iterationState) {
+      // Create a preliminary result for iteration start event
+      const fetchLimit = this.iterativeFetch.getFetchLimitForIteration(
+        state.iterationState.currentIteration + 1,
+      );
+      const startResult: IterationResult = {
+        iteration: state.iterationState.currentIteration + 1,
+        threshold: state.iterationState.currentThreshold,
+        papersFound: 0, // Will be updated after ranking
+        targetPapers: this.iterativeFetch.getDefaultConfig().targetPaperCount,
+        newPapersThisIteration: papers.length,
+        yieldRate: 0,
+        sourcesExhausted: [...state.iterationState.exhaustedSources],
+        shouldContinue: false,
+        reason: 'TARGET_REACHED',
+        fetchLimit,
+        durationMs: 0,
+        timestamp: Date.now(),
+      };
+      this.emitIterationStart(state, startResult, state.iterationState.field);
+    }
+
     let rankedPapers: Paper[];
 
     // Phase 10.115: Create AbortController for ranking timeout
@@ -841,6 +864,44 @@ export class SearchStreamService {
     state.papers.clear();
     for (const paper of rankedPapers) {
       state.papers.set(paper.id || this.generatePaperId(paper), paper);
+    }
+
+    // Phase 10.155: Track iteration progress
+    // Convert ranked papers to PaperWithOverallScore for iteration tracking
+    if (state.iterationState) {
+      const papersWithScores: PaperWithOverallScore[] = rankedPapers.map(p => ({
+        id: p.id || this.generatePaperId(p),
+        doi: p.doi,
+        title: p.title ?? '',
+        abstract: p.abstract,
+        qualityScore: p.qualityScore,
+        overallScore: p.overallScore ?? p.qualityScore ?? 0,
+        neuralRelevanceScore: p.neuralRelevanceScore,
+        source: p.source,
+      }));
+
+      // Create source paper counts map (simplified - using main source)
+      const sourcePaperCounts = new Map<string, number>();
+      for (const paper of rankedPapers) {
+        const source = paper.source ?? 'unknown';
+        sourcePaperCounts.set(source, (sourcePaperCounts.get(source) ?? 0) + 1);
+      }
+
+      // Process iteration results
+      const iterationResult = this.iterativeFetch.processIterationResults(
+        state.iterationState,
+        papersWithScores,
+        sourcePaperCounts,
+        state.sourceStats.size,
+      );
+
+      // Emit iteration complete event
+      this.emitIterationComplete(state, iterationResult, state.iterationState.field);
+
+      // Log iteration summary
+      this.logger.log(
+        this.iterativeFetch.getStatsSummary(state.iterationState),
+      );
     }
 
     // Phase 10.118: Emit 99% progress with accurate final count before batch
