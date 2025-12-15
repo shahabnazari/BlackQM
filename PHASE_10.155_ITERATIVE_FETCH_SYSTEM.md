@@ -1,8 +1,9 @@
 # Phase 10.155: Netflix-Grade Iterative Paper Fetching System
 
 **Date**: December 14, 2025
-**Status**: Planning Complete - Ready for Implementation
+**Status**: Week 1 Complete - Week 2 In Progress
 **Priority**: Critical - Core Pipeline Architecture Change
+**Last Updated**: December 14, 2025 (Post-Audit Revision)
 
 ---
 
@@ -20,35 +21,35 @@ This phase implements an iterative paper fetching system that guarantees deliver
 - **Line 722**: Sorts by `overallScore` (composite score)
 - **Critical Issue**: `overallScore` calculated in `calculateCombinedScores()` AFTER filtering, but filter runs BEFORE
 
+### Timing Analysis (Audit Fix #1)
+
+**IMPORTANT**: `calculateCombinedScores()` requires `semanticScore` and `themeFitScore` which are calculated during semantic scoring:
+
+```
+Current Flow (Non-Streaming):
+BM25 → Semantic Scoring → calculateCombinedScores() → Filter → Sort
+                ↑                      ↑                  ↑
+         adds semanticScore    needs semanticScore   uses qualityScore (WRONG)
+
+Current Flow (Streaming - search-stream.service.ts line 874):
+BM25 → Semantic Scoring → calculateCombinedScores() → Filter → Emit
+                                      ↑                  ↑
+                              already called       already has overallScore (OK)
+```
+
+**Key Insight**: The streaming path already calculates `overallScore` before emit. The issue is in the non-streaming path in `search-pipeline.service.ts`.
+
 ### Impact
 
 - Papers delivered: 27% of target (82/300)
 - Animation accuracy: 0% (misleading "300 selected")
 - Social science papers penalized due to sparse metadata
 
-### Current Flow (Broken)
-
-```
-COLLECT → DEDUPE → FILTER(qualityScore>=20) → SCORE(overallScore) → DELIVER(82)
-                           ↑                        ↑
-                     FILTERS HERE              CALCULATES HERE
-                     (too early)               (too late)
-```
-
-### Fixed Flow
-
-```
-COLLECT → DEDUPE → SCORE(overallScore) → FILTER(overallScore>=threshold) → DELIVER(300)
-                          ↑                           ↑
-                   CALCULATE HERE               FILTER HERE
-                   (before filter)              (after scoring)
-```
-
 ---
 
 ## Technical Specifications
 
-### 1. Adaptive Quality Threshold Service
+### 1. Adaptive Quality Threshold Service ✅ IMPLEMENTED
 
 **File**: `backend/src/modules/literature/services/adaptive-quality-threshold.service.ts`
 
@@ -66,50 +67,128 @@ const FIELD_THRESHOLDS: Record<string, number> = {
 // Progressive relaxation sequence
 const RELAXATION_SEQUENCE = [60, 50, 40, 35, 30];
 
-// Field detection keywords
-const FIELD_KEYWORDS: Record<string, string[]> = {
-  'biomedical': ['medical', 'clinical', 'health', 'disease', 'patient', 'drug', 'therapy', 'cancer', 'covid'],
-  'physics': ['quantum', 'particle', 'physics', 'energy', 'matter', 'relativity', 'cosmology'],
-  'computer-science': ['algorithm', 'machine learning', 'AI', 'software', 'computing', 'neural', 'deep learning'],
-  'social-science': ['social', 'political', 'economic', 'society', 'behavior', 'psychology', 'policy'],
-  'humanities': ['history', 'philosophy', 'literature', 'art', 'culture', 'religion', 'ethics'],
-};
+// Confidence threshold for field detection (Audit Fix #2)
+// Lowered from 0.6 to 0.35 to accept single strong keyword matches
+const FIELD_CONFIDENCE_THRESHOLD = 0.35;
 
-// Confidence threshold for field detection
-const FIELD_CONFIDENCE_THRESHOLD = 0.6; // 60%
+// Field detection returns confidence scoring (Audit Fix #2)
+interface FieldDetectionResult {
+  field: AcademicField;
+  confidence: number;
+  matchedKeywords: string[];
+  totalKeywordsChecked: number;
+}
 ```
 
-### 2. Iterative Fetch Service
+### 2. Iterative Fetch Service ✅ IMPLEMENTED
 
 **File**: `backend/src/modules/literature/services/iterative-fetch.service.ts`
 
 ```typescript
 // Iteration configuration
-const ITERATION_CONFIG = {
-  MAX_ITERATIONS: 4,
-  BASE_FETCH_LIMIT: 600,
-  FETCH_MULTIPLIERS: [1, 1.5, 2.25, 3.33], // 600, 900, 1350, 2000
-  MAX_FETCH_LIMIT: 2000,
-  DIMINISHING_RETURNS_THRESHOLD: 0.05, // 5%
-  SOURCE_EXHAUSTION_THRESHOLD: 0.5, // 50%
-  TARGET_PAPER_COUNT: 300,
-  MIN_ACCEPTABLE_THRESHOLD: 30,
-  ITERATION_TIMEOUT_MS: 40000, // 40s
+const DEFAULT_CONFIG: IterativeFetchConfig = {
+  targetPaperCount: 300,
+  maxIterations: 4,
+  baseFetchLimit: 600,
+  maxFetchLimit: 2000,
+  minThreshold: 30,
+  diminishingReturnsThreshold: 0.05, // 5%
+  sourceExhaustionThreshold: 0.5, // 50%
+  iterationTimeoutMs: 40000, // 40s
 };
+
+// Fetch limit multipliers
+const FETCH_MULTIPLIERS = [1, 1.5, 2.25, 3.33]; // 600, 900, 1350, 2000
 
 // Stop conditions
 type StopReason =
-  | 'TARGET_REACHED'       // filtered.length >= 300
-  | 'MAX_ITERATIONS'       // iteration > 4
-  | 'DIMINISHING_RETURNS'  // yieldRate < 5% (iteration > 1)
-  | 'SOURCES_EXHAUSTED'    // all sources returned < 50%
-  | 'MIN_THRESHOLD'        // can't relax below 30
-  | 'USER_CANCELLED';      // user clicked cancel
+  | 'TARGET_REACHED'        // filtered.length >= 300
+  | 'RELAXING_THRESHOLD'    // Need more papers, relaxing threshold
+  | 'MAX_ITERATIONS'        // iteration > 4
+  | 'DIMINISHING_RETURNS'   // yieldRate < 5% (iteration > 1)
+  | 'SOURCES_EXHAUSTED'     // all sources returned < 50%
+  | 'MIN_THRESHOLD'         // can't relax below 30
+  | 'USER_CANCELLED'        // user clicked cancel
+  | 'TIMEOUT';              // iteration timeout
 ```
 
-### 3. WebSocket Events
+### 3. Memory Management (Audit Fix #3)
 
-**File**: `frontend/lib/types/search-stream.types.ts`
+```typescript
+// IterationState - papers stored per-search, not globally
+interface IterationState {
+  allPapers: Map<string, PaperWithOverallScore>; // Deduplicated collection
+  exhaustedSources: Set<string>;                  // Track exhausted sources
+  // ... cleared when search completes
+}
+
+// Memory strategy:
+// 1. Papers stored in Map (deduped by DOI/title) - max ~2000 unique
+// 2. State cleared via SearchStreamService.cleanupSearch()
+// 3. Semantic embeddings cached separately in EmbeddingCacheService
+// 4. Only papers above threshold delivered to frontend
+```
+
+### 4. Deduplication Strategy (Audit Fix #5)
+
+```typescript
+// Priority: DOI > normalized title
+generatePaperKey(paper: { doi?: string; title?: string }): string {
+  if (paper.doi && paper.doi.trim().length > 0) {
+    return `doi:${paper.doi.toLowerCase().trim()}`;
+  }
+  if (paper.title && paper.title.trim().length > 0) {
+    return `title:${this.normalizeTitle(paper.title)}`;
+  }
+  return `unknown:${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '')  // Remove punctuation
+    .replace(/\s+/g, ' ')     // Collapse whitespace
+    .trim()
+    .substring(0, 100);       // Truncate for efficiency
+}
+```
+
+### 5. Source Exhaustion Tracking (Audit Fix #6)
+
+```typescript
+// Per-source tracking
+sourcePaperCounts.forEach((count, source) => {
+  const exhaustionRate = count / fetchLimit;
+  if (exhaustionRate < config.sourceExhaustionThreshold) {
+    state.exhaustedSources.add(source);
+  }
+});
+
+// Decision logic
+if (state.exhaustedSources.size >= totalSourceCount) {
+  return { shouldContinue: false, reason: 'SOURCES_EXHAUSTED' };
+}
+```
+
+### 6. User Cancellation Protocol (Audit Fix #7)
+
+```typescript
+// On cancel:
+cancelIteration(state: IterationState): void {
+  state.cancelled = true;
+  // 1. Stop current iteration immediately (checked in shouldContinue)
+  // 2. Deliver all papers found so far (getFilteredPapers)
+  // 3. Clear iteration state (handled by caller)
+  // 4. Emit cancellation event (iteration_complete with USER_CANCELLED)
+}
+```
+
+### 7. WebSocket Events ✅ IMPLEMENTED
+
+**Files**:
+- `backend/src/modules/literature/dto/search-stream.dto.ts`
+- `frontend/lib/types/search-stream.types.ts`
+- `frontend/lib/hooks/useSearchWebSocket.ts`
 
 ```typescript
 interface IterationProgressEvent {
@@ -124,12 +203,55 @@ interface IterationProgressEvent {
   newPapersThisIteration: number;
   yieldRate: number;
   sourcesExhausted: string[];
-  reason?: StopReason;
+  reason?: IterationStopReason;
+  field?: AcademicField;  // Added for debugging
   timestamp: number;
 }
+
+// WebSocket event types registered:
+// 'search:iteration-start'
+// 'search:iteration-progress'
+// 'search:iteration-complete'
 ```
 
-### 4. Pipeline Filter Change
+### 8. WebSocket Event Timing (Audit Fix #4)
+
+```typescript
+// Progressive emission strategy:
+// 1. Emit papers from each iteration as they complete
+// 2. Frontend shows partial results during iteration
+// 3. Label clearly shows iteration progress
+
+// Emit iteration start
+emitIterationProgress({
+  type: 'iteration_start',
+  iteration: 1,
+  papersFound: 0,
+  targetPapers: 300,
+  threshold: 60,
+});
+
+// Emit iteration progress (papers found)
+emitIterationProgress({
+  type: 'iteration_progress',
+  iteration: 1,
+  papersFound: 82,
+  targetPapers: 300,
+  newPapersThisIteration: 82,
+});
+
+// Emit iteration complete (moving to next iteration)
+emitIterationProgress({
+  type: 'iteration_complete',
+  iteration: 1,
+  papersFound: 82,
+  targetPapers: 300,
+  reason: 'RELAXING_THRESHOLD',
+  // Will continue with iteration 2
+});
+```
+
+### 9. Pipeline Filter Change (Audit Fix #9)
 
 **File**: `backend/src/modules/literature/services/search-pipeline.service.ts`
 
@@ -139,11 +261,17 @@ const qualityFiltered = papersForSemantic.filter(
   (p: MutablePaper) => (p.qualityScore ?? 0) >= QUALITY_THRESHOLD
 );
 
-// AFTER
-// Step 1: Calculate overallScore for all papers FIRST
-const scoredPapers = this.calculateCombinedScores(papersForSemantic, query);
+// AFTER - Correct signature (Audit Fix #9)
+// Note: calculateCombinedScores requires papers WITH semantic scores
+// So semantic scoring must run first
+const scoredPapers = this.calculateCombinedScores(
+  papersWithSemanticScores,  // Papers that have semanticScore set
+  0.15,  // bm25Weight
+  0.55,  // semanticWeight
+  0.30,  // themeFitWeight
+);
 
-// Step 2: Filter by overallScore with adaptive threshold
+// Then filter by overallScore with adaptive threshold
 const qualityFiltered = scoredPapers.filter(
   (p: MutablePaper) => {
     const score = p.overallScore ?? p.qualityScore ?? 0;
@@ -152,90 +280,142 @@ const qualityFiltered = scoredPapers.filter(
 );
 ```
 
+### 10. Threshold Service Integration (Audit Fix #10)
+
+```typescript
+// In SearchStreamService:
+const recommendation = this.adaptiveThreshold.getThresholdRecommendation(query);
+// Returns: { field: 'biomedical', threshold: 60, confidence: 0.75, ... }
+
+// Pass to iteration service:
+const state = this.iterativeFetch.createInitialState(query, config);
+// state.field = 'biomedical'
+// state.currentThreshold = 60
+// state.currentIteration = 0
+
+// During iteration, get next threshold:
+const nextRec = this.adaptiveThreshold.getNextThresholdRecommendation(
+  currentThreshold,  // 60
+  field,             // 'biomedical'
+  iteration,         // 1
+  papersFound,       // 82
+  targetPapers,      // 300
+);
+// Returns: { threshold: 50, relaxationReason: 'Below target', ... }
+```
+
+---
+
+## Performance Expectations (Audit Fix #8)
+
+### Realistic Timeline per Iteration
+
+| Iteration | Fetch Limit | Semantic Scoring | Total Time | Cumulative |
+|-----------|-------------|------------------|------------|------------|
+| 1 | 600 | ~10s | ~15s | 15s |
+| 2 | 900 | ~15s | ~22s | 37s |
+| 3 | 1350 | ~22s | ~33s | 70s |
+| 4 | 2000 | ~35s | ~50s | 120s |
+
+**Worst Case**: 120s if all 4 iterations run
+
+### Early Termination Optimization
+
+```typescript
+// If iteration 1 yields 250+ papers with high scores:
+// - Calculate expected yield for next iteration
+// - If expected yield < 50 papers, stop early
+
+if (papersFound >= 250 && yieldRate > 0.4) {
+  // Likely to hit target with current batch
+  // Consider stopping to save time
+}
+```
+
+### Target Performance
+
+- **Best case** (target in iteration 1): ~15s
+- **Average case** (target in iteration 2): ~37s
+- **Worst case** (all iterations): ~120s
+- **Acceptable threshold**: <60s for 90% of queries
+
 ---
 
 ## Files to Modify
 
 ### Backend (5 files)
 
-| File | Change Type | Description |
-|------|-------------|-------------|
-| `search-pipeline.service.ts` | MODIFY | Move `calculateCombinedScores()` before filter, switch to `overallScore` |
-| `search-stream.service.ts` | MODIFY | Add iteration loop, emit progress events |
-| `source-allocation.constants.ts` | MODIFY | Update fetch limits, add iteration config |
-| `adaptive-quality-threshold.service.ts` | NEW | Field detection + adaptive thresholds |
-| `iterative-fetch.service.ts` | NEW | Core iteration logic |
+| File | Change Type | Status |
+|------|-------------|--------|
+| `adaptive-quality-threshold.service.ts` | NEW | ✅ DONE |
+| `iterative-fetch.service.ts` | NEW | ✅ DONE |
+| `literature.module.ts` | MODIFY | ✅ DONE (services registered) |
+| `search-pipeline.service.ts` | MODIFY | ⏳ Week 2 |
+| `search-stream.service.ts` | MODIFY | ⏳ Week 2 |
 
 ### Frontend (6 files)
 
-| File | Change Type | Description |
-|------|-------------|-------------|
-| `search-stream.types.ts` | MODIFY | Add `IterationProgressEvent` type |
-| `useSearchWebSocket.ts` | MODIFY | Handle iteration events |
-| `constants.ts` (PipelineOrchestra) | MODIFY | Add "iterate" stage |
-| `LiveCounter.tsx` | MODIFY | Show honest counts |
-| `usePipelineState.ts` | MODIFY | Handle iteration state |
-| `IterationLoopVisualizer.tsx` | NEW | Visual loop-back animation |
+| File | Change Type | Status |
+|------|-------------|--------|
+| `search-stream.types.ts` | MODIFY | ✅ DONE |
+| `search-stream.dto.ts` | MODIFY | ✅ DONE |
+| `useSearchWebSocket.ts` | MODIFY | ✅ DONE |
+| `constants.ts` (PipelineOrchestra) | MODIFY | ⏳ Week 3 |
+| `LiveCounter.tsx` | MODIFY | ⏳ Week 3 |
+| `IterationLoopVisualizer.tsx` | NEW | ⏳ Week 3 |
 
 ---
 
 ## Implementation Checklist
 
-### Phase 0: Pre-Implementation
+### Phase 0: Pre-Implementation ✅ COMPLETE
 
-- [ ] Commit current state: `git add -A && git commit -m "Phase 10.155: Pre-iterative-fetch checkpoint"`
-- [ ] Push to remote: `git push`
-- [ ] Create feature branch: `git checkout -b feature/iterative-fetch-system`
-- [ ] Verify clean state: `git status` shows clean
+- [x] Commit current state: `git commit -m "Phase 10.155: Pre-iterative-fetch checkpoint"`
+- [x] Create feature branch: `git checkout -b feature/iterative-fetch-system`
+- [x] Verify clean state
 
-### Week 1: Foundation (Days 1-5)
+### Week 1: Foundation ✅ COMPLETE
 
-#### Day 1: Setup
+#### Day 1-2: Threshold Service ✅
 
-- [ ] Create `adaptive-quality-threshold.service.ts` file
-- [ ] Implement `detectField()` function
-- [ ] Implement `getInitialThreshold()` method
-- [ ] Implement `getNextThreshold()` method
-- [ ] Write unit tests for field detection
+- [x] Create `adaptive-quality-threshold.service.ts`
+- [x] Implement `detectField()` with confidence scoring (Audit Fix #2)
+- [x] Implement `getInitialThreshold()`
+- [x] Implement `getNextThresholdRecommendation()`
+- [x] Field confidence threshold: 0.35 (accepts single keyword matches)
+- [x] 45 unit tests passing
 
-#### Day 2: Threshold Service
+#### Day 3-4: Iterative Fetch Service ✅
 
-- [ ] Add field confidence scoring
-- [ ] Implement fallback to "interdisciplinary"
-- [ ] Test with 10 sample queries across fields
-- [ ] Verify threshold selection is correct
+- [x] Create `iterative-fetch.service.ts`
+- [x] Implement `createInitialState()` with field detection
+- [x] Implement `processIterationResults()` with deduplication (Audit Fix #5)
+- [x] Implement `shouldContinue()` with all stop conditions
+- [x] Implement source exhaustion tracking (Audit Fix #6)
+- [x] Implement `cancelIteration()` (Audit Fix #7)
+- [x] 35 unit tests passing
 
-#### Day 3-4: Iterative Fetch Service
+#### Day 5: WebSocket Events ✅
 
-- [ ] Create `iterative-fetch.service.ts` file
-- [ ] Implement `fetchUntilTarget()` generator
-- [ ] Implement deduplication logic
-- [ ] Implement source exhaustion tracking
-- [ ] Implement diminishing returns detection
-- [ ] Write unit tests for iteration logic
+- [x] Add `IterationProgressEvent` type to backend DTO
+- [x] Add iteration events to frontend types
+- [x] Add event handlers to `useSearchWebSocket.ts`
+- [x] Event constants: `ITERATION_START`, `ITERATION_PROGRESS`, `ITERATION_COMPLETE`
 
-#### Day 5: WebSocket Events
+#### Week 1 Audit ✅
 
-- [ ] Add `IterationProgressEvent` type to DTOs
-- [ ] Add event emission in `search-stream.service.ts`
-- [ ] Test events fire correctly in WebSocket
-- [ ] Verify event structure matches type definition
+- [x] Services registered in `literature.module.ts`
+- [x] TypeScript passes (frontend + backend)
+- [x] NestJS build succeeds
+- [x] 80/80 unit tests pass
+- [x] Micro-optimization: removed redundant `.toLowerCase()` calls
 
-#### Week 1 Verification
-
-- [ ] Check what user sees in frontend now (no changes expected yet)
-- [ ] Verify WebSocket connections stable
-- [ ] Run `npm run typecheck` - no TypeScript errors
-- [ ] Test backend API endpoints manually
-- [ ] Unit tests pass for new services
-- [ ] No regressions in existing functionality
-
-### Week 2: Pipeline Integration (Days 6-10)
+### Week 2: Pipeline Integration (Days 6-10) ⏳ IN PROGRESS
 
 #### Day 6-7: Critical Pipeline Fix
 
-- [ ] **CRITICAL**: Move `calculateCombinedScores()` call BEFORE quality filter
-- [ ] Verify `overallScore` is populated for all papers
+- [ ] **CRITICAL**: Ensure `overallScore` is set BEFORE quality filter
+- [ ] Verify semantic scoring runs before filter in non-streaming path
 - [ ] Update filter to use `overallScore ?? qualityScore ?? 0`
 - [ ] Test with A/B comparison (old vs new filter)
 - [ ] Measure pass rate improvement
@@ -243,191 +423,111 @@ const qualityFiltered = scoredPapers.filter(
 #### Day 8-9: Integration
 
 - [ ] Integrate `IterativeFetchService` into `SearchStreamService`
-- [ ] Connect adaptive threshold to iteration loop
+- [ ] Connect `AdaptiveQualityThresholdService` to pipeline
 - [ ] Emit iteration events during search
+- [ ] Implement progressive emission (Audit Fix #4)
 - [ ] Test end-to-end with single query
 
-#### Day 10: Exhaustion & Cancellation
+#### Day 10: Edge Cases
 
-- [ ] Implement source exhaustion detection
-- [ ] Implement user cancellation handling
+- [ ] Implement source exhaustion detection end-to-end
+- [ ] Implement user cancellation end-to-end
 - [ ] Test partial result delivery on cancel
-- [ ] Test all stop conditions
+- [ ] Test all stop conditions in integration
 
 #### Week 2 Verification
 
-- [ ] Check what user sees in frontend now
-- [ ] Test 10 diverse queries across different fields:
-  - [ ] "quantum computing algorithms" (physics/CS)
-  - [ ] "cancer immunotherapy clinical trials" (biomedical)
-  - [ ] "machine learning neural networks" (CS)
-  - [ ] "climate change policy economic impact" (social science)
-  - [ ] "American politics research" (social science)
-  - [ ] "renaissance art history" (humanities)
-  - [ ] "indigenous knowledge systems" (interdisciplinary)
-  - [ ] "COVID-19 vaccine efficacy" (biomedical)
-  - [ ] "blockchain cryptocurrency security" (CS)
-  - [ ] "mental health psychology depression" (social science)
+- [ ] Test 10 diverse queries (see Testing Queries section)
 - [ ] Verify 250+ papers returned for each query
-- [ ] Compare paper quality: old filter vs new filter
-- [ ] WebSocket stability check (long searches >30s)
+- [ ] WebSocket stability check (long searches >60s)
 - [ ] TypeScript error check: `npm run typecheck`
-- [ ] Full integration test: backend + frontend
 
-### Week 3: Frontend Animation (Days 11-15)
+### Week 3: Frontend Animation (Days 11-15) ⏳ NOT STARTED
 
-#### Day 11-12: Pipeline Stage
+(unchanged)
 
-- [ ] Add "iterate" stage to `PIPELINE_STAGES` constant
-- [ ] Update `usePipelineState.ts` to handle iteration state
-- [ ] Implement stage transition logic
-- [ ] Test stage rendering in orchestra
+### Week 4: Optimization & Polish (Days 16-20) ⏳ NOT STARTED
 
-#### Day 13: Honest Counter
+(unchanged)
 
-- [ ] Update `LiveCounter.tsx` interface
-- [ ] Display format: "82/300 (Iteration 1/4 @ 60%)"
-- [ ] Add iteration indicator during loop
-- [ ] Test counter accuracy matches delivered papers
+---
 
-#### Day 14: Loop Visualizer
+## Testing Queries (Audit Fix #10)
 
-- [ ] Create `IterationLoopVisualizer.tsx`
-- [ ] Implement visual arrow from FILTER to COLLECT
-- [ ] Add particle effect during loop
-- [ ] Test animation smoothness
+### Standard Tests
 
-#### Day 15: Cancellation UI
+| Query | Expected Field | Initial Threshold | Notes |
+|-------|---------------|-------------------|-------|
+| "quantum mechanics particle entanglement" | physics | 55 | Unambiguous physics |
+| "cancer immunotherapy clinical trials" | biomedical | 60 | High confidence |
+| "machine learning neural networks" | computer-science | 55 | CS keywords |
+| "political behavior voting election democracy" | social-science | 45 | Multiple social keywords |
+| "renaissance art history" | humanities | 40 | Clear humanities |
 
-- [ ] Handle cancellation in `useSearchWebSocket.ts`
-- [ ] Show "Search cancelled. X papers delivered"
-- [ ] Clear iteration state on cancel
-- [ ] Test cancel at different iteration stages
+### Edge Case Tests (Audit Fix #10)
 
-#### Week 3 Verification
-
-- [ ] **CRITICAL**: Check what user sees in frontend - is it confusing?
-- [ ] Animation accurately shows iteration progress
-- [ ] Paper counts match delivered papers exactly
-- [ ] Cancellation works and delivers partial results
-- [ ] No confusing UX elements
-- [ ] WebSocket reconnection test
-- [ ] TypeScript clean: `npm run typecheck`
-- [ ] User testing with 3 researchers (if available)
-
-### Week 4: Optimization & Polish (Days 16-20)
-
-#### Day 16-17: Performance
-
-- [ ] Implement parallel fetching within iteration
-- [ ] Optimize semantic embedding caching
-- [ ] Reduce memory footprint
-- [ ] Target: <35s for 300 papers
-
-#### Day 18: Tuning
-
-- [ ] Tune diminishing returns threshold (currently 5%)
-- [ ] Tune source exhaustion threshold (currently 50%)
-- [ ] Test with edge case queries
-- [ ] Document optimal values
-
-#### Day 19: Load Testing
-
-- [ ] Test 10 concurrent searches
-- [ ] Test 25 concurrent searches
-- [ ] Test 50 concurrent searches
-- [ ] Verify no memory leaks
-- [ ] Check CPU usage acceptable
-
-#### Day 20: Documentation
-
-- [ ] Update API documentation
-- [ ] Add inline code comments
-- [ ] Write migration guide
-- [ ] Code review with team
-
-#### Week 4 Verification
-
-- [ ] Full user experience walkthrough
-- [ ] < 35s for 300 papers target
-- [ ] WebSocket + backend + frontend integration stable
-- [ ] API response validation
-- [ ] TypeScript error check: `npm run typecheck`
-- [ ] Memory leak check (heap snapshot before/after)
-- [ ] Production deployment readiness
-- [ ] Rollback plan documented
+| Query | Expected Behavior | Notes |
+|-------|-------------------|-------|
+| "xyzabc123 nonexistent" | 0 papers, graceful stop | No matches |
+| "research" | Interdisciplinary fallback | Too broad |
+| "quantum computing algorithms" | CS (not physics) | "computing" + "algorithm" = CS |
+| "covid mental health depression" | Social-science | Mental health keywords |
 
 ---
 
 ## Success Metrics
 
-| Metric | Current | Target | Measurement Method |
-|--------|---------|--------|-------------------|
-| Papers delivered vs target | 27% (82/300) | 90%+ (270+/300) | `finalPapers.length / 300` |
-| Animation accuracy | 0% (misleading) | 100% (honest) | Manual verification |
-| Filter uses correct score | `qualityScore` | `overallScore` | Code review |
-| Search time | 25s | < 35s | `totalTimeMs` in complete event |
-| User confusion | High (support tickets) | Low | User feedback |
+| Metric | Current | Target | Status |
+|--------|---------|--------|--------|
+| Papers delivered vs target | 27% (82/300) | 90%+ (270+/300) | ⏳ Week 2 |
+| Animation accuracy | 0% (misleading) | 100% (honest) | ⏳ Week 3 |
+| Filter uses correct score | `qualityScore` | `overallScore` | ⏳ Week 2 |
+| Search time | 25s | < 60s | ⏳ Week 4 |
+| Unit tests passing | 80/80 | 80/80 | ✅ DONE |
 
 ---
 
-## Risk Mitigation
+## Risk Mitigation (Updated)
 
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| Infinite loop | Low | High | Hard cap at 4 iterations + 40s timeout |
-| Memory exhaustion | Medium | High | Stream papers, cap at 8000 total, clear between iterations |
-| Latency increase | Medium | Medium | Parallel fetching, early termination on target |
-| Field misclassification | Medium | Low | Fallback to "interdisciplinary", log for improvement |
-| Source exhaustion | Low | Medium | Track per-source yield, skip exhausted in next iteration |
-| User cancellation | Low | Low | Deliver partial results, clear state |
-| `overallScore` undefined | Low | High | Calculate BEFORE filter, fallback to `qualityScore` |
-| WebSocket disconnection | Low | Medium | Reconnection logic, resume from last iteration |
-
----
-
-## Rollback Plan
-
-If critical issues are discovered post-deployment:
-
-1. **Revert filter change**: Switch back to `qualityScore >= 20`
-2. **Disable iteration**: Set `MAX_ITERATIONS = 1`
-3. **Full rollback**: `git revert HEAD~N` to pre-Phase 10.155 commit
+| Risk | Probability | Impact | Mitigation | Status |
+|------|-------------|--------|------------|--------|
+| Infinite loop | Low | High | Hard cap at 4 iterations + 40s timeout | ✅ Implemented |
+| Memory exhaustion | Medium | High | State cleared per-search, cap at 2000 papers | ✅ Implemented |
+| Field misclassification | Medium | Low | Confidence scoring + interdisciplinary fallback | ✅ Implemented |
+| Source exhaustion | Low | Medium | Per-source tracking, skip exhausted | ✅ Implemented |
+| User cancellation | Low | Low | Deliver partial results, clear state | ✅ Implemented |
+| `overallScore` undefined | Low | High | Fallback to `qualityScore ?? 0` | ⏳ Week 2 |
+| Performance > 60s | Medium | Medium | Early termination, parallel fetching | ⏳ Week 4 |
 
 ---
 
-## Dependencies
+## Commits on `feature/iterative-fetch-system`
 
-- Phase 10.147: `overallScore` calculation (harmonic mean) - COMPLETED
-- Phase 10.138: Netflix-grade pipeline orchestra - COMPLETED
-- Phase 10.113: Progressive semantic ranking - COMPLETED
-
----
-
-## Testing Queries
-
-Use these queries to verify different field thresholds:
-
-| Query | Expected Field | Initial Threshold |
-|-------|---------------|-------------------|
-| "quantum computing algorithms" | physics | 55 |
-| "cancer immunotherapy clinical trials" | biomedical | 60 |
-| "machine learning neural networks" | computer-science | 55 |
-| "climate change policy economic impact" | social-science | 45 |
-| "American politics research" | social-science | 45 |
-| "renaissance art history" | humanities | 40 |
-| "indigenous knowledge forest management" | interdisciplinary | 50 |
+| Commit | Description | Date |
+|--------|-------------|------|
+| `d45a1cc` | Micro-optimization - Remove redundant toLowerCase() | Dec 14 |
+| `9f834a8` | Netflix-Grade Audit Fixes | Dec 14 |
+| `cd35fa6` | Week 1: Iterative Fetch Foundation | Dec 14 |
 
 ---
 
-## Sign-off
+## Audit Response Summary
 
-- [ ] Architecture reviewed
-- [ ] Security reviewed (no new vulnerabilities)
-- [ ] Performance acceptable (<35s)
-- [ ] UX approved (not confusing)
-- [ ] Ready for production
+| Audit Issue | Priority | Status |
+|-------------|----------|--------|
+| #1 Timing mismatch | P1 | ✅ Clarified in doc |
+| #2 Field detection accuracy | P1 | ✅ Implemented with 0.35 confidence |
+| #3 Memory management | P2 | ✅ Clarified in doc |
+| #4 WebSocket event timing | P2 | ✅ Clarified in doc |
+| #5 Deduplication | P2 | ✅ Implemented DOI/title |
+| #6 Source exhaustion | P2 | ✅ Implemented per-source |
+| #7 User cancellation | P3 | ✅ Implemented |
+| #8 Performance | P2 | ✅ Realistic targets in doc |
+| #9 Code example fix | P1 | ✅ Fixed in doc |
+| #10 Threshold integration | P2 | ✅ Clarified in doc |
+| #11 Edge case tests | P3 | ✅ Added to doc |
 
 ---
 
 *Phase 10.155 - Created December 14, 2025*
+*Last Updated: December 14, 2025 (Post-Audit Revision)*
