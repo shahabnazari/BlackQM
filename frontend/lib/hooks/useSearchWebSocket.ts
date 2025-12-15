@@ -43,6 +43,8 @@ import {
   // Phase 10.113 Week 11 Bug 10: Rerank types
   PaperWithSemanticScore,
   RerankOptions,
+  // Phase 10.155: Iterative fetch types
+  IterationProgressEvent,
 } from '@/lib/types/search-stream.types';
 
 // Infer socket type from the io function return type
@@ -76,6 +78,10 @@ const WS_EVENTS = {
   // Phase 10.113 Week 11: Semantic tier events
   SEMANTIC_TIER: 'search:semantic-tier',
   SEMANTIC_PROGRESS: 'search:semantic-progress',
+  // Phase 10.155: Iterative fetch events
+  ITERATION_START: 'search:iteration-start',
+  ITERATION_PROGRESS: 'search:iteration-progress',
+  ITERATION_COMPLETE: 'search:iteration-complete',
 } as const;
 
 /**
@@ -129,6 +135,13 @@ export interface SearchWebSocketCallbacks {
     reason: 'semantic-tier' | 'user-sort' | 'filter-change',
     options: RerankOptions
   ) => void;
+  // Phase 10.155: Iterative fetch callbacks
+  /** Called when an iteration starts */
+  onIterationStart?: (event: IterationProgressEvent) => void;
+  /** Called during iteration progress updates */
+  onIterationProgress?: (event: IterationProgressEvent) => void;
+  /** Called when iteration completes (success or stopped) */
+  onIterationComplete?: (event: IterationProgressEvent) => void;
 }
 
 /**
@@ -527,6 +540,22 @@ export function useSearchWebSocket(
       });
 
       callbacksRef.current.onSemanticProgress?.(event);
+    });
+
+    // Phase 10.155: Iterative fetch event handlers
+    socket.on(WS_EVENTS.ITERATION_START, (event: IterationProgressEvent) => {
+      console.log(`[SearchWebSocket] Iteration ${event.iteration} started: threshold=${event.threshold}, fetchLimit=${event.fetchLimit}`);
+      callbacksRef.current.onIterationStart?.(event);
+    });
+
+    socket.on(WS_EVENTS.ITERATION_PROGRESS, (event: IterationProgressEvent) => {
+      console.log(`[SearchWebSocket] Iteration ${event.iteration} progress: ${event.papersFound}/${event.targetPapers} papers (yield: ${(event.yieldRate * 100).toFixed(1)}%)`);
+      callbacksRef.current.onIterationProgress?.(event);
+    });
+
+    socket.on(WS_EVENTS.ITERATION_COMPLETE, (event: IterationProgressEvent) => {
+      console.log(`[SearchWebSocket] Iteration complete: ${event.papersFound}/${event.targetPapers} papers, reason=${event.reason}`);
+      callbacksRef.current.onIterationComplete?.(event);
     });
 
     socket.on(WS_EVENTS.COMPLETE, (event: SearchCompleteEvent) => {

@@ -444,6 +444,60 @@ export interface SemanticProgressEvent {
 }
 
 // ============================================================================
+// PHASE 10.155: ITERATIVE FETCH TYPES
+// ============================================================================
+
+/**
+ * Stop reasons for iterative fetching loop
+ */
+export type IterationStopReason =
+  | 'TARGET_REACHED'        // filtered.length >= targetCount
+  | 'RELAXING_THRESHOLD'    // Need more papers, relaxing threshold
+  | 'MAX_ITERATIONS'        // Hit max iteration count
+  | 'DIMINISHING_RETURNS'   // yieldRate < threshold
+  | 'SOURCES_EXHAUSTED'     // All sources returned < 50% of requested
+  | 'MIN_THRESHOLD'         // Cannot relax below minimum
+  | 'USER_CANCELLED'        // User clicked cancel
+  | 'TIMEOUT';              // Iteration timeout
+
+/**
+ * Iterative fetch progress event
+ * Emitted during iterative paper fetching to show honest progress
+ *
+ * Phase 10.155: Netflix-grade iterative fetching
+ */
+export interface IterationProgressEvent {
+  /** Event type */
+  type: 'iteration_start' | 'iteration_progress' | 'iteration_complete';
+  /** Search ID for correlation */
+  searchId: string;
+  /** Current iteration number (1-based) */
+  iteration: number;
+  /** Total iterations allowed */
+  totalIterations: number;
+  /** Current fetch limit per source */
+  fetchLimit: number;
+  /** Current quality threshold (overallScore) */
+  threshold: number;
+  /** Papers found so far above threshold */
+  papersFound: number;
+  /** Target paper count */
+  targetPapers: number;
+  /** New papers found in this iteration */
+  newPapersThisIteration: number;
+  /** Yield rate for this iteration (0-1) */
+  yieldRate: number;
+  /** Sources marked as exhausted */
+  sourcesExhausted: string[];
+  /** Stop reason (only on iteration_complete) */
+  reason?: IterationStopReason;
+  /** Detected academic field */
+  field?: string;
+  /** Timestamp */
+  timestamp: number;
+}
+
+// ============================================================================
 // WEBSOCKET EVENT TYPES
 // ============================================================================
 
@@ -462,7 +516,11 @@ export type SearchStreamEventType =
   | 'search:error'
   // Phase 10.113 Week 11: Semantic tier events
   | 'search:semantic-tier'
-  | 'search:semantic-progress';
+  | 'search:semantic-progress'
+  // Phase 10.155: Iterative fetch events
+  | 'search:iteration-start'
+  | 'search:iteration-progress'
+  | 'search:iteration-complete';
 
 /**
  * Generic search stream event
