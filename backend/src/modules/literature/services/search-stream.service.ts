@@ -48,6 +48,16 @@ import { SourceCapabilityService } from './source-capability.service';
 import { detectQueryComplexity } from '../constants/source-allocation.constants';
 // Phase 10.113 Week 11: Strict typing for semantic tier results
 import { PaperWithSemanticScore } from './progressive-semantic.service';
+// Phase 10.155: Iterative Fetch System for guaranteed paper delivery
+import {
+  IterativeFetchService,
+  IterationState,
+  IterationResult,
+  IterationProgressEvent,
+  PaperWithOverallScore,
+} from './iterative-fetch.service';
+import { AdaptiveQualityThresholdService } from './adaptive-quality-threshold.service';
+import { IterationProgressEvent as IterationProgressEventDTO } from '../dto/search-stream.dto';
 
 // ============================================================================
 // CONSTANTS
@@ -173,6 +183,8 @@ interface SearchState {
   emit: EventEmitter;
   config: SearchStreamConfig;
   aborted: boolean;
+  // Phase 10.155: Iteration state for adaptive fetching
+  iterationState?: IterationState;
 }
 
 // ============================================================================
@@ -191,9 +203,12 @@ export class SearchStreamService {
     // Phase 10.115: Netflix-Grade Integration
     private readonly searchPipeline: SearchPipelineService,
     private readonly sourceCapability: SourceCapabilityService,
+    // Phase 10.155: Iterative Fetch System
+    private readonly iterativeFetch: IterativeFetchService,
+    private readonly adaptiveThreshold: AdaptiveQualityThresholdService,
   ) {
     this.logger.log(
-      '✅ [SearchStreamService] Phase 10.115 - Netflix-Grade Streaming with Semantic Pipeline',
+      '✅ [SearchStreamService] Phase 10.155 - Netflix-Grade Iterative Fetch with Adaptive Thresholds',
     );
   }
 
@@ -217,6 +232,14 @@ export class SearchStreamService {
       `🚀 [SearchStream] Starting progressive search: "${query}" (ID: ${searchId})`,
     );
 
+    // Phase 10.155: Initialize iteration state for adaptive fetching
+    const iterationState = this.iterativeFetch.createInitialState(query);
+
+    this.logger.log(
+      `🎯 [Phase 10.155] Field detected: ${iterationState.field}, ` +
+      `Initial threshold: ${iterationState.currentThreshold}`,
+    );
+
     // Initialize search state
     const state: SearchState = {
       searchId,
@@ -230,6 +253,7 @@ export class SearchStreamService {
       emit,
       config,
       aborted: false,
+      iterationState,
     };
 
     this.activeSearches.set(searchId, state);
@@ -1324,5 +1348,138 @@ export class SearchStreamService {
     });
 
     return suggestions.slice(0, QUERY_INTELLIGENCE_CONFIG.MAX_SUGGESTIONS);
+  }
+
+  // ==========================================================================
+  // PHASE 10.155: ITERATION EVENT EMISSION
+  // ==========================================================================
+
+  /**
+   * Emit iteration start event
+   *
+   * Called when a new iteration begins in the iterative fetch loop.
+   * Informs frontend about the current iteration number and threshold.
+   */
+  private emitIterationStart(
+    state: SearchState,
+    iterationResult: IterationResult,
+    field: string,
+  ): void {
+    const event: IterationProgressEventDTO = {
+      type: 'iteration_start',
+      searchId: state.searchId,
+      iteration: iterationResult.iteration,
+      totalIterations: this.iterativeFetch.getDefaultConfig().maxIterations,
+      fetchLimit: iterationResult.fetchLimit,
+      threshold: iterationResult.threshold,
+      papersFound: iterationResult.papersFound,
+      targetPapers: iterationResult.targetPapers,
+      newPapersThisIteration: iterationResult.newPapersThisIteration,
+      yieldRate: iterationResult.yieldRate,
+      sourcesExhausted: iterationResult.sourcesExhausted,
+      field,
+      timestamp: Date.now(),
+    };
+
+    state.emit({
+      type: 'search:iteration-start',
+      data: event,
+    });
+
+    this.logger.log(
+      `🔄 [Iteration ${iterationResult.iteration}] Started - ` +
+      `Threshold: ${iterationResult.threshold}, Limit: ${iterationResult.fetchLimit}`,
+    );
+  }
+
+  /**
+   * Emit iteration progress event
+   *
+   * Called during an iteration to show intermediate progress.
+   */
+  private emitIterationProgress(
+    state: SearchState,
+    iterationResult: IterationResult,
+    field: string,
+  ): void {
+    const event: IterationProgressEventDTO = {
+      type: 'iteration_progress',
+      searchId: state.searchId,
+      iteration: iterationResult.iteration,
+      totalIterations: this.iterativeFetch.getDefaultConfig().maxIterations,
+      fetchLimit: iterationResult.fetchLimit,
+      threshold: iterationResult.threshold,
+      papersFound: iterationResult.papersFound,
+      targetPapers: iterationResult.targetPapers,
+      newPapersThisIteration: iterationResult.newPapersThisIteration,
+      yieldRate: iterationResult.yieldRate,
+      sourcesExhausted: iterationResult.sourcesExhausted,
+      field,
+      timestamp: Date.now(),
+    };
+
+    state.emit({
+      type: 'search:iteration-progress',
+      data: event,
+    });
+  }
+
+  /**
+   * Emit iteration complete event
+   *
+   * Called when an iteration finishes, with the stop reason.
+   */
+  private emitIterationComplete(
+    state: SearchState,
+    iterationResult: IterationResult,
+    field: string,
+  ): void {
+    const event: IterationProgressEventDTO = {
+      type: 'iteration_complete',
+      searchId: state.searchId,
+      iteration: iterationResult.iteration,
+      totalIterations: this.iterativeFetch.getDefaultConfig().maxIterations,
+      fetchLimit: iterationResult.fetchLimit,
+      threshold: iterationResult.threshold,
+      papersFound: iterationResult.papersFound,
+      targetPapers: iterationResult.targetPapers,
+      newPapersThisIteration: iterationResult.newPapersThisIteration,
+      yieldRate: iterationResult.yieldRate,
+      sourcesExhausted: iterationResult.sourcesExhausted,
+      reason: iterationResult.reason,
+      field,
+      timestamp: Date.now(),
+    };
+
+    state.emit({
+      type: 'search:iteration-complete',
+      data: event,
+    });
+
+    this.logger.log(
+      `✅ [Iteration ${iterationResult.iteration}] Complete - ` +
+      `Papers: ${iterationResult.papersFound}/${iterationResult.targetPapers}, ` +
+      `Reason: ${iterationResult.reason}`,
+    );
+  }
+
+  /**
+   * Get iteration state for the current search
+   *
+   * Creates a new iteration state using the query and default config.
+   * This integrates the AdaptiveQualityThresholdService for field detection.
+   */
+  getIterationState(query: string): IterationState {
+    return this.iterativeFetch.createInitialState(query);
+  }
+
+  /**
+   * Cancel iteration for a search
+   *
+   * Marks the iteration state as cancelled, which will stop the loop
+   * at the next iteration check.
+   */
+  cancelIteration(iterationState: IterationState): void {
+    this.iterativeFetch.cancelIteration(iterationState);
   }
 }
