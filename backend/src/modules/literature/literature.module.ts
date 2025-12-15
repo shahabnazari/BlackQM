@@ -182,6 +182,9 @@ import { SemanticMetricsService } from './services/semantic-metrics.service';
 import { SemanticCircuitBreakerService } from './services/semantic-circuit-breaker.service';
 import { SemanticHealthController } from './controllers/semantic-health.controller';
 import { PDFController } from './controllers/pdf.controller';
+// Phase 10.155: Iterative Fetch System (Netflix-Grade Paper Collection)
+import { AdaptiveQualityThresholdService } from './services/adaptive-quality-threshold.service';
+import { IterativeFetchService } from './services/iterative-fetch.service';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
 import { ThemeExtractionGateway } from './gateways/theme-extraction.gateway';
@@ -386,6 +389,9 @@ import { AIModule } from '../ai/ai.module';
     // Phase 10.113 Week 12: Production Monitoring & Error Recovery
     SemanticMetricsService,
     SemanticCircuitBreakerService,
+    // Phase 10.155: Iterative Fetch System (Netflix-Grade Paper Collection)
+    AdaptiveQualityThresholdService,
+    IterativeFetchService,
   ],
   exports: [
     LiteratureService,
@@ -492,6 +498,9 @@ import { AIModule } from '../ai/ai.module';
     // Phase 10.113 Week 12: Production Monitoring & Error Recovery
     SemanticMetricsService,
     SemanticCircuitBreakerService,
+    // Phase 10.155: Iterative Fetch System (Netflix-Grade Paper Collection)
+    AdaptiveQualityThresholdService,
+    IterativeFetchService,
   ],
 })
 export class LiteratureModule implements OnModuleInit {

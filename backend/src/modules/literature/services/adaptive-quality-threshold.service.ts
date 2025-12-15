@@ -103,9 +103,10 @@ const MIN_THRESHOLD = 30;
 
 /**
  * Confidence threshold for field detection
- * If confidence < 60%, fall back to interdisciplinary
+ * Lowered from 0.6 to 0.35 to accept single strong keyword matches
+ * (e.g., "quantum" → physics, "covid" → biomedical)
  */
-const FIELD_CONFIDENCE_THRESHOLD = 0.6;
+const FIELD_CONFIDENCE_THRESHOLD = 0.35;
 
 /**
  * Field detection keywords organized by academic discipline

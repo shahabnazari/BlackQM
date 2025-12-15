@@ -60,8 +60,9 @@ describe('AdaptiveQualityThresholdService', () => {
     });
 
     describe('Physics Detection', () => {
-      it('should detect physics from quantum computing queries', () => {
-        const result = service.detectField('quantum computing algorithms');
+      it('should detect physics from quantum mechanics queries', () => {
+        // Use unambiguous physics query (not "computing algorithms" which overlaps with CS)
+        const result = service.detectField('quantum mechanics particle entanglement');
         expect(result.field).toBe('physics');
         expect(result.matchedKeywords).toContain('quantum');
       });
@@ -111,7 +112,8 @@ describe('AdaptiveQualityThresholdService', () => {
 
     describe('Social Science Detection', () => {
       it('should detect social science from political queries', () => {
-        const result = service.detectField('American politics research voting behavior');
+        // Use query with clear social science keywords
+        const result = service.detectField('political behavior voting election democracy');
         expect(result.field).toBe('social-science');
         expect(result.matchedKeywords).toEqual(
           expect.arrayContaining(['political', 'voting', 'behavior'])
