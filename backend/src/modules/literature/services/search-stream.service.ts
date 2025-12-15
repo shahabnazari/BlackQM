@@ -343,11 +343,38 @@ export class SearchStreamService {
 
   /**
    * Cancel an active search
+   *
+   * Phase 10.155: Also cancels iteration state to stop iterative fetching.
    */
   cancelSearch(searchId: string): boolean {
     const state = this.activeSearches.get(searchId);
     if (state) {
       state.aborted = true;
+
+      // Phase 10.155: Cancel iteration state
+      if (state.iterationState) {
+        this.iterativeFetch.cancelIteration(state.iterationState);
+
+        // Emit iteration complete with USER_CANCELLED reason
+        const cancelResult: IterationResult = {
+          iteration: state.iterationState.currentIteration,
+          threshold: state.iterationState.currentThreshold,
+          papersFound: state.iterationState.allPapers.size,
+          targetPapers: this.iterativeFetch.getDefaultConfig().targetPaperCount,
+          newPapersThisIteration: 0,
+          yieldRate: 0,
+          sourcesExhausted: [...state.iterationState.exhaustedSources],
+          shouldContinue: false,
+          reason: 'USER_CANCELLED',
+          fetchLimit: this.iterativeFetch.getFetchLimitForIteration(
+            state.iterationState.currentIteration,
+          ),
+          durationMs: Date.now() - state.iterationState.startTime,
+          timestamp: Date.now(),
+        };
+        this.emitIterationComplete(state, cancelResult, state.iterationState.field);
+      }
+
       this.logger.log(`🛑 [SearchStream] Search cancelled: ${searchId}`);
       return true;
     }
