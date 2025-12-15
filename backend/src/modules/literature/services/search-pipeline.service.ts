@@ -696,21 +696,26 @@ export class SearchPipelineService {
 
     this.perfMonitor.endStage('Combined Scoring', papersForSemantic.length);
 
-    // STAGE 4: Quality Threshold Filter (keep papers with quality ≥ threshold)
-    this.perfMonitor.startStage('Quality Filter', papersForSemantic.length);
-    config.emitProgress('Stage 4: Filtering by quality threshold...', 92);
+    // STAGE 4: Overall Score Filter (keep papers with overallScore ≥ threshold)
+    // Phase 10.155 Critical Fix: Use overallScore (harmonic mean of relevance + quality)
+    // instead of qualityScore. This ensures papers are filtered by BOTH dimensions.
+    // The overallScore was already calculated in Stage 3 above.
+    this.perfMonitor.startStage('Overall Score Filter', papersForSemantic.length);
+    config.emitProgress('Stage 4: Filtering by overall score (relevance + quality)...', 92);
 
-    // Lowered threshold to 20 since semantic scoring helps identify relevant papers
+    // Phase 10.155: Filter by overallScore with fallback to qualityScore for safety
+    // overallScore = harmonic mean of (relevance, quality) ensures BOTH are high
+    // Threshold: 20 (low because harmonic mean is stricter than raw qualityScore)
     const qualityFiltered = papersForSemantic.filter(
-      (p: MutablePaper) => (p.qualityScore ?? 0) >= QUALITY_THRESHOLD
+      (p: MutablePaper) => (p.overallScore ?? p.qualityScore ?? 0) >= QUALITY_THRESHOLD
     );
 
     const qualityPassRate = (qualityFiltered.length / papersForSemantic.length * 100).toFixed(1);
     this.logger.log(
-      `✅ Quality Filter: ${papersForSemantic.length} → ${qualityFiltered.length} papers (${qualityPassRate}% pass rate)`
+      `✅ Overall Score Filter: ${papersForSemantic.length} → ${qualityFiltered.length} papers (${qualityPassRate}% pass rate)`
     );
 
-    this.perfMonitor.endStage('Quality Filter', qualityFiltered.length);
+    this.perfMonitor.endStage('Overall Score Filter', qualityFiltered.length);
 
     // STAGE 5: Sort by Overall Score (relevance + quality) and Take Top N
     this.perfMonitor.startStage('Final Selection', qualityFiltered.length);

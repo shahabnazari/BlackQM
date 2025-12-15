@@ -954,16 +954,19 @@ describe('SearchPipelineService', () => {
       );
     });
 
-    it('should sort results by combined score', async () => {
+    it('should sort results by overall score (relevance + quality)', async () => {
       const papers = createMockPapers(20);
       const config = createMockConfig({ sortOption: 'relevance' });
 
       const result = await service.executeOptimizedPipeline(papers, config);
 
-      // Check that results are sorted by neuralRelevanceScore (descending)
+      // Phase 10.147: Check that results are sorted by overallScore (descending)
+      // overallScore = harmonic mean of relevance + quality (ensures BOTH are high)
+      // This replaced sorting by neuralRelevanceScore alone
       for (let i = 1; i < result.length; i++) {
-        expect(result[i - 1].neuralRelevanceScore ?? 0)
-          .toBeGreaterThanOrEqual(result[i].neuralRelevanceScore ?? 0);
+        const prevScore = result[i - 1].overallScore ?? result[i - 1].neuralRelevanceScore ?? 0;
+        const currScore = result[i].overallScore ?? result[i].neuralRelevanceScore ?? 0;
+        expect(prevScore).toBeGreaterThanOrEqual(currScore);
       }
     });
 
