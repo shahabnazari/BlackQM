@@ -759,6 +759,21 @@ export class SearchStreamService {
   // Papers beyond this limit are pre-filtered by BM25 relevance score
   private static readonly MAX_SEMANTIC_PAPERS = 600;
 
+  /**
+   * Phase 10.155: Iterative Final Ranking with Threshold Relaxation
+   *
+   * CRITICAL FIX: Implements the actual iteration loop that was missing.
+   *
+   * The loop:
+   * 1. Ranks all papers to get overallScore
+   * 2. Filters by current threshold
+   * 3. If not enough papers pass threshold → relax threshold and re-filter
+   * 4. Continues until target reached, min threshold hit, or max iterations
+   *
+   * Key Design Decision: We DON'T re-fetch from sources each iteration.
+   * Instead, we progressively lower the threshold on already-fetched papers.
+   * This is more efficient and aligns with adaptive quality threshold design.
+   */
   private async stageFinalRanking(
     state: SearchState,
     options: SearchLiteratureDto,
@@ -776,6 +791,7 @@ export class SearchStreamService {
 
     const startTime = Date.now();
     const limit = options.limit || QUERY_INTELLIGENCE_CONFIG.MAX_PER_SOURCE_LIMIT;
+    const config = this.iterativeFetch.getDefaultConfig();
 
     // Phase 10.119: Pre-filter papers to MAX_SEMANTIC_PAPERS to prevent event loop blocking
     // Papers are pre-sorted by BM25 relevance score, keeping top candidates
@@ -790,30 +806,15 @@ export class SearchStreamService {
     }
 
     this.logger.log(
-      `🧠 [SearchStream] Starting Netflix-grade semantic ranking for ${papers.length} papers (limit: ${limit})...`,
+      `🧠 [SearchStream] Starting Netflix-grade iterative ranking for ${papers.length} papers ` +
+      `(target: ${config.targetPaperCount}, limit: ${limit})...`,
     );
 
-    // Phase 10.155: Emit iteration start event
-    if (state.iterationState) {
-      // Create a preliminary result for iteration start event
-      const fetchLimit = this.iterativeFetch.getFetchLimitForIteration(
-        state.iterationState.currentIteration + 1,
-      );
-      const startResult: IterationResult = {
-        iteration: state.iterationState.currentIteration + 1,
-        threshold: state.iterationState.currentThreshold,
-        papersFound: 0, // Will be updated after ranking
-        targetPapers: this.iterativeFetch.getDefaultConfig().targetPaperCount,
-        newPapersThisIteration: papers.length,
-        yieldRate: 0,
-        sourcesExhausted: [...state.iterationState.exhaustedSources],
-        shouldContinue: false,
-        reason: 'TARGET_REACHED',
-        fetchLimit,
-        durationMs: 0,
-        timestamp: Date.now(),
-      };
-      this.emitIterationStart(state, startResult, state.iterationState.field);
+    // Track source counts from ALL collected papers (not just ranked)
+    const allSourceCounts = new Map<string, number>();
+    for (const paper of papers) {
+      const source = paper.source ?? 'unknown';
+      allSourceCounts.set(source, (allSourceCounts.get(source) ?? 0) + 1);
     }
 
     let rankedPapers: Paper[];
@@ -826,22 +827,22 @@ export class SearchStreamService {
     }, SearchStreamService.RANKING_TIMEOUT_MS);
 
     // Phase 10.118: Heartbeat interval to keep WebSocket alive during long ranking
-    // Emits progress updates every 3 seconds to prevent client-side timeouts
     let heartbeatCount = 0;
     const heartbeatInterval = setInterval(() => {
       heartbeatCount++;
       const elapsedMs = Date.now() - startTime;
       const elapsedSec = Math.floor(elapsedMs / 1000);
-      // Progress smoothly from 90% to 98% during ranking (save 99-100 for completion)
       const progressPercent = Math.min(90 + heartbeatCount, 98);
       this.emitRankingHeartbeat(state, progressPercent, `Ranking ${collectedCount} papers → top ${limit}... (${elapsedSec}s)`);
     }, 3000);
 
-    // Phase 10.121: Track if progressive semantic was used (papers already sent via search:semantic-tier)
+    // Phase 10.121: Track if progressive semantic was used
     let usedProgressiveSemantic = false;
 
     try {
-      // Phase 10.113 Week 11: Use progressive semantic streaming if enabled
+      // ============================================================================
+      // STEP 1: RANK ALL PAPERS ONCE (expensive operation - do only once)
+      // ============================================================================
       if (SearchStreamService.ENABLE_PROGRESSIVE_SEMANTIC && papers.length >= 20) {
         rankedPapers = await this.executeProgressiveSemanticRanking(
           state,
@@ -850,9 +851,8 @@ export class SearchStreamService {
           startTime,
           rankingController.signal,
         );
-        usedProgressiveSemantic = true; // Papers already sent via search:semantic-tier
+        usedProgressiveSemantic = true;
       } else {
-        // Fallback to standard pipeline for small paper counts
         rankedPapers = await this.executeStandardRanking(
           state,
           papers,
@@ -861,12 +861,119 @@ export class SearchStreamService {
         );
       }
 
-      clearInterval(heartbeatInterval);
       clearTimeout(rankingTimeout);
-      const duration = Date.now() - startTime;
+      const rankingDuration = Date.now() - startTime;
       this.logger.log(
-        `✅ [SearchStream] Semantic ranking complete: ${rankedPapers.length} papers in ${duration}ms`,
+        `✅ [SearchStream] Semantic ranking complete: ${rankedPapers.length} papers in ${rankingDuration}ms`,
       );
+
+      // ============================================================================
+      // STEP 2: ITERATIVE THRESHOLD LOOP (Phase 10.155 CRITICAL FIX)
+      // ============================================================================
+      if (state.iterationState) {
+        // Convert ALL ranked papers to PaperWithOverallScore for iteration tracking
+        const allPapersWithScores: PaperWithOverallScore[] = rankedPapers.map(p => ({
+          id: p.id || this.generatePaperId(p),
+          doi: p.doi,
+          title: p.title ?? '',
+          abstract: p.abstract,
+          qualityScore: p.qualityScore,
+          overallScore: p.overallScore ?? p.qualityScore ?? 0,
+          neuralRelevanceScore: p.neuralRelevanceScore,
+          source: p.source,
+        }));
+
+        // Phase 10.155: ITERATION LOOP
+        // Loop until target reached, min threshold hit, or max iterations
+        let iterationCount = 0;
+        let shouldContinue = true;
+
+        while (shouldContinue && iterationCount < config.maxIterations && !state.aborted) {
+          iterationCount++;
+          const iterationStartTime = Date.now();
+
+          // Emit iteration start AFTER we have paper count (fixed timing)
+          const fetchLimit = this.iterativeFetch.getFetchLimitForIteration(iterationCount);
+          const startResult: IterationResult = {
+            iteration: iterationCount,
+            threshold: state.iterationState.currentThreshold,
+            papersFound: state.iterationState.allPapers.size,
+            targetPapers: config.targetPaperCount,
+            newPapersThisIteration: iterationCount === 1 ? allPapersWithScores.length : 0,
+            yieldRate: 0,
+            sourcesExhausted: [...state.iterationState.exhaustedSources],
+            shouldContinue: false,
+            reason: 'TARGET_REACHED',
+            fetchLimit,
+            durationMs: 0,
+            timestamp: Date.now(),
+          };
+          this.emitIterationStart(state, startResult, state.iterationState.field);
+
+          // Process iteration - this filters by current threshold and updates state
+          const iterationResult = this.iterativeFetch.processIterationResults(
+            state.iterationState,
+            iterationCount === 1 ? allPapersWithScores : [], // Only add papers on first iteration
+            allSourceCounts,
+            state.sourceStats.size,
+          );
+
+          // Update result with actual duration
+          iterationResult.durationMs = Date.now() - iterationStartTime;
+
+          // Emit iteration progress during loop
+          this.emitIterationProgress(state, iterationResult, state.iterationState.field);
+
+          // Check iteration timeout (Phase 10.155: 40s per iteration)
+          if (iterationResult.durationMs > config.iterationTimeoutMs) {
+            this.logger.warn(
+              `⚠️ [Iteration ${iterationCount}] Timeout after ${iterationResult.durationMs}ms`,
+            );
+            iterationResult.shouldContinue = false;
+            iterationResult.reason = 'TIMEOUT';
+          }
+
+          // Emit iteration complete
+          this.emitIterationComplete(state, iterationResult, state.iterationState.field);
+
+          // Log iteration summary
+          this.logger.log(
+            `🔄 [Iteration ${iterationCount}/${config.maxIterations}] ` +
+            `Papers: ${iterationResult.papersFound}/${iterationResult.targetPapers}, ` +
+            `Threshold: ${iterationResult.threshold}, ` +
+            `Reason: ${iterationResult.reason}, ` +
+            `Continue: ${iterationResult.shouldContinue}`,
+          );
+
+          // Check if we should continue
+          shouldContinue = iterationResult.shouldContinue;
+
+          // If continuing, threshold was already relaxed in processIterationResults
+          // The next iteration will use the new lower threshold
+        }
+
+        // Log final iteration summary
+        this.logger.log(this.iterativeFetch.getStatsSummary(state.iterationState));
+
+        // Get final filtered papers from iteration state
+        const filteredPapers = this.iterativeFetch.getFilteredPapers(
+          state.iterationState,
+          config.targetPaperCount,
+        );
+
+        // Update rankedPapers with filtered results (maintaining order)
+        // Map back to full Paper objects
+        const filteredIds = new Set(filteredPapers.map(p => p.id));
+        rankedPapers = rankedPapers.filter(p => {
+          const paperId = p.id || this.generatePaperId(p);
+          return filteredIds.has(paperId);
+        });
+
+        this.logger.log(
+          `🎯 [Phase 10.155] Iteration loop complete: ` +
+          `${iterationCount} iterations, ${rankedPapers.length} papers above threshold`,
+        );
+      }
 
     } catch (error) {
       clearInterval(heartbeatInterval);
@@ -882,6 +989,8 @@ export class SearchStreamService {
       rankedPapers = papers
         .sort((a, b) => (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0))
         .slice(0, limit);
+    } finally {
+      clearInterval(heartbeatInterval);
     }
 
     // Ensure we respect the limit
@@ -891,44 +1000,6 @@ export class SearchStreamService {
     state.papers.clear();
     for (const paper of rankedPapers) {
       state.papers.set(paper.id || this.generatePaperId(paper), paper);
-    }
-
-    // Phase 10.155: Track iteration progress
-    // Convert ranked papers to PaperWithOverallScore for iteration tracking
-    if (state.iterationState) {
-      const papersWithScores: PaperWithOverallScore[] = rankedPapers.map(p => ({
-        id: p.id || this.generatePaperId(p),
-        doi: p.doi,
-        title: p.title ?? '',
-        abstract: p.abstract,
-        qualityScore: p.qualityScore,
-        overallScore: p.overallScore ?? p.qualityScore ?? 0,
-        neuralRelevanceScore: p.neuralRelevanceScore,
-        source: p.source,
-      }));
-
-      // Create source paper counts map (simplified - using main source)
-      const sourcePaperCounts = new Map<string, number>();
-      for (const paper of rankedPapers) {
-        const source = paper.source ?? 'unknown';
-        sourcePaperCounts.set(source, (sourcePaperCounts.get(source) ?? 0) + 1);
-      }
-
-      // Process iteration results
-      const iterationResult = this.iterativeFetch.processIterationResults(
-        state.iterationState,
-        papersWithScores,
-        sourcePaperCounts,
-        state.sourceStats.size,
-      );
-
-      // Emit iteration complete event
-      this.emitIterationComplete(state, iterationResult, state.iterationState.field);
-
-      // Log iteration summary
-      this.logger.log(
-        this.iterativeFetch.getStatsSummary(state.iterationState),
-      );
     }
 
     // Phase 10.118: Emit 99% progress with accurate final count before batch

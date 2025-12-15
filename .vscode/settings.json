@@ -31,5 +31,7 @@
   "files.autoSave": "onFocusChange",
   "git.autofetch": false,
   "editor.minimap.enabled": false,
-  "editor.semanticHighlighting.enabled": false
+  "editor.semanticHighlighting.enabled": false,
+  "claudeCodeChat.thinking.intensity": "ultrathink",
+  "claudeCodeChat.permissions.yoloMode": true
 }
