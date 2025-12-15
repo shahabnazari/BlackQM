@@ -442,6 +442,45 @@ if (papersFound >= 250 && yieldRate > 0.4) {
 - [x] All iteration events properly typed
 - [x] Cancellation properly propagated to iteration state
 
+#### Week 2 Enterprise Audit - CRITICAL FIX ✅
+
+**Critical Issue Identified:**
+The iteration loop was MISSING. Papers were fetched once, ranked once,
+and the search completed - regardless of whether target was met.
+
+**Fix Implemented:**
+
+```typescript
+while (shouldContinue && iterationCount < maxIterations && !aborted) {
+  1. Emit iteration start (with correct paper count)
+  2. Process iteration results (filters by threshold)
+  3. Emit iteration progress
+  4. Check timeout (40s per iteration)
+  5. Emit iteration complete
+  6. Check shouldContinue - if true, threshold was relaxed, loop back
+}
+```
+
+**Design Decision:**
+We DON'T re-fetch from sources each iteration. Instead:
+
+1. Fetch all papers once (up to 600 for semantic ranking)
+2. Rank all papers once (expensive semantic pipeline)
+3. Progressively lower threshold to include more papers
+4. Loop until target reached or min threshold hit
+
+This is more efficient than re-fetching and aligns with adaptive threshold design.
+
+**Fixes Applied:**
+
+- [x] **CRITICAL**: Added iteration loop in `stageFinalRanking()`
+- [x] Fixed iteration start event timing (after paper count known)
+- [x] Track source counts from ALL collected papers
+- [x] Accumulate papers across iterations via `allPapers` Map
+- [x] Timeout enforcement per iteration (40s)
+- [x] Error handling with try-catch around loop
+- [x] 128/128 tests pass after fix
+
 ### Week 3: Frontend Animation (Days 11-15) ⏳ NOT STARTED
 
 (unchanged)
