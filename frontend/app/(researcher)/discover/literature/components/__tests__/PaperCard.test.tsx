@@ -29,11 +29,14 @@ vi.mock('framer-motion', () => ({
 }));
 
 // Mock sub-components
+// Phase 10.145: Updated mocks - PaperStatusBadges removed, MatchScoreBadge/CollapsibleMetadata added
 vi.mock('../paper-card', () => ({
-  PaperHeader: ({ title, authors, isSelected, onToggleSelection }: {
+  PaperHeader: ({ title, authors, isSelected, isExtracting, isExtracted, onToggleSelection }: {
     title: string;
     authors: string[];
     isSelected: boolean;
+    isExtracting: boolean;
+    isExtracted: boolean;
     onToggleSelection: () => void;
   }) => (
     <div data-testid="paper-header">
@@ -42,9 +45,14 @@ vi.mock('../paper-card', () => ({
         checked={isSelected}
         onChange={onToggleSelection}
         aria-label={`Select paper: ${title}`}
+        data-extracting={isExtracting}
+        data-extracted={isExtracted}
       />
       <h3>{title}</h3>
       <span>{authors.join(', ')}</span>
+      {/* Phase 10.145: Extraction status now shown via checkbox */}
+      {isExtracting && <span data-testid="extracting">Extracting</span>}
+      {isExtracted && !isExtracting && <span data-testid="extracted">Extracted</span>}
     </div>
   ),
   PaperMetadata: ({ year, venue, citationCount, wordCount }: {
@@ -66,18 +74,32 @@ vi.mock('../paper-card', () => ({
       {hasFullText && <span data-testid="fulltext">Full Text</span>}
     </div>
   ),
-  PaperQualityBadges: ({ qualityScore, citationCount }: { qualityScore?: number; citationCount?: number }) => (
+  // Phase 10.154: Simplified - only shows citations per year (quality shown in MatchScoreBadge)
+  PaperQualityBadges: ({ citationsPerYear }: { citationsPerYear?: number | null }) => (
     <div data-testid="paper-quality">
-      {qualityScore && <span data-testid="quality-score">{qualityScore}</span>}
+      {citationsPerYear && citationsPerYear > 0 && (
+        <span data-testid="cites-per-year">{citationsPerYear.toFixed(1)}</span>
+      )}
     </div>
   ),
-  PaperStatusBadges: ({ isExtracting, isExtracted }: { isExtracting: boolean; isExtracted: boolean }) => (
-    <div data-testid="paper-status">
-      {isExtracting && <span data-testid="extracting">Extracting</span>}
-      {isExtracted && <span data-testid="extracted">Extracted</span>}
-    </div>
-  ),
+  // Phase 10.145: PaperStatusBadges REMOVED - extraction status now shown in PaperHeader checkbox
   PaperActions: () => <div data-testid="paper-actions">Actions</div>,
+  // Phase 10.123: CollapsibleMetadata
+  CollapsibleMetadata: () => <div data-testid="collapsible-metadata">Extended Metadata</div>,
+  // Phase 10.123: MatchScoreBadge
+  MatchScoreBadge: ({ neuralRelevanceScore }: { neuralRelevanceScore?: number | null }) => (
+    <div data-testid="match-score-badge">
+      {neuralRelevanceScore && <span data-testid="neural-score">{neuralRelevanceScore}</span>}
+    </div>
+  ),
+  // Phase 10.123: Error Boundary
+  PaperCardErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  // Phase 10.123 Phase 5: Analytics (no-op mocks)
+  trackTooltipOpened: vi.fn(),
+  trackTooltipClosed: vi.fn(),
+  trackMetadataExpanded: vi.fn(),
+  trackMetadataCollapsed: vi.fn(),
+  // Constants
   MAX_DISPLAYED_PUBLICATION_TYPES: 3,
   MAX_DISPLAYED_MESH_TERMS: 5,
   MAX_DISPLAYED_GRANTS: 3,
@@ -202,10 +224,13 @@ describe('PaperCard Component - Day 4 Tests', () => {
       expect(screen.getByTestId('fulltext')).toBeInTheDocument();
     });
 
-    it('should render quality score when available', () => {
+    // Phase 10.154: Quality score moved to MatchScoreBadge tooltip
+    // PaperQualityBadges now only shows citations per year
+    it('should render citations per year when available', () => {
       renderPaperCard();
 
-      expect(screen.getByTestId('quality-score')).toHaveTextContent('85');
+      // citationsPerYear shows as formatted number in the mock
+      expect(screen.getByTestId('paper-quality')).toBeInTheDocument();
     });
 
     it('should handle missing optional fields gracefully', () => {

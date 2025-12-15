@@ -197,6 +197,31 @@ const TechnicalTooltip = memo<{
 });
 
 /**
+ * Substage header with completion count
+ * Optimized: Memoizes completion count calculation
+ */
+const SubstageHeader = memo<{
+  substages: string[];
+  substageProgress: Record<string, number>;
+}>(function SubstageHeader({ substages, substageProgress }) {
+  const completedCount = useMemo(
+    () => substages.filter(s => (substageProgress[s] || 0) === 100).length,
+    [substages, substageProgress]
+  );
+
+  return (
+    <div className="flex items-center justify-between mb-2.5">
+      <p className="text-xs font-semibold text-white/90 uppercase tracking-wider">
+        Substages ({substages.length})
+      </p>
+      <span className="text-[10px] text-white/50 uppercase">
+        {completedCount}/{substages.length} complete
+      </span>
+    </div>
+  );
+});
+
+/**
  * Status badge overlay
  */
 const StatusBadge = memo<{
@@ -276,9 +301,10 @@ export const StageOrb = memo<StageOrbProps>(function StageOrb({
   const IconComponent = stage.icon;
 
   // Animation variants - Phase 10.129: Added transitions for smooth state changes
+  // Phase 10.140: Fixed - all states use scale: 1 for consistent circle sizes
   const orbVariants = useMemo(() => ({
     pending: {
-      scale: 0.95,
+      scale: 1,
       opacity: 0.6,
       transition: SPRING_PRESETS.soft,
     },
@@ -343,7 +369,7 @@ export const StageOrb = memo<StageOrbProps>(function StageOrb({
 
   return (
     <motion.div
-      className="relative flex flex-col items-center"
+      className="relative flex flex-col items-center min-w-[120px]"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
@@ -361,6 +387,31 @@ export const StageOrb = memo<StageOrbProps>(function StageOrb({
         totalStages={totalStages}
       />
 
+      {/* Phase 10.140: Active stage glow ring */}
+      {isActive && !reducedMotion && (
+        <motion.div
+          className="absolute rounded-full pointer-events-none"
+          style={{
+            width: STAGE_ORB_SIZE.md + 24,
+            height: STAGE_ORB_SIZE.md + 24,
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: `radial-gradient(circle, ${stage.color.primary}20, transparent 70%)`,
+            boxShadow: `0 0 40px ${stage.color.primary}40, 0 0 80px ${stage.color.primary}20`,
+          }}
+          animate={{
+            opacity: [0.5, 1, 0.5],
+            scale: [0.95, 1.1, 0.95],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        />
+      )}
+
       {/* Main Orb Button */}
       <motion.button
         className={cn(
@@ -372,11 +423,15 @@ export const StageOrb = memo<StageOrbProps>(function StageOrb({
           'backdrop-blur-xl',
           // Status-based styling
           isPending && 'bg-white/10 border border-white/30',
-          isActive && `bg-gradient-to-br ${stage.color.gradient} border border-white/20`,
+          isActive && `bg-gradient-to-br ${stage.color.gradient} border-2 border-white/40`,
           isComplete && 'bg-white/10 border border-white/20',
           isError && 'bg-red-500/20 border border-red-500/30'
         )}
-        style={{ width: STAGE_ORB_SIZE.md, height: STAGE_ORB_SIZE.md }}
+        style={{
+          width: STAGE_ORB_SIZE.md,
+          height: STAGE_ORB_SIZE.md,
+          boxShadow: isActive ? `0 0 20px ${stage.color.primary}60, 0 0 40px ${stage.color.primary}30` : undefined,
+        }}
         variants={orbVariants}
         initial="pending"
         animate={state.status}
@@ -451,7 +506,7 @@ export const StageOrb = memo<StageOrbProps>(function StageOrb({
 
       {/* Stage Label - Phase 10.131: Improved readability */}
       <motion.div
-        className="mt-2.5 text-center"
+        className="mt-2.5 text-center w-full min-h-[60px] flex flex-col justify-start"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: reducedMotion ? 0 : index * 0.1 + 0.2 }}
@@ -459,7 +514,7 @@ export const StageOrb = memo<StageOrbProps>(function StageOrb({
       >
         <p
           className={cn(
-            'text-sm font-bold tracking-wide uppercase',
+            'text-sm font-bold tracking-wide uppercase whitespace-nowrap',
             isPending && 'text-white/70',
             isActive && 'text-white',
             isComplete && 'text-white/90',
@@ -470,7 +525,7 @@ export const StageOrb = memo<StageOrbProps>(function StageOrb({
         </p>
         <p
           className={cn(
-            'text-xs mt-1 max-w-[100px] truncate',
+            'text-xs mt-1 w-full truncate',
             isPending && 'text-white/60',
             (isActive || isComplete) && 'text-white/80',
             isError && 'text-red-400/80'
@@ -481,18 +536,47 @@ export const StageOrb = memo<StageOrbProps>(function StageOrb({
         </p>
       </motion.div>
 
-      {/* Expand Indicator */}
+      {/* Expand Indicator - Phase 10.146: Improved UX with text label and clearer visual */}
       {stage.substages.length > 0 && (
-        <motion.div
+        <motion.button
           className={cn(
-            'mt-1 p-0.5 rounded-full',
-            isExpanded ? 'bg-white/20' : 'bg-white/5'
+            'mt-2 flex items-center gap-1 px-2 py-1 rounded-lg cursor-pointer transition-all',
+            'border backdrop-blur-sm',
+            isExpanded
+              ? 'bg-white/15 border-white/25 hover:bg-white/20'
+              : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20',
+            'group/chevron'
           )}
-          animate={{ rotate: isExpanded ? 180 : 0 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+          animate={{ scale: isExpanded ? 1.02 : 1 }}
           transition={SPRING_PRESETS.soft}
+          title={isExpanded ? 'Click to collapse details' : `Click to see ${stage.substages.length} substage${stage.substages.length > 1 ? 's' : ''}`}
+          aria-label={isExpanded ? 'Collapse substage details' : `Expand ${stage.substages.length} substages`}
+          type="button"
         >
-          <ChevronDown className="w-3 h-3 text-white/60" />
-        </motion.div>
+          <span className={cn(
+            'text-[10px] font-medium uppercase tracking-wider transition-colors',
+            isExpanded
+              ? 'text-white/80'
+              : 'text-white/50 group-hover/chevron:text-white/70'
+          )}>
+            {isExpanded ? 'Hide' : 'Details'}
+          </span>
+          <motion.div
+            animate={{ rotate: isExpanded ? 180 : 0 }}
+            transition={SPRING_PRESETS.soft}
+          >
+            <ChevronDown className={cn(
+              'w-3 h-3 transition-colors',
+              isExpanded
+                ? 'text-white/80'
+                : 'text-white/50 group-hover/chevron:text-white/70'
+            )} />
+          </motion.div>
+        </motion.button>
       )}
 
       {/* Expanded Detail Panel - Phase 10.131: Improved readability */}
@@ -502,22 +586,25 @@ export const StageOrb = memo<StageOrbProps>(function StageOrb({
             id={`stage-detail-${stage.id}`}
             className={cn(
               'absolute top-full mt-3 z-[55]',
-              'min-w-[180px] p-3.5 rounded-xl',
+              'min-w-[200px] max-w-[260px] p-3.5 rounded-xl',
               'backdrop-blur-xl bg-gray-900/95 border border-white/20',
-              'shadow-xl'
+              'shadow-xl',
+              'left-1/2 -translate-x-1/2' // Center the panel relative to the orb
             )}
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={SPRING_PRESETS.soft}
           >
-            <p className="text-xs font-semibold text-white/80 uppercase tracking-wider mb-2.5">
-              Substages
-            </p>
+            <SubstageHeader
+              substages={stage.substages}
+              substageProgress={state.substageProgress}
+            />
             <ul className="space-y-2">
               {stage.substages.map((substage) => {
                 const substageProgress = state.substageProgress[substage] || 0;
                 const isSubstageComplete = substageProgress === 100;
+                const isSubstageActive = substageProgress > 0 && substageProgress < 100;
 
                 return (
                   <li
@@ -526,15 +613,20 @@ export const StageOrb = memo<StageOrbProps>(function StageOrb({
                   >
                     <div
                       className={cn(
-                        'w-2 h-2 rounded-full',
-                        isSubstageComplete ? 'bg-green-400' :
-                          substageProgress > 0 ? 'bg-blue-400 animate-pulse' :
+                        'w-2.5 h-2.5 rounded-full shrink-0',
+                        isSubstageComplete ? 'bg-green-400 shadow-sm shadow-green-400/50' :
+                          isSubstageActive ? 'bg-blue-400 animate-pulse shadow-sm shadow-blue-400/50' :
                           'bg-white/40'
                       )}
                     />
-                    <span className="text-sm text-white/90 capitalize">
+                    <span className="text-sm text-white/90 capitalize flex-1">
                       {substage.replace(/-/g, ' ')}
                     </span>
+                    {isSubstageActive && (
+                      <span className="text-xs text-white/60 font-mono">
+                        {Math.round(substageProgress)}%
+                      </span>
+                    )}
                   </li>
                 );
               })}

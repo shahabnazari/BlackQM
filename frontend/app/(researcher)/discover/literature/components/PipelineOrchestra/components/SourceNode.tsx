@@ -32,6 +32,7 @@ import {
   ARIA_LABELS,
   TOOLTIP_TRANSITIONS,
 } from '../constants';
+import { STABILIZATION_CONFIG } from '../hooks/useCountStabilization';
 
 // ============================================================================
 // SUB-COMPONENTS
@@ -211,6 +212,7 @@ export interface SourceNodeProps {
   onClick: (source: LiteratureSource) => void;
   reducedMotion: boolean;
   isHovered: boolean;
+  isOrbiting?: boolean; // Phase 10.143: Counter-rotate when parent is orbiting
 }
 
 /**
@@ -238,6 +240,7 @@ export const SourceNode = memo<SourceNodeProps>(function SourceNode({
   onClick,
   reducedMotion,
   isHovered,
+  isOrbiting = false,
 }) {
   const {
     source,
@@ -328,12 +331,21 @@ export const SourceNode = memo<SourceNodeProps>(function SourceNode({
 
   return (
     <motion.div
-      className="absolute"
+      className="absolute pointer-events-auto"
       style={{
         left: position.x - nodeSize / 2,
         top: position.y - nodeSize / 2,
         width: nodeSize,
         height: nodeSize,
+        // Phase 10.153: Counter-rotate to stay upright when parent orbits
+        animation: isOrbiting && !reducedMotion
+          ? `orbitCounterRotate ${STABILIZATION_CONFIG.orbitDurationSeconds}s linear infinite`
+          : 'none',
+        // Phase 10.153: GPU acceleration for smooth counter-rotation
+        willChange: isOrbiting ? 'transform' : 'auto',
+        // Note: Keyframes include translate3d(0,0,0) for GPU compositing
+        ...(isOrbiting ? {} : { transform: 'translate3d(0,0,0)' }),
+        backfaceVisibility: 'hidden',
       }}
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}

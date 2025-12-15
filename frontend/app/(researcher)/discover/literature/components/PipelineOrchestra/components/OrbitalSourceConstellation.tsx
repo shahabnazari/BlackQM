@@ -20,13 +20,14 @@
 
 'use client';
 
-import React, { memo, useState, useCallback, useMemo } from 'react';
+import React, { memo, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { OrbitalSourceConstellationProps } from '../types';
 import type { LiteratureSource, SourceTier } from '@/lib/types/search-stream.types';
 import { SourceNode } from './SourceNode';
+import { useCountStabilization, STABILIZATION_CONFIG } from '../hooks/useCountStabilization';
 import {
   ORBIT_CONFIGS,
   ORBIT_LEGEND,
@@ -203,16 +204,203 @@ const OrbitRing = memo<{
 
 /**
  * Enhanced center core with clearer visual hierarchy
+ * Phase 10.140: Added stage-aware data flow visualization
+ * - DISCOVER: Shows raw total, particles flow INWARD (collection phase)
+ * - RANK: Particles flow OUTWARD/UPWARD (processing phase)
+ * - COMPLETE: Final count with completion animation (Phase 10.152: no separate READY stage)
+ *
+ * Phase 10.141: Fixed critical bugs:
+ * - Stage mapping: 'rank' (not 'refine') for processing phase
+ * - Completion animation now triggers via AnimatePresence
+ * - Uses ORBIT_CONFIGS for dynamic radius
  */
 const CenterCore = memo<{
   centerX: number;
   centerY: number;
   isSearching: boolean;
   paperCount: number;
+  rawTotalPapers?: number;
+  currentStage?: string | null;
+  isComplete?: boolean;
   reducedMotion: boolean;
-}>(function CenterCore({ centerX, centerY, isSearching, paperCount, reducedMotion }) {
+}>(function CenterCore({
+  centerX,
+  centerY,
+  isSearching,
+  paperCount,
+  rawTotalPapers = 0,
+  currentStage,
+  isComplete = false,
+  reducedMotion,
+}) {
+  // Phase 10.141: Track completion state transitions for one-shot animation
+  const prevCompleteRef = useRef(isComplete);
+  const [showCompletionBurst, setShowCompletionBurst] = useState(false);
+
+  // Phase 10.143: Use shared hook for stabilization detection (DRY principle)
+  const { isStabilized: isCountStabilized } = useCountStabilization({
+    count: rawTotalPapers,
+    isActive: isSearching,
+  });
+
+  // Detect transition to complete state
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (isComplete && !prevCompleteRef.current) {
+      setShowCompletionBurst(true);
+      // Auto-hide after animation
+      timer = setTimeout(() => setShowCompletionBurst(false), 1500);
+    }
+    prevCompleteRef.current = isComplete;
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [isComplete]);
+
+  // Phase 10.141: Fixed stage detection
+  // WebSocket stages: 'analyzing' → 'analyze', 'fast/medium/slow-sources' → 'discover', 'ranking'/'complete' → 'rank'
+  // Phase 10.152: 'complete' now maps to 'rank' (no separate 'ready' stage)
+  const isCollectionPhase = currentStage === 'discover' || currentStage === 'analyze';
+  const isProcessingPhase = currentStage === 'rank'; // Fixed: 'refine' stage doesn't exist!
+
+  // Phase 10.143: Only show inward flow while actively collecting (count still increasing)
+  const showInwardFlow = isCollectionPhase && !isCountStabilized;
+
+  // Display count: raw total during collection, final count after
+  const displayCount = isCollectionPhase && rawTotalPapers > 0 ? rawTotalPapers : paperCount;
+
+  // Phase 10.141: Use ORBIT_CONFIGS for dynamic radius
+  const outerRadius = ORBIT_CONFIGS.slow.radius; // Use largest orbit as reference
+
   return (
     <g>
+      {/* Phase 10.140: INWARD flow during collection (DISCOVER) - Phase 10.143: Stops when count stabilizes */}
+      {isSearching && showInwardFlow && !reducedMotion && (
+        <g className="inward-flow">
+          {/* Particles flowing IN from outer edge - from all 4 quadrants */}
+          {[0, 1, 2, 3].map((i) => {
+            const angle = (i * Math.PI * 2) / 4 + Math.PI / 4; // 45°, 135°, 225°, 315°
+            const startX = centerX + Math.cos(angle) * outerRadius;
+            const startY = centerY + Math.sin(angle) * outerRadius;
+            return (
+              <motion.circle
+                key={`in-${i}`}
+                r={3}
+                fill="rgba(34, 197, 94, 0.8)"
+                initial={{ cx: startX, cy: startY, opacity: 0 }}
+                animate={{
+                  cx: [startX, centerX],
+                  cy: [startY, centerY],
+                  opacity: [0, 0.9, 0.9, 0],
+                  scale: [1, 0.6],
+                }}
+                transition={{
+                  duration: 1.8,
+                  delay: i * 0.4,
+                  repeat: Infinity,
+                  ease: 'easeIn',
+                }}
+              />
+            );
+          })}
+          {/* Collecting glow effect - contracts toward center */}
+          <motion.circle
+            cx={centerX}
+            cy={centerY}
+            r={25}
+            fill="none"
+            stroke="rgba(34, 197, 94, 0.3)"
+            strokeWidth={2}
+            animate={{
+              r: [40, 25],
+              opacity: [0, 0.5, 0],
+            }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: 'easeOut',
+            }}
+          />
+        </g>
+      )}
+
+      {/* Phase 10.143: Collection complete indicator - shows when count stabilizes during DISCOVER */}
+      {isSearching && isCollectionPhase && isCountStabilized && !reducedMotion && (
+        <motion.circle
+          cx={centerX}
+          cy={centerY}
+          r={30}
+          fill="none"
+          stroke="rgba(34, 197, 94, 0.5)"
+          strokeWidth={2}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        />
+      )}
+
+      {/* Phase 10.142: Processing indicator - subtle pulse during RANK (no flow, flow is between stages) */}
+      {isSearching && isProcessingPhase && !reducedMotion && (
+        <motion.circle
+          cx={centerX}
+          cy={centerY}
+          r={32}
+          fill="none"
+          stroke="rgba(147, 51, 234, 0.3)"
+          strokeWidth={2}
+          animate={{
+            r: [32, 38, 32],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        />
+      )}
+
+      {/* Phase 10.141: Completion burst - fires ONCE on transition via AnimatePresence */}
+      <AnimatePresence>
+        {showCompletionBurst && !reducedMotion && (
+          <g className="completion-effect">
+            <motion.circle
+              cx={centerX}
+              cy={centerY}
+              fill="none"
+              stroke="rgba(34, 197, 94, 0.7)"
+              strokeWidth={3}
+              initial={{ r: 25, opacity: 1 }}
+              animate={{ r: 70, opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.2, ease: 'easeOut' }}
+            />
+            <motion.circle
+              cx={centerX}
+              cy={centerY}
+              fill="none"
+              stroke="rgba(59, 130, 246, 0.5)"
+              strokeWidth={2}
+              initial={{ r: 20, opacity: 1 }}
+              animate={{ r: 55, opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.2, delay: 0.15, ease: 'easeOut' }}
+            />
+            {/* Success checkmark flash */}
+            <motion.circle
+              cx={centerX}
+              cy={centerY}
+              r={15}
+              fill="rgba(34, 197, 94, 0.3)"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: [0, 1.5, 1], opacity: [0, 0.8, 0] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+            />
+          </g>
+        )}
+      </AnimatePresence>
+
       {/* Outer pulse ring */}
       {isSearching && !reducedMotion && (
         <>
@@ -304,37 +492,46 @@ const CenterCore = memo<{
         transition={{ ...SPRING_PRESETS.soft, delay: 0.1 }}
       />
 
-      {/* Paper count */}
-      <motion.text
-        x={centerX}
-        y={centerY - 2}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill="white"
-        fontSize={paperCount > 999 ? 11 : 14}
-        fontWeight="bold"
-        fontFamily="system-ui, -apple-system, sans-serif"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        {paperCount > 9999 ? `${(paperCount / 1000).toFixed(0)}k` : paperCount.toLocaleString()}
-      </motion.text>
+      {/* Paper count - Phase 10.141: Stage-aware display with smooth transitions */}
+      <AnimatePresence mode="wait">
+        <motion.text
+          key={`count-${isCollectionPhase ? 'collect' : isComplete ? 'final' : 'process'}`}
+          x={centerX}
+          y={centerY - 2}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill={isComplete ? 'rgba(74, 222, 128, 1)' : isProcessingPhase ? 'rgba(192, 132, 252, 1)' : 'white'}
+          fontSize={displayCount > 999 ? 11 : 14}
+          fontWeight="bold"
+          fontFamily="system-ui, -apple-system, sans-serif"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ duration: 0.3 }}
+        >
+          {displayCount > 9999 ? `${(displayCount / 1000).toFixed(1)}k` : displayCount.toLocaleString()}
+        </motion.text>
+      </AnimatePresence>
       <motion.text
         x={centerX}
         y={centerY + 12}
         textAnchor="middle"
         dominantBaseline="middle"
-        fill="rgba(255, 255, 255, 0.5)"
+        fill={
+          isCollectionPhase ? 'rgba(74, 222, 128, 0.7)' :
+          isProcessingPhase ? 'rgba(192, 132, 252, 0.7)' :
+          isComplete ? 'rgba(74, 222, 128, 0.7)' :
+          'rgba(255, 255, 255, 0.5)'
+        }
         fontSize={7}
-        fontWeight="500"
+        fontWeight="600"
         letterSpacing="0.5px"
         fontFamily="system-ui, -apple-system, sans-serif"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
       >
-        PAPERS
+        {isCollectionPhase ? 'FOUND' : isProcessingPhase ? 'RANKING' : isComplete ? 'FINAL' : 'PAPERS'}
       </motion.text>
     </g>
   );
@@ -541,6 +738,9 @@ export const OrbitalSourceConstellation = memo<OrbitalSourceConstellationProps>(
     width,
     height,
     paperCount,
+    rawTotalPapers,
+    currentStage,
+    isComplete,
     isSearching,
     onSourceHover,
     onSourceClick,
@@ -548,6 +748,18 @@ export const OrbitalSourceConstellation = memo<OrbitalSourceConstellationProps>(
   }) {
     const [hoveredSource, setHoveredSource] = useState<LiteratureSource | null>(null);
     const [showLegend, setShowLegend] = useState(ORBIT_LEGEND.showByDefault);
+
+    // Phase 10.143/10.152: Use shared hook for orbital animation state
+    // Planets orbit clockwise after initial paper count stabilizes
+    // Phase 10.152 FIX: Orbit now persists briefly after search ends
+    const { isStabilized } = useCountStabilization({
+      count: rawTotalPapers ?? 0,
+      isActive: isSearching,
+    });
+
+    // Phase 10.152 FIX: Orbit when stabilized - continues briefly after search ends
+    // The useCountStabilization hook now handles persistence after completion
+    const isOrbiting = isStabilized;
 
     // Phase 10.130: Memoize containerSize to prevent unnecessary SourceNode re-renders
     const containerSize = useMemo(() => ({ width, height }), [width, height]);
@@ -630,24 +842,61 @@ export const OrbitalSourceConstellation = memo<OrbitalSourceConstellationProps>(
             centerY={centerPosition.y}
             isSearching={isSearching}
             paperCount={paperCount}
+            rawTotalPapers={rawTotalPapers ?? 0}
+            currentStage={currentStage ?? null}
+            isComplete={isComplete ?? false}
             reducedMotion={reducedMotion}
           />
         </svg>
 
-        {/* HTML Layer - Source Nodes */}
-        <div className="absolute inset-0 pointer-events-none">
+        {/* Phase 10.153: Netflix-Grade CSS Keyframes for buttery-smooth orbital animation */}
+        {/* Uses translate3d(0,0,0) to force GPU layer and prevent jank */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              @keyframes orbitClockwise {
+                0% { transform: rotate(0deg) translate3d(0,0,0); }
+                100% { transform: rotate(360deg) translate3d(0,0,0); }
+              }
+              @keyframes orbitCounterRotate {
+                0% { transform: rotate(0deg) translate3d(0,0,0); }
+                100% { transform: rotate(-360deg) translate3d(0,0,0); }
+              }
+            `,
+          }}
+        />
+
+        {/* HTML Layer - Source Nodes with Phase 10.153 orbital animation */}
+        {/* Sources orbit like planets around sun after particle collection stops */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            // Phase 10.153: Netflix-grade planetary orbit animation
+            // Rotates around the center (sun) when particles stop flowing
+            transformOrigin: `${centerPosition.x}px ${centerPosition.y}px`,
+            animation: isOrbiting && !reducedMotion
+              ? `orbitClockwise ${STABILIZATION_CONFIG.orbitDurationSeconds}s linear infinite`
+              : 'none',
+            // Phase 10.153: Comprehensive GPU acceleration for smooth 60fps rotation
+            willChange: isOrbiting ? 'transform' : 'auto',
+            // Note: Keyframes include translate3d(0,0,0) for GPU compositing
+            // Static transform only needed when NOT animating for layer promotion
+            ...(isOrbiting ? {} : { transform: 'translate3d(0,0,0)' }),
+            backfaceVisibility: 'hidden', // Prevent flicker during rotation
+          }}
+        >
           {sources.map((source) => (
-            <div key={source.source} className="pointer-events-auto">
-              <SourceNode
-                nodeState={source}
-                centerPosition={centerPosition}
-                containerSize={containerSize}
-                onHover={handleHover}
-                onClick={onSourceClick}
-                reducedMotion={reducedMotion}
-                isHovered={hoveredSource === source.source}
-              />
-            </div>
+            <SourceNode
+              key={source.source}
+              nodeState={source}
+              centerPosition={centerPosition}
+              containerSize={containerSize}
+              onHover={handleHover}
+              onClick={onSourceClick}
+              reducedMotion={reducedMotion}
+              isHovered={hoveredSource === source.source}
+              isOrbiting={isOrbiting}
+            />
           ))}
         </div>
 

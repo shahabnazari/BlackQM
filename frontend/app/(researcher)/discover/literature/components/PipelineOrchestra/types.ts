@@ -25,8 +25,9 @@ import type {
 
 /**
  * Pipeline stage identifiers
+ * Phase 10.152: Removed 'ready' stage - pipeline ends at 'rank' for cleaner user journey
  */
-export type PipelineStageId = 'analyze' | 'discover' | 'refine' | 'rank' | 'ready';
+export type PipelineStageId = 'analyze' | 'discover' | 'refine' | 'rank';
 
 /**
  * Pipeline stage status
@@ -105,6 +106,7 @@ export interface SourceNodeState {
 /**
  * Source constellation props
  * Phase 10.127: Updated to match actual component interface
+ * Phase 10.140: Added rawTotalPapers, currentStage, isComplete for data flow visualization
  */
 export interface OrbitalSourceConstellationProps {
   sources: SourceNodeState[];
@@ -113,6 +115,12 @@ export interface OrbitalSourceConstellationProps {
   width: number;
   height: number;
   paperCount: number;
+  /** Phase 10.140: Sum of all source paper counts (raw collection) */
+  rawTotalPapers?: number;
+  /** Phase 10.140: Current pipeline stage for flow direction */
+  currentStage?: string | null;
+  /** Phase 10.140: Whether search is complete */
+  isComplete?: boolean;
   isSearching: boolean;
   onSourceHover: (source: LiteratureSource | null) => void;
   onSourceClick: (source: LiteratureSource) => void;

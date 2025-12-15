@@ -1,61 +1,31 @@
 /**
  * PaperQualityBadges Component Tests
- * Phase 10.123 - Netflix-Grade PaperCard Redesign
+ * Phase 10.154 - Apple-Grade Simplification
  *
  * Tests for:
+ * - Citations per year badge display
  * - Memoization optimization
- * - Quality score display
  * - Accessibility
+ * - Edge cases
+ *
+ * NOTE: Quality score badge was removed in Phase 10.154
+ * Quality info is now shown exclusively in MatchScoreBadge tooltip
  *
  * @file frontend/app/(researcher)/discover/literature/components/paper-card/__tests__/PaperQualityBadges.test.tsx
  */
 
 import React from 'react';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { PaperQualityBadges } from '../PaperQualityBadges';
-import type { MetadataCompleteness } from '@/lib/types/literature.types';
-
-// ============================================================================
-// Mock Dependencies
-// ============================================================================
-
-vi.mock('@/lib/utils', () => ({
-  cn: (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' '),
-}));
 
 // ============================================================================
 // Test Utilities
 // ============================================================================
 
-const createMetadataCompleteness = (
-  overrides: Partial<MetadataCompleteness> = {}
-): MetadataCompleteness => ({
-  availableMetrics: 4,
-  totalMetrics: 4,
-  hasCitations: true,
-  hasJournalMetrics: true,
-  hasYear: true,
-  hasAbstract: true,
-  ...overrides,
-});
-
 const defaultProps = {
   citationsPerYear: 25.5,
-  qualityScore: 75,
-  qualityScoreBreakdown: {
-    citationImpact: 80,
-    journalPrestige: 70,
-    recencyBoost: 60,
-    openAccessBonus: 10,
-    reproducibilityBonus: 0,
-    altmetricBonus: 5,
-    coreScore: 70,
-    metadataCompleteness: createMetadataCompleteness(),
-  },
   citationCount: 150,
-  relevanceScore: 85,
-  metadataCompleteness: createMetadataCompleteness(),
 };
 
 const renderPaperQualityBadges = (overrides: Partial<typeof defaultProps> = {}) => {
@@ -67,7 +37,7 @@ const renderPaperQualityBadges = (overrides: Partial<typeof defaultProps> = {}) 
 // Test Suites
 // ============================================================================
 
-describe('PaperQualityBadges Component', () => {
+describe('PaperQualityBadges Component (Phase 10.154)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -84,114 +54,53 @@ describe('PaperQualityBadges Component', () => {
     it('should render citations per year badge', () => {
       renderPaperQualityBadges();
 
-      expect(screen.getAllByText('25.5').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('cites/yr').length).toBeGreaterThan(0);
+      expect(screen.getByText('25.5')).toBeInTheDocument();
+      expect(screen.getByText('cites/yr')).toBeInTheDocument();
     });
 
-    it('should render quality score badge', () => {
-      renderPaperQualityBadges();
-
-      // Multiple elements may have this text
-      const scoreElements = screen.getAllByText('75');
-      expect(scoreElements.length).toBeGreaterThan(0);
-    });
-
-    it('should render relevance badge', () => {
-      renderPaperQualityBadges();
-
-      // Check for relevance tier label (Very Relevant for score 85)
-      // May appear multiple times, use getAllByText
-      const relevanceLabels = screen.getAllByText('Very Relevant');
-      expect(relevanceLabels.length).toBeGreaterThan(0);
-    });
-
-    it('should return null when no quality data available', () => {
+    it('should return null when citationsPerYear is null', () => {
       const { container } = renderPaperQualityBadges({
         citationsPerYear: null,
-        qualityScore: null,
-        relevanceScore: null,
       });
 
       expect(container.firstChild).toBeNull();
     });
 
-    it('should render with only citations per year', () => {
-      renderPaperQualityBadges({
-        qualityScore: null,
-        relevanceScore: null,
+    it('should return null when citationsPerYear is undefined', () => {
+      const { container } = renderPaperQualityBadges({
+        citationsPerYear: undefined,
       });
 
-      expect(screen.getAllByText('25.5').length).toBeGreaterThan(0);
+      expect(container.firstChild).toBeNull();
     });
 
-    it('should render with only quality score', () => {
-      renderPaperQualityBadges({
-        citationsPerYear: null,
-        relevanceScore: null,
-      });
-
-      const scoreElements = screen.getAllByText('75');
-      expect(scoreElements.length).toBeGreaterThan(0);
-    });
-
-    it('should handle zero citations per year', () => {
-      renderPaperQualityBadges({
+    it('should return null when citationsPerYear is 0', () => {
+      const { container } = renderPaperQualityBadges({
         citationsPerYear: 0,
-        qualityScore: 75,
-        relevanceScore: null, // Explicitly nullify to test only citations behavior
       });
 
-      // citationsPerYear === 0 should not render citations badge
-      const citesElements = screen.queryAllByText('cites/yr');
-      expect(citesElements.length).toBe(0);
-      // But quality score should still render
-      const scoreElements = screen.getAllByText('75');
-      expect(scoreElements.length).toBeGreaterThan(0);
-    });
-  });
-
-  // ==========================================================================
-  // Confidence Indicator
-  // ==========================================================================
-
-  describe('Confidence Indicator', () => {
-    it('should display high confidence for 4/4 metrics', () => {
-      renderPaperQualityBadges({
-        metadataCompleteness: createMetadataCompleteness({ availableMetrics: 4 }),
-      });
-
-      // May have multiple elements with 4/4 text
-      expect(screen.getAllByText('4/4').length).toBeGreaterThan(0);
+      expect(container.firstChild).toBeNull();
     });
 
-    it('should display low confidence for 1/4 metrics', () => {
-      renderPaperQualityBadges({
-        qualityScoreBreakdown: {
-          ...defaultProps.qualityScoreBreakdown,
-          metadataCompleteness: createMetadataCompleteness({
-            availableMetrics: 1,
-            hasCitations: true,
-            hasJournalMetrics: false,
-            hasYear: false,
-            hasAbstract: false,
-          }),
-        },
+    it('should return null when citationsPerYear is negative', () => {
+      const { container } = renderPaperQualityBadges({
+        citationsPerYear: -5,
       });
 
-      expect(screen.getAllByText('1/4').length).toBeGreaterThan(0);
+      expect(container.firstChild).toBeNull();
     });
 
-    it('should handle undefined metadataCompleteness', () => {
-      renderPaperQualityBadges({
-        metadataCompleteness: undefined,
-        qualityScoreBreakdown: {
-          ...defaultProps.qualityScoreBreakdown,
-          metadataCompleteness: undefined,
-        },
-      });
+    it('should format decimal citations per year correctly', () => {
+      renderPaperQualityBadges({ citationsPerYear: 12.789 });
 
-      // Should default to 0/4
-      expect(screen.getAllByText('0/4').length).toBeGreaterThan(0);
+      // toFixed(1) rounds to 1 decimal place
+      expect(screen.getByText('12.8')).toBeInTheDocument();
+    });
+
+    it('should handle high citation rates', () => {
+      renderPaperQualityBadges({ citationsPerYear: 999.9 });
+
+      expect(screen.getByText('999.9')).toBeInTheDocument();
     });
   });
 
@@ -200,31 +109,40 @@ describe('PaperQualityBadges Component', () => {
   // ==========================================================================
 
   describe('Accessibility', () => {
-    it('should have accessible labels on citations badge', () => {
+    it('should have accessible aria-label', () => {
       renderPaperQualityBadges();
 
-      // Check for aria-label containing citations per year (may have multiple)
-      const citationsBadges = screen.getAllByLabelText(/citations per year/i);
-      expect(citationsBadges.length).toBeGreaterThan(0);
+      const badge = screen.getByLabelText(/citations per year/i);
+      expect(badge).toBeInTheDocument();
     });
 
-    it('should have accessible labels on relevance badge', () => {
-      renderPaperQualityBadges();
+    it('should include citation count in aria-label when available', () => {
+      renderPaperQualityBadges({ citationCount: 150 });
 
-      // Check for aria-label containing BM25 (may have multiple)
-      const relevanceBadges = screen.getAllByLabelText(/BM25/i);
-      expect(relevanceBadges.length).toBeGreaterThan(0);
+      const badge = screen.getByLabelText(/150 total citations/i);
+      expect(badge).toBeInTheDocument();
     });
 
-    it('should have accessible label on quality button', () => {
+    it('should have informative title tooltip', () => {
       renderPaperQualityBadges();
 
-      // Quality button should have aria-label
-      const buttons = screen.getAllByRole('button');
-      const qualityButton = buttons.find(btn =>
-        btn.getAttribute('aria-label')?.includes('Quality score')
-      );
-      expect(qualityButton).toBeDefined();
+      const badge = screen.getByTitle(/citation velocity/i);
+      expect(badge).toBeInTheDocument();
+    });
+
+    it('should include total citations in tooltip when available', () => {
+      renderPaperQualityBadges({ citationCount: 150 });
+
+      const badge = screen.getByTitle(/total citations: 150/i);
+      expect(badge).toBeInTheDocument();
+    });
+
+    it('should have hidden decorative icon', () => {
+      renderPaperQualityBadges();
+
+      // TrendingUp icon should be aria-hidden
+      const svg = document.querySelector('svg[aria-hidden="true"]');
+      expect(svg).toBeInTheDocument();
     });
   });
 
@@ -237,58 +155,27 @@ describe('PaperQualityBadges Component', () => {
       expect(PaperQualityBadges.displayName).toBe('PaperQualityBadges');
     });
 
-    it('should re-render when quality score changes', () => {
-      const { rerender } = renderPaperQualityBadges({ qualityScore: 75 });
-
-      expect(screen.getAllByText('75').length).toBeGreaterThan(0);
-
-      rerender(<PaperQualityBadges {...defaultProps} qualityScore={90} />);
-
-      expect(screen.getAllByText('90').length).toBeGreaterThan(0);
-    });
-
     it('should re-render when citations per year changes', () => {
       const { rerender } = renderPaperQualityBadges({ citationsPerYear: 25.5 });
 
-      expect(screen.getAllByText('25.5').length).toBeGreaterThan(0);
+      expect(screen.getByText('25.5')).toBeInTheDocument();
 
-      rerender(<PaperQualityBadges {...defaultProps} citationsPerYear={30.0} />);
+      rerender(<PaperQualityBadges citationsPerYear={30.0} citationCount={150} />);
 
-      expect(screen.getAllByText('30.0').length).toBeGreaterThan(0);
+      expect(screen.getByText('30.0')).toBeInTheDocument();
+      expect(screen.queryByText('25.5')).not.toBeInTheDocument();
     });
 
-    it('should re-render when relevance score changes', () => {
-      const { rerender } = renderPaperQualityBadges({ relevanceScore: 85 });
+    it('should re-render when citation count changes', () => {
+      const { rerender } = renderPaperQualityBadges({ citationCount: 100 });
 
-      expect(screen.getAllByText('Very Relevant').length).toBeGreaterThan(0);
+      // Check tooltip contains 100
+      expect(screen.getByTitle(/total citations: 100/i)).toBeInTheDocument();
 
-      rerender(<PaperQualityBadges {...defaultProps} relevanceScore={45} />);
+      rerender(<PaperQualityBadges citationsPerYear={25.5} citationCount={200} />);
 
-      expect(screen.getAllByText('Somewhat Relevant').length).toBeGreaterThan(0);
-    });
-  });
-
-  // ==========================================================================
-  // useCallback Optimization
-  // ==========================================================================
-
-  describe('useCallback Optimization', () => {
-    it('should handle tooltip interactions without errors', () => {
-      renderPaperQualityBadges();
-
-      // Find quality button by aria-label
-      const buttons = screen.getAllByRole('button');
-      const qualityButton = buttons.find(btn =>
-        btn.getAttribute('aria-label')?.includes('Quality score')
-      );
-
-      if (qualityButton) {
-        // Should not throw on hover interactions
-        expect(() => {
-          fireEvent.mouseEnter(qualityButton);
-          fireEvent.mouseLeave(qualityButton);
-        }).not.toThrow();
-      }
+      // Check tooltip now contains 200
+      expect(screen.getByTitle(/total citations: 200/i)).toBeInTheDocument();
     });
   });
 
@@ -298,35 +185,33 @@ describe('PaperQualityBadges Component', () => {
 
   describe('Edge Cases', () => {
     it('should handle null citation count gracefully', () => {
-      // Should not crash
-      expect(() => {
-        renderPaperQualityBadges({ citationCount: null });
-      }).not.toThrow();
+      renderPaperQualityBadges({ citationCount: null });
+
+      // Should still render badge
+      expect(screen.getByText('25.5')).toBeInTheDocument();
+
+      // But should not include total citations in label
+      const badge = screen.getByLabelText(/citations per year/i);
+      expect(badge.getAttribute('aria-label')).not.toContain('total citations');
     });
 
-    it('should handle missing breakdown fields', () => {
-      // Should not crash
-      expect(() => {
-        renderPaperQualityBadges({
-          qualityScoreBreakdown: {
-            metadataCompleteness: createMetadataCompleteness(),
-          },
-        });
-      }).not.toThrow();
+    it('should handle undefined citation count gracefully', () => {
+      renderPaperQualityBadges({ citationCount: undefined });
+
+      // Should still render badge
+      expect(screen.getByText('25.5')).toBeInTheDocument();
     });
 
-    it('should handle zero bonuses', () => {
-      // Should not crash with zero bonuses
-      expect(() => {
-        renderPaperQualityBadges({
-          qualityScoreBreakdown: {
-            ...defaultProps.qualityScoreBreakdown,
-            openAccessBonus: 0,
-            reproducibilityBonus: 0,
-            altmetricBonus: 0,
-          },
-        });
-      }).not.toThrow();
+    it('should handle very small citation rates', () => {
+      renderPaperQualityBadges({ citationsPerYear: 0.1 });
+
+      expect(screen.getByText('0.1')).toBeInTheDocument();
+    });
+
+    it('should handle whole number citation rates', () => {
+      renderPaperQualityBadges({ citationsPerYear: 10 });
+
+      expect(screen.getByText('10.0')).toBeInTheDocument();
     });
   });
 });

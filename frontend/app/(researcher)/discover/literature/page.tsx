@@ -33,7 +33,8 @@ import { BookOpen, Lightbulb, Search, Network } from 'lucide-react';
 // Self-contained containers
 import { LiteratureSearchContainer } from './containers/LiteratureSearchContainer';
 import { SearchResultsContainerEnhanced } from './containers/SearchResultsContainerEnhanced';
-import { AcademicResourcesPanel } from './components/AcademicResourcesPanel';
+// Phase 10.144: AcademicResourcesPanel removed - too complex for search flow
+// ORCID integration will be added to search bar instead
 import { ThemeExtractionActionCard } from './components/ThemeExtractionActionCard';
 import { PaperManagementContainer } from './containers/PaperManagementContainer';
 
@@ -184,8 +185,8 @@ export default function LiteratureSearchPage(): JSX.Element {
         <SearchResultsContainerEnhanced />
       </section>
 
-      {/* Academic Resources */}
-      <AcademicResourcesPanel />
+      {/* Phase 10.144: AcademicResourcesPanel removed for Apple-grade simplicity */}
+      {/* Source selection is now automatic. ORCID unlock indicator in search bar. */}
 
       {/* Theme Extraction Action Card */}
       <ThemeExtractionActionCard />

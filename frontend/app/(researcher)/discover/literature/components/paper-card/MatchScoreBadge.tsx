@@ -45,7 +45,7 @@ import {
 // ============================================================================
 
 interface MatchScoreBadgeProps {
-  /** Combined ranking score (0-100) - THIS IS THE SORTING SCORE */
+  /** Combined relevance score (0-100) - How well paper matches query */
   neuralRelevanceScore: number | null | undefined;
   /** Neural ranking position (1 = most relevant) */
   neuralRank: number | null | undefined;
@@ -53,6 +53,9 @@ interface MatchScoreBadgeProps {
   neuralExplanation: string | null | undefined;
   /** Paper quality score (0-100) for tier display */
   qualityScore: number | null | undefined;
+  /** Phase 10.147: Composite overall score (0-100) - PRIMARY RANKING SCORE */
+  /** Combines relevance + quality - ensures BEST papers rank highest */
+  overallScore?: number | null | undefined;
   /** Citation count for tooltip context */
   citationCount: number | null | undefined;
   /** Citations per year for tooltip context */
@@ -84,6 +87,7 @@ function MatchScoreBadgeComponent({
   neuralRank,
   neuralExplanation,
   qualityScore,
+  overallScore,
   citationCount,
   citationsPerYear,
   venue,
@@ -118,20 +122,36 @@ function MatchScoreBadgeComponent({
   // Memoized Values
   // ============================================================================
 
-  /** Validate and normalize score */
+  /** Phase 10.147: Use overallScore (relevance + quality) as primary, fallback to relevance */
+  /** Overall score ensures BEST papers (high relevance + high quality) are shown */
+  /** Enterprise-Grade: Full validation, edge case handling, type safety */
   const score = useMemo(() => {
+    // Prefer overallScore if available (composite of relevance + quality)
+    const primaryScore = overallScore ?? neuralRelevanceScore;
+    
+    // Strict validation: null, undefined, NaN check
     if (
-      neuralRelevanceScore === null ||
-      neuralRelevanceScore === undefined ||
-      Number.isNaN(neuralRelevanceScore)
+      primaryScore === null ||
+      primaryScore === undefined ||
+      Number.isNaN(primaryScore)
     ) {
       return null;
     }
-    if (!Number.isFinite(neuralRelevanceScore)) {
-      return neuralRelevanceScore > 0 ? 100 : 0;
+    
+    // Infinity handling: clamp to valid range
+    if (!Number.isFinite(primaryScore)) {
+      return primaryScore > 0 ? 100 : 0;
     }
-    return Math.max(0, Math.min(100, neuralRelevanceScore));
-  }, [neuralRelevanceScore]);
+    
+    // Clamp to valid range [0, 100]
+    return Math.max(0, Math.min(100, primaryScore));
+  }, [overallScore, neuralRelevanceScore]);
+
+  /** Check if we're using composite overall score (validated) */
+  // Netflix-Grade: Simple boolean check, no need for useMemo (cheap operation)
+  const isCompositeScore = overallScore != null && 
+                          Number.isFinite(overallScore) && 
+                          !Number.isNaN(overallScore);
 
   /** Quality tier from score */
   const qualityTier = useMemo(() => getQualityTier(qualityScore), [qualityScore]);
@@ -268,8 +288,10 @@ function MatchScoreBadgeComponent({
 
   // ============================================================================
   // Render null if no valid score
+  // Phase 10.147: Allow score of 0 if overallScore exists (composite score is valid even at 0)
+  // Only hide if score is null OR if it's 0 with no explanation AND no overallScore
   // ============================================================================
-  if (score === null) {
+  if (score === null || (score === 0 && !parsedExplanation && !isCompositeScore)) {
     return null;
   }
 
@@ -297,7 +319,7 @@ function MatchScoreBadgeComponent({
         onKeyDown={handleKeyDown}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        aria-label={`Match score: ${score.toFixed(0)}, ${matchLabel}. ${tierLabel}. Rank #${neuralRank ?? 'unknown'}. Click or tap for details.`}
+        aria-label={`${isCompositeScore ? 'Overall' : 'Match'} score: ${score.toFixed(0)}, ${matchLabel}. ${tierLabel}. Rank #${neuralRank ?? 'unknown'}. Click or tap for details.`}
         aria-describedby={showTooltip ? tooltipId : undefined}
         aria-expanded={showTooltip}
         aria-haspopup="dialog"
@@ -305,6 +327,16 @@ function MatchScoreBadgeComponent({
         <Zap className="w-3 h-3" aria-hidden="true" />
         <span className="font-bold">{score.toFixed(0)}</span>
         <span className="text-xs opacity-75">{matchLabel}</span>
+        {/* Phase 10.147: Visual indicator for composite score */}
+        {isCompositeScore && (
+          <span 
+            className="text-[9px] px-1 bg-purple-500/30 dark:bg-purple-400/30 text-purple-200 dark:text-purple-100 rounded font-medium"
+            title="Composite score combining relevance and quality"
+            aria-label="Composite score"
+          >
+            ⭐
+          </span>
+        )}
         {tierIcon && (
           <span
             role="img"
@@ -334,162 +366,168 @@ function MatchScoreBadgeComponent({
         {qualityScore?.toFixed(0) ?? 'unknown'} out of 100).
       </span>
 
-      {/* Tooltip */}
+      {/* Tooltip - Phase 10.155: Compact 2-column WCAG-compliant design */}
       {showTooltip && (
         <div
           id={tooltipId}
           role="dialog"
-          aria-label="Match Score Details"
+          aria-label={isCompositeScore ? "Overall Score Details" : "Match Score Details"}
           aria-modal="false"
           className={cn(
-            'absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-[380px]',
+            'absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2',
+            // Phase 10.155: Responsive width, max-height with scroll
+            'w-[420px] max-w-[calc(100vw-1rem)] max-h-[80vh] overflow-y-auto',
             'animate-in fade-in-0 zoom-in-95 duration-200'
           )}
         >
-          <div className="bg-gray-900 dark:bg-gray-950 text-white text-xs rounded-lg shadow-2xl p-4 border border-purple-500 dark:border-purple-400">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-3">
-              <div className="font-bold text-sm text-purple-300 dark:text-purple-200 flex items-center gap-1.5">
-                <Zap className="w-4 h-4" aria-hidden="true" />
-                MATCH SCORE
-              </div>
-              <div className="bg-purple-600 dark:bg-purple-500 text-white px-2 py-0.5 rounded text-[10px] font-medium">
-                SORTING SCORE
-              </div>
-            </div>
-
-            {/* Score Display */}
-            <div className="mb-3 pb-3 border-b border-gray-700 dark:border-gray-600">
-              <div className="text-2xl font-bold text-white flex items-center gap-3">
-                <span className="bg-gradient-to-r from-purple-500 to-indigo-500 bg-clip-text text-transparent">
-                  {score.toFixed(0)}/100
+          <div className="bg-gray-900 dark:bg-gray-950 text-white text-xs rounded-lg shadow-2xl p-3 border border-purple-500/80 dark:border-purple-400/80">
+            {/* Header Row - Score + Rank */}
+            <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-700/50">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-purple-400" aria-hidden="true" />
+                <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
+                  {score.toFixed(0)}
                 </span>
-                {neuralRank !== null && neuralRank !== undefined && (
-                  <span className="text-sm text-gray-400 dark:text-gray-300 font-normal">
-                    #{neuralRank}
+                <span className="text-gray-400 text-sm">/100</span>
+                {neuralRank != null && (
+                  <span className="text-[10px] px-1.5 py-0.5 bg-gray-700 rounded text-gray-300">
+                    Rank #{neuralRank}
                   </span>
                 )}
               </div>
-              <div className="text-gray-400 dark:text-gray-300 text-xs mt-1">
-                {matchLabel} - Papers are sorted by this score
-              </div>
+              <span className={cn(
+                'text-[10px] px-2 py-0.5 rounded font-medium',
+                getMatchScoreColors(score)
+              )}>
+                {matchLabel}
+              </span>
             </div>
 
-            {/* Breakdown Section */}
-            <div className="space-y-2 mb-3 pb-3 border-b border-gray-700 dark:border-gray-600">
-              <div className="font-semibold text-cyan-300 dark:text-cyan-200 text-xs">
-                WHY THIS PAPER RANKS HERE:
-              </div>
+            {/* Phase 10.155: 2-Column Grid Layout */}
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              {/* LEFT COLUMN: Relevance Breakdown */}
+              <div className="space-y-1">
+                <div className="text-[10px] font-semibold text-cyan-400 uppercase tracking-wide mb-1">
+                  Relevance ({neuralRelevanceScore?.toFixed(0) ?? '?'}/100)
+                </div>
 
-              {/* BM25 */}
-              <div className="flex items-center justify-between p-2 bg-gray-800/50 dark:bg-gray-800 rounded">
-                <div className="flex items-center gap-2">
-                  <Target
-                    className="w-4 h-4 text-blue-400"
-                    aria-hidden="true"
-                  />
-                  <div>
-                    <div className="font-semibold text-blue-300 dark:text-blue-200">
-                      Keyword Match
+                {parsedExplanation ? (
+                  <div className="space-y-1">
+                    {/* BM25 */}
+                    <div className="flex items-center justify-between p-1.5 bg-gray-800/60 rounded text-[11px]">
+                      <div className="flex items-center gap-1.5">
+                        <Target className="w-3 h-3 text-blue-400" aria-hidden="true" />
+                        <span className="text-blue-300">Keywords</span>
+                      </div>
+                      <span className="text-blue-200 font-semibold">
+                        {parsedExplanation.bm25}
+                        <span className="text-gray-500 text-[9px] ml-0.5">({RANKING_WEIGHTS.BM25}%)</span>
+                      </span>
                     </div>
-                    <div className="text-[10px] text-gray-400 dark:text-gray-300">
-                      BM25 exact terms
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-blue-300 dark:text-blue-200 font-bold">
-                    {parsedExplanation?.bm25 ?? '?'}/100
-                  </div>
-                  <div className="text-[10px] text-gray-500 dark:text-gray-400">
-                    {RANKING_WEIGHTS.BM25}% weight
-                  </div>
-                </div>
-              </div>
 
-              {/* Semantic */}
-              <div className="flex items-center justify-between p-2 bg-gray-800/50 dark:bg-gray-800 rounded">
-                <div className="flex items-center gap-2">
-                  <Brain
-                    className="w-4 h-4 text-green-400"
-                    aria-hidden="true"
-                  />
-                  <div>
-                    <div className="font-semibold text-green-300 dark:text-green-200">
-                      Semantic Similarity
+                    {/* Semantic */}
+                    <div className="flex items-center justify-between p-1.5 bg-gray-800/60 rounded text-[11px]">
+                      <div className="flex items-center gap-1.5">
+                        <Brain className="w-3 h-3 text-green-400" aria-hidden="true" />
+                        <span className="text-green-300">Semantic</span>
+                      </div>
+                      <span className="text-green-200 font-semibold">
+                        {parsedExplanation.semantic}
+                        <span className="text-gray-500 text-[9px] ml-0.5">({RANKING_WEIGHTS.SEMANTIC}%)</span>
+                      </span>
                     </div>
-                    <div className="text-[10px] text-gray-400 dark:text-gray-300">
-                      AI embeddings
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-green-300 dark:text-green-200 font-bold">
-                    {parsedExplanation?.semantic ?? '?'}/100
-                  </div>
-                  <div className="text-[10px] text-gray-500 dark:text-gray-400">
-                    {RANKING_WEIGHTS.SEMANTIC}% weight
-                  </div>
-                </div>
-              </div>
 
-              {/* Theme Fit */}
-              <div className="flex items-center justify-between p-2 bg-gray-800/50 dark:bg-gray-800 rounded">
-                <div className="flex items-center gap-2">
-                  <MessageSquare
-                    className="w-4 h-4 text-orange-400"
-                    aria-hidden="true"
-                  />
-                  <div>
-                    <div className="font-semibold text-orange-300 dark:text-orange-200">
-                      Topic Fit
-                    </div>
-                    <div className="text-[10px] text-gray-400 dark:text-gray-300">
-                      Q-method suitability
+                    {/* Topic Fit */}
+                    <div className="flex items-center justify-between p-1.5 bg-gray-800/60 rounded text-[11px]">
+                      <div className="flex items-center gap-1.5">
+                        <MessageSquare className="w-3 h-3 text-orange-400" aria-hidden="true" />
+                        <span className="text-orange-300">Topic Fit</span>
+                      </div>
+                      <span className="text-orange-200 font-semibold">
+                        {parsedExplanation.themeFit}
+                        <span className="text-gray-500 text-[9px] ml-0.5">({RANKING_WEIGHTS.THEME_FIT}%)</span>
+                      </span>
                     </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-orange-300 dark:text-orange-200 font-bold">
-                    {parsedExplanation?.themeFit ?? '?'}/100
+                ) : (
+                  <div className="p-2 bg-amber-900/20 border border-amber-700/30 rounded text-amber-300 text-[10px]">
+                    Breakdown unavailable
                   </div>
-                  <div className="text-[10px] text-gray-500 dark:text-gray-400">
-                    {RANKING_WEIGHTS.THEME_FIT}% weight
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Quality Tier Section */}
-            <div className="space-y-1">
-              <div className="font-semibold text-cyan-300 dark:text-cyan-200 text-xs flex items-center gap-1">
-                PAPER QUALITY:
-                {tierIcon && (
-                  <span role="img" aria-label={tierLabel}>
-                    {tierIcon}
-                  </span>
                 )}
-                <span className={getQualityTierColors(qualityTier)}>
-                  {tierLabel}
-                </span>
-                <span className="text-gray-400 dark:text-gray-300">
-                  ({qualityScore?.toFixed(0) ?? '?'}/100)
-                </span>
               </div>
-              {citationCount !== null && citationCount !== undefined && (
-                <div className="text-[10px] text-gray-400 dark:text-gray-300">
-                  {citationCount} citations
-                  {citationsPerYear !== null && citationsPerYear !== undefined
-                    ? ` (${citationsPerYear.toFixed(1)}/year)`
-                    : ''}
-                  {venue ? ` · ${venue}` : ''}
+
+              {/* RIGHT COLUMN: Quality + Overall */}
+              <div className="space-y-1">
+                <div className="text-[10px] font-semibold text-cyan-400 uppercase tracking-wide mb-1">
+                  Quality ({qualityScore?.toFixed(0) ?? '?'}/100)
                 </div>
-              )}
+
+                {/* Quality Tier */}
+                <div className="flex items-center justify-between p-1.5 bg-gray-800/60 rounded text-[11px]">
+                  <div className="flex items-center gap-1.5">
+                    {tierIcon && (
+                      <span role="img" aria-label={tierLabel} className="text-sm">
+                        {tierIcon}
+                      </span>
+                    )}
+                    <span className={getQualityTierColors(qualityTier)}>{tierLabel}</span>
+                  </div>
+                  <span className="text-gray-300 font-semibold">
+                    {qualityScore?.toFixed(0) ?? '?'}
+                  </span>
+                </div>
+
+                {/* Citations */}
+                {citationCount != null && (
+                  <div className="flex items-center justify-between p-1.5 bg-gray-800/60 rounded text-[11px]">
+                    <span className="text-gray-400">Citations</span>
+                    <span className="text-gray-200">
+                      {citationCount}
+                      {citationsPerYear != null && (
+                        <span className="text-gray-500 text-[9px] ml-0.5">
+                          ({citationsPerYear.toFixed(1)}/yr)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
+
+                {/* Venue */}
+                {venue && (
+                  <div className="p-1.5 bg-gray-800/60 rounded text-[10px] text-gray-400 truncate" title={venue}>
+                    {venue}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Keyboard Hint */}
-            <div className="mt-3 pt-2 border-t border-gray-700 dark:border-gray-600 text-[10px] text-gray-500 dark:text-gray-400">
-              Press <kbd className="px-1 bg-gray-700 rounded">Esc</kbd> to close
+            {/* Phase 10.155: Composite Score Formula (compact) */}
+            {/* Phase 10.156: Only show when ALL values are valid numbers */}
+            {isCompositeScore &&
+             neuralRelevanceScore != null && Number.isFinite(neuralRelevanceScore) &&
+             qualityScore != null && Number.isFinite(qualityScore) &&
+             score != null && (
+              <div className="p-2 bg-purple-900/30 border border-purple-600/40 rounded mb-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-purple-300">
+                    Overall = 2×(R×Q)/(R+Q)
+                  </span>
+                  <span className="text-purple-200 font-bold">
+                    2×({Math.round(neuralRelevanceScore)}×{Math.round(qualityScore)})/({Math.round(neuralRelevanceScore)}+{Math.round(qualityScore)}) = {score.toFixed(0)}
+                  </span>
+                </div>
+                <div className="text-[9px] text-purple-400/80 mt-1">
+                  Harmonic mean ensures both relevance AND quality must be high
+                </div>
+              </div>
+            )}
+
+            {/* Footer: Keyboard hint */}
+            <div className="flex items-center justify-between text-[9px] text-gray-500 pt-1 border-t border-gray-700/50">
+              <span>
+                <kbd className="px-1 py-0.5 bg-gray-700 rounded text-gray-400">Esc</kbd> to close
+              </span>
+              <span className="text-gray-600">Phase 10.155</span>
             </div>
           </div>
         </div>
@@ -503,11 +541,13 @@ function MatchScoreBadgeComponent({
 // ============================================================================
 
 export const MatchScoreBadge = memo(MatchScoreBadgeComponent, (prev, next) => {
+  // Phase 10.147: Include overallScore in comparison (critical for composite scoring)
   return (
     prev.neuralRelevanceScore === next.neuralRelevanceScore &&
     prev.neuralRank === next.neuralRank &&
     prev.neuralExplanation === next.neuralExplanation &&
     prev.qualityScore === next.qualityScore &&
+    prev.overallScore === next.overallScore &&
     prev.citationCount === next.citationCount &&
     prev.citationsPerYear === next.citationsPerYear &&
     prev.venue === next.venue

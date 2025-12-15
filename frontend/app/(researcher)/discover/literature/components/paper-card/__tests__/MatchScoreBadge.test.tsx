@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { MatchScoreBadge } from '../MatchScoreBadge';
@@ -59,6 +59,8 @@ describe('MatchScoreBadge Component', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    // Phase 10.155: Ensure cleanup between tests to prevent DOM pollution
+    cleanup();
   });
 
   // ==========================================================================
@@ -374,65 +376,74 @@ describe('MatchScoreBadge Component', () => {
   // Tooltip Content
   // ==========================================================================
 
+  // Phase 10.155: Updated tests for compact 2-column tooltip design
   describe('Tooltip Content', () => {
-    it('should display score breakdown', () => {
+    it('should display overall score', () => {
       renderMatchScoreBadge();
 
       const button = screen.getByRole('button');
       fireEvent.click(button);
 
-      expect(screen.getByText('MATCH SCORE')).toBeInTheDocument();
-      expect(screen.getByText('75/100')).toBeInTheDocument();
+      // Phase 10.155: Score shown prominently - may appear in button and tooltip
+      const scoreElements = screen.getAllByText('75');
+      expect(scoreElements.length).toBeGreaterThan(0);
+      expect(screen.getByText('/100')).toBeInTheDocument();
     });
 
-    it('should display BM25 breakdown', () => {
+    it('should display BM25 breakdown in relevance column', () => {
       renderMatchScoreBadge();
 
       const button = screen.getByRole('button');
       fireEvent.click(button);
 
-      expect(screen.getByText('Keyword Match')).toBeInTheDocument();
-      expect(screen.getByText('45/100')).toBeInTheDocument();
+      // Phase 10.155: Compact labels
+      expect(screen.getByText('Keywords')).toBeInTheDocument();
+      expect(screen.getByText('45')).toBeInTheDocument();
     });
 
-    it('should display semantic score breakdown', () => {
+    it('should display semantic score in relevance column', () => {
       renderMatchScoreBadge();
 
       const button = screen.getByRole('button');
       fireEvent.click(button);
 
-      expect(screen.getByText('Semantic Similarity')).toBeInTheDocument();
-      expect(screen.getByText('72/100')).toBeInTheDocument();
+      // Phase 10.155: Compact labels
+      expect(screen.getByText('Semantic')).toBeInTheDocument();
+      expect(screen.getByText('72')).toBeInTheDocument();
     });
 
-    it('should display theme fit breakdown', () => {
+    it('should display theme fit in relevance column', () => {
       renderMatchScoreBadge();
 
       const button = screen.getByRole('button');
       fireEvent.click(button);
 
       expect(screen.getByText('Topic Fit')).toBeInTheDocument();
-      expect(screen.getByText('58/100')).toBeInTheDocument();
+      expect(screen.getByText('58')).toBeInTheDocument();
     });
 
-    it('should display quality tier in tooltip', () => {
+    it('should display quality tier in quality column', () => {
       renderMatchScoreBadge();
 
       const button = screen.getByRole('button');
       fireEvent.click(button);
 
-      expect(screen.getByText('PAPER QUALITY:')).toBeInTheDocument();
+      // Phase 10.155: Quality tier shown - may appear multiple times
+      const qualityElements = screen.getAllByText(/Quality/);
+      expect(qualityElements.length).toBeGreaterThan(0);
       expect(screen.getByText('High Quality')).toBeInTheDocument();
     });
 
-    it('should display citation info in tooltip', () => {
+    it('should display citation info in quality column', () => {
       renderMatchScoreBadge();
 
       const button = screen.getByRole('button');
       fireEvent.click(button);
 
-      expect(screen.getByText(/150 citations/)).toBeInTheDocument();
-      expect(screen.getByText(/25.5\/year/)).toBeInTheDocument();
+      // Phase 10.155: Citations in quality column - use getAllByText for multiple matches
+      expect(screen.getByText('Citations')).toBeInTheDocument();
+      const countElements = screen.getAllByText('150');
+      expect(countElements.length).toBeGreaterThan(0);
     });
 
     it('should handle missing explanation gracefully', () => {
@@ -441,8 +452,8 @@ describe('MatchScoreBadge Component', () => {
       const button = screen.getByRole('button');
       fireEvent.click(button);
 
-      // Should show ? for missing values
-      expect(screen.getAllByText('?/100').length).toBeGreaterThan(0);
+      // Phase 10.155: Compact error message
+      expect(screen.getByText('Breakdown unavailable')).toBeInTheDocument();
     });
   });
 

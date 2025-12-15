@@ -1,6 +1,7 @@
 /**
  * PaperActions Component
  * Phase 10.91 Day 10 - PaperCard Refactoring
+ * Phase 10.145 - Netflix-grade UX: Replaced alert() with toast notifications
  *
  * Displays action buttons: View Paper, Full-Text Access, Save
  * Includes enterprise-grade full-text fetch with paywall detection
@@ -8,7 +9,7 @@
  * ✅ FIXED: Security - removed hardcoded API URL fallback, added DOI sanitization
  * ✅ FIXED: Type safety - proper API response types
  * ✅ FIXED: Performance - useCallback for event handlers
- * ⚠️  TODO: Replace alert() with toast system (requires UX library integration)
+ * ✅ Phase 10.145: Replaced all alert() with toast notifications
  *
  * @module PaperActions
  */
@@ -18,6 +19,7 @@
 import React, { useCallback } from 'react';
 import { ExternalLink, BookOpen, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast, ToastContainer } from '@/components/ui/ToastNotification';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/utils/logger';
 import type { Paper } from '@/lib/types/literature.types';
@@ -64,6 +66,17 @@ interface UnpaywallResponse {
   };
 }
 
+/**
+ * Toast callback interface for full-text fetch notifications
+ * Phase 10.145: Enables toast notifications in async helper function
+ */
+interface ToastCallbacks {
+  showError: (message: string) => void;
+  showWarning: (message: string) => void;
+  showInfo: (message: string) => void;
+  showSuccess: (message: string) => void;
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -86,15 +99,15 @@ function getApiUrl(): string {
 
 /**
  * Handle full-text fetch with enterprise waterfall strategy
+ * Phase 10.145: Now uses toast callbacks instead of alert()
  * @param paper - Paper to fetch full-text for
+ * @param toast - Toast callback functions
  */
-async function handleFullTextFetch(paper: Paper): Promise<void> {
+async function handleFullTextFetch(paper: Paper, toast: ToastCallbacks): Promise<void> {
   const sanitizedDOI = sanitizeDOI(paper.doi);
 
   if (!sanitizedDOI) {
-    alert(
-      'Cannot fetch full-text: Invalid or missing DOI. Please verify the paper has a valid DOI identifier.'
-    );
+    toast.showError('Invalid or missing DOI. Please verify the paper has a valid DOI identifier.');
     return;
   }
 
@@ -133,13 +146,11 @@ async function handleFullTextFetch(paper: Paper): Promise<void> {
       });
 
       if (response.status === 401) {
-        alert('Authentication required. Please log in and try again.');
+        toast.showError('Authentication required. Please log in and try again.');
       } else if (response.status === 404) {
-        alert('Paper not found. Please refresh and try again.');
+        toast.showError('Paper not found. Please refresh and try again.');
       } else {
-        alert(
-          `Failed to queue full-text fetch (HTTP ${response.status}). Please try again.`
-        );
+        toast.showError(`Failed to queue full-text fetch (HTTP ${response.status}). Please try again.`);
       }
       return;
     }
@@ -160,9 +171,7 @@ async function handleFullTextFetch(paper: Paper): Promise<void> {
           status: unpaywallResponse.status,
           doi: sanitizedDOI,
         });
-        alert(
-          `Full-text fetch queued (Job ID: ${jobData.jobId.slice(0, 8)}...). Background processing in progress. Please refresh in a moment.`
-        );
+        toast.showInfo(`Full-text queued. Background processing in progress.`);
         return;
       }
 
@@ -180,6 +189,7 @@ async function handleFullTextFetch(paper: Paper): Promise<void> {
       if (pdfUrl) {
         logger.info('Opening PDF from Unpaywall', 'PaperActions', { pdfUrl });
         window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+        toast.showSuccess('PDF opened in new tab');
         logger.info('Full-text fetch complete - PDF opened + background job queued', 'PaperActions', {
           paperId: paper.id,
           doi: sanitizedDOI,
@@ -189,9 +199,7 @@ async function handleFullTextFetch(paper: Paper): Promise<void> {
           paperId: paper.id,
           doi: sanitizedDOI,
         });
-        alert(
-          `Full-text fetch queued (Job ID: ${jobData.jobId.slice(0, 8)}...). No immediate PDF available. Background processing will try PMC/HTML scraping. Please check back in a moment.`
-        );
+        toast.showInfo('No immediate PDF. Background fetch queued - check back shortly.');
       }
     } catch (unpaywallError: unknown) {
       const errorMessage =
@@ -199,16 +207,12 @@ async function handleFullTextFetch(paper: Paper): Promise<void> {
           ? unpaywallError.message
           : 'Unknown error';
       logger.error('Unpaywall request error', 'PaperActions', { errorMessage, doi: sanitizedDOI });
-      alert(
-        `Full-text fetch queued (Job ID: ${jobData.jobId.slice(0, 8)}...). Could not check Unpaywall. Background processing in progress.`
-      );
+      toast.showInfo('Full-text queued. Background processing in progress.');
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Unexpected error during full-text fetch', 'PaperActions', { errorMessage, paperId: paper.id });
-    alert(
-      `Unexpected error: ${errorMessage}. Please try again or contact support if this persists.`
-    );
+    toast.showError(`Unexpected error: ${errorMessage}`);
   }
 }
 
@@ -221,6 +225,9 @@ export function PaperActions({
   isSaved,
   onToggleSave,
 }: PaperActionsProps) {
+  // Phase 10.145: Toast notifications instead of alert()
+  const { toasts, removeToast, showError, showWarning, showInfo, showSuccess } = useToast();
+
   // Calculate access status for button styling
   const hasFullText =
     paper.hasFullText === true || paper.fullTextStatus === 'success';
@@ -251,14 +258,15 @@ export function PaperActions({
 
   /**
    * Handle Full-Text Access button click
-   * Stops propagation and initiates full-text fetch
+   * Stops propagation and initiates full-text fetch with toast notifications
    */
   const handleFullTextClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
-      void handleFullTextFetch(paper);
+      // Phase 10.145: Pass toast callbacks to async function
+      void handleFullTextFetch(paper, { showError, showWarning, showInfo, showSuccess });
     },
-    [paper]
+    [paper, showError, showWarning, showInfo, showSuccess]
   );
 
   /**
@@ -274,53 +282,58 @@ export function PaperActions({
   );
 
   return (
-    <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
-      {/* View Paper Button */}
-      {(paper.doi || paper.url) && (
+    <>
+      {/* Phase 10.145: Toast Container for notifications */}
+      <ToastContainer toasts={toasts} onDismiss={removeToast} position="bottom-right" />
+
+      <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
+        {/* View Paper Button */}
+        {(paper.doi || paper.url) && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleViewPaper}
+            aria-label="View paper on publisher website"
+          >
+            <ExternalLink className="w-3 h-3 mr-1" aria-hidden="true" />
+            View Paper
+          </Button>
+        )}
+
+        {/* Full-Text Access Button */}
+        {paper.doi && (
+          <Button
+            size="sm"
+            variant="default"
+            className={`${buttonColor} text-white`}
+            onClick={handleFullTextClick}
+            title="Enterprise-grade full-text access via Unpaywall, PMC, or publisher"
+            aria-label={
+              isAvailable
+                ? 'Access full text of this paper'
+                : 'Check full-text availability'
+            }
+          >
+            <BookOpen className="w-3 h-3 mr-1" aria-hidden="true" />
+            {isAvailable ? 'Access Full Text' : 'Check Availability'}
+          </Button>
+        )}
+
+        {/* Save Button */}
         <Button
           size="sm"
-          variant="outline"
-          onClick={handleViewPaper}
-          aria-label="View paper on publisher website"
+          variant={isSaved ? 'secondary' : 'outline'}
+          onClick={handleSaveClick}
+          aria-label={isSaved ? 'Remove from saved papers' : 'Save paper to library'}
+          aria-pressed={isSaved}
         >
-          <ExternalLink className="w-3 h-3 mr-1" aria-hidden="true" />
-          View Paper
+          <Star
+            className={cn('w-3 h-3 mr-1', isSaved && 'fill-current')}
+            aria-hidden="true"
+          />
+          {isSaved ? 'Saved' : 'Save'}
         </Button>
-      )}
-
-      {/* Full-Text Access Button */}
-      {paper.doi && (
-        <Button
-          size="sm"
-          variant="default"
-          className={`${buttonColor} text-white`}
-          onClick={handleFullTextClick}
-          title="Enterprise-grade full-text access. Tries: 1) Database cache, 2) PMC HTML, 3) Unpaywall PDF, 4) Publisher HTML scraping. Opens PDF if immediately available, otherwise queues background fetch."
-          aria-label={
-            isAvailable
-              ? 'Access full text of this paper'
-              : 'Check full-text availability'
-          }
-        >
-          <BookOpen className="w-3 h-3 mr-1" aria-hidden="true" />
-          {isAvailable ? 'Access Full Text' : 'Check Availability'}
-        </Button>
-      )}
-
-      {/* Save Button */}
-      <Button
-        size="sm"
-        variant={isSaved ? 'secondary' : 'outline'}
-        onClick={handleSaveClick}
-        aria-label={isSaved ? 'Remove from saved papers' : 'Save paper to library'}
-        aria-pressed={isSaved}
-      >
-        <Star
-          className={cn('w-3 h-3 mr-1', isSaved && 'fill-current')}
-          aria-hidden="true"
-        />
-        {isSaved ? 'Saved' : 'Save'}
-      </Button>
-    </div>
+      </div>
+    </>
   );
 }

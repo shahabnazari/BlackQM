@@ -135,6 +135,68 @@ const SEMANTIC_PROGRESS_RANGE = 7;
 /** Fixed progress percentage for reduced quality mode */
 const REDUCED_QUALITY_PROGRESS = 80;
 
+// ============================================================================
+// NCBI SOURCE CONSTANTS (DRY: Single source of truth)
+// ============================================================================
+/** NCBI sources that provide pre-validated semantic search results */
+const NCBI_SOURCES = ['pmc', 'pubmed'] as const;
+/** Base relevance boost for NCBI sources with low BM25 scores (Phase 10.117) */
+const NCBI_BASE_RELEVANCE_BOOST = 50;
+/** Base neural score for NCBI papers that don't pass neural threshold (Phase 10.117) */
+const NCBI_BASE_NEURAL_SCORE = 0.55;
+/** Default domain for NCBI papers (Phase 10.117) */
+const NCBI_DEFAULT_DOMAIN = 'Medicine';
+/** Default domain confidence for NCBI papers (Phase 10.117) */
+const NCBI_DEFAULT_DOMAIN_CONFIDENCE = 0.80;
+/** Default aspects for NCBI papers (Phase 10.117) */
+const NCBI_DEFAULT_ASPECTS = {
+  subjectType: 'research' as const,
+  methodType: 'experimental' as const,
+  confidence: 0.75,
+};
+/** Minimum quality score for NCBI papers (Phase 10.117) */
+const NCBI_MIN_QUALITY_SCORE = 40;
+
+// ============================================================================
+// PIPELINE CONSTANTS
+// ============================================================================
+/** Maximum papers for semantic scoring (2x target for quality filtering) */
+const MAX_PAPERS_FOR_SEMANTIC_MULTIPLIER = 2;
+/** Base maximum papers for semantic scoring */
+const MAX_PAPERS_FOR_SEMANTIC_BASE = 600;
+/** Maximum papers for neural reranking */
+const MAX_NEURAL_PAPERS = 1500;
+/** Neural reranking timeout in milliseconds */
+const NEURAL_TIMEOUT_MS = 30000;
+/** Quality threshold for filtering papers */
+const QUALITY_THRESHOLD = 20;
+/** Score weights for combined scoring (Phase 10.115) */
+const SCORE_WEIGHTS = {
+  BM25: 0.15,
+  SEMANTIC: 0.55,
+  THEMEFIT: 0.30,
+  // Fallback weights when semantic is disabled (should never happen)
+  BM25_FALLBACK: 0.40,
+  THEMEFIT_FALLBACK: 0.60,
+} as const;
+
+/**
+ * Phase 10.147: Composite Overall Score Weights
+ * 
+ * INNOVATIVE APPROACH: Harmonic Mean ensures both relevance AND quality are high
+ * Formula: overallScore = 2 × (relevance × quality) / (relevance + quality)
+ * 
+ * This penalizes papers where either dimension is low, ensuring the BEST papers
+ * (high relevance + high quality) rank highest.
+ * 
+ * Alternative: Weighted geometric mean for fine-tuning
+ * Formula: overallScore = (relevance^RELEVANCE_WEIGHT × quality^QUALITY_WEIGHT)^(1/(RELEVANCE_WEIGHT+QUALITY_WEIGHT))
+ */
+const OVERALL_SCORE_WEIGHTS = {
+  RELEVANCE: 0.6,  // 60% weight on relevance (how well it matches query)
+  QUALITY: 0.4,    // 40% weight on quality (how good the paper is)
+} as const;
+
 @Injectable()
 export class SearchPipelineService {
   private readonly logger = new Logger(SearchPipelineService.name);
@@ -163,6 +225,24 @@ export class SearchPipelineService {
     this.logger.log('✅ [Phase 10.112 Week 4] GracefulDegradationService integrated - multi-level fallback cascade');
     this.logger.log('✅ [Phase 10.113 Week 2] ThemeFitScoringService integrated - thematization-optimized scoring');
     this.logger.log('✅ [Phase 10.113 Week 11] ProgressiveSemanticService integrated - tiered streaming');
+  }
+
+  // ============================================================================
+  // HELPER METHODS (DRY: Reduce code duplication)
+  // ============================================================================
+
+  /**
+   * Check if a paper is from an NCBI source (PMC or PubMed)
+   * 
+   * NCBI sources provide pre-validated semantic search results and should
+   * be preserved even if they don't pass all pipeline thresholds.
+   * 
+   * @param paper Paper to check
+   * @returns true if paper is from NCBI source
+   */
+  private isNCBISource(paper: { source?: string }): boolean {
+    const source = paper.source?.toLowerCase() ?? '';
+    return NCBI_SOURCES.includes(source as typeof NCBI_SOURCES[number]);
   }
 
   /**
@@ -300,16 +380,13 @@ export class SearchPipelineService {
     // A boost of 50 ensures NCBI papers are competitive with other sources
     // that score 20-80 on BM25, while still allowing BM25 matches to rank higher.
     // ============================================================================
-    const NCBI_SOURCES = ['pmc', 'pubmed'];
-    const NCBI_BASE_RELEVANCE_BOOST = 50;
-
     const scoredPapers: MutablePaper[] = papers.map((paper: Paper): MutablePaper => {
       const bm25Score = calculateBM25RelevanceScore(paper, compiledQuery);
-      const isNCBISource = NCBI_SOURCES.includes(paper.source?.toLowerCase() ?? '');
+      const isNCBI = this.isNCBISource(paper);
 
       // Add base boost for NCBI sources that have low BM25 scores
       // This ensures they're not filtered out before semantic scoring
-      const finalScore = isNCBISource && bm25Score < NCBI_BASE_RELEVANCE_BOOST
+      const finalScore = isNCBI && bm25Score < NCBI_BASE_RELEVANCE_BOOST
         ? NCBI_BASE_RELEVANCE_BOOST + bm25Score
         : bm25Score;
 
@@ -320,7 +397,7 @@ export class SearchPipelineService {
     });
 
     // Log NCBI boost stats
-    const ncbiPapers = scoredPapers.filter(p => NCBI_SOURCES.includes(p.source?.toLowerCase() ?? ''));
+    const ncbiPapers = scoredPapers.filter(p => this.isNCBISource(p));
     if (ncbiPapers.length > 0) {
       this.logger.log(
         `🔬 [Phase 10.117] NCBI boost applied: ${ncbiPapers.length} papers from PMC/PubMed ` +
@@ -331,11 +408,14 @@ export class SearchPipelineService {
     this.perfMonitor.endStage('BM25 Scoring', scoredPapers.length);
 
     // STAGE 1.5: BM25 Pre-Filter (reduce embedding count for performance)
-    // Only embed top 600 papers by BM25 (2x target) to keep semantic scoring fast
+    // Only embed top N papers by BM25 (2x target) to keep semantic scoring fast
     this.perfMonitor.startStage('BM25 Pre-Filter', scoredPapers.length);
     config.emitProgress('Stage 1.5: Pre-filtering by keyword relevance...', 74);
 
-    const MAX_PAPERS_FOR_SEMANTIC = Math.max(600, config.targetPaperCount * 2);
+    const MAX_PAPERS_FOR_SEMANTIC = Math.max(
+      MAX_PAPERS_FOR_SEMANTIC_BASE,
+      config.targetPaperCount * MAX_PAPERS_FOR_SEMANTIC_MULTIPLIER
+    );
     scoredPapers.sort((a, b) => (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0));
     const papersForSemantic = scoredPapers.slice(0, MAX_PAPERS_FOR_SEMANTIC);
 
@@ -557,37 +637,70 @@ export class SearchPipelineService {
     // If semantic unavailable (fallback): 0.40×BM25 + 0.60×ThemeFit
     // This should NEVER happen since we always run semantic scoring now
     // ============================================================================
-    const BM25_WEIGHT = semanticEnabled ? 0.15 : 0.40;
-    const SEMANTIC_WEIGHT = semanticEnabled ? 0.55 : 0.0;
-    const THEMEFIT_WEIGHT = semanticEnabled ? 0.30 : 0.60;
+    const BM25_WEIGHT = semanticEnabled ? SCORE_WEIGHTS.BM25 : SCORE_WEIGHTS.BM25_FALLBACK;
+    const SEMANTIC_WEIGHT = semanticEnabled ? SCORE_WEIGHTS.SEMANTIC : 0.0;
+    const THEMEFIT_WEIGHT = semanticEnabled ? SCORE_WEIGHTS.THEMEFIT : SCORE_WEIGHTS.THEMEFIT_FALLBACK;
 
     papersForSemantic.forEach((paper: MutablePaper, idx: number) => {
       const normalizedBM25 = ((paper.relevanceScore ?? 0) - minBM25) / bm25Range;
       const normalizedSemantic = semanticScores[idx] ?? 0.5;
       const themeFitScore = themeFitScores[idx] ?? 0.5;
 
-      // Combined score on 0-100 scale
+      // Combined relevance score on 0-100 scale (how well paper matches query)
       const combinedScore = (
         BM25_WEIGHT * normalizedBM25 +
         SEMANTIC_WEIGHT * normalizedSemantic +
         THEMEFIT_WEIGHT * themeFitScore
       ) * 100;
 
-      // Store combined score
+      // Store combined relevance score
       paper.neuralRelevanceScore = combinedScore;
       paper.neuralExplanation = semanticEnabled
         ? `BM25=${(normalizedBM25 * 100).toFixed(0)}, Sem=${(normalizedSemantic * 100).toFixed(0)}, ThemeFit=${(themeFitScore * 100).toFixed(0)}`
         : `BM25=${(normalizedBM25 * 100).toFixed(0)}, ThemeFit=${(themeFitScore * 100).toFixed(0)} (semantic disabled)`;
+
+      // Phase 10.147: Calculate composite overall score (relevance + quality)
+      // Netflix-Grade Optimization: Single-pass calculation with early exits
+      // Uses harmonic mean to ensure BOTH relevance and quality are high
+      // Enterprise-Grade: Full validation, edge case handling, type safety
+      
+      // Netflix-Grade Optimization: Single-pass calculation with minimal branching
+      // Inputs are already validated from previous stages, so we can optimize
+      const relevanceScore = Math.max(0, Math.min(100, combinedScore));
+      const qualityScore = Math.max(0, Math.min(100, paper.qualityScore ?? 0));
+
+      // Fast path: Both scores are positive (99% of cases)
+      // Harmonic mean: 2 × (a × b) / (a + b) - ensures both dimensions are high
+      let overallScore: number;
+      if (relevanceScore > 0 && qualityScore > 0) {
+        // Optimized: Single calculation, inputs guaranteed valid (already clamped)
+        overallScore = (2 * relevanceScore * qualityScore) / (relevanceScore + qualityScore);
+      } else if (relevanceScore === 0 && qualityScore === 0) {
+        // Early exit for zero scores
+        overallScore = 0;
+      } else {
+        // Edge case: One score is zero - use weighted average (less penalizing)
+        overallScore = OVERALL_SCORE_WEIGHTS.RELEVANCE * relevanceScore + 
+                      OVERALL_SCORE_WEIGHTS.QUALITY * qualityScore;
+      }
+      
+      // Final clamp (defensive programming - should never be needed but ensures safety)
+      // Netflix-Grade: Single Math.max/Math.min call instead of nested
+      overallScore = Math.max(0, Math.min(100, overallScore));
+
+      // Store overall score (type-safe: Paper class now includes overallScore)
+      // Netflix-Grade: Round to integer for performance and memory efficiency
+      // Integer precision is sufficient for sorting (0.1 precision adds no value)
+      paper.overallScore = Math.round(overallScore);
     });
 
     this.perfMonitor.endStage('Combined Scoring', papersForSemantic.length);
 
-    // STAGE 4: Quality Threshold Filter (keep papers with quality ≥ 20)
+    // STAGE 4: Quality Threshold Filter (keep papers with quality ≥ threshold)
     this.perfMonitor.startStage('Quality Filter', papersForSemantic.length);
     config.emitProgress('Stage 4: Filtering by quality threshold...', 92);
 
     // Lowered threshold to 20 since semantic scoring helps identify relevant papers
-    const QUALITY_THRESHOLD = 20;
     const qualityFiltered = papersForSemantic.filter(
       (p: MutablePaper) => (p.qualityScore ?? 0) >= QUALITY_THRESHOLD
     );
@@ -599,14 +712,42 @@ export class SearchPipelineService {
 
     this.perfMonitor.endStage('Quality Filter', qualityFiltered.length);
 
-    // STAGE 5: Sort by Combined Score and Take Top N
+    // STAGE 5: Sort by Overall Score (relevance + quality) and Take Top N
     this.perfMonitor.startStage('Final Selection', qualityFiltered.length);
-    config.emitProgress('Stage 5: Selecting top papers by combined score...', 97);
+    config.emitProgress('Stage 5: Selecting top papers by overall score (relevance + quality)...', 97);
 
-    // Sort by combined score (descending)
-    qualityFiltered.sort((a: MutablePaper, b: MutablePaper) =>
-      (b.neuralRelevanceScore ?? 0) - (a.neuralRelevanceScore ?? 0)
-    );
+    // Sort by overall score (descending) - Phase 10.147: Composite scoring
+    // This ensures BEST papers (high relevance + high quality) rank highest
+    // Netflix-Grade Optimization: Fast-path comparator with minimal branching
+    qualityFiltered.sort((a: MutablePaper, b: MutablePaper) => {
+      // Fast path: Both have valid overall scores (99% of cases)
+      const aOverall = a.overallScore;
+      const bOverall = b.overallScore;
+      
+      // Optimized: Check for null/undefined first (most common edge case)
+      if (aOverall == null || bOverall == null) {
+        // Handle missing scores: prefer papers with scores
+        if (aOverall == null && bOverall == null) {
+          // Both missing: fallback to relevance
+          return (b.neuralRelevanceScore ?? 0) - (a.neuralRelevanceScore ?? 0);
+        }
+        return aOverall == null ? 1 : -1;  // Missing scores go to bottom
+      }
+      
+      // Fast path: Both scores are valid numbers
+      // Primary sort: overall score (relevance + quality composite)
+      const scoreDiff = bOverall - aOverall;
+      
+      // Optimized: Use integer comparison (scores are rounded to integers)
+      // Tie-breaker threshold: 1 (since scores are integers, 0.1 threshold not needed)
+      if (scoreDiff !== 0) {
+        return scoreDiff;
+      }
+      
+      // Tie-breaker: prefer higher relevance if overall scores are equal
+      // Optimized: Direct subtraction, no null checks needed (already validated above)
+      return (b.neuralRelevanceScore ?? 0) - (a.neuralRelevanceScore ?? 0);
+    });
 
     // Assign ranks
     qualityFiltered.forEach((paper: MutablePaper, idx: number) => {
@@ -631,9 +772,12 @@ export class SearchPipelineService {
       `\n   Semantic Matching: ${semanticEnabled ? 'ENABLED' : 'DISABLED (fallback)'}` +
       `\n` +
       `\n   Top 5 Papers:` +
-      finalPapers.slice(0, 5).map((p, i) =>
-        `\n   ${i + 1}. [Score: ${(p.neuralRelevanceScore ?? 0).toFixed(1)}] ${(p.title ?? 'N/A').substring(0, 55)}...`
-      ).join('') +
+      finalPapers.slice(0, 5).map((p, i) => {
+        const overall = p.overallScore ?? p.neuralRelevanceScore ?? 0;
+        const relevance = p.neuralRelevanceScore ?? 0;
+        const quality = p.qualityScore ?? 0;
+        return `\n   ${i + 1}. [Overall: ${overall.toFixed(1)} (Rel: ${relevance.toFixed(1)}, Qual: ${quality.toFixed(1)})] ${(p.title ?? 'N/A').substring(0, 50)}...`;
+      }).join('') +
       `\n${'═'.repeat(80)}\n`
     );
 
@@ -973,13 +1117,12 @@ export class SearchPipelineService {
     // With 5,000+ papers collected from multi-source searches, 500 was too restrictive
     // Neural reranking is CPU-intensive (~45ms per paper) but modern systems can handle more
     // 1500 papers * 45ms = ~67 seconds (acceptable with async processing)
-    const MAX_NEURAL_PAPERS = 1500;
     if (papers.length > MAX_NEURAL_PAPERS) {
       // Sort by BM25 score (descending) and take top N
       papers.sort((a: MutablePaper, b: MutablePaper): number =>
         (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0)
       );
-      papers.length = MAX_NEURAL_PAPERS; // Keep only top 1500
+      papers.length = MAX_NEURAL_PAPERS; // Keep only top N
       this.logger.log(
         `⚡ Neural optimization: Sending top ${MAX_NEURAL_PAPERS} papers (sorted by BM25) to neural reranking`
       );
@@ -1022,23 +1165,21 @@ export class SearchPipelineService {
     );
 
     try {
-      // Limit papers sent to neural reranking to prevent blocking (max 1500 papers)
-      const MAX_NEURAL_INPUT = 1500;
+      // Limit papers sent to neural reranking to prevent blocking
       const papersForNeural: MutablePaper[] =
-        papers.length > MAX_NEURAL_INPUT
-          ? papers.slice(0, MAX_NEURAL_INPUT)
+        papers.length > MAX_NEURAL_PAPERS
+          ? papers.slice(0, MAX_NEURAL_PAPERS)
           : papers;
 
-      if (papers.length > MAX_NEURAL_INPUT) {
+      if (papers.length > MAX_NEURAL_PAPERS) {
         this.logger.log(
-          `⚠️ Limiting neural reranking to top ${MAX_NEURAL_INPUT} papers (from ${papers.length} total) to prevent timeout`,
+          `⚠️ Limiting neural reranking to top ${MAX_NEURAL_PAPERS} papers (from ${papers.length} total) to prevent timeout`,
         );
       }
 
       // Call neural reranking service with timeout protection (30 seconds max)
       // Using proper timeout cleanup to prevent memory leaks
       // Phase 10.100 Strict Audit Fix: Generic rerankWithSciBERT eliminates need for type assertion
-      const NEURAL_TIMEOUT_MS = 30000; // 30 seconds timeout
       const neuralScores = await this.executeWithTimeout(
         () =>
           this.neuralRelevance.rerankWithSciBERT(
@@ -1076,9 +1217,6 @@ export class SearchPipelineService {
       // Papers that fail our neural filter but come from NCBI get assigned a
       // base neural score of 0.55 (just above threshold) to pass through.
       // ============================================================================
-      const NCBI_SOURCES = ['pmc', 'pubmed'];
-      const NCBI_BASE_NEURAL_SCORE = 0.55; // Ensures NCBI papers pass threshold
-
       // Apply neural scores and filter in-place
       let writeIdx = 0;
       let ncbiPreservedCount = 0;
@@ -1086,7 +1224,7 @@ export class SearchPipelineService {
         // Phase 10.100 Strict Audit Fix: Add fallback index to prevent duplicate keys
         const key: string = papers[i].id || papers[i].doi || papers[i].title || `__fallback_${i}`;
         const neuralPaper: PaperWithNeuralScore | undefined = neuralScoreMap.get(key);
-        const isNCBISource = NCBI_SOURCES.includes(papers[i].source?.toLowerCase() ?? '');
+        const isNCBI = this.isNCBISource(papers[i]);
 
         if (neuralPaper) {
           // Mutate in-place with neural scores
@@ -1099,7 +1237,7 @@ export class SearchPipelineService {
             papers[writeIdx] = papers[i];
           }
           writeIdx++;
-        } else if (isNCBISource) {
+        } else if (isNCBI) {
           // Phase 10.117: Preserve NCBI papers that failed neural threshold
           // NCBI's semantic search already validated relevance
           papers[i].neuralRelevanceScore = NCBI_BASE_NEURAL_SCORE;
@@ -1293,10 +1431,6 @@ export class SearchPipelineService {
       // Phase 10.117: NCBI Source Preservation in Domain Classification
       // PMC and PubMed papers already passed NCBI's semantic search validation
       // Preserve them even if domain classification fails (different classifier paradigm)
-      const NCBI_SOURCES_DOMAIN = ['pmc', 'pubmed'];
-      const NCBI_DEFAULT_DOMAIN = 'Medicine'; // Most NCBI papers are medical/life sciences
-      const NCBI_DEFAULT_DOMAIN_CONFIDENCE = 0.80;
-
       // Apply domain data and filter in-place
       let writeIdx = 0;
       let ncbiDomainPreservedCount = 0;
@@ -1304,7 +1438,7 @@ export class SearchPipelineService {
         // Phase 10.100 Strict Audit Fix: Add fallback index to prevent duplicate keys
         const key: string = papers[i].id || papers[i].doi || papers[i].title || `__fallback_${i}`;
         const domainPaper = domainMap.get(key);
-        const isNCBISource = NCBI_SOURCES_DOMAIN.includes(papers[i].source?.toLowerCase() ?? '');
+        const isNCBI = this.isNCBISource(papers[i]);
 
         if (domainPaper) {
           // Mutate in-place with domain data
@@ -1316,7 +1450,7 @@ export class SearchPipelineService {
             papers[writeIdx] = papers[i];
           }
           writeIdx++;
-        } else if (isNCBISource) {
+        } else if (isNCBI) {
           // Phase 10.117: Preserve NCBI papers with default domain
           papers[i].domain = NCBI_DEFAULT_DOMAIN;
           papers[i].domainConfidence = NCBI_DEFAULT_DOMAIN_CONFIDENCE;
@@ -1415,13 +1549,6 @@ export class SearchPipelineService {
       // Phase 10.117: NCBI Source Preservation in Aspect Filtering
       // PMC and PubMed papers already passed NCBI's semantic search validation
       // Preserve them even if aspect filtering fails (different paradigm)
-      const NCBI_SOURCES_ASPECT = ['pmc', 'pubmed'];
-      const NCBI_DEFAULT_ASPECTS = {
-        subjectType: 'research' as const,
-        methodType: 'experimental' as const,
-        confidence: 0.75,
-      };
-
       // Apply aspect data and filter in-place
       let writeIdx = 0;
       let ncbiAspectPreservedCount = 0;
@@ -1429,7 +1556,7 @@ export class SearchPipelineService {
         // Phase 10.100 Strict Audit Fix: Add fallback index to prevent duplicate keys
         const key: string = papers[i].id || papers[i].doi || papers[i].title || `__fallback_${i}`;
         const aspectPaper = aspectMap.get(key);
-        const isNCBISource = NCBI_SOURCES_ASPECT.includes(papers[i].source?.toLowerCase() ?? '');
+        const isNCBI = this.isNCBISource(papers[i]);
 
         if (aspectPaper) {
           // Phase 10.100 Strict Audit Fix: Type-safe property assignment
@@ -1442,7 +1569,7 @@ export class SearchPipelineService {
             papers[writeIdx] = papers[i];
           }
           writeIdx++;
-        } else if (isNCBISource) {
+        } else if (isNCBI) {
           // Phase 10.117: Preserve NCBI papers with default aspects
           Object.assign(papers[i], { aspects: NCBI_DEFAULT_ASPECTS });
 
@@ -1654,14 +1781,11 @@ export class SearchPipelineService {
     // Phase 10.117: NCBI Source Preservation in Quality Threshold
     // PMC and PubMed papers already passed NCBI's rigorous peer review
     // Preserve them even if quality score is low (incomplete metadata doesn't mean low quality research)
-    const NCBI_SOURCES_QUALITY = ['pmc', 'pubmed'];
-    const NCBI_MIN_QUALITY_SCORE = 40; // Assign minimum quality score to NCBI papers
-
     let writeIdx = 0;
     let ncbiQualityPreservedCount = 0;
     for (let i = 0; i < papers.length; i++) {
       const qualityScore: number = papers[i].qualityScore ?? 0;
-      const isNCBISource = NCBI_SOURCES_QUALITY.includes(papers[i].source?.toLowerCase() ?? '');
+      const isNCBI = this.isNCBISource(papers[i]);
 
       if (qualityScore >= qualityThreshold) {
         // Keep this paper - meets quality threshold
@@ -1669,7 +1793,7 @@ export class SearchPipelineService {
           papers[writeIdx] = papers[i];
         }
         writeIdx++;
-      } else if (isNCBISource) {
+      } else if (isNCBI) {
         // Phase 10.117: Preserve NCBI papers with boosted quality score
         // NCBI peer-reviewed papers have inherent quality even with incomplete metadata
         papers[i].qualityScore = Math.max(qualityScore, NCBI_MIN_QUALITY_SCORE);
@@ -1683,13 +1807,6 @@ export class SearchPipelineService {
       }
     }
 
-    if (ncbiQualityPreservedCount > 0) {
-      this.logger.log(
-        `🔬 [Phase 10.117] NCBI quality preservation: ${ncbiQualityPreservedCount} PMC/PubMed papers preserved ` +
-        `(boosted to minimum quality score: ${NCBI_MIN_QUALITY_SCORE})`
-      );
-    }
-
     papers.length = writeIdx; // Truncate array
 
     const qualityPassRate: string =
@@ -1701,6 +1818,13 @@ export class SearchPipelineService {
       `✅ Quality Threshold Filter (in-place, ≥${qualityThreshold}/100): ${beforeQualityFilter} → ${papers.length} papers ` +
         `(${qualityPassRate}% pass rate)`,
     );
+
+    if (ncbiQualityPreservedCount > 0) {
+      this.logger.log(
+        `🔬 [Phase 10.117] NCBI quality preservation: ${ncbiQualityPreservedCount} PMC/PubMed papers preserved ` +
+        `(boosted to minimum quality score: ${NCBI_MIN_QUALITY_SCORE})`
+      );
+    }
 
     // Phase 2: Smart sampling (in-place truncation)
     const minAcceptableFinal: number = ABSOLUTE_LIMITS.MIN_ACCEPTABLE_PAPERS; // 300 papers
@@ -1843,16 +1967,23 @@ export class SearchPipelineService {
     const bm25Range = maxBM25 - minBM25 || 1;
 
     return papers.map(paper => {
-      const normalizedBM25 = ((paper.relevanceScore ?? 0) - minBM25) / bm25Range;
-      const semanticScore = paper.semanticScore ?? 0.5;
+      // Phase 10.156: NaN-safe normalization
+      const rawBM25 = paper.relevanceScore ?? 0;
+      const safeBM25 = Number.isFinite(rawBM25) ? rawBM25 : 0;
+      const normalizedBM25 = Math.max(0, Math.min(1, (safeBM25 - minBM25) / bm25Range));
+      const rawSemantic = paper.semanticScore ?? 0.5;
+      const semanticScore = Number.isFinite(rawSemantic) ? rawSemantic : 0.5;
 
       // Calculate ThemeFit if not already present
+      // Phase 10.156: NaN-safe themeFit calculation
       let themeFitScore = 0.5;
       if (paper.themeFitScore) {
-        themeFitScore = paper.themeFitScore.overallThemeFit ?? 0.5;
+        const rawThemeFit = paper.themeFitScore.overallThemeFit ?? 0.5;
+        themeFitScore = Number.isFinite(rawThemeFit) ? rawThemeFit : 0.5;
       } else {
         const themeFitResult = this.themeFitScoring.calculateThemeFitScore(paper);
-        themeFitScore = themeFitResult.overallThemeFit;
+        const rawThemeFit = themeFitResult.overallThemeFit;
+        themeFitScore = Number.isFinite(rawThemeFit) ? rawThemeFit : 0.5;
       }
 
       // Combined score on 0-100 scale
@@ -1862,11 +1993,32 @@ export class SearchPipelineService {
         themeFitWeight * themeFitScore
       ) * 100;
 
+      // Phase 10.147: Calculate composite overall score (relevance + quality)
+      // Uses harmonic mean to ensure BOTH dimensions are high
+      // Phase 10.156: Added NaN safety check for robustness
+      const relevanceScore = Math.max(0, Math.min(100, Number.isFinite(combinedScore) ? combinedScore : 0));
+      const rawQuality = paper.qualityScore ?? 0;
+      const qualityScore = Math.max(0, Math.min(100, Number.isFinite(rawQuality) ? rawQuality : 0));
+
+      let overallScore: number;
+      if (relevanceScore > 0 && qualityScore > 0) {
+        // Harmonic mean: 2 × (a × b) / (a + b)
+        overallScore = (2 * relevanceScore * qualityScore) / (relevanceScore + qualityScore);
+      } else if (relevanceScore === 0 && qualityScore === 0) {
+        overallScore = 0;
+      } else {
+        // One score is zero - use weighted average
+        overallScore = OVERALL_SCORE_WEIGHTS.RELEVANCE * relevanceScore +
+                      OVERALL_SCORE_WEIGHTS.QUALITY * qualityScore;
+      }
+      overallScore = Math.round(Math.max(0, Math.min(100, overallScore)));
+
       return {
         ...paper,
         combinedScore,
         neuralRelevanceScore: combinedScore, // For compatibility
         neuralExplanation: `BM25=${(normalizedBM25 * 100).toFixed(0)}, Sem=${(semanticScore * 100).toFixed(0)}, ThemeFit=${(themeFitScore * 100).toFixed(0)}`,
+        overallScore, // Phase 10.147: Composite score for frontend display
       };
     });
   }

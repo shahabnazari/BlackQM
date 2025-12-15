@@ -1,25 +1,30 @@
 /**
  * Phase 10.126: Semantic Brain Visualizer Component
+ * Phase 10.147: Enterprise-Grade Optimization
+ * Phase 10.150: User-Journey-Driven Redesign
+ * Phase 10.151: WCAG 2.1 AA Compliance & Bug Fixes
  *
  * Neural network visualization for the 3-tier semantic ranking process.
- * Shows interconnected nodes with pulsing synapses and progress indicators.
  *
- * Features:
- * - Three-node neural network layout
- * - Animated synapse connections
- * - Progress rings per tier
- * - Cache hit indicators
- * - Tier completion celebrations
+ * Phase 10.151 Fixes:
+ * ─────────────────────────────────────────────────────────────────────────
+ * 1. FIX: papersProcessed > totalPapers bug (400/300)
+ * 2. FIX: Tooltip works on hover at ANY state (not just complete)
+ * 3. FIX: 100/100 with spinner - show complete state if at 100%
+ * 4. ADD: WCAG 2.1 AA compliance (aria, focus, contrast)
+ * 5. IMPROVE: Progress display clarity
+ * ─────────────────────────────────────────────────────────────────────────
  *
  * @module PipelineOrchestra
  * @since Phase 10.126
+ * @updated Phase 10.151 - WCAG compliance and bug fixes
  */
 
 'use client';
 
 import React, { memo, useMemo, useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Brain, Check, Loader2 } from 'lucide-react';
+import { Zap, Check, Loader2, ChevronRight, Clock, Cpu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SemanticBrainVisualizerProps, NeuralNodeState } from '../types';
 import type { SemanticTierName } from '@/lib/types/search-stream.types';
@@ -28,18 +33,98 @@ import {
   SEMANTIC_TIER_CONFIG,
   SPRING_PRESETS,
   NEURAL_MESH_LAYOUT,
-  ARIA_LABELS,
   TOOLTIP_TRANSITIONS,
   DELAYED_TRANSITIONS,
+  RANKING_TIER_LIMITS,
 } from '../constants';
+
+// ============================================================================
+// PHASE 10.150/10.151: TIER CAPACITY CALCULATION
+// ============================================================================
+
+interface TierAllocation {
+  tier: SemanticTierName;
+  papersInTier: number;
+  startPosition: number;
+  endPosition: number;
+  isFirstTier: boolean;
+  displayLabel: string;
+}
+
+function calculateTierAllocations(totalPapers: number): TierAllocation[] {
+  const quickLimit = RANKING_TIER_LIMITS.immediate.papers;
+  const refinedLimit = RANKING_TIER_LIMITS.refined.papers;
+  const completeLimit = RANKING_TIER_LIMITS.complete.papers;
+
+  const safeTotalPapers = Math.max(0, totalPapers);
+  const effectiveTotal = Math.min(safeTotalPapers, completeLimit);
+
+  const quickPapers = Math.min(quickLimit, effectiveTotal);
+  const refinedPapers = Math.max(0, Math.min(refinedLimit, effectiveTotal) - quickLimit);
+  const completePapers = Math.max(0, effectiveTotal - refinedLimit);
+
+  // Phase 10.153: Calculate cumulative totals for clearer display
+  // Shows "TOP 50", "TOP 200", "ALL 600" instead of confusing deltas like "+150", "+400"
+  const refinedCumulative = quickLimit + refinedPapers;
+  const completeCumulative = refinedLimit + completePapers;
+
+  return [
+    {
+      tier: 'immediate',
+      papersInTier: quickPapers,
+      startPosition: 1,
+      endPosition: Math.max(1, quickPapers),
+      isFirstTier: true,
+      // "TOP 50" - shows this tier ranks the first 50 papers
+      displayLabel: quickPapers > 0 ? `TOP ${quickPapers}` : '—',
+    },
+    {
+      tier: 'refined',
+      papersInTier: refinedPapers,
+      startPosition: quickLimit + 1,
+      endPosition: refinedPapers > 0 ? quickLimit + refinedPapers : quickLimit + 1,
+      isFirstTier: false,
+      // "TOP 200" - shows this tier ranks up to top 200 papers (clearer than "+150")
+      displayLabel: refinedPapers > 0 ? `TOP ${refinedCumulative}` : '—',
+    },
+    {
+      tier: 'complete',
+      papersInTier: completePapers,
+      startPosition: refinedLimit + 1,
+      endPosition: completePapers > 0 ? refinedLimit + completePapers : refinedLimit + 1,
+      isFirstTier: false,
+      // "ALL 600" - shows this tier ranks all papers up to 600 (clearer than "+400")
+      displayLabel: completePapers > 0 ? `ALL ${completeCumulative}` : '—',
+    },
+  ];
+}
+
+// ============================================================================
+// MEMOIZED STYLE OBJECTS
+// ============================================================================
+
+const TOOLTIP_ARROW_STYLE = Object.freeze({
+  borderLeft: '6px solid transparent',
+  borderRight: '6px solid transparent',
+  borderBottom: '6px solid rgba(17, 24, 39, 0.98)',
+});
+
+const PROCESSING_INDICATOR_ANIMATION = Object.freeze({
+  scale: [1, 1.2, 1],
+  opacity: [1, 0.6, 1],
+});
+
+const PROCESSING_INDICATOR_TRANSITION = Object.freeze({
+  duration: 1,
+  repeat: Infinity,
+});
+
+const TIER_ORDER: readonly SemanticTierName[] = Object.freeze(['immediate', 'refined', 'complete']);
 
 // ============================================================================
 // SUB-COMPONENTS
 // ============================================================================
 
-/**
- * Neural node progress ring
- */
 const ProgressRing = memo<{
   progress: number;
   color: string;
@@ -76,7 +161,6 @@ const ProgressRing = memo<{
         strokeLinecap="round"
         strokeDasharray={circumference}
         initial={{ strokeDashoffset: circumference }}
-        // Reduced-motion should still reflect *correct* progress, just without animation.
         animate={{ strokeDashoffset: offset }}
         transition={animate ? SPRING_PRESETS.gentle : { duration: 0 }}
       />
@@ -85,71 +169,44 @@ const ProgressRing = memo<{
 });
 
 /**
- * Synapse connection between nodes
+ * Phase 10.150: Directional arrow between tiers
  */
-const SynapseConnection = memo<{
-  fromX: number;
-  fromY: number;
-  toX: number;
-  toY: number;
+const TierArrow = memo<{
   isActive: boolean;
-  dataFlowing: boolean;
+  isFlowing: boolean;
   color: string;
   reducedMotion: boolean;
-}>(function SynapseConnection({
-  fromX,
-  fromY,
-  toX,
-  toY,
-  isActive,
-  dataFlowing,
-  color,
-  reducedMotion,
-}) {
-  const midX = (fromX + toX) / 2;
+}>(function TierArrow({ isActive, isFlowing, color, reducedMotion }) {
+  const shouldAnimate = isFlowing && !reducedMotion;
 
   return (
-    <g>
-      {/* Base line */}
-      <motion.line
-        x1={fromX}
-        y1={fromY}
-        x2={toX}
-        y2={toY}
-        stroke={isActive ? color : 'rgba(255, 255, 255, 0.1)'}
-        strokeWidth={isActive ? 2 : 1}
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={SPRING_PRESETS.soft}
-      />
-
-      {/* Data flow pulse */}
-      {dataFlowing && !reducedMotion && (
-        <motion.circle
-          r={4}
-          fill={color}
-          initial={{ cx: fromX, cy: fromY, opacity: 0 }}
-          animate={{
-            cx: [fromX, midX, toX],
-            cy: [fromY, fromY, toY],
-            opacity: [0, 1, 0],
-          }}
-          transition={{
-            duration: 1,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
+    <div
+      className="flex items-center justify-center w-6 h-6 mx-0.5"
+      aria-hidden="true"
+    >
+      <motion.div
+        className={cn(
+          'flex items-center justify-center',
+          isActive ? 'opacity-100' : 'opacity-30'
+        )}
+        animate={shouldAnimate ? { x: [0, 3, 0] } : { x: 0 }}
+        transition={shouldAnimate ? { duration: 0.8, repeat: Infinity } : { duration: 0 }}
+      >
+        <ChevronRight
+          className="w-4 h-4"
+          style={{ color: isActive ? color : 'rgba(255,255,255,0.3)' }}
         />
-      )}
-    </g>
+      </motion.div>
+    </div>
   );
 });
 
 /**
- * Individual neural node
+ * Phase 10.151: Enhanced Neural Node with WCAG compliance
  */
 const NeuralNode = memo<{
   node: NeuralNodeState;
+  allocation: TierAllocation;
   tierConfig: typeof SEMANTIC_TIER_CONFIG[SemanticTierName];
   color: string;
   onHover: (tier: SemanticTierName | null) => void;
@@ -158,6 +215,7 @@ const NeuralNode = memo<{
   reducedMotion: boolean;
 }>(function NeuralNode({
   node,
+  allocation,
   tierConfig,
   color,
   onHover,
@@ -169,20 +227,22 @@ const NeuralNode = memo<{
   const size = NEURAL_MESH_LAYOUT.nodeSize;
   const Icon = tierConfig.icon;
 
-  // Animation variants - memoized for performance (Phase 10.132)
+  // Phase 10.151 FIX: If progress is 100%, treat as complete for display purposes
+  const effectiveStatus = progress >= 100 && status === 'processing' ? 'complete' : status;
+  const isEffectivelyComplete = effectiveStatus === 'complete';
+
   const nodeVariants = useMemo(() => ({
     pending: { scale: 0.9, opacity: 0.5 },
     processing: { scale: 1, opacity: 1 },
     complete: { scale: 1, opacity: 1 },
   }), []);
 
-  // Pulse animation
   const pulseAnimation = useMemo(() => {
-    if (reducedMotion || !isActive) return undefined;
+    if (reducedMotion || !isActive || isEffectivelyComplete) return undefined;
     return {
       boxShadow: [
         `0 0 0 0 ${color}40`,
-        `0 0 0 12px ${color}00`,
+        `0 0 0 10px ${color}00`,
       ],
       transition: {
         duration: 1.2,
@@ -190,163 +250,300 @@ const NeuralNode = memo<{
         ease: 'easeOut' as const,
       },
     };
-  }, [isActive, color, reducedMotion]);
+  }, [isActive, isEffectivelyComplete, color, reducedMotion]);
+
+  // Phase 10.151 FIX: Calculate tier-specific progress correctly
+  const tierProgress = useMemo(() => {
+    if (allocation.papersInTier === 0) return { processed: 0, total: 0, percent: 0 };
+    // Cap processed at the tier's allocation
+    const processed = Math.min(papersProcessed, allocation.papersInTier);
+    return {
+      processed,
+      total: allocation.papersInTier,
+      percent: Math.round((processed / allocation.papersInTier) * 100),
+    };
+  }, [papersProcessed, allocation.papersInTier]);
+
+  // Phase 10.151: WCAG accessible status description
+  const statusDescription = useMemo(() => {
+    if (isEffectivelyComplete) {
+      return `Complete. ${tierProgress.total} papers ranked in ${(latencyMs / 1000).toFixed(1)} seconds`;
+    }
+    if (status === 'processing') {
+      return `Processing. ${tierProgress.processed} of ${tierProgress.total} papers ranked (${tierProgress.percent}%)`;
+    }
+    return 'Waiting for previous tier to complete';
+  }, [isEffectivelyComplete, status, tierProgress, latencyMs]);
 
   return (
     <motion.div
-      className="relative"
-      style={{ width: size, height: size }}
+      className="relative flex flex-col items-center"
+      style={{ width: size + 16 }}
       variants={nodeVariants}
-      animate={status}
+      animate={effectiveStatus}
       transition={SPRING_PRESETS.soft}
     >
-      {/* Progress Ring */}
-      <ProgressRing
-        progress={progress}
-        color={color}
-        size={size}
-        animate={!reducedMotion}
-      />
+      {/* The Node */}
+      <div className="relative" style={{ width: size, height: size }}>
+        <ProgressRing
+          progress={isEffectivelyComplete ? 100 : (status === 'processing' ? progress : 0)}
+          color={color}
+          size={size}
+          animate={!reducedMotion}
+        />
 
-      {/* Main Node - Phase 10.131: Better contrast and sizing */}
-      <motion.button
-        className={cn(
-          'absolute inset-1 rounded-full',
-          'flex flex-col items-center justify-center gap-1',
-          'backdrop-blur-md border-2',
-          'focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
-          'transition-colors duration-200',
-          status === 'pending' && 'bg-white/10 border-white/30',
-          status === 'processing' && 'bg-white/20 border-current',
-          status === 'complete' && 'bg-green-500/20 border-green-400'
-        )}
-        style={{
-          borderColor: status === 'processing' ? color : undefined,
-        }}
-        {...(!reducedMotion && { whileHover: { scale: 1.05 } })}
-        {...(!reducedMotion && { whileTap: { scale: 0.95 } })}
-        onMouseEnter={() => onHover(tier)}
-        onMouseLeave={() => onHover(null)}
-        onFocus={() => onHover(tier)}
-        onBlur={() => onHover(null)}
-        onClick={() => onClick(tier)}
-        type="button"
-        aria-label={ARIA_LABELS.semanticTier(tierConfig.displayName, status, progress)}
-        aria-busy={status === 'processing'}
-      >
-        {/* Pulse Effect */}
-        {isActive && !reducedMotion && pulseAnimation ? (
+        {/* Phase 10.151: WCAG-compliant button with proper focus states */}
+        <motion.button
+          className={cn(
+            'absolute inset-1 rounded-full',
+            'flex flex-col items-center justify-center',
+            'backdrop-blur-md border-2',
+            // Phase 10.151: High contrast focus ring for WCAG 2.4.7
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900',
+            'transition-colors duration-200',
+            status === 'pending' && 'bg-white/10 border-white/30',
+            status === 'processing' && !isEffectivelyComplete && 'bg-white/20 border-current',
+            isEffectivelyComplete && 'bg-green-500/20 border-green-400'
+          )}
+          style={{
+            borderColor: status === 'processing' && !isEffectivelyComplete ? color : undefined,
+          }}
+          {...(!reducedMotion && { whileHover: { scale: 1.05 } })}
+          {...(!reducedMotion && { whileTap: { scale: 0.95 } })}
+          onMouseEnter={() => onHover(tier)}
+          onMouseLeave={() => onHover(null)}
+          onFocus={() => onHover(tier)}
+          onBlur={() => onHover(null)}
+          onClick={() => onClick(tier)}
+          type="button"
+          // Phase 10.151: WCAG 4.1.2 - Proper accessible name and description
+          aria-label={`${tierConfig.displayName}: ${allocation.displayLabel} papers`}
+          aria-describedby={`tier-${tier}-status`}
+          aria-busy={status === 'processing' && !isEffectivelyComplete}
+        >
+          {/* Hidden status for screen readers */}
+          <span id={`tier-${tier}-status`} className="sr-only">
+            {statusDescription}
+          </span>
+
+          {/* Pulse Effect */}
+          {isActive && !isEffectivelyComplete && !reducedMotion && pulseAnimation ? (
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              animate={pulseAnimation}
+              aria-hidden="true"
+            />
+          ) : null}
+
+          {/* Paper count label */}
+          <span
+            className={cn(
+              'text-sm font-bold tabular-nums leading-tight',
+              status === 'pending' && 'text-white/50',
+              status === 'processing' && !isEffectivelyComplete && 'text-white',
+              isEffectivelyComplete && 'text-green-400'
+            )}
+            aria-hidden="true"
+          >
+            {allocation.displayLabel}
+          </span>
+
+          {/* Status indicator */}
+          <div className="mt-0.5" aria-hidden="true">
+            {isEffectivelyComplete ? (
+              <Check className="w-3.5 h-3.5 text-green-400" />
+            ) : status === 'processing' ? (
+              <Loader2
+                className={cn('w-3.5 h-3.5', !reducedMotion && 'animate-spin')}
+                style={{ color }}
+              />
+            ) : (
+              <Clock className="w-3.5 h-3.5 text-white/40" />
+            )}
+          </div>
+        </motion.button>
+
+        {/* Completion Badge */}
+        {isEffectivelyComplete && (
           <motion.div
-            className="absolute inset-0 rounded-full"
-            animate={pulseAnimation}
-          />
-        ) : null}
-
-        {/* Icon - Phase 10.131: Larger icons for visibility */}
-        {status === 'complete' ? (
-          <Check className="w-5 h-5 text-green-400" />
-        ) : status === 'processing' ? (
-          <Loader2
-            className={cn('w-5 h-5', !reducedMotion && 'animate-spin')}
-            style={{ color }}
-          />
-        ) : (
-          <Icon className="w-5 h-5 text-white/60" />
+            className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shadow-lg"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={SPRING_PRESETS.bouncy}
+            aria-hidden="true"
+          >
+            <Check className="w-3 h-3 text-white" strokeWidth={3} />
+          </motion.div>
         )}
 
-        {/* Short Name - Phase 10.131: Larger, more readable text */}
+        {/* Cache Hit Indicator */}
+        {cacheHits > 0 && isEffectivelyComplete && (
+          <motion.div
+            className="absolute -bottom-1 -left-1 px-1 py-0.5 rounded bg-yellow-500/80 flex items-center gap-0.5"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={DELAYED_TRANSITIONS.bouncyShort}
+            role="img"
+            aria-label={`${cacheHits} cached results used`}
+          >
+            <Zap className="w-2 h-2 text-yellow-900" aria-hidden="true" />
+            <span className="text-[7px] font-bold text-yellow-900">
+              {cacheHits}
+            </span>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Tier label BELOW the node */}
+      <div className="mt-1.5 text-center" aria-hidden="true">
         <span
           className={cn(
-            'text-xs font-bold uppercase tracking-wide', // Phase 10.135: Increased from 10px to 12px for WCAG compliance
-            status === 'pending' && 'text-white/60',
-            status === 'processing' && 'text-white',
-            status === 'complete' && 'text-white/90'
+            'text-[10px] font-semibold uppercase tracking-wider block',
+            status === 'pending' && 'text-white/40',
+            status === 'processing' && !isEffectivelyComplete && 'text-white/80',
+            isEffectivelyComplete && 'text-green-400/80'
           )}
         >
           {tierConfig.shortName}
         </span>
-      </motion.button>
-
-      {/* Status Badge */}
-      {status === 'complete' && (
-        <motion.div
-          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shadow-lg"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={SPRING_PRESETS.bouncy}
-        >
-          <Check className="w-3 h-3 text-white" strokeWidth={3} />
-        </motion.div>
-      )}
-
-      {/* Cache Hit Indicator */}
-      {cacheHits > 0 && status === 'complete' && (
-        <motion.div
-          className="absolute -bottom-1 -left-1 px-1 py-0.5 rounded bg-yellow-500/80 flex items-center gap-0.5"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={DELAYED_TRANSITIONS.bouncyShort}
-        >
-          <Zap className="w-2 h-2 text-yellow-900" />
-          <span className="text-[7px] font-bold text-yellow-900">
-            {cacheHits}
+        {/* Phase 10.151: Clearer progress display */}
+        {status === 'processing' && !isEffectivelyComplete && tierProgress.total > 0 && (
+          <span className="text-[9px] text-white/50 tabular-nums block">
+            {tierProgress.percent}%
           </span>
-        </motion.div>
-      )}
+        )}
+        {isEffectivelyComplete && (
+          <span className="text-[9px] text-green-400/60 tabular-nums block">
+            ✓ done
+          </span>
+        )}
+        {status === 'pending' && (
+          <span className="text-[9px] text-white/30 block">
+            waiting
+          </span>
+        )}
+      </div>
 
-      {/* Tooltip - Phase 10.133: Fixed positioning - now appears BELOW nodes to avoid overlap with title/badge */}
+      {/* Phase 10.151: Tooltip that works on ANY hover state */}
       <AnimatePresence>
         {isHovered && (
           <motion.div
             className={cn(
-              'absolute top-full left-1/2 -translate-x-1/2 mt-2 z-[60]',
-              'min-w-[150px] p-2.5 rounded-lg',
-              'backdrop-blur-xl bg-gray-900/95 border border-white/20',
-              'shadow-xl pointer-events-none'
+              'absolute top-full left-1/2 -translate-x-1/2 mt-10 z-[60]',
+              'w-[280px] p-3 rounded-xl',
+              'backdrop-blur-xl bg-gray-900/98 border border-white/20',
+              'shadow-2xl'
             )}
             initial={{ opacity: 0, y: -5, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -5, scale: 0.95 }}
             transition={TOOLTIP_TRANSITIONS.fade}
+            role="tooltip"
+            id={`tooltip-${tier}`}
           >
-            {/* Arrow pointing UP to the node */}
+            {/* Arrow */}
             <div
               className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-px"
-              style={{
-                borderLeft: '6px solid transparent',
-                borderRight: '6px solid transparent',
-                borderBottom: '6px solid rgba(17, 24, 39, 0.95)',
-              }}
+              style={TOOLTIP_ARROW_STYLE}
+              aria-hidden="true"
             />
 
-            <p className="text-sm font-semibold text-white mb-1">
-              {tierConfig.displayName}
-            </p>
-            <p className="text-xs text-white/80 mb-2">
-              {tierConfig.description}
-            </p>
-
-            <div className="space-y-1 text-xs">
-              {status === 'complete' && (
-                <>
-                  <p className="text-green-400 font-medium">
-                    {papersProcessed} papers ranked
+            {/* Header */}
+            <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: `${color}30` }}
+                >
+                  <Icon className="w-4 h-4" style={{ color }} aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">
+                    {tierConfig.displayName}
                   </p>
-                  {cacheHits > 0 && (
-                    <p className="text-yellow-400 font-medium">
-                      {cacheHits} cache hits
+                  {allocation.papersInTier > 0 ? (
+                    <p className="text-[10px] text-white/50">
+                      Papers {allocation.startPosition}-{allocation.endPosition}
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-white/40 italic">
+                      No papers in this tier
                     </p>
                   )}
-                  <p className="text-white/70">
-                    {(latencyMs / 1000).toFixed(1)}s
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xl font-bold" style={{ color }}>
+                  {allocation.papersInTier}
+                </p>
+                <p className="text-[10px] text-white/50 uppercase">papers</p>
+              </div>
+            </div>
+
+            {/* Algorithm explanation */}
+            <div className="mb-2">
+              <p className="text-xs text-white/90 leading-relaxed mb-1.5">
+                {tierConfig.description}
+              </p>
+              <div className="bg-white/5 rounded-lg px-2 py-1.5 flex items-start gap-2">
+                <Cpu className="w-3 h-3 text-cyan-400 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                <p className="text-[10px] text-cyan-400 font-mono leading-relaxed">
+                  {tierConfig.algorithmDetail}
+                </p>
+              </div>
+            </div>
+
+            {/* Why explanation */}
+            <p className="text-[10px] text-white/50 italic mb-2">
+              💡 {tierConfig.whyFast}
+            </p>
+
+            {/* Status-specific stats - Phase 10.151: ALWAYS show stats regardless of status */}
+            <div className="space-y-1.5 text-xs pt-2 border-t border-white/10">
+              {isEffectivelyComplete ? (
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/70">Papers ranked:</span>
+                    <span className="text-green-400 font-semibold">{tierProgress.total}</span>
+                  </div>
+                  {cacheHits > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-white/70">Cache hits:</span>
+                      <span className="text-yellow-400 font-semibold">{cacheHits}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/70">Time taken:</span>
+                    <span className="text-white/90 font-mono">{(latencyMs / 1000).toFixed(1)}s</span>
+                  </div>
+                </>
+              ) : status === 'processing' ? (
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/70">Progress:</span>
+                    <span className="text-blue-400 font-semibold">
+                      {tierProgress.processed} / {tierProgress.total} ({tierProgress.percent}%)
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/70">Expected time:</span>
+                    <span className="text-white/60 font-mono">~{tierConfig.targetLatencyMs / 1000}s</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/70">Papers to rank:</span>
+                    <span className="text-white/60">{allocation.papersInTier}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/70">Expected time:</span>
+                    <span className="text-white/60 font-mono">~{tierConfig.targetLatencyMs / 1000}s</span>
+                  </div>
+                  <p className="text-white/40 text-center pt-1 text-[10px]">
+                    ⏳ Waiting for previous tier...
                   </p>
                 </>
-              )}
-              {status === 'processing' && (
-                <p className="text-blue-400 font-medium">{progress}% complete</p>
-              )}
-              {status === 'pending' && (
-                <p className="text-white/60">Waiting...</p>
               )}
             </div>
           </motion.div>
@@ -360,24 +557,6 @@ const NeuralNode = memo<{
 // MAIN COMPONENT
 // ============================================================================
 
-/**
- * Semantic Brain Visualizer Component
- *
- * Displays the 3-tier semantic ranking process as a neural network.
- *
- * @example
- * ```tsx
- * <SemanticBrainVisualizer
- *   currentTier="refined"
- *   tierStats={tierStatsMap}
- *   papersProcessed={150}
- *   totalPapers={600}
- *   isProcessing={true}
- *   onTierHover={handleHover}
- *   onTierClick={handleClick}
- * />
- * ```
- */
 export const SemanticBrainVisualizer = memo<SemanticBrainVisualizerProps>(
   function SemanticBrainVisualizer({
     currentTier,
@@ -391,145 +570,184 @@ export const SemanticBrainVisualizer = memo<SemanticBrainVisualizerProps>(
   }) {
     const [hoveredTier, setHoveredTier] = useState<SemanticTierName | null>(null);
 
-    // Handle hover
     const handleHover = useCallback((tier: SemanticTierName | null) => {
       setHoveredTier(tier);
       onTierHover(tier);
     }, [onTierHover]);
 
-    // Derive node states
-    const nodes: NeuralNodeState[] = useMemo(() => {
-      const tiers: SemanticTierName[] = ['immediate', 'refined', 'complete'];
-      const spacing = NEURAL_MESH_LAYOUT.nodeSpacing;
+    const allocations = useMemo(
+      () => calculateTierAllocations(totalPapers),
+      [totalPapers]
+    );
 
-      return tiers.map((tier, index) => {
+    const nodes: NeuralNodeState[] = useMemo(() => {
+      const spacing = NEURAL_MESH_LAYOUT.nodeSpacing;
+      const currentTierOrder = currentTier ? TIER_ORDER.indexOf(currentTier) : -1;
+
+      return TIER_ORDER.map((tier, tierIndex) => {
         const stats = tierStats.get(tier);
-        const tierOrder = tiers.indexOf(tier);
-        const currentTierOrder = currentTier ? tiers.indexOf(currentTier) : -1;
 
         let status: 'pending' | 'processing' | 'complete' = 'pending';
         if (stats?.isComplete) {
           status = 'complete';
         } else if (currentTierOrder >= 0) {
-          // Earlier tiers should read as complete once we move past them.
-          if (tierOrder < currentTierOrder) status = 'complete';
-          else if (tierOrder === currentTierOrder) status = 'processing';
+          if (tierIndex < currentTierOrder) status = 'complete';
+          else if (tierIndex === currentTierOrder) status = 'processing';
           else status = 'pending';
         } else if (stats && !stats.isComplete) {
-          // If we have stats for a tier but no currentTier (edge cases), show activity.
           status = stats.progressPercent > 0 ? 'processing' : 'pending';
         }
 
         return {
           tier,
-          position: { x: index * spacing, y: 0 },
+          position: { x: tierIndex * spacing, y: 0 },
           status,
-          progress: stats?.progressPercent || 0,
-          papersProcessed: stats?.papersProcessed || 0,
-          cacheHits: stats?.cacheHits || 0,
-          latencyMs: stats?.latencyMs || 0,
+          progress: stats?.progressPercent ?? 0,
+          papersProcessed: stats?.papersProcessed ?? 0,
+          cacheHits: stats?.cacheHits ?? 0,
+          latencyMs: stats?.latencyMs ?? 0,
           isActive: status === 'processing',
         };
       });
     }, [tierStats, currentTier]);
 
-    // Calculate container dimensions
-    const containerWidth = (nodes.length - 1) * NEURAL_MESH_LAYOUT.nodeSpacing +
-      NEURAL_MESH_LAYOUT.nodeSize;
-    const containerHeight = NEURAL_MESH_LAYOUT.nodeSize + 20;
+    const tierTotals = useMemo(() => {
+      const sum = allocations.reduce((acc, a) => acc + a.papersInTier, 0);
+      return { sum, matches: sum === Math.min(totalPapers, RANKING_TIER_LIMITS.complete.papers) };
+    }, [allocations, totalPapers]);
+
+    // Phase 10.151 FIX: Cap papersProcessed at totalPapers to prevent 400/300 bug
+    const safePapersProcessed = Math.min(papersProcessed, totalPapers);
+
+    // Phase 10.151: Calculate overall progress percentage
+    const overallProgress = useMemo(() => {
+      if (totalPapers === 0) return 0;
+      return Math.round((safePapersProcessed / totalPapers) * 100);
+    }, [safePapersProcessed, totalPapers]);
 
     return (
       <div
         className="relative flex flex-col items-center overflow-visible"
-        role="group"
-        aria-label={ARIA_LABELS.semanticBrain}
+        role="region"
+        aria-label="3-tier semantic ranking progress"
       >
-        {/* Title - Phase 10.132: Improved z-index and visibility */}
+        {/* Header */}
         <motion.div
-          className="relative z-10 flex items-center gap-2 mb-3"
+          className="text-center mb-2"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={SPRING_PRESETS.soft}
+          transition={{ delay: 0.1 }}
         >
-          <Brain className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-bold text-white/90 uppercase tracking-wider">
-            Semantic Ranking
-          </span>
-          {isProcessing && !reducedMotion && (
-            <motion.div
-              className="w-1.5 h-1.5 rounded-full bg-blue-400"
-              animate={{ scale: [1, 1.2, 1], opacity: [1, 0.6, 1] }}
-              transition={{ duration: 1, repeat: Infinity }}
-            />
-          )}
+          <p className="text-xs text-white/70">
+            Ranking <span className="text-white font-semibold">{totalPapers}</span> papers
+          </p>
         </motion.div>
 
-        {/* Neural Network - Phase 10.133: Added overflow-visible for tooltips */}
-        <div
-          className="relative overflow-visible"
-          style={{ width: containerWidth, height: containerHeight }}
-        >
-          {/* SVG Connections */}
-          <svg
-            className="absolute inset-0"
-            width={containerWidth}
-            height={containerHeight}
-            style={{ overflow: 'visible' }}
-            aria-hidden="true"
+        {/* Processing indicator */}
+        {isProcessing && !reducedMotion && (
+          <motion.div
+            className="flex items-center gap-2 mb-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            role="status"
+            aria-live="polite"
           >
-            {nodes.slice(0, -1).map((node, index) => {
-              const nextNode = nodes[index + 1];
-              // Guard against undefined (TypeScript strictness with slice)
-              if (!nextNode) return null;
+            <motion.div
+              className="w-2 h-2 rounded-full bg-blue-400"
+              animate={PROCESSING_INDICATOR_ANIMATION}
+              transition={PROCESSING_INDICATOR_TRANSITION}
+              aria-hidden="true"
+            />
+            <span className="text-xs text-blue-400 font-medium">
+              {overallProgress}% complete
+            </span>
+          </motion.div>
+        )}
 
-              const fromX = node.position.x + NEURAL_MESH_LAYOUT.nodeSize / 2;
-              const toX = nextNode.position.x + NEURAL_MESH_LAYOUT.nodeSize / 2;
-              const y = NEURAL_MESH_LAYOUT.nodeSize / 2;
+        {/* Tier nodes */}
+        <div
+          className="flex items-start justify-center overflow-visible"
+          role="list"
+          aria-label="Ranking tiers"
+        >
+          {nodes.map((node, index) => {
+            const allocation = allocations[index];
+            const nextNode = nodes[index + 1];
+            const showArrow = index < nodes.length - 1;
 
-              return (
-                <SynapseConnection
-                  key={`synapse-${node.tier}-${nextNode.tier}`}
-                  fromX={fromX}
-                  fromY={y}
-                  toX={toX}
-                  toY={y}
-                  isActive={node.status === 'complete'}
-                  dataFlowing={node.status === 'complete' && nextNode.status === 'processing'}
-                  color={SEMANTIC_TIER_COLORS[node.tier]}
-                  reducedMotion={reducedMotion}
-                />
-              );
-            })}
-          </svg>
+            if (!allocation) return null;
 
-          {/* Nodes */}
-          <div className="relative flex items-center justify-between">
-            {nodes.map((node) => (
-              <NeuralNode
-                key={node.tier}
-                node={node}
-                tierConfig={SEMANTIC_TIER_CONFIG[node.tier]}
-                color={SEMANTIC_TIER_COLORS[node.tier]}
-                onHover={handleHover}
-                onClick={onTierClick}
-                isHovered={hoveredTier === node.tier}
-                reducedMotion={reducedMotion}
-              />
-            ))}
-          </div>
+            const arrowActive = node.status === 'complete' || (node.progress >= 100);
+            const arrowFlowing = arrowActive && nextNode?.status === 'processing';
+
+            return (
+              <React.Fragment key={node.tier}>
+                <div role="listitem">
+                  <NeuralNode
+                    node={node}
+                    allocation={allocation}
+                    tierConfig={SEMANTIC_TIER_CONFIG[node.tier]}
+                    color={SEMANTIC_TIER_COLORS[node.tier]}
+                    onHover={handleHover}
+                    onClick={onTierClick}
+                    isHovered={hoveredTier === node.tier}
+                    reducedMotion={reducedMotion}
+                  />
+                </div>
+                {showArrow && (
+                  <TierArrow
+                    isActive={arrowActive}
+                    isFlowing={arrowFlowing}
+                    color={SEMANTIC_TIER_COLORS[node.tier]}
+                    reducedMotion={reducedMotion}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
         </div>
 
-        {/* Progress Summary */}
+        {/* Math equation */}
+        {totalPapers > 0 && (
+          <motion.div
+            className="mt-3 flex items-center gap-1.5 text-[10px] text-white/40"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            aria-hidden="true"
+          >
+            <span className="tabular-nums">{allocations[0]?.papersInTier ?? 0}</span>
+            <span>+</span>
+            <span className="tabular-nums">{allocations[1]?.papersInTier ?? 0}</span>
+            <span>+</span>
+            <span className="tabular-nums">{allocations[2]?.papersInTier ?? 0}</span>
+            <span>=</span>
+            <span className={cn(
+              'font-semibold',
+              tierTotals.matches ? 'text-green-400/70' : 'text-yellow-400/70'
+            )}>
+              {tierTotals.sum} {tierTotals.matches && '✓'}
+            </span>
+          </motion.div>
+        )}
+
+        {/* Progress Summary - Phase 10.151 FIX: Use capped value */}
         <motion.div
-          className="mt-2 text-center"
+          className="mt-1.5 text-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          <span className="text-xs text-white/50"> {/* Phase 10.135: Increased from 10px to 12px */}
-            {papersProcessed} / {totalPapers} papers analyzed
+          <span className="text-[11px] text-white/50">
+            {safePapersProcessed} / {totalPapers} analyzed
           </span>
         </motion.div>
+
+        {/* Screen reader summary */}
+        <div className="sr-only" role="status" aria-live="polite">
+          Semantic ranking: {safePapersProcessed} of {totalPapers} papers analyzed.
+          {nodes.filter(n => n.status === 'complete').length} of 3 tiers complete.
+        </div>
       </div>
     );
   }

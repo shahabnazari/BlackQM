@@ -1,6 +1,7 @@
 /**
  * Shared Constants for PaperCard Components
  * Phase 10.91 Day 10 - Code Quality Fixes
+ * Phase 10.145 - Dark mode support for all color functions
  *
  * Centralized constants to maintain DRY principle and enterprise-grade maintainability
  *
@@ -295,20 +296,21 @@ export function getQualityLabel(score: number): string {
 
 /**
  * Get Tailwind CSS classes for quality score badge color
+ * Phase 10.145: Added dark mode support
  * @param score - Quality score (0-100)
- * @returns Tailwind CSS class string
+ * @returns Tailwind CSS class string with dark mode
  */
 export function getQualityColorClasses(score: number): string {
   if (score >= QUALITY_COLOR_THRESHOLDS.GREEN) {
-    return 'text-green-700 bg-green-50 border-green-200';
+    return 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700';
   }
   if (score >= QUALITY_COLOR_THRESHOLDS.PURPLE) {
-    return 'text-purple-700 bg-purple-50 border-purple-200';
+    return 'text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-700';
   }
   if (score >= QUALITY_COLOR_THRESHOLDS.AMBER) {
-    return 'text-amber-700 bg-amber-50 border-amber-200';
+    return 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700';
   }
-  return 'text-gray-700 bg-gray-50 border-gray-200';
+  return 'text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600';
 }
 
 // ============================================================================
@@ -330,23 +332,24 @@ export function getRelevanceTierLabel(score: number): string {
 
 /**
  * Get Tailwind CSS classes for relevance tier badge color
+ * Phase 10.145: Added dark mode support
  * @param score - Relevance score (0-100+)
- * @returns Tailwind CSS class string
+ * @returns Tailwind CSS class string with dark mode
  */
 export function getRelevanceColorClasses(score: number): string {
   if (score >= RELEVANCE_COLOR_THRESHOLDS.EMERALD) {
-    return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+    return 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700';
   }
   if (score >= RELEVANCE_COLOR_THRESHOLDS.GREEN) {
-    return 'text-green-700 bg-green-50 border-green-200';
+    return 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700';
   }
   if (score >= RELEVANCE_COLOR_THRESHOLDS.BLUE) {
-    return 'text-blue-700 bg-blue-50 border-blue-200';
+    return 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700';
   }
   if (score >= RELEVANCE_COLOR_THRESHOLDS.AMBER) {
-    return 'text-amber-700 bg-amber-50 border-amber-200';
+    return 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700';
   }
-  return 'text-gray-700 bg-gray-50 border-gray-200';
+  return 'text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600';
 }
 
 // ============================================================================
@@ -368,23 +371,24 @@ export function getConfidenceLabel(availableMetrics: number): string {
 
 /**
  * Get Tailwind CSS classes for confidence badge color
+ * Phase 10.145: Added dark mode support
  * @param availableMetrics - Number of metrics available (0-4)
- * @returns Tailwind CSS class string
+ * @returns Tailwind CSS class string with dark mode
  */
 export function getConfidenceColorClasses(availableMetrics: number): string {
   if (availableMetrics >= CONFIDENCE_THRESHOLDS.HIGH) {
-    return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+    return 'text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700';
   }
   if (availableMetrics >= CONFIDENCE_THRESHOLDS.GOOD) {
-    return 'text-green-600 bg-green-50 border-green-200';
+    return 'text-green-600 dark:text-green-300 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700';
   }
   if (availableMetrics >= CONFIDENCE_THRESHOLDS.MODERATE) {
-    return 'text-amber-600 bg-amber-50 border-amber-200';
+    return 'text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700';
   }
   if (availableMetrics >= CONFIDENCE_THRESHOLDS.LOW) {
-    return 'text-orange-600 bg-orange-50 border-orange-200';
+    return 'text-orange-600 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-700';
   }
-  return 'text-gray-500 bg-gray-50 border-gray-200';
+  return 'text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600';
 }
 
 /**
@@ -437,23 +441,24 @@ export function getRankingScoreLabel(score: number): string {
 
 /**
  * Get Tailwind CSS classes for ranking score badge color
+ * Phase 10.145: Added dark mode support
  * @param score - Combined ranking score (0-100)
- * @returns Tailwind CSS class string
+ * @returns Tailwind CSS class string with dark mode
  */
 export function getRankingColorClasses(score: number): string {
   if (score >= RANKING_COLOR_THRESHOLDS.PURPLE) {
-    return 'text-purple-700 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-300';
+    return 'text-purple-700 dark:text-purple-300 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 border-purple-300 dark:border-purple-600';
   }
   if (score >= RANKING_COLOR_THRESHOLDS.GREEN) {
-    return 'text-green-700 bg-green-50 border-green-200';
+    return 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700';
   }
   if (score >= RANKING_COLOR_THRESHOLDS.BLUE) {
-    return 'text-blue-700 bg-blue-50 border-blue-200';
+    return 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700';
   }
   if (score >= RANKING_COLOR_THRESHOLDS.AMBER) {
-    return 'text-amber-700 bg-amber-50 border-amber-200';
+    return 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700';
   }
-  return 'text-gray-700 bg-gray-50 border-gray-200';
+  return 'text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600';
 }
 
 /**

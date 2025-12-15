@@ -1,6 +1,7 @@
 /**
  * PaperCard Component (Refactored)
  * Phase 10.123 - Netflix-Grade PaperCard Redesign
+ * Phase 10.145 - Apple-Grade Simplicity (removed redundant badges)
  *
  * **Refactored:** Reduced from 961 lines to < 400 lines using composition
  * **Pattern:** Component composition with focused sub-components
@@ -11,6 +12,10 @@
  * ✅ Phase 3: CollapsibleMetadata with progressive disclosure
  * ✅ Phase 4: Memoized PaperCard with custom comparison
  * ✅ Phase 5: Analytics integration (tooltip + metadata tracking)
+ *
+ * PHASE 10.145 SIMPLIFICATION:
+ * ✅ Removed PaperStatusBadges (checkbox shows extraction state)
+ * ✅ Removed BM25 from PaperQualityBadges (MatchScoreBadge shows combined ranking)
  *
  * Displays individual paper with rich metadata, quality indicators, and actions
  *
@@ -28,7 +33,7 @@ import {
   PaperMetadata,
   PaperAccessBadges,
   PaperQualityBadges,
-  PaperStatusBadges,
+  // Phase 10.145: PaperStatusBadges REMOVED - checkbox already shows extraction state
   PaperActions,
   CollapsibleMetadata,
   PaperCardErrorBoundary,
@@ -158,11 +163,12 @@ function PaperCardComponent({
       tabIndex={0}
       onKeyDown={handleCardKeyDown}
     >
-      {/* Status Badges (top-right corner) */}
-      <PaperStatusBadges
-        isExtracting={isExtracting}
-        isExtracted={isExtracted}
-      />
+      {/* Phase 10.145: PaperStatusBadges REMOVED for Apple simplicity
+        * Extraction status now shown only via checkbox indicators:
+        * - Spinner when extracting
+        * - Checkmark when extracted
+        * - Colored borders for visual feedback
+        */}
 
       <div className="flex justify-between items-start">
         <div className="flex-1">
@@ -188,6 +194,17 @@ function PaperCardComponent({
             isEligible={paper.isEligible}
           />
 
+          {/* Phase 10.145: Abstract Preview - Apple-grade simplicity */}
+          {paper.abstract && (
+            <p
+              className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2"
+              title={paper.abstract}
+              aria-label="Paper abstract preview"
+            >
+              {paper.abstract}
+            </p>
+          )}
+
           {/* Access and Quality Badges */}
           <div className="flex gap-4 mt-2 flex-wrap items-center">
             {/* Phase 10.123 Phase 2: Netflix-Grade Match Score Badge */}
@@ -196,6 +213,7 @@ function PaperCardComponent({
               neuralRank={paper.neuralRank}
               neuralExplanation={paper.neuralExplanation}
               qualityScore={paper.qualityScore}
+              overallScore={paper.overallScore}
               citationCount={paper.citationCount}
               citationsPerYear={paper.citationsPerYear}
               venue={paper.venue}
@@ -210,16 +228,15 @@ function PaperCardComponent({
               hasFullText={paper.hasFullText}
               fullTextStatus={paper.fullTextStatus}
               fullTextSource={paper.fullTextSource}
+              pdfUrl={paper.pdfUrl}
+              hasPdf={paper.hasPdf}
             />
 
-            {/* Quality Indicators (citations/year, quality score) */}
+            {/* Phase 10.154: Simplified - only citations/year shown here */}
+            {/* Quality score moved to MatchScoreBadge composite breakdown */}
             <PaperQualityBadges
               citationsPerYear={paper.citationsPerYear}
-              qualityScore={paper.qualityScore}
-              qualityScoreBreakdown={paper.qualityScoreBreakdown}
               citationCount={paper.citationCount}
-              relevanceScore={paper.relevanceScore}
-              metadataCompleteness={paper.metadataCompleteness}
             />
           </div>
 
@@ -267,10 +284,12 @@ export const PaperCard = React.memo(PaperCardComponent, (prev, next) => {
   }
 
   // Check key paper properties that affect display
+  // Phase 10.147: Include overallScore in comparison (critical for composite scoring)
   if (
     prev.paper.neuralRelevanceScore !== next.paper.neuralRelevanceScore ||
     prev.paper.neuralRank !== next.paper.neuralRank ||
     prev.paper.qualityScore !== next.paper.qualityScore ||
+    prev.paper.overallScore !== next.paper.overallScore ||
     prev.paper.citationCount !== next.paper.citationCount
   ) {
     return false;

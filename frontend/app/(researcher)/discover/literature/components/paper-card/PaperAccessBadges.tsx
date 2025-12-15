@@ -37,6 +37,10 @@ interface PaperAccessBadgesProps {
     | undefined;
   /** Source of full-text (unpaywall, pmc, etc.) */
   fullTextSource?: string | null | undefined;
+  /** Direct URL to open access PDF */
+  pdfUrl?: string | null | undefined;
+  /** Whether PDF is available */
+  hasPdf?: boolean | undefined;
 }
 
 // ============================================================================
@@ -45,10 +49,12 @@ interface PaperAccessBadgesProps {
 
 export function PaperAccessBadges({
   url,
-  doi,
+  doi: _doi, // Reserved for future DOI-based access checks
   hasFullText = false,
   fullTextStatus = undefined,
   fullTextSource = undefined,
+  pdfUrl = undefined,
+  hasPdf = false,
 }: PaperAccessBadgesProps) {
   // Determine access status with input validation
   const actualHasFullText = hasFullText === true || fullTextStatus === 'success';
@@ -56,14 +62,25 @@ export function PaperAccessBadges({
   const isPaywalled = isPaywalledPublisher(url);
   const isOpenSource = isKnownOpenSource(url);
 
-  // Verified open access: Unpaywall/PMC OR known open source (but NOT paywalled)
+  // Check if there's a free PDF available (direct link or hasPdf flag)
+  const hasFreePdf = !!(pdfUrl && pdfUrl.trim().length > 0) || hasPdf === true;
+
+  // Verified open access: Unpaywall/PMC OR known open source OR free PDF (but NOT paywalled)
   const isVerifiedOpenAccess =
-    (fullTextSource === 'unpaywall' || fullTextSource === 'pmc' || isOpenSource) &&
+    (fullTextSource === 'unpaywall' || fullTextSource === 'pmc' || isOpenSource || hasFreePdf) &&
     !isPaywalled;
 
-  // Show subscription required if: paywalled OR (has DOI but no full text)
+  // Show subscription required ONLY when:
+  // 1. URL is from a paywalled publisher, AND
+  // 2. No free PDF link available, AND
+  // 3. No full text available (and not currently fetching)
+  // This means: the ONLY way to get full text is to sign in with subscription
+  // (No free PDF download link, no direct free full text access)
   const hasRestrictedAccess =
-    isPaywalled || (doi && !actualHasFullText && !isFetching);
+    isPaywalled &&
+    !hasFreePdf &&
+    !actualHasFullText &&
+    !isFetching;
 
   return (
     <>

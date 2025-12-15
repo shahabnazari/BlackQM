@@ -557,9 +557,14 @@ export class Paper {
   // Phase 10.99 Week 2: Performance Optimization - Scoring Properties
   // Added to support in-place mutations during search pipeline
   relevanceScore?: number; // BM25 relevance score (Robertson & Walker, 1994)
-  neuralRelevanceScore?: number; // SciBERT neural relevance score (0-1)
+  neuralRelevanceScore?: number; // SciBERT neural relevance score (0-100) - How well paper matches query
   neuralRank?: number; // Neural ranking position (1 = most relevant)
   neuralExplanation?: string; // Explanation of neural score
+  // Phase 10.147: Composite Overall Score - INNOVATIVE RANKING
+  // Combines relevance + quality using harmonic mean to ensure BEST papers rank highest
+  // Formula: 2 × (relevance × quality) / (relevance + quality)
+  // This penalizes papers where either dimension is low, ensuring high relevance + high quality papers win
+  overallScore?: number; // Composite score (0-100) - PRIMARY RANKING SCORE
   domain?: string; // Domain classification (e.g., "Biology", "Medicine")
   domainConfidence?: number; // Domain classification confidence (0-1)
   rejectionReason?: string; // Rejection reason if filtered out

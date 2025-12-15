@@ -138,12 +138,17 @@ export interface Paper {
   // Formula: 15%×BM25 + 55%×Semantic + 30%×ThemeFit = Combined Score (0-100)
   // ============================================================================
 
-  /** Combined relevance score (0-100) - THIS IS THE ACTUAL RANKING SCORE */
+  /** Combined relevance score (0-100) - How well paper matches query */
   neuralRelevanceScore?: number;
   /** Neural ranking position (1 = most relevant) */
   neuralRank?: number;
   /** Explanation: "BM25=45, Sem=72, ThemeFit=58" */
   neuralExplanation?: string;
+  /** Phase 10.147: Composite overall score (0-100) - INNOVATIVE RANKING */
+  /** Combines relevance + quality using harmonic mean: 2 × (relevance × quality) / (relevance + quality) */
+  /** This is the PRIMARY ranking score - ensures BEST papers (high relevance + high quality) rank highest */
+  /** Penalizes papers where either dimension is low, ensuring balanced excellence */
+  overallScore?: number;
   /** Semantic similarity score (0-1) from embedding comparison */
   semanticScore?: number;
   /** Theme-fit score for Q-methodology (0-1) */

@@ -13,7 +13,7 @@ import {
   Search,
   Filter,
   Sparkles,
-  CheckCircle,
+  // Phase 10.152: Removed CheckCircle - was only used by 'ready' stage
   Zap,
   Target,
 } from 'lucide-react';
@@ -56,11 +56,7 @@ export const STAGE_COLORS = {
     secondary: '#C4B5FD',
     gradient: 'from-purple-500 to-pink-400',
   },
-  ready: {
-    primary: '#06B6D4',
-    secondary: '#67E8F9',
-    gradient: 'from-cyan-500 to-teal-400',
-  },
+  // Phase 10.152: Removed 'ready' - pipeline ends at 'rank'
 } as const;
 
 /**
@@ -209,23 +205,7 @@ export const STAGE_TECHNICAL_DETAILS: Record<string, {
     ],
     scienceNote: 'Progressive semantic ranking balances speed vs. accuracy',
   },
-  ready: {
-    title: 'Results Compilation',
-    algorithm: 'Final Aggregation & Caching',
-    metrics: [
-      'Cache hit rate: 85%+',
-      'Result set: Up to 600 papers',
-      'Export formats: PDF, BibTeX, RIS',
-    ],
-    technicalSteps: [
-      'Final score normalization (0-100)',
-      'Result caching for 24h',
-      'Methodology report generation',
-      'Export preparation',
-      'Analytics logging (anonymized)',
-    ],
-    scienceNote: 'Results cached for fast subsequent access',
-  },
+  // Phase 10.152: Removed 'ready' - users see results as soon as ranking completes
 };
 
 /**
@@ -268,20 +248,12 @@ export const PIPELINE_STAGES: PipelineStageConfig[] = [
     icon: Sparkles,
     description: 'AI-powered scoring',
     activeDescription: 'Calculating relevance...',
-    completeDescription: 'Papers ranked',
+    completeDescription: 'Search complete!', // Phase 10.152: Final stage now shows completion
     color: STAGE_COLORS.rank,
     substages: ['bm25-scoring', 'semantic-tier-1', 'semantic-tier-2', 'semantic-tier-3'],
   },
-  {
-    id: 'ready',
-    name: 'Ready',
-    icon: CheckCircle,
-    description: 'Papers ready to explore',
-    activeDescription: 'Finalizing...',
-    completeDescription: 'Search complete!',
-    color: STAGE_COLORS.ready,
-    substages: [],
-  },
+  // Phase 10.152: Removed 'ready' stage - pipeline ends at 'rank' for cleaner user journey
+  // When ranking completes, papers are immediately visible - no need for a separate "Ready" stage
 ];
 
 // ============================================================================
@@ -415,12 +387,15 @@ export const PARTICLE_INTENSITY = {
 
 /**
  * Semantic tier display configuration
+ * Phase 10.146: Enhanced with detailed algorithm explanations
  */
 export const SEMANTIC_TIER_CONFIG: Record<SemanticTierName, {
   icon: typeof Zap;
   displayName: string;
   shortName: string;
   description: string;
+  algorithmDetail: string;
+  whyFast: string;
   paperRange: string;
   targetLatencyMs: number;
 }> = {
@@ -429,6 +404,8 @@ export const SEMANTIC_TIER_CONFIG: Record<SemanticTierName, {
     displayName: 'Quick Preview',
     shortName: 'Quick',
     description: 'Top 50 most relevant papers',
+    algorithmDetail: 'BM25 lexical scoring - keyword matching optimized for speed',
+    whyFast: 'Uses lightweight keyword frequency analysis, no deep learning inference',
     paperRange: '1-50',
     targetLatencyMs: 500,
   },
@@ -437,6 +414,8 @@ export const SEMANTIC_TIER_CONFIG: Record<SemanticTierName, {
     displayName: 'Refined Results',
     shortName: 'Refined',
     description: 'Extended to 200 papers',
+    algorithmDetail: 'Dense vector retrieval - semantic similarity via embeddings',
+    whyFast: 'Pre-computed embeddings with approximate nearest neighbor search',
     paperRange: '51-200',
     targetLatencyMs: 2000,
   },
@@ -445,6 +424,8 @@ export const SEMANTIC_TIER_CONFIG: Record<SemanticTierName, {
     displayName: 'Complete Analysis',
     shortName: 'Complete',
     description: 'Full 600 paper analysis',
+    algorithmDetail: 'Cross-encoder re-ranking - deep pairwise query-document scoring',
+    whyFast: 'Full transformer inference for maximum accuracy, takes longer',
     paperRange: '201-600',
     targetLatencyMs: 10000,
   },
@@ -646,7 +627,8 @@ export const CANVAS_DIMENSIONS = {
 export const ARIA_LABELS = {
   // Pipeline container
   pipeline: 'Search pipeline progress visualization',
-  pipelineDescription: 'Interactive visualization showing search progress through 5 stages: Analyze, Discover, Refine, Rank, and Ready',
+  // Phase 10.152: Updated to 4 stages (removed Ready)
+  pipelineDescription: 'Interactive visualization showing search progress through 4 stages: Analyze, Discover, Refine, and Rank',
 
   // Stage labels
   stage: (name: string, status: string) => `${name} stage: ${status}`,

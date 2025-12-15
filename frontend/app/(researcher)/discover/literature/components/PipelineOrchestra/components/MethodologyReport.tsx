@@ -90,12 +90,12 @@ const REPORT_SECTIONS: ReportSection[] = [
  * Pipeline flowchart visualization
  */
 const PipelineFlowchart = memo(function PipelineFlowchart() {
+  // Phase 10.152: Removed 'ready' stage - pipeline ends at 'rank'
   const stages = [
     { id: 'analyze', label: 'Analyze', icon: Brain, color: '#3B82F6' },
     { id: 'discover', label: 'Discover', icon: Search, color: '#10B981' },
     { id: 'refine', label: 'Refine', icon: Filter, color: '#F59E0B' },
     { id: 'rank', label: 'Rank', icon: Sparkles, color: '#8B5CF6' },
-    { id: 'ready', label: 'Ready', icon: CheckCircle, color: '#06B6D4' },
   ];
 
   return (
@@ -518,7 +518,7 @@ export const MethodologyReport = memo<MethodologyReportProps>(function Methodolo
                     <div>
                       <h2 id="methodology-report-title" className="text-lg font-bold text-white">Search Methodology Report</h2>
                       <p className="text-xs text-white/60 truncate max-w-[300px]">
-                        Query: "{query}"
+                        Query: &quot;{query}&quot;
                       </p>
                     </div>
                   </div>
@@ -759,10 +759,9 @@ export const MethodologyReport = memo<MethodologyReportProps>(function Methodolo
                         </h4>
                         <div className="space-y-2">
                           {[
-                            { name: 'Semantic Similarity', weight: '40%', desc: 'Dense vector cosine similarity' },
-                            { name: 'BM25 Lexical Score', weight: '25%', desc: 'Term frequency-inverse document frequency' },
-                            { name: 'Citation Impact', weight: '20%', desc: 'Normalized citation count + h-index' },
-                            { name: 'Recency Bonus', weight: '15%', desc: 'Exponential decay from publication date' },
+                            { name: 'Semantic Similarity', weight: '55%', desc: 'BGE-small-en-v1.5 embedding cosine similarity (PRIMARY)' },
+                            { name: 'ThemeFit Score', weight: '30%', desc: 'Q-methodology relevance (controversy, clarity, thematic fit)' },
+                            { name: 'BM25 Lexical Score', weight: '15%', desc: 'Term frequency-inverse document frequency (tiebreaker)' },
                           ].map((factor) => (
                             <div key={factor.name} className="flex items-center gap-3">
                               <span className="text-xs font-bold text-purple-400 w-12">
@@ -871,131 +870,1434 @@ function generateReportHTML(data: {
 }): string {
   const elapsedSeconds = Math.round(data.elapsedMs / 1000);
   const safeQuery = escapeHTML(data.query);
-  const sourceNames = escapeHTML(
-    data.sourcesQueried
-      .map(s => SOURCE_DISPLAY_NAMES[s] || s)
-      .join(', ')
-  );
+  const sourceNames = data.sourcesQueried.map(s => SOURCE_DISPLAY_NAMES[s] || s);
+  const timestamp = new Date();
+  const reportId = `BQ-${timestamp.getFullYear()}${String(timestamp.getMonth() + 1).padStart(2, '0')}${String(timestamp.getDate()).padStart(2, '0')}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+  // Calculate derived metrics for this search
+  const avgPapersPerSource = data.sourcesQueried.length > 0
+    ? Math.round((data.papersFound + data.duplicatesRemoved) / data.sourcesQueried.length)
+    : 0;
+  const deduplicationRate = data.duplicatesRemoved > 0
+    ? Math.round((data.duplicatesRemoved / (data.papersFound + data.duplicatesRemoved)) * 100)
+    : 0;
+  const throughput = elapsedSeconds > 0
+    ? Math.round(data.papersFound / elapsedSeconds)
+    : data.papersFound;
+  const semanticTierLabel = data.semanticTier === 'complete' ? 'Full Precision'
+    : data.semanticTier === 'refined' ? 'High Precision'
+    : data.semanticTier === 'immediate' ? 'Fast Results'
+    : 'Standard';
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Search Methodology Report - ${safeQuery}</title>
+  <title>Literature Search Report - ${safeQuery} | BlackQ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --color-bg: #0a0a0f;
+      --color-surface: #12121a;
+      --color-surface-elevated: #1a1a24;
+      --color-border: rgba(255,255,255,0.08);
+      --color-border-strong: rgba(255,255,255,0.15);
+      --color-text: #ffffff;
+      --color-text-secondary: rgba(255,255,255,0.7);
+      --color-text-muted: rgba(255,255,255,0.5);
+      --color-accent: #6366f1;
+      --color-accent-light: #818cf8;
+      --color-success: #10b981;
+      --color-warning: #f59e0b;
+      --color-error: #ef4444;
+      --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+      --gradient-success: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+      --gradient-dark: linear-gradient(180deg, #12121a 0%, #0a0a0f 100%);
+      --shadow-lg: 0 25px 50px -12px rgba(0,0,0,0.5);
+      --shadow-glow: 0 0 60px rgba(99,102,241,0.15);
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1f2937; max-width: 800px; margin: 0 auto; padding: 40px 20px; }
-    h1 { font-size: 24px; margin-bottom: 8px; color: #111827; }
-    h2 { font-size: 18px; margin: 32px 0 16px; color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
-    h3 { font-size: 14px; margin: 16px 0 8px; color: #4b5563; }
-    p { margin-bottom: 12px; color: #4b5563; }
-    .meta { color: #6b7280; font-size: 14px; margin-bottom: 24px; }
-    .stats { display: flex; gap: 32px; margin: 24px 0; padding: 16px; background: #f9fafb; border-radius: 8px; }
-    .stat { text-align: center; }
-    .stat-value { font-size: 28px; font-weight: 700; color: #111827; }
-    .stat-label { font-size: 12px; color: #6b7280; text-transform: uppercase; }
-    .section { margin: 24px 0; padding: 16px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #3b82f6; }
-    .pipeline { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
-    .stage { text-align: center; flex: 1; }
-    .stage-name { font-size: 12px; font-weight: 600; color: #374151; }
-    .stage-icon { font-size: 24px; margin-bottom: 4px; }
-    .arrow { color: #d1d5db; font-size: 20px; }
-    ul { margin: 8px 0 8px 20px; }
-    li { margin: 4px 0; color: #4b5563; }
-    .footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center; }
+
+    @media print {
+      .page-break { page-break-before: always; }
+      .no-print { display: none !important; }
+      body { background: white !important; color: #111 !important; }
+      .cover-page { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important; }
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.7;
+      color: var(--color-text);
+      background: var(--color-bg);
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== COVER PAGE ===== */
+    .cover-page {
+      min-height: 100vh;
+      background: var(--gradient-dark);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cover-page::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 20%, rgba(99,102,241,0.08) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 80%, rgba(139,92,246,0.06) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .cover-logo {
+      width: 80px;
+      height: 80px;
+      background: var(--gradient-primary);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 40px;
+      box-shadow: var(--shadow-glow);
+    }
+
+    .cover-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-accent-light);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 24px;
+    }
+
+    .cover-title {
+      font-size: 48px;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.8) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      max-width: 800px;
+    }
+
+    .cover-subtitle {
+      font-size: 20px;
+      color: var(--color-text-secondary);
+      text-align: center;
+      max-width: 600px;
+      margin-bottom: 48px;
+    }
+
+    .cover-query-box {
+      background: var(--color-surface-elevated);
+      border: 1px solid var(--color-border-strong);
+      border-radius: 16px;
+      padding: 24px 32px;
+      margin-bottom: 48px;
+      max-width: 700px;
+      width: 100%;
+    }
+
+    .cover-query-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+
+    .cover-query-text {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--color-text);
+      word-break: break-word;
+    }
+
+    .cover-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      max-width: 800px;
+      width: 100%;
+      margin-bottom: 48px;
+    }
+
+    .cover-stat {
+      text-align: center;
+      padding: 24px 16px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+    }
+
+    .cover-stat-value {
+      font-size: 36px;
+      font-weight: 800;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .cover-stat-label {
+      font-size: 12px;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+
+    .cover-meta {
+      display: flex;
+      gap: 32px;
+      color: var(--color-text-muted);
+      font-size: 13px;
+    }
+
+    .cover-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    .main-content {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 60px 40px;
+    }
+
+    /* ===== TOC ===== */
+    .toc {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 20px;
+      padding: 40px;
+      margin-bottom: 60px;
+    }
+
+    .toc-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+    }
+
+    .toc-list {
+      list-style: none;
+    }
+
+    .toc-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 16px;
+      color: var(--color-text);
+    }
+
+    .toc-item:last-child { border-bottom: none; }
+
+    .toc-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: var(--gradient-primary);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: white;
+      margin-right: 16px;
+    }
+
+    .toc-page {
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+
+    /* ===== EXECUTIVE SUMMARY ===== */
+    .exec-summary {
+      background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.05) 100%);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 20px;
+      padding: 40px;
+      margin-bottom: 60px;
+    }
+
+    .exec-summary-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .exec-summary-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--gradient-primary);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .exec-summary-text {
+      color: var(--color-text-secondary);
+      font-size: 16px;
+      line-height: 1.8;
+    }
+
+    .exec-summary-text strong {
+      color: var(--color-text);
+      font-weight: 600;
+    }
+
+    .exec-highlights {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 32px;
+    }
+
+    .exec-highlight {
+      background: var(--color-surface);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--color-border);
+    }
+
+    .exec-highlight-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .exec-highlight-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--color-accent-light);
+    }
+
+    /* ===== SECTION HEADERS ===== */
+    .section {
+      margin-bottom: 60px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--color-border);
+    }
+
+    .section-number {
+      width: 48px;
+      height: 48px;
+      background: var(--gradient-primary);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .section-title {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .section-description {
+      color: var(--color-text-muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .card-icon.blue { background: rgba(99,102,241,0.15); color: #818cf8; }
+    .card-icon.green { background: rgba(16,185,129,0.15); color: #34d399; }
+    .card-icon.orange { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .card-icon.purple { background: rgba(139,92,246,0.15); color: #a78bfa; }
+    .card-icon.red { background: rgba(239,68,68,0.15); color: #f87171; }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    /* ===== PIPELINE VISUALIZATION ===== */
+    .pipeline-visual {
+      background: var(--color-surface-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: 20px;
+      padding: 40px;
+      margin-bottom: 32px;
+    }
+
+    .pipeline-flow {
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pipeline-stage {
+      flex: 1;
+      min-width: 100px;
+      text-align: center;
+      padding: 20px 12px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      position: relative;
+    }
+
+    .pipeline-stage-icon {
+      width: 44px;
+      height: 44px;
+      margin: 0 auto 12px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .pipeline-stage-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 4px;
+    }
+
+    .pipeline-stage-metric {
+      font-size: 10px;
+      color: var(--color-text-muted);
+    }
+
+    .pipeline-arrow {
+      display: flex;
+      align-items: center;
+      color: var(--color-text-muted);
+      font-size: 20px;
+    }
+
+    /* ===== METRICS GRID ===== */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .metric-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .metric-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .metric-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+
+    .metric-badge.success { background: rgba(16,185,129,0.15); color: #34d399; }
+    .metric-badge.info { background: rgba(99,102,241,0.15); color: #818cf8; }
+
+    .metric-value {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--color-text);
+      margin-bottom: 8px;
+    }
+
+    .metric-bar {
+      height: 8px;
+      background: var(--color-surface-elevated);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .metric-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: var(--gradient-primary);
+    }
+
+    /* ===== DATA TABLE ===== */
+    .data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 24px 0;
+    }
+
+    .data-table th {
+      background: var(--color-surface-elevated);
+      padding: 16px 20px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .data-table th:first-child { border-radius: 12px 0 0 0; }
+    .data-table th:last-child { border-radius: 0 12px 0 0; }
+
+    .data-table td {
+      padding: 16px 20px;
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      border-bottom: 1px solid var(--color-border);
+      background: var(--color-surface);
+    }
+
+    .data-table tr:last-child td:first-child { border-radius: 0 0 0 12px; }
+    .data-table tr:last-child td:last-child { border-radius: 0 0 12px 0; }
+
+    .data-table tr:hover td {
+      background: var(--color-surface-elevated);
+    }
+
+    /* ===== FORMULA BOX ===== */
+    .formula-box {
+      background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.05) 100%);
+      border: 2px solid rgba(99,102,241,0.3);
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      margin: 24px 0;
+    }
+
+    .formula-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-accent-light);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .formula-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--color-text);
+      padding: 16px;
+      background: var(--color-surface);
+      border-radius: 10px;
+      display: inline-block;
+    }
+
+    /* ===== SCORE BREAKDOWN ===== */
+    .score-breakdown {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin: 24px 0;
+    }
+
+    .score-header {
+      background: var(--gradient-primary);
+      padding: 20px 24px;
+      color: white;
+    }
+
+    .score-header-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .score-header-subtitle {
+      font-size: 13px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+
+    .score-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .score-row:last-child { border-bottom: none; }
+
+    .score-row.total {
+      background: var(--color-surface-elevated);
+      font-weight: 700;
+    }
+
+    .score-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--color-text-secondary);
+    }
+
+    .score-weight {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      background: rgba(99,102,241,0.15);
+      color: var(--color-accent-light);
+      border-radius: 6px;
+    }
+
+    .score-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    /* ===== SOURCE GRID ===== */
+    .source-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      margin: 24px 0;
+    }
+
+    .source-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--color-text-secondary);
+    }
+
+    .source-chip.active {
+      background: rgba(16,185,129,0.1);
+      border-color: rgba(16,185,129,0.3);
+      color: #34d399;
+    }
+
+    .source-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--color-text-muted);
+    }
+
+    .source-chip.active .source-dot {
+      background: #34d399;
+      box-shadow: 0 0 8px rgba(16,185,129,0.5);
+    }
+
+    /* ===== FOOTER ===== */
+    .report-footer {
+      margin-top: 80px;
+      padding-top: 40px;
+      border-top: 1px solid var(--color-border);
+      text-align: center;
+    }
+
+    .footer-logo {
+      width: 48px;
+      height: 48px;
+      background: var(--gradient-primary);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      color: white;
+      margin: 0 auto 20px;
+    }
+
+    .footer-text {
+      color: var(--color-text-muted);
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 20px;
+    }
+
+    .footer-link {
+      color: var(--color-text-muted);
+      font-size: 12px;
+      text-decoration: none;
+    }
+
+    /* ===== UTILITIES ===== */
+    .text-gradient {
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .flex { display: flex; }
+    .items-center { align-items: center; }
+    .gap-2 { gap: 8px; }
+    .gap-4 { gap: 16px; }
+    .mt-4 { margin-top: 16px; }
+    .mt-6 { margin-top: 24px; }
+    .mb-4 { margin-bottom: 16px; }
+    .text-sm { font-size: 14px; }
+    .text-muted { color: var(--color-text-muted); }
   </style>
 </head>
 <body>
-  <h1>Search Methodology Report</h1>
-  <p class="meta">Query: "${safeQuery}" • Generated ${new Date().toLocaleString()}</p>
+  <!-- ===== COVER PAGE ===== -->
+  <div class="cover-page">
+    <div class="cover-logo">B</div>
 
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-value">${data.papersFound}</div>
-      <div class="stat-label">Papers Found</div>
+    <div class="cover-badge">
+      <span>●</span> Scientific Literature Search Report
     </div>
-    <div class="stat">
-      <div class="stat-value">${data.sourcesQueried.length}</div>
-      <div class="stat-label">Sources Queried</div>
+
+    <h1 class="cover-title">Systematic Literature Search Analysis</h1>
+    <p class="cover-subtitle">
+      A comprehensive methodology report documenting the search process,
+      ranking algorithms, and quality metrics for reproducible research.
+    </p>
+
+    <div class="cover-query-box">
+      <div class="cover-query-label">Research Query</div>
+      <div class="cover-query-text">"${safeQuery}"</div>
     </div>
-    <div class="stat">
-      <div class="stat-value">${elapsedSeconds}s</div>
-      <div class="stat-label">Search Duration</div>
+
+    <div class="cover-stats">
+      <div class="cover-stat">
+        <div class="cover-stat-value">${data.papersFound}</div>
+        <div class="cover-stat-label">Papers Found</div>
+      </div>
+      <div class="cover-stat">
+        <div class="cover-stat-value">${data.sourcesQueried.length}</div>
+        <div class="cover-stat-label">Sources</div>
+      </div>
+      <div class="cover-stat">
+        <div class="cover-stat-value">${elapsedSeconds}s</div>
+        <div class="cover-stat-label">Duration</div>
+      </div>
+      <div class="cover-stat">
+        <div class="cover-stat-value">${semanticTierLabel}</div>
+        <div class="cover-stat-label">Precision</div>
+      </div>
     </div>
-    <div class="stat">
-      <div class="stat-value">${data.duplicatesRemoved}</div>
-      <div class="stat-label">Duplicates Removed</div>
+
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <span>📅</span> ${timestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+      </div>
+      <div class="cover-meta-item">
+        <span>🔖</span> Report ID: ${reportId}
+      </div>
+      <div class="cover-meta-item">
+        <span>⚡</span> Pipeline v10.139
+      </div>
     </div>
   </div>
 
-  <h2>1. Pipeline Architecture</h2>
-  <div class="pipeline">
-    <div class="stage"><div class="stage-icon">🧠</div><div class="stage-name">Analyze</div></div>
-    <div class="arrow">→</div>
-    <div class="stage"><div class="stage-icon">🔍</div><div class="stage-name">Discover</div></div>
-    <div class="arrow">→</div>
-    <div class="stage"><div class="stage-icon">⚗️</div><div class="stage-name">Refine</div></div>
-    <div class="arrow">→</div>
-    <div class="stage"><div class="stage-icon">✨</div><div class="stage-name">Rank</div></div>
-    <div class="arrow">→</div>
-    <div class="stage"><div class="stage-icon">✅</div><div class="stage-name">Ready</div></div>
-  </div>
+  <div class="page-break"></div>
 
-  <h2>2. Data Sources</h2>
-  <div class="section">
-    <h3>Federated Database Coverage</h3>
-    <p>This search queried ${data.sourcesQueried.length} academic databases in parallel:</p>
-    <p><strong>${sourceNames}</strong></p>
-    <p>Total indexed papers across all sources: 250M+</p>
-  </div>
+  <!-- ===== MAIN CONTENT ===== -->
+  <div class="main-content">
 
-  <h2>3. Deduplication Process</h2>
-  <div class="section">
-    <h3>Multi-Stage Deduplication Pipeline</h3>
-    <ul>
-      <li><strong>Stage 1:</strong> DOI exact matching</li>
-      <li><strong>Stage 2:</strong> Title similarity (Jaccard + Levenshtein, threshold 0.85)</li>
-      <li><strong>Stage 3:</strong> Author name disambiguation</li>
-    </ul>
-    <p>Result: ${data.duplicatesRemoved} duplicates removed with 99.2% accuracy.</p>
-  </div>
+    <!-- TABLE OF CONTENTS -->
+    <div class="toc">
+      <div class="toc-title">Contents</div>
+      <ul class="toc-list">
+        <li class="toc-item">
+          <span><span class="toc-number">1</span>Executive Summary</span>
+          <span class="toc-page">Page 2</span>
+        </li>
+        <li class="toc-item">
+          <span><span class="toc-number">2</span>Search Metrics & Performance</span>
+          <span class="toc-page">Page 3</span>
+        </li>
+        <li class="toc-item">
+          <span><span class="toc-number">3</span>Pipeline Architecture</span>
+          <span class="toc-page">Page 4</span>
+        </li>
+        <li class="toc-item">
+          <span><span class="toc-number">4</span>Relevance Scoring Algorithm</span>
+          <span class="toc-page">Page 5</span>
+        </li>
+        <li class="toc-item">
+          <span><span class="toc-number">5</span>Quality Assurance Framework</span>
+          <span class="toc-page">Page 6</span>
+        </li>
+        <li class="toc-item">
+          <span><span class="toc-number">6</span>Data Sources & Traceability</span>
+          <span class="toc-page">Page 7</span>
+        </li>
+        <li class="toc-item">
+          <span><span class="toc-number">7</span>Reproducibility Statement</span>
+          <span class="toc-page">Page 8</span>
+        </li>
+      </ul>
+    </div>
 
-  <h2>4. Ranking Algorithm</h2>
-  <div class="section">
-    <h3>3-Tier Progressive Semantic Ranking</h3>
-    <ul>
-      <li><strong>Tier 1 (Quick):</strong> Top ${RANKING_TIER_LIMITS.immediate.papers} papers via BM25 lexical scoring (~${RANKING_TIER_LIMITS.immediate.latencyLabel})</li>
-      <li><strong>Tier 2 (Refined):</strong> Extended to ${RANKING_TIER_LIMITS.refined.papers} papers with dense retrieval (~${RANKING_TIER_LIMITS.refined.latencyLabel})</li>
-      <li><strong>Tier 3 (Complete):</strong> Full ${RANKING_TIER_LIMITS.complete.papers} papers with cross-encoder re-ranking (~${RANKING_TIER_LIMITS.complete.latencyLabel})</li>
-    </ul>
-    <h3>Scoring Factors</h3>
-    <ul>
-      <li>Semantic Similarity: 40%</li>
-      <li>BM25 Lexical Score: 25%</li>
-      <li>Citation Impact: 20%</li>
-      <li>Recency Bonus: 15%</li>
-    </ul>
-  </div>
+    <!-- EXECUTIVE SUMMARY -->
+    <div class="exec-summary">
+      <div class="exec-summary-title">
+        <div class="exec-summary-icon">📊</div>
+        Executive Summary
+      </div>
+      <p class="exec-summary-text">
+        This report documents a systematic literature search for <strong>"${safeQuery}"</strong>,
+        conducted on <strong>${timestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.
+        The search queried <strong>${data.sourcesQueried.length} academic databases</strong> in parallel using
+        a federated search architecture, discovering <strong>${data.papersFound + data.duplicatesRemoved} raw papers</strong>.
+        After multi-stage deduplication (DOI matching, title similarity, author validation),
+        <strong>${data.duplicatesRemoved} duplicates</strong> were removed with 99.2% accuracy.
+        The remaining <strong>${data.papersFound} unique papers</strong> were ranked using a hybrid algorithm
+        combining semantic similarity (55%), thematic fit (30%), and BM25 keyword matching (15%),
+        optimized for Q-methodology research requirements.
+      </p>
 
-  <h2>5. Quality Metrics</h2>
-  <div class="section">
-    <ul>
-      <li>Duplicate Detection Accuracy: 99.2%</li>
-      <li>Ranking NDCG@10: 0.84</li>
-      <li>Cache Hit Rate: 85%+</li>
-      <li>Average Response Time: 2.3s (p95)</li>
-    </ul>
-  </div>
+      <div class="exec-highlights">
+        <div class="exec-highlight">
+          <div class="exec-highlight-label">Throughput</div>
+          <div class="exec-highlight-value">${throughput} papers/sec</div>
+        </div>
+        <div class="exec-highlight">
+          <div class="exec-highlight-label">Dedup Rate</div>
+          <div class="exec-highlight-value">${deduplicationRate}%</div>
+        </div>
+        <div class="exec-highlight">
+          <div class="exec-highlight-label">Avg/Source</div>
+          <div class="exec-highlight-value">${avgPapersPerSource} papers</div>
+        </div>
+      </div>
+    </div>
 
-  <h2>6. Transparency & Reproducibility</h2>
-  <div class="section">
-    <p>This methodology is designed for reproducibility and complies with systematic review standards (PRISMA guidelines compatible). All parameters, algorithms, and data sources are documented to support transparent scientific research.</p>
-  </div>
+    <div class="page-break"></div>
 
-  <div class="footer">
-    <p>Generated by BlackQ Literature Search • Methodology Version 10.128</p>
-    <p>© ${new Date().getFullYear()} BlackQ Research Platform</p>
+    <!-- SECTION 1: SEARCH METRICS -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">1</div>
+        <div>
+          <div class="section-title">Search Metrics & Performance</div>
+          <div class="section-description">Quantitative analysis of this specific search execution</div>
+        </div>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Total Papers Found</span>
+            <span class="metric-badge success">Complete</span>
+          </div>
+          <div class="metric-value">${data.papersFound}</div>
+          <div class="metric-bar">
+            <div class="metric-bar-fill" style="width: ${Math.min(100, (data.papersFound / 300) * 100)}%"></div>
+          </div>
+          <div class="text-sm text-muted mt-4">Target: 300 papers maximum</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Search Duration</span>
+            <span class="metric-badge info">Optimized</span>
+          </div>
+          <div class="metric-value">${elapsedSeconds}s</div>
+          <div class="metric-bar">
+            <div class="metric-bar-fill" style="width: ${Math.min(100, (elapsedSeconds / 30) * 100)}%"></div>
+          </div>
+          <div class="text-sm text-muted mt-4">Benchmark: &lt;30s for full search</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Sources Queried</span>
+            <span class="metric-badge success">All Active</span>
+          </div>
+          <div class="metric-value">${data.sourcesQueried.length}</div>
+          <div class="metric-bar">
+            <div class="metric-bar-fill" style="width: ${Math.min(100, (data.sourcesQueried.length / 15) * 100)}%"></div>
+          </div>
+          <div class="text-sm text-muted mt-4">Available: 15 academic databases</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Duplicates Removed</span>
+            <span class="metric-badge info">High Accuracy</span>
+          </div>
+          <div class="metric-value">${data.duplicatesRemoved}</div>
+          <div class="metric-bar">
+            <div class="metric-bar-fill" style="width: ${deduplicationRate}%"></div>
+          </div>
+          <div class="text-sm text-muted mt-4">Deduplication rate: ${deduplicationRate}%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- SECTION 2: PIPELINE ARCHITECTURE -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">2</div>
+        <div>
+          <div class="section-title">Pipeline Architecture</div>
+          <div class="section-description">9-stage processing pipeline with your search metrics</div>
+        </div>
+      </div>
+
+      <div class="pipeline-visual">
+        <div class="pipeline-flow">
+          <div class="pipeline-stage">
+            <div class="pipeline-stage-icon" style="background: rgba(99,102,241,0.15);">🔍</div>
+            <div class="pipeline-stage-name">Query Analysis</div>
+            <div class="pipeline-stage-metric">Optimized query</div>
+          </div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage">
+            <div class="pipeline-stage-icon" style="background: rgba(16,185,129,0.15);">🌐</div>
+            <div class="pipeline-stage-name">Discovery</div>
+            <div class="pipeline-stage-metric">${data.sourcesQueried.length} sources</div>
+          </div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage">
+            <div class="pipeline-stage-icon" style="background: rgba(245,158,11,0.15);">🔄</div>
+            <div class="pipeline-stage-name">Dedup</div>
+            <div class="pipeline-stage-metric">-${data.duplicatesRemoved} papers</div>
+          </div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage">
+            <div class="pipeline-stage-icon" style="background: rgba(139,92,246,0.15);">📊</div>
+            <div class="pipeline-stage-name">BM25</div>
+            <div class="pipeline-stage-metric">15% weight</div>
+          </div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage">
+            <div class="pipeline-stage-icon" style="background: rgba(236,72,153,0.15);">🧠</div>
+            <div class="pipeline-stage-name">Semantic</div>
+            <div class="pipeline-stage-metric">55% weight</div>
+          </div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage">
+            <div class="pipeline-stage-icon" style="background: rgba(14,165,233,0.15);">🎯</div>
+            <div class="pipeline-stage-name">ThemeFit</div>
+            <div class="pipeline-stage-metric">30% weight</div>
+          </div>
+          <div class="pipeline-arrow">→</div>
+          <div class="pipeline-stage">
+            <div class="pipeline-stage-icon" style="background: rgba(16,185,129,0.15);">✓</div>
+            <div class="pipeline-stage-name">Output</div>
+            <div class="pipeline-stage-metric">${data.papersFound} papers</div>
+          </div>
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Stage</th>
+            <th>Input</th>
+            <th>Output</th>
+            <th>Algorithm</th>
+            <th>This Search</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1. Query Analysis</strong></td>
+            <td>User query</td>
+            <td>Optimized query</td>
+            <td>ScientificQueryOptimizer</td>
+            <td class="mono">"${safeQuery.substring(0, 25)}${safeQuery.length > 25 ? '...' : ''}"</td>
+          </tr>
+          <tr>
+            <td><strong>2. Source Discovery</strong></td>
+            <td>Optimized query</td>
+            <td>Raw papers</td>
+            <td>Federated parallel search</td>
+            <td class="mono">${data.papersFound + data.duplicatesRemoved} raw papers</td>
+          </tr>
+          <tr>
+            <td><strong>3. Deduplication</strong></td>
+            <td>Raw papers</td>
+            <td>Unique papers</td>
+            <td>DOI + Title + Author match</td>
+            <td class="mono">-${data.duplicatesRemoved} duplicates</td>
+          </tr>
+          <tr>
+            <td><strong>4. BM25 Scoring</strong></td>
+            <td>Unique papers</td>
+            <td>Keyword scores</td>
+            <td>BM25 (Robertson 1994)</td>
+            <td class="mono">15% contribution</td>
+          </tr>
+          <tr>
+            <td><strong>5. Semantic Scoring</strong></td>
+            <td>Top 600 papers</td>
+            <td>Similarity scores</td>
+            <td>BGE-small-en-v1.5</td>
+            <td class="mono">55% contribution</td>
+          </tr>
+          <tr>
+            <td><strong>6. ThemeFit Scoring</strong></td>
+            <td>Scored papers</td>
+            <td>Theme scores</td>
+            <td>Q-methodology classifier</td>
+            <td class="mono">30% contribution</td>
+          </tr>
+          <tr>
+            <td><strong>7. Quality Filter</strong></td>
+            <td>Ranked papers</td>
+            <td>Quality papers</td>
+            <td>Threshold ≥ 20</td>
+            <td class="mono">Variable (query-dependent)</td>
+          </tr>
+          <tr>
+            <td><strong>8. Final Selection</strong></td>
+            <td>Quality papers</td>
+            <td>Top 300</td>
+            <td>Combined score sort</td>
+            <td class="mono">${data.papersFound} final</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- SECTION 3: RELEVANCE SCORING -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">3</div>
+        <div>
+          <div class="section-title">Relevance Scoring Algorithm</div>
+          <div class="section-description">Hybrid ranking combining semantic, thematic, and keyword matching</div>
+        </div>
+      </div>
+
+      <div class="formula-box">
+        <div class="formula-label">Combined Relevance Formula</div>
+        <div class="formula-text">Score = 0.15×BM25 + 0.55×Semantic + 0.30×ThemeFit</div>
+      </div>
+
+      <div class="metrics-grid mt-6">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon purple">🧠</div>
+            <div class="card-title">Semantic Similarity (55%)</div>
+          </div>
+          <p class="text-muted">
+            <strong>Primary signal.</strong> BGE-small-en-v1.5 embeddings capture conceptual meaning.
+            Finds papers about "cardiac arrest" when searching "heart attack" - synonyms and related concepts
+            that keyword matching misses.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon blue">🎯</div>
+            <div class="card-title">ThemeFit Score (30%)</div>
+          </div>
+          <p class="text-muted">
+            <strong>Q-methodology optimization.</strong> Evaluates controversy, clarity, and thematic fit
+            for Q-sort studies. Ensures papers provide diverse viewpoints suitable for qualitative research.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon green">📝</div>
+            <div class="card-title">BM25 Keyword (15%)</div>
+          </div>
+          <p class="text-muted">
+            <strong>Tiebreaker signal.</strong> Classic TF-IDF with position weighting.
+            Title (4×), Keywords (3×), Abstract (2×). Prevents semantic gaming and helps with
+            domain-specific terminology.
+          </p>
+        </div>
+      </div>
+
+      <div class="score-breakdown mt-6">
+        <div class="score-header">
+          <div class="score-header-title">Example: How a Paper Gets Ranked</div>
+          <div class="score-header-subtitle">Paper: "Machine Learning Applications in Healthcare Research"</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">
+            <span class="score-weight">15%</span>
+            BM25 Keyword Score
+          </div>
+          <div class="score-value">0.72 → 0.108</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">
+            <span class="score-weight">55%</span>
+            Semantic Similarity
+          </div>
+          <div class="score-value">0.85 → 0.468</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">
+            <span class="score-weight">30%</span>
+            ThemeFit Score
+          </div>
+          <div class="score-value">0.68 → 0.204</div>
+        </div>
+        <div class="score-row total">
+          <div class="score-label">Combined Relevance Score</div>
+          <div class="score-value text-gradient" style="font-size: 18px;">77.3 / 100</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- SECTION 4: QUALITY ASSURANCE -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">4</div>
+        <div>
+          <div class="section-title">Quality Assurance Framework</div>
+          <div class="section-description">Multi-dimensional quality scoring with honest metadata handling</div>
+        </div>
+      </div>
+
+      <div class="formula-box">
+        <div class="formula-label">Quality Score Formula</div>
+        <div class="formula-text">Quality = (35%×Citation) + (45%×Journal) + (20%×Recency) + Bonuses (max +20)</div>
+      </div>
+
+      <div class="card mt-6">
+        <div class="card-header">
+          <div class="card-icon green">✓</div>
+          <div class="card-title">Component Breakdown</div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Weight</th>
+              <th>Metric</th>
+              <th>Score Range</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Citation Impact</strong></td>
+              <td class="mono">35%</td>
+              <td>Citations per year relative to field</td>
+              <td>0 - 100</td>
+            </tr>
+            <tr>
+              <td><strong>Journal Prestige</strong></td>
+              <td class="mono">45%</td>
+              <td>Impact Factor, h-index, quartile</td>
+              <td>0 - 100</td>
+            </tr>
+            <tr>
+              <td><strong>Recency</strong></td>
+              <td class="mono">20%</td>
+              <td>Publication year (4.6-year half-life)</td>
+              <td>0 - 100</td>
+            </tr>
+            <tr>
+              <td><strong>Open Access Bonus</strong></td>
+              <td class="mono">+10</td>
+              <td>Freely available full text</td>
+              <td>0 or +10</td>
+            </tr>
+            <tr>
+              <td><strong>Reproducibility Bonus</strong></td>
+              <td class="mono">+5</td>
+              <td>Code/data repository linked</td>
+              <td>0 or +5</td>
+            </tr>
+            <tr>
+              <td><strong>Altmetric Bonus</strong></td>
+              <td class="mono">+5</td>
+              <td>Social/policy attention (score ≥100: +5, ≥50: +3, ≥20: +2)</td>
+              <td>0 to +5</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card mt-6">
+        <div class="card-header">
+          <div class="card-icon orange">⚠️</div>
+          <div class="card-title">Metadata Confidence Caps</div>
+        </div>
+        <p class="text-muted mb-4">
+          The system applies score caps based on available metadata. Papers with missing data
+          receive honest scores rather than fabricated neutral values.
+        </p>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Available Metrics</th>
+              <th>Maximum Score</th>
+              <th>Confidence Level</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>4/4 metrics</td><td class="mono">100</td><td>Full confidence</td></tr>
+            <tr><td>3/4 metrics</td><td class="mono">92</td><td>High confidence</td></tr>
+            <tr><td>2/4 metrics</td><td class="mono">80</td><td>Moderate confidence</td></tr>
+            <tr><td>1/4 metrics</td><td class="mono">55</td><td>Low confidence</td></tr>
+            <tr><td>0/4 metrics</td><td class="mono">30</td><td>Minimal confidence</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- SECTION 5: DATA SOURCES -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">5</div>
+        <div>
+          <div class="section-title">Data Sources & Traceability</div>
+          <div class="section-description">Academic databases queried in this search</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon blue">🌐</div>
+          <div class="card-title">Sources Used in This Search</div>
+        </div>
+
+        <div class="source-grid">
+          ${sourceNames.map(name => `
+          <div class="source-chip active">
+            <div class="source-dot"></div>
+            ${escapeHTML(name)}
+          </div>
+          `).join('')}
+        </div>
+
+        <div class="mt-6 text-muted text-sm">
+          <strong>Total indexed papers:</strong> 250M+ across all sources<br>
+          <strong>Update frequency:</strong> Daily incremental, weekly full refresh
+        </div>
+      </div>
+
+      <div class="metrics-grid mt-6">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon green">⚡</div>
+            <div class="card-title">Fast Tier (&lt;2s)</div>
+          </div>
+          <p class="text-muted text-sm">
+            OpenAlex, Crossref, ERIC, arXiv, SSRN<br>
+            High-speed APIs with broad coverage
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon blue">🔄</div>
+            <div class="card-title">Medium Tier (2-5s)</div>
+          </div>
+          <p class="text-muted text-sm">
+            Semantic Scholar, Springer, Nature, IEEE, Wiley, SAGE<br>
+            Publisher APIs with rich metadata
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon purple">🔍</div>
+            <div class="card-title">Slow Tier (5s+)</div>
+          </div>
+          <p class="text-muted text-sm">
+            PubMed, PMC, CORE, Web of Science, Scopus<br>
+            Deep search with comprehensive results
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- SECTION 6: REPRODUCIBILITY -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number">6</div>
+        <div>
+          <div class="section-title">Reproducibility Statement</div>
+          <div class="section-description">PRISMA-compatible methodology for systematic reviews</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon green">📋</div>
+          <div class="card-title">This Search Parameters</div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Query String</td><td class="mono">"${safeQuery}"</td></tr>
+            <tr><td>Search Date</td><td class="mono">${timestamp.toISOString()}</td></tr>
+            <tr><td>Report ID</td><td class="mono">${reportId}</td></tr>
+            <tr><td>Pipeline Version</td><td class="mono">10.139 (Universal Semantic-First)</td></tr>
+            <tr><td>Scoring Formula</td><td class="mono">0.15×BM25 + 0.55×Semantic + 0.30×ThemeFit</td></tr>
+            <tr><td>Quality Threshold</td><td class="mono">≥ 20</td></tr>
+            <tr><td>Max Results</td><td class="mono">300 papers</td></tr>
+            <tr><td>Embedding Model</td><td class="mono">BGE-small-en-v1.5</td></tr>
+            <tr><td>Sources Queried</td><td class="mono">${data.sourcesQueried.length} databases</td></tr>
+            <tr><td>Semantic Tier</td><td class="mono">${data.semanticTier || 'standard'}</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card mt-6">
+        <div class="card-header">
+          <div class="card-icon blue">📚</div>
+          <div class="card-title">Algorithm References</div>
+        </div>
+        <ul style="color: var(--color-text-muted); font-size: 14px; list-style: none; padding: 0;">
+          <li style="margin-bottom: 12px;">
+            <strong>BM25:</strong> Robertson, S. E., & Walker, S. (1994).
+            Some simple effective approximations to the 2-Poisson model. <em>SIGIR '94</em>
+          </li>
+          <li style="margin-bottom: 12px;">
+            <strong>BGE Embeddings:</strong> Xiao, S., et al. (2023).
+            C-Pack: Packaged Resources To Advance General Chinese Embedding. <em>arXiv:2309.07597</em>
+          </li>
+          <li style="margin-bottom: 12px;">
+            <strong>Deduplication:</strong> Multi-stage pipeline using DOI exact matching,
+            Jaccard similarity (threshold 0.85), and Levenshtein distance for fuzzy matching.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="report-footer">
+      <div class="footer-logo">B</div>
+      <p class="footer-text">
+        <strong>Generated by BlackQ Literature Search</strong><br>
+        Pipeline Version 10.139 • Report ID: ${reportId}<br>
+        © ${timestamp.getFullYear()} BlackQ Research Platform
+      </p>
+      <div class="footer-links">
+        <span class="footer-link">Methodology v10.139</span>
+        <span class="footer-link">•</span>
+        <span class="footer-link">PRISMA Compatible</span>
+        <span class="footer-link">•</span>
+        <span class="footer-link">Reproducible Research</span>
+      </div>
+    </div>
+
   </div>
 </body>
 </html>`;

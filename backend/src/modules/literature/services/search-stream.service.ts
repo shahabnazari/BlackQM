@@ -869,8 +869,13 @@ export class SearchStreamService {
         state.correctedQuery,
         signal,
       )) {
+        // Phase 10.147 FIX: Calculate combined scores BEFORE emit so overallScore is included
+        // This ensures papers have combinedScore, neuralRelevanceScore, and overallScore set
+        finalPapers = this.searchPipeline.calculateCombinedScores(tierResult.papers);
+
         // Emit semantic tier event to frontend (sliced to limit)
-        const emittedPapers = tierResult.papers.slice(0, limit);
+        // Now using finalPapers which have all scores calculated
+        const emittedPapers = finalPapers.slice(0, limit);
         this.emitSemanticTier(state, {
           searchId: state.searchId,
           tier: tierResult.tier,
@@ -881,9 +886,6 @@ export class SearchStreamService {
           metadata: tierResult.metadata,
           timestamp: Date.now(),
         });
-
-        // Update final papers with combined scores
-        finalPapers = this.searchPipeline.calculateCombinedScores(tierResult.papers);
 
         this.logger.log(
           `✨ [Semantic Tier ${tierResult.tier}] Emitted ${emittedPapers.length} papers (v${tierResult.version})`,
@@ -995,38 +997,36 @@ export class SearchStreamService {
     // This is the ACTUAL SORTING SCORE that should be displayed to users
     // Note: event.papers are already deduplicated by search pipeline
 
-    // Calculate max BM25 for normalization (0-100 scale for display consistency)
-    const maxBM25 = Math.max(
-      ...event.papers.map(p => p.relevanceScore ?? 0),
-      1, // Prevent division by zero
-    );
+    // Phase 10.154: Papers from calculateCombinedScores already have all scores calculated:
+    // - combinedScore (the weighted BM25 + Semantic + ThemeFit)
+    // - neuralRelevanceScore (= combinedScore for display)
+    // - neuralExplanation (with CORRECT min-max normalized BM25)
+    // - overallScore (harmonic mean of relevance + quality)
+    //
+    // We only need to add neuralRank (position in sorted list)
+    // DO NOT recalculate neuralExplanation - it would use wrong normalization!
 
-    // Use event.papers directly (already deduplicated by pipeline)
     const transformedPapers = event.papers.map((paper, index) => {
-      // Cast to access semantic scoring fields (they exist but aren't in Paper type)
+      // Cast to access semantic scoring fields
       const scoredPaper = paper as Paper & {
         combinedScore?: number;
         semanticScore?: number;
-        themeFitScore?: { overallThemeFit?: number };
       };
-
-      // Normalize BM25 to 0-100 scale for display consistency
-      const normalizedBM25 = Math.round(((paper.relevanceScore ?? 0) / maxBM25) * 100);
-      const semanticPct = Math.round((scoredPaper.semanticScore ?? 0) * 100);
-      const themeFitPct = Math.round((scoredPaper.themeFitScore?.overallThemeFit ?? 0) * 100);
 
       return {
         ...paper,
-        // Map combinedScore to neuralRelevanceScore for frontend display
-        neuralRelevanceScore: scoredPaper.combinedScore ?? paper.relevanceScore ?? 0,
+        // Use pre-calculated combinedScore as neuralRelevanceScore
+        // Falls back to relevanceScore only if combinedScore not available
+        neuralRelevanceScore: scoredPaper.combinedScore ?? paper.neuralRelevanceScore ?? paper.relevanceScore ?? 0,
         // Add ranking position (1-indexed)
         neuralRank: index + 1,
-        // Add explanation with normalized component breakdown (all 0-100 scale)
-        neuralExplanation: scoredPaper.combinedScore !== undefined
-          ? `BM25=${normalizedBM25}, Sem=${semanticPct}, ThemeFit=${themeFitPct}`
-          : undefined,
-        // Also include raw semantic score for frontend
+        // PRESERVE neuralExplanation from calculateCombinedScores (has correct BM25 normalization)
+        // Only set if paper already has it (from calculateCombinedScores)
+        neuralExplanation: paper.neuralExplanation,
+        // Preserve semantic score for frontend (use cast to access it)
         semanticScore: scoredPaper.semanticScore,
+        // Preserve overallScore from calculateCombinedScores
+        overallScore: paper.overallScore,
       };
     });
 

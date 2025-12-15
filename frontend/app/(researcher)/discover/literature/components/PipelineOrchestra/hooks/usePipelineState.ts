@@ -58,6 +58,7 @@ interface PipelineStateInput {
 
 /**
  * Map WebSocket search stage to pipeline stage ID
+ * Phase 10.152: Removed 'ready' stage - 'complete' now maps to 'rank' (final stage)
  */
 function mapSearchStageToPipelineStage(stage: SearchStage | null): PipelineStageId | null {
   switch (stage) {
@@ -68,9 +69,8 @@ function mapSearchStageToPipelineStage(stage: SearchStage | null): PipelineStage
     case 'slow-sources':
       return 'discover';
     case 'ranking':
+    case 'complete': // Phase 10.152: Pipeline ends at 'rank', so 'complete' = 'rank' done
       return 'rank';
-    case 'complete':
-      return 'ready';
     default:
       return null;
   }
@@ -78,6 +78,9 @@ function mapSearchStageToPipelineStage(stage: SearchStage | null): PipelineStage
 
 /**
  * Derive stage status from search state
+ * Phase 10.142: Fixed REFINE stage activation - REFINE becomes active when DISCOVER completes
+ * but before RANK starts (since REFINE has no explicit WebSocket stage)
+ * Phase 10.152: Removed 'ready' stage - pipeline now ends at 'rank'
  */
 function deriveStageStatus(
   stageId: PipelineStageId,
@@ -85,7 +88,8 @@ function deriveStageStatus(
   isSearching: boolean,
   isComplete: boolean
 ): PipelineStageStatus {
-  const stageOrder: PipelineStageId[] = ['analyze', 'discover', 'refine', 'rank', 'ready'];
+  // Phase 10.152: Pipeline is now 4 stages - removed 'ready'
+  const stageOrder: PipelineStageId[] = ['analyze', 'discover', 'refine', 'rank'];
   const stageIndex = stageOrder.indexOf(stageId);
   const currentIndex = currentStage ? stageOrder.indexOf(currentStage) : -1;
 
@@ -95,6 +99,23 @@ function deriveStageStatus(
 
   if (isComplete) {
     return 'complete';
+  }
+
+  // Phase 10.142: REFINE stage activation logic (must check BEFORE stageIndex < currentIndex)
+  // REFINE becomes active when DISCOVER is complete and RANK is starting
+  // Since REFINE has no explicit WebSocket stage, we infer it from the transition
+  // REFINE should be 'active' when RANK starts to enable REFINE→RANK particle flow
+  if (stageId === 'refine') {
+    const discoverIndex = stageOrder.indexOf('discover');
+    const rankIndex = stageOrder.indexOf('rank');
+    
+    // REFINE is active when:
+    // - DISCOVER is complete (currentIndex > discoverIndex)
+    // - AND we're at RANK (currentIndex === rankIndex)
+    // This enables REFINE→RANK particle flow visualization
+    if (currentIndex > discoverIndex && currentIndex === rankIndex) {
+      return 'active';
+    }
   }
 
   if (stageIndex < currentIndex) {
@@ -181,6 +202,7 @@ function deriveStageStates(input: PipelineStateInput): PipelineStageState[] {
 
 /**
  * Calculate source position in orbital space
+ * Phase 10.135: Improved angle distribution to ensure nodes align perfectly on orbit rings
  */
 function calculateSourcePosition(
   source: LiteratureSource,
@@ -193,43 +215,54 @@ function calculateSourcePosition(
   const orbitConfig = ORBIT_CONFIGS[tier];
 
   // Distribute sources evenly around the orbit
-  const angleStep = (2 * Math.PI) / tierSourceCount;
+  // Use full circle (2π) and ensure proper distribution
+  const angleStep = (2 * Math.PI) / Math.max(tierSourceCount, 1);
+  
+  // Calculate angle: start from orbit's startAngle and distribute evenly
+  // Add small offset per source to spread them around the orbit
   const angle = orbitConfig.startAngle + (sourceIndex * angleStep);
 
-  return {
-    x: centerX + orbitConfig.radius * Math.cos(angle),
-    y: centerY + orbitConfig.radius * Math.sin(angle),
-  };
+  // Calculate position on the orbit ring
+  const x = centerX + orbitConfig.radius * Math.cos(angle);
+  const y = centerY + orbitConfig.radius * Math.sin(angle);
+
+  return { x, y };
 }
 
 /**
  * Derive source node states
- * Phase 10.129: Updated center for new container size (280x300)
+ * Phase 10.135: Fixed center calculation to match actual constellation size (420x420)
+ * Also improved node positioning to ensure proper alignment on orbital rings
  */
 function deriveSourceStates(
   sourceStats: Map<LiteratureSource, SourceStats>,
-  centerX: number = 140,  // PIPELINE_LAYOUT.constellationWidth / 2 = 280/2
-  centerY: number = 150   // PIPELINE_LAYOUT.constellationHeight / 2 = 300/2
+  centerX: number = 210,  // PIPELINE_LAYOUT.constellationWidth / 2 = 420/2
+  centerY: number = 210   // PIPELINE_LAYOUT.constellationHeight / 2 = 420/2
 ): SourceNodeState[] {
   const sources: SourceNodeState[] = [];
 
-  // Group sources by tier for positioning
+  // Group sources by tier for positioning (using Map for O(1) lookups)
   const tierGroups: Map<string, LiteratureSource[]> = new Map([
     ['fast', []],
     ['medium', []],
     ['slow', []],
   ]);
 
+  // Build tier groups and create index map for O(1) lookups
+  const sourceIndices = new Map<LiteratureSource, number>();
   sourceStats.forEach((_, source) => {
     const tier = SOURCE_TIERS[source];
-    tierGroups.get(tier)?.push(source);
+    const tierArray = tierGroups.get(tier)!;
+    sourceIndices.set(source, tierArray.length); // Store index BEFORE push
+    tierArray.push(source);
   });
 
-  // Calculate positions for each source
+  // Calculate positions for each source using pre-computed indices
   sourceStats.forEach((stats, source) => {
     const tier = SOURCE_TIERS[source];
     const tierSources = tierGroups.get(tier) || [];
-    const sourceIndex = tierSources.indexOf(source);
+    const sourceIndex = sourceIndices.get(source) ?? 0; // O(1) lookup instead of indexOf
+    
     const position = calculateSourcePosition(
       source,
       sourceIndex,
@@ -237,6 +270,9 @@ function deriveSourceStates(
       centerX,
       centerY
     );
+
+    // Calculate angle from center to ensure proper alignment
+    const angleFromCenter = Math.atan2(position.y - centerY, position.x - centerX);
 
     sources.push({
       source,
@@ -247,7 +283,7 @@ function deriveSourceStates(
         stats.status === 'error' ? 'error' : 'skipped',
       position: {
         ...position,
-        angle: Math.atan2(position.y - centerY, position.x - centerX),
+        angle: angleFromCenter,
         radius: ORBIT_CONFIGS[tier].radius,
       },
       paperCount: stats.paperCount,

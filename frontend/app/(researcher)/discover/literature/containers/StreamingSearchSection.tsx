@@ -40,8 +40,8 @@ import { logger } from '@/lib/utils/logger';
 const FEATURE_FLAGS = {
   /** Enable WebSocket streaming by default */
   STREAMING_ENABLED_DEFAULT: true,
-  /** Show query intelligence panel */
-  SHOW_QUERY_INTELLIGENCE: true,
+  /** Show query intelligence panel - DISABLED: Adds clutter, "Controversy Potential" is confusing */
+  SHOW_QUERY_INTELLIGENCE: false,
   /** Show live progress component */
   SHOW_LIVE_PROGRESS: true,
 } as const;

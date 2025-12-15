@@ -1,10 +1,13 @@
 /**
  * PaperHeader Component
  * Phase 10.91 Day 10 - PaperCard Refactoring
+ * Phase 10.145 - Semantic HTML (address for authors), dark mode support
  *
  * Displays paper title, authors, source, and selection checkbox
  * ✅ FIXED: Keyboard accessibility for checkbox (WCAG 2.1.1)
  * ✅ FIXED: Magic numbers replaced with constants
+ * ✅ Phase 10.145: Semantic address element for authors
+ * ✅ Phase 10.145: Dark mode support
  *
  * @module PaperHeader
  */
@@ -105,7 +108,7 @@ export function PaperHeader({
       <div className="flex-1">
         {/* Title and Source */}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-lg leading-tight flex-1">
+          <h3 className="font-semibold text-lg leading-tight flex-1 text-gray-900 dark:text-gray-100">
             {title}
           </h3>
           {source && (
@@ -120,13 +123,19 @@ export function PaperHeader({
           )}
         </div>
 
-        {/* Authors */}
+        {/* Authors - Phase 10.145: Semantic HTML with address element */}
         {authors && authors.length > 0 && (
-          <p className="text-sm text-gray-600 mt-1">
+          <address
+            className="text-sm text-gray-600 dark:text-gray-400 mt-1 not-italic"
+            aria-label={`Authors: ${authors.join(', ')}`}
+          >
             {authors.slice(0, MAX_DISPLAYED_AUTHORS).join(', ')}
-            {authors.length > MAX_DISPLAYED_AUTHORS &&
-              ` +${authors.length - MAX_DISPLAYED_AUTHORS} more`}
-          </p>
+            {authors.length > MAX_DISPLAYED_AUTHORS && (
+              <span className="text-gray-500 dark:text-gray-500">
+                {` +${authors.length - MAX_DISPLAYED_AUTHORS} more`}
+              </span>
+            )}
+          </address>
         )}
       </div>
     </div>

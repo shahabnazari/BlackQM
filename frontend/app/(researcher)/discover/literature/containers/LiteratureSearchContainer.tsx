@@ -79,7 +79,8 @@ import {
 import { ProgressiveLoadingIndicator } from '@/components/literature/ProgressiveLoadingIndicator';
 // Phase 10.113 Week 10: WebSocket streaming section
 import { StreamingSearchSection, type StreamingSearchSectionHandle } from './StreamingSearchSection';
-import { AcademicResourcesPanel } from '../components/AcademicResourcesPanel';
+// Phase 10.144: AcademicResourcesPanel removed for Apple-grade simplicity
+// ORCID unlock for premium sources integrated into search bar
 import { AlternativeSourcesPanel } from '../components/AlternativeSourcesPanel';
 import { SocialMediaPanel } from '../components/SocialMediaPanel';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -199,20 +200,16 @@ export const LiteratureSearchContainer = React.memo(
       toggleShowFilters,
       getAppliedFilterCount,
       progressiveLoading,
-      academicDatabases,
     } = useLiteratureSearchStore();
 
     // Alternative sources store
     const {
       loading: loadingAlternative,
-      sources: alternativeSources,
     } = useAlternativeSourcesStore();
 
     // Social media store
     const {
       loading: socialLoadingMap,
-      platformConfigs,
-      getEnabledPlatforms,
     } = useSocialMediaStore();
 
     // ==========================================================================
@@ -281,43 +278,15 @@ export const LiteratureSearchContainer = React.memo(
      * Component re-renders when store changes (Zustand subscription),
      * so calling getAppliedFilterCount() directly always gets fresh value.
      *
-     * Previous implementation with useMemo([getAppliedFilterCount]) was WRONG:
-     * - Function reference never changes (stable from Zustand)
-     * - useMemo cached FIRST value forever
-     * - Filter count never updated in UI
-     *
      * @computed
      */
     const appliedFilterCount = getAppliedFilterCount();
-
-    /**
-     * Source counts computed locally from store data
-     *
-     * Phase 10.935 Day 1: Computed locally instead of passed as props
-     *
-     * For social media: Count only ENABLED platforms (not all platforms)
-     * using the store's getEnabledPlatforms() selector.
-     *
-     * @computed
-     * @memoized
-     */
-    const academicDatabasesCount = academicDatabases.length;
-    const alternativeSourcesCount = alternativeSources.length;
-
-    const socialPlatformsCount = useMemo(() => {
-      // Use store selector to get only enabled platforms
-      const enabledPlatforms = getEnabledPlatforms();
-      return enabledPlatforms.length;
-    }, [getEnabledPlatforms, platformConfigs]);
 
     /**
      * Check if ANY social media platform is loading
      *
      * Social media store uses Map<Platform, boolean> for loading state.
      * We need to check if any platform is currently loading.
-     *
-     * Defensive Programming: Handle case where Map might be corrupted
-     * by persistence (Maps don't serialize to JSON correctly).
      *
      * @computed
      * @memoized
@@ -340,10 +309,6 @@ export const LiteratureSearchContainer = React.memo(
 
     /**
      * Combined loading state from all sources
-     *
-     * Memoized to prevent SearchBar re-render when only other props change.
-     * Boolean calculation is cheap, but memoization prevents creating new
-     * reference for memoized child components.
      *
      * @computed
      * @memoized
@@ -375,16 +340,13 @@ export const LiteratureSearchContainer = React.memo(
               </Badge>
             </div>
 
-            {/* Search Bar Component */}
+            {/* Search Bar Component - Phase 10.144: Simplified Apple-grade */}
             <SearchBar
               onSearch={handleSearchWithStreaming}
               isLoading={isLoading}
               appliedFilterCount={appliedFilterCount}
               showFilters={showFilters}
               onToggleFilters={toggleShowFilters}
-              academicDatabasesCount={academicDatabasesCount}
-              alternativeSourcesCount={alternativeSourcesCount}
-              socialPlatformsCount={socialPlatformsCount}
             />
 
             {/* Active Filters Chips */}
@@ -398,20 +360,14 @@ export const LiteratureSearchContainer = React.memo(
             {/* Filter Panel */}
             <FilterPanel isVisible={showFilters} />
 
-            {/* Academic Resources Panel - Phase 10.935 Day 11 Integration */}
-            <div className="mt-6">
-              <AcademicResourcesPanel />
-            </div>
+            {/* Phase 10.144: AcademicResourcesPanel removed for Apple-grade simplicity */}
+            {/* ORCID unlock for premium sources integrated into search bar */}
 
-            {/* Alternative Sources Panel - Phase 10.935 Day 12 Integration */}
-            <div className="mt-6">
-              <AlternativeSourcesPanel />
-            </div>
+            {/* Alternative Sources Panel */}
+            <AlternativeSourcesPanel />
 
-            {/* Social Media Panel - Phase 10.935 Day 13 Integration */}
-            <div className="mt-6">
-              <SocialMediaPanel />
-            </div>
+            {/* Social Media Panel */}
+            <SocialMediaPanel />
 
             {/* Progressive Loading Indicator */}
             <ProgressiveLoadingIndicator

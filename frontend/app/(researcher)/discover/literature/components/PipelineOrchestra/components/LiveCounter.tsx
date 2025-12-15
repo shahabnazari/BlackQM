@@ -10,9 +10,9 @@
 
 'use client';
 
-import React, { memo, useEffect, useState, useMemo } from 'react';
+import React, { memo, useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LiveCounterProps, CounterFormat } from '../types';
 import { SPRING_PRESETS, ARIA_LABELS, LIVE_COUNTER_CONFIG, QUALITY_METER_SIZE } from '../constants';
@@ -369,6 +369,44 @@ export const ETAPredictor = memo<{
 // ============================================================================
 
 /**
+ * Quality tooltip content - extracted for memoization
+ */
+const QualityTooltipContent = memo(function QualityTooltipContent() {
+  return (
+    <div className="bg-gray-900/98 border border-white/20 rounded-lg shadow-xl p-3 backdrop-blur-xl pointer-events-auto">
+      <div className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-gray-900 border-l border-b border-white/20 transform rotate-45"></div>
+      
+      <h4 className="text-xs font-semibold text-white mb-1.5">
+        Search Progress Quality Score
+      </h4>
+      
+      <p className="text-xs text-white/80 leading-relaxed mb-2">
+        This score indicates how complete and thorough the search process is, not the quality of individual papers.
+      </p>
+      
+      <div className="space-y-1.5 text-xs">
+        <div className="flex items-start gap-2">
+          <span className="text-white/60 font-mono shrink-0">30pts</span>
+          <span className="text-white/70">Source coverage (databases queried)</span>
+        </div>
+        <div className="flex items-start gap-2">
+          <span className="text-white/60 font-mono shrink-0">30pts</span>
+          <span className="text-white/70">Papers discovered (up to 200)</span>
+        </div>
+        <div className="flex items-start gap-2">
+          <span className="text-white/60 font-mono shrink-0">40pts</span>
+          <span className="text-white/70">Semantic analysis progress</span>
+        </div>
+      </div>
+      
+      <p className="text-xs text-white/60 mt-2 pt-2 border-t border-white/10">
+        100% = All sources complete, papers found, full semantic analysis done
+      </p>
+    </div>
+  );
+});
+
+/**
  * Quality score visualization with factor breakdown
  */
 export const QualityMeter = memo<{
@@ -376,6 +414,7 @@ export const QualityMeter = memo<{
   animate: boolean;
 }>(function QualityMeter({ score, animate }) {
   const springScore = useSpring(0, SPRING_PRESETS.counter);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
     if (animate) {
@@ -385,20 +424,31 @@ export const QualityMeter = memo<{
 
   const displayScore = useTransform(springScore, (v) => Math.round(v));
 
-  // Determine quality level
-  const qualityLevel = score >= 80 ? 'Excellent' :
-    score >= 60 ? 'Good' :
-    score >= 40 ? 'Fair' : 'Building...';
+  // Memoize quality level and color calculations
+  const { qualityLevel, qualityColor } = useMemo(() => {
+    const level = score >= 80 ? 'Excellent' :
+      score >= 60 ? 'Good' :
+      score >= 40 ? 'Fair' : 'Building...';
+    
+    const color = score >= 80 ? 'text-green-400' :
+      score >= 60 ? 'text-blue-400' :
+      score >= 40 ? 'text-yellow-400' : 'text-white/50';
+    
+    return { qualityLevel: level, qualityColor: color };
+  }, [score]);
 
-  const qualityColor = score >= 80 ? 'text-green-400' :
-    score >= 60 ? 'text-blue-400' :
-    score >= 40 ? 'text-yellow-400' : 'text-white/50';
+  // Memoize SVG constants
+  const { viewBox, center } = useMemo(() => ({
+    viewBox: QUALITY_METER_SIZE.viewBox,
+    center: QUALITY_METER_SIZE.viewBox / 2,
+  }), []);
 
-  const viewBox = QUALITY_METER_SIZE.viewBox;
-  const center = viewBox / 2;
+  // Memoize tooltip handlers to prevent unnecessary re-renders
+  const handleTooltipShow = useCallback(() => setShowTooltip(true), []);
+  const handleTooltipHide = useCallback(() => setShowTooltip(false), []);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 relative group">
       {/* Score Ring */}
       <div
         className="relative"
@@ -441,9 +491,29 @@ export const QualityMeter = memo<{
           {qualityLevel}
         </span>
         <span className="text-xs text-white/50 uppercase tracking-wider"> {/* Phase 10.135: Increased from 10px to 12px */}
-          Quality
+          Search Progress
         </span>
       </div>
+
+      {/* Info Icon with Tooltip */}
+      <button
+        type="button"
+        className="relative flex-shrink-0 w-4 h-4 text-white/40 hover:text-white/70 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-gray-900 rounded"
+        onMouseEnter={handleTooltipShow}
+        onMouseLeave={handleTooltipHide}
+        onFocus={handleTooltipShow}
+        onBlur={handleTooltipHide}
+        aria-label="What does this quality score mean?"
+      >
+        <Info className="w-4 h-4" />
+        
+        {/* Tooltip */}
+        {showTooltip && (
+          <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50 min-w-[240px] max-w-[280px] pointer-events-none">
+            <QualityTooltipContent />
+          </div>
+        )}
+      </button>
     </div>
   );
 });

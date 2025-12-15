@@ -1,6 +1,7 @@
 /**
  * PaperStatusBadges Component
  * Phase 10.91 Day 10 - PaperCard Refactoring
+ * Phase 10.145 - Added aria-live to Extracted badge for WCAG 2.1 AA
  *
  * Displays extraction status badges (extracting/extracted) at top-right corner
  *
@@ -67,6 +68,7 @@ export function PaperStatusBadges({
             className="bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg px-2 py-1 gap-1 border-2 border-white"
             aria-label="Themes successfully extracted"
             role="status"
+            aria-live="polite"
           >
             <Check className="w-3 h-3" aria-hidden="true" />
             <span className="text-xs font-semibold">Extracted</span>

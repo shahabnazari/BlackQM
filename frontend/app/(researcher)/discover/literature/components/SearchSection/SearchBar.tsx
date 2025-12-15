@@ -52,15 +52,16 @@ const SMART_SEARCH_KEY = 'literature-smart-search-enabled';
 // Component Props
 // ============================================================================
 
+/**
+ * Phase 10.144: Simplified props - Apple-grade minimalism
+ * Removed individual source counts in favor of automatic open-access searching
+ */
 interface SearchBarProps {
   onSearch: () => Promise<void>;
   isLoading: boolean;
   appliedFilterCount: number;
   showFilters: boolean;
   onToggleFilters: () => void;
-  academicDatabasesCount: number;
-  alternativeSourcesCount: number;
-  socialPlatformsCount: number;
 }
 
 // ============================================================================
@@ -73,9 +74,6 @@ export const SearchBar = memo(function SearchBar({
   appliedFilterCount,
   showFilters,
   onToggleFilters,
-  academicDatabasesCount,
-  alternativeSourcesCount,
-  socialPlatformsCount,
 }: SearchBarProps) {
   // State from store
   const {
@@ -324,7 +322,6 @@ export const SearchBar = memo(function SearchBar({
   }, [query, onSearch, smartSearch, setQuery, setShowSuggestions]);
 
   // Derived
-  const totalSources = academicDatabasesCount + alternativeSourcesCount + socialPlatformsCount;
   const hasDropdownContent = historySuggestions.length > 0 || aiSuggestions.length > 0 || loadingSuggestions || suggestionError;
 
   return (
@@ -506,31 +503,27 @@ export const SearchBar = memo(function SearchBar({
           </Button>
         </div>
 
-        {/* Active Sources - Minimal */}
+        {/* Phase 10.144: Apple-grade source indicator with ORCID unlock */}
         {isMounted && (
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span>Sources:</span>
-            {totalSources > 0 ? (
-              <>
-                {academicDatabasesCount > 0 && (
-                  <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-xs py-0">
-                    {academicDatabasesCount} Academic
-                  </Badge>
-                )}
-                {alternativeSourcesCount > 0 && (
-                  <Badge variant="outline" className="bg-indigo-50 text-indigo-600 border-indigo-200 text-xs py-0">
-                    {alternativeSourcesCount} Alt
-                  </Badge>
-                )}
-                {socialPlatformsCount > 0 && (
-                  <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200 text-xs py-0">
-                    {socialPlatformsCount} Social
-                  </Badge>
-                )}
-              </>
-            ) : (
-              <span className="text-orange-500">No sources selected</span>
-            )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs py-0.5 px-2">
+                ✓ 9 Open Access Sources
+              </Badge>
+            </div>
+            {/* ORCID Unlock - Premium sources indicator */}
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-purple-600 transition-colors group"
+              title="Connect ORCID to unlock premium academic sources"
+              onClick={() => {
+                // TODO: Phase 10.145 - ORCID OAuth integration
+                logger.info('ORCID unlock clicked', 'SearchBar');
+              }}
+            >
+              <span className="group-hover:text-purple-600">Connect ORCID</span>
+              <span className="text-purple-500 font-medium">→ +8 Premium</span>
+            </button>
           </div>
         )}
       </div>
