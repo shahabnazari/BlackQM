@@ -70,13 +70,13 @@ describe('usePipelineState - Netflix-Grade Tests', () => {
       expect(result.current.currentStage).toBe('rank');
     });
 
-    // Phase 10.152: 'complete' now maps to 'rank' (no separate 'ready' stage)
-    it('should map complete stage to rank', () => {
+    // Phase 10.159: 'complete' now maps to 'select' (5-stage pipeline with select as final)
+    it('should map complete stage to select', () => {
       const { result } = renderHook(() =>
         usePipelineState(createMockInput({ stage: 'complete' }))
       );
 
-      expect(result.current.currentStage).toBe('rank');
+      expect(result.current.currentStage).toBe('select');
     });
   });
 
@@ -385,14 +385,14 @@ describe('usePipelineState - Netflix-Grade Tests', () => {
   // ==========================================================================
 
   describe('1.8 Edge Cases', () => {
-    // Phase 10.152: Pipeline now has 4 stages (removed 'ready' stage)
+    // Phase 10.159: Pipeline now has 5 stages (analyze, discover, refine, rank, select)
     it('should handle null stage gracefully', () => {
       const { result } = renderHook(() =>
         usePipelineState(createMockInput({ stage: null }))
       );
 
       expect(result.current.currentStage).toBeNull();
-      expect(result.current.stages.length).toBe(4);
+      expect(result.current.stages.length).toBe(5);
     });
 
     it('should handle empty sourceStats', () => {

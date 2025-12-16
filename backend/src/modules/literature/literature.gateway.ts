@@ -182,11 +182,12 @@ export class LiteratureGateway
       this.logger.log(`🚀 [Progressive Search] Client ${client.id} starting search: "${query}"`);
 
       // Build search options with defaults
-      // Phase 10.115: Use tier-based allocation (300-500 per source) instead of hardcoded 50
-      // The source-router will apply tier-specific limits if not overridden
+      // Phase 10.159: REMOVED limit default - source-router uses tier-based allocation (500 per tier)
+      // Gateway MUST NOT set a limit, letting search-stream pass undefined to source-router
+      // which then applies getSourceAllocation() per source
       const searchOptions: SearchLiteratureDto = {
         query: query.trim(),
-        limit: options.limit ?? 300,
+        // limit: REMOVED - tier allocations handle this (500 per source)
         page: options.page ?? 1,
         yearFrom: options.yearFrom,
         yearTo: options.yearTo,

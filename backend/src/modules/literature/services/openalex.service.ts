@@ -127,6 +127,9 @@ export class OpenAlexService {
    * @param options Search options (yearFrom, yearTo, limit)
    * @returns Array of Paper DTOs
    */
+  /** Phase 10.158: Max results per page (OpenAlex limit) */
+  private readonly MAX_PER_PAGE = 200;
+
   async search(query: string, options?: OpenAlexSearchOptions): Promise<Paper[]> {
     const startTime = Date.now();
 
@@ -152,21 +155,94 @@ export class OpenAlexService {
     const yearFrom = options?.yearFrom;
     const yearTo = options?.yearTo;
 
-    const perPage = Math.min(limit, 200); // OpenAlex max: 200 per page
+    // Phase 10.158: Pagination support for fetching more than 200 papers
+    if (limit > this.MAX_PER_PAGE) {
+      return this.searchWithPagination(sanitizedQuery, limit, yearFrom, yearTo, startTime);
+    }
+
+    // Single page request (limit <= 200)
+    return this.searchSinglePage(sanitizedQuery, limit, 1, yearFrom, yearTo, startTime);
+  }
+
+  /**
+   * Phase 10.158: Paginated search to fetch more than 200 papers
+   */
+  private async searchWithPagination(
+    query: string,
+    requestedLimit: number,
+    yearFrom?: number,
+    yearTo?: number,
+    startTime: number = Date.now(),
+  ): Promise<Paper[]> {
+    const allPapers: Paper[] = [];
+    const pagesNeeded = Math.ceil(requestedLimit / this.MAX_PER_PAGE);
+    const maxPages = 3; // Safety cap: max 600 papers (3 pages × 200)
+    const pagesToFetch = Math.min(pagesNeeded, maxPages);
+
+    this.logger.log(
+      `🔍 [OpenAlex] Paginated search: ${requestedLimit} papers requested, fetching ${pagesToFetch} pages`,
+    );
+
+    // Phase 10.159: Parallel pagination for maximum speed
+    // Execute all pages concurrently (OpenAlex has generous rate limits)
+    const pagePromises = Array.from({ length: pagesToFetch }, (_, idx) => {
+      const page = idx + 1; // OpenAlex uses 1-based pages
+      const pageLimit = Math.min(
+        requestedLimit - (idx * this.MAX_PER_PAGE),
+        this.MAX_PER_PAGE
+      );
+      return this.searchSinglePage(query, pageLimit, page, yearFrom, yearTo, startTime)
+        .then(papers => ({ page, papers, success: true as const }))
+        .catch(() => ({ page, papers: [] as Paper[], success: false as const }));
+    });
+
+    const results = await Promise.all(pagePromises);
+
+    // Collect papers in page order (maintains relevance ordering)
+    for (const result of results.sort((a, b) => a.page - b.page)) {
+      if (result.success) {
+        allPapers.push(...result.papers);
+        this.logger.log(
+          `[OpenAlex] Page ${result.page}/${pagesToFetch}: fetched ${result.papers.length} papers`,
+        );
+      } else {
+        this.logger.warn(`[OpenAlex] Page ${result.page} failed`);
+      }
+    }
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    this.logger.log(`✅ [OpenAlex] Parallel pagination complete: ${allPapers.length} total papers in ${duration}s`);
+    return allPapers.slice(0, requestedLimit);
+  }
+
+  /**
+   * Phase 10.158: Single page search with page number support
+   */
+  private async searchSinglePage(
+    query: string,
+    limit: number,
+    page: number,
+    yearFrom?: number,
+    yearTo?: number,
+    startTime: number = Date.now(),
+  ): Promise<Paper[]> {
+    const perPage = Math.min(limit, this.MAX_PER_PAGE);
 
     try {
-      this.logger.log(`🔍 [OpenAlex] Searching for "${sanitizedQuery}" (max ${perPage} results)...`);
+      if (page === 1) {
+        this.logger.log(`🔍 [OpenAlex] Searching for "${query}" (max ${perPage} results)...`);
+      }
 
-      // BUG-1 FIX: Build params with year filtering support
+      // Build params with year filtering and pagination
       const params: Record<string, string | number> = {
-        search: sanitizedQuery,
+        search: query,
         per_page: perPage,
+        page: page, // Phase 10.158: Pagination support
         sort: 'relevance_score:desc', // Most relevant first
       };
 
       // Add year filtering if provided
       if (yearFrom !== undefined || yearTo !== undefined) {
-        // OpenAlex uses publication_year filter
         if (yearFrom !== undefined && yearTo !== undefined) {
           params.filter = `publication_year:${yearFrom}-${yearTo}`;
         } else if (yearFrom !== undefined) {
@@ -200,15 +276,10 @@ export class OpenAlexService {
         );
       });
 
-      // BUG-2 FIX: Runtime validation before type assertion
-      // Phase 10.106 Netflix-Grade: RetryResult wraps AxiosResponse
-      // response is RetryResult<AxiosResponse<OpenAlexSearchResponse>>
-      // response.data is AxiosResponse<OpenAlexSearchResponse>
-      // response.data.data is OpenAlexSearchResponse
+      // Validate response structure
       const axiosResponse = response.data;
       const responseData = axiosResponse.data;
 
-      // Validate response structure
       if (!responseData || typeof responseData !== 'object') {
         this.logger.error('[OpenAlex] Invalid API response: not an object');
         return [];
@@ -220,18 +291,17 @@ export class OpenAlexService {
       }
 
       const works: readonly OpenAlexWork[] = responseData.results;
-      const totalAvailable =
-        typeof responseData.meta?.count === 'number'
-          ? responseData.meta.count
-          : 0;
+      const totalAvailable = typeof responseData.meta?.count === 'number' ? responseData.meta.count : 0;
 
       // Map OpenAlex works to Paper DTOs
       const papers: Paper[] = works.map((work: OpenAlexWork) => this.mapWorkToPaper(work));
 
-      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      this.logger.log(
-        `✅ [OpenAlex] Search completed: ${papers.length} papers returned (${totalAvailable.toLocaleString()} total available) in ${duration}s`
-      );
+      if (page === 1) {
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        this.logger.log(
+          `✅ [OpenAlex] Search completed: ${papers.length} papers returned (${totalAvailable.toLocaleString()} total available) in ${duration}s`
+        );
+      }
 
       // Reset failure count on success
       if (this.failureCount > 0) {
@@ -240,15 +310,12 @@ export class OpenAlexService {
 
       return papers;
     } catch (error: unknown) {
-      // Phase 10.106 Phase 6: Use unknown with type narrowing (Netflix-grade)
       const err = error as { message?: string };
       this.failureCount++;
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
       this.logger.error(
         `❌ [OpenAlex] Search failed after ${duration}s: ${err.message || 'Unknown error'} (failure ${this.failureCount}/${this.requestCount})`
       );
-
-      // Graceful degradation: return empty array on error
       return [];
     }
   }

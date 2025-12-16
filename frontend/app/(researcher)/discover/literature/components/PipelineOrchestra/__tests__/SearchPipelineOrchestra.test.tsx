@@ -88,6 +88,10 @@ vi.mock('../components/SemanticBrainVisualizer', () => ({
   SemanticBrainVisualizer: () => <div data-testid="semantic-brain">Brain</div>,
 }));
 
+vi.mock('../components/RankToSemanticFlow', () => ({
+  RankToSemanticFlow: () => <div data-testid="rank-to-semantic-flow">Flow</div>,
+}));
+
 vi.mock('../components/LiveCounter', () => ({
   LiveCounter: ({ value, label }: { value: number; label: string }) => (
     <div data-testid={`counter-${label.toLowerCase()}`}>{label}: {value}</div>

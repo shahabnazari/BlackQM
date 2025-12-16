@@ -419,13 +419,13 @@ export const StageOrb = memo<StageOrbProps>(function StageOrb({
           'flex items-center justify-center',
           'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
           'focus-visible:ring-blue-500',
-          // Glassmorphism base - removed transition-colors to avoid conflict with Framer
-          'backdrop-blur-xl',
-          // Status-based styling
-          isPending && 'bg-white/10 border border-white/30',
+          // Phase 10.165: Solid dark backgrounds for WCAG contrast
+          'backdrop-blur-sm',
+          // Status-based styling - solid dark backgrounds for visibility
+          isPending && 'bg-gray-800/90 border border-white/20',
           isActive && `bg-gradient-to-br ${stage.color.gradient} border-2 border-white/40`,
-          isComplete && 'bg-white/10 border border-white/20',
-          isError && 'bg-red-500/20 border border-red-500/30'
+          isComplete && 'bg-gray-800/80 border border-green-500/40',
+          isError && 'bg-red-900/50 border border-red-500/40'
         )}
         style={{
           width: STAGE_ORB_SIZE.md,

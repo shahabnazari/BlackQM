@@ -385,9 +385,12 @@ export const StreamingSearchSection = memo(forwardRef<StreamingSearchSectionHand
       )}
 
       {/* Phase 10.126: Netflix-Grade Pipeline Visualization */}
-      <AnimatePresence>
+      {/* Phase 10.155 FIX: Use searchId as key to force remount on new search */}
+      {/* This ensures all animations restart when a new search begins */}
+      <AnimatePresence mode="wait">
         {FEATURE_FLAGS.SHOW_LIVE_PROGRESS && (isSearching || wsState.sourceStats.size > 0) && (
           <SearchPipelineOrchestra
+            key={wsState.searchId || 'initial'}
             isSearching={isSearching}
             stage={wsState.stage}
             percent={wsState.percent}
@@ -402,11 +405,16 @@ export const StreamingSearchSection = memo(forwardRef<StreamingSearchSectionHand
             semanticVersion={wsState.semanticVersion}
             // Phase 10.113 Week 12: Semantic tier stats for detailed display
             semanticTierStats={wsState.semanticTierStats}
+            // Phase 10.160: Quality selection state for funnel visualization
+            selectionRankedCount={wsState.selectionRankedCount}
+            selectionSelectedCount={wsState.selectionSelectedCount}
+            selectionAvgQuality={wsState.selectionAvgQuality}
             // Phase 10.126: Callbacks
             onCancel={handleCancelSearch}
             // Optional: Enable/disable features
             showParticles={true}
             showSemanticBrain={true}
+            showQualityFunnel={true}
             compactMode={false}
           />
         )}

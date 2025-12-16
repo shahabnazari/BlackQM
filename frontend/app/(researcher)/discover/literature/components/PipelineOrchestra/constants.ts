@@ -56,7 +56,11 @@ export const STAGE_COLORS = {
     secondary: '#C4B5FD',
     gradient: 'from-purple-500 to-pink-400',
   },
-  // Phase 10.152: Removed 'ready' - pipeline ends at 'rank'
+  select: {
+    primary: '#06B6D4',
+    secondary: '#67E8F9',
+    gradient: 'from-cyan-500 to-teal-400',
+  },
 } as const;
 
 /**
@@ -123,6 +127,40 @@ export const GLASS_COLORS = {
 };
 
 // ============================================================================
+// RANKING TIER LIMITS (must be defined before STAGE_TECHNICAL_DETAILS)
+// ============================================================================
+
+/**
+ * Ranking tier paper limits
+ * Used in RankingDiagram, methodology displays, and pipeline configuration
+ * Phase 10.158: Updated for 600-paper processing
+ * Phase 10.159: Moved to top to enable use in other constants
+ */
+export const RANKING_TIER_LIMITS = {
+  immediate: { papers: 50, latencyLabel: '500ms' },
+  refined: { papers: 200, latencyLabel: '3s' },
+  complete: { papers: 600, latencyLabel: '12s' },
+} as const;
+
+/**
+ * Maximum papers across all ranking tiers (semantic ranking pool)
+ */
+export const MAX_RANKED_PAPERS = RANKING_TIER_LIMITS.complete.papers;
+
+/**
+ * Maximum papers in final selection (after quality filtering)
+ * Phase 10.159: Added constant for final selection limit
+ */
+export const MAX_FINAL_PAPERS = 300;
+
+/**
+ * Per-source allocation limit
+ * Phase 10.159: Used to detect when source results are capped
+ * When a source returns exactly this number, we show "500+" to indicate truncation
+ */
+export const SOURCE_ALLOCATION_LIMIT = 500;
+
+// ============================================================================
 // PIPELINE STAGE CONFIGURATION
 // ============================================================================
 
@@ -138,87 +176,106 @@ export const STAGE_TECHNICAL_DETAILS: Record<string, {
   scienceNote: string;
 }> = {
   analyze: {
-    title: 'Query Analysis Engine',
+    title: 'Query Intelligence Engine',
     algorithm: 'NLP + Domain-Specific Entity Recognition',
     metrics: [
-      'Query intent classification accuracy: 94%',
-      'Methodology detection F1-score: 0.89',
-      'Spell correction precision: 97%',
+      'Intent classification: 94% accuracy',
+      'Methodology detection: F1 = 0.89',
+      'Spell correction: 97% precision',
     ],
     technicalSteps: [
-      'Tokenization using academic vocabulary',
-      'Named entity recognition for authors, journals, concepts',
-      'Research methodology detection (qualitative, quantitative, mixed)',
-      'Query expansion via semantic synonyms',
+      'Academic vocabulary tokenization',
+      'Entity extraction (authors, journals, concepts)',
+      'Research methodology detection',
+      'Semantic synonym expansion',
       'Boolean operator optimization',
     ],
-    scienceNote: 'Uses BERT-based model fine-tuned on 2M+ academic queries',
+    scienceNote: 'BERT-based model trained on 2M+ academic queries',
   },
   discover: {
-    title: 'Federated Database Search',
-    algorithm: 'Parallel API Query Orchestration',
+    title: 'Federated Multi-Source Search',
+    algorithm: 'Parallel API Orchestration + Overlapping Tiers',
     metrics: [
-      'Sources queried: Up to 18 databases',
-      'Avg. response time: 2.3s (p95)',
+      'Sources: 18 academic databases',
+      'Time to first result: <2s',
       'Coverage: 250M+ indexed papers',
     ],
     technicalSteps: [
-      'Convert query to source-specific syntax',
-      'Parallel execution across all databases',
-      'Rate limiting & circuit breaker protection',
-      'Metadata normalization (DOI, ISSN, authors)',
-      'Response streaming for progressive results',
+      'Source-specific query translation',
+      'Overlapping tier execution (fast→medium→slow)',
+      'Parallel pagination within sources',
+      'Circuit breaker fault tolerance',
+      'Progressive result streaming',
     ],
-    scienceNote: 'Searches OpenAlex, PubMed, Semantic Scholar, Scopus, and 14 more sources',
+    scienceNote: 'OpenAlex, PubMed, Semantic Scholar, CORE, arXiv + 13 more',
   },
   refine: {
-    title: 'Deduplication & Quality Filter',
-    algorithm: 'Fuzzy Matching + Citation Analysis',
+    title: 'Deduplication & Normalization',
+    algorithm: 'Multi-Stage Fuzzy Matching',
     metrics: [
-      'Duplicate detection: 99.2% accuracy',
+      'Duplicate detection: 99.2%',
       'False positive rate: <0.1%',
-      'Avg. reduction: 30-40% duplicates',
+      'Typical reduction: 30-40%',
     ],
     technicalSteps: [
-      'DOI-based exact deduplication',
+      'DOI-based exact matching',
       'Title similarity (Jaccard + Levenshtein)',
       'Author name disambiguation',
       'Year/venue cross-validation',
-      'Quality scoring (citation count, journal impact)',
+      'Metadata normalization',
     ],
-    scienceNote: 'Multi-stage pipeline removes exact & near-duplicate papers',
+    scienceNote: 'Removes duplicates while preserving the highest-quality version',
   },
   rank: {
-    title: 'Semantic Relevance Ranking',
-    algorithm: 'BM25 + Transformer Embeddings (3-Tier)',
+    title: 'AI Semantic Ranking',
+    algorithm: 'BM25 + Porter Stemming + Neural Embeddings (3-Tier Progressive)',
     metrics: [
-      'BM25 precision@10: 0.78',
-      'Semantic re-ranking NDCG: 0.84',
-      'Processing: 600 papers in <10s',
+      'Precision@10: 0.78',
+      'NDCG: 0.84',
+      `Throughput: Up to ${RANKING_TIER_LIMITS.complete.papers} papers in <12s`,
     ],
     technicalSteps: [
-      'Tier 1: BM25 lexical scoring (top 50)',
-      'Tier 2: Dense retrieval refinement (top 200)',
-      'Tier 3: Cross-encoder re-ranking (all 600)',
-      'Citation graph analysis bonus',
-      'Recency weighting factor',
+      `Tier 1: BM25 lexical scoring with Porter Stemming (${RANKING_TIER_LIMITS.immediate.papers} papers, <500ms)`,
+      `Tier 2: Dense vector retrieval (${RANKING_TIER_LIMITS.refined.papers} papers, <3s)`,
+      `Tier 3: Cross-encoder re-ranking (${RANKING_TIER_LIMITS.complete.papers} papers, <12s)`,
+      'Porter Stemming: Matches morphological variants (mercy → merciful)',
+      'Citation graph influence bonus',
+      'Recency decay weighting',
     ],
-    scienceNote: 'Progressive semantic ranking balances speed vs. accuracy',
+    scienceNote: 'Porter Stemmer (1980) + progressive ranking delivers fast, accurate results',
   },
-  // Phase 10.152: Removed 'ready' - users see results as soon as ranking completes
+  select: {
+    title: 'Composite Quality Selection',
+    algorithm: 'Harmonic Mean Quality Filter',
+    metrics: [
+      // Note: These are system maximums, actual counts vary by search
+      `Input pool: Up to ${RANKING_TIER_LIMITS.complete.papers} ranked papers`,
+      `Output: Top papers by quality (up to ${MAX_FINAL_PAPERS})`,
+      'Formula: 2×(R×Q)/(R+Q)',
+    ],
+    technicalSteps: [
+      'Compute overallScore = harmonic mean(relevance, quality)',
+      'Sort all ranked papers by overallScore descending',
+      'Select top papers by quality score (ensures both R and Q are high)',
+      'Papers with low relevance OR low quality filtered out',
+      'Final result set optimized for research value',
+    ],
+    scienceNote: 'Harmonic mean ensures papers must excel in BOTH relevance AND quality',
+  },
 };
 
 /**
  * Pipeline stage configurations
+ * Phase 10.159: Netflix-grade descriptions and UX
  */
 export const PIPELINE_STAGES: PipelineStageConfig[] = [
   {
     id: 'analyze',
     name: 'Analyze',
     icon: Brain,
-    description: 'Understanding your query',
-    activeDescription: 'Analyzing query intent...',
-    completeDescription: 'Query analyzed',
+    description: 'Query intelligence',
+    activeDescription: 'Understanding your research intent...',
+    completeDescription: 'Query optimized',
     color: STAGE_COLORS.analyze,
     substages: ['spell-check', 'methodology-detection', 'query-expansion'],
   },
@@ -226,9 +283,9 @@ export const PIPELINE_STAGES: PipelineStageConfig[] = [
     id: 'discover',
     name: 'Discover',
     icon: Search,
-    description: 'Searching global databases',
-    activeDescription: 'Querying academic sources...',
-    completeDescription: 'Sources queried',
+    description: 'Multi-source search',
+    activeDescription: 'Searching 18 academic databases...',
+    completeDescription: 'Papers discovered',
     color: STAGE_COLORS.discover,
     substages: [], // Dynamic from active sources
   },
@@ -236,9 +293,9 @@ export const PIPELINE_STAGES: PipelineStageConfig[] = [
     id: 'refine',
     name: 'Refine',
     icon: Filter,
-    description: 'Cleaning and deduplicating',
-    activeDescription: 'Removing duplicates...',
-    completeDescription: 'Papers refined',
+    description: 'Deduplication',
+    activeDescription: 'Removing duplicates & normalizing...',
+    completeDescription: 'Papers deduplicated',
     color: STAGE_COLORS.refine,
     substages: ['deduplication', 'quality-filter', 'metadata-enrichment'],
   },
@@ -246,14 +303,24 @@ export const PIPELINE_STAGES: PipelineStageConfig[] = [
     id: 'rank',
     name: 'Rank',
     icon: Sparkles,
-    description: 'AI-powered scoring',
-    activeDescription: 'Calculating relevance...',
-    completeDescription: 'Search complete!', // Phase 10.152: Final stage now shows completion
+    description: 'AI semantic ranking',
+    // Note: These are fallback descriptions - usePipelineState.ts shows actual counts
+    activeDescription: `Scoring up to ${MAX_RANKED_PAPERS} papers with AI...`,
+    completeDescription: 'Papers ranked',
     color: STAGE_COLORS.rank,
     substages: ['bm25-scoring', 'semantic-tier-1', 'semantic-tier-2', 'semantic-tier-3'],
   },
-  // Phase 10.152: Removed 'ready' stage - pipeline ends at 'rank' for cleaner user journey
-  // When ranking completes, papers are immediately visible - no need for a separate "Ready" stage
+  {
+    id: 'select',
+    name: 'Select',
+    icon: Target,
+    description: 'Quality filter',
+    // Note: These are fallback descriptions - usePipelineState.ts shows actual counts
+    activeDescription: `Selecting top papers by quality...`,
+    completeDescription: 'Top papers selected!',
+    color: STAGE_COLORS.select, // Cyan for final selection
+    substages: ['harmonic-score', 'quality-sort', 'final-selection'],
+  },
 ];
 
 // ============================================================================
@@ -261,30 +328,42 @@ export const PIPELINE_STAGES: PipelineStageConfig[] = [
 // ============================================================================
 
 /**
- * Orbital configurations by source tier
- * Phase 10.134: Adjusted radii for 44px minimum touch targets
+ * Phase 10.168: Apple-Grade Orbital System
  *
- * CALCULATION (container ~400x400 visualization area):
- * - Center at ~200,200 with larger orbit radii
- * - Node size now 44-52px, so need more spacing between orbits
+ * Container: 400 × 280
+ * Center: (200, 140)
+ *
+ * ORBIT CALCULATIONS:
+ * - Scaled for balanced 400×280 container
+ * - Node diameter: ~44px (compact)
+ * - Min arc spacing: 52px
+ *
+ * Visual hierarchy: Inner → Middle → Outer
+ * Each tier visually distinct with clear separation
  */
 export const ORBIT_CONFIGS: Record<SourceTier, OrbitConfig> = {
   fast: {
-    radius: 80,  // Phase 10.134: Increased for larger nodes
-    speed: 0.02,
+    radius: 45,
+    radiusX: 52,       // Inner core - compact
+    radiusY: 36,
+    speed: 0,
     startAngle: 0,
     direction: 1,
   },
   medium: {
-    radius: 120, // Phase 10.134: Increased spacing for larger nodes
-    speed: 0.012,
-    startAngle: Math.PI / 6,
+    radius: 75,
+    radiusX: 88,       // Middle ring
+    radiusY: 60,
+    speed: 0,
+    startAngle: Math.PI / 6,   // 30° offset
     direction: -1,
   },
   slow: {
-    radius: 160, // Phase 10.134: Increased for larger nodes
-    speed: 0.006,
-    startAngle: Math.PI / 3,
+    radius: 110,
+    radiusX: 130,      // Outer ring
+    radiusY: 88,
+    speed: 0,
+    startAngle: Math.PI / 4,   // 45° offset
     direction: 1,
   },
 };
@@ -401,58 +480,43 @@ export const SEMANTIC_TIER_CONFIG: Record<SemanticTierName, {
 }> = {
   immediate: {
     icon: Zap,
-    displayName: 'Quick Preview',
-    shortName: 'Quick',
-    description: 'Top 50 most relevant papers',
-    algorithmDetail: 'BM25 lexical scoring - keyword matching optimized for speed',
-    whyFast: 'Uses lightweight keyword frequency analysis, no deep learning inference',
+    displayName: 'Instant Preview',
+    shortName: 'Instant',
+    description: 'Top 50 papers ranked instantly',
+    algorithmDetail: 'BM25 + Porter Stemming — keyword matching with morphological variants (mercy → merciful)',
+    whyFast: 'No neural network — pure algorithmic speed with stemming',
     paperRange: '1-50',
     targetLatencyMs: 500,
   },
   refined: {
     icon: Target,
-    displayName: 'Refined Results',
+    displayName: 'Semantic Refinement',
     shortName: 'Refined',
-    description: 'Extended to 200 papers',
-    algorithmDetail: 'Dense vector retrieval - semantic similarity via embeddings',
-    whyFast: 'Pre-computed embeddings with approximate nearest neighbor search',
+    description: 'Top 200 papers with semantic scoring',
+    algorithmDetail: 'Dense vector retrieval — neural embedding similarity',
+    whyFast: 'Pre-computed embeddings + approximate nearest neighbors',
     paperRange: '51-200',
-    targetLatencyMs: 2000,
+    targetLatencyMs: 3000,
   },
   complete: {
     icon: Brain,
-    displayName: 'Complete Analysis',
+    displayName: 'Deep Analysis',
     shortName: 'Complete',
-    description: 'Full 600 paper analysis',
-    algorithmDetail: 'Cross-encoder re-ranking - deep pairwise query-document scoring',
-    whyFast: 'Full transformer inference for maximum accuracy, takes longer',
+    description: 'All 600 papers with cross-encoder',
+    algorithmDetail: 'Cross-encoder re-ranking — pairwise query-doc transformer',
+    whyFast: 'Full transformer inference for maximum accuracy',
     paperRange: '201-600',
-    targetLatencyMs: 10000,
+    targetLatencyMs: 12000,
   },
 };
 
 /**
- * Ranking tier paper limits
- * Used in RankingDiagram and other methodology displays
- */
-export const RANKING_TIER_LIMITS = {
-  immediate: { papers: 50, latencyLabel: '500ms' },
-  refined: { papers: 200, latencyLabel: '2s' },
-  complete: { papers: 600, latencyLabel: '10s' },
-} as const;
-
-/**
- * Maximum papers across all ranking tiers
- */
-export const MAX_RANKED_PAPERS = RANKING_TIER_LIMITS.complete.papers;
-
-/**
  * Neural mesh layout
- * Phase 10.131: Increased node size for better readability
+ * Phase 10.162: Compact node size for space efficiency
  */
 export const NEURAL_MESH_LAYOUT = {
-  nodeSpacing: 110,
-  nodeSize: 64,
+  nodeSpacing: 80,
+  nodeSize: 48,
   synapseWidth: 2,
   pulseSpeed: 1.5,
 };
@@ -521,21 +585,21 @@ export const DELAYED_TRANSITIONS = {
 
 /**
  * Stage orb dimensions
+ * Phase 10.162: Compact sizing
  */
 export const STAGE_ORB_SIZE = {
-  sm: 56,
-  md: 72,
-  lg: 88,
+  sm: 48,
+  md: 60,
+  lg: 72,
 };
 
 /**
  * Source node dimensions
- * Phase 10.134: Minimum 44px for WCAG touch target compliance
- * Note: Base increased from 24px to 44px for accessibility
+ * Phase 10.162: Compact but still accessible (36px minimum)
  */
 export const SOURCE_NODE_SIZE = {
-  base: 44,      // Phase 10.134: WCAG AA minimum touch target (was 24px)
-  max: 52,       // Phase 10.134: Increased to scale proportionally
+  base: 36,      // Phase 10.162: Compact touch target
+  max: 44,       // Phase 10.162: Max size for high-yield sources
   scaleThreshold: 50, // Scale up faster for visual impact
 };
 
@@ -579,41 +643,63 @@ export const QUALITY_METER_SIZE = {
 };
 
 /**
- * Pipeline layout configuration
- * Phase 10.134: Increased constellation size for larger touch targets
+ * Phase 10.168: Apple-Grade Layout System
  *
- * CALCULATION for constellation size:
- * - Max orbit radius (slow): 160px
- * - Max node half-size: 26px (52px / 2)
- * - Padding: 16px
- * - Required from center: 160 + 26 + 16 = 202px
- * - Total dimension: 202 * 2 = ~410px (rounded to 420px)
+ * DESIGN PRINCIPLES:
+ * - Clean visual hierarchy
+ * - Precise alignment
+ * - Purposeful whitespace
+ * - Subtle animations
+ *
+ * LAYOUT STRUCTURE:
+ * ┌─────────────────────────────────────────────────────────┐
+ * │  ANALYZE → DISCOVER → REFINE → RANK → SELECT           │
+ * ├─────────────────────────────────────────────────────────┤
+ * │                                    ↓           ↓        │
+ * │   ┌───────────────┐          ┌─────────┐ ┌─────────┐   │
+ * │   │    GALAXY     │          │SEMANTIC │ │QUALITY  │   │
+ * │   │   (sources)   │          │ RANKING │ │ FILTER  │   │
+ * │   └───────────────┘          └─────────┘ └─────────┘   │
+ * └─────────────────────────────────────────────────────────┘
+ *
+ * DIMENSIONS:
+ * - Galaxy: 400 × 280 (balanced, not overwhelming)
+ * - Detail panels: ~200px each (compact, informative)
+ * - Gap: 24px (Apple-standard spacing)
  */
 export const PIPELINE_LAYOUT = {
-  minWidth: 840,            // Phase 10.134: Increased for larger constellation
-  minHeight: 560,           // Phase 10.134: Increased for larger constellation
-  padding: 24,
-  constellationWidth: 420,  // Phase 10.134: Increased to fit 160px orbit + larger nodes
-  constellationHeight: 420, // Phase 10.134: Increased to fit 160px orbit + larger nodes
+  minWidth: 880,
+  minHeight: 480,
+  padding: 20,
+  // Phase 10.168: Balanced galaxy container
+  constellationWidth: 400,
+  constellationHeight: 280,
+  constellationCenterOffsetX: 0,
   stageGap: 8,
-  brainWidth: 220,          // Phase 10.134: Slightly larger for better readability
+  // Phase 10.168: Detail panel widths
+  brainWidth: 220,
+  qualityWidth: 200,
+  // Phase 10.168: Apple-standard gap (24px base unit)
+  detailPanelGap: 24,
 };
 
 /**
  * Connector dimensions
+ * Phase 10.162: Compact connectors
  */
 export const CONNECTOR_SIZE = {
-  width: 60,
-  height: 4,
-  arrowSize: 8,
+  width: 40,
+  height: 3,
+  arrowSize: 6,
 };
 
 /**
  * Canvas dimensions
+ * Phase 10.162: Compact canvas
  */
 export const CANVAS_DIMENSIONS = {
-  minWidth: 800,
-  minHeight: 400,
+  minWidth: 640,
+  minHeight: 320,
   aspectRatio: 2,
 };
 

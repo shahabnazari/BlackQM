@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import type { OrbitalSourceConstellationProps } from '../types';
 import type { LiteratureSource, SourceTier } from '@/lib/types/search-stream.types';
 import { SourceNode } from './SourceNode';
-import { useCountStabilization, STABILIZATION_CONFIG } from '../hooks/useCountStabilization';
+import { useCountStabilization } from '../hooks/useCountStabilization';
 import {
   ORBIT_CONFIGS,
   ORBIT_LEGEND,
@@ -97,37 +97,41 @@ const StarfieldBackground = memo<{
 });
 
 /**
- * Enhanced orbital ring with gradient and glow
- * Phase 10.128: Added isSearching prop to control rotating animation
+ * Phase 10.163: Elliptical orbital ring - galaxy-like aesthetic
+ * Static display without rotation animation for enterprise-grade appearance
  */
 const OrbitRing = memo<{
   tier: SourceTier;
   centerX: number;
   centerY: number;
   isActive: boolean;
-  isSearching: boolean;
   reducedMotion: boolean;
-}>(function OrbitRing({ tier, centerX, centerY, isActive, isSearching, reducedMotion }) {
+}>(function OrbitRing({ tier, centerX, centerY, isActive, reducedMotion }) {
   const config = ORBIT_CONFIGS[tier];
   const color = TIER_COLORS[tier];
   const id = `orbit-${tier}`;
+
+  // Phase 10.163: Use elliptical radii if available, fallback to circular
+  const rx = config.radiusX ?? config.radius;
+  const ry = config.radiusY ?? config.radius;
 
   return (
     <g>
       {/* Gradient definition */}
       <defs>
         <radialGradient id={`${id}-gradient`} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={color} stopOpacity={isActive ? 0.3 : 0.05} />
+          <stop offset="0%" stopColor={color} stopOpacity={isActive ? 0.15 : 0.03} />
           <stop offset="100%" stopColor={color} stopOpacity={0} />
         </radialGradient>
       </defs>
 
       {/* Subtle fill for active orbits */}
       {isActive && (
-        <motion.circle
+        <motion.ellipse
           cx={centerX}
           cy={centerY}
-          r={config.radius}
+          rx={rx}
+          ry={ry}
           fill={`url(#${id}-gradient)`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -135,69 +139,23 @@ const OrbitRing = memo<{
         />
       )}
 
-      {/* Main orbit ring */}
-      <motion.circle
+      {/* Main orbit ring - Phase 10.163: Ellipse instead of circle */}
+      <motion.ellipse
         cx={centerX}
         cy={centerY}
-        r={config.radius}
+        rx={rx}
+        ry={ry}
         fill="none"
-        stroke={isActive ? color : 'rgba(255, 255, 255, 0.1)'}
-        strokeWidth={isActive ? 1.5 : 0.5}
-        strokeDasharray={isActive ? 'none' : '2 4'}
-        initial={{ opacity: 0, scale: 0.8 }}
+        stroke={isActive ? color : 'rgba(255, 255, 255, 0.08)'}
+        strokeWidth={isActive ? 1 : 0.5}
+        strokeDasharray={isActive ? 'none' : '3 6'}
+        initial={{ opacity: 0, scale: 0.9 }}
         animate={{
-          opacity: isActive ? 0.8 : 0.3,
+          opacity: isActive ? 0.6 : 0.2,
           scale: 1,
         }}
-        transition={SPRING_PRESETS.soft}
+        transition={reducedMotion ? { duration: 0 } : SPRING_PRESETS.soft}
       />
-
-      {/* Rotating highlight - only shows while actively searching */}
-      {isActive && isSearching && !reducedMotion && (
-        <motion.circle
-          cx={centerX}
-          cy={centerY}
-          r={config.radius}
-          fill="none"
-          stroke={color}
-          strokeWidth={2}
-          strokeDasharray={`${Math.PI * config.radius * 0.1} ${Math.PI * config.radius * 1.9}`}
-          strokeLinecap="round"
-          initial={{ rotate: config.startAngle * (180 / Math.PI) }}
-          animate={{ rotate: 360 + config.startAngle * (180 / Math.PI) }}
-          transition={{
-            duration: 20 / config.speed,
-            repeat: Infinity,
-            ease: 'linear',
-          }}
-          style={{ transformOrigin: `${centerX}px ${centerY}px` }}
-        />
-      )}
-
-      {/* Static completion indicator - shows when search complete */}
-      {isActive && !isSearching && (
-        <motion.circle
-          cx={centerX}
-          cy={centerY}
-          r={config.radius}
-          fill="none"
-          stroke={color}
-          strokeWidth={2}
-          strokeDasharray={`${Math.PI * config.radius * 0.15} ${Math.PI * config.radius * 1.85}`}
-          strokeLinecap="round"
-          initial={{ opacity: 0.5 }}
-          animate={{ opacity: [0.5, 0.8, 0.5] }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-          style={{
-            transformOrigin: `${centerX}px ${centerY}px`,
-            transform: `rotate(${config.startAngle * (180 / Math.PI)}deg)`,
-          }}
-        />
-      )}
     </g>
   );
 });
@@ -749,18 +707,6 @@ export const OrbitalSourceConstellation = memo<OrbitalSourceConstellationProps>(
     const [hoveredSource, setHoveredSource] = useState<LiteratureSource | null>(null);
     const [showLegend, setShowLegend] = useState(ORBIT_LEGEND.showByDefault);
 
-    // Phase 10.143/10.152: Use shared hook for orbital animation state
-    // Planets orbit clockwise after initial paper count stabilizes
-    // Phase 10.152 FIX: Orbit now persists briefly after search ends
-    const { isStabilized } = useCountStabilization({
-      count: rawTotalPapers ?? 0,
-      isActive: isSearching,
-    });
-
-    // Phase 10.152 FIX: Orbit when stabilized - continues briefly after search ends
-    // The useCountStabilization hook now handles persistence after completion
-    const isOrbiting = isStabilized;
-
     // Phase 10.130: Memoize containerSize to prevent unnecessary SourceNode re-renders
     const containerSize = useMemo(() => ({ width, height }), [width, height]);
 
@@ -829,7 +775,6 @@ export const OrbitalSourceConstellation = memo<OrbitalSourceConstellationProps>(
               centerX={centerPosition.x}
               centerY={centerPosition.y}
               isActive={activeTiers.has(tier)}
-              isSearching={isSearching}
               reducedMotion={reducedMotion}
             />
           ))}
@@ -849,42 +794,8 @@ export const OrbitalSourceConstellation = memo<OrbitalSourceConstellationProps>(
           />
         </svg>
 
-        {/* Phase 10.153: Netflix-Grade CSS Keyframes for buttery-smooth orbital animation */}
-        {/* Uses translate3d(0,0,0) to force GPU layer and prevent jank */}
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-              @keyframes orbitClockwise {
-                0% { transform: rotate(0deg) translate3d(0,0,0); }
-                100% { transform: rotate(360deg) translate3d(0,0,0); }
-              }
-              @keyframes orbitCounterRotate {
-                0% { transform: rotate(0deg) translate3d(0,0,0); }
-                100% { transform: rotate(-360deg) translate3d(0,0,0); }
-              }
-            `,
-          }}
-        />
-
-        {/* HTML Layer - Source Nodes with Phase 10.153 orbital animation */}
-        {/* Sources orbit like planets around sun after particle collection stops */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            // Phase 10.153: Netflix-grade planetary orbit animation
-            // Rotates around the center (sun) when particles stop flowing
-            transformOrigin: `${centerPosition.x}px ${centerPosition.y}px`,
-            animation: isOrbiting && !reducedMotion
-              ? `orbitClockwise ${STABILIZATION_CONFIG.orbitDurationSeconds}s linear infinite`
-              : 'none',
-            // Phase 10.153: Comprehensive GPU acceleration for smooth 60fps rotation
-            willChange: isOrbiting ? 'transform' : 'auto',
-            // Note: Keyframes include translate3d(0,0,0) for GPU compositing
-            // Static transform only needed when NOT animating for layer promotion
-            ...(isOrbiting ? {} : { transform: 'translate3d(0,0,0)' }),
-            backfaceVisibility: 'hidden', // Prevent flicker during rotation
-          }}
-        >
+        {/* Phase 10.163: Static source nodes - no orbital rotation */}
+        <div className="absolute inset-0 pointer-events-none">
           {sources.map((source) => (
             <SourceNode
               key={source.source}
@@ -895,7 +806,7 @@ export const OrbitalSourceConstellation = memo<OrbitalSourceConstellationProps>(
               onClick={onSourceClick}
               reducedMotion={reducedMotion}
               isHovered={hoveredSource === source.source}
-              isOrbiting={isOrbiting}
+              isOrbiting={false}
             />
           ))}
         </div>

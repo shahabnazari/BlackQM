@@ -51,10 +51,15 @@ import { cn } from '@/lib/utils';
 const PAPERS_PER_PAGE = 50;
 const CURRENT_YEAR = new Date().getFullYear();
 
+/**
+ * Phase 10.160 FIX: Widened default filters to include ALL papers
+ * This ensures "X papers" in results matches "X FINAL" in pipeline visualization
+ * Previous defaults (year 2010+, 1-20 authors) were filtering out valid papers
+ */
 const DEFAULT_FILTERS: PaperFilters = {
-  yearRange: [2010, CURRENT_YEAR],
-  citationsPerYearRange: [0, 100],
-  authorCountRange: [1, 20],
+  yearRange: [1900, CURRENT_YEAR], // Include all years by default
+  citationsPerYearRange: [0, 1000], // Wide range to include all
+  authorCountRange: [0, 100], // Include papers with 0 authors (some preprints) and large teams
   openAccessOnly: false,
   hasPdfOnly: false,
   publicationTypes: [],
@@ -157,6 +162,7 @@ function applyFilters(papers: Paper[], filters: PaperFilters): Paper[] {
 
 /**
  * Sort papers
+ * Phase 10.169: Use overallScore (harmonic mean of relevance × quality) for quality sorting
  */
 function sortPapers(papers: Paper[], sortConfig: SortConfig): Paper[] {
   const sorted = [...papers].sort((a, b) => {
@@ -164,7 +170,10 @@ function sortPapers(papers: Paper[], sortConfig: SortConfig): Paper[] {
 
     switch (sortConfig.field) {
       case 'quality_score':
-        comparison = (a.qualityScore || 0) - (b.qualityScore || 0);
+        // Phase 10.169: Use overallScore (composite of relevance + quality via harmonic mean)
+        // This is the score papers are ranked by in the backend quality selection stage
+        // Falls back to qualityScore if overallScore not available
+        comparison = (a.overallScore ?? a.qualityScore ?? 0) - (b.overallScore ?? b.qualityScore ?? 0);
         break;
       case 'publication_year':
         comparison = (a.year || 0) - (b.year || 0);
@@ -181,9 +190,9 @@ function sortPapers(papers: Paper[], sortConfig: SortConfig): Paper[] {
         break;
       }
       case 'relevance':
-        // Use qualityScore as relevance indicator (no separate relevanceScore field in Paper type)
-        // Higher quality score = more relevant
-        comparison = (a.qualityScore || 0) - (b.qualityScore || 0);
+        // Phase 10.169: Use overallScore for relevance sorting (composite score)
+        // overallScore = harmonic mean of (relevance × quality), which gives best results
+        comparison = (a.overallScore ?? a.qualityScore ?? 0) - (b.overallScore ?? b.qualityScore ?? 0);
         break;
       case 'author_count':
         comparison = (a.authors?.length || 0) - (b.authors?.length || 0);
@@ -201,22 +210,23 @@ function sortPapers(papers: Paper[], sortConfig: SortConfig): Paper[] {
 
 /**
  * Count active filters
+ * Phase 10.160: Updated defaults to match widened filter ranges
  */
 function countActiveFilters(filters: PaperFilters): number {
   let count = 0;
 
-  // Year range (if not default)
-  if (filters.yearRange[0] !== 2010 || filters.yearRange[1] !== CURRENT_YEAR) {
+  // Year range (if not default - Phase 10.160: Changed default from 2010 to 1900)
+  if (filters.yearRange[0] !== 1900 || filters.yearRange[1] !== CURRENT_YEAR) {
     count++;
   }
 
-  // Citations per year range (if not default)
-  if (filters.citationsPerYearRange[0] !== 0 || filters.citationsPerYearRange[1] !== 100) {
+  // Citations per year range (if not default - Phase 10.160: Changed default max from 100 to 1000)
+  if (filters.citationsPerYearRange[0] !== 0 || filters.citationsPerYearRange[1] !== 1000) {
     count++;
   }
 
-  // Author count range (if not default)
-  if (filters.authorCountRange[0] !== 1 || filters.authorCountRange[1] !== 20) {
+  // Author count range (if not default - Phase 10.160: Changed from 1-20 to 0-100)
+  if (filters.authorCountRange[0] !== 0 || filters.authorCountRange[1] !== 100) {
     count++;
   }
 
@@ -271,53 +281,8 @@ export const SearchResultsContainerEnhanced = memo(function SearchResultsContain
   const lastAutoSelectedPapersRef = useRef<string>('');
 
   // ==========================================================================
-  // EFFECTS
-  // ==========================================================================
-
-  /**
-   * Auto-select ALL papers when search results change
-   * PHASE 10.942 BUGFIX: Fixed auto-selection to ALWAYS select all papers on new search
-   * DEFAULT BEHAVIOR: All papers selected on new search (regardless of previous selections)
-   */
-  useEffect(() => {
-    // Create a unique identifier for the current papers set
-    const papersSignature = papers.map((p) => p.id).sort().join(',');
-
-    // Only auto-select if:
-    // 1. We have papers
-    // 2. This is a NEW set of papers (different from last auto-selected set)
-    // BUGFIX: Removed `selectedPapers.size === 0` condition - we ALWAYS want to
-    // select all papers when a new search happens, even if user had previous selections
-    if (
-      papers.length > 0 &&
-      papersSignature !== lastAutoSelectedPapersRef.current
-    ) {
-      const allPaperIds = papers.map((p) => p.id);
-
-      // Defensive: Only select if we have valid IDs
-      if (allPaperIds.length > 0 && allPaperIds.every((id) => id && typeof id === 'string')) {
-        // BUGFIX: Clear existing selections first, then select all new papers
-        // This ensures a clean slate for each new search
-        clearSelection();
-        selectMultiplePapers(allPaperIds);
-        lastAutoSelectedPapersRef.current = papersSignature;
-
-        logger.info('Auto-selected ALL papers from new search', 'SearchResultsContainerEnhanced', {
-          count: allPaperIds.length,
-        });
-      }
-    }
-  }, [papers, selectMultiplePapers, clearSelection]);
-
-  /**
-   * Reset to page 1 when filters or sort changes
-   */
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filters, sortConfig]);
-
-  // ==========================================================================
   // MEMOIZED VALUES
+  // Note: useMemo must come before useEffect that depends on them
   // ==========================================================================
 
   /**
@@ -393,6 +358,59 @@ export const SearchResultsContainerEnhanced = memo(function SearchResultsContain
     },
     [savedPapers]
   );
+
+  // ==========================================================================
+  // EFFECTS
+  // Note: These must come after useMemo declarations they depend on
+  // ==========================================================================
+
+  /**
+   * Auto-select ALL papers when search results change
+   * PHASE 10.942 BUGFIX: Fixed auto-selection to ALWAYS select all papers on new search
+   * PHASE 10.160 FIX: Changed to select from processedPapers (filtered) instead of papers (all)
+   * This ensures "X selected" badge matches "X papers" displayed count
+   * DEFAULT BEHAVIOR: All VISIBLE papers selected on new search
+   */
+  useEffect(() => {
+    // Phase 10.160: Use processedPapers signature (filtered papers) for accurate selection
+    // This prevents mismatch between "X selected" and "X papers" in the UI
+    const papersSignature = processedPapers.map((p) => p.id).sort().join(',');
+
+    // Only auto-select if:
+    // 1. We have papers
+    // 2. This is a NEW set of papers (different from last auto-selected set)
+    // BUGFIX: Removed `selectedPapers.size === 0` condition - we ALWAYS want to
+    // select all papers when a new search happens, even if user had previous selections
+    if (
+      processedPapers.length > 0 &&
+      papersSignature !== lastAutoSelectedPapersRef.current
+    ) {
+      // Phase 10.160 FIX: Select only visible (filtered) papers, not all papers
+      // This ensures the "X selected" badge matches the displayed "X papers" count
+      const visiblePaperIds = processedPapers.map((p) => p.id);
+
+      // Defensive: Only select if we have valid IDs
+      if (visiblePaperIds.length > 0 && visiblePaperIds.every((id) => id && typeof id === 'string')) {
+        // BUGFIX: Clear existing selections first, then select all visible papers
+        // This ensures a clean slate for each new search
+        clearSelection();
+        selectMultiplePapers(visiblePaperIds);
+        lastAutoSelectedPapersRef.current = papersSignature;
+
+        logger.info('Auto-selected ALL visible papers from new search', 'SearchResultsContainerEnhanced', {
+          count: visiblePaperIds.length,
+          filteredFrom: papers.length,
+        });
+      }
+    }
+  }, [processedPapers, papers.length, selectMultiplePapers, clearSelection]);
+
+  /**
+   * Reset to page 1 when filters or sort changes
+   */
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, sortConfig]);
 
   // ==========================================================================
   // HANDLERS

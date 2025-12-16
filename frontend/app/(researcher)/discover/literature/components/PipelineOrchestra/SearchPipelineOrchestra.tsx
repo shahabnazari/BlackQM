@@ -20,7 +20,7 @@
 
 import React, { memo, useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Maximize2, Minimize2, FileText, Clock, Sparkles } from 'lucide-react';
+import { X, Maximize2, Minimize2, FileText, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SearchPipelineOrchestraProps, Point } from './types';
 import type { LiteratureSource, SourceTier, SemanticTierName } from '@/lib/types/search-stream.types';
@@ -36,11 +36,11 @@ import { StageConnector } from './components/StageConnector';
 import { OrbitalSourceConstellation } from './components/OrbitalSourceConstellation';
 import { ParticleFlowSystem } from './components/ParticleFlowSystem';
 import { SemanticBrainVisualizer } from './components/SemanticBrainVisualizer';
+import { QualityFunnelVisualizer } from './components/QualityFunnelVisualizer';
 import { LiveCounter, ETAPredictor, QualityMeter } from './components/LiveCounter';
 import { PipelineErrorBoundary } from './components/PipelineErrorBoundary';
 import { MethodologyReport } from './components/MethodologyReport';
 import { StageFlowParticles } from './components/StageFlowParticles';
-import { RankToSemanticFlow } from './components/RankToSemanticFlow';
 
 // Constants
 import {
@@ -147,68 +147,6 @@ const OrchestraHeader = memo<{
   );
 });
 
-/**
- * Metrics dashboard row
- */
-const MetricsDashboard = memo<{
-  papers: number;
-  elapsed: number;
-  quality: number;
-  sourcesComplete: number;
-  sourcesTotal: number;
-  stage: string | null;
-  reducedMotion: boolean;
-}>(function MetricsDashboard({
-  papers,
-  elapsed,
-  quality,
-  sourcesComplete,
-  sourcesTotal,
-  stage,
-  reducedMotion,
-}) {
-  return (
-    <motion.div
-      className="flex items-center justify-between gap-3 pt-4 border-t border-white/10"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={SPRING_PRESETS.soft}
-    >
-      <div className="flex items-center gap-3">
-        <LiveCounter
-          value={papers}
-          label="Papers"
-          icon={FileText}
-          format="number"
-          trend={papers > 0 ? 'up' : 'neutral'}
-          animate={!reducedMotion}
-          size="sm"
-        />
-
-        <LiveCounter
-          value={elapsed}
-          label="Elapsed"
-          icon={Clock}
-          format="duration"
-          animate={!reducedMotion}
-          size="sm"
-        />
-
-        <QualityMeter score={quality} animate={!reducedMotion} />
-      </div>
-
-      <ETAPredictor
-        elapsedMs={elapsed}
-        sourcesComplete={sourcesComplete}
-        sourcesTotal={sourcesTotal}
-        papersFound={papers}
-        stage={stage}
-        reducedMotion={reducedMotion}
-      />
-    </motion.div>
-  );
-});
-
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -251,11 +189,16 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
     semanticTier,
     semanticVersion,
     semanticTierStats,
+    // Phase 10.160: Quality selection state for funnel visualization
+    selectionRankedCount,
+    selectionSelectedCount,
+    selectionAvgQuality,
     onCancel,
     onSourceClick,
     onTierClick,
     showParticles = true,
     showSemanticBrain = true,
+    showQualityFunnel = true,
     compactMode = false,
   }) {
     // Reduced motion preference
@@ -267,7 +210,8 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
     const containerRef = useRef<HTMLDivElement | null>(null);
     const restoreFocusRef = useRef<HTMLElement | null>(null);
 
-    // Derive pipeline state
+    // Derive pipeline state (Phase 10.156: Iteration state removed)
+    // Phase 10.160: Added selection props for quality funnel visualization
     const pipelineState = usePipelineState({
       isSearching,
       stage,
@@ -281,6 +225,10 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
       semanticTier,
       semanticVersion,
       semanticTierStats,
+      // Phase 10.160: Quality selection state (default to 0 if undefined)
+      selectionRankedCount: selectionRankedCount ?? 0,
+      selectionSelectedCount: selectionSelectedCount ?? 0,
+      selectionAvgQuality: selectionAvgQuality ?? 0,
     });
 
     // Expanded mode behaves like a lightweight modal overlay: Escape closes,
@@ -325,7 +273,7 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
       }
     }, [isSearching]); // Only depend on isSearching - don't re-run on isExpanded changes
 
-    // Phase 10.135: Responsive constellation sizing for mobile
+    // Phase 10.167: Responsive golden ratio scaling
     const [constellationSize, setConstellationSize] = useState({
       width: PIPELINE_LAYOUT.constellationWidth,
       height: PIPELINE_LAYOUT.constellationHeight,
@@ -334,18 +282,40 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
     useEffect(() => {
       const updateSize = () => {
         if (typeof window === 'undefined') return;
-        const isMobile = window.innerWidth < 640; // sm breakpoint
-        if (isMobile) {
-          const maxSize = Math.min(
-            window.innerWidth - 32, // Account for padding
-            PIPELINE_LAYOUT.constellationWidth
-          );
-          setConstellationSize({ width: maxSize, height: maxSize });
-        } else {
+
+        const screenWidth = window.innerWidth;
+        const baseWidth = PIPELINE_LAYOUT.constellationWidth;   // 480
+        const baseHeight = PIPELINE_LAYOUT.constellationHeight; // 300
+        const aspectRatio = baseHeight / baseWidth;             // 0.625 (≈ 1/φ)
+
+        // Mobile (<640): Scale to 65% - still readable
+        if (screenWidth < 640) {
+          const scale = 0.65;
+          const scaledWidth = Math.min(screenWidth - 40, baseWidth * scale);
           setConstellationSize({
-            width: PIPELINE_LAYOUT.constellationWidth,
-            height: PIPELINE_LAYOUT.constellationHeight,
+            width: scaledWidth,
+            height: scaledWidth * aspectRatio,
           });
+        }
+        // Tablet (640-1024): Scale to 80%
+        else if (screenWidth < 1024) {
+          const scale = 0.80;
+          setConstellationSize({
+            width: baseWidth * scale,
+            height: baseHeight * scale,
+          });
+        }
+        // Small desktop (1024-1280): Scale to 90%
+        else if (screenWidth < 1280) {
+          const scale = 0.90;
+          setConstellationSize({
+            width: baseWidth * scale,
+            height: baseHeight * scale,
+          });
+        }
+        // Large desktop: Full golden ratio size
+        else {
+          setConstellationSize({ width: baseWidth, height: baseHeight });
         }
       };
       updateSize();
@@ -353,9 +323,9 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
       return () => window.removeEventListener('resize', updateSize);
     }, []);
 
-    // Calculate center position for constellation
+    // Phase 10.167: Calculate true center (no offset for balanced orbits)
     const constellationCenter = useMemo<Point>(() => ({
-      x: constellationSize.width / 2,
+      x: constellationSize.width / 2 + (PIPELINE_LAYOUT.constellationCenterOffsetX ?? 0),
       y: constellationSize.height / 2,
     }), [constellationSize]);
 
@@ -410,18 +380,23 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
       });
 
       // Calculate positions using pre-computed indices
+      // Phase 10.163: Updated for elliptical orbits
       sourceStats.forEach((_, source) => {
         const tier = SOURCE_TIERS[source];
         const tierSources = tierGroups.get(tier) || [];
-        const sourceIndex = sourceIndices.get(source) ?? 0; // O(1) lookup
+        const sourceIndex = sourceIndices.get(source) ?? 0;
         const orbitConfig = ORBIT_CONFIGS[tier];
+
+        // Phase 10.163: Use elliptical radii
+        const rx = orbitConfig.radiusX ?? orbitConfig.radius;
+        const ry = orbitConfig.radiusY ?? orbitConfig.radius;
 
         const angleStep = (2 * Math.PI) / Math.max(tierSources.length, 1);
         const angle = orbitConfig.startAngle + (sourceIndex * angleStep);
 
         positions.set(source, {
-          x: constellationCenter.x + orbitConfig.radius * Math.cos(angle),
-          y: constellationCenter.y + orbitConfig.radius * Math.sin(angle),
+          x: constellationCenter.x + rx * Math.cos(angle),
+          y: constellationCenter.y + ry * Math.sin(angle),
         });
       });
 
@@ -498,7 +473,7 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
         <AnimatePresence>
           {isExpanded && (
             <motion.div
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -511,10 +486,12 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
         <motion.div
           ref={containerRef}
           className={cn(
-            'relative rounded-2xl',
-            'backdrop-blur-xl bg-gradient-to-br from-gray-900/95 to-gray-800/95',
-            'border border-white/10 shadow-2xl',
-            isExpanded && 'fixed inset-4 z-50 overflow-auto'
+            'relative rounded-xl',
+            // Phase 10.165: Solid dark background with subtle blur - WCAG compliant
+            'bg-gray-900 backdrop-blur-md',
+            'border border-white/15 shadow-2xl',
+            // Phase 10.163: Enterprise-grade expanded layout
+            isExpanded && 'fixed inset-8 z-50 overflow-auto max-w-6xl mx-auto'
           )}
           initial={{ opacity: 0, y: 20, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -524,17 +501,21 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
           aria-label={ARIA_LABELS.pipeline}
           tabIndex={-1}
         >
-          {/* Background gradient - Phase 10.133: Added overflow-hidden + rounded to clip gradient properly */}
+          {/* Background gradient - subtle for enterprise look */}
           <div
-            className="absolute inset-0 opacity-30 overflow-hidden rounded-2xl"
+            className="absolute inset-0 opacity-20 overflow-hidden rounded-xl"
             style={{
-              background: `radial-gradient(ellipse at 30% 50%, rgba(59, 130, 246, 0.2) 0%, transparent 60%),
-                          radial-gradient(ellipse at 70% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 60%)`,
+              background: `radial-gradient(ellipse at 30% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                          radial-gradient(ellipse at 70% 50%, rgba(139, 92, 246, 0.1) 0%, transparent 50%)`,
             }}
           />
 
-        {/* Content */}
-        <div className={cn('relative p-6', compactMode && 'p-4')}>
+        {/* Content - Phase 10.163: Tighter padding for compact feel */}
+        <div className={cn(
+          'relative p-4',
+          isExpanded && 'p-6',
+          compactMode && 'p-3'
+        )}>
           {/* Phase 10.135: Error banner - prominent display of source failures */}
           <AnimatePresence>
             {hasErrors && (
@@ -570,14 +551,14 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
             {...(onCancel && { onCancel })}
           />
 
-          {/* Main Content Area - Phase 10.135: Netflix-Grade Arc Layout */}
+          {/* Main Content Area - Phase 10.162: Compact Layout */}
           <div className={cn(
-            'relative flex flex-col gap-6',
-            'max-lg:gap-4',
-            compactMode && 'gap-4'
+            'relative flex flex-col gap-4',
+            'max-lg:gap-3',
+            compactMode && 'gap-3'
           )}>
-            {/* Phase 10.148: Pipeline Stages - Horizontal Layout */}
-            <div className="relative w-full flex justify-center overflow-visible" style={{ minHeight: '100px' }}>
+            {/* Phase 10.162: Pipeline Stages - Compact Horizontal Layout */}
+            <div className="relative w-full flex justify-center overflow-visible" style={{ minHeight: '80px' }}>
               {/* Horizontal Container - Stages in a row */}
               <div className="relative w-full max-w-4xl flex items-center justify-center overflow-visible">
                 {/* SVG Horizontal Path for Visual Flow (Decorative) */}
@@ -688,10 +669,13 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
               </div>
             </div>
 
-            {/* Center: Orbit Visualization with Semantic Brain */}
-            <div className="relative flex items-center justify-center gap-8 max-lg:flex-col max-lg:gap-6">
-              {/* Source Constellation - Wrapped in Error Boundary */}
-              <div className="relative flex-shrink-0 max-lg:mx-auto">
+            {/* Phase 10.168: Apple-Grade Layout - Galaxy left, Detail panels under stages */}
+            <div className="relative flex items-start gap-6 max-lg:flex-col">
+              {/* Left: Milky Way Galaxy */}
+              <div
+                className="relative flex-shrink-0"
+                style={{ width: constellationSize.width, height: constellationSize.height }}
+              >
                 <PipelineErrorBoundary>
                   <OrbitalSourceConstellation
                     sources={pipelineState.sources}
@@ -710,8 +694,6 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
                   />
                 </PipelineErrorBoundary>
 
-                {/* Phase 10.140: Particle Flow System - sources to constellation center */}
-                {/* Phase 10.143: Only show during collection phase, stops when count stabilizes */}
                 {showParticles && !reducedMotion && showParticleFlow && (
                   <PipelineErrorBoundary>
                     <ParticleFlowSystem
@@ -728,78 +710,170 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
                 )}
               </div>
 
-              {/* Semantic Brain - Wrapped in Error Boundary */}
-              {/* Phase 10.129: Added label to clarify this is the Rank stage breakdown */}
-              {/* Phase 10.146: Added RankToSemanticFlow for visual connection */}
-              {showSemanticBrain && (pipelineState.currentStage === 'rank' || semanticTier) && (
-                <motion.div
-                  className="flex flex-col items-center overflow-visible"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3, ...SPRING_PRESETS.soft }}
-                >
-                  {/* Phase 10.146: Animated flow from RANK to Semantic Ranking */}
-                  <RankToSemanticFlow
-                    isRankActive={pipelineState.currentStage === 'rank'}
-                    isProcessing={stage === 'ranking'}
-                    currentTier={semanticTier}
-                    reducedMotion={reducedMotion}
-                  />
+              {/* Right: Detail Panels with Vertical Arrows */}
+              <div className="flex-1 flex gap-5 max-lg:flex-col max-lg:w-full">
+                {/* RANK → Semantic Ranking Column */}
+                <div className="flex-1 flex flex-col items-center">
+                  {/* Vertical Arrow from RANK stage */}
+                  {showSemanticBrain && (pipelineState.currentStage === 'rank' || semanticTier) && (
+                    <motion.div
+                      className="flex flex-col items-center mb-3"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2, ...SPRING_PRESETS.soft }}
+                    >
+                      {/* Arrow line */}
+                      <div className="w-px h-8 bg-gradient-to-b from-purple-500/60 to-purple-500/20" />
+                      {/* Arrow head */}
+                      <svg width="12" height="8" viewBox="0 0 12 8" className="text-purple-500/60">
+                        <path d="M6 8L0 0h12L6 8z" fill="currentColor" />
+                      </svg>
+                      {/* Label */}
+                      <span className="text-[10px] font-medium text-purple-400/80 uppercase tracking-wider mt-1">
+                        from RANK
+                      </span>
+                    </motion.div>
+                  )}
 
-                  {/* Label explaining the semantic brain's relationship to Rank stage */}
-                  <div className="flex items-center gap-2 mb-2 mt-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20">
-                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                    <span className="text-xs font-medium text-purple-300 uppercase tracking-wider">
-                      3-Tier Semantic Ranking
-                    </span>
-                  </div>
-                  <PipelineErrorBoundary>
-                    <SemanticBrainVisualizer
-                      currentTier={semanticTier}
-                      tierStats={semanticTierStats}
-                      papersProcessed={
-                        semanticTierStats.get('complete')?.papersProcessed ||
-                        semanticTierStats.get('refined')?.papersProcessed ||
-                        semanticTierStats.get('immediate')?.papersProcessed ||
-                        0
-                      }
-                      totalPapers={papersFound}
-                      isProcessing={stage === 'ranking'}
-                      onTierHover={handleTierHover}
-                      onTierClick={handleTierClick}
-                      reducedMotion={reducedMotion}
-                    />
-                  </PipelineErrorBoundary>
-                </motion.div>
-              )}
+                  {/* Semantic Ranking Panel */}
+                  {showSemanticBrain && (pipelineState.currentStage === 'rank' || semanticTier) && (
+                    <PipelineErrorBoundary>
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.3, ...SPRING_PRESETS.soft }}
+                        className="w-full"
+                      >
+                        <SemanticBrainVisualizer
+                          currentTier={semanticTier}
+                          tierStats={semanticTierStats}
+                          papersProcessed={
+                            semanticTierStats.get('complete')?.papersProcessed ||
+                            semanticTierStats.get('refined')?.papersProcessed ||
+                            semanticTierStats.get('immediate')?.papersProcessed ||
+                            0
+                          }
+                          totalPapers={pipelineState.qualitySelection.rankedCount || papersFound}
+                          isProcessing={stage === 'ranking'}
+                          onTierHover={handleTierHover}
+                          onTierClick={handleTierClick}
+                          reducedMotion={reducedMotion}
+                        />
+                      </motion.div>
+                    </PipelineErrorBoundary>
+                  )}
+                </div>
+
+                {/* SELECT → Quality Filter Column */}
+                <div className="flex-1 flex flex-col items-center">
+                  {/* Vertical Arrow from SELECT stage */}
+                  {showQualityFunnel && (
+                    stage === 'selecting' ||
+                    stage === 'complete' ||
+                    pipelineState.qualitySelection.isSelecting ||
+                    pipelineState.qualitySelection.isComplete
+                  ) && (
+                    <motion.div
+                      className="flex flex-col items-center mb-3"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.25, ...SPRING_PRESETS.soft }}
+                    >
+                      {/* Arrow line */}
+                      <div className="w-px h-8 bg-gradient-to-b from-cyan-500/60 to-cyan-500/20" />
+                      {/* Arrow head */}
+                      <svg width="12" height="8" viewBox="0 0 12 8" className="text-cyan-500/60">
+                        <path d="M6 8L0 0h12L6 8z" fill="currentColor" />
+                      </svg>
+                      {/* Label */}
+                      <span className="text-[10px] font-medium text-cyan-400/80 uppercase tracking-wider mt-1">
+                        from SELECT
+                      </span>
+                    </motion.div>
+                  )}
+
+                  {/* Quality Filter Panel */}
+                  {showQualityFunnel && (
+                    stage === 'selecting' ||
+                    stage === 'complete' ||
+                    pipelineState.qualitySelection.isSelecting ||
+                    pipelineState.qualitySelection.isComplete
+                  ) && (
+                    <PipelineErrorBoundary>
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.35, ...SPRING_PRESETS.soft }}
+                        className="w-full"
+                      >
+                        <QualityFunnelVisualizer
+                          rankedCount={pipelineState.qualitySelection.rankedCount}
+                          selectedCount={pipelineState.qualitySelection.selectedCount}
+                          targetCount={pipelineState.qualitySelection.targetCount}
+                          avgQualityScore={pipelineState.qualitySelection.avgQualityScore}
+                          isSelecting={pipelineState.qualitySelection.isSelecting || stage === 'selecting'}
+                          isComplete={pipelineState.qualitySelection.isComplete || stage === 'complete'}
+                          reducedMotion={reducedMotion}
+                        />
+                      </motion.div>
+                    </PipelineErrorBoundary>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Metrics Dashboard */}
-          <MetricsDashboard
-            papers={pipelineState.metrics.papers}
-            elapsed={pipelineState.metrics.elapsed}
-            quality={pipelineState.metrics.quality}
-            sourcesComplete={pipelineState.metrics.sourcesComplete}
-            sourcesTotal={pipelineState.metrics.sourcesTotal}
-            stage={stage}
-            reducedMotion={reducedMotion}
-          />
-
-          {/* Phase 10.128: Methodology Report - shown after search completes */}
-          {pipelineState.isComplete && (
-            <div className="pt-3 border-t border-white/10 mt-3 flex justify-end">
-              <MethodologyReport
-                query={message}
-                papersFound={papersFound}
-                sourcesQueried={Array.from(sourceStats.keys())}
-                elapsedMs={elapsedMs}
-                semanticTier={semanticTier}
-                duplicatesRemoved={Math.round(papersFound * 0.35)}
-                isComplete={pipelineState.isComplete}
+          {/* Metrics Dashboard + Methodology Report on same row */}
+          <motion.div
+            className="flex items-center justify-between gap-3 pt-4 border-t border-white/10"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={SPRING_PRESETS.soft}
+          >
+            <div className="flex items-center gap-3">
+              <LiveCounter
+                value={pipelineState.metrics.papers}
+                label="Papers"
+                icon={FileText}
+                format="number"
+                trend={pipelineState.metrics.papers > 0 ? 'up' : 'neutral'}
+                animate={!reducedMotion}
+                size="sm"
               />
+              <LiveCounter
+                value={pipelineState.metrics.elapsed}
+                label="Elapsed"
+                icon={Clock}
+                format="duration"
+                animate={!reducedMotion}
+                size="sm"
+              />
+              <QualityMeter score={pipelineState.metrics.quality} animate={!reducedMotion} />
             </div>
-          )}
+
+            <div className="flex items-center gap-3">
+              <ETAPredictor
+                elapsedMs={pipelineState.metrics.elapsed}
+                sourcesComplete={pipelineState.metrics.sourcesComplete}
+                sourcesTotal={pipelineState.metrics.sourcesTotal}
+                papersFound={pipelineState.metrics.papers}
+                stage={stage}
+                reducedMotion={reducedMotion}
+              />
+              {/* Methodology Report - inline with metrics */}
+              {pipelineState.isComplete && (
+                <MethodologyReport
+                  query={message}
+                  papersFound={papersFound}
+                  sourcesQueried={Array.from(sourceStats.keys())}
+                  elapsedMs={elapsedMs}
+                  semanticTier={semanticTier}
+                  duplicatesRemoved={Math.round(papersFound * 0.35)}
+                  isComplete={pipelineState.isComplete}
+                />
+              )}
+            </div>
+          </motion.div>
         </div>
 
           {/* Screen Reader Announcements */}

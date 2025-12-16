@@ -104,23 +104,24 @@ export interface PMCSearchOptions {
 }
 
 /**
- * Phase 10.126: PMC-SPECIFIC LIMIT
+ * Phase 10.159: PMC-SPECIFIC LIMIT (REDUCED FOR TIMEOUT SAFETY)
  *
  * PMC has unique performance constraints due to full-text XML parsing:
  * - Each article takes ~310ms to parse (regex extraction of sections)
  * - Other sources (PubMed, Semantic Scholar) only parse metadata (~5-10ms)
  *
- * Calculation for 65s source timeout:
+ * Calculation for 70s source timeout:
  * - HTTP fetch: ~14s per batch
  * - Parsing: 75 articles × 310ms = 23s per batch
  * - Total per batch: ~37s
- * - With 2 concurrent batches: ~37s (well under 65s timeout)
- * - 2 batches × 75 = 150 papers maximum
+ * - With 3 concurrent batches of 75: ~37s total for first 225 papers
+ * - 2 batches × 75 = 150 papers keeps us safely under timeout
  *
- * This cap ensures PMC completes within timeout while still providing
- * valuable full-text content that other sources cannot offer.
+ * Phase 10.159: REVERTED from 300 to 150 because:
+ * - 300 articles = 4 batches = ~74s total (EXCEEDS 70s timeout!)
+ * - 150 articles = 2 batches = ~37s total (safe with buffer)
  */
-const PMC_MAX_ARTICLES = 150; // Prevents timeout during full-text parsing
+const PMC_MAX_ARTICLES = 150; // Phase 10.159: Reverted to 150 for timeout safety
 
 /**
  * Phase 10.106 Phase 3: Typed interface for PMC esearch parameters

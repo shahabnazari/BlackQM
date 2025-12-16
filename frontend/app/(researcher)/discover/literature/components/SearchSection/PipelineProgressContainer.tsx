@@ -165,6 +165,7 @@ const STAGE_MAP: Record<SearchStage, string> = {
   'medium-sources': 'source-fetch',
   'slow-sources': 'source-fetch',
   'ranking': 'semantic-rank',
+  'selecting': 'quality-select',
   'complete': 'complete',
 };
 

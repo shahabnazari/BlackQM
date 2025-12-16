@@ -121,11 +121,13 @@ interface ScoredPaper {
 /**
  * Tier configurations with conservative latency targets
  * Adjusted based on real-world benchmarks (Issue 12 FIX)
+ * Phase 10.158: Updated to process 600 papers (matching MAX_SEMANTIC_PAPERS)
+ * More papers = better quality selection for final 300
  */
 const SEMANTIC_TIERS: readonly SemanticTier[] = [
   { name: 'immediate', paperCount: 50, maxLatencyMs: 1500, priority: 'critical' },
   { name: 'refined', paperCount: 150, maxLatencyMs: 3000, priority: 'high' },
-  { name: 'complete', paperCount: 400, maxLatencyMs: 10000, priority: 'background' },
+  { name: 'complete', paperCount: 400, maxLatencyMs: 12000, priority: 'background' },
 ] as const;
 
 /**

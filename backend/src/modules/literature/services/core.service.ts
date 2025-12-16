@@ -87,7 +87,8 @@ import {
   calculateComprehensiveWordCount,
   isPaperEligible,
 } from '../utils/word-count.util';
-import { FAST_API_TIMEOUT } from '../constants/http-config.constants';
+// Phase 10.159: Use COMPLEX_API_TIMEOUT for CORE (SLOW tier source fetching 500 papers)
+import { COMPLEX_API_TIMEOUT } from '../constants/http-config.constants';
 
 export interface CoreSearchOptions {
   yearFrom?: number;
@@ -159,10 +160,21 @@ export class CoreService {
   }
 
   /**
+   * Phase 10.159: CORE API Constants
+   * CORE API v3 has a max limit of 100 results per request
+   * Need pagination to fetch more papers
+   *
+   * Rate limits: 1 req/10s (free), faster with API key
+   * Max 3 pages to stay under 70s slow source timeout
+   */
+  private static readonly CORE_MAX_PER_REQUEST = 100;
+  private static readonly CORE_MAX_PAGES = 3; // 3 pages × 100 = 300 papers max (safe under timeout)
+
+  /**
    * Search CORE database using API v3
    *
    * Phase 10.106 Phase 3: Refactored to use centralized RetryService
-   * instead of custom retry logic (DRY principle)
+   * Phase 10.159: Added pagination support (CORE API max 100 per request)
    *
    * @param query Search query string (supports CORE query language)
    * @param options Search filters (year range, limit, pagination)
@@ -175,14 +187,89 @@ export class CoreService {
       return [];
     }
 
-    this.logger.log(`[CORE] Searching: "${query}"`);
+    const requestedLimit = options?.limit || 20;
+    this.logger.log(`[CORE] Searching: "${query}" (limit: ${requestedLimit}, yearFrom: ${options?.yearFrom || 'none'}, yearTo: ${options?.yearTo || 'none'})`);
 
+    // Phase 10.159: Paginate if requesting more than 100 papers
+    if (requestedLimit > CoreService.CORE_MAX_PER_REQUEST) {
+      return this.searchWithPagination(query, requestedLimit, options);
+    }
+
+    // Single request for small limits
+    return this.searchSinglePage(query, requestedLimit, 0, options);
+  }
+
+  /**
+   * Phase 10.159: Paginated search for CORE API
+   *
+   * IMPORTANT: CORE API has strict rate limits:
+   * - Free tier: 1 request per 10 seconds for /search endpoint
+   * - With API key: Still limited, but faster
+   *
+   * Strategy: Sequential requests with minimal delay (API key provides faster rate)
+   * This prevents 429 rate limit errors while still fetching multiple pages
+   */
+  private async searchWithPagination(
+    query: string,
+    requestedLimit: number,
+    options?: CoreSearchOptions,
+  ): Promise<Paper[]> {
+    const pagesNeeded = Math.ceil(requestedLimit / CoreService.CORE_MAX_PER_REQUEST);
+    // Phase 10.159: Limit to 3 pages max (300 papers) to stay within timeout
+    // 3 pages × ~8s each = ~24s (safe under 70s slow source timeout)
+    const pagesToFetch = Math.min(pagesNeeded, 3);
+
+    this.logger.log(`[CORE] Pagination: ${pagesToFetch} pages for ${requestedLimit} papers (sequential due to rate limits)`);
+
+    const allPapers: Paper[] = [];
+    let successfulPages = 0;
+
+    // Phase 10.159: Sequential page fetching (CORE has strict rate limits)
+    // With API key, we can make requests faster but still need some delay
+    for (let page = 0; page < pagesToFetch; page++) {
+      const offset = page * CoreService.CORE_MAX_PER_REQUEST;
+      const pageLimit = Math.min(
+        requestedLimit - offset,
+        CoreService.CORE_MAX_PER_REQUEST,
+      );
+
+      try {
+        const papers = await this.searchSinglePage(query, pageLimit, offset, options);
+        if (papers.length > 0) {
+          successfulPages++;
+          allPapers.push(...papers);
+        }
+
+        // Small delay between requests to avoid rate limiting
+        // API key provides faster rate than free tier
+        if (page < pagesToFetch - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      } catch (err) {
+        this.logger.warn(`[CORE] Page ${page + 1} failed: ${(err as Error).message}`);
+        // Continue to next page on failure
+      }
+    }
+
+    this.logger.log(`[CORE] Pagination complete: ${allPapers.length} papers from ${successfulPages}/${pagesToFetch} pages`);
+    return allPapers.slice(0, requestedLimit);
+  }
+
+  /**
+   * Phase 10.159: Fetch a single page from CORE API
+   */
+  private async searchSinglePage(
+    query: string,
+    limit: number,
+    offset: number,
+    options?: CoreSearchOptions,
+  ): Promise<Paper[]> {
     try {
       // Construct typed query parameters
       const params: CoreSearchParams = {
         q: query,
-        limit: options?.limit || 20,
-        offset: options?.offset || 0,
+        limit: limit,
+        offset: offset,
       };
 
       // Add year filtering as query parameters
@@ -194,16 +281,15 @@ export class CoreService {
       }
 
       // Phase 10.106 Phase 3: Execute HTTP request with centralized retry + exponential backoff
-      // Retry policy: 3 attempts, 1s → 2s → 4s delays, 0-500ms jitter
-      // Retryable errors: Network failures, timeouts, server errors (500-599)
       const result = await this.retry.executeWithRetry(
         async () => firstValueFrom(
           this.httpService.get(`${this.API_BASE_URL}/search/works/`, {
             params,
             headers: {
-              'Authorization': `Bearer ${this.apiKey}`,
+              // Phase 10.159 FIX: CORE API uses plain Authorization header, NOT "Bearer" prefix
+              'Authorization': this.apiKey,
             },
-            timeout: FAST_API_TIMEOUT, // 10s timeout
+            timeout: COMPLEX_API_TIMEOUT, // 25s timeout (Phase 10.159: SLOW tier source)
           }),
         ),
         'CORE.searchPapers',
@@ -217,7 +303,6 @@ export class CoreService {
       );
 
       // Phase 10.106 Phase 3: Handle both direct data and wrapped AxiosResponse cases
-      // Same fix pattern as ERIC/PMC services - unwrap if needed
       const rawData = result.data;
       const apiData: CoreApiResponse = (rawData as any)?.data ?? rawData;
       const results: CoreApiItem[] = apiData?.results || [];
@@ -225,7 +310,10 @@ export class CoreService {
         .map((item) => this.parsePaper(item))
         .filter((paper): paper is Paper => paper !== null);
 
-      this.logger.log(`[CORE] Returned ${papers.length} papers`);
+      if (offset === 0) {
+        this.logger.log(`[CORE] Page 1: ${papers.length} papers (API: ${results.length})`);
+      }
+
       return papers;
     } catch (error: unknown) {
       const err = error as { response?: { status?: number }; message?: string };
@@ -241,7 +329,7 @@ export class CoreService {
         this.logger.error(`[CORE] Search failed: ${err.message || 'Unknown error'} (Status: ${status || 'N/A'})`);
       }
 
-      return [];
+      throw error; // Re-throw for pagination error handling
     }
   }
 

@@ -146,6 +146,7 @@ interface SemanticScholarSearchParams {
   query: string;
   fields: string;
   limit: number;
+  offset?: number; // Phase 10.158: Pagination support
   year?: string;
 }
 
@@ -203,26 +204,90 @@ export class SemanticScholarService {
       return [];
     }
 
-    try {
-      // Cap limit at API maximum (100) to prevent HTTP 500 errors
-      // The tier allocation system may request 600 papers, but API only supports 100
-      const requestedLimit = options?.limit ?? this.DEFAULT_LIMIT;
-      const cappedLimit = Math.min(requestedLimit, this.MAX_RESULTS_PER_REQUEST);
+    const requestedLimit = options?.limit ?? this.DEFAULT_LIMIT;
 
-      if (requestedLimit > this.MAX_RESULTS_PER_REQUEST) {
-        this.logger.warn(
-          `[Semantic Scholar] Requested ${requestedLimit} papers, capped to ${cappedLimit} (API limit)`,
+    // Phase 10.158: Pagination support for fetching more than 100 papers
+    // Semantic Scholar API limits to 100 per request, so we paginate to reach tier allocation
+    if (requestedLimit > this.MAX_RESULTS_PER_REQUEST) {
+      return this.searchWithPagination(trimmedQuery, requestedLimit, options);
+    }
+
+    // Single request path (limit <= 100)
+    return this.searchSinglePage(trimmedQuery, requestedLimit, 0, options);
+  }
+
+  /**
+   * Phase 10.158: Paginated search to fetch more than 100 papers
+   * Makes multiple API requests with offset to reach requested limit
+   */
+  private async searchWithPagination(
+    query: string,
+    requestedLimit: number,
+    options?: SemanticScholarSearchOptions,
+  ): Promise<Paper[]> {
+    const allPapers: Paper[] = [];
+    const pagesNeeded = Math.ceil(requestedLimit / this.MAX_RESULTS_PER_REQUEST);
+    const maxPages = 5; // Safety cap: max 500 papers (5 pages × 100)
+    const pagesToFetch = Math.min(pagesNeeded, maxPages);
+
+    this.logger.log(
+      `[Semantic Scholar] Paginated search: ${requestedLimit} papers requested, fetching ${pagesToFetch} pages`,
+    );
+
+    // Phase 10.159: Parallel pagination for maximum speed
+    // Execute all pages concurrently with Promise.allSettled (fault-tolerant)
+    const pagePromises = Array.from({ length: pagesToFetch }, (_, page) => {
+      const offset = page * this.MAX_RESULTS_PER_REQUEST;
+      const pageLimit = Math.min(
+        requestedLimit - (page * this.MAX_RESULTS_PER_REQUEST),
+        this.MAX_RESULTS_PER_REQUEST
+      );
+      return this.searchSinglePage(query, pageLimit, offset, options)
+        .then(papers => ({ page, papers, success: true as const }))
+        .catch(() => ({ page, papers: [] as Paper[], success: false as const }));
+    });
+
+    const results = await Promise.all(pagePromises);
+
+    // Collect papers in page order (maintains relevance ordering)
+    for (const result of results.sort((a, b) => a.page - b.page)) {
+      if (result.success) {
+        allPapers.push(...result.papers);
+        this.logger.log(
+          `[Semantic Scholar] Page ${result.page + 1}/${pagesToFetch}: fetched ${result.papers.length} papers`,
         );
+      } else {
+        this.logger.warn(`[Semantic Scholar] Page ${result.page + 1} failed`);
       }
+    }
 
-      this.logger.log(`[Semantic Scholar] Searching: "${trimmedQuery}" (limit: ${cappedLimit})`);
+    this.logger.log(`[Semantic Scholar] Parallel pagination complete: ${allPapers.length} total papers`);
+    return allPapers.slice(0, requestedLimit);
+  }
+
+  /**
+   * Phase 10.158: Single page search with offset support
+   */
+  private async searchSinglePage(
+    query: string,
+    limit: number,
+    offset: number,
+    options?: SemanticScholarSearchOptions,
+  ): Promise<Paper[]> {
+    try {
+      const cappedLimit = Math.min(limit, this.MAX_RESULTS_PER_REQUEST);
+
+      if (offset === 0) {
+        this.logger.log(`[Semantic Scholar] Searching: "${query}" (limit: ${cappedLimit})`);
+      }
 
       // Build typed request parameters
       const url = `${this.API_BASE_URL}/paper/search`;
       const params: SemanticScholarSearchParams = {
-        query: trimmedQuery,
+        query: query,
         fields: this.API_FIELDS,
         limit: cappedLimit,
+        offset: offset, // Phase 10.158: Pagination offset
       };
 
       // Year range filter (format: YYYY-YYYY)
@@ -275,9 +340,11 @@ export class SemanticScholarService {
         this.parsePaper(paper),
       );
 
-      this.logger.log(
-        `[Semantic Scholar] Found ${papers.length} papers (attempts: ${result.attempts})`,
-      );
+      if (offset === 0) {
+        this.logger.log(
+          `[Semantic Scholar] Found ${papers.length} papers (attempts: ${result.attempts})`,
+        );
+      }
       return papers;
     } catch (error: unknown) {
       // Phase 10.106 Phase 6: Use unknown with type narrowing (Netflix-grade)

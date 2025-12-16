@@ -48,16 +48,7 @@ import { SourceCapabilityService } from './source-capability.service';
 import { detectQueryComplexity } from '../constants/source-allocation.constants';
 // Phase 10.113 Week 11: Strict typing for semantic tier results
 import { PaperWithSemanticScore } from './progressive-semantic.service';
-// Phase 10.155: Iterative Fetch System for guaranteed paper delivery
-import {
-  IterativeFetchService,
-  IterationState,
-  IterationResult,
-  IterationProgressEvent,
-  PaperWithOverallScore,
-} from './iterative-fetch.service';
-import { AdaptiveQualityThresholdService } from './adaptive-quality-threshold.service';
-import { IterationProgressEvent as IterationProgressEventDTO } from '../dto/search-stream.dto';
+// Phase 10.156: Simplified sort-based selection (iteration system removed)
 
 // ============================================================================
 // CONSTANTS
@@ -89,6 +80,7 @@ const PROGRESS_STAGES = {
   'medium-sources': 50,
   'slow-sources': 75,
   ranking: 90,
+  selecting: 97, // Phase 10.158: Quality selection stage (600 → 300)
   complete: 100,
 } as const;
 
@@ -97,29 +89,35 @@ const PROGRESS_STAGES = {
  */
 const STAGE_MESSAGES: Record<string, string[]> = {
   analyzing: [
-    'Analyzing your query...',
-    'Detecting research methodology...',
-    'Optimizing search terms...',
+    'Understanding your research intent...',
+    'Detecting methodology & expanding terms...',
+    'Query optimized for 18 databases...',
   ],
   'fast-sources': [
-    'Querying fast sources (OpenAlex, CrossRef)...',
-    'First results arriving shortly...',
-    'Checking preprint servers...',
+    'Searching OpenAlex, CrossRef, arXiv...',
+    'Fast sources responding...',
+    'Streaming first results...',
   ],
   'medium-sources': [
-    'Querying comprehensive databases...',
+    'Searching Semantic Scholar, Springer...',
     'Retrieving peer-reviewed articles...',
-    'Searching specialized sources...',
+    'Medium sources completing...',
   ],
   'slow-sources': [
-    'Querying deep databases (PubMed, PMC)...',
-    'Almost there - final sources responding...',
-    'Gathering remaining results...',
+    'Deep search: PubMed, PMC, CORE...',
+    'Final databases responding...',
+    'Gathering comprehensive results...',
   ],
   ranking: [
-    'Applying relevance ranking...',
-    'Sorting by relevance...',
-    'Preparing results...',
+    'AI scoring papers with neural embeddings...',
+    'BM25 + semantic embeddings...',
+    'Cross-encoder re-ranking...',
+  ],
+  // Phase 10.160: Removed hardcoded counts - actual counts shown in dynamic messages
+  selecting: [
+    'Computing composite quality scores...',
+    'Filtering by harmonic mean (R×Q)...',
+    'Selecting top papers by quality...',
   ],
 };
 
@@ -183,8 +181,6 @@ interface SearchState {
   emit: EventEmitter;
   config: SearchStreamConfig;
   aborted: boolean;
-  // Phase 10.155: Iteration state for adaptive fetching
-  iterationState?: IterationState;
 }
 
 // ============================================================================
@@ -203,12 +199,9 @@ export class SearchStreamService {
     // Phase 10.115: Netflix-Grade Integration
     private readonly searchPipeline: SearchPipelineService,
     private readonly sourceCapability: SourceCapabilityService,
-    // Phase 10.155: Iterative Fetch System
-    private readonly iterativeFetch: IterativeFetchService,
-    private readonly adaptiveThreshold: AdaptiveQualityThresholdService,
   ) {
     this.logger.log(
-      '✅ [SearchStreamService] Phase 10.155 - Netflix-Grade Iterative Fetch with Adaptive Thresholds',
+      '✅ [SearchStreamService] Phase 10.156 - Simplified Sort-Based Ranking',
     );
   }
 
@@ -232,15 +225,7 @@ export class SearchStreamService {
       `🚀 [SearchStream] Starting progressive search: "${query}" (ID: ${searchId})`,
     );
 
-    // Phase 10.155: Initialize iteration state for adaptive fetching
-    const iterationState = this.iterativeFetch.createInitialState(query);
-
-    this.logger.log(
-      `🎯 [Phase 10.155] Field detected: ${iterationState.field}, ` +
-      `Initial threshold: ${iterationState.currentThreshold}`,
-    );
-
-    // Initialize search state
+    // Initialize search state (Phase 10.156: No iteration state needed)
     const state: SearchState = {
       searchId,
       query,
@@ -253,7 +238,6 @@ export class SearchStreamService {
       emit,
       config,
       aborted: false,
-      iterationState,
     };
 
     this.activeSearches.set(searchId, state);
@@ -343,37 +327,11 @@ export class SearchStreamService {
 
   /**
    * Cancel an active search
-   *
-   * Phase 10.155: Also cancels iteration state to stop iterative fetching.
    */
   cancelSearch(searchId: string): boolean {
     const state = this.activeSearches.get(searchId);
     if (state) {
       state.aborted = true;
-
-      // Phase 10.155: Cancel iteration state
-      if (state.iterationState) {
-        this.iterativeFetch.cancelIteration(state.iterationState);
-
-        // Emit iteration complete with USER_CANCELLED reason
-        const cancelResult: IterationResult = {
-          iteration: state.iterationState.currentIteration,
-          threshold: state.iterationState.currentThreshold,
-          papersFound: state.iterationState.allPapers.size,
-          targetPapers: this.iterativeFetch.getDefaultConfig().targetPaperCount,
-          newPapersThisIteration: 0,
-          yieldRate: 0,
-          sourcesExhausted: [...state.iterationState.exhaustedSources],
-          shouldContinue: false,
-          reason: 'USER_CANCELLED',
-          fetchLimit: this.iterativeFetch.getFetchLimitForIteration(
-            state.iterationState.currentIteration,
-          ),
-          durationMs: Date.now() - state.iterationState.startTime,
-          timestamp: Date.now(),
-        };
-        this.emitIterationComplete(state, cancelResult, state.iterationState.field);
-      }
 
       this.logger.log(`🛑 [SearchStream] Search cancelled: ${searchId}`);
       return true;
@@ -396,7 +354,7 @@ export class SearchStreamService {
     state: SearchState,
     _options: SearchLiteratureDto,
   ): Promise<void> {
-    this.emitProgress(state, 'analyzing', 'Analyzing your query...');
+    this.emitProgress(state, 'analyzing', STAGE_MESSAGES.analyzing[0]);
 
     const analysisStart = Date.now();
 
@@ -526,6 +484,8 @@ export class SearchStreamService {
       `📡 [SearchStream] Using ${sourcesToQuery.length}/${ALL_PROGRESSIVE_SOURCES.length} sources ` +
       `(${availableSources.length} available, ${ALL_PROGRESSIVE_SOURCES.length - availableSources.length} require ORCID auth)`
     );
+    // Phase 10.159: Log actual sources being searched for debugging
+    this.logger.log(`📡 [SearchStream] Querying: ${sourcesToQuery.join(', ')}`);
 
     // Group sources by tier
     const tiers = this.groupSourcesByTier(sourcesToQuery);
@@ -535,26 +495,44 @@ export class SearchStreamService {
       `fast=${tiers.fast.length}, medium=${tiers.medium.length}, slow=${tiers.slow.length}`,
     );
 
-    // Execute tiers in sequence, but sources within tier in parallel
-    // This ensures fast sources emit first
+    // Phase 10.159: Overlapping tier execution for maximum throughput
+    // Start all tiers with staggered delays - fast results arrive first, but we don't wait
+    // for fast to complete before starting medium/slow sources
 
-    // TIER 1: Fast sources (<3s expected)
+    const tierPromises: Promise<void>[] = [];
+
+    // TIER 1: Fast sources - start immediately
     if (tiers.fast.length > 0 && !state.aborted) {
-      this.emitProgress(state, 'fast-sources', 'Querying fast sources...');
-      await this.executeTierSources(state, options, tiers.fast, SourceTier.FAST);
+      this.emitProgress(state, 'fast-sources', STAGE_MESSAGES['fast-sources'][0]);
+      tierPromises.push(this.executeTierSources(state, options, tiers.fast, SourceTier.FAST));
     }
 
-    // TIER 2: Medium sources (<8s expected)
+    // TIER 2: Medium sources - start after 300ms delay (fast sources start emitting)
     if (tiers.medium.length > 0 && !state.aborted) {
-      this.emitProgress(state, 'medium-sources', 'Querying comprehensive databases...');
-      await this.executeTierSources(state, options, tiers.medium, SourceTier.MEDIUM);
+      tierPromises.push(
+        new Promise<void>(resolve => setTimeout(resolve, 300)).then(async () => {
+          if (!state.aborted) {
+            this.emitProgress(state, 'medium-sources', STAGE_MESSAGES['medium-sources'][0]);
+            await this.executeTierSources(state, options, tiers.medium, SourceTier.MEDIUM);
+          }
+        })
+      );
     }
 
-    // TIER 3: Slow sources (<20s expected)
+    // TIER 3: Slow sources - start after 800ms delay (fast sources mostly done)
     if (tiers.slow.length > 0 && !state.aborted) {
-      this.emitProgress(state, 'slow-sources', 'Querying deep databases...');
-      await this.executeTierSources(state, options, tiers.slow, SourceTier.SLOW);
+      tierPromises.push(
+        new Promise<void>(resolve => setTimeout(resolve, 800)).then(async () => {
+          if (!state.aborted) {
+            this.emitProgress(state, 'slow-sources', STAGE_MESSAGES['slow-sources'][0]);
+            await this.executeTierSources(state, options, tiers.slow, SourceTier.SLOW);
+          }
+        })
+      );
     }
+
+    // Wait for all tiers to complete
+    await Promise.allSettled(tierPromises);
   }
 
   private groupSourcesByTier(
@@ -631,13 +609,13 @@ export class SearchStreamService {
 
     try {
       // Build search DTO with corrected query
+      // Phase 10.159 FIX: Explicitly set limit to undefined to use tier-based allocation
+      // The ...options spread was passing options.limit which capped results at 300
+      // Now source-router will use getSourceAllocation(source) for tier allocations (500 each)
       const searchDto: SearchLiteratureDto = {
         ...options,
         query: state.correctedQuery,
-        limit: Math.min(
-          options.limit || QUERY_INTELLIGENCE_CONFIG.DEFAULT_LIMIT,
-          QUERY_INTELLIGENCE_CONFIG.MAX_PER_SOURCE_LIMIT,
-        ),
+        limit: undefined, // CRITICAL: Let source-router use tier allocation, not frontend limit
       };
 
       // Execute search with timeout
@@ -664,7 +642,7 @@ export class SearchStreamService {
         this.emitPapersBatch(state, newPapers, source);
       }
 
-      // Emit source complete event
+      // Emit source complete event (ALWAYS emit, even if 0 papers)
       const completeEvent: SourceCompleteEvent = {
         searchId: state.searchId,
         source,
@@ -680,7 +658,7 @@ export class SearchStreamService {
       });
 
       this.logger.log(
-        `✓ [${source}] ${papers.length} papers (${newPapers.length} new) in ${duration}ms`,
+        `✓ [${source}] ${papers.length} papers (${newPapers.length} new) in ${duration}ms - emitting source-complete event`,
       );
 
     } catch (error) {
@@ -742,8 +720,9 @@ export class SearchStreamService {
    *
    * NEW (Week 11): Progressive semantic tiers:
    * - Tier 1 (immediate): Top 50 papers → <500ms
-   * - Tier 2 (refined): Next 150 papers → <2s
-   * - Tier 3 (complete): Remaining 400 papers → background
+   * - Tier 2 (refined): Next 100 papers → <2s
+   * - Tier 3 (complete): Remaining 150 papers → background
+   * Phase 10.157: Updated to match 300-paper target (50+100+150=300)
    *
    * This ensures WebSocket streaming path gets the SAME quality ranking as HTTP REST API
    * with PROGRESSIVE results via semantic tier events.
@@ -755,24 +734,25 @@ export class SearchStreamService {
   // Phase 10.113 Week 11: Enable progressive semantic streaming (feature flag)
   private static readonly ENABLE_PROGRESSIVE_SEMANTIC = true;
 
-  // Phase 10.119: Maximum papers for semantic ranking (tier capacity: 50+150+400=600)
+  // Phase 10.158: Maximum papers for semantic ranking (increased for better quality selection)
+  // Process 600 papers to ensure quality top-300 selection from larger pool
   // Papers beyond this limit are pre-filtered by BM25 relevance score
   private static readonly MAX_SEMANTIC_PAPERS = 600;
 
   /**
-   * Phase 10.155: Iterative Final Ranking with Threshold Relaxation
+   * Phase 10.156: Simplified Sort-Based Ranking
    *
-   * CRITICAL FIX: Implements the actual iteration loop that was missing.
+   * Design: Sort ALL papers by overallScore and take top N.
+   * This replaces the complex threshold relaxation loop.
    *
-   * The loop:
-   * 1. Ranks all papers to get overallScore
-   * 2. Filters by current threshold
-   * 3. If not enough papers pass threshold → relax threshold and re-filter
-   * 4. Continues until target reached, min threshold hit, or max iterations
+   * Flow:
+   * 1. Ranks all papers using semantic scoring (BM25 + Semantic + ThemeFit)
+   * 2. Calculates overallScore (harmonic mean of relevance + quality)
+   * 3. Sorts ALL papers by overallScore descending
+   * 4. Returns top N papers
    *
-   * Key Design Decision: We DON'T re-fetch from sources each iteration.
-   * Instead, we progressively lower the threshold on already-fetched papers.
-   * This is more efficient and aligns with adaptive quality threshold design.
+   * Rationale: If we're taking top N sorted by quality anyway, thresholds don't matter.
+   * Simpler code, same quality results, fewer bugs.
    */
   private async stageFinalRanking(
     state: SearchState,
@@ -781,8 +761,8 @@ export class SearchStreamService {
     let papers = Array.from(state.papers.values());
     const collectedCount = papers.length;
 
-    // Phase 10.118: Show collected count in initial progress
-    this.emitProgress(state, 'ranking', `Ranking ${collectedCount} collected papers...`);
+    // Phase 10.159: Scientific message with actual count
+    this.emitProgress(state, 'ranking', `AI scoring ${collectedCount} papers (BM25 + neural embeddings)...`);
 
     if (papers.length === 0) {
       this.logger.warn(`⚠️ [SearchStream] No papers to rank`);
@@ -790,8 +770,9 @@ export class SearchStreamService {
     }
 
     const startTime = Date.now();
-    const limit = options.limit || QUERY_INTELLIGENCE_CONFIG.MAX_PER_SOURCE_LIMIT;
-    const config = this.iterativeFetch.getDefaultConfig();
+    // Phase 10.158: Use TARGET_FINAL_RESULTS (300) as the final output limit
+    // This ensures we always output exactly 300 papers regardless of how many were ranked
+    const limit = options.limit || QUERY_INTELLIGENCE_CONFIG.TARGET_FINAL_RESULTS;
 
     // Phase 10.119: Pre-filter papers to MAX_SEMANTIC_PAPERS to prevent event loop blocking
     // Papers are pre-sorted by BM25 relevance score, keeping top candidates
@@ -806,16 +787,8 @@ export class SearchStreamService {
     }
 
     this.logger.log(
-      `🧠 [SearchStream] Starting Netflix-grade iterative ranking for ${papers.length} papers ` +
-      `(target: ${config.targetPaperCount}, limit: ${limit})...`,
+      `🧠 [SearchStream] Starting semantic ranking for ${papers.length} papers (limit: ${limit})...`,
     );
-
-    // Track source counts from ALL collected papers (not just ranked)
-    const allSourceCounts = new Map<string, number>();
-    for (const paper of papers) {
-      const source = paper.source ?? 'unknown';
-      allSourceCounts.set(source, (allSourceCounts.get(source) ?? 0) + 1);
-    }
 
     let rankedPapers: Paper[];
 
@@ -868,112 +841,45 @@ export class SearchStreamService {
       );
 
       // ============================================================================
-      // STEP 2: ITERATIVE THRESHOLD LOOP (Phase 10.155 CRITICAL FIX)
+      // STEP 2: QUALITY-BASED FINAL SELECTION (Phase 10.158)
       // ============================================================================
-      if (state.iterationState) {
-        // Convert ALL ranked papers to PaperWithOverallScore for iteration tracking
-        const allPapersWithScores: PaperWithOverallScore[] = rankedPapers.map(p => ({
-          id: p.id || this.generatePaperId(p),
-          doi: p.doi,
-          title: p.title ?? '',
-          abstract: p.abstract,
-          qualityScore: p.qualityScore,
-          overallScore: p.overallScore ?? p.qualityScore ?? 0,
-          neuralRelevanceScore: p.neuralRelevanceScore,
-          source: p.source,
-        }));
+      // Design: Sort ALL papers by overallScore (composite quality) and take top N
+      // Flow: 600 ranked papers → sort by quality → select top 300
+      // This is the final stage that produces the user-visible results
 
-        // Phase 10.155: ITERATION LOOP
-        // Loop until target reached, min threshold hit, or max iterations
-        let iterationCount = 0;
-        let shouldContinue = true;
+      const rankedCount = rankedPapers.length;
 
-        while (shouldContinue && iterationCount < config.maxIterations && !state.aborted) {
-          iterationCount++;
-          const iterationStartTime = Date.now();
+      // Emit selection stage start event for pipeline visualization
+      this.emitProgress(state, 'selecting', `Filtering ${rankedCount}→${limit} by harmonic mean (relevance × quality)...`);
 
-          // Emit iteration start AFTER we have paper count (fixed timing)
-          const fetchLimit = this.iterativeFetch.getFetchLimitForIteration(iterationCount);
-          const startResult: IterationResult = {
-            iteration: iterationCount,
-            threshold: state.iterationState.currentThreshold,
-            papersFound: state.iterationState.allPapers.size,
-            targetPapers: config.targetPaperCount,
-            newPapersThisIteration: iterationCount === 1 ? allPapersWithScores.length : 0,
-            yieldRate: 0,
-            sourcesExhausted: [...state.iterationState.exhaustedSources],
-            shouldContinue: false,
-            reason: 'TARGET_REACHED',
-            fetchLimit,
-            durationMs: 0,
-            timestamp: Date.now(),
-          };
-          this.emitIterationStart(state, startResult, state.iterationState.field);
+      // Sort by overallScore descending (best papers first)
+      rankedPapers = rankedPapers
+        .sort((a, b) => (b.overallScore ?? 0) - (a.overallScore ?? 0))
+        .slice(0, limit);
 
-          // Process iteration - this filters by current threshold and updates state
-          const iterationResult = this.iterativeFetch.processIterationResults(
-            state.iterationState,
-            iterationCount === 1 ? allPapersWithScores : [], // Only add papers on first iteration
-            allSourceCounts,
-            state.sourceStats.size,
-          );
+      // Calculate quality statistics for the selected papers
+      // Phase 10.161 FIX: overallScore is on 0-100 scale, normalize to 0-1 for frontend
+      const avgQualityRaw = rankedPapers.length > 0
+        ? rankedPapers.reduce((sum, p) => sum + (p.overallScore ?? 0), 0) / rankedPapers.length
+        : 0;
+      const avgQuality = avgQualityRaw / 100; // Normalize to 0-1 scale
 
-          // Update result with actual duration
-          iterationResult.durationMs = Date.now() - iterationStartTime;
+      this.logger.log(
+        `🎯 [Phase 10.158] Quality selection complete: ${rankedPapers.length}/${rankedCount} papers selected (avg quality: ${(avgQuality * 100).toFixed(1)}%)`,
+      );
 
-          // Emit iteration progress during loop
-          this.emitIterationProgress(state, iterationResult, state.iterationState.field);
-
-          // Check iteration timeout (Phase 10.155: 40s per iteration)
-          if (iterationResult.durationMs > config.iterationTimeoutMs) {
-            this.logger.warn(
-              `⚠️ [Iteration ${iterationCount}] Timeout after ${iterationResult.durationMs}ms`,
-            );
-            iterationResult.shouldContinue = false;
-            iterationResult.reason = 'TIMEOUT';
-          }
-
-          // Emit iteration complete
-          this.emitIterationComplete(state, iterationResult, state.iterationState.field);
-
-          // Log iteration summary
-          this.logger.log(
-            `🔄 [Iteration ${iterationCount}/${config.maxIterations}] ` +
-            `Papers: ${iterationResult.papersFound}/${iterationResult.targetPapers}, ` +
-            `Threshold: ${iterationResult.threshold}, ` +
-            `Reason: ${iterationResult.reason}, ` +
-            `Continue: ${iterationResult.shouldContinue}`,
-          );
-
-          // Check if we should continue
-          shouldContinue = iterationResult.shouldContinue;
-
-          // If continuing, threshold was already relaxed in processIterationResults
-          // The next iteration will use the new lower threshold
-        }
-
-        // Log final iteration summary
-        this.logger.log(this.iterativeFetch.getStatsSummary(state.iterationState));
-
-        // Get final filtered papers from iteration state
-        const filteredPapers = this.iterativeFetch.getFilteredPapers(
-          state.iterationState,
-          config.targetPaperCount,
-        );
-
-        // Update rankedPapers with filtered results (maintaining order)
-        // Map back to full Paper objects
-        const filteredIds = new Set(filteredPapers.map(p => p.id));
-        rankedPapers = rankedPapers.filter(p => {
-          const paperId = p.id || this.generatePaperId(p);
-          return filteredIds.has(paperId);
-        });
-
-        this.logger.log(
-          `🎯 [Phase 10.155] Iteration loop complete: ` +
-          `${iterationCount} iterations, ${rankedPapers.length} papers above threshold`,
-        );
-      }
+      // Emit selection complete event for pipeline visualization
+      state.emit({
+        type: 'search:selection-complete',
+        data: {
+          searchId: state.searchId,
+          rankedCount,
+          selectedCount: rankedPapers.length,
+          targetCount: limit,
+          avgQualityScore: avgQuality,
+          timestamp: Date.now(),
+        },
+      });
 
     } catch (error) {
       clearInterval(heartbeatInterval);
@@ -1056,9 +962,10 @@ export class SearchStreamService {
         // This ensures papers have combinedScore, neuralRelevanceScore, and overallScore set
         finalPapers = this.searchPipeline.calculateCombinedScores(tierResult.papers);
 
-        // Emit semantic tier event to frontend (sliced to limit)
-        // Now using finalPapers which have all scores calculated
-        const emittedPapers = finalPapers.slice(0, limit);
+        // Phase 10.161 FIX: Emit ALL ranked papers (up to MAX_SEMANTIC_PAPERS = 600)
+        // This allows frontend to show full 3-tier semantic ranking before quality selection
+        // Quality selection (600 → 300) happens AFTER semantic ranking, not during
+        const emittedPapers = finalPapers.slice(0, SearchStreamService.MAX_SEMANTIC_PAPERS);
         this.emitSemanticTier(state, {
           searchId: state.searchId,
           tier: tierResult.tier,
@@ -1097,10 +1004,12 @@ export class SearchStreamService {
       );
     }
 
-    // Sort by combined score and apply limit (strict typing - no 'as any')
+    // Phase 10.161 FIX: Return ALL ranked papers (up to MAX_SEMANTIC_PAPERS = 600)
+    // Quality selection (600 → 300) happens in stageFinalRanking AFTER this function returns
+    // Previously this was slicing to `limit` (300) which broke the 600 → 300 quality filter flow
     return finalPapers
       .sort((a, b) => (b.combinedScore ?? b.relevanceScore ?? 0) - (a.combinedScore ?? a.relevanceScore ?? 0))
-      .slice(0, limit);
+      .slice(0, SearchStreamService.MAX_SEMANTIC_PAPERS);
   }
 
   /**
@@ -1509,136 +1418,4 @@ export class SearchStreamService {
     return suggestions.slice(0, QUERY_INTELLIGENCE_CONFIG.MAX_SUGGESTIONS);
   }
 
-  // ==========================================================================
-  // PHASE 10.155: ITERATION EVENT EMISSION
-  // ==========================================================================
-
-  /**
-   * Emit iteration start event
-   *
-   * Called when a new iteration begins in the iterative fetch loop.
-   * Informs frontend about the current iteration number and threshold.
-   */
-  private emitIterationStart(
-    state: SearchState,
-    iterationResult: IterationResult,
-    field: string,
-  ): void {
-    const event: IterationProgressEventDTO = {
-      type: 'iteration_start',
-      searchId: state.searchId,
-      iteration: iterationResult.iteration,
-      totalIterations: this.iterativeFetch.getDefaultConfig().maxIterations,
-      fetchLimit: iterationResult.fetchLimit,
-      threshold: iterationResult.threshold,
-      papersFound: iterationResult.papersFound,
-      targetPapers: iterationResult.targetPapers,
-      newPapersThisIteration: iterationResult.newPapersThisIteration,
-      yieldRate: iterationResult.yieldRate,
-      sourcesExhausted: iterationResult.sourcesExhausted,
-      field,
-      timestamp: Date.now(),
-    };
-
-    state.emit({
-      type: 'search:iteration-start',
-      data: event,
-    });
-
-    this.logger.log(
-      `🔄 [Iteration ${iterationResult.iteration}] Started - ` +
-      `Threshold: ${iterationResult.threshold}, Limit: ${iterationResult.fetchLimit}`,
-    );
-  }
-
-  /**
-   * Emit iteration progress event
-   *
-   * Called during an iteration to show intermediate progress.
-   */
-  private emitIterationProgress(
-    state: SearchState,
-    iterationResult: IterationResult,
-    field: string,
-  ): void {
-    const event: IterationProgressEventDTO = {
-      type: 'iteration_progress',
-      searchId: state.searchId,
-      iteration: iterationResult.iteration,
-      totalIterations: this.iterativeFetch.getDefaultConfig().maxIterations,
-      fetchLimit: iterationResult.fetchLimit,
-      threshold: iterationResult.threshold,
-      papersFound: iterationResult.papersFound,
-      targetPapers: iterationResult.targetPapers,
-      newPapersThisIteration: iterationResult.newPapersThisIteration,
-      yieldRate: iterationResult.yieldRate,
-      sourcesExhausted: iterationResult.sourcesExhausted,
-      field,
-      timestamp: Date.now(),
-    };
-
-    state.emit({
-      type: 'search:iteration-progress',
-      data: event,
-    });
-  }
-
-  /**
-   * Emit iteration complete event
-   *
-   * Called when an iteration finishes, with the stop reason.
-   */
-  private emitIterationComplete(
-    state: SearchState,
-    iterationResult: IterationResult,
-    field: string,
-  ): void {
-    const event: IterationProgressEventDTO = {
-      type: 'iteration_complete',
-      searchId: state.searchId,
-      iteration: iterationResult.iteration,
-      totalIterations: this.iterativeFetch.getDefaultConfig().maxIterations,
-      fetchLimit: iterationResult.fetchLimit,
-      threshold: iterationResult.threshold,
-      papersFound: iterationResult.papersFound,
-      targetPapers: iterationResult.targetPapers,
-      newPapersThisIteration: iterationResult.newPapersThisIteration,
-      yieldRate: iterationResult.yieldRate,
-      sourcesExhausted: iterationResult.sourcesExhausted,
-      reason: iterationResult.reason,
-      field,
-      timestamp: Date.now(),
-    };
-
-    state.emit({
-      type: 'search:iteration-complete',
-      data: event,
-    });
-
-    this.logger.log(
-      `✅ [Iteration ${iterationResult.iteration}] Complete - ` +
-      `Papers: ${iterationResult.papersFound}/${iterationResult.targetPapers}, ` +
-      `Reason: ${iterationResult.reason}`,
-    );
-  }
-
-  /**
-   * Get iteration state for the current search
-   *
-   * Creates a new iteration state using the query and default config.
-   * This integrates the AdaptiveQualityThresholdService for field detection.
-   */
-  getIterationState(query: string): IterationState {
-    return this.iterativeFetch.createInitialState(query);
-  }
-
-  /**
-   * Cancel iteration for a search
-   *
-   * Marks the iteration state as cancelled, which will stop the loop
-   * at the next iteration check.
-   */
-  cancelIteration(iterationState: IterationState): void {
-    this.iterativeFetch.cancelIteration(iterationState);
-  }
 }

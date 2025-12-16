@@ -68,15 +68,16 @@ interface ActiveConnection {
 // CONSTANTS - Netflix-Grade Configuration
 // ============================================================================
 
-// Phase 10.152: Removed 'ready' - pipeline ends at 'rank'
+// Phase 10.158: Added 'select' for quality selection (600 → 300)
 const STAGE_COLORS: Record<PipelineStageId, string> = {
   analyze: '#3B82F6',   // Blue
   discover: '#22C55E',  // Green
   refine: '#F59E0B',    // Amber
   rank: '#A855F7',      // Purple
+  select: '#10B981',    // Teal - quality selection
 };
 
-const STAGE_ORDER: PipelineStageId[] = ['analyze', 'discover', 'refine', 'rank'];
+const STAGE_ORDER: PipelineStageId[] = ['analyze', 'discover', 'refine', 'rank', 'select'];
 
 // Netflix-grade particle configuration
 const PARTICLE_CONFIG = Object.freeze({

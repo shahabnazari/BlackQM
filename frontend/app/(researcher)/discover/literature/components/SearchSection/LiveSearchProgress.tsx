@@ -80,6 +80,7 @@ const STAGE_INFO: Record<SearchStage, { label: string; color: string; percent: n
   'medium-sources': { label: 'Medium Sources', color: 'text-yellow-600', percent: 50 },
   'slow-sources': { label: 'Slow Sources', color: 'text-orange-600', percent: 75 },
   'ranking': { label: 'Ranking Results', color: 'text-purple-600', percent: 90 },
+  'selecting': { label: 'Selecting Best Papers', color: 'text-indigo-600', percent: 97 },
   'complete': { label: 'Complete', color: 'text-green-600', percent: 100 },
 };
 

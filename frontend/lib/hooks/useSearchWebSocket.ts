@@ -43,8 +43,8 @@ import {
   // Phase 10.113 Week 11 Bug 10: Rerank types
   PaperWithSemanticScore,
   RerankOptions,
-  // Phase 10.155: Iterative fetch types
-  IterationProgressEvent,
+  // Phase 10.158: Quality selection event
+  SelectionCompleteEvent,
 } from '@/lib/types/search-stream.types';
 
 // Infer socket type from the io function return type
@@ -78,10 +78,8 @@ const WS_EVENTS = {
   // Phase 10.113 Week 11: Semantic tier events
   SEMANTIC_TIER: 'search:semantic-tier',
   SEMANTIC_PROGRESS: 'search:semantic-progress',
-  // Phase 10.155: Iterative fetch events
-  ITERATION_START: 'search:iteration-start',
-  ITERATION_PROGRESS: 'search:iteration-progress',
-  ITERATION_COMPLETE: 'search:iteration-complete',
+  // Phase 10.158: Quality selection event
+  SELECTION_COMPLETE: 'search:selection-complete',
 } as const;
 
 /**
@@ -135,13 +133,9 @@ export interface SearchWebSocketCallbacks {
     reason: 'semantic-tier' | 'user-sort' | 'filter-change',
     options: RerankOptions
   ) => void;
-  // Phase 10.155: Iterative fetch callbacks
-  /** Called when an iteration starts */
-  onIterationStart?: (event: IterationProgressEvent) => void;
-  /** Called during iteration progress updates */
-  onIterationProgress?: (event: IterationProgressEvent) => void;
-  /** Called when iteration completes (success or stopped) */
-  onIterationComplete?: (event: IterationProgressEvent) => void;
+  // Phase 10.158: Quality selection callback
+  /** Called when quality selection completes (600 → 300 papers) */
+  onSelectionComplete?: (event: SelectionCompleteEvent) => void;
 }
 
 /**
@@ -542,20 +536,31 @@ export function useSearchWebSocket(
       callbacksRef.current.onSemanticProgress?.(event);
     });
 
-    // Phase 10.155: Iterative fetch event handlers
-    socket.on(WS_EVENTS.ITERATION_START, (event: IterationProgressEvent) => {
-      console.log(`[SearchWebSocket] Iteration ${event.iteration} started: threshold=${event.threshold}, fetchLimit=${event.fetchLimit}`);
-      callbacksRef.current.onIterationStart?.(event);
-    });
+    // Phase 10.158: Quality selection event handler
+    // Phase 10.160 FIX: Update papersFound to selectedCount (actual papers after quality filtering)
+    // Phase 10.160: Also store full selection state for funnel visualization
+    // Phase 10.169 CRITICAL FIX: Trim papers array to selectedCount - this is the ACTUAL quality filter
+    socket.on(WS_EVENTS.SELECTION_COMPLETE, (event: SelectionCompleteEvent) => {
+      console.log(`[SearchWebSocket] Selection complete: ${event.selectedCount}/${event.rankedCount} papers (avg quality: ${(event.avgQualityScore * 100).toFixed(1)}%)`);
+      setState(prev => {
+        // Phase 10.169 CRITICAL FIX: Trim papers array to only keep top selectedCount papers
+        // Papers are already sorted by overallScore from semantic-tier, so slice to target count
+        // This ensures the displayed results match the target count (300) after quality filtering
+        const trimmedPapers = prev.papers.slice(0, event.selectedCount);
 
-    socket.on(WS_EVENTS.ITERATION_PROGRESS, (event: IterationProgressEvent) => {
-      console.log(`[SearchWebSocket] Iteration ${event.iteration} progress: ${event.papersFound}/${event.targetPapers} papers (yield: ${(event.yieldRate * 100).toFixed(1)}%)`);
-      callbacksRef.current.onIterationProgress?.(event);
-    });
+        console.log(`[SearchWebSocket] Phase 10.169: Trimmed papers from ${prev.papers.length} to ${trimmedPapers.length}`);
 
-    socket.on(WS_EVENTS.ITERATION_COMPLETE, (event: IterationProgressEvent) => {
-      console.log(`[SearchWebSocket] Iteration complete: ${event.papersFound}/${event.targetPapers} papers, reason=${event.reason}`);
-      callbacksRef.current.onIterationComplete?.(event);
+        return {
+          ...prev,
+          papers: trimmedPapers, // Phase 10.169: Apply quality filter to papers array
+          papersFound: event.selectedCount, // Update to actual selected count
+          // Phase 10.160: Store full selection state for quality funnel visualization
+          selectionRankedCount: event.rankedCount,
+          selectionSelectedCount: event.selectedCount,
+          selectionAvgQuality: event.avgQualityScore,
+        };
+      });
+      callbacksRef.current.onSelectionComplete?.(event);
     });
 
     socket.on(WS_EVENTS.COMPLETE, (event: SearchCompleteEvent) => {
@@ -567,6 +572,7 @@ export function useSearchWebSocket(
         elapsedTimerRef.current = null;
       }
 
+      // Phase 10.160 FIX: Update papersFound to uniquePapers for final count accuracy
       setState(prev => ({
         ...prev,
         isSearching: false,
@@ -574,6 +580,7 @@ export function useSearchWebSocket(
         percent: 100,
         message: `Found ${event.uniquePapers} papers in ${(event.totalTimeMs / 1000).toFixed(1)}s`,
         elapsedMs: event.totalTimeMs,
+        papersFound: event.uniquePapers, // Ensure final count is accurate
       }));
       callbacksRef.current.onComplete?.(event);
     });

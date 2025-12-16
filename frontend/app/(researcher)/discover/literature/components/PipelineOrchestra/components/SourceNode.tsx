@@ -31,6 +31,7 @@ import {
   SOURCE_GLOW_CONFIG,
   ARIA_LABELS,
   TOOLTIP_TRANSITIONS,
+  SOURCE_ALLOCATION_LIMIT,
 } from '../constants';
 import { STABILIZATION_CONFIG } from '../hooks/useCountStabilization';
 
@@ -40,12 +41,17 @@ import { STABILIZATION_CONFIG } from '../hooks/useCountStabilization';
 
 /**
  * Paper count badge
+ * Phase 10.160: Shows "+" suffix when count equals allocation limit (indicates more may exist)
  */
 const PaperCountBadge = memo<{
   count: number;
   animate: boolean;
 }>(function PaperCountBadge({ count, animate }) {
   if (count === 0) return null;
+
+  // Phase 10.160: Indicate when source returned exactly the limit (more papers likely exist)
+  const isAtLimit = count === SOURCE_ALLOCATION_LIMIT;
+  const displayValue = count > 999 ? '999+' : isAtLimit ? `${count}+` : count;
 
   return (
     <motion.div
@@ -59,7 +65,7 @@ const PaperCountBadge = memo<{
       animate={{ scale: 1 }}
       transition={SPRING_PRESETS.bouncy}
     >
-      {count > 999 ? '999+' : count}
+      {displayValue}
     </motion.div>
   );
 });
@@ -178,7 +184,8 @@ const SourceTooltip = memo<{
         {status === 'complete' && (
           <>
             <p className="text-green-400 font-medium">
-              {paperCount} paper{paperCount !== 1 ? 's' : ''} found
+              {/* Phase 10.160: Show "+" when at allocation limit to indicate more papers may exist */}
+              {paperCount === SOURCE_ALLOCATION_LIMIT ? `${paperCount}+` : paperCount} paper{paperCount !== 1 ? 's' : ''} found
             </p>
             <p className="text-white/70">{(timeMs / 1000).toFixed(1)}s</p>
           </>

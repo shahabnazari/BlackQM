@@ -25,8 +25,10 @@ import type {
   NeuralNodeState,
   SynapseState,
   PipelineMetrics,
+  QualitySelectionState,
   Point,
 } from '../types';
+import { MAX_FINAL_PAPERS, MAX_RANKED_PAPERS } from '../constants';
 import {
   PIPELINE_STAGES,
   ORBIT_CONFIGS,
@@ -37,6 +39,11 @@ import {
 // TYPES
 // ============================================================================
 
+/**
+ * Input state from WebSocket/container component
+ * Phase 10.156: Simplified (iteration state removed - using sort-based selection)
+ * Phase 10.160: Added quality selection props for funnel visualization
+ */
 interface PipelineStateInput {
   isSearching: boolean;
   stage: SearchStage | null;
@@ -50,6 +57,10 @@ interface PipelineStateInput {
   semanticTier: SemanticTierName | null;
   semanticVersion: number;
   semanticTierStats: Map<SemanticTierName, SemanticTierStats>;
+  // Phase 10.160: Quality selection state (from selection-complete event)
+  selectionRankedCount?: number;
+  selectionSelectedCount?: number;
+  selectionAvgQuality?: number;
 }
 
 // ============================================================================
@@ -69,8 +80,11 @@ function mapSearchStageToPipelineStage(stage: SearchStage | null): PipelineStage
     case 'slow-sources':
       return 'discover';
     case 'ranking':
-    case 'complete': // Phase 10.152: Pipeline ends at 'rank', so 'complete' = 'rank' done
       return 'rank';
+    case 'selecting':
+      return 'select';
+    case 'complete': // Phase 10.158: Pipeline ends at 'select', so 'complete' = 'select' done
+      return 'select';
     default:
       return null;
   }
@@ -88,8 +102,8 @@ function deriveStageStatus(
   isSearching: boolean,
   isComplete: boolean
 ): PipelineStageStatus {
-  // Phase 10.152: Pipeline is now 4 stages - removed 'ready'
-  const stageOrder: PipelineStageId[] = ['analyze', 'discover', 'refine', 'rank'];
+  // Phase 10.158: Pipeline is now 5 stages - added 'select' for quality selection
+  const stageOrder: PipelineStageId[] = ['analyze', 'discover', 'refine', 'rank', 'select'];
   const stageIndex = stageOrder.indexOf(stageId);
   const currentIndex = currentStage ? stageOrder.indexOf(currentStage) : -1;
 
@@ -149,11 +163,31 @@ function deriveStageStates(input: PipelineStateInput): PipelineStageState[] {
     let duration: number | null = null;
     let message = stageConfig.description;
 
+    // Phase 10.159: Calculate raw paper count (before deduplication) for dynamic messages
+    let rawPaperCount = 0;
+    input.sourceStats.forEach(stats => { rawPaperCount += stats.paperCount; });
+
     if (status === 'complete') {
       progress = 100;
-      message = stageConfig.completeDescription;
+      // Phase 10.159: Dynamic completion messages showing real paper counts
+      if (stageConfig.id === 'select') {
+        message = `Top ${input.papersFound} selected!`;
+      } else if (stageConfig.id === 'rank') {
+        message = `${rawPaperCount} papers ranked`;
+      } else if (stageConfig.id === 'discover') {
+        message = `${rawPaperCount} papers collected`;
+      } else {
+        message = stageConfig.completeDescription;
+      }
     } else if (status === 'active') {
-      message = stageConfig.activeDescription;
+      // Phase 10.159: Dynamic active messages showing real paper counts
+      if (stageConfig.id === 'rank') {
+        message = `Scoring ${rawPaperCount} papers with AI...`;
+      } else if (stageConfig.id === 'select') {
+        message = `Selecting top papers by quality...`;
+      } else {
+        message = stageConfig.activeDescription;
+      }
 
       switch (stageConfig.id) {
         case 'analyze':
@@ -202,7 +236,7 @@ function deriveStageStates(input: PipelineStateInput): PipelineStageState[] {
 
 /**
  * Calculate source position in orbital space
- * Phase 10.135: Improved angle distribution to ensure nodes align perfectly on orbit rings
+ * Phase 10.163: Updated for elliptical orbits (radiusX/radiusY)
  */
 function calculateSourcePosition(
   source: LiteratureSource,
@@ -214,30 +248,29 @@ function calculateSourcePosition(
   const tier = SOURCE_TIERS[source];
   const orbitConfig = ORBIT_CONFIGS[tier];
 
-  // Distribute sources evenly around the orbit
-  // Use full circle (2π) and ensure proper distribution
+  // Phase 10.163: Use elliptical radii if available
+  const rx = orbitConfig.radiusX ?? orbitConfig.radius;
+  const ry = orbitConfig.radiusY ?? orbitConfig.radius;
+
+  // Distribute sources evenly around the ellipse
   const angleStep = (2 * Math.PI) / Math.max(tierSourceCount, 1);
-  
-  // Calculate angle: start from orbit's startAngle and distribute evenly
-  // Add small offset per source to spread them around the orbit
   const angle = orbitConfig.startAngle + (sourceIndex * angleStep);
 
-  // Calculate position on the orbit ring
-  const x = centerX + orbitConfig.radius * Math.cos(angle);
-  const y = centerY + orbitConfig.radius * Math.sin(angle);
+  // Phase 10.163: Calculate position on ellipse (rx for X, ry for Y)
+  const x = centerX + rx * Math.cos(angle);
+  const y = centerY + ry * Math.sin(angle);
 
   return { x, y };
 }
 
 /**
  * Derive source node states
- * Phase 10.135: Fixed center calculation to match actual constellation size (420x420)
- * Also improved node positioning to ensure proper alignment on orbital rings
+ * Phase 10.163: Updated center for elliptical constellation (290x200)
  */
 function deriveSourceStates(
   sourceStats: Map<LiteratureSource, SourceStats>,
-  centerX: number = 210,  // PIPELINE_LAYOUT.constellationWidth / 2 = 420/2
-  centerY: number = 210   // PIPELINE_LAYOUT.constellationHeight / 2 = 420/2
+  centerX: number = 145,  // PIPELINE_LAYOUT.constellationWidth / 2 = 290/2
+  centerY: number = 100   // PIPELINE_LAYOUT.constellationHeight / 2 = 200/2
 ): SourceNodeState[] {
   const sources: SourceNodeState[] = [];
 
@@ -445,6 +478,31 @@ function deriveMetrics(input: PipelineStateInput): PipelineMetrics {
 }
 
 // ============================================================================
+// QUALITY SELECTION DERIVATION
+// ============================================================================
+
+/**
+ * Phase 10.160: Derive quality selection state
+ * Shows the 600 → 300 quality filter stage
+ */
+function deriveQualitySelection(
+  input: PipelineStateInput
+): QualitySelectionState {
+  const isSelecting = input.stage === 'selecting';
+  const isComplete = input.stage === 'complete' ||
+    (input.selectionSelectedCount !== undefined && input.selectionSelectedCount > 0);
+
+  return {
+    rankedCount: input.selectionRankedCount ?? MAX_RANKED_PAPERS,
+    selectedCount: input.selectionSelectedCount ?? input.papersFound,
+    targetCount: MAX_FINAL_PAPERS,
+    avgQualityScore: input.selectionAvgQuality ?? 0,
+    isSelecting,
+    isComplete,
+  };
+}
+
+// ============================================================================
 // MAIN HOOK
 // ============================================================================
 
@@ -467,10 +525,19 @@ function deriveMetrics(input: PipelineStateInput): PipelineMetrics {
  * ```
  */
 export function usePipelineState(input: PipelineStateInput): DerivedPipelineState {
+  // Phase 10.159: Calculate raw paper count for memoization dependency
+  // This ensures stage messages update when source paper counts change
+  const rawPaperCount = useMemo(() => {
+    let total = 0;
+    input.sourceStats.forEach(stats => { total += stats.paperCount; });
+    return total;
+  }, [input.sourceStats]);
+
   // Memoize derived state to prevent unnecessary recalculations
+  // Phase 10.159: Added rawPaperCount dependency for dynamic stage messages
   const stages = useMemo(
     () => deriveStageStates(input),
-    [input.isSearching, input.stage, input.percent, input.sourcesComplete, input.sourcesTotal, input.semanticTier]
+    [input.isSearching, input.stage, input.percent, input.sourcesComplete, input.sourcesTotal, input.semanticTier, input.papersFound, rawPaperCount]
   );
 
   const currentStage = useMemo(
@@ -505,6 +572,12 @@ export function usePipelineState(input: PipelineStateInput): DerivedPipelineStat
     [input.papersFound, input.elapsedMs, input.sourcesComplete, input.sourcesTotal, input.semanticTier, input.stage]
   );
 
+  // Phase 10.160: Derive quality selection state for funnel visualization
+  const qualitySelection = useMemo(
+    () => deriveQualitySelection(input),
+    [input.stage, input.selectionRankedCount, input.selectionSelectedCount, input.selectionAvgQuality, input.papersFound]
+  );
+
   return useMemo(() => ({
     stages,
     currentStage,
@@ -516,7 +589,8 @@ export function usePipelineState(input: PipelineStateInput): DerivedPipelineStat
     metrics,
     isSearching: input.isSearching,
     isComplete: input.stage === 'complete',
-  }), [stages, currentStage, sources, activeSource, semanticNodes, synapses, metrics, input.isSearching, input.stage]);
+    qualitySelection, // Phase 10.160: Quality funnel state
+  }), [stages, currentStage, sources, activeSource, semanticNodes, synapses, metrics, input.isSearching, input.stage, qualitySelection]);
 }
 
 export default usePipelineState;

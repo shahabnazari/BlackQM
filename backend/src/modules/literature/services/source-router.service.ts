@@ -63,10 +63,10 @@ const MAX_GLOBAL_TIMEOUT = 30000; // 30 seconds
 
 /**
  * Default limit for search results when not specified
- * Phase 10.115: Increased from 20 to 300 to match tier allocations
- * Individual sources will use tier-based allocation (300-500) from getSourceAllocation()
+ * Phase 10.159: This is a fallback only - primary limit comes from getSourceAllocation()
+ * All tiers now use 500 papers for maximum quality selection pool
  */
-const DEFAULT_SEARCH_LIMIT = 300;
+const DEFAULT_SEARCH_LIMIT = 500;
 
 // ============================================================================
 // SERVICE IMPLEMENTATION
@@ -161,11 +161,15 @@ export class SourceRouterService {
     // SEC-1: Input validation
     this.validateSearchInput(source, searchDto);
 
-    // Phase 10.115: Use tier-based allocation for source-specific limits
-    // Premium sources (Tier 1): 500 papers, Good (Tier 2): 400, Preprint (Tier 3): 300, Aggregator (Tier 4): 300
+    // Phase 10.159: Use tier-based allocation for source-specific limits
+    // ALL tiers now fetch 500 papers for maximum quality selection pool
+    // If searchDto.limit is provided (truthy), cap at tier allocation; otherwise use full tier allocation
     const tierAllocation = getSourceAllocation(source);
-    const effectiveLimit = searchDto.limit ?? tierAllocation;
-    this.logger.debug(`[${source}] Using limit ${effectiveLimit} (tier allocation: ${tierAllocation}, dto: ${searchDto.limit ?? 'undefined'})`);
+    const effectiveLimit = searchDto.limit
+      ? Math.min(searchDto.limit, tierAllocation) // Cap at tier allocation (never exceed tier limit)
+      : tierAllocation;                            // Use tier allocation if no limit provided
+    // Phase 10.159: Changed to .log for visibility - confirms tier allocation is being applied
+    this.logger.log(`📊 [${source}] Requesting ${effectiveLimit} papers (tier: ${tierAllocation}, dto.limit: ${searchDto.limit ?? 'undefined'})`);
 
     switch (source) {
       case LiteratureSource.SEMANTIC_SCHOLAR:

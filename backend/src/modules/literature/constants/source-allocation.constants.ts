@@ -1,26 +1,22 @@
 /**
  * Source Allocation Strategy Constants
- * 
- * Phase 10.6 Day 14.9: Enterprise-Grade Tiered Source Allocation
- * 
- * Purpose: Optimize paper collection by allocating fetch limits based on source quality
- * 
- * Innovation: Unlike competitors (uniform limits), we use tiered allocation:
+ *
+ * Phase 10.159: Maximum Quality Pool Strategy
+ *
+ * Purpose: Fetch maximum papers from ALL sources to build largest quality pool
+ *
+ * Strategy: ALL tiers now fetch 500 papers each for maximum diversity:
  * - Premium sources (peer-reviewed, high impact): 500 papers
- * - Good sources (established, quality): 300 papers
- * - Preprint sources (emerging, unreviewed): 200 papers
- * - Aggregator sources (balanced): 250 papers
- * 
+ * - Good sources (established, quality): 500 papers
+ * - Preprint sources (emerging, unreviewed): 500 papers
+ * - Aggregator sources (comprehensive): 500 papers
+ *
  * Scientific Rationale:
- * - Research shows diminishing returns after 200-300 papers for theme extraction
- * - Gap analysis requires 300-500 papers for comprehensive coverage
- * - Tiered approach ensures quality while maintaining diversity
- * 
- * Competitor Analysis:
- * - Scopus/WoS: Unlimited (overwhelming)
- * - Semantic Scholar: 1,000 uniform
- * - Elicit: 50 (too restrictive)
- * - Our approach: 200-500 adaptive (optimal)
+ * - Larger pool = better chance of finding high-quality papers
+ * - 600 papers ranked → 300 selected via harmonic mean (relevance × quality)
+ * - Composite quality filter ensures BOTH relevance AND quality are high
+ *
+ * Pipeline: Sources(~3000-4000) → Dedupe(~1500) → BM25(600) → Semantic(600) → Select(300)
  */
 
 import { LiteratureSource } from '../dto/literature.dto';
@@ -58,10 +54,11 @@ export enum SourceTier {
  *           = 3500 + 1600 + 600 + 1500 = 7200 papers max → filter to 300 at 80%+
  */
 export const TIER_ALLOCATIONS = {
-  [SourceTier.TIER_1_PREMIUM]: parseInt(process.env.PAPERS_PER_SOURCE_TIER1 || '500', 10),     // Increased: premium sources likely have best papers
-  [SourceTier.TIER_2_GOOD]: parseInt(process.env.PAPERS_PER_SOURCE_TIER2 || '400', 10),        // Increased: good sources still valuable
-  [SourceTier.TIER_3_PREPRINT]: parseInt(process.env.PAPERS_PER_SOURCE_TIER3 || '300', 10),    // Increased: preprints can have cutting-edge research
-  [SourceTier.TIER_4_AGGREGATOR]: parseInt(process.env.PAPERS_PER_SOURCE_TIER4 || '300', 10),  // Increased: aggregators provide diverse coverage
+  // Phase 10.158: Increased all tiers to fetch more papers for better ranking quality
+  [SourceTier.TIER_1_PREMIUM]: parseInt(process.env.PAPERS_PER_SOURCE_TIER1 || '500', 10),     // Premium: peer-reviewed, high-impact
+  [SourceTier.TIER_2_GOOD]: parseInt(process.env.PAPERS_PER_SOURCE_TIER2 || '500', 10),        // Good: established, reputable (increased from 400)
+  [SourceTier.TIER_3_PREPRINT]: parseInt(process.env.PAPERS_PER_SOURCE_TIER3 || '500', 10),    // Preprint: cutting-edge research (increased from 300)
+  [SourceTier.TIER_4_AGGREGATOR]: parseInt(process.env.PAPERS_PER_SOURCE_TIER4 || '500', 10),  // Aggregator: diverse coverage (increased from 300)
 };
 
 /**

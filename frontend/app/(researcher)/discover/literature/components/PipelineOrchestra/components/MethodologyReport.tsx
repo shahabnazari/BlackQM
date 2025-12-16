@@ -46,6 +46,7 @@ import {
   STAGE_TECHNICAL_DETAILS,
   RANKING_TIER_LIMITS,
   MAX_RANKED_PAPERS,
+  MAX_FINAL_PAPERS,
 } from '../constants';
 
 // ============================================================================
@@ -1790,9 +1791,9 @@ function generateReportHTML(data: {
           </div>
           <div class="metric-value">${data.papersFound}</div>
           <div class="metric-bar">
-            <div class="metric-bar-fill" style="width: ${Math.min(100, (data.papersFound / 300) * 100)}%"></div>
+            <div class="metric-bar-fill" style="width: ${Math.min(100, (data.papersFound / MAX_FINAL_PAPERS) * 100)}%"></div>
           </div>
-          <div class="text-sm text-muted mt-4">Target: 300 papers maximum</div>
+          <div class="text-sm text-muted mt-4">Target: ${MAX_FINAL_PAPERS} papers maximum</div>
         </div>
 
         <div class="metric-card">
@@ -1932,7 +1933,7 @@ function generateReportHTML(data: {
           </tr>
           <tr>
             <td><strong>5. Semantic Scoring</strong></td>
-            <td>Top 600 papers</td>
+            <td>Top ${MAX_RANKED_PAPERS} papers</td>
             <td>Similarity scores</td>
             <td>BGE-small-en-v1.5</td>
             <td class="mono">55% contribution</td>
@@ -1954,7 +1955,7 @@ function generateReportHTML(data: {
           <tr>
             <td><strong>8. Final Selection</strong></td>
             <td>Quality papers</td>
-            <td>Top 300</td>
+            <td>Top ${MAX_FINAL_PAPERS}</td>
             <td>Combined score sort</td>
             <td class="mono">${data.papersFound} final</td>
           </tr>
@@ -2251,7 +2252,7 @@ function generateReportHTML(data: {
             <tr><td>Pipeline Version</td><td class="mono">10.139 (Universal Semantic-First)</td></tr>
             <tr><td>Scoring Formula</td><td class="mono">0.15×BM25 + 0.55×Semantic + 0.30×ThemeFit</td></tr>
             <tr><td>Quality Threshold</td><td class="mono">≥ 20</td></tr>
-            <tr><td>Max Results</td><td class="mono">300 papers</td></tr>
+            <tr><td>Max Results</td><td class="mono">${MAX_FINAL_PAPERS} papers</td></tr>
             <tr><td>Embedding Model</td><td class="mono">BGE-small-en-v1.5</td></tr>
             <tr><td>Sources Queried</td><td class="mono">${data.sourcesQueried.length} databases</td></tr>
             <tr><td>Semantic Tier</td><td class="mono">${data.semanticTier || 'standard'}</td></tr>

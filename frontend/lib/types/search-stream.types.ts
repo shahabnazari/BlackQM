@@ -225,8 +225,9 @@ export interface PapersBatchEvent {
 
 /**
  * Search progress stages
+ * Phase 10.158: Added 'selecting' stage for quality selection (600 → 300)
  */
-export type SearchStage = 'analyzing' | 'fast-sources' | 'medium-sources' | 'slow-sources' | 'ranking' | 'complete';
+export type SearchStage = 'analyzing' | 'fast-sources' | 'medium-sources' | 'slow-sources' | 'ranking' | 'selecting' | 'complete';
 
 /**
  * Search progress event
@@ -285,6 +286,19 @@ export interface SearchErrorEvent {
   timestamp: number;
 }
 
+/**
+ * Phase 10.158: Quality selection complete event
+ * Emitted when 600 ranked papers are filtered to top 300
+ */
+export interface SelectionCompleteEvent {
+  searchId: string;
+  rankedCount: number;      // Papers before selection (600)
+  selectedCount: number;    // Papers after selection (300)
+  targetCount: number;      // Target count (300)
+  avgQualityScore: number;  // Average quality of selected papers
+  timestamp: number;
+}
+
 // ============================================================================
 // WEBSOCKET EVENT TYPES
 // ============================================================================
@@ -301,7 +315,9 @@ export type SearchStreamEventType =
   | 'search:progress'
   | 'search:enrichment'
   | 'search:complete'
-  | 'search:error';
+  | 'search:error'
+  // Phase 10.158: Quality selection event
+  | 'search:selection-complete';
 
 /**
  * WebSocket event name to payload type mapping
@@ -387,6 +403,11 @@ export interface SearchStreamState {
   enrichedPaperIds: Set<string>;
   enrichmentPending: number;
 
+  // Phase 10.160: Quality selection state (from selection-complete event)
+  selectionRankedCount: number;    // Papers before quality filter (from semantic ranking)
+  selectionSelectedCount: number;  // Papers after quality filter
+  selectionAvgQuality: number;     // Average quality score (0-1)
+
   // Timing
   startTime: number | null;
   elapsedMs: number;
@@ -454,6 +475,10 @@ export const INITIAL_SEARCH_STREAM_STATE: SearchStreamState = {
   papersFound: 0,
   enrichedPaperIds: new Set(),
   enrichmentPending: 0,
+  // Phase 10.160: Quality selection state
+  selectionRankedCount: 0,
+  selectionSelectedCount: 0,
+  selectionAvgQuality: 0,
   startTime: null,
   elapsedMs: 0,
   error: null,
@@ -540,107 +565,6 @@ export interface SemanticProgressEvent {
   timestamp: number;
 }
 
-// ============================================================================
-// PHASE 10.155: ITERATIVE FETCH TYPES
-// ============================================================================
-
-/**
- * Stop reasons for iterative fetching loop
- */
-export type IterationStopReason =
-  | 'TARGET_REACHED'        // filtered.length >= targetCount
-  | 'RELAXING_THRESHOLD'    // Need more papers, relaxing threshold
-  | 'MAX_ITERATIONS'        // Hit max iteration count
-  | 'DIMINISHING_RETURNS'   // yieldRate < threshold
-  | 'SOURCES_EXHAUSTED'     // All sources returned < 50% of requested
-  | 'MIN_THRESHOLD'         // Cannot relax below minimum
-  | 'USER_CANCELLED'        // User clicked cancel
-  | 'TIMEOUT';              // Iteration timeout
-
-/**
- * Academic field detected from query
- */
-export type AcademicField =
-  | 'biomedical'
-  | 'physics'
-  | 'computer-science'
-  | 'social-science'
-  | 'humanities'
-  | 'interdisciplinary';
-
-/**
- * Iterative fetch progress event
- * Emitted during iterative paper fetching to show honest progress
- *
- * Phase 10.155: Netflix-grade iterative fetching
- */
-export interface IterationProgressEvent {
-  /** Event type */
-  type: 'iteration_start' | 'iteration_progress' | 'iteration_complete';
-  /** Search ID for correlation */
-  searchId: string;
-  /** Current iteration number (1-based) */
-  iteration: number;
-  /** Total iterations allowed */
-  totalIterations: number;
-  /** Current fetch limit per source */
-  fetchLimit: number;
-  /** Current quality threshold (overallScore) */
-  threshold: number;
-  /** Papers found so far above threshold */
-  papersFound: number;
-  /** Target paper count */
-  targetPapers: number;
-  /** New papers found in this iteration */
-  newPapersThisIteration: number;
-  /** Yield rate for this iteration (0-1) */
-  yieldRate: number;
-  /** Sources marked as exhausted */
-  sourcesExhausted: string[];
-  /** Stop reason (only on iteration_complete) */
-  reason?: IterationStopReason;
-  /** Detected academic field */
-  field?: AcademicField;
-  /** Timestamp */
-  timestamp: number;
-}
-
-/**
- * Iteration state for tracking in UI
- */
-export interface IterationState {
-  /** Current iteration number */
-  iteration: number;
-  /** Total iterations allowed */
-  totalIterations: number;
-  /** Current quality threshold */
-  threshold: number;
-  /** Papers found above threshold */
-  papersFound: number;
-  /** Target paper count */
-  targetPapers: number;
-  /** Detected academic field */
-  field: AcademicField | null;
-  /** Whether iterating is in progress */
-  isIterating: boolean;
-  /** Stop reason if stopped */
-  stopReason: IterationStopReason | null;
-}
-
-/**
- * Initial iteration state
- */
-export const INITIAL_ITERATION_STATE: IterationState = {
-  iteration: 0,
-  totalIterations: 4,
-  threshold: 50,
-  papersFound: 0,
-  targetPapers: 300,
-  field: null,
-  isIterating: false,
-  stopReason: null,
-};
-
 /**
  * Phase 10.113 Week 11 Bug 10: Position change for animation
  */
@@ -675,32 +599,25 @@ export interface RerankOptions {
 }
 
 /**
- * Extended WebSocket event types with semantic and iteration events
+ * Extended WebSocket event types with semantic events
  */
 export type ExtendedSearchStreamEventType =
   | SearchStreamEventType
   | 'search:semantic-tier'
-  | 'search:semantic-progress'
-  // Phase 10.155: Iterative fetch events
-  | 'search:iteration-start'
-  | 'search:iteration-progress'
-  | 'search:iteration-complete';
+  | 'search:semantic-progress';
 
 /**
- * Extended event map with semantic and iteration events
+ * Extended event map with semantic events
  */
 export interface ExtendedSearchStreamEventMap extends SearchStreamEventMap {
   'search:semantic-tier': SemanticTierEvent;
   'search:semantic-progress': SemanticProgressEvent;
-  // Phase 10.155: Iterative fetch events
-  'search:iteration-start': IterationProgressEvent;
-  'search:iteration-progress': IterationProgressEvent;
-  'search:iteration-complete': IterationProgressEvent;
 }
 
 /**
  * Semantic tier display configuration
  * Used for UI tier indicators
+ * Phase 10.159: Netflix-grade descriptions aligned with constants.ts
  */
 export const SEMANTIC_TIER_CONFIG: Record<SemanticTierName, {
   displayName: string;
@@ -710,24 +627,24 @@ export const SEMANTIC_TIER_CONFIG: Record<SemanticTierName, {
   color: string;
 }> = {
   immediate: {
-    displayName: 'Quick Preview',
-    description: 'Top 50 most relevant papers',
+    displayName: 'Instant Preview',
+    description: 'Top 50 papers ranked instantly',
     paperRange: '1-50',
     targetLatencyMs: 500,
     color: 'green',
   },
   refined: {
-    displayName: 'Refined Results',
-    description: 'Extended to 200 papers',
+    displayName: 'Semantic Refinement',
+    description: 'Top 200 papers with semantic scoring',
     paperRange: '51-200',
-    targetLatencyMs: 2000,
+    targetLatencyMs: 3000,
     color: 'blue',
   },
   complete: {
-    displayName: 'Complete Analysis',
-    description: 'Full 600 paper analysis',
+    displayName: 'Deep Analysis',
+    description: 'All 600 papers with cross-encoder',
     paperRange: '201-600',
-    targetLatencyMs: 10000,
+    targetLatencyMs: 12000,
     color: 'purple',
   },
 };

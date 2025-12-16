@@ -26,8 +26,9 @@ import type {
 /**
  * Pipeline stage identifiers
  * Phase 10.152: Removed 'ready' stage - pipeline ends at 'rank' for cleaner user journey
+ * Phase 10.158: Added 'select' stage for quality selection (600 → 300)
  */
-export type PipelineStageId = 'analyze' | 'discover' | 'refine' | 'rank';
+export type PipelineStageId = 'analyze' | 'discover' | 'refine' | 'rank' | 'select';
 
 /**
  * Pipeline stage status
@@ -80,9 +81,12 @@ export interface SourcePosition {
 
 /**
  * Orbital configuration for source tier
+ * Phase 10.163: Added elliptical support (radiusX/radiusY)
  */
 export interface OrbitConfig {
-  radius: number;
+  radius: number;       // Base radius (backward compat)
+  radiusX?: number;     // Phase 10.163: Ellipse X radius (horizontal)
+  radiusY?: number;     // Phase 10.163: Ellipse Y radius (vertical)
   speed: number;
   startAngle: number;
   direction: 1 | -1;
@@ -331,7 +335,22 @@ export interface PipelineMetrics {
 }
 
 /**
+ * Phase 10.160: Quality selection state
+ * Tracks the quality filter stage (600 → 300 papers)
+ */
+export interface QualitySelectionState {
+  rankedCount: number;      // Papers entering quality filter (from semantic ranking)
+  selectedCount: number;    // Papers after quality filter
+  targetCount: number;      // Target maximum (300)
+  avgQualityScore: number;  // Average quality of selected papers (0-1)
+  isSelecting: boolean;     // Currently filtering
+  isComplete: boolean;      // Filtering complete
+}
+
+/**
  * Derived pipeline state
+ * Phase 10.156: Iteration state removed (simplified to sort-based selection)
+ * Phase 10.160: Added qualitySelection for quality filter visualization
  */
 export interface DerivedPipelineState {
   stages: PipelineStageState[];
@@ -344,10 +363,14 @@ export interface DerivedPipelineState {
   metrics: PipelineMetrics;
   isSearching: boolean;
   isComplete: boolean;
+  /** Phase 10.160: Quality selection state for funnel visualization */
+  qualitySelection: QualitySelectionState;
 }
 
 /**
  * Search pipeline orchestra props
+ * Phase 10.156: Iteration state removed (simplified to sort-based selection)
+ * Phase 10.160: Added quality selection props for funnel visualization
  */
 export interface SearchPipelineOrchestraProps {
   // WebSocket state
@@ -366,6 +389,11 @@ export interface SearchPipelineOrchestraProps {
   semanticVersion: number;
   semanticTierStats: Map<SemanticTierName, SemanticTierStats>;
 
+  // Phase 10.160: Quality selection state (from selection-complete event)
+  selectionRankedCount?: number;    // Papers before quality filter
+  selectionSelectedCount?: number;  // Papers after quality filter
+  selectionAvgQuality?: number;     // Average quality score (0-1)
+
   // Callbacks
   onCancel?: () => void;
   onSourceClick?: (source: LiteratureSource) => void;
@@ -374,6 +402,7 @@ export interface SearchPipelineOrchestraProps {
   // Options
   showParticles?: boolean;
   showSemanticBrain?: boolean;
+  showQualityFunnel?: boolean;  // Phase 10.160: Show quality filter visualization
   compactMode?: boolean;
 }
 

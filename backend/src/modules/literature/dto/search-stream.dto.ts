@@ -75,9 +75,13 @@ export const QUERY_INTELLIGENCE_CONFIG = {
   ESTIMATE_CONFIDENCE: 0.6,
 
   // Search limits
-  // Phase 10.115: Increased from 20/50 to match tier allocations (300-500)
-  DEFAULT_LIMIT: 300,
-  MAX_PER_SOURCE_LIMIT: 500,
+  // Phase 10.156: Increased for sort-based selection (need larger pool for quality top-N)
+  DEFAULT_LIMIT: 500,
+  MAX_PER_SOURCE_LIMIT: 750,
+
+  // Phase 10.158: Final target result count after quality selection
+  // 600 papers ranked → 300 selected based on composite quality score
+  TARGET_FINAL_RESULTS: 300,
 
   // Query suggestions
   MAX_SUGGESTIONS: 3,
@@ -265,7 +269,7 @@ export interface PapersBatchEvent {
  */
 export interface SearchProgressEvent {
   searchId: string;
-  stage: 'analyzing' | 'fast-sources' | 'medium-sources' | 'slow-sources' | 'ranking' | 'complete';
+  stage: 'analyzing' | 'fast-sources' | 'medium-sources' | 'slow-sources' | 'ranking' | 'selecting' | 'complete';
   percent: number;
   message: string;
   sourcesComplete: number;
@@ -334,16 +338,16 @@ export interface SearchStreamConfig {
 /**
  * Phase 10.115: Netflix-Grade Stream Configuration
  *
- * TIMEOUT OPTIMIZATION FOR 300-500 PAPER FETCHES:
- * - Fast sources: 3s → 8s (allows fetching up to 500 papers from OpenAlex, CrossRef)
- * - Medium sources: 8s → 15s (allows fetching up to 400 papers from Semantic Scholar)
- * - Slow sources: 20s → 35s (allows fetching up to 300 papers from PubMed, PMC)
+ * TIMEOUT OPTIMIZATION FOR 500 PAPER FETCHES (Phase 10.159):
+ * - Fast sources: 8s (allows fetching up to 500 papers from OpenAlex, CrossRef, ERIC, arXiv)
+ * - Medium sources: 15s (allows fetching up to 500 papers from Semantic Scholar with pagination)
+ * - Slow sources: 70s (allows fetching up to 500 papers from PubMed, PMC, CORE)
  *
  * These timeouts align with TIER_ALLOCATIONS in source-allocation.constants.ts:
- * - Tier 1 (Premium): 500 papers
- * - Tier 2 (Good): 400 papers
- * - Tier 3 (Standard): 300 papers
- * - Tier 4 (Supplementary): 300 papers
+ * - Tier 1 (Premium): 500 papers (Semantic Scholar, PubMed, PMC, Springer, Nature, WoS, Scopus)
+ * - Tier 2 (Good): 500 papers (Wiley, IEEE, Taylor&Francis, SAGE)
+ * - Tier 3 (Preprint): 500 papers (arXiv, SSRN)
+ * - Tier 4 (Aggregator): 500 papers (OpenAlex, CrossRef, ERIC, CORE, Google Scholar)
  */
 export const DEFAULT_STREAM_CONFIG: SearchStreamConfig = {
   minBatchSize: 5,
@@ -444,60 +448,6 @@ export interface SemanticProgressEvent {
 }
 
 // ============================================================================
-// PHASE 10.155: ITERATIVE FETCH TYPES
-// ============================================================================
-
-/**
- * Stop reasons for iterative fetching loop
- */
-export type IterationStopReason =
-  | 'TARGET_REACHED'        // filtered.length >= targetCount
-  | 'RELAXING_THRESHOLD'    // Need more papers, relaxing threshold
-  | 'MAX_ITERATIONS'        // Hit max iteration count
-  | 'DIMINISHING_RETURNS'   // yieldRate < threshold
-  | 'SOURCES_EXHAUSTED'     // All sources returned < 50% of requested
-  | 'MIN_THRESHOLD'         // Cannot relax below minimum
-  | 'USER_CANCELLED'        // User clicked cancel
-  | 'TIMEOUT';              // Iteration timeout
-
-/**
- * Iterative fetch progress event
- * Emitted during iterative paper fetching to show honest progress
- *
- * Phase 10.155: Netflix-grade iterative fetching
- */
-export interface IterationProgressEvent {
-  /** Event type */
-  type: 'iteration_start' | 'iteration_progress' | 'iteration_complete';
-  /** Search ID for correlation */
-  searchId: string;
-  /** Current iteration number (1-based) */
-  iteration: number;
-  /** Total iterations allowed */
-  totalIterations: number;
-  /** Current fetch limit per source */
-  fetchLimit: number;
-  /** Current quality threshold (overallScore) */
-  threshold: number;
-  /** Papers found so far above threshold */
-  papersFound: number;
-  /** Target paper count */
-  targetPapers: number;
-  /** New papers found in this iteration */
-  newPapersThisIteration: number;
-  /** Yield rate for this iteration (0-1) */
-  yieldRate: number;
-  /** Sources marked as exhausted */
-  sourcesExhausted: string[];
-  /** Stop reason (only on iteration_complete) */
-  reason?: IterationStopReason;
-  /** Detected academic field */
-  field?: string;
-  /** Timestamp */
-  timestamp: number;
-}
-
-// ============================================================================
 // WEBSOCKET EVENT TYPES
 // ============================================================================
 
@@ -517,10 +467,8 @@ export type SearchStreamEventType =
   // Phase 10.113 Week 11: Semantic tier events
   | 'search:semantic-tier'
   | 'search:semantic-progress'
-  // Phase 10.155: Iterative fetch events
-  | 'search:iteration-start'
-  | 'search:iteration-progress'
-  | 'search:iteration-complete';
+  // Phase 10.158: Quality selection event
+  | 'search:selection-complete';
 
 /**
  * Generic search stream event

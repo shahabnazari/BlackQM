@@ -224,46 +224,48 @@ export const PaperFiltersPanel = memo(function PaperFiltersPanel({
           </div>
 
           {/* Citations Per Year Range */}
+          {/* Phase 10.160: Widened range to 1000+ to include all papers by default */}
           <div>
             <Label className="text-sm font-medium mb-2 block">
               Citations/Year: {filters.citationsPerYearRange[0]} -{' '}
-              {filters.citationsPerYearRange[1] >= 100
-                ? '100+'
+              {filters.citationsPerYearRange[1] >= 1000
+                ? '1000+'
                 : filters.citationsPerYearRange[1]}
             </Label>
             <Slider
               min={0}
-              max={100}
-              step={1}
+              max={1000}
+              step={10}
               value={filters.citationsPerYearRange}
               onValueChange={handleCitationsRangeChange}
               className="w-full"
             />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
               <span>0</span>
-              <span>100+</span>
+              <span>1000+</span>
             </div>
           </div>
 
           {/* Author Count Range */}
+          {/* Phase 10.160: Widened range to 0-100 to include all papers by default */}
           <div>
             <Label className="text-sm font-medium mb-2 block">
               Number of Authors: {filters.authorCountRange[0]} -{' '}
-              {filters.authorCountRange[1] >= 20
-                ? '20+'
+              {filters.authorCountRange[1] >= 100
+                ? '100+'
                 : filters.authorCountRange[1]}
             </Label>
             <Slider
-              min={1}
-              max={20}
+              min={0}
+              max={100}
               step={1}
               value={filters.authorCountRange}
               onValueChange={handleAuthorCountRangeChange}
               className="w-full"
             />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>1</span>
-              <span>20+</span>
+              <span>0</span>
+              <span>100+</span>
             </div>
           </div>
 
