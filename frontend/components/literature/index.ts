@@ -55,3 +55,7 @@ export type { CitationModalProps, CitationFormat } from './CitationModal';
 
 // Phase 10.97 Day 2: Theme to Statement modal
 export { ThemeToStatementModal } from './ThemeToStatementModal';
+
+// Phase 10.175: Thematization Configuration
+export { ThematizationConfigModal } from './ThematizationConfigModal';
+export type { ThematizationConfig, ThematizationConfigModalProps } from './ThematizationConfigModal';

@@ -823,6 +823,7 @@ model Paper {
   
   // PDF support
   pdfPath       String?
+  pdfUrl        String?  // Phase 10.180: Direct PDF URL from Stage 9 detection (fastest fetch tier)
   hasFullText   Boolean  @default(false)
 
   // Phase 10 Day 5.15: Full-Text PDF Parsing

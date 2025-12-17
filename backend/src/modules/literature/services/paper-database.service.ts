@@ -201,6 +201,25 @@ export class PaperDatabaseService {
       if (existingPaper) {
         this.logger.log(`Returning existing paper ID: ${existingPaper.id}`);
 
+        // Phase 10.180: Update pdfUrl/hasFullText/fullTextStatus if Stage 9 detected availability
+        // CRITICAL: Without this, detection results are lost for existing papers
+        const shouldUpdateDetection =
+          saveDto.hasFullText === true && !existingPaper.hasFullText;
+
+        if (shouldUpdateDetection) {
+          this.logger.log(
+            `📝 Updating existing paper ${existingPaper.id} with Stage 9 detection: hasFullText=${saveDto.hasFullText}, pdfUrl=${saveDto.pdfUrl ? 'present' : 'none'}`,
+          );
+          await this.prisma.paper.update({
+            where: { id: existingPaper.id },
+            data: {
+              pdfUrl: saveDto.pdfUrl ?? null,
+              hasFullText: saveDto.hasFullText,
+              fullTextStatus: saveDto.fullTextStatus ?? 'available',
+            },
+          });
+        }
+
         // Still queue for full-text if needed (also retry failed papers)
         if (
           (sanitized.doi || sanitized.pmid || sanitized.url) &&
@@ -256,6 +275,11 @@ export class PaperDatabaseService {
           publicationType: toJsonStringArray(saveDto.publicationType),
           authorAffiliations: toJsonAuthorAffiliations(saveDto.authorAffiliations),
           grants: toJsonGrants(saveDto.grants),
+          // Phase 10.180: Full-text detection results from Stage 9
+          // CRITICAL: These fields tell the backend WHERE to fetch full-text from
+          pdfUrl: saveDto.pdfUrl ?? null,
+          hasFullText: saveDto.hasFullText ?? false,
+          fullTextStatus: saveDto.fullTextStatus ?? 'not_fetched',
         },
       });
 

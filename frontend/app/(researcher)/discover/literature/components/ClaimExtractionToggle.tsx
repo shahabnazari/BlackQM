@@ -29,7 +29,7 @@ import {
   CheckCircle2,
   Zap,
 } from 'lucide-react';
-import { FEATURE_METADATA, formatCredits } from '@/lib/types/thematization-pricing.types';
+import { FEATURE_METADATA, FEATURE_COST_CREDITS, formatCredits } from '@/lib/types/thematization-pricing.types';
 import { logger } from '@/lib/utils/logger';
 import { cn } from '@/lib/utils/cn';
 
@@ -73,8 +73,8 @@ const CLAIM_EXTRACTION_INFO = {
   ],
 };
 
-// Get cost from metadata
-const CLAIM_EXTRACTION_COST = FEATURE_METADATA.find(f => f.flag === 'enableClaimExtraction')?.costCredits ?? 3;
+// Get cost from metadata (use FEATURE_COST_CREDITS as consistent fallback)
+const CLAIM_EXTRACTION_COST = FEATURE_METADATA.find(f => f.flag === 'enableClaimExtraction')?.costCredits ?? FEATURE_COST_CREDITS;
 
 // ============================================================================
 // COMPACT TOGGLE COMPONENT

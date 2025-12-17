@@ -93,6 +93,17 @@ export interface ResearchGap {
   collaborators?: string[];
 }
 
+/**
+ * Phase 10.170: Research Purpose Enum (Frontend)
+ * Must match backend ResearchPurpose enum exactly
+ */
+export type ResearchPurpose =
+  | 'q_methodology'
+  | 'qualitative_analysis'
+  | 'literature_synthesis'
+  | 'hypothesis_generation'
+  | 'survey_construction';
+
 export interface SearchLiteratureParams {
   query: string;
   sources?: string[];
@@ -114,6 +125,26 @@ export interface SearchLiteratureParams {
     | 'citations_per_year'
     | 'word_count'
     | 'quality_score';
+  // ==========================================================================
+  // Phase 10.170: Purpose-Aware Pipeline Configuration
+  // ==========================================================================
+  /**
+   * Research purpose for purpose-aware search configuration
+   * Determines: paper limits, quality weights, full-text requirements
+   */
+  purpose?: ResearchPurpose;
+  /**
+   * Override target paper count (purpose-specific default applies if not set)
+   */
+  targetPaperCount?: number;
+  /**
+   * Force full-text requirement regardless of purpose config
+   */
+  forceFullText?: boolean;
+  /**
+   * Full-text boost multiplier for quality scoring (0.0-1.0)
+   */
+  fullTextBoost?: number;
 }
 
 export interface KnowledgeGraphData {

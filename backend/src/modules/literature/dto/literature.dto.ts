@@ -16,6 +16,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 import type { MetadataCompleteness } from '../utils/paper-quality.util';
+// Phase 10.170: Purpose-Aware Pipeline Integration
+import { ResearchPurpose } from '../types/purpose-aware.types';
 
 export enum ExportFormat {
   BIBTEX = 'bibtex',
@@ -176,6 +178,45 @@ export class SearchLiteratureDto {
     | 'citations_per_year'
     | 'word_count'
     | 'quality_score';
+
+  // ==========================================================================
+  // Phase 10.170: Purpose-Aware Pipeline Configuration
+  // ==========================================================================
+
+  @ApiPropertyOptional({
+    description: 'Research purpose for purpose-aware search configuration. Determines paper limits, quality weights, and full-text requirements.',
+    enum: ResearchPurpose,
+    example: ResearchPurpose.QUALITATIVE_ANALYSIS,
+  })
+  @IsEnum(ResearchPurpose)
+  @IsOptional()
+  purpose?: ResearchPurpose;
+
+  @ApiPropertyOptional({
+    description: 'Override target paper count (purpose-specific default applies if not set)',
+    minimum: 10,
+    maximum: 10000,
+  })
+  @IsNumber()
+  @IsOptional()
+  targetPaperCount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Force full-text requirement regardless of purpose config',
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  forceFullText?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Full-text boost multiplier for quality scoring (0.0-1.0)',
+    minimum: 0,
+    maximum: 1,
+  })
+  @IsNumber()
+  @IsOptional()
+  fullTextBoost?: number;
 }
 
 export class SavePaperDto {
@@ -328,6 +369,34 @@ export class SavePaperDto {
   @ArrayMaxSize(50, { message: 'Grants array cannot exceed 50 items' })
   @IsOptional()
   grants?: Array<{ grantId: string | null; agency: string | null; country: string | null }>;
+
+  // ==========================================================================
+  // Phase 10.180: Full-Text Detection Results from Stage 9
+  // CRITICAL: These fields enable efficient full-text fetching during extraction
+  // ==========================================================================
+
+  @ApiPropertyOptional({
+    description: 'Direct PDF URL for full-text fetching (detected by Stage 9 IntelligentFullTextDetectionService)',
+  })
+  @IsString()
+  @IsOptional()
+  pdfUrl?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Whether full-text is available (detected by Stage 9 IntelligentFullTextDetectionService)',
+  })
+  @IsBoolean()
+  @IsOptional()
+  hasFullText?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Full-text fetch status (tracks progress of full-text retrieval)',
+    enum: ['not_fetched', 'fetching', 'success', 'failed', 'available'],
+  })
+  @IsString()
+  @IsIn(['not_fetched', 'fetching', 'success', 'failed', 'available'])
+  @IsOptional()
+  fullTextStatus?: 'not_fetched' | 'fetching' | 'success' | 'failed' | 'available';
 }
 
 export class ExportCitationsDto {

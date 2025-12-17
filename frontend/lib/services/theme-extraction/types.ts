@@ -41,6 +41,22 @@ export interface PaperSavePayload {
   citationCount?: number;
   /** Array of keyword strings (optional) */
   keywords?: string[];
+  /**
+   * Phase 10.180: PDF URL for full-text fetching
+   * Set by Stage 9 IntelligentFullTextDetectionService
+   * Used by backend to know WHERE to fetch full-text from
+   */
+  pdfUrl?: string | null;
+  /**
+   * Phase 10.180: Whether full-text is available (detected by Stage 9)
+   * If true, backend will attempt to fetch full-text during extraction
+   */
+  hasFullText?: boolean;
+  /**
+   * Phase 10.180: Full-text fetch status
+   * Tracks progress of full-text retrieval
+   */
+  fullTextStatus?: 'not_fetched' | 'fetching' | 'success' | 'failed' | 'available';
 }
 
 /**

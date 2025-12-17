@@ -1056,19 +1056,26 @@ export class SearchPipelineService {
     );
 
     // Stage 9: Full-Text Detection (Phase 10.170 Week 2)
-    // Only run if service is available and purpose requires full-text
-    // Phase 10.170 Week 2 Audit: Respect contentPriority levels
-    // OPTIMIZATION: Reuse purposeConfig from earlier (line ~379) instead of calling getConfig() again
-    if (this.fulltextDetection && purposeConfig && purposeConfig.contentPriority !== 'low') {
+    // Phase 10.180 FIX: Run detection ALWAYS (not just when purpose specified)
+    // This ensures hasFullText flag is set for content analysis in theme extraction
+    // Use purpose config if available, otherwise use default 'medium' priority
+    const detectionPriority = purposeConfig?.contentPriority ?? 'medium';
+    const fullTextBoost = purposeConfig?.fullTextRequirement?.fullTextBoost ?? 5;
+
+    if (this.fulltextDetection && detectionPriority !== 'low') {
+      this.logger.log(
+        `🔍 [Stage 9] Running full-text detection (priority: ${detectionPriority}, purpose: ${config.purpose || 'exploratory'})`
+      );
+
       mutablePapers = await this.enhanceWithFullTextDetection(
         mutablePapers,
         config.emitProgress,
-        purposeConfig.contentPriority,
-        purposeConfig.fullTextRequirement.fullTextBoost,
+        detectionPriority,
+        fullTextBoost,
       );
 
-      // Phase 10.170 Week 2 Audit: Validate minFullTextRequired
-      if (purposeConfig.fullTextRequirement.strictRequirement) {
+      // Phase 10.170 Week 2 Audit: Validate minFullTextRequired (only when purpose specified)
+      if (purposeConfig?.fullTextRequirement?.strictRequirement) {
         const fullTextCount = mutablePapers.filter(p => p.hasFullText).length;
         const minRequired = purposeConfig.fullTextRequirement.minRequired;
         if (fullTextCount < minRequired) {
@@ -2304,6 +2311,49 @@ export class SearchPipelineService {
       this.perfMonitor.endStage('Full-Text Detection', papers.length);
       return papers; // Graceful degradation - return papers without enhancement
     }
+  }
+
+  /**
+   * Phase 10.180: Public method for Stage 9 Full-Text Detection
+   *
+   * Allows SearchStreamService to run Stage 9 detection after progressive
+   * semantic ranking (which bypasses executeOptimizedPipeline).
+   *
+   * @param papers Input papers to enhance (Paper[] from frontend type)
+   * @param emitProgress Progress callback for WebSocket
+   * @returns Papers enhanced with hasFullText flag and pdfUrl
+   */
+  public async runFullTextDetection(
+    papers: Paper[],
+    emitProgress?: (message: string, progress: number) => void,
+  ): Promise<Paper[]> {
+    if (!this.fulltextDetection || papers.length === 0) {
+      return papers;
+    }
+
+    const progressFn = emitProgress ?? ((_msg: string, _p: number) => {});
+
+    this.logger.log(
+      `🔍 [Stage 9 Public] Running full-text detection on ${papers.length} papers`,
+    );
+
+    // Convert Paper[] to MutablePaper[]
+    const mutablePapers: MutablePaper[] = papers.map(p => ({
+      ...p,
+      relevanceScore: p.relevanceScore ?? 0,
+      qualityScore: p.qualityScore ?? 0,
+    }));
+
+    // Run detection with default 'medium' priority
+    const enhanced = await this.enhanceWithFullTextDetection(
+      mutablePapers,
+      progressFn,
+      'medium',
+      5, // Default boost
+    );
+
+    // Convert back to Paper[]
+    return enhanced as Paper[];
   }
 
   // ===========================================================================

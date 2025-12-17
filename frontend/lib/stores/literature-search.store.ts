@@ -129,6 +129,8 @@ export const useLiteratureSearchStore = create<SearchState>()(
           showSuggestions: false,
           queryCorrectionMessage: null,
           progressiveLoading: INITIAL_PROGRESSIVE_STATE,
+          // Phase 10.170: Purpose-Aware Search Integration
+          researchPurpose: null,
         }),
     }),
     {
@@ -139,6 +141,8 @@ export const useLiteratureSearchStore = create<SearchState>()(
         filters: state.filters,
         appliedFilters: state.appliedFilters,
         academicDatabases: state.academicDatabases,
+        // Phase 10.170: Persist research purpose selection
+        researchPurpose: state.researchPurpose,
       }),
       migrate: (persistedState: any, version: number) => {
         // ✅ SECURITY FIX: Validate persisted state structure

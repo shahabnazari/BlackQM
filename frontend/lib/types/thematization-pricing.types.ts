@@ -418,6 +418,10 @@ export function calculateDetailedCost(
  * Format credits for display
  */
 export function formatCredits(credits: number): string {
+  // Defensive: handle invalid inputs
+  if (!Number.isFinite(credits) || credits < 0) {
+    return '0 credits';
+  }
   return `${credits} credit${credits !== 1 ? 's' : ''}`;
 }
 
@@ -425,6 +429,10 @@ export function formatCredits(credits: number): string {
  * Format USD for display
  */
 export function formatUSD(amount: number): string {
+  // Defensive: handle invalid inputs
+  if (!Number.isFinite(amount) || amount < 0) {
+    return '$0.00';
+  }
   return `$${amount.toFixed(2)}`;
 }
 
@@ -432,6 +440,10 @@ export function formatUSD(amount: number): string {
  * Format time estimate for display
  */
 export function formatTimeEstimate(minutes: number): string {
+  // Defensive: handle invalid inputs
+  if (!Number.isFinite(minutes) || minutes < 0) {
+    return 'Unknown';
+  }
   if (minutes < 1) {
     return 'Less than 1 minute';
   }
@@ -484,6 +496,10 @@ export const TIER_VALUES = THEMATIZATION_TIERS;
  * Check if a tier is available based on paper count
  */
 export function isTierAvailable(tier: ThematizationTierCount, availablePapers: number): boolean {
+  // Defensive: handle invalid inputs
+  if (!Number.isFinite(availablePapers) || availablePapers < 0) {
+    return false;
+  }
   return availablePapers >= tier;
 }
 
@@ -496,6 +512,10 @@ export function canAffordTier(
   subscription: SubscriptionTier,
   remainingCredits: number
 ): boolean {
+  // Defensive: handle invalid credits
+  if (!Number.isFinite(remainingCredits) || remainingCredits < 0) {
+    return false;
+  }
   const cost = calculateDetailedCost(tier, flags, subscription, remainingCredits);
   return remainingCredits >= cost.finalCost;
 }
@@ -535,6 +555,16 @@ export function validateTier(
   remainingCredits: number
 ): TierValidationResult {
   const errors: string[] = [];
+
+  // Defensive: validate numeric inputs
+  if (!Number.isFinite(availablePapers) || availablePapers < 0) {
+    errors.push('Invalid paper count');
+    return { isValid: false, errors };
+  }
+  if (!Number.isFinite(remainingCredits) || remainingCredits < 0) {
+    errors.push('Invalid credit balance');
+    return { isValid: false, errors };
+  }
 
   if (!isTierAvailable(tier, availablePapers)) {
     errors.push(`Need at least ${tier} papers (have ${availablePapers})`);

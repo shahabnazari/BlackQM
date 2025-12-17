@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   AlertCircle,
+  Clock, // Phase 10.180: For "available" status
 } from 'lucide-react';
 // TYPE SAFETY: Import ContentType enum for proper type checking
 import { ContentType } from '@/lib/types/content-types';
@@ -61,24 +62,46 @@ interface PurposeConfig {
   };
 }
 
+/**
+ * Content availability status for a paper
+ * Phase 10.180: Netflix-grade status tracking
+ */
+type ContentAvailabilityStatus = 'ready' | 'available' | 'unavailable';
+
 interface ContentAnalysis {
+  // === READY CONTENT (already fetched) ===
   fullTextCount: number;
   abstractOverflowCount: number;
   abstractCount: number;
+
+  // === AVAILABLE CONTENT (can be fetched) ===
+  /** Phase 10.180: Papers with hasFullText=true but content not yet fetched */
+  fullTextAvailableCount: number;
+
+  // === UNAVAILABLE ===
   noContentCount: number;
+
+  // === SUMMARY STATS ===
   avgContentLength: number;
   hasFullTextContent: boolean;
   sources: any[];
-  // BUGFIX: Transparency fields
   totalSelected: number;
+  /** Total with content READY (already fetched) */
   totalWithContent: number;
+  /** Phase 10.180: Total that CAN have content (ready + available) */
+  totalWithContentAvailable: number;
   totalSkipped: number;
+  /** Phase 10.180: Papers pending full-text fetch */
+  totalPendingFetch: number;
+
   selectedPapersList: Array<{
     id: string;
     title: string;
     hasContent: boolean;
-    contentType: ContentType; // TYPE SAFETY: Use ContentType enum instead of any
+    contentType: ContentType;
     contentLength: number;
+    /** Phase 10.180: Availability status for UI display */
+    availabilityStatus: ContentAvailabilityStatus;
     skipReason?: string;
   }>;
 }
@@ -261,20 +284,36 @@ export default function PurposeSelectionWizard({
   const [selectedPurpose, setSelectedPurpose] =
     useState<ResearchPurpose | null>(initialPurpose || null);
 
-  // PHASE 10 DAY 5.17: Content sufficiency validation
+  /**
+   * Phase 10.180: Netflix-grade content sufficiency validation
+   *
+   * Counts TOTAL full-text potential:
+   * - fullTextCount: Already fetched
+   * - fullTextAvailableCount: Will be fetched before extraction
+   * - abstractOverflowCount: Rich abstracts (250+ words)
+   */
   const validateContentSufficiency = (purpose: ResearchPurpose) => {
     const config = PURPOSE_CONFIGS[purpose];
-    const totalFullText =
-      contentAnalysis.fullTextCount + contentAnalysis.abstractOverflowCount;
+    // Phase 10.180: Include fullTextAvailableCount - these WILL be fetched
+    const totalFullTextPotential =
+      contentAnalysis.fullTextCount +
+      contentAnalysis.fullTextAvailableCount + // NEW: Papers with hasFullText=true
+      contentAnalysis.abstractOverflowCount;
     const requirements = config.contentRequirements;
 
-    const isSufficient = totalFullText >= requirements.minFullText;
+    const isSufficient = totalFullTextPotential >= requirements.minFullText;
 
     return {
       isSufficient,
       level: requirements.level,
       minRequired: requirements.minFullText,
-      currentCount: totalFullText,
+      currentCount: totalFullTextPotential,
+      // Phase 10.180: Show breakdown for transparency
+      breakdown: {
+        ready: contentAnalysis.fullTextCount,
+        pendingFetch: contentAnalysis.fullTextAvailableCount,
+        extendedAbstracts: contentAnalysis.abstractOverflowCount,
+      },
       rationale: requirements.rationale,
       isBlocking: requirements.level === 'blocking' && !isSufficient,
     };
@@ -406,47 +445,100 @@ export default function PurposeSelectionWizard({
                     Selected Sources Analysis
                   </h3>
 
-                  <div className="grid grid-cols-3 gap-4 mb-4">
+                  {/* Phase 10.180: Dynamic grid based on content categories */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    {/* READY: Full-text fetched */}
                     {contentAnalysis.fullTextCount > 0 && (
-                      <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
-                        <div className="text-3xl font-bold text-green-700">
+                      <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-green-700">
                           {contentAnalysis.fullTextCount}
                         </div>
-                        <div className="text-sm text-green-600 mt-1">
-                          Full-text papers
+                        <div className="text-xs text-green-600 mt-1">
+                          Full-text ready
                         </div>
-                        <div className="text-xs text-green-500 mt-1">
-                          ~8,500 words each
+                        <div className="text-xs text-green-500 mt-0.5">
+                          ✓ ~8,500 words
                         </div>
                       </div>
                     )}
+
+                    {/* AVAILABLE: Full-text detected but not yet fetched */}
+                    {contentAnalysis.fullTextAvailableCount > 0 && (
+                      <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-amber-700">
+                          {contentAnalysis.fullTextAvailableCount}
+                        </div>
+                        <div className="text-xs text-amber-600 mt-1">
+                          Full-text available
+                        </div>
+                        <div className="text-xs text-amber-500 mt-0.5">
+                          ⏳ Will be fetched
+                        </div>
+                      </div>
+                    )}
+
+                    {/* READY: Extended abstracts */}
                     {contentAnalysis.abstractOverflowCount > 0 && (
-                      <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 text-center">
-                        <div className="text-3xl font-bold text-purple-700">
+                      <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-purple-700">
                           {contentAnalysis.abstractOverflowCount}
                         </div>
-                        <div className="text-sm text-purple-600 mt-1">
+                        <div className="text-xs text-purple-600 mt-1">
                           Extended abstracts
                         </div>
-                        <div className="text-xs text-purple-500 mt-1">
-                          250+ words (richer content)
+                        <div className="text-xs text-purple-500 mt-0.5">
+                          ✓ 250+ words
                         </div>
                       </div>
                     )}
+
+                    {/* READY: Standard abstracts */}
                     {contentAnalysis.abstractCount > 0 && (
-                      <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4 text-center">
-                        <div className="text-3xl font-bold text-gray-700">
+                      <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-gray-700">
                           {contentAnalysis.abstractCount}
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-xs text-gray-600 mt-1">
                           Standard abstracts
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          &lt;250 words (~{Math.round(contentAnalysis.avgContentLength)} chars avg)
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          ✓ &lt;250 words
+                        </div>
+                      </div>
+                    )}
+
+                    {/* UNAVAILABLE: No content detected */}
+                    {contentAnalysis.noContentCount > 0 && (
+                      <div className="bg-red-50 border-2 border-red-200 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-red-700">
+                          {contentAnalysis.noContentCount}
+                        </div>
+                        <div className="text-xs text-red-600 mt-1">
+                          No content
+                        </div>
+                        <div className="text-xs text-red-500 mt-0.5">
+                          ✗ Will be skipped
                         </div>
                       </div>
                     )}
                   </div>
+
+                  {/* Phase 10.180: Pending fetch notice */}
+                  {contentAnalysis.totalPendingFetch > 0 && (
+                    <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-3 mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-amber-600 text-lg">⏳</span>
+                        <div>
+                          <p className="text-sm font-medium text-amber-800">
+                            {contentAnalysis.totalPendingFetch} papers have full-text available
+                          </p>
+                          <p className="text-xs text-amber-600">
+                            Content will be automatically fetched before theme extraction
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Quality Assessment */}
                   <div
@@ -496,7 +588,7 @@ export default function PurposeSelectionWizard({
                   </div>
                 </div>
 
-                {/* BUGFIX: Show ALL selected sources (papers + videos) with their content status */}
+                {/* Phase 10.180: Show ALL selected sources with availability status */}
                 {contentAnalysis.selectedPapersList && contentAnalysis.selectedPapersList.length > 0 && (
                   <div className="bg-white border-2 border-blue-200 rounded-lg p-5">
                     <div className="flex items-center justify-between mb-4">
@@ -504,81 +596,120 @@ export default function PurposeSelectionWizard({
                         <Info className="w-5 h-5 text-blue-600" />
                         Selected Sources ({contentAnalysis.totalSelected})
                       </h3>
-                      {contentAnalysis.totalSkipped > 0 && (
-                        <span className="text-sm text-red-600 font-medium">
-                          ⚠️ {contentAnalysis.totalSkipped} will be skipped
-                        </span>
-                      )}
+                      <div className="flex items-center gap-3 text-sm">
+                        {contentAnalysis.totalPendingFetch > 0 && (
+                          <span className="text-amber-600 font-medium">
+                            ⏳ {contentAnalysis.totalPendingFetch} to fetch
+                          </span>
+                        )}
+                        {contentAnalysis.totalSkipped > 0 && (
+                          <span className="text-red-600 font-medium">
+                            ⚠️ {contentAnalysis.totalSkipped} skipped
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {contentAnalysis.selectedPapersList.map((paper, idx) => (
-                        <div
-                          key={paper.id || idx}
-                          className={`p-3 rounded-lg border-2 ${
-                            paper.hasContent
-                              ? 'bg-green-50 border-green-200'
-                              : 'bg-red-50 border-red-200'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 mt-1">
-                              {paper.hasContent ? (
-                                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                              ) : (
-                                <AlertCircle className="w-5 h-5 text-red-600" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate" title={paper.title}>
-                                {paper.title}
-                              </p>
-                              <div className="flex items-center gap-3 mt-1">
-                                <span
-                                  className={`text-xs px-2 py-0.5 rounded font-medium ${
-                                    paper.hasContent
-                                      ? 'bg-green-100 text-green-700'
-                                      : 'bg-red-100 text-red-700'
-                                  }`}
-                                >
-                                  {paper.hasContent ? '✅ Will be used' : '❌ Will be skipped'}
-                                </span>
-                                {paper.hasContent && (
-                                  <span className="text-xs text-gray-600">
-                                    {paper.contentType === ContentType.FULL_TEXT && '📄 Full-text'}
-                                    {paper.contentType === ContentType.ABSTRACT_OVERFLOW && '📋 Extended abstract'}
-                                    {paper.contentType === ContentType.ABSTRACT && '📃 Abstract'}
-                                    {paper.contentType === ContentType.VIDEO_TRANSCRIPT && '🎥 Video transcript'}
-                                    {' • '}
-                                    {paper.contentLength.toLocaleString()} chars
-                                  </span>
-                                )}
-                                {!paper.hasContent && paper.skipReason && (
-                                  <span className="text-xs text-red-600 italic">
-                                    {paper.skipReason}
-                                  </span>
-                                )}
+                      {contentAnalysis.selectedPapersList.map((paper, idx) => {
+                        // Phase 10.180: Style based on availability status
+                        const statusStyles = {
+                          ready: 'bg-green-50 border-green-200',
+                          available: 'bg-amber-50 border-amber-200',
+                          unavailable: 'bg-red-50 border-red-200',
+                        };
+                        const iconColors = {
+                          ready: 'text-green-600',
+                          available: 'text-amber-600',
+                          unavailable: 'text-red-600',
+                        };
+                        const status = paper.availabilityStatus || (paper.hasContent ? 'ready' : 'unavailable');
+
+                        return (
+                          <div
+                            key={paper.id || idx}
+                            className={`p-3 rounded-lg border-2 ${statusStyles[status]}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0 mt-1">
+                                {status === 'ready' && <CheckCircle2 className={`w-5 h-5 ${iconColors.ready}`} />}
+                                {status === 'available' && <Clock className={`w-5 h-5 ${iconColors.available}`} />}
+                                {status === 'unavailable' && <AlertCircle className={`w-5 h-5 ${iconColors.unavailable}`} />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate" title={paper.title}>
+                                  {paper.title}
+                                </p>
+                                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                  {/* Status badge */}
+                                  {status === 'ready' && (
+                                    <span className="text-xs px-2 py-0.5 rounded font-medium bg-green-100 text-green-700">
+                                      ✅ Ready
+                                    </span>
+                                  )}
+                                  {status === 'available' && (
+                                    <span className="text-xs px-2 py-0.5 rounded font-medium bg-amber-100 text-amber-700">
+                                      ⏳ Will fetch
+                                    </span>
+                                  )}
+                                  {status === 'unavailable' && (
+                                    <span className="text-xs px-2 py-0.5 rounded font-medium bg-red-100 text-red-700">
+                                      ❌ Skipped
+                                    </span>
+                                  )}
+
+                                  {/* Content type for ready papers */}
+                                  {status === 'ready' && paper.hasContent && (
+                                    <span className="text-xs text-gray-600">
+                                      {paper.contentType === ContentType.FULL_TEXT && '📄 Full-text'}
+                                      {paper.contentType === ContentType.ABSTRACT_OVERFLOW && '📋 Extended abstract'}
+                                      {paper.contentType === ContentType.ABSTRACT && '📃 Abstract'}
+                                      {paper.contentType === ContentType.VIDEO_TRANSCRIPT && '🎥 Video transcript'}
+                                      {' • '}
+                                      {paper.contentLength.toLocaleString()} chars
+                                    </span>
+                                  )}
+
+                                  {/* Skip reason for unavailable papers */}
+                                  {status === 'unavailable' && paper.skipReason && (
+                                    <span className="text-xs text-red-600 italic">
+                                      {paper.skipReason}
+                                    </span>
+                                  )}
+
+                                  {/* Info for available papers */}
+                                  {status === 'available' && (
+                                    <span className="text-xs text-amber-600 italic">
+                                      Full-text detected, will be fetched automatically
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
-                    {/* Summary Stats */}
+                    {/* Phase 10.180: Summary Stats with availability breakdown */}
                     <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4 flex-wrap">
                         <span className="text-green-700 font-medium">
-                          ✅ {contentAnalysis.totalWithContent} will be used
+                          ✅ {contentAnalysis.totalWithContent} ready
                         </span>
+                        {contentAnalysis.totalPendingFetch > 0 && (
+                          <span className="text-amber-700 font-medium">
+                            ⏳ {contentAnalysis.totalPendingFetch} to fetch
+                          </span>
+                        )}
                         {contentAnalysis.totalSkipped > 0 && (
                           <span className="text-red-700 font-medium">
-                            ❌ {contentAnalysis.totalSkipped} will be skipped
+                            ❌ {contentAnalysis.totalSkipped} skipped
                           </span>
                         )}
                       </div>
                       <span className="text-gray-600">
-                        Total: {contentAnalysis.totalSelected} sources
+                        Total usable: {contentAnalysis.totalWithContentAvailable}/{contentAnalysis.totalSelected}
                       </span>
                     </div>
                   </div>

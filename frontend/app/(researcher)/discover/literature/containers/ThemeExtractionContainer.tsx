@@ -39,7 +39,9 @@ import { logger } from '@/lib/utils/logger';
 import { toast } from 'sonner';
 
 // Phase 10.97 Day 2: Theme to Statement modal
-import { ThemeToStatementModal } from '@/components/literature';
+// Phase 10.175: Thematization Configuration modal
+import { ThemeToStatementModal, ThematizationConfigModal } from '@/components/literature';
+import type { ThematizationConfig } from '@/components/literature';
 
 // Phase 10.98.3: Inline progress display
 import EnhancedThemeExtractionProgress from '@/components/literature/EnhancedThemeExtractionProgress';
@@ -97,6 +99,7 @@ import { useAlternativeSourcesStore } from '@/lib/stores/alternative-sources.sto
 import { useThemeApiHandlers } from '@/lib/hooks/useThemeApiHandlers';
 import { useResearchOutputHandlers } from '@/lib/hooks/useResearchOutputHandlers';
 import { useExtractionWorkflow } from '@/lib/hooks/useExtractionWorkflow';
+import { useUserUsage } from '@/lib/hooks/useUserUsage'; // Phase 10.175
 
 // Utils
 import { mapUnifiedThemeToTheme } from '../utils/theme-mapping';
@@ -376,13 +379,22 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
     setShowModeSelectionModal,
     isNavigatingToThemes,
     setIsNavigatingToThemes,
+    // Phase 10.175: Thematization configuration modal
+    showThematizationConfig,
+    setShowThematizationConfig,
   } = useThemeExtractionStore();
 
   const { papers, selectedPapers } = useLiteratureSearchStore();
   const { results: alternativeSources } = useAlternativeSourcesStore();
 
+  // Phase 10.175: User subscription and credits data
+  const { subscriptionTier, remainingCredits } = useUserUsage();
+
   // Phase 10.98.3 FIX: Track selected extraction mode
   const [selectedExtractionMode, setSelectedExtractionMode] = useState<'quick' | 'guided' | null>(null);
+
+  // Phase 10.175: Track pending purpose for config modal flow
+  const [pendingPurpose, setPendingPurpose] = useState<ResearchPurpose | null>(null);
 
   // ==========================================================================
   // Hooks
@@ -591,19 +603,10 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
     logger.info('═══════════════════════════════════════════════════════════════', 'ThemeExtractionContainer');
     logger.info('', 'ThemeExtractionContainer');
 
-    // Phase 10.98.3 FIX: After purpose selection, start extraction with the selected mode
-    const mode = selectedExtractionMode || 'guided';
     logger.info('📋 Callback Parameters:', 'ThemeExtractionContainer', {
       purpose,
-      mode,
       selectedPapersCount: selectedPapersList.length,
     });
-
-    logger.info('🔧 Setting extraction purpose in store...', 'ThemeExtractionContainer');
-    setExtractionPurpose(purpose);
-
-    logger.info('🔧 Closing purpose wizard...', 'ThemeExtractionContainer');
-    setShowPurposeWizard(false);
 
     // CRITICAL BUGFIX Phase 10.97.2: Validate papers exist with specific error messages
     if (selectedPapersList.length === 0) {
@@ -629,43 +632,136 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
     logger.info('✅ Paper validation passed', 'ThemeExtractionContainer');
     logger.info('', 'ThemeExtractionContainer');
 
-    // Phase 10.98.3: Navigate to themes page before starting extraction
-    const isOnThemesPage = pathname === '/discover/themes';
-    if (!isOnThemesPage) {
-      logger.info('🧭 Navigating to themes page...', 'ThemeExtractionContainer', {
-        from: pathname,
-        to: '/discover/themes',
-      });
+    // Phase 10.175: Store purpose and show config modal
+    logger.info('🔧 Storing pending purpose and showing config modal...', 'ThemeExtractionContainer', {
+      purpose,
+      selectedPapers: selectedPapersList.length,
+    });
 
-      setIsNavigatingToThemes(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      router.push('/discover/themes');
-      setIsNavigatingToThemes(false);
+    setExtractionPurpose(purpose);
+    setPendingPurpose(purpose);
+    setShowPurposeWizard(false);
+    setShowThematizationConfig(true);
+
+    logger.info('✅ Config modal should now be visible', 'ThemeExtractionContainer');
+    logger.info('═══════════════════════════════════════════════════════════════', 'ThemeExtractionContainer');
+    logger.info('', 'ThemeExtractionContainer');
+  }, [selectedPapersList, papers.length, selectedPaperIdsSet.size, setExtractionPurpose, setShowPurposeWizard, setShowThematizationConfig]);
+
+  /**
+   * Phase 10.175: Handle thematization config confirmation
+   * This is called when user confirms tier/features in the config modal
+   *
+   * AUDIT FIXES:
+   * - Issue #2: Tier/flags now passed to backend
+   * - Issue #3: Tier validation against available papers
+   * - Issue #5: Error handling with try/catch
+   */
+  const handleConfigConfirm = useCallback(async (config: ThematizationConfig): Promise<void> => {
+    // Validation: Check pending purpose
+    if (!pendingPurpose) {
+      logger.error('❌ No pending purpose for config confirmation', 'ThemeExtractionContainer');
+      toast.error('Invalid configuration. Please try again.');
+      return;
+    }
+
+    // AUDIT FIX Issue #3: Tier validation
+    if (config.tier > selectedPapersList.length) {
+      logger.error('❌ Selected tier exceeds available papers', 'ThemeExtractionContainer', {
+        tier: config.tier,
+        available: selectedPapersList.length,
+      });
+      toast.error(
+        `Selected tier (${config.tier} papers) exceeds available papers (${selectedPapersList.length}). Please select a lower tier.`
+      );
+      return;
     }
 
     logger.info('', 'ThemeExtractionContainer');
-    logger.info('🚀 Starting Extraction Workflow', 'ThemeExtractionContainer', {
-      purpose,
-      mode,
-      papers: selectedPapersList.length,
-      userExpertiseLevel: validateExpertiseLevel(userExpertiseLevel),
-    });
+    logger.info('═══════════════════════════════════════════════════════════════', 'ThemeExtractionContainer');
+    logger.info('🎬 FLOW STEP 7: HANDLE CONFIG CONFIRMATION', 'ThemeExtractionContainer');
     logger.info('═══════════════════════════════════════════════════════════════', 'ThemeExtractionContainer');
     logger.info('', 'ThemeExtractionContainer');
 
-    // Start extraction
-    extractionInProgressRef.current = true;
-
-    await executeWorkflow({
-      papers: selectedPapersList,
-      purpose,
+    const mode = selectedExtractionMode || 'guided';
+    logger.info('📋 Config Parameters:', 'ThemeExtractionContainer', {
+      tier: config.tier,
+      flags: config.flags,
+      estimatedCost: config.estimatedCost,
+      purpose: pendingPurpose,
       mode,
-      userExpertiseLevel: validateExpertiseLevel(userExpertiseLevel),
     });
 
-    extractionInProgressRef.current = false;
-    setSelectedExtractionMode(null); // Reset for next extraction
-  }, [selectedExtractionMode, selectedPapersList, papers.length, selectedPaperIdsSet.size, userExpertiseLevel, setExtractionPurpose, setShowPurposeWizard, setIsNavigatingToThemes, executeWorkflow, pathname, router]);
+    // Close config modal (optimistic UI)
+    setShowThematizationConfig(false);
+
+    // AUDIT FIX Issue #5: Error handling with try/catch
+    try {
+      // Phase 10.98.3: Navigate to themes page before starting extraction
+      const isOnThemesPage = pathname === '/discover/themes';
+      if (!isOnThemesPage) {
+        logger.info('🧭 Navigating to themes page...', 'ThemeExtractionContainer', {
+          from: pathname,
+          to: '/discover/themes',
+        });
+
+        setIsNavigatingToThemes(true);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        router.push('/discover/themes');
+        setIsNavigatingToThemes(false);
+      }
+
+      logger.info('', 'ThemeExtractionContainer');
+      logger.info('🚀 Starting Extraction Workflow with Config', 'ThemeExtractionContainer', {
+        purpose: pendingPurpose,
+        mode,
+        papers: selectedPapersList.length,
+        tier: config.tier,
+        flags: config.flags,
+        userExpertiseLevel: validateExpertiseLevel(userExpertiseLevel),
+      });
+      logger.info('═══════════════════════════════════════════════════════════════', 'ThemeExtractionContainer');
+      logger.info('', 'ThemeExtractionContainer');
+
+      // Start extraction
+      extractionInProgressRef.current = true;
+
+      // AUDIT FIX Issue #2: Pass tier/flags to backend
+      await executeWorkflow({
+        papers: selectedPapersList,
+        purpose: pendingPurpose,
+        mode,
+        userExpertiseLevel: validateExpertiseLevel(userExpertiseLevel),
+        // Phase 10.175: Include tier and flags for backend
+        tier: config.tier,
+        flags: config.flags,
+      });
+
+      // Success - cleanup state
+      setPendingPurpose(null);
+      setSelectedExtractionMode(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('❌ Workflow execution failed', 'ThemeExtractionContainer', { error: message });
+      toast.error('Failed to start theme extraction. Please try again.');
+
+      // Reopen modal on error (don't lose user's config)
+      setShowThematizationConfig(true);
+
+      // Don't clear pendingPurpose - allow retry
+    } finally {
+      extractionInProgressRef.current = false;
+    }
+  }, [pendingPurpose, selectedExtractionMode, selectedPapersList, userExpertiseLevel, setShowThematizationConfig, setIsNavigatingToThemes, executeWorkflow, pathname, router]);
+
+  /**
+   * Phase 10.175: Handle thematization config cancellation
+   */
+  const handleConfigCancel = useCallback((): void => {
+    logger.info('Config modal cancelled', 'ThemeExtractionContainer');
+    setShowThematizationConfig(false);
+    setPendingPurpose(null);
+  }, [setShowThematizationConfig]);
 
   const handleModeSelected = useCallback(
     async (mode: 'quick' | 'guided'): Promise<void> => {
@@ -901,6 +997,16 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
           onModeSelected={handleModeSelected}
           onCloseModeModal={handleCloseModeModal}
         />
+        {/* Phase 10.175: Thematization Configuration Modal (AUDIT FIX Issue #1 & #4) */}
+        <ThematizationConfigModal
+          isOpen={showThematizationConfig}
+          onClose={handleConfigCancel}
+          availablePapers={selectedPapersList.length}
+          subscriptionTier={subscriptionTier}
+          remainingCredits={remainingCredits}
+          onConfirm={handleConfigConfirm}
+          isLoading={isModalLoading}
+        />
       </ErrorBoundary>
     );
   }
@@ -989,6 +1095,17 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
         <ThemeToStatementModal
           open={showStatementModal}
           onOpenChange={handleStatementModalChange}
+        />
+
+        {/* Phase 10.175: Thematization Configuration Modal (AUDIT FIX Issue #1 & #4) */}
+        <ThematizationConfigModal
+          isOpen={showThematizationConfig}
+          onClose={handleConfigCancel}
+          availablePapers={selectedPapersList.length}
+          subscriptionTier={subscriptionTier}
+          remainingCredits={remainingCredits}
+          onConfirm={handleConfigConfirm}
+          isLoading={isModalLoading}
         />
       </div>
     </ErrorBoundary>

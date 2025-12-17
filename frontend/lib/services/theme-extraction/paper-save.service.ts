@@ -144,6 +144,12 @@ export class PaperSaveService {
       }
       if (paper.keywords) savePayload.keywords = paper.keywords;
 
+      // Phase 10.180: Include full-text detection results from Stage 9
+      // CRITICAL: These fields tell the backend WHERE to fetch full-text from
+      if (paper.pdfUrl) savePayload.pdfUrl = paper.pdfUrl;
+      if (paper.hasFullText !== undefined) savePayload.hasFullText = paper.hasFullText;
+      if (paper.fullTextStatus) savePayload.fullTextStatus = paper.fullTextStatus;
+
       // PERF-001 fix: Direct assignment instead of wrapper function
       const retryOptions: {
         maxRetries: number;

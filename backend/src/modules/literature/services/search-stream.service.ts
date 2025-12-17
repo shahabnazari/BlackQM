@@ -1004,12 +1004,52 @@ export class SearchStreamService {
       );
     }
 
-    // Phase 10.161 FIX: Return ALL ranked papers (up to MAX_SEMANTIC_PAPERS = 600)
-    // Quality selection (600 → 300) happens in stageFinalRanking AFTER this function returns
-    // Previously this was slicing to `limit` (300) which broke the 600 → 300 quality filter flow
-    return finalPapers
+    // Sort and slice to MAX_SEMANTIC_PAPERS before detection
+    let rankedPapers = finalPapers
       .sort((a, b) => (b.combinedScore ?? b.relevanceScore ?? 0) - (a.combinedScore ?? a.relevanceScore ?? 0))
       .slice(0, SearchStreamService.MAX_SEMANTIC_PAPERS);
+
+    // Phase 10.180: Run Stage 9 Full-Text Detection on ranked papers
+    // This was previously skipped in progressive semantic path because it doesn't use executeOptimizedPipeline
+    // Detection sets hasFullText flag for content analysis in theme extraction
+    try {
+      this.logger.log(
+        `🔍 [Phase 10.180] Running Stage 9 Full-Text Detection on ${rankedPapers.length} papers`,
+      );
+      // Create a map of original semanticScores to preserve during detection
+      const semanticScoreMap = new Map<string, number>();
+      for (const paper of rankedPapers) {
+        if (paper.id) {
+          semanticScoreMap.set(paper.id, paper.semanticScore);
+        }
+      }
+
+      const detectedPapers = await this.searchPipeline.runFullTextDetection(
+        rankedPapers,
+        (message, _progress) => {
+          this.logger.debug(`[Stage 9] ${message}`);
+        },
+      );
+
+      // Re-apply semanticScores that were lost during type conversion
+      rankedPapers = detectedPapers.map(p => ({
+        ...p,
+        semanticScore: p.id ? (semanticScoreMap.get(p.id) ?? p.relevanceScore ?? 0) : (p.relevanceScore ?? 0),
+      })) as PaperWithSemanticScore[];
+
+      const detectedCount = rankedPapers.filter(p => p.hasFullText).length;
+      this.logger.log(
+        `✅ [Phase 10.180] Stage 9 complete: ${detectedCount}/${rankedPapers.length} papers with full-text detected`,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `⚠️ [Phase 10.180] Stage 9 detection failed: ${(error as Error).message}. Papers returned without detection.`,
+      );
+    }
+
+    // Phase 10.161 FIX: Return ALL ranked papers (up to MAX_SEMANTIC_PAPERS = 600)
+    // Quality selection (600 → 300) happens in stageFinalRanking AFTER this function returns
+    return rankedPapers;
   }
 
   /**
@@ -1037,6 +1077,7 @@ export class SearchStreamService {
       'Quality Threshold': 98,
     };
 
+    // Phase 10.170: Pass purpose to pipeline for purpose-aware quality weights and paper limits
     return this.searchPipeline.executeOptimizedPipeline(
       papers,
       {
@@ -1054,6 +1095,8 @@ export class SearchStreamService {
           }
         },
         signal,
+        // Phase 10.170: Purpose-Aware Pipeline Integration
+        purpose: options.purpose,
       },
     );
   }

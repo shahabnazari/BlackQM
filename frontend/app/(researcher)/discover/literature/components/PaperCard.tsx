@@ -208,6 +208,7 @@ function PaperCardComponent({
           {/* Access and Quality Badges */}
           <div className="flex gap-4 mt-2 flex-wrap items-center">
             {/* Phase 10.123 Phase 2: Netflix-Grade Match Score Badge */}
+            {/* Phase 10.169: Added journalPrestige from quality score breakdown */}
             <MatchScoreBadge
               neuralRelevanceScore={paper.neuralRelevanceScore}
               neuralRank={paper.neuralRank}
@@ -217,6 +218,7 @@ function PaperCardComponent({
               citationCount={paper.citationCount}
               citationsPerYear={paper.citationsPerYear}
               venue={paper.venue}
+              journalPrestige={paper.qualityScoreBreakdown?.journalPrestige}
               onTooltipOpen={handleTooltipOpen}
               onTooltipClose={handleTooltipClose}
             />

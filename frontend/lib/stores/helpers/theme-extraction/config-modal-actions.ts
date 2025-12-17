@@ -38,6 +38,7 @@ export function createConfigModalActions<T extends {
   extractionPurpose: ResearchPurpose | null;
   userExpertiseLevel: UserExpertiseLevel;
   showModeSelectionModal: boolean;
+  showThematizationConfig: boolean; // Phase 10.175
   showPurposeWizard: boolean;
   showGuidedWizard: boolean;
   isNavigatingToThemes: boolean; // Phase 10.106
@@ -108,6 +109,20 @@ export function createConfigModalActions<T extends {
     },
 
     /**
+     * Phase 10.175: Show/hide thematization config modal
+     * @param show Boolean to show/hide modal
+     */
+    setShowThematizationConfig: (show: boolean): void => {
+      // Input validation
+      if (typeof show !== 'boolean') {
+        logger.warn('setShowThematizationConfig: Invalid boolean', 'ThemeStore', { show });
+        return;
+      }
+
+      set({ showThematizationConfig: show } as Partial<T>);
+    },
+
+    /**
      * Show/hide purpose wizard modal
      * @param show Boolean to show/hide modal
      */
@@ -156,6 +171,7 @@ export function createConfigModalActions<T extends {
       logger.debug('Closing all modals', 'ThemeStore');
       set({
         showModeSelectionModal: false,
+        showThematizationConfig: false, // Phase 10.175
         showPurposeWizard: false,
         showGuidedWizard: false,
         isNavigatingToThemes: false, // Phase 10.106

@@ -27,7 +27,7 @@
 
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +42,7 @@ import { useVideoManagementStore } from '@/lib/stores/video-management.store';
 
 // Utils
 import { logger } from '@/lib/utils/logger';
+import { toast } from 'sonner';
 
 // ============================================================================
 // Constants
@@ -75,27 +76,24 @@ export const ThemeExtractionActionCard = React.memo(function ThemeExtractionActi
 
   // ==========================================================================
   // COMPUTED VALUES
+  // Phase 10.180: Removed excessive useMemo for O(1) operations
+  // useMemo has overhead - only use for expensive computations
   // ==========================================================================
 
-  const selectedCount = useMemo(() => selectedPapers.size, [selectedPapers.size]);
-  const transcribedCount = useMemo(() => transcribedVideos.size, [transcribedVideos.size]);
-  const themesCount = useMemo(() => unifiedThemes.length, [unifiedThemes.length]);
+  // Direct property access (O(1) - no memo needed)
+  const selectedCount = selectedPapers.size;
+  const transcribedCount = transcribedVideos.size;
+  const themesCount = unifiedThemes.length;
 
-  const totalSources = useMemo(
-    () => selectedCount + transcribedCount,
-    [selectedCount, transcribedCount]
-  );
+  // Derived values (simple arithmetic - no memo needed)
+  const totalSources = selectedCount + transcribedCount;
+  const totalAvailable = papers.length + transcribedCount;
 
-  const totalAvailable = useMemo(
-    () => papers.length + transcribedCount,
-    [papers.length, transcribedCount]
-  );
-
-  const hasNoSources = useMemo(() => totalAvailable === 0, [totalAvailable]);
-  const hasLowSources = useMemo(
-    () => totalAvailable > 0 && totalAvailable < MIN_SOURCES_BASIC,
-    [totalAvailable]
-  );
+  // Boolean flags (simple comparisons - no memo needed)
+  const hasNoSelection = totalSources === 0;
+  const hasNoSources = totalAvailable === 0;
+  const hasLowSources = totalSources > 0 && totalSources < MIN_SOURCES_BASIC;
+  const needsSelection = papers.length > 0 && selectedCount === 0;
 
   // ==========================================================================
   // HANDLERS
@@ -104,6 +102,8 @@ export const ThemeExtractionActionCard = React.memo(function ThemeExtractionActi
   /**
    * Handle Extract Themes button click
    * Opens purpose selection wizard modal
+   *
+   * Phase 10.180: Added defense-in-depth validation with user feedback
    */
   const handleExtractThemes = useCallback(() => {
     logger.info('Theme extraction initiated from action card', 'ThemeExtractionActionCard', {
@@ -112,6 +112,17 @@ export const ThemeExtractionActionCard = React.memo(function ThemeExtractionActi
       transcribedVideos: transcribedCount,
       totalSources,
     });
+
+    // Defense-in-depth: Validate selection before opening wizard
+    if (totalSources === 0) {
+      logger.warn('Theme extraction blocked: no sources selected', 'ThemeExtractionActionCard');
+      if (papers.length > 0) {
+        toast.error('Please select papers to extract themes from. Use the checkboxes in the search results.');
+      } else {
+        toast.error('No papers available. Please search for papers first.');
+      }
+      return;
+    }
 
     // Open purpose wizard modal
     setShowPurposeWizard(true);
@@ -176,15 +187,18 @@ export const ThemeExtractionActionCard = React.memo(function ThemeExtractionActi
             </div>
 
             {/* Action Button */}
+            {/* Phase 10.180 BUGFIX: Disable when no SELECTION, not when no AVAILABLE papers */}
             <Button
               size="lg"
               onClick={handleExtractThemes}
-              disabled={hasNoSources || analyzingThemes}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+              disabled={hasNoSelection || analyzingThemes}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label={
                 analyzingThemes
                   ? 'Extracting themes in progress'
-                  : `Extract themes from ${totalSources} sources`
+                  : hasNoSelection
+                    ? 'Select papers to extract themes'
+                    : `Extract themes from ${totalSources} sources`
               }
             >
               {analyzingThemes ? (
@@ -195,26 +209,34 @@ export const ThemeExtractionActionCard = React.memo(function ThemeExtractionActi
               ) : (
                 <>
                   <Sparkles className="w-5 h-5 mr-2" aria-hidden="true" />
-                  Extract Themes from {totalSources} Sources
+                  {hasNoSelection ? 'Select Papers to Extract' : `Extract Themes from ${totalSources} Sources`}
                 </>
               )}
             </Button>
 
-            {/* No Sources Warning */}
+            {/* No Sources Warning - No papers available at all */}
             {hasNoSources && (
               <p className="text-xs text-amber-600 dark:text-amber-400 mt-3">
-                ⚠️ Search for papers above or transcribe videos to begin extraction
+                Search for papers above or transcribe videos to begin extraction
+              </p>
+            )}
+
+            {/* Selection Prompt - Papers exist but none selected */}
+            {needsSelection && !hasNoSources && (
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-3">
+                Use the checkboxes in search results to select papers for theme extraction
               </p>
             )}
 
             {/* Low Source Count Warning */}
+            {/* Phase 10.180: Show totalSources (selected) not totalAvailable */}
             {hasLowSources && (
               <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                 <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1">
-                  ⚠️ Low Source Count Warning
+                  Low Source Count
                 </p>
                 <p className="text-xs text-amber-700 dark:text-amber-400">
-                  You have {totalAvailable} source(s) available. For reliable theme extraction, we
+                  You have {totalSources} source(s) selected. For reliable theme extraction, we
                   recommend:
                 </p>
                 <ul className="text-xs text-amber-700 dark:text-amber-400 list-disc ml-4 mt-1 space-y-0.5">

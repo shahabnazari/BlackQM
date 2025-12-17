@@ -24,11 +24,13 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Lightbulb, Search, Network } from 'lucide-react';
+import { BookOpen, Lightbulb, Search, Network, Loader2 } from 'lucide-react';
 
 // Self-contained containers
 import { LiteratureSearchContainer } from './containers/LiteratureSearchContainer';
@@ -38,11 +40,53 @@ import { SearchResultsContainerEnhanced } from './containers/SearchResultsContai
 import { ThemeExtractionActionCard } from './components/ThemeExtractionActionCard';
 import { PaperManagementContainer } from './containers/PaperManagementContainer';
 
+// Phase 10.180: Modals for theme extraction flow
+import { ThematizationConfigModal } from '@/components/literature';
+import type { ThematizationConfig } from '@/components/literature';
+import { NavigatingToThemesModal } from '@/components/literature/NavigatingToThemesModal';
+import { analyzeContentForExtraction } from './utils/content-analysis';
+import { useExtractionWorkflow } from '@/lib/hooks/useExtractionWorkflow';
+import { useUserUsage } from '@/lib/hooks/useUserUsage';
+import { logger } from '@/lib/utils/logger';
+import { toast } from 'sonner';
+import type { ResearchPurpose, UserExpertiseLevel } from '@/lib/api/services/unified-theme-api.service';
+
+// Lazy-loaded modals
+const PurposeSelectionWizard = dynamic(
+  () => import('@/components/literature/PurposeSelectionWizard'),
+  {
+    loading: () => (
+      <div className="flex items-center justify-center p-8" role="status" aria-live="polite">
+        <Loader2 className="w-8 h-8 animate-spin" aria-hidden="true" />
+        <span className="sr-only">Loading purpose selection wizard...</span>
+      </div>
+    ),
+    ssr: false,
+  }
+);
+
 // Stores for stats display only
 import { useLiteratureSearchStore } from '@/lib/stores/literature-search.store';
 import { usePaperManagementStore } from '@/lib/stores/paper-management.store';
 import { useGapAnalysisStore } from '@/lib/stores/gap-analysis.store';
 import { useThemeExtractionStore } from '@/lib/stores/theme-extraction.store';
+
+// ============================================================================
+// Constants (moved outside component for performance)
+// ============================================================================
+
+const VALID_EXPERTISE_LEVELS: readonly UserExpertiseLevel[] = ['novice', 'researcher', 'expert'] as const;
+
+/**
+ * Validates and sanitizes user expertise level
+ * Pure function - no React dependencies, can be module-level
+ */
+function validateExpertiseLevel(level: string | undefined): UserExpertiseLevel {
+  if (level && (VALID_EXPERTISE_LEVELS as readonly string[]).includes(level)) {
+    return level as UserExpertiseLevel;
+  }
+  return 'researcher';
+}
 
 // ============================================================================
 // Component
@@ -64,12 +108,38 @@ export default function LiteratureSearchPage(): JSX.Element {
   }, []);
 
   // ==========================================================================
+  // Router for navigation
+  // ==========================================================================
+  const router = useRouter();
+
+  // ==========================================================================
   // Store State - Display counts only (read-only)
   // ==========================================================================
   const papers = useLiteratureSearchStore((state) => state.papers);
+  const selectedPapers = useLiteratureSearchStore((state) => state.selectedPapers);
   const savedPapers = usePaperManagementStore((state) => state.savedPapers);
   const unifiedThemes = useThemeExtractionStore((state) => state.unifiedThemes);
   const gaps = useGapAnalysisStore((state) => state.gaps);
+
+  // Phase 10.180: Theme extraction modal state
+  const showPurposeWizard = useThemeExtractionStore((state) => state.showPurposeWizard);
+  const setShowPurposeWizard = useThemeExtractionStore((state) => state.setShowPurposeWizard);
+  const extractionPurpose = useThemeExtractionStore((state) => state.extractionPurpose);
+  const setExtractionPurpose = useThemeExtractionStore((state) => state.setExtractionPurpose);
+  const userExpertiseLevel = useThemeExtractionStore((state) => state.userExpertiseLevel);
+  const showThematizationConfig = useThemeExtractionStore((state) => state.showThematizationConfig);
+  const setShowThematizationConfig = useThemeExtractionStore((state) => state.setShowThematizationConfig);
+  const isNavigatingToThemes = useThemeExtractionStore((state) => state.isNavigatingToThemes);
+  const setIsNavigatingToThemes = useThemeExtractionStore((state) => state.setIsNavigatingToThemes);
+
+  // Phase 10.180: Extraction workflow hook
+  const { executeWorkflow, isExecuting } = useExtractionWorkflow();
+
+  // Phase 10.180: User subscription and credits data
+  const { subscriptionTier, remainingCredits } = useUserUsage();
+
+  // Phase 10.180: Pending purpose for config modal flow
+  const [pendingPurpose, setPendingPurpose] = useState<ResearchPurpose | null>(null);
 
   // ==========================================================================
   // Hydration-safe counts - Use initial values until mounted
@@ -79,6 +149,103 @@ export default function LiteratureSearchPage(): JSX.Element {
   const safeSavedPapersCount = mounted ? savedPapers.length : 0;
   const safeUnifiedThemesCount = mounted ? unifiedThemes.length : 0;
   const safeGapsCount = mounted ? gaps.length : 0;
+
+  // ==========================================================================
+  // Phase 10.180: Computed values for extraction modals
+  // ==========================================================================
+
+  // Selected papers list for extraction
+  const selectedPapersList = useMemo(() => {
+    if (!Array.isArray(papers) || papers.length === 0) return [];
+    if (!selectedPapers || !(selectedPapers instanceof Set) || selectedPapers.size === 0) return [];
+    return papers.filter((p) => p && p.id && selectedPapers.has(p.id));
+  }, [papers, selectedPapers]);
+
+  // Content analysis for purpose wizard
+  const contentAnalysis = useMemo(() => {
+    return analyzeContentForExtraction(selectedPapersList);
+  }, [selectedPapersList]);
+
+  // ==========================================================================
+  // Phase 10.180: Handlers for extraction modals
+  // ==========================================================================
+
+  const handlePurposeSelected = useCallback(async (purpose: ResearchPurpose): Promise<void> => {
+    if (!purpose) return;
+
+    logger.info('Purpose selected on literature page', 'LiteratureSearchPage', {
+      purpose,
+      selectedPapers: selectedPapersList.length,
+    });
+
+    if (selectedPapersList.length === 0) {
+      toast.error('Please select papers to extract themes from.');
+      return;
+    }
+
+    // Store purpose and show config modal
+    setExtractionPurpose(purpose);
+    setPendingPurpose(purpose);
+    setShowPurposeWizard(false);
+    setShowThematizationConfig(true);
+  }, [selectedPapersList, setExtractionPurpose, setShowPurposeWizard, setShowThematizationConfig]);
+
+  const handlePurposeCancel = useCallback(() => {
+    setShowPurposeWizard(false);
+  }, [setShowPurposeWizard]);
+
+  const handleConfigConfirm = useCallback(async (config: ThematizationConfig): Promise<void> => {
+    if (!pendingPurpose) {
+      toast.error('Invalid configuration. Please try again.');
+      return;
+    }
+
+    if (config.tier > selectedPapersList.length) {
+      toast.error(
+        `Selected tier (${config.tier} papers) exceeds available papers (${selectedPapersList.length}). Please select a lower tier.`
+      );
+      return;
+    }
+
+    logger.info('Config confirmed on literature page', 'LiteratureSearchPage', {
+      tier: config.tier,
+      flags: config.flags,
+      purpose: pendingPurpose,
+    });
+
+    setShowThematizationConfig(false);
+
+    try {
+      // Navigate to themes page
+      logger.info('Navigating to themes page...', 'LiteratureSearchPage');
+      setIsNavigatingToThemes(true);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      router.push('/discover/themes');
+      setIsNavigatingToThemes(false);
+
+      // Start extraction
+      await executeWorkflow({
+        papers: selectedPapersList,
+        purpose: pendingPurpose,
+        mode: 'guided',
+        userExpertiseLevel: validateExpertiseLevel(userExpertiseLevel),
+        tier: config.tier,
+        flags: config.flags,
+      });
+
+      setPendingPurpose(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Workflow execution failed', 'LiteratureSearchPage', { error: message });
+      toast.error('Failed to start theme extraction. Please try again.');
+      setShowThematizationConfig(true);
+    }
+  }, [pendingPurpose, selectedPapersList, userExpertiseLevel, setShowThematizationConfig, setIsNavigatingToThemes, executeWorkflow, router]);
+
+  const handleConfigCancel = useCallback((): void => {
+    setShowThematizationConfig(false);
+    setPendingPurpose(null);
+  }, [setShowThematizationConfig]);
 
   // ==========================================================================
   // Render
@@ -198,6 +365,34 @@ export default function LiteratureSearchPage(): JSX.Element {
         </h2>
         <PaperManagementContainer />
       </section>
+
+      {/* ================================================================== */}
+      {/* Phase 10.180: Theme Extraction Modals */}
+      {/* ================================================================== */}
+      {showPurposeWizard && contentAnalysis && (
+        <PurposeSelectionWizard
+          onPurposeSelected={handlePurposeSelected}
+          onCancel={handlePurposeCancel}
+          contentAnalysis={contentAnalysis}
+          {...(extractionPurpose ? { initialPurpose: extractionPurpose } : {})}
+        />
+      )}
+
+      {/* Phase 10.180: Use totalWithContentAvailable, not raw selection count
+          This ensures tier selection is based on papers that CAN be used:
+          - Papers with content ready (abstracts/fullText)
+          - Papers with fullText available (will be fetched) */}
+      <ThematizationConfigModal
+        isOpen={showThematizationConfig}
+        onClose={handleConfigCancel}
+        availablePapers={contentAnalysis?.totalWithContentAvailable ?? selectedPapersList.length}
+        subscriptionTier={subscriptionTier}
+        remainingCredits={remainingCredits}
+        onConfirm={handleConfigConfirm}
+        isLoading={isExecuting}
+      />
+
+      <NavigatingToThemesModal isOpen={isNavigatingToThemes} />
     </div>
   );
 }

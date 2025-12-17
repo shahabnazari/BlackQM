@@ -26,6 +26,7 @@ import type {
   FilterPreset,
   QueryCorrection,
 } from '@/lib/types/literature.types';
+import type { ResearchPurpose } from '@/lib/services/literature-api.service';
 
 // ============================================================================
 // Type Definitions
@@ -59,9 +60,11 @@ export interface ProgressiveLoadingState {
 // Search Metadata (Phase 10.6 Day 14.5+)
 export interface SearchMetadata {
   totalCollected: number;
+  // sourceBreakdown can be either a simple count or detailed object
+  // (API returns different formats depending on context)
   sourceBreakdown: Record<
     string,
-    {
+    number | {
       papers: number;
       duration: number;
       error?: string;
@@ -90,6 +93,23 @@ export interface SearchMetadata {
       recencyBoost?: number; // Phase 10.942: 20% exponential decay
     };
     filtersApplied: string[];
+  };
+  // Phase 10.7: Two-stage filtering metadata
+  stage1?: {
+    totalCollected: number;
+    sourcesSearched: number;
+    sourceBreakdown: Record<string, number | { papers: number; duration: number }>;
+  };
+  stage2?: {
+    startingPapers: number;
+    afterEnrichment: number;
+    afterRelevanceFilter: number;
+    finalSelected: number;
+  };
+  // Phase 10.6 Day 14.9: Dynamic allocation strategy
+  allocationStrategy?: {
+    targetPaperCount: number;
+    queryComplexity?: string;
   };
 }
 
@@ -134,6 +154,8 @@ export interface SearchStateSlice {
   academicDatabases: string[];
   queryCorrectionMessage: QueryCorrection | null;
   searchMetadata: SearchMetadata | null;
+  // Phase 10.170: Purpose-Aware Search Integration
+  researchPurpose: ResearchPurpose | null;
 
   setQuery: (query: string) => void;
   clearQuery: () => void;
@@ -146,6 +168,8 @@ export interface SearchStateSlice {
   setAcademicDatabases: (databases: string[]) => void;
   setQueryCorrection: (correction: QueryCorrection | null) => void;
   setSearchMetadata: (metadata: SearchMetadata | null) => void;
+  // Phase 10.170: Purpose-Aware Search Integration
+  setResearchPurpose: (purpose: ResearchPurpose | null) => void;
 }
 
 export const createSearchStateSlice: StateCreator<
@@ -164,6 +188,8 @@ export const createSearchStateSlice: StateCreator<
   academicDatabases: [],
   queryCorrectionMessage: null,
   searchMetadata: null,
+  // Phase 10.170: Purpose-Aware Search Integration
+  researchPurpose: null,
 
   // Actions
   setQuery: (query) => set({ query }),
@@ -215,6 +241,8 @@ export const createSearchStateSlice: StateCreator<
   setAcademicDatabases: (academicDatabases) => set({ academicDatabases }),
   setQueryCorrection: (queryCorrectionMessage) => set({ queryCorrectionMessage }),
   setSearchMetadata: (searchMetadata) => set({ searchMetadata }),
+  // Phase 10.170: Purpose-Aware Search Integration
+  setResearchPurpose: (researchPurpose) => set({ researchPurpose }),
 });
 
 // ============================================================================

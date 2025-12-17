@@ -629,8 +629,8 @@ export class PDFParsingService {
 
       // Tier 2.5: Try GROBID PDF extraction (Phase 10.94 - Enterprise Enhancement)
       // 6-10x better extraction than pdf-parse (90%+ vs 15% content extraction)
-      // Note: pdfUrl may not be in Prisma schema, cast to any for flexibility
-      if (!fullText && ((paper as any).pdfUrl || paper.doi)) {
+      // Phase 10.180: pdfUrl is now in Prisma schema (no more 'as any' cast needed)
+      if (!fullText && (paper.pdfUrl || paper.doi)) {
         this.logger.log(`🔍 Tier 2.5: Attempting GROBID PDF extraction...`);
 
         // Create AbortController for this tier
@@ -647,9 +647,9 @@ export class PDFParsingService {
             let pdfBuffer: Buffer | null = null;
 
             // Try direct PDF URL first (faster)
-            if ((paper as any).pdfUrl) {
+            if (paper.pdfUrl) {
               try {
-                const pdfResponse = await axios.get((paper as any).pdfUrl, {
+                const pdfResponse = await axios.get(paper.pdfUrl, {
                   responseType: 'arraybuffer',
                   timeout: FULL_TEXT_TIMEOUT,
                   headers: {

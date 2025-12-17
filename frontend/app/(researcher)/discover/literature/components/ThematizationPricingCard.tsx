@@ -16,7 +16,7 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -223,18 +223,21 @@ export const ThematizationPricingCard = React.memo(function ThematizationPricing
   /**
    * Handle feature toggle
    */
-  const handleFeatureToggle = (flag: keyof ThematizationPipelineFlags, enabled: boolean) => {
-    logger.info('Feature toggled', 'ThematizationPricingCard', { flag, enabled });
-    onFlagsChange({
-      ...flags,
-      [flag]: enabled,
-    });
-  };
+  const handleFeatureToggle = useCallback(
+    (flag: keyof ThematizationPipelineFlags, enabled: boolean) => {
+      logger.info('Feature toggled', 'ThematizationPricingCard', { flag, enabled });
+      onFlagsChange({
+        ...flags,
+        [flag]: enabled,
+      });
+    },
+    [flags, onFlagsChange]
+  );
 
   /**
    * Handle proceed click
    */
-  const handleProceed = () => {
+  const handleProceed = useCallback(() => {
     if (canAfford && onProceed) {
       logger.info('Proceeding with thematization', 'ThematizationPricingCard', {
         tier: selectedTier,
@@ -243,7 +246,7 @@ export const ThematizationPricingCard = React.memo(function ThematizationPricing
       });
       onProceed();
     }
-  };
+  }, [canAfford, onProceed, selectedTier, flags, costBreakdown.finalCost]);
 
   // ==========================================================================
   // Render

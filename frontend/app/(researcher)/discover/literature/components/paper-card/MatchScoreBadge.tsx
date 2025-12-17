@@ -62,6 +62,8 @@ interface MatchScoreBadgeProps {
   citationsPerYear: number | null | undefined;
   /** Venue/journal name for tooltip context */
   venue: string | null | undefined;
+  /** Phase 10.169: Journal prestige score (0-100) from quality breakdown */
+  journalPrestige?: number | null | undefined;
   /** Optional callback when tooltip is opened (for analytics) */
   onTooltipOpen?: (() => void) | undefined;
   /** Optional callback when tooltip is closed (for analytics) */
@@ -78,6 +80,46 @@ const TOUCH_AUTO_DISMISS_MS = 3000;
 /** Delay before closing tooltip on blur (allows clicking tooltip content) */
 const BLUR_CLOSE_DELAY_MS = 150;
 
+/**
+ * Phase 10.169: Decode HTML entities in venue name
+ * Fixes "&amp;" showing as literal text
+ */
+function decodeHtmlEntities(text: string): string {
+  const entities: Record<string, string> = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&nbsp;': ' ',
+  };
+  return text.replace(/&amp;|&lt;|&gt;|&quot;|&#39;|&nbsp;/g, match => entities[match] || match);
+}
+
+/**
+ * Phase 10.169: Get journal prestige label from score
+ */
+function getJournalPrestigeLabel(score: number | null | undefined): string {
+  if (score == null) return 'Unknown';
+  if (score >= 80) return 'Elite';
+  if (score >= 60) return 'High';
+  if (score >= 40) return 'Medium';
+  if (score >= 20) return 'Low';
+  return 'Minimal';
+}
+
+/**
+ * Phase 10.169: Get journal prestige color classes
+ */
+function getJournalPrestigeColors(score: number | null | undefined): string {
+  if (score == null) return 'text-gray-400';
+  if (score >= 80) return 'text-yellow-400';
+  if (score >= 60) return 'text-green-400';
+  if (score >= 40) return 'text-blue-400';
+  if (score >= 20) return 'text-orange-400';
+  return 'text-gray-400';
+}
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -91,6 +133,7 @@ function MatchScoreBadgeComponent({
   citationCount,
   citationsPerYear,
   venue,
+  journalPrestige,
   onTooltipOpen,
   onTooltipClose,
 }: MatchScoreBadgeProps) {
@@ -477,6 +520,23 @@ function MatchScoreBadgeComponent({
                   </span>
                 </div>
 
+                {/* Phase 10.169: Journal Prestige with proper label and score */}
+                <div className="flex items-center justify-between p-1.5 bg-gray-800/60 rounded text-[11px]">
+                  <span className="text-gray-400">Journal Prestige</span>
+                  <span className={cn('font-semibold', getJournalPrestigeColors(journalPrestige))}>
+                    {journalPrestige != null ? (
+                      <>
+                        {getJournalPrestigeLabel(journalPrestige)}
+                        <span className="text-gray-500 text-[9px] ml-0.5">
+                          ({journalPrestige})
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-gray-500">N/A</span>
+                    )}
+                  </span>
+                </div>
+
                 {/* Citations */}
                 {citationCount != null && (
                   <div className="flex items-center justify-between p-1.5 bg-gray-800/60 rounded text-[11px]">
@@ -492,10 +552,13 @@ function MatchScoreBadgeComponent({
                   </div>
                 )}
 
-                {/* Venue */}
+                {/* Phase 10.169: Venue with proper label and decoded HTML entities */}
                 {venue && (
-                  <div className="p-1.5 bg-gray-800/60 rounded text-[10px] text-gray-400 truncate" title={venue}>
-                    {venue}
+                  <div className="flex items-center justify-between p-1.5 bg-gray-800/60 rounded text-[10px]">
+                    <span className="text-gray-500">Journal:</span>
+                    <span className="text-gray-300 truncate ml-1 max-w-[140px]" title={decodeHtmlEntities(venue)}>
+                      {decodeHtmlEntities(venue)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -542,6 +605,7 @@ function MatchScoreBadgeComponent({
 
 export const MatchScoreBadge = memo(MatchScoreBadgeComponent, (prev, next) => {
   // Phase 10.147: Include overallScore in comparison (critical for composite scoring)
+  // Phase 10.169: Include journalPrestige in comparison
   return (
     prev.neuralRelevanceScore === next.neuralRelevanceScore &&
     prev.neuralRank === next.neuralRank &&
@@ -550,7 +614,8 @@ export const MatchScoreBadge = memo(MatchScoreBadgeComponent, (prev, next) => {
     prev.overallScore === next.overallScore &&
     prev.citationCount === next.citationCount &&
     prev.citationsPerYear === next.citationsPerYear &&
-    prev.venue === next.venue
+    prev.venue === next.venue &&
+    prev.journalPrestige === next.journalPrestige
   );
 });
 

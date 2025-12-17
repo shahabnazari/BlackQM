@@ -26,6 +26,14 @@ import { logger } from '@/lib/utils/logger';
 import { useLiteratureSearchStore } from '@/lib/stores/literature-search.store';
 import { literatureAPI, type SearchLiteratureParams } from '@/lib/services/literature-api.service';
 import type { Paper } from '@/lib/types/literature.types';
+import type { SearchMetadata, ProgressiveLoadingState } from '@/lib/stores/helpers/literature-search-helpers';
+
+// ============================================================================
+// Stage Metadata Types (extracted from ProgressiveLoadingState)
+// ============================================================================
+
+type Stage1Metadata = NonNullable<ProgressiveLoadingState['stage1']>;
+type Stage2Metadata = NonNullable<ProgressiveLoadingState['stage2']>;
 
 // ============================================================================
 // Types
@@ -91,6 +99,7 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
     progressiveLoading,
     setSearchMetadata, // Phase 10.6 Day 14.5: Store aggregated metadata
     setShowSuggestions, // Phase 10.7.10: Close AI suggestions dropdown when search starts
+    researchPurpose, // Phase 10.170: Purpose-Aware Search Integration
   } = useLiteratureSearchStore();
 
   // Ref to track if search should be cancelled
@@ -153,7 +162,7 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
    * Phase 10.6 Day 14.5: Now returns both papers AND metadata
    */
   const executeBatch = useCallback(
-    async (config: BatchConfig): Promise<{ papers: Paper[]; metadata: any }> => {
+    async (config: BatchConfig): Promise<{ papers: Paper[]; metadata: SearchMetadata | null }> => {
       // Check if cancelled
       if (isCancelledRef.current) {
         logger.info('Batch cancelled', 'ProgressiveSearch', { batchNumber: config.batchNumber });
@@ -191,6 +200,9 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
           page, // 🔧 FIX: Use batch number directly as page
           limit: config.limit,
           includeCitations: true,
+          // Phase 10.170: Purpose-Aware Search Integration
+          // Pass research purpose to backend for purpose-specific quality weights and paper limits
+          ...(researchPurpose && { purpose: researchPurpose }),
           // Phase 10.1 Day 11: Removed strict filters - we only have abstracts, not full-text yet
           // minAbstractLength: 100 would require long abstracts (filters out 50% of papers)
           // minWordCount: 3000 would require full papers (filters out 100% of abstract-only papers)
@@ -234,7 +246,7 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
         };
       }
     },
-    [query, appliedFilters, academicDatabases] // Phase 10.7.10: Added academicDatabases dependency
+    [query, appliedFilters, academicDatabases, researchPurpose] // Phase 10.7.10: Added academicDatabases; Phase 10.170: Added researchPurpose
   );
 
   // ============================================================================
@@ -253,8 +265,8 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
     intervalRef: React.MutableRefObject<NodeJS.Timeout | null>,
     backendCompleteRef: React.MutableRefObject<boolean>,
     getRealPaperCount: () => number, // Function to get REAL count from backend
-    getStage1Metadata: () => any,
-    getStage2Metadata: () => any
+    getStage1Metadata: () => Stage1Metadata | null,
+    getStage2Metadata: () => Stage2Metadata | null
   ) => {
     // BUG FIX: Prevent animation restart
     if (animationStartedRef.current) {
@@ -406,9 +418,9 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
     const progressIntervalRef = { current: null as NodeJS.Timeout | null };
 
     let allPapers: Paper[] = [];
-    let stage1Metadata: any = null;
-    let stage2Metadata: any = null;
-    let searchMetadata: any = null;
+    let stage1Metadata: Stage1Metadata | null = null;
+    let stage2Metadata: Stage2Metadata | null = null;
+    let searchMetadata: SearchMetadata | null = null;
     let animationStarted = false; // 🚨 CRITICAL FIX: Track if animation has started
 
     // Functions to get REAL backend data (closures)
@@ -600,8 +612,9 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
           }
 
           // Store stage metadata for real numbers in counter
-          stage1Metadata = searchMetadata.stage1;
-          stage2Metadata = searchMetadata.stage2;
+          // Convert undefined to null for consistent type handling
+          stage1Metadata = searchMetadata.stage1 ?? null;
+          stage2Metadata = searchMetadata.stage2 ?? null;
         } else if (!batchMetadata) {
           logger.warn('No metadata returned from batch', 'ProgressiveSearch', {
             batchNumber: config.batchNumber,

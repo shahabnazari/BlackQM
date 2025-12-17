@@ -76,6 +76,8 @@ import {
   FilterPanel,
   ActiveFiltersChips,
 } from '../components/SearchSection';
+// Phase 10.170: Purpose-Aware Search Integration
+import { ResearchPurposeSelector } from '../components/ResearchPurposeSelector';
 import { ProgressiveLoadingIndicator } from '@/components/literature/ProgressiveLoadingIndicator';
 // Phase 10.113 Week 10: WebSocket streaming section
 import { StreamingSearchSection, type StreamingSearchSectionHandle } from './StreamingSearchSection';
@@ -338,6 +340,11 @@ export const LiteratureSearchContainer = React.memo(
               <Badge variant="secondary" className={STYLES.BADGE}>
                 {A11Y.BADGE_TEXT}
               </Badge>
+            </div>
+
+            {/* Phase 10.170: Research Purpose Selector */}
+            <div className="mb-4">
+              <ResearchPurposeSelector showTooltip={true} />
             </div>
 
             {/* Search Bar Component - Phase 10.144: Simplified Apple-grade */}

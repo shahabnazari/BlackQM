@@ -1058,15 +1058,21 @@ export class LiteratureService implements OnModuleInit {
         const preQualityTarget = ABSOLUTE_LIMITS.PRE_QUALITY_FILTER_PAPERS || 1000;
         const optimizedTarget = Math.min(preQualityTarget, complexityConfig.totalTarget);
 
+        // Phase 10.170: Use purpose-aware target if specified in searchDto
+        const effectiveTarget = searchDto.targetPaperCount ?? optimizedTarget;
+
         let finalPapers: Paper[] = await this.searchPipeline.executeOptimizedPipeline(
           filteredPapers,
           {
             query: originalQuery,
             queryComplexity: queryComplexity,
-            targetPaperCount: optimizedTarget,
+            targetPaperCount: effectiveTarget,
             sortOption: searchDto.sortByEnhanced || searchDto.sortBy,
             emitProgress,
             signal, // Phase 10.112: Propagate cancellation signal to pipeline
+            // Phase 10.170: Purpose-Aware Pipeline Configuration
+            purpose: searchDto.purpose,
+            qualityThresholdOverride: undefined, // Use purpose-aware threshold
           },
         );
 

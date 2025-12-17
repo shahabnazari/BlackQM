@@ -41,6 +41,21 @@ import { Badge } from '@/components/ui/badge';
 import type { SearchMetadata } from '@/lib/stores/helpers/literature-search-helpers';
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Extract paper count from sourceBreakdown value
+ * Handles both legacy number format and new object format
+ */
+function extractPaperCount(value: number | { papers: number; duration: number; error?: string }): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+  return value.papers || 0;
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -373,9 +388,9 @@ const SourceBreakdown = memo(function SourceBreakdown({
     }
 
     const sorted = Object.entries(sourceBreakdown)
-      .sort(([, a], [, b]) => (b.papers || 0) - (a.papers || 0));
+      .sort(([, a], [, b]) => extractPaperCount(b) - extractPaperCount(a));
 
-    const total = sorted.reduce((sum, [, data]) => sum + (data.papers || 0), 0);
+    const total = sorted.reduce((sum, [, data]) => sum + extractPaperCount(data), 0);
 
     return { sortedSources: sorted, totalPapers: total };
   }, [sourceBreakdown]);
@@ -391,20 +406,23 @@ const SourceBreakdown = memo(function SourceBreakdown({
         Source Contribution
       </h4>
       <div className="grid grid-cols-2 gap-2">
-        {sortedSources.slice(0, 8).map(([source, data]) => (
-          <div
-            key={source}
-            className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-xs"
-          >
-            <span className="text-gray-600 capitalize">{source.replace(/_/g, ' ')}</span>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold">{data.papers || 0}</span>
-              <span className="text-gray-400">
-                ({totalPapers > 0 ? ((data.papers || 0) / totalPapers * 100).toFixed(0) : 0}%)
-              </span>
+        {sortedSources.slice(0, 8).map(([source, data]) => {
+          const paperCount = extractPaperCount(data);
+          return (
+            <div
+              key={source}
+              className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-xs"
+            >
+              <span className="text-gray-600 capitalize">{source.replace(/_/g, ' ')}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">{paperCount}</span>
+                <span className="text-gray-400">
+                  ({totalPapers > 0 ? (paperCount / totalPapers * 100).toFixed(0) : 0}%)
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       {sortedSources.length > 8 && (
         <p className="text-xs text-gray-500 text-center">

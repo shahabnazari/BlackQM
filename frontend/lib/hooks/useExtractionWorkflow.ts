@@ -70,11 +70,23 @@ const EXTRACTION_PROGRESS_RANGE = PROGRESS_STAGES.EXTRACT_THEMES.END - PROGRESS_
 // Types
 // ============================================================================
 
+/**
+ * Phase 10.175: Added tier and flags for thematization configuration
+ */
 export interface ExtractionWorkflowParams {
   papers: LiteraturePaper[];
   purpose: ResearchPurpose;
   mode: 'quick' | 'guided';
   userExpertiseLevel: UserExpertiseLevel;
+  /** Phase 10.175: Paper count tier (50-300) */
+  tier?: 50 | 100 | 150 | 200 | 250 | 300;
+  /** Phase 10.175: Pipeline feature flags */
+  flags?: {
+    enableThemeFit?: boolean;
+    enableHierarchical?: boolean;
+    enableControversy?: boolean;
+    enableClaimExtraction?: boolean;
+  };
 }
 
 export interface ExtractionWorkflowResult {

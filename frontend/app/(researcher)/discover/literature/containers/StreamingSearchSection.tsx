@@ -97,6 +97,8 @@ export const StreamingSearchSection = memo(forwardRef<StreamingSearchSectionHand
     academicDatabases,
     // Phase 10.115: Clear selection on new search to prevent stale selection counts
     clearSelection,
+    // Phase 10.170: Get research purpose for purpose-aware search
+    researchPurpose,
   } = useLiteratureSearchStore();
 
   // ==========================================================================
@@ -209,11 +211,14 @@ export const StreamingSearchSection = memo(forwardRef<StreamingSearchSectionHand
     // Phase 10.115: Remove hardcoded limit - let backend use tier-based allocation
     // Tier 1 (Premium): 500 papers, Tier 2 (Good): 400, Tier 3/4: 300
     // Pass user-selected sources to backend for filtering
+    // Phase 10.170: Pass research purpose for purpose-aware quality weights and paper limits
     const result = await startSearch(query, {
       sortBy: 'relevance',
       // Phase 10.115: Pass user-selected sources from store
       // Backend will filter these through SourceCapabilityService for availability/ORCID auth
       sources: academicDatabases,
+      // Phase 10.170: Pass research purpose for purpose-aware search configuration
+      ...(researchPurpose && { purpose: researchPurpose }),
     });
 
     if (!result.success) {
@@ -223,7 +228,7 @@ export const StreamingSearchSection = memo(forwardRef<StreamingSearchSectionHand
         await onHttpSearch();
       }
     }
-  }, [query, streamingEnabled, isConnected, startSearch, resetState, setLoading, onHttpSearch, academicDatabases, clearSelection]);
+  }, [query, streamingEnabled, isConnected, startSearch, resetState, setLoading, onHttpSearch, academicDatabases, clearSelection, researchPurpose]);
 
   // ==========================================================================
   // IMPERATIVE HANDLE

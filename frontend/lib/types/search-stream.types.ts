@@ -339,9 +339,21 @@ export interface SearchStreamEventMap {
 // ============================================================================
 
 /**
+ * Research purpose for purpose-aware search configuration
+ * Phase 10.170: Purpose-Aware Search Integration
+ */
+export type ResearchPurpose =
+  | 'q_methodology'
+  | 'qualitative_analysis'
+  | 'literature_synthesis'
+  | 'hypothesis_generation'
+  | 'survey_construction';
+
+/**
  * Search options for progressive streaming
  *
  * Phase 10.115: Added sources field for user-selected database filtering
+ * Phase 10.170: Added purpose field for purpose-aware search configuration
  */
 export interface StreamingSearchOptions {
   /** Maximum papers to return (default: tier-based allocation 300-500) */
@@ -359,6 +371,11 @@ export interface StreamingSearchOptions {
    * Source names should match LiteratureSource enum values (e.g., 'pubmed', 'arxiv', 'openalex')
    */
   sources?: string[];
+  /**
+   * Phase 10.170: Research purpose for purpose-aware search configuration
+   * Affects quality weights, paper limits, and full-text requirements
+   */
+  purpose?: ResearchPurpose;
 }
 
 // ============================================================================

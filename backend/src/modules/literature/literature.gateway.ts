@@ -9,12 +9,19 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import { LiteratureService } from './literature.service';
 import { getCorrelationId } from '../../common/middleware/correlation-id.middleware';
 import { ErrorCodes, ErrorCode } from '../../common/constants/error-codes';
 // Phase 10.113 Week 10: Progressive Search Streaming
 import { SearchStreamService } from './services/search-stream.service';
 import { LazyEnrichmentService } from './services/lazy-enrichment.service';
+// Phase 10.170: Purpose-Aware Pipeline
+import { PurposeAwareSearchService } from './services/purpose-aware-search.service';
+import { ResearchPurpose, isValidResearchPurpose } from './types/purpose-aware.types';
+// Phase 10.170 Week 2: Intelligent Full-Text Detection
+import { IntelligentFullTextDetectionService } from './services/intelligent-fulltext-detection.service';
+import { DetectionProgressEvent } from './types/fulltext-detection.types';
 import {
   SearchStreamEvent,
   EnrichmentRequest,
@@ -49,8 +56,14 @@ export class LiteratureGateway
     // Phase 10.113 Week 10: Progressive Search Services
     private readonly searchStream: SearchStreamService,
     private readonly lazyEnrichment: LazyEnrichmentService,
+    // Phase 10.170: Purpose-Aware Pipeline
+    private readonly purposeAwareSearch: PurposeAwareSearchService,
+    // Phase 10.170 Week 2: Intelligent Full-Text Detection
+    private readonly fulltextDetection: IntelligentFullTextDetectionService,
   ) {
     this.logger.log('✅ [LiteratureGateway] Phase 10.113 Week 10 - Progressive search streaming enabled');
+    this.logger.log('✅ [LiteratureGateway] Phase 10.170 - Purpose-aware pipeline enabled');
+    this.logger.log('✅ [LiteratureGateway] Phase 10.170 Week 2 - Intelligent full-text detection enabled');
   }
 
   handleConnection(client: Socket) {
@@ -464,5 +477,242 @@ export class LiteratureGateway
    */
   emitSearchError(searchId: string, errorCode: ErrorCode, message?: string) {
     this.emitError(`search-${searchId}`, errorCode, getCorrelationId() || undefined, message);
+  }
+
+  // ==========================================================================
+  // Phase 10.170: Purpose-Aware Pipeline WebSocket Integration
+  // ==========================================================================
+
+  /**
+   * Handle purpose-aware search started event
+   * Forwards EventEmitter2 events to WebSocket clients
+   */
+  @OnEvent('purpose-aware-search.started')
+  handlePurposeAwareSearchStarted(payload: {
+    sessionId: string;
+    purpose: ResearchPurpose;
+    displayName: string;
+    config: Record<string, unknown>;
+    timestamp: number;
+  }): void {
+    this.server.to(`search-${payload.sessionId}`).emit('purpose-aware:started', {
+      purpose: payload.purpose,
+      displayName: payload.displayName,
+      config: payload.config,
+      timestamp: payload.timestamp,
+    });
+    this.logger.debug(`[Purpose-Aware] Search started: ${payload.displayName} (${payload.sessionId})`);
+  }
+
+  /**
+   * Handle purpose-aware search progress event
+   */
+  @OnEvent('purpose-aware-search.progress')
+  handlePurposeAwareSearchProgress(payload: {
+    sessionId: string;
+    purpose: ResearchPurpose;
+    stage: string;
+    progress: number;
+    details?: Record<string, unknown>;
+    timestamp: number;
+  }): void {
+    this.server.to(`search-${payload.sessionId}`).emit('purpose-aware:progress', {
+      purpose: payload.purpose,
+      stage: payload.stage,
+      progress: payload.progress,
+      details: payload.details,
+      timestamp: payload.timestamp,
+    });
+  }
+
+  /**
+   * Handle purpose-aware search completed event
+   */
+  @OnEvent('purpose-aware-search.completed')
+  handlePurposeAwareSearchCompleted(payload: {
+    sessionId: string;
+    purpose: ResearchPurpose;
+    displayName: string;
+    result: Record<string, unknown>;
+    timestamp: number;
+  }): void {
+    this.server.to(`search-${payload.sessionId}`).emit('purpose-aware:completed', {
+      purpose: payload.purpose,
+      displayName: payload.displayName,
+      result: payload.result,
+      timestamp: payload.timestamp,
+    });
+    this.logger.log(`[Purpose-Aware] Search completed: ${payload.displayName} (${payload.sessionId})`);
+  }
+
+  /**
+   * Get purpose configuration via WebSocket
+   *
+   * @event purpose-aware:get-config { purpose: ResearchPurpose }
+   * @returns Purpose configuration
+   */
+  @SubscribeMessage('purpose-aware:get-config')
+  handleGetPurposeConfig(
+    @MessageBody() data: { purpose: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const { purpose } = data;
+
+      if (!purpose || !isValidResearchPurpose(purpose)) {
+        return {
+          success: false,
+          error: `Invalid purpose: ${purpose}. Must be one of: ${Object.values(ResearchPurpose).join(', ')}`,
+        };
+      }
+
+      const config = this.purposeAwareSearch.getResolvedConfig(purpose as ResearchPurpose);
+      const metadata = this.purposeAwareSearch.getMetadata(purpose as ResearchPurpose);
+
+      return {
+        success: true,
+        config: {
+          purpose,
+          displayName: metadata.displayName,
+          paperLimits: config.paperLimits,
+          qualityWeights: config.qualityWeights,
+          qualityThreshold: config.qualityThreshold.initial,
+          contentPriority: config.contentPriority,
+          fullTextRequired: config.fullTextRequirement.strictRequirement,
+          diversityRequired: config.diversityRequired,
+          scientificMethod: config.scientificMethod,
+          targetThemes: config.targetThemes,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`[Purpose-Aware] Get config failed: ${(error as Error).message}`);
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Join purpose-aware search room
+   *
+   * @event purpose-aware:join { sessionId: string }
+   */
+  @SubscribeMessage('purpose-aware:join')
+  handleJoinPurposeAwareSearch(
+    @MessageBody() data: { sessionId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const { sessionId } = data;
+
+      if (!sessionId) {
+        return { success: false, error: 'sessionId is required' };
+      }
+
+      client.join(`search-${sessionId}`);
+      this.logger.debug(`[Purpose-Aware] Client ${client.id} joined session ${sessionId}`);
+
+      return { success: true, sessionId };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  // ==========================================================================
+  // Phase 10.170 Week 2: Intelligent Full-Text Detection WebSocket Integration
+  // ==========================================================================
+
+  /**
+   * Handle full-text detection progress event
+   * Forwards EventEmitter2 events to WebSocket clients
+   */
+  @OnEvent('fulltext-detection.progress')
+  handleFulltextDetectionProgress(payload: DetectionProgressEvent): void {
+    this.server.to(`detection-${payload.paperId}`).emit('fulltext:progress', {
+      paperId: payload.paperId,
+      currentTier: payload.currentTier,
+      totalTiers: payload.totalTiers,
+      tierName: payload.tierName,
+      message: payload.message,
+      timestamp: payload.timestamp,
+    });
+  }
+
+  /**
+   * Detect full-text for a paper via WebSocket
+   *
+   * @event fulltext:detect { paperId: string; doi?: string; title?: string }
+   * @emits fulltext:progress, fulltext:result
+   */
+  @SubscribeMessage('fulltext:detect')
+  async handleFulltextDetect(
+    @MessageBody() data: { paperId: string; doi?: string; title?: string; pdfUrl?: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const { paperId, doi, title, pdfUrl } = data;
+
+      if (!paperId) {
+        return { success: false, error: 'paperId is required' };
+      }
+
+      // Join the detection room for progress updates
+      client.join(`detection-${paperId}`);
+
+      this.logger.debug(`[FullText] Client ${client.id} starting detection for paper ${paperId}`);
+
+      // Perform detection
+      const result = await this.fulltextDetection.detectFullText({
+        id: paperId,
+        doi,
+        title,
+        pdfUrl,
+      });
+
+      // Emit result
+      client.emit('fulltext:result', {
+        paperId,
+        ...result,
+      });
+
+      // Leave the detection room
+      client.leave(`detection-${paperId}`);
+
+      return { success: true, result };
+    } catch (error) {
+      this.logger.error(`[FullText] Detection error: ${(error as Error).message}`);
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
+   * Batch detect full-text for multiple papers via WebSocket
+   *
+   * @event fulltext:detect-batch { papers: Array<{ id, doi?, title? }> }
+   * @emits fulltext:batch-result
+   */
+  @SubscribeMessage('fulltext:detect-batch')
+  async handleFulltextDetectBatch(
+    @MessageBody() data: { papers: Array<{ id: string; doi?: string; title?: string }> },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const { papers } = data;
+
+      if (!papers || !Array.isArray(papers) || papers.length === 0) {
+        return { success: false, error: 'papers array is required' };
+      }
+
+      this.logger.debug(`[FullText] Client ${client.id} starting batch detection for ${papers.length} papers`);
+
+      // Perform batch detection
+      const result = await this.fulltextDetection.detectBatch(papers);
+
+      // Emit result
+      client.emit('fulltext:batch-result', result);
+
+      return { success: true, stats: { total: papers.length, successful: result.successfulPapers.length, failed: result.failedPapers.length } };
+    } catch (error) {
+      this.logger.error(`[FullText] Batch detection error: ${(error as Error).message}`);
+      return { success: false, error: (error as Error).message };
+    }
   }
 }

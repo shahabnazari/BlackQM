@@ -285,7 +285,7 @@ export class TranscriptionService {
 
     try {
       const audioFile = await fs.readFile(audioPath);
-      const blob = new Blob([audioFile], { type: 'audio/mp3' });
+      const blob = new Blob([new Uint8Array(audioFile)], { type: 'audio/mp3' });
 
       const transcription = await this.openai.audio.transcriptions.create({
         file: blob as any,

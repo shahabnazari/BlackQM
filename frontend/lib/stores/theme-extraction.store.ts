@@ -128,6 +128,9 @@ interface ThemeExtractionState {
   /** Show/hide mode selection modal (batch vs. incremental) */
   showModeSelectionModal: boolean;
 
+  /** Phase 10.175: Show/hide thematization config modal (tier selection) */
+  showThematizationConfig: boolean;
+
   /** Show/hide purpose wizard modal (research purpose selection) */
   showPurposeWizard: boolean;
 
@@ -198,6 +201,7 @@ interface ThemeExtractionState {
   setExtractionPurpose: (purpose: ResearchPurpose | null) => void;
   setUserExpertiseLevel: (level: UserExpertiseLevel) => void;
   setShowModeSelectionModal: (show: boolean) => void;
+  setShowThematizationConfig: (show: boolean) => void; // Phase 10.175
   setShowPurposeWizard: (show: boolean) => void;
   setShowGuidedWizard: (show: boolean) => void;
   setIsNavigatingToThemes: (navigating: boolean) => void; // Phase 10.106
@@ -250,6 +254,7 @@ export const useThemeExtractionStore = create<ThemeExtractionState>()(
       contentAnalysis: null,
 
       showModeSelectionModal: false,
+      showThematizationConfig: false, // Phase 10.175
       showPurposeWizard: false,
       showGuidedWizard: false,
       isNavigatingToThemes: false, // Phase 10.106
@@ -387,6 +392,7 @@ export const selectExtractionStatus = (state: ThemeExtractionState) => ({
 
 export const selectModalState = (state: ThemeExtractionState) => ({
   modeSelection: state.showModeSelectionModal,
+  thematizationConfig: state.showThematizationConfig, // Phase 10.175
   purpose: state.showPurposeWizard,
   guided: state.showGuidedWizard,
 });
