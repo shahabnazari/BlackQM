@@ -28,6 +28,9 @@ import { ThemeDatabaseService } from './theme-database.service';
 import { QMethodologyPipelineService } from './q-methodology-pipeline.service';
 import { SurveyConstructionPipelineService } from './survey-construction-pipeline.service';
 import { QualitativeAnalysisPipelineService } from './qualitative-analysis-pipeline.service';
+// Phase 10.170 Week 4+: Literature Synthesis & Hypothesis Generation Pipelines
+import { LiteratureSynthesisPipelineService } from './literature-synthesis-pipeline.service';
+import { HypothesisGenerationPipelineService } from './hypothesis-generation-pipeline.service';
 // Phase 10.98 FIX: Local code extraction and theme labeling services (NO AI, $0.00 cost)
 import { LocalCodeExtractionService } from './local-code-extraction.service';
 import { LocalThemeLabelingService } from './local-theme-labeling.service';
@@ -260,6 +263,9 @@ export class UnifiedThemeExtractionService implements OnModuleInit {
     @Optional() private qMethodologyPipeline?: QMethodologyPipelineService,
     @Optional() private surveyConstructionPipeline?: SurveyConstructionPipelineService,
     @Optional() private qualitativeAnalysisPipeline?: QualitativeAnalysisPipelineService,
+    // Phase 10.170 Week 4+: Literature Synthesis & Hypothesis Generation pipelines
+    @Optional() private literatureSynthesisPipeline?: LiteratureSynthesisPipelineService,
+    @Optional() private hypothesisGenerationPipeline?: HypothesisGenerationPipelineService,
   ) {
     // Phase 10.98 PERF-OPT-5: Initialize LRU cache with strict typing
     // Upgraded from FIFO Map to LRU for 10-20% better cache efficiency
@@ -3219,6 +3225,195 @@ Return JSON format:
         return { themes: qualitativeResult.themes, codeEmbeddings };
       } catch (error) {
         this.logger.error(`[Phase 10.98] Qualitative Analysis pipeline failed, falling back to hierarchical clustering: ${(error as Error).message}`);
+        // Fall through to legacy algorithm
+      }
+    }
+
+    // Phase 10.170 Week 4+: Route to Literature Synthesis pipeline
+    // Literature Synthesis: Use meta-ethnography (Noblit & Hare 1988) for qualitative synthesis
+    if (options.purpose === ResearchPurpose.LITERATURE_SYNTHESIS && this.literatureSynthesisPipeline) {
+      this.logger.log(`[Phase 10.170] Routing to Literature Synthesis pipeline (meta-ethnography)`);
+
+      // Gap #4 Fix: Track full-text availability for transparency
+      const fullTextSources = sources.filter(s => s.content && s.content.length > 1000);
+      const fullTextPercent = sources.length > 0
+        ? ((fullTextSources.length / sources.length) * 100).toFixed(1)
+        : '0';
+      this.logger.log(
+        `   • Full-text availability: ${fullTextSources.length}/${sources.length} sources (${fullTextPercent}%) ` +
+        `- richer content improves synthesis quality`
+      );
+
+      try {
+        // Convert sources to StudyWithThemes format
+        // Each source becomes a "study" with themes derived from its codes
+        const studies = sources.map(source => {
+          const sourceCodes = codes.filter(code => code.sourceId === source.id);
+          return {
+            id: source.id,
+            title: source.title || `Source ${source.id}`,
+            themes: sourceCodes.map(code => ({
+              id: code.id,
+              label: code.label,
+              description: code.label, // Use label as description
+              evidence: code.excerpts,
+            })),
+            methodology: null,
+            context: null,
+            year: null,
+          };
+        });
+
+        // Filter to studies with at least one theme
+        const studiesWithThemes = studies.filter(s => s.themes.length > 0);
+
+        if (studiesWithThemes.length < 2) {
+          this.logger.warn(`[Phase 10.170] Need at least 2 studies with themes for synthesis, got ${studiesWithThemes.length}. Falling back to hierarchical clustering.`);
+        } else {
+          // Create embedding function wrapper
+          const embeddingFn = async (texts: readonly string[]): Promise<readonly number[][]> => {
+            const results: number[][] = [];
+            for (const text of texts) {
+              const embedding = await this.embeddingOrchestrator.generateEmbedding(text);
+              results.push(embedding as number[]);
+            }
+            return results;
+          };
+
+          // Execute Literature Synthesis pipeline
+          const synthesisResult = await this.literatureSynthesisPipeline.synthesize(
+            studiesWithThemes,
+            embeddingFn,
+          );
+
+          this.logger.log(`[Phase 10.170] Literature Synthesis pipeline complete:`);
+          this.logger.log(`   • Synthesized themes: ${synthesisResult.synthesizedThemes.length}`);
+          this.logger.log(`   • Reciprocal translations: ${synthesisResult.reciprocalTranslations.length}`);
+          this.logger.log(`   • Supporting themes: ${synthesisResult.lineOfArgument.supportingThemes.length}`);
+          this.logger.log(`   • Contradictions found: ${synthesisResult.refutationalSynthesis.contradictions.length}`);
+          this.logger.log(`   • Quality - Study Coverage: ${(synthesisResult.qualityMetrics.studyCoverage * 100).toFixed(1)}%`);
+          this.logger.log(`   • Quality - Translation Completeness: ${(synthesisResult.qualityMetrics.translationCompleteness * 100).toFixed(1)}%`);
+
+          // Convert SynthesizedTheme to CandidateTheme format
+          const themes: CandidateTheme[] = synthesisResult.synthesizedThemes.map(synthTheme => ({
+            id: crypto.randomBytes(6).toString('hex'),
+            label: synthTheme.label,
+            description: synthTheme.description,
+            keywords: [],
+            definition: synthTheme.description,
+            codes: codes.filter(c => synthTheme.contributingStudyIds.includes(c.sourceId)),
+            centroid: [], // Will be computed if needed
+            sourceIds: [...synthTheme.contributingStudyIds],
+            validationScore: synthTheme.confidence,
+          }));
+
+          return { themes, codeEmbeddings };
+        }
+      } catch (error) {
+        this.logger.error(`[Phase 10.170] Literature Synthesis pipeline failed, falling back to hierarchical clustering: ${(error as Error).message}`);
+        // Fall through to legacy algorithm
+      }
+    }
+
+    // Phase 10.170 Week 4+: Route to Hypothesis Generation pipeline
+    // Hypothesis Generation: Use grounded theory (Glaser & Strauss 1967) for theory building
+    if (options.purpose === ResearchPurpose.HYPOTHESIS_GENERATION && this.hypothesisGenerationPipeline) {
+      this.logger.log(`[Phase 10.170] Routing to Hypothesis Generation pipeline (grounded theory)`);
+
+      // Gap #4 Fix: Track full-text availability for transparency
+      // Grounded theory benefits significantly from full-text (more in-vivo codes, richer categories)
+      const fullTextSources = sources.filter(s => s.content && s.content.length > 1000);
+      const fullTextPercent = sources.length > 0
+        ? ((fullTextSources.length / sources.length) * 100).toFixed(1)
+        : '0';
+      this.logger.log(
+        `   • Full-text availability: ${fullTextSources.length}/${sources.length} sources (${fullTextPercent}%) ` +
+        `- critical for grounded theory saturation`
+      );
+
+      try {
+        // Convert sources to GroundedTheorySource format
+        // Gap #4 Fix: Pass full content for better grounded theory analysis
+        const gtSources = sources.map(source => ({
+          id: source.id,
+          title: source.title || `Source ${source.id}`,
+          abstract: source.content.substring(0, 500), // First 500 chars as abstract
+          fullText: source.content,
+          keywords: [] as readonly string[],
+        }));
+
+        // Create embedding function wrapper
+        const embeddingFn = async (texts: readonly string[]): Promise<readonly number[][]> => {
+          const results: number[][] = [];
+          for (const text of texts) {
+            const embedding = await this.embeddingOrchestrator.generateEmbedding(text);
+            results.push(embedding as number[]);
+          }
+          return results;
+        };
+
+        // Execute Hypothesis Generation pipeline
+        const gtResult = await this.hypothesisGenerationPipeline.generateHypotheses(
+          gtSources,
+          embeddingFn,
+        );
+
+        this.logger.log(`[Phase 10.170] Hypothesis Generation pipeline complete:`);
+        this.logger.log(`   • Open codes: ${gtResult.openCoding.codes.length}`);
+        this.logger.log(`   • Axial categories: ${gtResult.axialCoding.categories.length}`);
+        this.logger.log(`   • Core category: ${gtResult.selectiveCoding.coreCategory.label}`);
+        this.logger.log(`   • Theoretical constructs: ${gtResult.theoreticalFramework.constructs.length}`);
+        this.logger.log(`   • Hypotheses generated: ${gtResult.hypotheses.length}`);
+        this.logger.log(`   • Quality - Theoretical Saturation: ${(gtResult.qualityMetrics.theoreticalSaturation * 100).toFixed(1)}%`);
+        this.logger.log(`   • Quality - Coding Density: ${gtResult.qualityMetrics.codingDensity.toFixed(2)}`);
+
+        // Convert grounded theory results to CandidateTheme format
+        // Use axial categories as themes (more meaningful than raw open codes)
+        // Get all open codes for mapping
+        const openCodes = gtResult.openCoding.codes;
+
+        const themes: CandidateTheme[] = gtResult.axialCoding.categories.map(category => {
+          // Find open codes that belong to this category
+          const categoryOpenCodes = openCodes.filter(oc => category.openCodeIds.includes(oc.id));
+          // Map back to original codes by label matching
+          const matchingOriginalCodes = codes.filter(c =>
+            categoryOpenCodes.some(openCode =>
+              c.label.toLowerCase().includes(openCode.label.toLowerCase()) ||
+              openCode.label.toLowerCase().includes(c.label.toLowerCase())
+            )
+          );
+          // Get unique source IDs from matched original codes
+          const sourceIdsFromCodes = [...new Set(matchingOriginalCodes.map(c => c.sourceId))];
+
+          return {
+            id: crypto.randomBytes(6).toString('hex'),
+            label: category.label,
+            description: category.description,
+            keywords: [],
+            definition: category.description,
+            codes: matchingOriginalCodes,
+            centroid: [],
+            sourceIds: sourceIdsFromCodes,
+            validationScore: gtResult.qualityMetrics.categoryCompleteness,
+          };
+        });
+
+        // Also add hypotheses as special themes for visibility
+        const hypothesisThemes: CandidateTheme[] = gtResult.hypotheses.slice(0, 5).map(hypothesis => ({
+          id: crypto.randomBytes(6).toString('hex'),
+          label: `[Hypothesis] ${hypothesis.statement.substring(0, 50)}...`,
+          description: hypothesis.statement,
+          keywords: [],
+          definition: `Type: ${hypothesis.type} | Testability: ${(hypothesis.testability * 100).toFixed(0)}%`,
+          codes: [],
+          centroid: [],
+          sourceIds: [...hypothesis.grounding],
+          validationScore: hypothesis.testability,
+        }));
+
+        return { themes: [...themes, ...hypothesisThemes], codeEmbeddings };
+      } catch (error) {
+        this.logger.error(`[Phase 10.170] Hypothesis Generation pipeline failed, falling back to hierarchical clustering: ${(error as Error).message}`);
         // Fall through to legacy algorithm
       }
     }

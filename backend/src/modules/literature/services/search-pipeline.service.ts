@@ -31,7 +31,7 @@
  * @see backend/src/modules/literature/types/performance.types.ts
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Paper } from '../dto/literature.dto';
 import {
   NeuralRelevanceService,
@@ -64,6 +64,24 @@ import {
   QueryComplexity,
   ABSOLUTE_LIMITS,
 } from '../constants/source-allocation.constants';
+// Phase 10.170: Purpose-Aware Pipeline Integration
+import { PurposeAwareConfigService } from './purpose-aware-config.service';
+import { ResearchPurpose, PurposeFetchingConfig } from '../types/purpose-aware.types';
+// Phase 10.170 Week 2: Intelligent Full-Text Detection Integration
+import { IntelligentFullTextDetectionService } from './intelligent-fulltext-detection.service';
+import { PaperForDetection, FullTextDetectionResult } from '../types/fulltext-detection.types';
+// Phase 10.170 Week 3: Purpose-Aware Quality Scoring & Diversity Integration
+import { PurposeAwareScoringService } from './purpose-aware-scoring.service';
+import { AdaptiveThresholdService } from './adaptive-threshold.service';
+import { DiversityScoringService } from './diversity-scoring.service';
+import {
+  ScoringPaperInput,
+  PurposeAwareScoreResult,
+  PERSPECTIVE_CATEGORIES,
+} from '../types/purpose-aware-scoring.types';
+// Phase 10.170 Week 4: Gap #2 Fix - TwoStageFilter Integration
+import { TwoStageFilterService } from './two-stage-filter.service';
+import { PaperForFilter } from '../types/specialized-pipeline.types';
 
 /**
  * Query domain for domain-aware processing
@@ -73,6 +91,7 @@ type QueryDomainType = 'humanities' | 'stem' | 'methodology' | 'general';
 
 /**
  * Pipeline configuration interface (strict typing)
+ * Phase 10.170: Added purpose field for purpose-aware configuration
  */
 interface PipelineConfig {
   query: string;
@@ -82,6 +101,8 @@ interface PipelineConfig {
   emitProgress: (message: string, progress: number) => void;
   signal?: AbortSignal; // Phase 10.112: Request cancellation support
   queryDomain?: QueryDomainType; // Phase 10.114: Domain-aware processing
+  purpose?: ResearchPurpose; // Phase 10.170: Purpose-aware configuration
+  qualityThresholdOverride?: number; // Phase 10.170: Quality threshold override
 }
 
 /**
@@ -219,12 +240,32 @@ export class SearchPipelineService {
     private readonly themeFitScoring: ThemeFitScoringService,
     // Phase 10.113 Week 11: Progressive Semantic Scoring
     private readonly progressiveSemantic: ProgressiveSemanticService,
+    // Phase 10.170: Purpose-Aware Pipeline Configuration
+    private readonly purposeAwareConfig: PurposeAwareConfigService,
+    // Phase 10.170 Week 2: Intelligent Full-Text Detection
+    @Optional() private readonly fulltextDetection?: IntelligentFullTextDetectionService,
+    // Phase 10.170 Week 3: Purpose-Aware Quality Scoring & Diversity
+    @Optional() private readonly purposeAwareScoring?: PurposeAwareScoringService,
+    @Optional() private readonly adaptiveThreshold?: AdaptiveThresholdService,
+    @Optional() private readonly diversityScoring?: DiversityScoringService,
+    // Phase 10.170 Week 4: Gap #2 Fix - Two-Stage Content-First Filtering
+    @Optional() private readonly twoStageFilter?: TwoStageFilterService,
   ) {
     this.logger.log('✅ [Phase 10.112 Week 3] NeuralBudgetService integrated - dynamic load-based limits');
     this.logger.log('✅ [Phase 10.112 Week 4] AdaptiveTimeoutService integrated - P95/P99 dynamic timeouts');
     this.logger.log('✅ [Phase 10.112 Week 4] GracefulDegradationService integrated - multi-level fallback cascade');
     this.logger.log('✅ [Phase 10.113 Week 2] ThemeFitScoringService integrated - thematization-optimized scoring');
     this.logger.log('✅ [Phase 10.113 Week 11] ProgressiveSemanticService integrated - tiered streaming');
+    this.logger.log('✅ [Phase 10.170] PurposeAwareConfigService integrated - purpose-driven paper limits & quality');
+    if (fulltextDetection) {
+      this.logger.log('✅ [Phase 10.170 Week 2] IntelligentFullTextDetectionService integrated - 7-tier waterfall');
+    }
+    if (purposeAwareScoring && adaptiveThreshold && diversityScoring) {
+      this.logger.log('✅ [Phase 10.170 Week 3] Quality Scoring, Adaptive Threshold & Diversity integrated');
+    }
+    if (twoStageFilter) {
+      this.logger.log('✅ [Phase 10.170 Week 4] TwoStageFilterService integrated - content-first filtering');
+    }
   }
 
   // ============================================================================
@@ -347,12 +388,51 @@ export class SearchPipelineService {
       config.queryComplexity || 'comprehensive'
     );
 
+    // ============================================================================
+    // Phase 10.170: Purpose-Aware Configuration Resolution
+    // ============================================================================
+    // Get purpose-specific config if purpose is provided
+    // This determines: paper limits, quality threshold, full-text requirements
+    // ============================================================================
+    let purposeConfig: PurposeFetchingConfig | null = null;
+    let effectiveQualityThreshold = QUALITY_THRESHOLD; // Default: 20
+    let effectiveTargetPaperCount = config.targetPaperCount;
+
+    if (config.purpose) {
+      try {
+        purposeConfig = this.purposeAwareConfig.getConfig(config.purpose);
+
+        // Use purpose-aware quality threshold (initial threshold)
+        effectiveQualityThreshold = config.qualityThresholdOverride ?? purposeConfig.qualityThreshold.initial;
+
+        // Use purpose-aware target paper count (if not overridden in config)
+        if (config.targetPaperCount === ABSOLUTE_LIMITS.MAX_FINAL_PAPERS || config.targetPaperCount === 300) {
+          // Default was used, apply purpose-aware target
+          effectiveTargetPaperCount = purposeConfig.paperLimits.target;
+        }
+
+        this.logger.log(
+          `🎯 [Phase 10.170] Purpose-Aware Config: ${config.purpose}` +
+          `\n   Paper Limits: ${purposeConfig.paperLimits.min}-${purposeConfig.paperLimits.target}-${purposeConfig.paperLimits.max}` +
+          `\n   Quality Threshold: ${effectiveQualityThreshold}% (initial)` +
+          `\n   Full-Text Required: ${purposeConfig.fullTextRequirement.strictRequirement ? 'YES' : 'NO'}` +
+          `\n   Diversity Required: ${purposeConfig.diversityRequired ? 'ENABLED' : 'DISABLED'}`
+        );
+      } catch (error) {
+        this.logger.warn(
+          `⚠️  [Phase 10.170] Purpose-aware config failed for ${config.purpose}: ${(error as Error).message}. ` +
+          `Using default configuration.`
+        );
+      }
+    }
+
     const startTime = Date.now();
     this.logger.log(
       `\n${'═'.repeat(80)}` +
-      `\n🚀 NETFLIX-GRADE UNIVERSAL SEARCH PIPELINE (Phase 10.115)` +
+      `\n🚀 NETFLIX-GRADE UNIVERSAL SEARCH PIPELINE (Phase 10.115 + 10.170 Purpose-Aware)` +
       `\n   Input: ${papers.length} papers` +
-      `\n   Target: ${config.targetPaperCount} papers` +
+      `\n   Target: ${effectiveTargetPaperCount} papers${config.purpose ? ` (${config.purpose})` : ''}` +
+      `\n   Quality Threshold: ${effectiveQualityThreshold}%${purposeConfig ? ' (purpose-aware)' : ' (default)'}` +
       `\n   Strategy: SEMANTIC-FIRST (0.15×BM25 + 0.55×Semantic + 0.30×ThemeFit)` +
       `\n   Budget: ${this.currentBudget.qualityLevel} quality, batch=${this.currentBudget.batchSize}` +
       `\n   Semantic: ALWAYS ENABLED (Netflix-grade quality)` +
@@ -604,10 +684,22 @@ export class SearchPipelineService {
     );
 
     // Normalize BM25 scores (0-1 range) using papersForSemantic
+    // Phase 10.170 CRITICAL FIX: Use MAX normalization instead of min-max
+    // ========================================================================
+    // PROBLEM: Min-max normalization causes papers with the MINIMUM BM25 score
+    // to show "Keywords: 0" in the tooltip, even if they have keyword matches!
+    // Example:
+    //   - Query: "sustainable practices in plantation agriculture"
+    //   - Paper: "Sustainable Pasture and Rangeland Management Practices"
+    //   - Raw BM25: 60 (matches "sustainable" + "practices")
+    //   - But if 60 is the MIN in batch: (60-60)/range = 0 → Shows "Keywords: 0"
+    //
+    // FIX: Use max normalization (raw/max) instead of min-max ((raw-min)/range)
+    // This ensures papers with actual keyword matches show a non-zero score,
+    // while papers with NO matches correctly show 0.
+    // ========================================================================
     const bm25Scores = papersForSemantic.map((p: MutablePaper) => p.relevanceScore ?? 0);
     const maxBM25 = Math.max(...bm25Scores, 1);
-    const minBM25 = Math.min(...bm25Scores);
-    const bm25Range = maxBM25 - minBM25 || 1;
 
     // Phase 10.115: NETFLIX-GRADE Universal Relevance Formula
     // ============================================================================
@@ -642,7 +734,9 @@ export class SearchPipelineService {
     const THEMEFIT_WEIGHT = semanticEnabled ? SCORE_WEIGHTS.THEMEFIT : SCORE_WEIGHTS.THEMEFIT_FALLBACK;
 
     papersForSemantic.forEach((paper: MutablePaper, idx: number) => {
-      const normalizedBM25 = ((paper.relevanceScore ?? 0) - minBM25) / bm25Range;
+      // Phase 10.170 FIX: Max normalization (0 = no matches, 1 = max matches)
+      // Papers with actual keyword matches will show non-zero scores
+      const normalizedBM25 = (paper.relevanceScore ?? 0) / maxBM25;
       const normalizedSemantic = semanticScores[idx] ?? 0.5;
       const themeFitScore = themeFitScores[idx] ?? 0.5;
 
@@ -704,15 +798,16 @@ export class SearchPipelineService {
     config.emitProgress('Stage 4: Filtering by overall score (relevance + quality)...', 92);
 
     // Phase 10.155: Filter by overallScore with fallback to qualityScore for safety
+    // Phase 10.170: Use purpose-aware threshold (effectiveQualityThreshold) if purpose is set
     // overallScore = harmonic mean of (relevance, quality) ensures BOTH are high
-    // Threshold: 20 (low because harmonic mean is stricter than raw qualityScore)
     const qualityFiltered = papersForSemantic.filter(
-      (p: MutablePaper) => (p.overallScore ?? p.qualityScore ?? 0) >= QUALITY_THRESHOLD
+      (p: MutablePaper) => (p.overallScore ?? p.qualityScore ?? 0) >= effectiveQualityThreshold
     );
 
     const qualityPassRate = (qualityFiltered.length / papersForSemantic.length * 100).toFixed(1);
     this.logger.log(
-      `✅ Overall Score Filter: ${papersForSemantic.length} → ${qualityFiltered.length} papers (${qualityPassRate}% pass rate)`
+      `✅ Overall Score Filter: ${papersForSemantic.length} → ${qualityFiltered.length} papers ` +
+      `(${qualityPassRate}% pass rate, threshold: ${effectiveQualityThreshold}%${purposeConfig ? ' purpose-aware' : ' default'})`
     );
 
     this.perfMonitor.endStage('Overall Score Filter', qualityFiltered.length);
@@ -759,8 +854,8 @@ export class SearchPipelineService {
       paper.neuralRank = idx + 1;
     });
 
-    // Take top N papers (default 300)
-    const targetCount = Math.min(config.targetPaperCount, qualityFiltered.length);
+    // Take top N papers (Phase 10.170: use effectiveTargetPaperCount for purpose-aware limits)
+    const targetCount = Math.min(effectiveTargetPaperCount, qualityFiltered.length);
     const finalPapers = qualityFiltered.slice(0, targetCount);
 
     this.perfMonitor.endStage('Final Selection', finalPapers.length);
@@ -769,10 +864,10 @@ export class SearchPipelineService {
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     this.logger.log(
       `\n${'═'.repeat(80)}` +
-      `\n✅ ENHANCED PIPELINE COMPLETE:` +
+      `\n✅ ENHANCED PIPELINE COMPLETE${purposeConfig ? ` (${config.purpose})` : ''}:` +
       `\n   Input: ${papers.length} papers` +
-      `\n   After Quality Filter: ${qualityFiltered.length} papers` +
-      `\n   Final Selection: ${finalPapers.length} papers` +
+      `\n   After Quality Filter: ${qualityFiltered.length} papers (threshold: ${effectiveQualityThreshold}%)` +
+      `\n   Final Selection: ${finalPapers.length} papers (target: ${effectiveTargetPaperCount})` +
       `\n   Duration: ${duration}s` +
       `\n   Semantic Matching: ${semanticEnabled ? 'ENABLED' : 'DISABLED (fallback)'}` +
       `\n` +
@@ -890,6 +985,16 @@ export class SearchPipelineService {
       config.queryComplexity || 'comprehensive'
     );
 
+    // Phase 10.170 Week 2 Optimization: Resolve purpose config once at start
+    let purposeConfig: PurposeFetchingConfig | null = null;
+    if (config.purpose) {
+      try {
+        purposeConfig = this.purposeAwareConfig.getConfig(config.purpose);
+      } catch (error) {
+        this.logger.warn(`[executePipeline] Purpose config failed: ${(error as Error).message}`);
+      }
+    }
+
     // Track initial array copy (COPY #1 of 2)
     this.perfMonitor.recordArrayCopy();
 
@@ -933,11 +1038,58 @@ export class SearchPipelineService {
     // Stage 7: Final Sorting
     mutablePapers = this.sortPapers(mutablePapers, config.sortOption);
 
+    // Stage 7.5: Content-First Filtering (Phase 10.170 Week 4 - Gap #2 Fix)
+    // Only run if TwoStageFilterService is available and purpose is specified
+    // This filters out papers that don't meet content eligibility BEFORE quality scoring
+    if (this.twoStageFilter && config.purpose) {
+      mutablePapers = this.applyContentFirstFiltering(
+        mutablePapers,
+        config.purpose,
+        config.emitProgress,
+      );
+    }
+
     // Stage 8: Quality Threshold & Sampling
     mutablePapers = this.applyQualityThresholdAndSampling(
       mutablePapers,
       config.targetPaperCount,
     );
+
+    // Stage 9: Full-Text Detection (Phase 10.170 Week 2)
+    // Only run if service is available and purpose requires full-text
+    // Phase 10.170 Week 2 Audit: Respect contentPriority levels
+    // OPTIMIZATION: Reuse purposeConfig from earlier (line ~379) instead of calling getConfig() again
+    if (this.fulltextDetection && purposeConfig && purposeConfig.contentPriority !== 'low') {
+      mutablePapers = await this.enhanceWithFullTextDetection(
+        mutablePapers,
+        config.emitProgress,
+        purposeConfig.contentPriority,
+        purposeConfig.fullTextRequirement.fullTextBoost,
+      );
+
+      // Phase 10.170 Week 2 Audit: Validate minFullTextRequired
+      if (purposeConfig.fullTextRequirement.strictRequirement) {
+        const fullTextCount = mutablePapers.filter(p => p.hasFullText).length;
+        const minRequired = purposeConfig.fullTextRequirement.minRequired;
+        if (fullTextCount < minRequired) {
+          this.logger.warn(
+            `⚠️ [Stage 9] Full-text requirement not met: ${fullTextCount}/${minRequired} papers have full-text ` +
+            `(purpose: ${config.purpose}, strictRequirement: true)`
+          );
+        }
+      }
+    }
+
+    // Stage 10: Purpose-Aware Quality Scoring & Diversity (Phase 10.170 Week 3)
+    // Only run if purpose is specified and services are available
+    if (config.purpose && this.purposeAwareScoring && this.adaptiveThreshold && this.diversityScoring) {
+      mutablePapers = await this.applyPurposeAwareQualityScoring(
+        mutablePapers,
+        config.purpose,
+        config.targetPaperCount,
+        config.emitProgress,
+      );
+    }
 
     // Performance report
     this.perfMonitor.logReport();
@@ -1872,6 +2024,479 @@ export class SearchPipelineService {
     return papers;
   }
 
+  // ===========================================================================
+  // PHASE 10.170 WEEK 4: CONTENT-FIRST FILTERING (Gap #2 Fix)
+  // ===========================================================================
+
+  /**
+   * STAGE 7.5: Content-First Filtering
+   *
+   * Phase 10.170 Week 4 Gap #2 Fix: Uses TwoStageFilterService for content-first filtering
+   *
+   * This ensures papers meet content eligibility requirements (abstract presence,
+   * year bounds, minimum content length) BEFORE applying quality scoring.
+   *
+   * Architecture benefit: Content-first filtering architecture separates concerns:
+   * - Stage 7.5: Content eligibility (does paper have required content?)
+   * - Stage 8: Quality threshold (is content quality high enough?)
+   * - Stage 10: Purpose-aware scoring (refined scoring for specific purposes)
+   *
+   * @param papers Input papers
+   * @param purpose Research purpose for content requirements
+   * @param emitProgress Progress callback for WebSocket
+   * @returns Content-eligible papers
+   */
+  private applyContentFirstFiltering(
+    papers: MutablePaper[],
+    purpose: ResearchPurpose,
+    emitProgress: (message: string, progress: number) => void,
+  ): MutablePaper[] {
+    if (!this.twoStageFilter) {
+      return papers; // Service not available, skip
+    }
+
+    this.perfMonitor.startStage('Content-First Filtering', papers.length);
+
+    const beforeCount = papers.length;
+
+    // Convert MutablePaper to PaperForFilter
+    const papersForFilter: PaperForFilter[] = papers.map(p => ({
+      id: p.id,
+      title: p.title,
+      abstract: p.abstract ?? null,
+      doi: p.doi ?? null,
+      year: p.year ?? null,
+      citationCount: p.citationCount ?? null,
+      venue: p.venue ?? null,
+      hasFullText: p.hasFullText ?? false,
+      qualityScore: p.qualityScore ?? undefined,
+    }));
+
+    // Run content eligibility stage only (not full two-stage filter)
+    // We only need content eligibility here; quality is handled by Stage 8 and 10
+    const contentResult = this.twoStageFilter.contentEligibilityOnly(
+      papersForFilter,
+      purpose,
+    );
+
+    // Build set of eligible paper IDs for O(1) lookup
+    const eligibleIds = new Set(contentResult.eligible.map(p => p.id));
+
+    // Filter in-place for performance
+    let writeIdx = 0;
+    for (let i = 0; i < papers.length; i++) {
+      if (eligibleIds.has(papers[i].id)) {
+        if (writeIdx !== i) {
+          papers[writeIdx] = papers[i];
+        }
+        writeIdx++;
+      }
+    }
+    papers.length = writeIdx;
+
+    const passRate = beforeCount > 0
+      ? ((papers.length / beforeCount) * 100).toFixed(1)
+      : '0.0';
+
+    this.logger.log(
+      `✅ [Stage 7.5] Content-First Filtering (${purpose}): ${beforeCount} → ${papers.length} papers ` +
+      `(${passRate}% pass rate, ${contentResult.durationMs}ms)`
+    );
+
+    // Log top rejection reasons if significant filtering occurred
+    if (contentResult.rejectionReasons.size > 0 && beforeCount - papers.length > 10) {
+      const reasonCounts = new Map<string, number>();
+      for (const reason of contentResult.rejectionReasons.values()) {
+        reasonCounts.set(reason, (reasonCounts.get(reason) ?? 0) + 1);
+      }
+      const topReasons = [...reasonCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([reason, count]) => `${reason} (${count})`)
+        .join(', ');
+
+      this.logger.debug(`   Top rejection reasons: ${topReasons}`);
+    }
+
+    emitProgress(
+      `Content eligibility: ${papers.length}/${beforeCount} papers (${purpose})`,
+      77,
+    );
+
+    this.perfMonitor.endStage('Content-First Filtering', papers.length);
+
+    return papers;
+  }
+
+  // ===========================================================================
+  // PHASE 10.170 WEEK 2: FULL-TEXT DETECTION INTEGRATION
+  // ===========================================================================
+
+  /**
+   * STAGE 9: Full-Text Detection Enhancement
+   *
+   * Enhances papers with intelligent full-text detection results using
+   * the 7-tier waterfall detection strategy.
+   *
+   * Detection tiers (in order):
+   * 1. Database check - Already have full-text?
+   * 2. Direct URL - openAccessPdf.url or pdfUrl available?
+   * 3. PMC Pattern - Construct URL from PMC ID
+   * 4. Unpaywall API - Query Unpaywall for OA location
+   * 5. Publisher HTML - Extract from publisher landing page
+   * 6. Secondary Links - Scan page for PDF/repository links
+   * 7. AI Verification - Verify content is full-text (expensive)
+   *
+   * @param papers Input papers to enhance
+   * @param emitProgress Progress callback for WebSocket
+   * @param contentPriority Content priority level for detection depth
+   * @param fullTextBoost Score boost for papers with full-text
+   * @returns Papers enhanced with detection results
+   *
+   * @since Phase 10.170 Week 2
+   * @updated Phase 10.170 Week 2 Audit - Added contentPriority and fullTextBoost
+   */
+  private async enhanceWithFullTextDetection(
+    papers: MutablePaper[],
+    emitProgress: (message: string, progress: number) => void,
+    contentPriority: 'medium' | 'high' | 'critical' = 'high',
+    fullTextBoost: number = 15,
+  ): Promise<MutablePaper[]> {
+    if (!this.fulltextDetection || papers.length === 0) {
+      return papers;
+    }
+
+    this.perfMonitor.startStage('Full-Text Detection', papers.length);
+    emitProgress('🔍 Detecting full-text availability...', 85);
+
+    // Phase 10.170 Week 2 Audit: Determine detection depth based on contentPriority
+    // - medium: Tiers 1-4 (database, URL, PMC, Unpaywall)
+    // - high: Tiers 1-6 (+ Publisher HTML, Secondary Links)
+    // - critical: Tiers 1-7 (+ AI Verification for literature synthesis)
+    const detectionSettings = {
+      medium: { maxTiers: 4, skipAI: true },
+      high: { maxTiers: 6, skipAI: true },
+      critical: { maxTiers: 7, skipAI: false },
+    };
+    const settings = detectionSettings[contentPriority];
+
+    this.logger.log(
+      `📊 [Stage 9] Detection settings: contentPriority=${contentPriority}, ` +
+      `maxTiers=${settings.maxTiers}, skipAI=${settings.skipAI}, fullTextBoost=${fullTextBoost}`
+    );
+
+    try {
+      // Convert MutablePaper to PaperForDetection
+      // Map Paper.fullTextStatus to PaperForDetection.fullTextStatus
+      // Phase 10.170 Week 2 Audit: Enhanced externalIds mapping
+      const papersForDetection: PaperForDetection[] = papers.map((paper: MutablePaper): PaperForDetection => {
+        // Build externalIds object with all available identifiers
+        const externalIds: PaperForDetection['externalIds'] =
+          paper.pmcId || paper.arXivId || paper.doi
+            ? {
+                ...(paper.pmcId && { PubMedCentral: paper.pmcId }),
+                ...(paper.arXivId && { ArXiv: paper.arXivId }),
+                ...(paper.doi && { DOI: paper.doi }),
+              }
+            : undefined;
+
+        return {
+          id: paper.id,
+          doi: paper.doi ?? undefined,
+          title: paper.title ?? undefined,
+          pdfUrl: paper.pdfUrl ?? undefined,
+          fullText: paper.fullText ?? undefined,
+          // Map Paper status to PaperForDetection status
+          fullTextStatus: paper.fullTextStatus === 'available' || paper.fullTextStatus === 'success' ? 'available' :
+                          paper.fullTextStatus === 'fetching' ? 'pending' :
+                          paper.fullTextStatus === 'failed' ? 'failed' : undefined,
+          openAccessPdf: paper.pdfUrl ? { url: paper.pdfUrl } : undefined,
+          externalIds,
+          venue: paper.venue ?? undefined,
+        };
+      });
+
+      // Batch detection with progress tracking
+      // Phase 10.170 Week 2 Audit: Use contentPriority-based detection settings
+      const batchResult = await this.fulltextDetection.detectBatch(
+        papersForDetection,
+        {
+          skipDatabaseCheck: false,
+          skipAIVerification: settings.skipAI,
+          maxTiers: settings.maxTiers,
+          tierTimeoutMs: 5000,
+        },
+      );
+
+      // Enhance papers with detection results
+      let detectedCount = 0;
+      let highConfidenceCount = 0;
+
+      for (const paper of papers) {
+        const result: FullTextDetectionResult | undefined = batchResult.results[paper.id];
+
+        if (result && result.isAvailable) {
+          detectedCount++;
+
+          // Update paper with detection info
+          if (result.primaryUrl && !paper.pdfUrl) {
+            paper.pdfUrl = result.primaryUrl;
+          }
+
+          // Mark full-text as available if detected with high confidence
+          if (result.confidence === 'high' || result.confidence === 'ai_verified') {
+            highConfidenceCount++;
+            paper.hasFullText = true;
+
+            // Phase 10.170 Week 2 Audit: Apply fullTextBoost to quality score
+            // This boost rewards papers with full-text availability (purpose-specific)
+            if (paper.qualityScore !== undefined && fullTextBoost > 0) {
+              const originalScore = paper.qualityScore;
+              paper.qualityScore = Math.min(100, paper.qualityScore + fullTextBoost);
+              this.logger.debug(
+                `[Stage 9] Applied fullTextBoost to ${paper.id}: ${originalScore} → ${paper.qualityScore} (+${fullTextBoost})`
+              );
+            }
+
+            if (!paper.fullTextStatus || paper.fullTextStatus === 'not_fetched') {
+              paper.fullTextStatus = 'not_fetched'; // Ready to fetch
+            }
+
+            // Map detection source to fullTextSource (only valid Paper.fullTextSource values)
+            // Phase 10.170 Week 2 Audit: Added missing sources (ssrn, secondary_link)
+            if (result.sources.length > 0) {
+              const sourceMap: Record<string, MutablePaper['fullTextSource']> = {
+                'pmc': 'pmc',
+                'unpaywall': 'unpaywall',
+                'arxiv': 'manual', // arXiv maps to manual (preprints)
+                'biorxiv': 'manual', // bioRxiv maps to manual (preprints)
+                'medrxiv': 'manual', // medRxiv maps to manual (preprints)
+                'ssrn': 'manual', // SSRN maps to manual (preprints)
+                'publisher_html': 'publisher',
+                'publisher_pdf': 'publisher',
+                'repository': 'manual',
+                'secondary_link': 'publisher', // Secondary links typically from publisher pages
+                'manual': 'manual',
+                'database': 'manual',
+              };
+              paper.fullTextSource = sourceMap[result.sources[0]] ?? 'publisher';
+            }
+          }
+        }
+      }
+
+      this.logger.log(
+        `🔍 [Phase 10.170 Week 2] Full-Text Detection: ${detectedCount}/${papers.length} papers with available full-text ` +
+        `(${highConfidenceCount} high confidence)`
+      );
+
+      emitProgress(
+        `✅ Full-text detected for ${detectedCount} papers (${highConfidenceCount} high confidence)`,
+        88,
+      );
+
+      this.perfMonitor.endStage('Full-Text Detection', papers.length);
+      return papers;
+    } catch (error) {
+      this.logger.error(
+        `⚠️ [Phase 10.170 Week 2] Full-Text Detection failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      this.perfMonitor.endStage('Full-Text Detection', papers.length);
+      return papers; // Graceful degradation - return papers without enhancement
+    }
+  }
+
+  // ===========================================================================
+  // PHASE 10.170 WEEK 3: PURPOSE-AWARE QUALITY SCORING & DIVERSITY
+  // ===========================================================================
+
+  /**
+   * STAGE 10: Purpose-Aware Quality Scoring & Diversity Enhancement
+   *
+   * Enterprise-grade quality scoring with purpose-specific weights and
+   * adaptive threshold relaxation for Q-methodology diversity.
+   *
+   * ALGORITHM:
+   * 1. Score papers with purpose-specific quality weights
+   * 2. Apply adaptive threshold relaxation if target not met
+   * 3. For Q-methodology: Select diverse perspectives
+   * 4. Return enhanced papers with quality scores
+   *
+   * SCIENTIFIC FOUNDATION:
+   * - Purpose-specific weights (Phase 10.170 research)
+   * - Adaptive threshold algorithms (Robertson & Walker, 1994)
+   * - Shannon diversity index for perspective variety
+   * - Simpson's index for dominance detection
+   *
+   * @param papers Input papers to enhance
+   * @param purpose Research purpose (determines weights)
+   * @param targetCount Target number of papers
+   * @param emitProgress Progress callback for WebSocket
+   * @returns Papers enhanced with quality scores
+   *
+   * @since Phase 10.170 Week 3
+   */
+  private async applyPurposeAwareQualityScoring(
+    papers: MutablePaper[],
+    purpose: ResearchPurpose,
+    targetCount: number,
+    emitProgress: (message: string, progress: number) => void,
+  ): Promise<MutablePaper[]> {
+    // Guard: Services must be available
+    if (!this.purposeAwareScoring || !this.adaptiveThreshold || !this.diversityScoring) {
+      this.logger.debug('[Stage 10] Purpose-aware services not available, skipping');
+      return papers;
+    }
+
+    if (papers.length === 0) {
+      return papers;
+    }
+
+    this.perfMonitor.startStage('Purpose-Aware Quality Scoring', papers.length);
+    emitProgress('🎯 Applying purpose-aware quality scoring...', 90);
+
+    try {
+      // Convert MutablePaper to ScoringPaperInput
+      const scoringInputs: ScoringPaperInput[] = papers.map((paper: MutablePaper): ScoringPaperInput => ({
+        id: paper.id,
+        title: paper.title ?? '',
+        abstract: paper.abstract ?? null,
+        keywords: paper.keywords ?? [],
+        citationCount: paper.citationCount ?? null,
+        year: paper.year ?? null,
+        venue: paper.venue ?? null,
+        impactFactor: null, // Not available in MutablePaper
+        hasFullText: paper.hasFullText ?? false,
+        wordCount: null, // Not available in MutablePaper
+        existingQualityScore: paper.qualityScore ?? null,
+      }));
+
+      // Step 1: Score papers with purpose-specific weights
+      const batchResult = this.purposeAwareScoring.scoreBatch({
+        papers: scoringInputs,
+        purpose,
+      });
+
+      this.logger.log(
+        `🎯 [Stage 10] Purpose-Aware Scoring: ${batchResult.passingPapers.length}/${papers.length} passing ` +
+        `(avg: ${batchResult.stats.averageScore.toFixed(1)}, pass rate: ${(batchResult.stats.passRate * 100).toFixed(1)}%)`
+      );
+
+      // Step 2: Apply adaptive threshold if target not met
+      let passingPaperIds: Set<string>;
+      let thresholdApplied = batchResult.stats.passRate * 100;
+
+      if (batchResult.passingPapers.length < targetCount) {
+        const thresholdResult = this.adaptiveThreshold.applyAdaptiveThreshold(
+          batchResult.scores,
+          purpose,
+          targetCount,
+        );
+
+        passingPaperIds = new Set(
+          batchResult.scores
+            .filter((s: { totalScore: number }) => s.totalScore >= thresholdResult.currentThreshold)
+            .map((s: { paperId: string }) => s.paperId)
+        );
+        thresholdApplied = thresholdResult.currentThreshold;
+
+        this.logger.log(
+          `🔄 [Stage 10] Adaptive Threshold: ${thresholdResult.originalThreshold}% → ${thresholdResult.currentThreshold}% ` +
+          `(${thresholdResult.stepsApplied} steps, ${thresholdResult.passingPapers} papers)`
+        );
+      } else {
+        passingPaperIds = new Set(batchResult.passingPapers.map((s: { paperId: string }) => s.paperId));
+      }
+
+      // Step 3: For Q-methodology, apply diversity scoring
+      let selectedPaperIds: Set<string> = passingPaperIds;
+      if (purpose === 'q_methodology' && papers.length > targetCount) {
+        const diverseSelection = this.diversityScoring.selectForMaxDiversity(
+          scoringInputs,
+          targetCount,
+        );
+
+        selectedPaperIds = new Set(diverseSelection.map((p: ScoringPaperInput) => p.id));
+
+        // Analyze diversity of selected corpus
+        const corpusAnalysis = this.diversityScoring.analyzeCorpusDiversity(
+          scoringInputs.filter((p: ScoringPaperInput) => selectedPaperIds.has(p.id)),
+        );
+
+        this.logger.log(
+          `🎭 [Stage 10] Q-Methodology Diversity: Shannon=${corpusAnalysis.shannonIndex.toFixed(2)}, ` +
+          `Simpson=${corpusAnalysis.simpsonIndex.toFixed(2)}, ` +
+          `Coverage=${corpusAnalysis.uniquePerspectives}/${PERSPECTIVE_CATEGORIES.length} perspectives, ` +
+          `Health: ${corpusAnalysis.healthStatus}`
+        );
+
+        if (corpusAnalysis.underrepresented.length > 0) {
+          this.logger.warn(
+            `⚠️ [Stage 10] Underrepresented perspectives: ${corpusAnalysis.underrepresented.join(', ')}`
+          );
+        }
+      }
+
+      // Step 4: Create score map for quick lookup (strongly typed)
+      const scoreMap = new Map<string, PurposeAwareScoreResult>(
+        batchResult.scores.map((s: PurposeAwareScoreResult) => [s.paperId, s])
+      );
+
+      // Step 5: Filter and enhance papers
+      let writeIdx = 0;
+      for (let i = 0; i < papers.length; i++) {
+        const paper = papers[i];
+        const score = scoreMap.get(paper.id);
+
+        // Keep paper if in selected set and has a valid score
+        if (selectedPaperIds.has(paper.id) && score !== undefined) {
+          // Enhance paper with quality score
+          paper.qualityScore = score.totalScore;
+
+          // Add metadata for debugging/analytics (optional, for transparency)
+          Object.defineProperty(paper, '_purposeAwareMetrics', {
+            value: {
+              contentScore: score.components.content.weighted,
+              citationScore: score.components.citation.weighted,
+              journalScore: score.components.journal.weighted,
+              methodologyScore: score.components.methodology.weighted,
+              diversityScore: score.components.diversity?.weighted ?? 0,
+              fullTextBonus: score.fullTextBonus,
+              thresholdApplied,
+            },
+            enumerable: false,
+            configurable: true,
+          });
+
+          if (writeIdx !== i) {
+            papers[writeIdx] = papers[i];
+          }
+          writeIdx++;
+        }
+      }
+      papers.length = writeIdx;
+
+      const passRate = ((papers.length / scoringInputs.length) * 100).toFixed(1);
+      this.logger.log(
+        `✅ [Stage 10] Purpose-Aware Filtering Complete: ${papers.length} papers (${passRate}% pass rate, threshold: ${thresholdApplied.toFixed(1)}%)`
+      );
+
+      emitProgress(
+        `✅ Purpose-aware scoring: ${papers.length} papers meet ${purpose} criteria`,
+        92,
+      );
+
+      this.perfMonitor.endStage('Purpose-Aware Quality Scoring', papers.length);
+      return papers;
+    } catch (error) {
+      this.logger.error(
+        `⚠️ [Stage 10] Purpose-Aware Scoring failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      this.perfMonitor.endStage('Purpose-Aware Quality Scoring', papers.length);
+      return papers; // Graceful degradation
+    }
+  }
+
   /**
    * Log performance optimization metrics
    */
@@ -1965,17 +2590,17 @@ export class SearchPipelineService {
     semanticWeight: number = 0.55,
     themeFitWeight: number = 0.30,
   ): PaperWithSemanticScore[] {
-    // Normalize BM25 scores
+    // Normalize BM25 scores using MAX normalization (Phase 10.170 CRITICAL FIX)
+    // This ensures papers with actual keyword matches show non-zero scores
     const bm25Scores = papers.map(p => p.relevanceScore ?? 0);
     const maxBM25 = Math.max(...bm25Scores, 1);
-    const minBM25 = Math.min(...bm25Scores);
-    const bm25Range = maxBM25 - minBM25 || 1;
 
     return papers.map(paper => {
       // Phase 10.156: NaN-safe normalization
+      // Phase 10.170 FIX: Use max normalization (raw/max) instead of min-max
       const rawBM25 = paper.relevanceScore ?? 0;
       const safeBM25 = Number.isFinite(rawBM25) ? rawBM25 : 0;
-      const normalizedBM25 = Math.max(0, Math.min(1, (safeBM25 - minBM25) / bm25Range));
+      const normalizedBM25 = Math.max(0, Math.min(1, safeBM25 / maxBM25));
       const rawSemantic = paper.semanticScore ?? 0.5;
       const semanticScore = Number.isFinite(rawSemantic) ? rawSemantic : 0.5;
 

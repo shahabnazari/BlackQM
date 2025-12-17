@@ -182,6 +182,26 @@ import { SemanticMetricsService } from './services/semantic-metrics.service';
 import { SemanticCircuitBreakerService } from './services/semantic-circuit-breaker.service';
 import { SemanticHealthController } from './controllers/semantic-health.controller';
 import { PDFController } from './controllers/pdf.controller';
+// Phase 10.170: Purpose-Aware Pipeline System
+import { PurposeAwareConfigService } from './services/purpose-aware-config.service';
+import { PurposeAwareSearchService } from './services/purpose-aware-search.service';
+// Phase 10.170 Week 2: Intelligent Full-Text Detection Service
+import { IntelligentFullTextDetectionService } from './services/intelligent-fulltext-detection.service';
+// Phase 10.170 Week 3: Purpose-Aware Quality Scoring & Diversity
+import { PurposeAwareScoringService } from './services/purpose-aware-scoring.service';
+import { AdaptiveThresholdService } from './services/adaptive-threshold.service';
+import { DiversityScoringService } from './services/diversity-scoring.service';
+// Phase 10.170 Week 4: Netflix-Grade Production Infrastructure
+import { PurposeAwareMetricsService } from './services/purpose-aware-metrics.service';
+import { PurposeAwareCacheService } from './services/purpose-aware-cache.service';
+import { PurposeAwareCircuitBreakerService } from './services/purpose-aware-circuit-breaker.service';
+import { PurposeAwareHealthController } from './controllers/purpose-aware-health.controller';
+// Phase 10.170 Week 4+: Specialized Pipelines (Meta-ethnography, Grounded Theory)
+import { TwoStageFilterService } from './services/two-stage-filter.service';
+import { ConstantComparisonEngine } from './services/constant-comparison.service';
+import { TheoreticalSamplingService } from './services/theoretical-sampling.service';
+import { LiteratureSynthesisPipelineService } from './services/literature-synthesis-pipeline.service';
+import { HypothesisGenerationPipelineService } from './services/hypothesis-generation-pipeline.service';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
 import { ThemeExtractionGateway } from './gateways/theme-extraction.gateway';
@@ -204,7 +224,7 @@ import { AIModule } from '../ai/ai.module';
       max: 1000, // Maximum items in cache
     }),
   ],
-  controllers: [LiteratureController, PDFController, ThematizationController, SemanticHealthController],
+  controllers: [LiteratureController, PDFController, ThematizationController, SemanticHealthController, PurposeAwareHealthController],
   providers: [
     LiteratureService,
     LiteratureGateway,
@@ -386,6 +406,25 @@ import { AIModule } from '../ai/ai.module';
     // Phase 10.113 Week 12: Production Monitoring & Error Recovery
     SemanticMetricsService,
     SemanticCircuitBreakerService,
+    // Phase 10.170: Purpose-Aware Pipeline System
+    PurposeAwareConfigService,
+    PurposeAwareSearchService,
+    // Phase 10.170 Week 2: Intelligent Full-Text Detection Service
+    IntelligentFullTextDetectionService,
+    // Phase 10.170 Week 3: Purpose-Aware Quality Scoring & Diversity
+    PurposeAwareScoringService,
+    AdaptiveThresholdService,
+    DiversityScoringService,
+    // Phase 10.170 Week 4: Netflix-Grade Production Infrastructure
+    PurposeAwareMetricsService,
+    PurposeAwareCacheService,
+    PurposeAwareCircuitBreakerService,
+    // Phase 10.170 Week 4+: Specialized Pipelines (Meta-ethnography, Grounded Theory)
+    TwoStageFilterService,
+    ConstantComparisonEngine,
+    TheoreticalSamplingService,
+    LiteratureSynthesisPipelineService,
+    HypothesisGenerationPipelineService,
   ],
   exports: [
     LiteratureService,
@@ -492,6 +531,25 @@ import { AIModule } from '../ai/ai.module';
     // Phase 10.113 Week 12: Production Monitoring & Error Recovery
     SemanticMetricsService,
     SemanticCircuitBreakerService,
+    // Phase 10.170: Purpose-Aware Pipeline System
+    PurposeAwareConfigService,
+    PurposeAwareSearchService,
+    // Phase 10.170 Week 2: Intelligent Full-Text Detection Service
+    IntelligentFullTextDetectionService,
+    // Phase 10.170 Week 3: Purpose-Aware Quality Scoring & Diversity
+    PurposeAwareScoringService,
+    AdaptiveThresholdService,
+    DiversityScoringService,
+    // Phase 10.170 Week 4: Netflix-Grade Production Infrastructure
+    PurposeAwareMetricsService,
+    PurposeAwareCacheService,
+    PurposeAwareCircuitBreakerService,
+    // Phase 10.170 Week 4+: Specialized Pipelines (Meta-ethnography, Grounded Theory)
+    TwoStageFilterService,
+    ConstantComparisonEngine,
+    TheoreticalSamplingService,
+    LiteratureSynthesisPipelineService,
+    HypothesisGenerationPipelineService,
   ],
 })
 export class LiteratureModule implements OnModuleInit {
