@@ -26,7 +26,7 @@
  * @since Phase 10.170 Week 3
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import {
   PerspectiveCategory,
   PERSPECTIVE_CATEGORIES,
@@ -37,6 +37,9 @@ import {
   getDiversityHealthStatus,
   validateDiversityMetrics,
 } from '../types/purpose-aware-scoring.types';
+import { ResearchPurpose } from '../types/purpose-aware.types';
+// Phase 10.170 Week 4: Netflix-Grade Metrics Integration
+import { PurposeAwareMetricsService } from './purpose-aware-metrics.service';
 
 // ============================================================================
 // PERSPECTIVE DETECTION CONFIGURATION
@@ -109,11 +112,17 @@ const STRONG_MATCH_THRESHOLD = 5;
 export class DiversityScoringService {
   private readonly logger = new Logger(DiversityScoringService.name);
 
-  constructor() {
+  constructor(
+    // Phase 10.170 Week 4: Netflix-Grade Metrics Integration
+    @Optional() private readonly metricsService?: PurposeAwareMetricsService,
+  ) {
     this.logger.log('✅ [DiversityScoring] Phase 10.170 Week 3 - Service initialized');
     this.logger.log(
       `[DiversityScoring] Tracking ${PERSPECTIVE_CATEGORIES.length} perspective categories`
     );
+    if (metricsService) {
+      this.logger.log('✅ [Phase 10.170 Week 4] Metrics collection enabled for diversity');
+    }
   }
 
   // ==========================================================================
@@ -182,11 +191,15 @@ export class DiversityScoringService {
    * perspectives, and provides actionable recommendations.
    *
    * @param papers Papers in the corpus
+   * @param purpose Optional research purpose for metrics tracking
    * @returns Corpus diversity metrics
    */
   analyzeCorpusDiversity(
     papers: readonly ScoringPaperInput[],
+    purpose?: ResearchPurpose,
   ): CorpusDiversityMetrics {
+    const startTime = Date.now();
+
     if (papers.length === 0) {
       return this.buildEmptyMetrics();
     }
@@ -255,6 +268,12 @@ export class DiversityScoringService {
       `Shannon=${shannonIndex.toFixed(2)}, Simpson=${simpsonIndex.toFixed(2)}, ` +
       `health=${metrics.healthStatus}`
     );
+
+    // Phase 10.170 Week 4: Record metrics
+    if (purpose && this.metricsService) {
+      const durationMs = Date.now() - startTime;
+      this.metricsService.recordDiversityAnalysis(purpose, shannonIndex, durationMs);
+    }
 
     return metrics;
   }
