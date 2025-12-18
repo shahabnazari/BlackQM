@@ -27,6 +27,13 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { Paper, LiteratureSource } from '../dto/literature.dto';
 import Bottleneck from 'bottleneck';
+// Phase 10.182: Add word count calculation (was missing - papers showed 0 words)
+import {
+  calculateAbstractWordCount,
+  calculateComprehensiveWordCount,
+} from '../utils/word-count.util';
+// Phase 10.184: URL validation at source level (prevents bad URLs from propagating)
+import { isValidExternalURL } from '../types/fulltext-detection.types';
 // Phase 10.106: Retry service for resilience
 import { RetryService } from '../../../common/services/retry.service';
 
@@ -41,7 +48,28 @@ export interface OpenAlexSearchOptions {
 }
 
 /**
+ * OpenAlex OA location (for best_oa_location and primary_location)
+ * Phase 10.184: Added for PDF URL extraction
+ */
+interface OpenAlexOALocation {
+  readonly is_oa?: boolean;
+  readonly landing_page_url?: string;
+  readonly pdf_url?: string;
+  readonly source?: {
+    readonly display_name?: string;
+    readonly issn_l?: string;
+    readonly summary_stats?: {
+      readonly h_index?: number;
+      readonly '2yr_mean_citedness'?: number;
+    };
+  };
+  readonly license?: string;
+  readonly version?: string;
+}
+
+/**
  * OpenAlex work response (from API)
+ * Phase 10.184: Added best_oa_location and open_access.oa_url for PDF extraction
  */
 interface OpenAlexWork {
   readonly id: string;
@@ -56,17 +84,12 @@ interface OpenAlexWork {
   readonly open_access?: {
     readonly is_oa?: boolean;
     readonly oa_status?: string;
+    /** Phase 10.184: OA URL for direct PDF/article access */
+    readonly oa_url?: string;
   };
-  readonly primary_location?: {
-    readonly source?: {
-      readonly display_name?: string;
-      readonly issn_l?: string;
-      readonly summary_stats?: {
-        readonly h_index?: number;
-        readonly '2yr_mean_citedness'?: number;
-      };
-    };
-  };
+  /** Phase 10.184: Best open access location with PDF URL */
+  readonly best_oa_location?: OpenAlexOALocation;
+  readonly primary_location?: OpenAlexOALocation;
   readonly primary_topic?: {
     readonly display_name?: string;
   };
@@ -234,11 +257,14 @@ export class OpenAlexService {
       }
 
       // Build params with year filtering and pagination
+      // Phase 10.184: Add select parameter to explicitly request OA fields for PDF detection
       const params: Record<string, string | number> = {
         search: query,
         per_page: perPage,
         page: page, // Phase 10.158: Pagination support
         sort: 'relevance_score:desc', // Most relevant first
+        // Phase 10.184: Explicitly request OA location fields (critical for PDF detection)
+        select: 'id,doi,title,display_name,publication_year,cited_by_count,relevance_score,abstract_inverted_index,authorships,open_access,best_oa_location,primary_location,primary_topic,topics',
       };
 
       // Add year filtering if provided
@@ -350,6 +376,39 @@ export class OpenAlexService {
 
     // Extract Open Access status
     const isOpenAccess = work.open_access?.is_oa || false;
+    const openAccessStatus = work.open_access?.oa_status || null;
+
+    // Phase 10.184: Extract PDF URL from OpenAlex (CRITICAL for full-text detection)
+    // Priority: best_oa_location.pdf_url > open_access.oa_url > primary_location.pdf_url
+    let pdfUrl: string | null = null;
+    // Phase 10.184 DRY FIX: Use Paper['fullTextSource'] from DTO (single source of truth)
+    let fullTextSource: Paper['fullTextSource'] = undefined;
+
+    // 1. Try best_oa_location (most reliable for PDFs)
+    // Phase 10.184: Validate URL at source level (blocks malicious/malformed URLs)
+    if (work.best_oa_location?.pdf_url && isValidExternalURL(work.best_oa_location.pdf_url)) {
+      pdfUrl = work.best_oa_location.pdf_url;
+      fullTextSource = 'openalex';
+    }
+    // 2. Try open_access.oa_url as fallback
+    else if (work.open_access?.oa_url && isValidExternalURL(work.open_access.oa_url)) {
+      pdfUrl = work.open_access.oa_url;
+      fullTextSource = 'openalex';
+    }
+    // 3. Try primary_location.pdf_url
+    else if (work.primary_location?.pdf_url && isValidExternalURL(work.primary_location.pdf_url)) {
+      pdfUrl = work.primary_location.pdf_url;
+      fullTextSource = 'openalex';
+    }
+    // 4. Try landing_page_url as last resort (not a direct PDF but still useful)
+    else if (work.best_oa_location?.landing_page_url && isValidExternalURL(work.best_oa_location.landing_page_url)) {
+      pdfUrl = work.best_oa_location.landing_page_url;
+      fullTextSource = 'openalex';
+    }
+
+    const hasPdf = !!pdfUrl;
+    // hasFullText is true if we have a PDF URL OR if the paper is marked as open access
+    const hasFullText = hasPdf || isOpenAccess;
 
     // Extract field of study
     const fieldOfStudy: string[] = [];
@@ -385,6 +444,11 @@ export class OpenAlexService {
       totalMetrics: 4,
     };
 
+    // Phase 10.182: Calculate word counts (was missing - papers showed 0 words on cards)
+    const abstractWordCount = abstract ? calculateAbstractWordCount(abstract) : 0;
+    const wordCount = calculateComprehensiveWordCount(title, abstract);
+    const isEligible = wordCount >= 150; // Minimum threshold for theme extraction
+
     // Construct Paper DTO
     const paper: Paper = {
       id: openAlexId,
@@ -407,6 +471,18 @@ export class OpenAlexService {
       // Additional metadata
       isOpenAccess,
       fieldOfStudy: fieldOfStudy.length > 0 ? fieldOfStudy : undefined,
+      // Phase 10.182: Word counts for paper cards (was missing)
+      wordCount,
+      wordCountExcludingRefs: wordCount,
+      abstractWordCount,
+      isEligible,
+      // Phase 10.184: PDF URL and full-text availability (CRITICAL for content analysis)
+      pdfUrl,
+      openAccessStatus,
+      hasPdf,
+      hasFullText,
+      fullTextStatus: hasFullText ? 'available' : 'not_fetched',
+      fullTextSource,
     };
 
     return paper;

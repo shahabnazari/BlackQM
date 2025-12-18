@@ -85,6 +85,8 @@ import {
 import { FAST_API_TIMEOUT } from '../constants/http-config.constants';
 // Phase 10.106 Netflix-Grade: Import RetryService for resilient API calls
 import { RetryService } from '../../../common/services/retry.service';
+// Phase 10.184: URL validation at source level (prevents bad URLs from propagating)
+import { isValidExternalURL } from '../types/fulltext-detection.types';
 
 export interface CrossRefSearchOptions {
   yearFrom?: number;
@@ -110,8 +112,30 @@ interface CrossRefAuthor {
 }
 
 /**
+ * Phase 10.184: Typed interface for CrossRef API link
+ * Netflix-grade: Explicit typing for PDF URL extraction
+ */
+interface CrossRefLink {
+  URL: string;
+  'content-type'?: string;
+  'content-version'?: string;
+  'intended-application'?: string;
+}
+
+/**
+ * Phase 10.184: Typed interface for CrossRef API license
+ */
+interface CrossRefLicense {
+  URL?: string;
+  start?: { 'date-parts'?: number[][] };
+  'delay-in-days'?: number;
+  'content-version'?: string;
+}
+
+/**
  * Phase 10.106 Phase 5: Typed interface for CrossRef API item
  * Netflix-grade: Explicit typing for API response parsing
+ * Phase 10.184: Added link and license fields for PDF URL extraction
  */
 interface CrossRefItem {
   DOI: string;
@@ -128,6 +152,9 @@ interface CrossRefItem {
   publisher?: string;
   ISSN?: string[];
   subject?: string[];
+  // Phase 10.184: Fields for PDF detection
+  link?: CrossRefLink[];
+  license?: CrossRefLicense[];
 }
 
 @Injectable()
@@ -256,6 +283,51 @@ export class CrossRefService {
     // JATS XML like <jats:p xml:lang="en"> contains unescaped quotes that corrupt JSON
     const sanitizedAbstract = this.sanitizeAbstract(item.abstract);
 
+    // Phase 10.184: Extract PDF URL from CrossRef link array (CRITICAL for full-text detection)
+    // Priority: application/pdf links > text-mining PDFs > any PDF link
+    let pdfUrl: string | null = null;
+    // Phase 10.184 DRY FIX: Use Paper['fullTextSource'] from DTO (single source of truth)
+    let fullTextSource: Paper['fullTextSource'] = undefined;
+
+    if (item.link && item.link.length > 0) {
+      // Phase 10.184: Validate URLs at source level (blocks malicious/malformed URLs)
+      // 1. Try to find a direct PDF link
+      const pdfLink = item.link.find(
+        (l) => (l['content-type'] === 'application/pdf' || l.URL?.toLowerCase().endsWith('.pdf'))
+          && l.URL && isValidExternalURL(l.URL),
+      );
+      if (pdfLink) {
+        pdfUrl = pdfLink.URL;
+        fullTextSource = 'crossref';
+      }
+      // 2. Try text-mining link as fallback
+      else {
+        const textMiningLink = item.link.find(
+          (l) => l['intended-application'] === 'text-mining' && l.URL && isValidExternalURL(l.URL),
+        );
+        if (textMiningLink) {
+          pdfUrl = textMiningLink.URL;
+          fullTextSource = 'crossref';
+        }
+        // 3. Use any available link (with validation)
+        else {
+          const validLink = item.link.find((l) => l.URL && isValidExternalURL(l.URL));
+          if (validLink) {
+            pdfUrl = validLink.URL;
+            fullTextSource = 'crossref';
+          }
+        }
+      }
+    }
+
+    // Check if paper has open access license (indicates potential full-text availability)
+    const hasOpenLicense = item.license?.some(
+      (l) => l.URL?.includes('creativecommons') || l.URL?.includes('open-access'),
+    );
+    const hasPdf = !!pdfUrl;
+    const hasFullText = hasPdf || !!hasOpenLicense;
+    const openAccessStatus = hasOpenLicense ? 'OPEN_ACCESS' : null;
+
     return {
       id: item.DOI,
       title: item.title?.[0] || '',
@@ -279,6 +351,16 @@ export class CrossRefService {
       isHighQuality: qualityComponents.totalScore >= 50,
       // Phase 10.120: Add metadataCompleteness for honest scoring transparency
       metadataCompleteness: qualityComponents.metadataCompleteness,
+      // Phase 10.181: Extract document type for filtering (exclude books)
+      // CrossRef types: journal-article, book, book-chapter, book-section, proceedings-article, posted-content, dataset, monograph
+      publicationType: item.type ? [item.type] : undefined,
+      // Phase 10.184: PDF URL and full-text availability (CRITICAL for content analysis)
+      pdfUrl,
+      openAccessStatus,
+      hasPdf,
+      hasFullText,
+      fullTextStatus: hasFullText ? 'available' : 'not_fetched',
+      fullTextSource,
     };
   }
 

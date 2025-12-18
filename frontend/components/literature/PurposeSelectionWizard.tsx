@@ -523,6 +523,46 @@ export default function PurposeSelectionWizard({
                     )}
                   </div>
 
+                  {/* Phase 10.180: Full-Text Detection Information */}
+                  {contentAnalysis.noContentCount > 0 && (
+                    <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+                      <div className="flex items-start gap-3">
+                        <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-blue-900 mb-2">
+                            ℹ️ Full-Text Detection Status
+                          </h4>
+                          <p className="text-sm text-blue-800 leading-relaxed mb-2">
+                            <strong>{contentAnalysis.noContentCount} papers</strong> were checked for full-text availability 
+                            using our <strong>7-tier detection system</strong>:
+                          </p>
+                          <ul className="text-xs text-blue-700 list-disc list-inside space-y-1 mb-2 ml-2">
+                            <li>Database check (already fetched)</li>
+                            <li>Direct PDF URL detection</li>
+                            <li>PMC pattern matching</li>
+                            <li>Unpaywall API (open-access database)</li>
+                            <li>Publisher HTML scraping</li>
+                            <li>Secondary link scanning</li>
+                            <li>AI content verification</li>
+                          </ul>
+                          <p className="text-sm text-blue-700">
+                            <strong>No full-text sources were found</strong> for these papers. This typically means:
+                          </p>
+                          <ul className="text-xs text-blue-600 list-disc list-inside space-y-1 mt-1 ml-2">
+                            <li>Paper is behind a paywall (subscription required)</li>
+                            <li>Publisher doesn't provide open-access PDFs</li>
+                            <li>Full-text only available in institutional repositories</li>
+                            <li>Paper metadata incomplete (missing DOI/URL)</li>
+                          </ul>
+                          <p className="text-xs text-blue-600 mt-2 italic">
+                            <strong>Note:</strong> Full-text will be automatically fetched during extraction 
+                            if sources become available or if you have institutional access.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Phase 10.180: Pending fetch notice */}
                   {contentAnalysis.totalPendingFetch > 0 && (
                     <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-3 mb-4">
@@ -672,16 +712,19 @@ export default function PurposeSelectionWizard({
 
                                   {/* Skip reason for unavailable papers */}
                                   {status === 'unavailable' && paper.skipReason && (
-                                    <span className="text-xs text-red-600 italic">
-                                      {paper.skipReason}
-                                    </span>
+                                    <div className="text-xs text-red-600">
+                                      <span className="italic">{paper.skipReason}</span>
+                                      <p className="text-red-500 mt-1">
+                                        ℹ️ Checked via 7-tier detection: Database → Direct URL → PMC → Unpaywall → Publisher HTML → Secondary Links → AI Verification
+                                      </p>
+                                    </div>
                                   )}
 
                                   {/* Info for available papers */}
                                   {status === 'available' && (
-                                    <span className="text-xs text-amber-600 italic">
-                                      Full-text detected, will be fetched automatically
-                                    </span>
+                                    <div className="text-xs text-amber-700">
+                                      <p>Full-text source detected via 7-tier detection. Will be fetched automatically before extraction.</p>
+                                    </div>
                                   )}
                                 </div>
                               </div>

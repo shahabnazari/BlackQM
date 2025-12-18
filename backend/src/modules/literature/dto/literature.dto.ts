@@ -397,6 +397,16 @@ export class SavePaperDto {
   @IsIn(['not_fetched', 'fetching', 'success', 'failed', 'available'])
   @IsOptional()
   fullTextStatus?: 'not_fetched' | 'fetching' | 'success' | 'failed' | 'available';
+
+  // Paper-intrinsic quality score (independent of search query)
+  @ApiPropertyOptional({
+    description: 'Composite quality score (0-100) based on citations, journal prestige, recency',
+    minimum: 0,
+    maximum: 100,
+  })
+  @IsNumber()
+  @IsOptional()
+  qualityScore?: number;
 }
 
 export class ExportCitationsDto {
@@ -586,7 +596,11 @@ export class Paper {
     | 'wiley'
     | 'sage'
     | 'taylor_francis'
-    | 'publisher'; // Where full-text came from
+    | 'publisher'
+    // Phase 10.184: Added API sources for PDF URL extraction
+    | 'openalex'
+    | 'crossref'
+    | 'semantic_scholar'; // Where full-text came from
   fullTextWordCount?: number; // Word count from full-text (when fetched)
   fullText?: string; // Full-text content (when fetched)
 
