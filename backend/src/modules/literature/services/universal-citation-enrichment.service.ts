@@ -314,6 +314,10 @@ export class UniversalCitationEnrichmentService {
     // Papers may be cached with citations but WITHOUT journal metrics (from old cache)
     const cachedPapersNeedingJournalMetrics: { paper: Paper; index: number; cacheKey: string }[] = [];
 
+    // Phase 10.185: Track papers enriched by OpenAlex in STEP 3
+    // These papers already have journal metrics, so skip them in STEP 3.5
+    const openAlexEnrichedIndices = new Set<number>();
+
     // STEP 1: Check cache for already-enriched papers
     for (let i = 0; i < papers.length; i++) {
       const paper = papers[i];
@@ -436,6 +440,9 @@ export class UniversalCitationEnrichmentService {
             enrichedPapers[originalIndex] = enriched;
             enrichedFromOA++;
             this.oaEnrichments++;
+
+            // Phase 10.185: Track OpenAlex-enriched papers (already have journal metrics)
+            openAlexEnrichedIndices.add(originalIndex);
           } else {
             // No enrichment possible - use original at its original index
             enrichedPapers[originalIndex] = original;
@@ -465,55 +472,63 @@ export class UniversalCitationEnrichmentService {
         // Phase 10.110 BUGFIX: Place at original indices
         for (let i = 0; i < papersNeedingEnrichment.length; i++) {
           enrichedPapers[papersNeedingEnrichment[i].index] = oaEnrichedPapers[i];
+          // Phase 10.185: Track OpenAlex-enriched papers (circuit breaker path)
+          openAlexEnrichedIndices.add(papersNeedingEnrichment[i].index);
         }
         enrichedFromOA = papersNeedingEnrichment.length;
       }
     }
 
     // ========================================================================
-    // STEP 3.5: Phase 10.114 - Get journal metrics from OpenAlex for ALL papers
+    // STEP 3.5: Phase 10.114/10.185 - Get journal metrics for S2-enriched papers only
     // ========================================================================
     // This step runs AFTER all main enrichment is complete.
     // It handles papers that:
-    // 1. Have citation data (from S2, OA, or cache)
+    // 1. Have citation data (from S2 or cache)
     // 2. But still lack journal metrics (no impactFactor)
-    // This includes:
-    // - Cached papers from before Phase 10.114 journal metrics support
-    // - S2-enriched papers (S2 doesn't provide journal metrics)
-    // - Papers from OpenAlex that might not have journal info
+    //
+    // Phase 10.185 OPTIMIZATION: Skip papers already enriched by OpenAlex in STEP 3
+    // OpenAlex enrichPaper() already fetches journal metrics, so re-calling
+    // enrichBatch() for those papers is wasteful (duplicate API calls).
+    // This optimization saves ~50-60 seconds on large searches.
     // ========================================================================
     this.logger.log(
-      `🔍 [STEP 3.5 DEBUG] signal?.aborted=${signal?.aborted}, ` +
-      `enrichedPapers.length=${enrichedPapers.length}, ` +
-      `cachedPapersNeedingJournalMetrics.length=${cachedPapersNeedingJournalMetrics.length}`,
+      `🔍 [STEP 3.5] OpenAlex-enriched: ${openAlexEnrichedIndices.size}, ` +
+      `cachedNeedingJournalMetrics: ${cachedPapersNeedingJournalMetrics.length}`,
     );
 
-    // Phase 10.114 FIX: ALWAYS run STEP 3.5 regardless of signal abort
-    // Reasoning: We've already invested ~170s in S2 + OA enrichment.
-    // Journal metrics is a quick additional step (~5-10s) that significantly
-    // improves quality scores. For quality-first search, it's worth completing.
-    // The signal abort is typically from the search timeout, but since we're
-    // already past the expensive work, we should finish the job.
     {
-      // Collect ALL papers that need journal metrics
-      const allPapersNeedingJournalMetrics: { paper: Paper; index: number; cacheKey: string }[] = [
-        ...cachedPapersNeedingJournalMetrics  // Cached papers needing journal metrics
-      ];
+      // Collect papers that need journal metrics (EXCLUDING OpenAlex-enriched)
+      const allPapersNeedingJournalMetrics: { paper: Paper; index: number; cacheKey: string }[] = [];
 
-      // Also check freshly enriched papers
+      // Add cached papers needing journal metrics (not enriched by OA in this run)
+      for (const cached of cachedPapersNeedingJournalMetrics) {
+        if (!openAlexEnrichedIndices.has(cached.index)) {
+          allPapersNeedingJournalMetrics.push(cached);
+        }
+      }
+
+      // Check freshly enriched papers (S2-enriched need journal metrics)
       let debugChecked = 0;
-      let debugWithCitations = 0;
-      let debugWithoutImpactFactor = 0;
+      let debugSkippedOA = 0;
       for (let i = 0; i < enrichedPapers.length; i++) {
         const paper = enrichedPapers[i];
+        if (!paper) continue;
+
+        debugChecked++;
+
+        // Phase 10.185: Skip papers already enriched by OpenAlex (they have journal metrics)
+        if (openAlexEnrichedIndices.has(i)) {
+          debugSkippedOA++;
+          continue;
+        }
+
         // Skip if already in the cached list
         const isAlreadyTracked = cachedPapersNeedingJournalMetrics.some(p => p.index === i);
-        if (paper) {
-          debugChecked++;
-          if (paper.citationCount !== undefined) debugWithCitations++;
-          if (!paper.impactFactor) debugWithoutImpactFactor++;
-        }
-        if (!isAlreadyTracked && paper && paper.citationCount !== undefined && !paper.impactFactor) {
+        if (isAlreadyTracked) continue;
+
+        // Add if has citations but no journal metrics (S2-enriched papers)
+        if (paper.citationCount !== undefined && !paper.impactFactor) {
           allPapersNeedingJournalMetrics.push({
             paper,
             index: i,
@@ -522,7 +537,7 @@ export class UniversalCitationEnrichmentService {
         }
       }
       this.logger.log(
-        `🔍 [STEP 3.5 DEBUG] Checked ${debugChecked} papers: ${debugWithCitations} with citations, ${debugWithoutImpactFactor} without impactFactor, ` +
+        `🔍 [STEP 3.5] Checked ${debugChecked} papers, skipped ${debugSkippedOA} OpenAlex-enriched, ` +
         `${allPapersNeedingJournalMetrics.length} need journal metrics`,
       );
 

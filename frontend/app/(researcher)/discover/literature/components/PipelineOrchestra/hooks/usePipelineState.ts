@@ -265,12 +265,13 @@ function calculateSourcePosition(
 
 /**
  * Derive source node states
- * Phase 10.163: Updated center for elliptical constellation (290x200)
+ * Phase 10.163: Updated center for elliptical constellation
+ * Phase 10.203: Fixed center coordinates for 600x420 galaxy (was 290x200)
  */
 function deriveSourceStates(
   sourceStats: Map<LiteratureSource, SourceStats>,
-  centerX: number = 145,  // PIPELINE_LAYOUT.constellationWidth / 2 = 290/2
-  centerY: number = 100   // PIPELINE_LAYOUT.constellationHeight / 2 = 200/2
+  centerX: number = 300,  // PIPELINE_LAYOUT.constellationWidth / 2 = 600/2
+  centerY: number = 210   // PIPELINE_LAYOUT.constellationHeight / 2 = 420/2
 ): SourceNodeState[] {
   const sources: SourceNodeState[] = [];
 

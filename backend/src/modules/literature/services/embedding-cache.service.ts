@@ -89,8 +89,10 @@ const MAX_UNCOMPRESSED_SIZE = 1024 * 1024;
 
 /**
  * In-memory LRU fallback cache size
+ * Phase 10.185: Increased from 1K to 5K for higher hit rates
+ * At ~600 bytes/embedding, 5K entries = ~3MB memory (acceptable trade-off)
  */
-const LRU_CACHE_SIZE = 1000;
+const LRU_CACHE_SIZE = 5000;
 
 // ============================================================================
 // PROMISIFIED ZLIB

@@ -54,8 +54,11 @@ const DIVERSITY_CACHE_CONFIG = {
   MAX_SIZE: 5000,
 } as const;
 
-/** Memory pressure threshold (percentage of max entries) */
-const MEMORY_PRESSURE_THRESHOLD = 0.9;
+/** Memory pressure threshold (percentage of max entries)
+ * Phase 10.185: Lowered from 0.9 to 0.8 for smoother cache eviction
+ * Prevents sudden performance drops when cache is near capacity
+ */
+const MEMORY_PRESSURE_THRESHOLD = 0.8;
 
 /** Cleanup interval (5 minutes) */
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;

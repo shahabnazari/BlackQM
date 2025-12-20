@@ -119,20 +119,25 @@ export class OpenAlexEnrichmentService {
   //   - Predictable, linear performance
   // ============================================
   private readonly rateLimiter = new Bottleneck({
-    // Reservoir pattern: 8 requests per second (conservative for OpenAlex 10 req/sec limit)
-    reservoir: 8,                     // Start with 8 requests (leave headroom)
-    reservoirRefreshAmount: 8,        // Refill to 8 requests
+    // ============================================
+    // Phase 10.185: Optimized Rate Limiting (Netflix-Grade)
+    // ============================================
+    // PREVIOUS: 8 req/sec with 150ms minTime = ~6.6 actual req/sec
+    // OPTIMIZED: 10 req/sec with 100ms minTime = full OpenAlex capacity
+    //
+    // OpenAlex official limit: 10 req/sec (polite pool)
+    // We now use the full capacity with proper backoff on 429
+    // ============================================
+    reservoir: 10,                    // Start with 10 requests (full capacity)
+    reservoirRefreshAmount: 10,       // Refill to 10 requests
     reservoirRefreshInterval: 1000,   // Every 1 second (1000ms)
 
-    // Phase 10.112 Week 4 FIX: Reduce concurrency to 3 to prevent 429 errors
-    // Each paper can make 2 API calls (paper lookup + journal lookup)
-    // With 3 concurrent: max 6 in-flight requests at any time
-    // Combined with search service, total stays under 10 req/sec
-    maxConcurrent: 3,
+    // Phase 10.185: Increased concurrency with proper rate limiting
+    // The reservoir pattern handles rate limiting, concurrency is for parallelism
+    maxConcurrent: 5,
 
-    // Queue: Unlimited (we want to process all papers)
-    // Phase 10.112 Week 4 FIX: Increase minTime from 100ms to 150ms for safety
-    minTime: 150, // 150ms minimum between requests (~6.6 req/sec max burst)
+    // Phase 10.185: Reduced minTime since reservoir handles rate limiting
+    minTime: 100, // 100ms minimum between requests (~10 req/sec max)
   });
 
   private requestCount = 0;           // Track requests for metrics
@@ -269,11 +274,12 @@ export class OpenAlexEnrichmentService {
           ),
           'OpenAlex.enrichPaper.doi',
           {
+            // Phase 10.185: Faster retry for better throughput
             maxAttempts: 2, // Conservative: enrichment is optional
-            initialDelayMs: 1000,
-            maxDelayMs: 4000,
+            initialDelayMs: 500,  // Reduced from 1000ms
+            maxDelayMs: 2000,     // Reduced from 4000ms
             backoffMultiplier: 2,
-            jitterMs: 500,
+            jitterMs: 300,        // Reduced from 500ms
           },
         );
 
@@ -302,11 +308,12 @@ export class OpenAlexEnrichmentService {
             ),
             'OpenAlex.enrichPaper.pmid',
             {
+              // Phase 10.185: Faster retry for better throughput
               maxAttempts: 2,
-              initialDelayMs: 1000,
-              maxDelayMs: 4000,
+              initialDelayMs: 500,  // Reduced from 1000ms
+              maxDelayMs: 2000,     // Reduced from 4000ms
               backoffMultiplier: 2,
-              jitterMs: 500,
+              jitterMs: 300,        // Reduced from 500ms
             },
           );
 
@@ -347,11 +354,12 @@ export class OpenAlexEnrichmentService {
             ),
             'OpenAlex.enrichPaper.title',
             {
-              maxAttempts: 1, // Title search is last resort, don't retry much
-              initialDelayMs: 1000,
-              maxDelayMs: 2000,
+              // Phase 10.185: Title search is last resort, minimal retry
+              maxAttempts: 1,
+              initialDelayMs: 500,  // Reduced from 1000ms
+              maxDelayMs: 1000,     // Reduced from 2000ms
               backoffMultiplier: 1,
-              jitterMs: 200,
+              jitterMs: 100,        // Reduced from 200ms
             },
           );
 

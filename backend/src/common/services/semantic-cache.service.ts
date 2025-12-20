@@ -76,7 +76,9 @@ export class SemanticCacheService implements OnModuleInit {
   private readonly collectionName = 'semantic_cache';
 
   // Phase 8.90: Enterprise-grade configuration constants
-  private static readonly SIMILARITY_THRESHOLD = 0.98; // 98% similarity = cache hit
+  // Phase 10.185: Lowered from 0.98 to 0.94 for better cache hit rates
+  // 0.94 still captures semantically equivalent queries while allowing minor rephrasing
+  private static readonly SIMILARITY_THRESHOLD = 0.94; // 94% similarity = cache hit
   private static readonly TTL_HOURS = 24;
   private static readonly MAX_ENTRIES = 100000;
   private static readonly QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333';

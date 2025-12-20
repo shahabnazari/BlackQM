@@ -509,8 +509,8 @@ export const MethodologyReport = memo<MethodologyReportProps>(function Methodolo
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             >
-              {/* Header */}
-              <div className="p-4 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
+              {/* Header - Fixed/Sticky */}
+              <div className="shrink-0 p-4 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-purple-500/10 bg-gray-900">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
@@ -570,8 +570,8 @@ export const MethodologyReport = memo<MethodologyReportProps>(function Methodolo
                 </div>
               </div>
 
-              {/* Navigation */}
-              <div className="flex border-b border-white/10 overflow-x-auto">
+              {/* Navigation - Fixed/Sticky */}
+              <div className="shrink-0 flex border-b border-white/10 overflow-x-auto bg-gray-900">
                 {REPORT_SECTIONS.map((section) => {
                   const Icon = section.icon;
                   const isActive = activeSection === section.id;
@@ -594,15 +594,16 @@ export const MethodologyReport = memo<MethodologyReportProps>(function Methodolo
                 })}
               </div>
 
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto p-4">
+              {/* Content - Scrollable area */}
+              <div className="flex-1 min-h-0 overflow-y-auto p-4">
                 <AnimatePresence mode="wait">
                   {activeSection === 'overview' && (
                     <motion.div
                       key="overview"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
                       className="space-y-4"
                     >
                       <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
@@ -624,9 +625,10 @@ export const MethodologyReport = memo<MethodologyReportProps>(function Methodolo
                   {activeSection === 'pipeline' && (
                     <motion.div
                       key="pipeline"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
                       className="space-y-4"
                     >
                       <h3 className="text-sm font-semibold text-white">
@@ -656,9 +658,10 @@ export const MethodologyReport = memo<MethodologyReportProps>(function Methodolo
                   {activeSection === 'sources' && (
                     <motion.div
                       key="sources"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
                       className="space-y-4"
                     >
                       <h3 className="text-sm font-semibold text-white">
@@ -683,9 +686,10 @@ export const MethodologyReport = memo<MethodologyReportProps>(function Methodolo
                   {activeSection === 'deduplication' && (
                     <motion.div
                       key="deduplication"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
                       className="space-y-4"
                     >
                       <h3 className="text-sm font-semibold text-white">
@@ -744,9 +748,10 @@ export const MethodologyReport = memo<MethodologyReportProps>(function Methodolo
                   {activeSection === 'ranking' && (
                     <motion.div
                       key="ranking"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
                       className="space-y-4"
                     >
                       <h3 className="text-sm font-semibold text-white">
@@ -782,9 +787,10 @@ export const MethodologyReport = memo<MethodologyReportProps>(function Methodolo
                   {activeSection === 'quality' && (
                     <motion.div
                       key="quality"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
                       className="space-y-4"
                     >
                       <h3 className="text-sm font-semibold text-white">
@@ -828,8 +834,8 @@ export const MethodologyReport = memo<MethodologyReportProps>(function Methodolo
                 </AnimatePresence>
               </div>
 
-              {/* Footer */}
-              <div className="p-3 border-t border-white/10 bg-gray-800/50">
+              {/* Footer - Fixed/Sticky */}
+              <div className="shrink-0 p-3 border-t border-white/10 bg-gray-800/50">
                 <p className="text-xs text-white/40 text-center"> {/* Phase 10.135: Increased from 10px to 12px */}
                   Generated by BlackQ Literature Search • {new Date().toLocaleDateString()} •
                   Methodology version 10.128
